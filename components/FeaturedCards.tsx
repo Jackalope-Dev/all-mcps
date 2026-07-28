@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Sparkles } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { SafeMarkdown } from './ui/SafeMarkdown';
@@ -34,7 +35,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
   return (
     <section className="container animate-fade-in delay-2" style={{ marginBottom: '4rem' }}>
       <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <span style={{ display: 'inline-block', width: '24px', height: '24px', background: 'linear-gradient(135deg, var(--accent-color), #007BFF)', borderRadius: '6px' }}></span>
+        <Sparkles size={24} style={{ color: 'var(--accent-color)' }} />
         Featured Servers
       </h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
