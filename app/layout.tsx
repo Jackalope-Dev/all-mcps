@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
 import { Button } from "../components/ui/Button";
+import { WebMCPProvider } from "../components/WebMCPProvider";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -36,6 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <WebMCPProvider />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -80,7 +82,7 @@ export default function RootLayout({
         {children}
         
         <footer className="container" style={{ borderTop: '1px solid var(--border-color)', marginTop: '4rem', padding: '4rem 0', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2rem' }}>
             <div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>AllMCPs</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>The definitive directory for discovering and installing Model Context Protocol servers.</p>
@@ -91,6 +93,14 @@ export default function RootLayout({
                 <li><Link href="/blog" className="nav-link">Blog</Link></li>
                 <li><Link href="/what-is-mcp" className="nav-link">What is an MCP?</Link></li>
                 <li><Link href="/guide" className="nav-link">LLM Agents Guide</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>For AI & Agents</h4>
+              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <li><a href="/llms.txt" className="nav-link" target="_blank" rel="noopener">llms.txt Standard ↗</a></li>
+                <li><a href="/api/mcp" className="nav-link" target="_blank" rel="noopener">Remote MCP Server ↗</a></li>
+                <li><a href="/api/v1/search" className="nav-link" target="_blank" rel="noopener">Agent Search API ↗</a></li>
               </ul>
             </div>
             <div>
