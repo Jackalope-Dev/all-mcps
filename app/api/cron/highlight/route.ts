@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    let selectedServer: { id: string; name: string; description: string; category?: string } | null = null;
+    let selectedServer: { id: string; name: string; description: string; category?: string; isFeatured?: boolean } | null = null;
 
     try {
       const ctx = await getCloudflareContext();
@@ -44,11 +44,20 @@ export async function POST(req: Request) {
           
           const randomIndex = Math.floor(Math.random() * pool.length);
           const item = pool[randomIndex];
+          const isFeatured = Boolean(
+            item.isPremium ||
+            item.reviewPriority ||
+            item.isOfficial ||
+            item.premiumStatus === 'active' ||
+            (item.featuredUntil && new Date(item.featuredUntil) > now)
+          );
+
           selectedServer = {
             id: item.id,
             name: item.name,
             description: item.description,
             category: item.category,
+            isFeatured,
           };
         }
       }
@@ -65,6 +74,7 @@ export async function POST(req: Request) {
         name: item.name,
         description: item.description,
         category: item.category,
+        isFeatured: false,
       };
     }
 
@@ -78,6 +88,7 @@ export async function POST(req: Request) {
       description: selectedServer.description,
       category: selectedServer.category,
       isNew: false,
+      isFeatured: selectedServer.isFeatured,
     });
 
     return NextResponse.json({

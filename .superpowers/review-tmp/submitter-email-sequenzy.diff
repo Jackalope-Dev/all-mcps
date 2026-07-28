@@ -1,0 +1,531 @@
+# Submitter-email/Stripe/Sequenzy review package: c042057e894cec96112ec16409881473ab60c7a5..5390836d1555c8d8d672be04bf45f7e73fb19afd
+
+## Files changed (scoped)
+ app/api/stripe/webhook/route.ts  | 24 ++++++++++--------
+ app/api/submit/route.ts          | 11 +++++++++
+ components/forms/SubmitForm.tsx  | 22 +++++++++++++++++
+ db/schema.ts                     |  2 ++
+ docs/SEQUENZY_SETUP.md           | 27 ++++++++++++++++++++
+ drizzle/0010_submitter_email.sql |  1 +
+ drizzle/meta/_journal.json       |  7 ++++++
+ lib/sequenzy.ts                  | 53 ++++++++++++++++++++++++++++++++++++++++
+ 8 files changed, 137 insertions(+), 10 deletions(-)
+
+## Diff
+diff --git a/app/api/stripe/webhook/route.ts b/app/api/stripe/webhook/route.ts
+index d64e3ad..833a94a 100644
+--- a/app/api/stripe/webhook/route.ts
++++ b/app/api/stripe/webhook/route.ts
+@@ -1,90 +1,94 @@
+ import { NextResponse } from 'next/server';
+ import { getCloudflareContext } from '@opennextjs/cloudflare';
+ import { drizzle } from 'drizzle-orm/d1';
+ import { eq } from 'drizzle-orm';
+ import type Stripe from 'stripe';
+ import { servers } from '../../../../db/schema';
+ import { getStripe } from '../../../../lib/stripe';
+ import type { PaidSku } from '../../../../lib/pricing';
++import { syncSequenzySubscriber } from '../../../../lib/sequenzy';
+ 
+ async function getDb() {
+   const ctx = await getCloudflareContext();
+   const env = ctx.env as any;
+   if (!env?.DB) throw new Error('DB missing');
+   return drizzle(env.DB);
+ }
+ 
+ function addDays(from: Date, days: number): Date {
+   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
+ }
+ 
+ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
+   const serverId = session.metadata?.serverId || session.client_reference_id;
+   const sku = (session.metadata?.sku || '') as PaidSku;
+   if (!serverId || !sku) {
+     console.warn('Checkout session missing serverId/sku metadata', session.id);
+     return;
+   }
+ 
+   const db = await getDb();
+   const customerId =
+     typeof session.customer === 'string' ? session.customer : session.customer?.id || null;
+   const subscriptionId =
+     typeof session.subscription === 'string'
+       ? session.subscription
+       : session.subscription?.id || null;
+ 
++  const rows = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
++  const current = rows[0];
++
+   if (sku === 'priority_review') {
+     await db
+       .update(servers)
+       .set({
+         reviewPriority: true,
+         ...(customerId ? { stripeCustomerId: customerId } : {}),
+       })
+       .where(eq(servers.id, serverId));
+-    return;
+-  }
+-
+-  if (sku === 'featured_7d') {
+-    const rows = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+-    const current = rows[0];
++  } else if (sku === 'featured_7d') {
+     const base =
+       current?.featuredUntil && new Date(current.featuredUntil).getTime() > Date.now()
+         ? new Date(current.featuredUntil)
+         : new Date();
+     await db
+       .update(servers)
+       .set({
+         featuredUntil: addDays(base, 7),
+         ...(customerId ? { stripeCustomerId: customerId } : {}),
+       })
+       .where(eq(servers.id, serverId));
+-    return;
+-  }
+-
+-  if (sku === 'premium_monthly') {
++  } else if (sku === 'premium_monthly') {
+     await db
+       .update(servers)
+       .set({
+         isPremium: true,
+         premiumStatus: 'active',
+         ...(customerId ? { stripeCustomerId: customerId } : {}),
+         ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
+       })
+       .where(eq(servers.id, serverId));
+   }
++
++  const email = session.customer_details?.email || current?.submitterEmail || null;
++  if (email) {
++    await syncSequenzySubscriber({
++      email,
++      tags: [`paid-${sku}`],
++    });
++  }
+ }
+ 
+ async function applySubscriptionUpdated(sub: Stripe.Subscription) {
+   const serverId = sub.metadata?.serverId;
+   if (!serverId) return;
+ 
+   const db = await getDb();
+   const active = sub.status === 'active' || sub.status === 'trialing';
+   const pastDue = sub.status === 'past_due';
+ 
+   await db
+     .update(servers)
+     .set({
+       isPremium: active,
+       premiumStatus: active ? 'active' : pastDue ? 'past_due' : sub.status === 'canceled' ? 'canceled' : sub.status,
+diff --git a/app/api/submit/route.ts b/app/api/submit/route.ts
+index 0bb3653..86b7912 100644
+--- a/app/api/submit/route.ts
++++ b/app/api/submit/route.ts
+@@ -1,28 +1,30 @@
+ import { NextResponse } from 'next/server';
+ import { getCloudflareContext } from '@opennextjs/cloudflare';
+ import { drizzle } from 'drizzle-orm/d1';
+ import { servers } from '../../../db/schema';
+ import { z } from 'zod';
+ import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
+ import { DEFAULT_SUBMIT_CATEGORY } from '../../../lib/categories';
++import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';
+ 
+ const submitSchema = z.object({
+   url: z.string().optional().or(z.literal('')),
+   name: z.string().optional(),
+   description: z.string().optional(),
+   category: z.string().optional(),
++  email: z.string().email('Enter a valid email'),
+   websiteUrl: z
+     .string()
+     .optional()
+     .or(z.literal(''))
+     .transform((v) => (v || '').trim())
+     .refine((v) => !v || z.string().url().safeParse(v).success, {
+       message: 'Website must be a valid URL',
+     }),
+ });
+ 
+ export async function POST(req: Request) {
+   try {
+     const body = (await req.json()) as any;
+     const token = body['cf-turnstile-response'];
+ 
+@@ -38,30 +40,31 @@ export async function POST(req: Request) {
+     const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+       method: 'POST',
+       body: verifyForm,
+     });
+ 
+     const verifyResult = (await verifyRes.json()) as any;
+     if (!verifyResult.success) {
+       return NextResponse.json({ success: false, error: 'Turnstile verification failed' }, { status: 403 });
+     }
+ 
+     const result = submitSchema.safeParse(body);
+     if (!result.success) {
+       return NextResponse.json({ error: result.error.issues }, { status: 400 });
+     }
+ 
++    const email = result.data.email;
+     let websiteUrl = result.data.websiteUrl || '';
+     let name = result.data.name || '';
+     let description = result.data.description || '';
+     let category = result.data.category || DEFAULT_SUBMIT_CATEGORY;
+     let url = (result.data.url || '').trim();
+ 
+     // Website-only: use website as primary url when repo omitted
+     if (!url && websiteUrl) {
+       url = websiteUrl;
+     }
+     if (!websiteUrl && url && !url.includes('github.com')) {
+       websiteUrl = url;
+     }
+ 
+     if (!url) {
+@@ -122,35 +125,43 @@ export async function POST(req: Request) {
+     if (!env || !env.DB) {
+       throw new Error('Database binding not found');
+     }
+ 
+     const db = drizzle(env.DB as any);
+ 
+     await db
+       .insert(servers)
+       .values({
+         id,
+         name,
+         url,
+         description: description || 'No description provided.',
+         category,
+         websiteUrl: websiteUrl || null,
++        submitterEmail: email,
+         isPremium: false,
+         websiteVerified: false,
+         isOfficial: false,
+         reviewPriority: false,
+         premiumStatus: 'free',
+         status: 'pending',
+         createdAt: new Date(),
+       })
+       .onConflictDoNothing();
+ 
++    await syncSequenzySubscriber({
++      email,
++      tags: ['submitted-listing'],
++      lists: [PRODUCT_SUBSCRIBERS_LIST_ID],
++      customAttributes: { serverId: id, serverName: name },
++    });
++
+     return NextResponse.json({
+       success: true,
+       message: 'Server submitted successfully for review!',
+       id,
+     });
+   } catch (error) {
+     console.error('Submission error:', error);
+     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+   }
+ }
+diff --git a/components/forms/SubmitForm.tsx b/components/forms/SubmitForm.tsx
+index 448e549..e724e1a 100644
+--- a/components/forms/SubmitForm.tsx
++++ b/components/forms/SubmitForm.tsx
+@@ -1,31 +1,33 @@
+ 'use client';
+ 
+ import { useState } from 'react';
+ import { Input } from '../ui/Input';
+ import { Button } from '../ui/Button';
+ import { TurnstileWidget } from '../ui/TurnstileWidget';
+ import { toast } from '../ui/Toast';
+ import { DEFAULT_SUBMIT_CATEGORY, DIRECTORY_CATEGORIES } from '../../lib/categories';
++import { trackSubmitLead } from '../../lib/gtag';
+ 
+ export function SubmitForm() {
+   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+   const [token, setToken] = useState<string>('');
+   const [submittedId, setSubmittedId] = useState<string | null>(null);
+   const [prefillLoading, setPrefillLoading] = useState(false);
+ 
+   const [name, setName] = useState('');
++  const [email, setEmail] = useState('');
+   const [url, setUrl] = useState('');
+   const [websiteUrl, setWebsiteUrl] = useState('');
+   const [description, setDescription] = useState('');
+ 
+   const runPrefill = async (fromUrl: string) => {
+     if (!fromUrl.trim()) {
+       toast.error('Enter a URL to prefill from');
+       return;
+     }
+     setPrefillLoading(true);
+     try {
+       const res = await fetch('/api/submit/prefill', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ url: fromUrl.trim() }),
+@@ -65,45 +67,51 @@ export function SubmitForm() {
+       });
+       return;
+     }
+ 
+     if (!url.trim() && !websiteUrl.trim()) {
+       toast.error('Add a repository or website URL');
+       return;
+     }
+ 
+     setStatus('loading');
+     const formData = new FormData(e.currentTarget);
+     const data = Object.fromEntries(formData.entries());
+     data['cf-turnstile-response'] = token;
+     // Prefer explicit state (controlled inputs)
+     data.name = name;
++    data.email = email;
+     data.url = url.trim() || websiteUrl.trim();
+     data.websiteUrl = websiteUrl;
+     data.description = description;
+ 
+     try {
+       const res = await fetch('/api/submit', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify(data),
+       });
+ 
+       if (res.ok) {
+         const payload = (await res.json().catch(() => null)) as { id?: string } | null;
+         setSubmittedId(payload?.id || null);
+         setStatus('success');
++        trackSubmitLead({
++          serverName: name,
++          category: (data.category as string) || DEFAULT_SUBMIT_CATEGORY,
++          url: url || websiteUrl,
++        });
+         toast.success('Server submitted', {
+           description: 'Your listing is pending review.',
+         });
+       } else {
+         const errorData = (await res.json().catch(() => null)) as { error?: unknown } | null;
+         const serverError = errorData?.error
+           ? typeof errorData.error === 'string'
+             ? errorData.error
+             : JSON.stringify(errorData.error)
+           : 'Submission failed.';
+         setStatus('error');
+         toast.error('Submission failed', { description: serverError });
+         (window as any).turnstile?.reset();
+         setToken('');
+       }
+@@ -160,30 +168,44 @@ export function SubmitForm() {
+             type="button"
+             variant="secondary"
+             disabled={prefillLoading}
+             onClick={() => runPrefill(url || websiteUrl)}
+             style={{ fontSize: '0.85rem', padding: '0.5rem 0.9rem' }}
+           >
+             {prefillLoading ? 'Fetching…' : 'Prefill from URL'}
+           </Button>
+           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+             Works with GitHub repos or any public website (title + meta description).
+           </span>
+         </div>
+       </div>
+ 
+       <Input name="name" label="Server Name" placeholder="e.g., GitHub MCP" value={name} onChange={(e) => setName(e.target.value)} />
++      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
++        <Input
++          name="email"
++          label="Your email"
++          placeholder="you@example.com"
++          type="email"
++          required
++          value={email}
++          onChange={(e) => setEmail(e.target.value)}
++        />
++        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
++          We&apos;ll email you about your listing status and occasional offers.
++        </p>
++      </div>
+       <Input
+         name="websiteUrl"
+         label="Website (optional if repo is the main link)"
+         placeholder="https://yoursite.com"
+         type="url"
+         value={websiteUrl}
+         onChange={(e) => setWebsiteUrl(e.target.value)}
+       />
+       <p style={{ margin: '-0.75rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+         Free listings show website links with <strong>nofollow</strong>. Premium adds a <strong>dofollow</strong>{' '}
+         backlink. GitHub is optional — website-only MCP products are welcome.
+       </p>
+ 
+       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+         <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Short Description</label>
+diff --git a/db/schema.ts b/db/schema.ts
+index e720435..6a78a9d 100644
+--- a/db/schema.ts
++++ b/db/schema.ts
+@@ -1,25 +1,27 @@
+ import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
+ 
+ export const servers = sqliteTable('servers', {
+   id: text('id').primaryKey(),
+   name: text('name').notNull(),
+   url: text('url').notNull(),
+   description: text('description').notNull(),
+   category: text('category').notNull(),
+   /** Optional product/marketing website (separate from the repo `url`). */
+   websiteUrl: text('website_url'),
++  /** Email the submitter gave at submit time. Used for status notices and the submission upsell sequence. */
++  submitterEmail: text('submitter_email'),
+   /** Paid/premium listings get dofollow website backlinks; free listings use nofollow. */
+   isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
+   /** True when the owner proved control of `websiteUrl` (DNS TXT or site badge). */
+   websiteVerified: integer('website_verified', { mode: 'boolean' }).notNull().default(false),
+   /** Claimed/verified ownership (GitHub README, site badge, or DNS). */
+   isOfficial: integer('is_official', { mode: 'boolean' }).notNull().default(false),
+   claimedAt: integer('claimed_at', { mode: 'timestamp' }),
+   /** Auth.js user id after claim (optional until owners sign in). */
+   ownerUserId: text('owner_user_id'),
+   /** Set when a website/DNS claim proves control of a *new* site (not already on file) — awaits admin approval before ownerUserId/isOfficial/websiteUrl take effect. */
+   pendingClaimUserId: text('pending_claim_user_id'),
+   /** The site the pending claimant proved control of. */
+   pendingClaimWebsiteUrl: text('pending_claim_website_url'),
+   /** Timed featured placement (e.g. 7-day boost). */
+   featuredUntil: integer('featured_until', { mode: 'timestamp' }),
+diff --git a/docs/SEQUENZY_SETUP.md b/docs/SEQUENZY_SETUP.md
+new file mode 100644
+index 0000000..bd8eaec
+--- /dev/null
++++ b/docs/SEQUENZY_SETUP.md
+@@ -0,0 +1,27 @@
++# Sequenzy setup (AllMCPs subscriber sync)
++
++## Secrets (Workers / local)
++
++```bash
++SEQUENZY_API_KEY=seq_...   # data_ingest_safe scoped key, see lib/sequenzy.ts
++```
++
++Do **not** commit this key. It's created via the Sequenzy dashboard or MCP `create_api_key`
++tool, scoped to `data_ingest_safe` (create/tag subscribers only — this key ships in a
++publicly-deployed Worker's server-side code, never the client bundle).
++
++## What syncs where
++
++- `POST /api/submit` — every submitter is added to the "Product Subscribers" list
++  (`x8r0du7z66k34tdyuwnsvxwt`) tagged `submitted-listing`.
++- `POST /api/stripe/webhook` — on `checkout.session.completed`, the same subscriber (matched by
++  email) gets tagged `paid-priority_review`, `paid-featured_7d`, or `paid-premium_monthly`.
++- Suppression (not emailing people who already paid) is handled by Sequenzy's **native Stripe
++  integration**, already connected in the dashboard — it auto-tags any matching subscriber
++  `customer`. The `paid-*` tags above are for future segmentation only, not suppression.
++
++## App routes touched
++
++- `lib/sequenzy.ts` — shared client
++- `app/api/submit/route.ts` — subscriber creation
++- `app/api/stripe/webhook/route.ts` — purchase tagging
+diff --git a/drizzle/0010_submitter_email.sql b/drizzle/0010_submitter_email.sql
+new file mode 100644
+index 0000000..98b2240
+--- /dev/null
++++ b/drizzle/0010_submitter_email.sql
+@@ -0,0 +1 @@
++ALTER TABLE `servers` ADD `submitter_email` text;
+diff --git a/drizzle/meta/_journal.json b/drizzle/meta/_journal.json
+index 16079dc..7c38871 100644
+--- a/drizzle/meta/_journal.json
++++ b/drizzle/meta/_journal.json
+@@ -59,18 +59,25 @@
+       "breakpoints": true
+     },
+     {
+       "idx": 8,
+       "version": "6",
+       "when": 1785236000000,
+       "tag": "0008_claim_ownership",
+       "breakpoints": true
+     },
+     {
+       "idx": 9,
+       "version": "6",
+       "when": 1785237000000,
+       "tag": "0009_pending_claim",
+       "breakpoints": true
++    },
++    {
++      "idx": 10,
++      "version": "6",
++      "when": 1785263303895,
++      "tag": "0010_submitter_email",
++      "breakpoints": true
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/lib/sequenzy.ts b/lib/sequenzy.ts
+new file mode 100644
+index 0000000..1a708a9
+--- /dev/null
++++ b/lib/sequenzy.ts
+@@ -0,0 +1,53 @@
++/**
++ * Sequenzy subscriber sync. Fetch-based (Cloudflare Workers has no node:https) —
++ * same rationale as lib/stripe.ts's explicit fetch http client.
++ */
++
++const SEQUENZY_SUBSCRIBERS_URL = 'https://api.sequenzy.com/api/v1/subscribers';
++
++/** AllMCPs company, "Product Subscribers" list. */
++export const PRODUCT_SUBSCRIBERS_LIST_ID = 'x8r0du7z66k34tdyuwnsvxwt';
++
++export type SequenzySubscriberSync = {
++  email: string;
++  tags: string[];
++  lists?: string[];
++  customAttributes?: Record<string, string>;
++};
++
++/**
++ * Best-effort create-or-tag a Sequenzy subscriber. Never throws — callers run this
++ * alongside a submission or Stripe webhook and must not fail because Sequenzy is down.
++ * Always merges (adds tags to an existing subscriber) rather than skipping or overwriting.
++ */
++export async function syncSequenzySubscriber(input: SequenzySubscriberSync): Promise<void> {
++  const key = process.env.SEQUENZY_API_KEY;
++  if (!key) {
++    console.warn('SEQUENZY_API_KEY not configured; skipping Sequenzy sync');
++    return;
++  }
++
++  try {
++    const res = await fetch(SEQUENZY_SUBSCRIBERS_URL, {
++      method: 'POST',
++      headers: {
++        Authorization: `Bearer ${key}`,
++        'Content-Type': 'application/json',
++      },
++      body: JSON.stringify({
++        email: input.email,
++        tags: input.tags,
++        lists: input.lists,
++        customAttributes: input.customAttributes,
++        duplicateStrategy: 'merge',
++        enrollInSequences: true,
++      }),
++    });
++
++    if (!res.ok) {
++      console.error('Sequenzy subscriber sync failed', res.status, await res.text());
++    }
++  } catch (e) {
++    console.error('Sequenzy subscriber sync error', e);
++  }
++}

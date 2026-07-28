@@ -1,0 +1,998 @@
+# Blog SEO/AEO overhaul review package: c042057e894cec96112ec16409881473ab60c7a5..5390836d1555c8d8d672be04bf45f7e73fb19afd
+
+## Files changed (scoped)
+ AGENTS.md                                    |  26 +++
+ app/blog/[slug]/page.tsx                     | 243 +++++++++++++++++++++++++++
+ app/blog/page.tsx                            | 134 ++++++---------
+ app/blog/rss.xml/route.ts                    |  47 ++++++
+ app/sitemap.ts                               |  82 +++++++--
+ components/BlogListClient.tsx                | 101 +++++++++++
+ content/blog/2026-07-27-launching-allmcps.md |  71 ++++++++
+ lib/blog.ts                                  |  70 ++++++++
+ lib/blogToc.ts                               |  46 +++++
+ 9 files changed, 725 insertions(+), 95 deletions(-)
+
+## Diff
+diff --git a/AGENTS.md b/AGENTS.md
+index d40663b..0f741f4 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -1,8 +1,34 @@
+ <!-- BEGIN:nextjs-agent-rules -->
+ # This is NOT the Next.js you know
+ 
+ This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+ <!-- END:nextjs-agent-rules -->
+ 
+ # Brand & Styling Rules
+ When working on UI, design, or layout tasks, please refer to the [BRAND_GUIDE.md](./BRAND_GUIDE.md) to ensure consistency with our established colors, typography, and logo assets.
++
++# Blog Posts
++
++Blog posts live at `content/blog/YYYY-MM-DD-slug.md` — one markdown file per post. The filename's date prefix and slug are the source of truth; there's no separate `date` field in frontmatter.
++
++Frontmatter schema:
++
++```yaml
++---
++title: "Post title"
++excerpt: "One-sentence summary — used in listing cards, the meta description, and the RSS feed."
++tags: ["Tag One", "Tag Two"]
++faq: # optional — omit if the post has no FAQ section
++  - q: "Question?"
++    a: "Answer."
++---
++```
++
++Guidelines:
++- Long-form and educational, ~800+ words minimum.
++- Structure the body with `##` headings — they auto-build the table of contents. Keep heading text plain (no bold/italic/inline code inside a `##` line) since headings are converted straight to HTML for anchor linking.
++- 2-5 tags; tags automatically populate the filter chips and search on `/blog`.
++- The `faq` block, if present, renders as a "Frequently asked questions" section on the post and adds `FAQPage` structured data — useful for answer-engine visibility.
++- Everything else (tag filters, search, RSS feed, sitemap entry, JSON-LD) is generated automatically from the file. No other file needs to change to publish a post.
++- Posts are statically generated, so a new file goes live on the next build/deploy, not instantly — run `npm run build` locally to confirm it compiles before pushing.
++
+diff --git a/app/blog/[slug]/page.tsx b/app/blog/[slug]/page.tsx
+new file mode 100644
+index 0000000..1f85ef0
+--- /dev/null
++++ b/app/blog/[slug]/page.tsx
+@@ -0,0 +1,243 @@
++import type { Metadata } from 'next';
++import Link from 'next/link';
++import { ChevronRight } from 'lucide-react';
++import { getAllPosts, getPostBySlug } from '../../../lib/blog';
++import { extractToc, tocHref, withHeadingAnchors } from '../../../lib/blogToc';
++import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
++import { Badge } from '../../../components/ui/Badge';
++
++export const dynamicParams = false;
++
++export async function generateStaticParams() {
++  return getAllPosts().map((post) => ({ slug: post.slug }));
++}
++
++export async function generateMetadata({
++  params,
++}: {
++  params: Promise<{ slug: string }>;
++}): Promise<Metadata> {
++  const { slug } = await params;
++  const post = getPostBySlug(slug);
++
++  if (!post) {
++    return { title: 'Not Found' };
++  }
++
++  const url = `https://allmcps.com/blog/${post.slug}`;
++
++  return {
++    title: post.title,
++    description: post.excerpt,
++    keywords: [...post.tags, 'MCP', 'Model Context Protocol'].join(', '),
++    alternates: {
++      canonical: url,
++    },
++    openGraph: {
++      title: `${post.title} | AllMCPs`,
++      description: post.excerpt,
++      url,
++      type: 'article',
++      publishedTime: `${post.date}T12:00:00.000Z`,
++    },
++    twitter: {
++      card: 'summary_large_image',
++      title: `${post.title} | AllMCPs`,
++      description: post.excerpt,
++    },
++  };
++}
++
++function formatDate(date: string): string {
++  return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
++    year: 'numeric',
++    month: 'long',
++    day: 'numeric',
++  });
++}
++
++export default async function BlogPostPage({
++  params,
++}: {
++  params: Promise<{ slug: string }>;
++}) {
++  const { slug } = await params;
++  const post = getPostBySlug(slug);
++
++  if (!post) {
++    return (
++      <main className="page-shell page-shell--status">
++        <div className="page-shell-inner">
++          <div className="surface page-panel">
++            <div className="empty-state">
++              <h1 className="empty-state-title">Post Not Found</h1>
++              <p className="empty-state-body">This blog post may have been moved or the URL is incorrect.</p>
++              <div className="empty-state-actions">
++                <Link href="/blog" className="btn btn-primary">
++                  ← Back to Blog
++                </Link>
++              </div>
++            </div>
++          </div>
++        </div>
++      </main>
++    );
++  }
++
++  const url = `https://allmcps.com/blog/${post.slug}`;
++  const toc = extractToc(post.content);
++  const contentWithAnchors = withHeadingAnchors(post.content);
++
++  const jsonLd = {
++    '@context': 'https://schema.org',
++    '@graph': [
++      {
++        '@type': 'BlogPosting',
++        headline: post.title,
++        description: post.excerpt,
++        url,
++        datePublished: post.date,
++        dateModified: post.date,
++        keywords: post.tags.join(', '),
++        author: {
++          '@type': 'Organization',
++          name: 'AllMCPs',
++          url: 'https://allmcps.com',
++        },
++        publisher: {
++          '@type': 'Organization',
++          name: 'AllMCPs',
++          url: 'https://allmcps.com',
++          logo: {
++            '@type': 'ImageObject',
++            url: 'https://allmcps.com/logo-icon.svg',
++          },
++        },
++        mainEntityOfPage: {
++          '@type': 'WebPage',
++          '@id': url,
++        },
++      },
++      {
++        '@type': 'BreadcrumbList',
++        itemListElement: [
++          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
++          { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://allmcps.com/blog' },
++          { '@type': 'ListItem', position: 3, name: post.title, item: url },
++        ],
++      },
++      ...(post.faq.length > 0
++        ? [
++            {
++              '@type': 'FAQPage',
++              mainEntity: post.faq.map((item) => ({
++                '@type': 'Question',
++                name: item.q,
++                acceptedAnswer: {
++                  '@type': 'Answer',
++                  text: item.a,
++                },
++              })),
++            },
++          ]
++        : []),
++    ],
++  };
++
++  return (
++    <>
++      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
++      <main className="page-shell page-shell--content">
++        <div className="page-shell-inner">
++          <nav aria-label="Breadcrumb">
++            <ol className="breadcrumb">
++              <li>
++                <Link href="/">Home</Link>
++              </li>
++              <li className="breadcrumb-separator">
++                <ChevronRight size={12} />
++              </li>
++              <li>
++                <Link href="/blog">Blog</Link>
++              </li>
++              <li className="breadcrumb-separator">
++                <ChevronRight size={12} />
++              </li>
++              <li className="breadcrumb-current">{post.title}</li>
++            </ol>
++          </nav>
++
++          <article className="surface page-panel" style={{ marginTop: '1.5rem' }}>
++            <header>
++              <h1 className="text-page-title">{post.title}</h1>
++              <div
++                style={{
++                  display: 'flex',
++                  gap: '0.75rem',
++                  alignItems: 'center',
++                  flexWrap: 'wrap',
++                  marginBottom: '1rem',
++                }}
++              >
++                <time dateTime={post.date} className="text-meta" style={{ fontWeight: 600 }}>
++                  {formatDate(post.date)}
++                </time>
++                <span className="text-meta">· {post.readingTime} min read</span>
++              </div>
++              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
++                {post.tags.map((tag) => (
++                  <Badge key={tag} variant="category">
++                    {tag}
++                  </Badge>
++                ))}
++              </div>
++            </header>
++
++            {toc.length > 1 && (
++              <nav
++                aria-label="Table of contents"
++                className="surface-muted"
++                style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem' }}
++              >
++                <p className="text-meta" style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
++                  On this page
++                </p>
++                <ol style={{ margin: 0, paddingLeft: '1.25rem' }}>
++                  {toc.map((entry) => (
++                    <li key={entry.slug} style={{ marginBottom: '0.35rem' }}>
++                      <a href={tocHref(entry.slug)}>{entry.text}</a>
++                    </li>
++                  ))}
++                </ol>
++              </nav>
++            )}
++
++            <div className="markdown-body">
++              <SafeMarkdown content={contentWithAnchors} />
++            </div>
++
++            {post.faq.length > 0 && (
++              <div style={{ marginTop: '2.5rem' }}>
++                <h2 className="text-section">Frequently asked questions</h2>
++                {post.faq.map((item) => (
++                  <div key={item.q} style={{ marginBottom: '1.5rem' }}>
++                    <h3 style={{ color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.4rem' }}>
++                      {item.q}
++                    </h3>
++                    <p style={{ color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{item.a}</p>
++                  </div>
++                ))}
++              </div>
++            )}
++          </article>
++
++          <div style={{ marginTop: '2rem' }}>
++            <Link href="/blog" className="btn btn-secondary">
++              ← Back to Blog
++            </Link>
++          </div>
++        </div>
++      </main>
++    </>
++  );
++}
+diff --git a/app/blog/page.tsx b/app/blog/page.tsx
+index 3d433f1..93a2361 100644
+--- a/app/blog/page.tsx
++++ b/app/blog/page.tsx
+@@ -1,96 +1,66 @@
+-import { Metadata } from 'next';
+-import Link from 'next/link';
++import type { Metadata } from 'next';
++import { getAllPosts, getAllTags } from '../../lib/blog';
++import { BlogListClient } from '../../components/BlogListClient';
++
++export const dynamic = 'force-static';
+ 
+ export const metadata: Metadata = {
+   title: 'Blog',
+-  description: 'News and updates from the AllMCPs team — MCP directory, agents, and launch notes.',
++  description: 'News, guides, and updates from the AllMCPs team — MCP directory, agent tooling, and launch notes.',
+   alternates: {
+     canonical: 'https://allmcps.com/blog',
++    types: {
++      'application/rss+xml': 'https://allmcps.com/blog/rss.xml',
++    },
+   },
+-};
+-
+-const POSTS = [
+-  {
+-    slug: 'launching-allmcps',
+-    title: 'Launching AllMCPs: a directory for MCP servers',
+-    date: '2026-07-27',
+-    excerpt:
+-      'AllMCPs is the open directory for discovering, installing, and verifying Model Context Protocol servers — with claim flows, website backlinks, and agent-friendly APIs.',
++  openGraph: {
++    title: 'Blog | AllMCPs',
++    description: 'News, guides, and updates from the AllMCPs team — MCP directory, agent tooling, and launch notes.',
++    url: 'https://allmcps.com/blog',
+   },
+-];
++};
+ 
+ export default function BlogPage() {
++  const posts = getAllPosts();
++  const tags = getAllTags();
++
++  const jsonLd = {
++    '@context': 'https://schema.org',
++    '@graph': [
++      {
++        '@type': 'Blog',
++        name: 'AllMCPs Blog',
++        url: 'https://allmcps.com/blog',
++        blogPost: posts.map((post) => ({
++          '@type': 'BlogPosting',
++          headline: post.title,
++          url: `https://allmcps.com/blog/${post.slug}`,
++          datePublished: post.date,
++        })),
++      },
++      {
++        '@type': 'BreadcrumbList',
++        itemListElement: [
++          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
++          { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://allmcps.com/blog' },
++        ],
++      },
++    ],
++  };
++
+   return (
+-    <main className="page-shell page-shell--content">
+-      <div className="page-shell-inner">
+-        <header className="page-header">
+-          <h1 className="text-page-title">Blog</h1>
+-          <p className="text-lead">Notes on MCP, agents, and the AllMCPs directory.</p>
+-        </header>
++    <>
++      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
++      <main className="page-shell page-shell--content">
++        <div className="page-shell-inner">
++          <header className="page-header">
++            <h1 className="text-page-title">Blog</h1>
++            <p className="text-lead">Notes on MCP, agents, and the AllMCPs directory.</p>
++          </header>
+ 
+-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+-          {POSTS.map((post) => (
+-            <article key={post.slug} className="surface" style={{ padding: '1.75rem' }}>
+-              <time dateTime={post.date} className="text-meta" style={{ fontWeight: 600 }}>
+-                {new Date(post.date + 'T12:00:00').toLocaleDateString('en-US', {
+-                  year: 'numeric',
+-                  month: 'long',
+-                  day: 'numeric',
+-                })}
+-              </time>
+-              <h2 className="text-section" style={{ margin: '0.5rem 0 0.75rem' }}>
+-                <Link href={`/blog#${post.slug}`}>{post.title}</Link>
+-              </h2>
+-              <p style={{ margin: 0, lineHeight: 1.65 }}>{post.excerpt}</p>
+-            </article>
+-          ))}
++          <BlogListClient posts={posts} tags={tags} />
+         </div>
+-
+-        <article
+-          id="launching-allmcps"
+-          className="surface page-panel"
+-          style={{ marginTop: '2.5rem' }}
+-        >
+-          <h2 className="text-section">Launching AllMCPs</h2>
+-          <div className="markdown-body">
+-            <p>
+-              Model Context Protocol (MCP) is how AI agents connect to tools, data, and APIs. The ecosystem already
+-              has thousands of servers — but discovery is scattered across repos, READMEs, and word of mouth.
+-            </p>
+-            <p>
+-              <strong style={{ color: 'var(--text-primary)' }}>AllMCPs</strong> is the directory we wanted: browse
+-              and search by category, copy install prompts for agents, and ship a clean detail page for every listing.
+-            </p>
+-            <h3 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', marginTop: '1.5rem' }}>
+-              What you can do today
+-            </h3>
+-            <ul>
+-              <li>
+-                <Link href="/browse" style={{ color: 'var(--accent-color)' }}>
+-                  Browse
+-                </Link>{' '}
+-                the catalog with list/grid views, search, and filters (including Verified).
+-              </li>
+-              <li>
+-                Open any listing for install configs, agent prompts, and README content when available.
+-              </li>
+-              <li>
+-                <Link href="/submit" style={{ color: 'var(--accent-color)' }}>
+-                  Submit
+-                </Link>{' '}
+-                your own MCP server and claim ownership after approval.
+-              </li>
+-            </ul>
+-            <p>
+-              Built by{' '}
+-              <a href="https://jackalope.digital" target="_blank" rel="noopener noreferrer">
+-                Jackalope Digital
+-              </a>
+-              . Give your AI agents superpowers.
+-            </p>
+-          </div>
+-        </article>
+-      </div>
+-    </main>
++      </main>
++    </>
+   );
+ }
+diff --git a/app/blog/rss.xml/route.ts b/app/blog/rss.xml/route.ts
+new file mode 100644
+index 0000000..8d2b442
+--- /dev/null
++++ b/app/blog/rss.xml/route.ts
+@@ -0,0 +1,47 @@
++import { getAllPosts } from '../../../lib/blog';
++
++export const dynamic = 'force-static';
++
++function escapeXml(value: string): string {
++  return value
++    .replace(/&/g, '&amp;')
++    .replace(/</g, '&lt;')
++    .replace(/>/g, '&gt;')
++    .replace(/"/g, '&quot;')
++    .replace(/'/g, '&apos;');
++}
++
++export async function GET() {
++  const posts = getAllPosts();
++  const siteUrl = 'https://allmcps.com';
++
++  const items = posts
++    .map((post) => {
++      const url = `${siteUrl}/blog/${post.slug}`;
++      const pubDate = new Date(`${post.date}T12:00:00.000Z`).toUTCString();
++      return `    <item>
++      <title>${escapeXml(post.title)}</title>
++      <link>${url}</link>
++      <guid>${url}</guid>
++      <pubDate>${pubDate}</pubDate>
++      <description>${escapeXml(post.excerpt)}</description>
++    </item>`;
++    })
++    .join('\n');
++
++  const xml = `<?xml version="1.0" encoding="UTF-8" ?>
++<rss version="2.0">
++<channel>
++  <title>AllMCPs Blog</title>
++  <link>${siteUrl}/blog</link>
++  <description>News, guides, and updates from the AllMCPs team — MCP directory, agent tooling, and launch notes.</description>
++${items}
++</channel>
++</rss>`;
++
++  return new Response(xml, {
++    headers: {
++      'Content-Type': 'application/rss+xml; charset=utf-8',
++    },
++  });
++}
+diff --git a/app/sitemap.ts b/app/sitemap.ts
+index d5ee2b5..e487e80 100644
+--- a/app/sitemap.ts
++++ b/app/sitemap.ts
+@@ -1,103 +1,159 @@
+ import { MetadataRoute } from 'next';
+ import { drizzle } from 'drizzle-orm/d1';
+ import { servers as serversTable } from '../db/schema';
+ import { eq } from 'drizzle-orm';
+ import serversData from '../data/mcp-servers.json';
++import { getAllPosts } from '../lib/blog';
++
++/**
++ * Safely parses and normalizes any date input into a valid Date object.
++ * Handles Date objects, Unix timestamps (seconds or ms), ISO strings,
++ * SQLite datetime strings ("YYYY-MM-DD HH:MM:SS"), null, undefined,
++ * or invalid strings, always returning a valid Date instance.
++ */
++function safeDate(val: unknown): Date {
++  if (!val) return new Date();
++
++  if (val instanceof Date) {
++    return isNaN(val.getTime()) ? new Date() : val;
++  }
++
++  if (typeof val === 'number') {
++    if (isNaN(val) || val <= 0) return new Date();
++    // If 10-digit Unix timestamp in seconds (< 10_000_000_000), convert to ms
++    const ms = val < 10000000000 ? val * 1000 : val;
++    const d = new Date(ms);
++    return isNaN(d.getTime()) ? new Date() : d;
++  }
++
++  if (typeof val === 'string') {
++    let str = val.trim();
++    if (!str || str === 'null' || str === 'undefined') return new Date();
++    // Normalize SQLite format "YYYY-MM-DD HH:MM:SS" to ISO "YYYY-MM-DDTHH:MM:SSZ"
++    if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/.test(str)) {
++      str = str.replace(' ', 'T') + 'Z';
++    }
++    const d = new Date(str);
++    return isNaN(d.getTime()) ? new Date() : d;
++  }
++
++  return new Date();
++}
+ 
+ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+   const baseUrl = 'https://allmcps.com';
+   
+   let servers = serversData as any[];
+   
+   try {
+     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+     const ctx = await getCloudflareContext({ async: true });
+     if (ctx && ctx.env && (ctx.env as any).DB) {
+       const db = drizzle((ctx.env as any).DB);
+       const dbServers = await db.select().from(serversTable).where(eq(serversTable.status, 'active'));
+       if (dbServers.length > 0) {
+         servers = dbServers;
+       }
+     }
+   } catch (e) {
+     console.error("Failed to fetch D1 for sitemap", e);
+   }
+ 
+   const sitemapEntries: MetadataRoute.Sitemap = [
+     {
+       url: baseUrl,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'hourly',
+       priority: 1,
+     },
+     {
+       url: `${baseUrl}/browse`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'hourly',
+       priority: 0.95,
+     },
+     {
+       url: `${baseUrl}/categories`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'daily',
+       priority: 0.9,
+     },
+     {
+       url: `${baseUrl}/about`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'monthly',
+       priority: 0.8,
+     },
+     {
+       url: `${baseUrl}/blog`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'weekly',
+       priority: 0.8,
+     },
+     {
+       url: `${baseUrl}/contact`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'monthly',
+       priority: 0.6,
+     },
+     {
+       url: `${baseUrl}/submit`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'weekly',
+       priority: 0.8,
+     },
+     {
+       url: `${baseUrl}/terms`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'yearly',
+       priority: 0.3,
+     },
+     {
+       url: `${baseUrl}/privacy`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'yearly',
+       priority: 0.3,
+     },
+     {
+       url: `${baseUrl}/what-is-mcp`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'monthly',
+       priority: 0.9,
+     },
+     {
+       url: `${baseUrl}/guide`,
+-      lastModified: new Date(),
++      lastModified: safeDate(new Date()),
++      changeFrequency: 'monthly',
++      priority: 0.9,
++    },
++    {
++      url: `${baseUrl}/build-mcp-server`,
++      lastModified: safeDate(new Date()),
+       changeFrequency: 'monthly',
+       priority: 0.9,
+     }
+   ];
+ 
++  let blogEntries: MetadataRoute.Sitemap = [];
++  try {
++    const posts = getAllPosts();
++    blogEntries = posts.map((post) => ({
++      url: `${baseUrl}/blog/${post.slug}`,
++      lastModified: safeDate(post.date ? `${post.date}T12:00:00.000Z` : undefined),
++      changeFrequency: 'monthly' as const,
++      priority: 0.6,
++    }));
++  } catch (e) {
++    console.error('Failed to read blog posts for sitemap', e);
++  }
++
+   const serverEntries = servers.map((server) => ({
+     url: `${baseUrl}/mcp/${server.id}`,
+-    lastModified: server.lastCheckedAt ? new Date(server.lastCheckedAt) : new Date(server.createdAt || new Date()),
++    lastModified: safeDate(server.lastCheckedAt || server.createdAt || server.created_at),
+     changeFrequency: 'daily' as const,
+     priority: 0.7,
+   }));
+ 
+-  return [...sitemapEntries, ...serverEntries];
++  return [...sitemapEntries, ...blogEntries, ...serverEntries];
+ }
++
+diff --git a/components/BlogListClient.tsx b/components/BlogListClient.tsx
+new file mode 100644
+index 0000000..1e7dd28
+--- /dev/null
++++ b/components/BlogListClient.tsx
+@@ -0,0 +1,101 @@
++'use client';
++
++import { useMemo, useState } from 'react';
++import Link from 'next/link';
++import { Badge } from './ui/Badge';
++import { Input } from './ui/Input';
++import type { BlogPost } from '../lib/blog';
++
++function formatDate(date: string): string {
++  return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
++    year: 'numeric',
++    month: 'long',
++    day: 'numeric',
++  });
++}
++
++export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: string[] }) {
++  const [query, setQuery] = useState('');
++  const [activeTag, setActiveTag] = useState<string | null>(null);
++
++  const filtered = useMemo(() => {
++    const q = query.trim().toLowerCase();
++    return posts.filter((post) => {
++      const matchesQuery =
++        !q ||
++        post.title.toLowerCase().includes(q) ||
++        post.excerpt.toLowerCase().includes(q) ||
++        post.tags.some((tag) => tag.toLowerCase().includes(q));
++      const matchesTag = !activeTag || post.tags.includes(activeTag);
++      return matchesQuery && matchesTag;
++    });
++  }, [posts, query, activeTag]);
++
++  return (
++    <>
++      <div className="directory-filters" style={{ marginBottom: '2rem' }}>
++        <div className="directory-filters-row">
++          <Input
++            type="text"
++            placeholder="Search posts..."
++            value={query}
++            onChange={(e) => setQuery(e.target.value)}
++            aria-label="Search blog posts"
++            style={{ flexGrow: 1, flexBasis: '280px', margin: 0, minWidth: 0 }}
++          />
++        </div>
++
++        {tags.length > 0 && (
++          <div className="directory-tags-row">
++            {tags.map((tag) => (
++              <button
++                key={tag}
++                type="button"
++                className={`directory-tag ${activeTag === tag ? 'directory-tag-active' : ''}`}
++                aria-pressed={activeTag === tag}
++                onClick={() => setActiveTag((current) => (current === tag ? null : tag))}
++              >
++                {tag}
++              </button>
++            ))}
++          </div>
++        )}
++      </div>
++
++      {filtered.length === 0 ? (
++        <div className="surface" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
++          No posts match your search or filters.
++        </div>
++      ) : (
++        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
++          {filtered.map((post) => (
++            <Link
++              key={post.slug}
++              href={`/blog/${post.slug}`}
++              className="surface surface-interactive"
++              style={{ padding: '1.75rem', display: 'block' }}
++            >
++              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
++                <time dateTime={post.date} className="text-meta" style={{ fontWeight: 600 }}>
++                  {formatDate(post.date)}
++                </time>
++                <span className="text-meta">· {post.readingTime} min read</span>
++              </div>
++              <h2 className="text-section" style={{ margin: '0.5rem 0 0.75rem' }}>
++                {post.title}
++              </h2>
++              <p style={{ margin: '0 0 1rem', lineHeight: 1.65, color: 'var(--text-secondary)' }}>{post.excerpt}</p>
++              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
++                {post.tags.map((tag) => (
++                  <Badge key={tag} variant="category">
++                    {tag}
++                  </Badge>
++                ))}
++              </div>
++            </Link>
++          ))}
++        </div>
++      )}
++    </>
++  );
++}
+diff --git a/content/blog/2026-07-27-launching-allmcps.md b/content/blog/2026-07-27-launching-allmcps.md
+new file mode 100644
+index 0000000..339bdad
+--- /dev/null
++++ b/content/blog/2026-07-27-launching-allmcps.md
+@@ -0,0 +1,71 @@
++---
++title: "Launching AllMCPs: A Directory for Model Context Protocol Servers"
++excerpt: "Why MCP server discovery is broken, how AllMCPs fixes it, and a practical guide to evaluating, installing, and claiming servers in the directory."
++tags: ["MCP", "Announcements"]
++faq:
++  - q: "Do I need to pay to list my MCP server on AllMCPs?"
++    a: "No. Submitting and listing a server is free. Claiming ownership and unlocking premium placement are optional upgrades on top of a free listing."
++  - q: "How does a listing become Verified?"
++    a: "A listing is marked Verified once its owner claims it by proving control of the linked GitHub repository or website — either with a DNS TXT record or a small badge/verification file — or by holding an active premium subscription."
++  - q: "Does AllMCPs only work with Claude Desktop?"
++    a: "No. Any MCP-compatible client that reads a standard mcpServers configuration block — including Claude Desktop, Claude Code, and other MCP hosts — can use the install snippets on AllMCPs listings."
++  - q: "How often is the directory updated?"
++    a: "New submissions go live after a quick review, and existing listings are re-checked on a recurring schedule, so broken or archived servers surface with an accurate health status instead of silently going stale."
++---
++
++> **TL;DR:** MCP (Model Context Protocol) is the open standard that lets AI agents call real tools instead of guessing. The ecosystem already has thousands of servers, but they're scattered across GitHub repos and READMEs with no common way to search, compare, or verify them. AllMCPs is the directory that fixes that — browse and search by category, copy a ready-to-paste install config for your agent, and claim your own server once it's listed. This post covers what MCP actually is, how to evaluate a server before installing it, and how the directory works end to end.
++
++## What MCP is, and why finding a good server is harder than it should be
++
++Model Context Protocol is an open protocol for connecting AI applications to the outside world. Instead of every AI app inventing its own bespoke way to talk to a database, a filesystem, a ticketing system, or an internal company API, MCP defines one standard interface. An AI application (the "host" — Claude Desktop, Claude Code, an IDE extension, or any other MCP-compatible client) talks to small, focused processes called MCP servers. Each server exposes a set of tools, resources, and prompts over a simple JSON-RPC based protocol, and the host decides when to call them on the model's behalf.
++
++The practical effect is that instead of N applications each writing M custom integrations, you get N applications and M servers that all speak the same language. It's often described as a USB-C port for AI applications — one physical interface, many devices on either end.
++
++Because the protocol is simple and open, the number of available servers exploded within months of release: servers for relational databases, browsers, filesystems, project management tools, CI pipelines, and countless internal APIs. That growth is good for choice and bad for discovery. Servers live scattered across individual GitHub repositories with wildly inconsistent README quality, there's no shared place to compare two servers that claim to do the same job, and there's no easy way to check whether a project is still maintained or whether it's safe to run arbitrary code from it on your machine before you wire it into an agent that can act on your behalf.
++
++## What AllMCPs actually does
++
++AllMCPs is a directory built specifically for this problem, not a general software catalog with MCP support bolted on.
++
++- [Browse](/browse) by category or search across every listing's name and description.
++- Every listing page pulls the live README straight from GitHub and shows the exact install snippet your agent needs — no digging through a repo to find the right JSON block.
++- Listings carry badges that tell you at a glance what you're looking at: Official for first-party servers, Verified for listings whose owner has proven control of the linked repo or site, and Featured for promoted placements — so everything doesn't look identical.
++- Basic health and popularity signals — views, install/copy counts, and upvotes — give you a rough read on whether a server is actually used and whether its source still resolves.
++- An agent-friendly "copy prompt" button generates a ready-to-paste install instruction, so a coding agent can wire up a new MCP server itself instead of a human hand-copying JSON into a config file.
++
++## How to evaluate an MCP server before you install it
++
++An MCP server isn't a passive dependency — depending on what it exposes, it can read your filesystem, hit the network, or take actions against a live account on your behalf. A few minutes of evaluation up front is worth it:
++
++- **Source.** Is this an official server from the tool's own maintainers, or a community implementation? Both can be fine, but they carry different trust assumptions.
++- **Maintenance.** When was it last updated? An MCP server that hasn't been touched since the protocol changed underneath it is a liability, not a convenience.
++- **Scope requested.** Read the tool list before you install. A filesystem server that only needs read access to one directory is a very different risk profile from one that can write anywhere on disk.
++- **Transport.** Local servers run as a subprocess on your machine (stdio); remote servers run somewhere else and you're trusting that operator's infrastructure too. Know which one you're installing.
++- **Verification status.** A Verified badge means the listed owner has proven they control the linked repository or site — it's not a security audit, but it does rule out a large class of impersonation.
++- **Popularity signals.** Views, installs, and upvotes on AllMCPs are a rough proxy for "other people use this and it didn't immediately break," not a guarantee — treat them as one input, not the whole decision.
++
++Treat every MCP server the way you'd treat any third-party dependency that gets real access to your system: read what it actually does before you grant it the ability to do it.
++
++## Installing your first MCP server
++
++Once you've picked a server on AllMCPs, installing it is usually a three-step process:
++
++1. Open the listing and copy the install block — most servers on the directory run via `npx`, so there's nothing to separately download or build.
++2. Paste it into your MCP client's configuration. For Claude Desktop, that's the `mcpServers` object in `claude_desktop_config.json`; other MCP hosts use the same shape with a different file location.
++3. Restart the client and confirm the new tools show up in its tool list.
++
++If you're driving this from an agent rather than doing it by hand, the "copy agent prompt" button on each listing produces an instruction an agent can act on directly — describe the goal, hand it the prompt, and let it edit the config file itself.
++
++## Claiming and verifying your own server
++
++If you maintain a server that's listed on AllMCPs — or you're submitting a new one — you can claim it once it's live. Claiming works like most domain-ownership checks: prove you control the linked GitHub repository or website, either by adding a DNS TXT record or by hosting a small verification badge file, and the listing flips to Verified.
++
++Once claimed, you can edit your own listing's details directly, and verified listings get a reciprocal dofollow link back to the project's own site — a real trust signal for people browsing the directory, and a modest SEO benefit for the project itself.
++
++If you haven't listed your server yet, start with [Submit](/submit); if it's already in the directory, open its page and look for the claim flow.
++
++## What's next for AllMCPs
++
++This blog is where directory updates, MCP ecosystem notes, and practical guides for installing and evaluating servers will live going forward. If you want the deeper background on the protocol itself, [What is MCP](/what-is-mcp) and the [Guide](/guide) cover that in more depth than a launch post can. And if there's a server you use that isn't listed yet, [submit it](/submit) — that's how the directory grows.
++
++Built by [Jackalope Digital](https://jackalope.digital). Give your AI agents superpowers.
+diff --git a/lib/blog.ts b/lib/blog.ts
+new file mode 100644
+index 0000000..0bb9998
+--- /dev/null
++++ b/lib/blog.ts
+@@ -0,0 +1,70 @@
++import fs from 'fs';
++import path from 'path';
++import matter from 'gray-matter';
++
++const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
++const FILENAME_PATTERN = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/;
++
++export type BlogFaq = {
++  q: string;
++  a: string;
++};
++
++export type BlogPost = {
++  slug: string;
++  title: string;
++  date: string;
++  excerpt: string;
++  tags: string[];
++  faq: BlogFaq[];
++  readingTime: number;
++  content: string;
++};
++
++function readPostFile(filename: string): BlogPost {
++  const match = filename.match(FILENAME_PATTERN);
++  if (!match) {
++    throw new Error(`Blog post filename "${filename}" must match YYYY-MM-DD-slug.md`);
++  }
++  const [, date, slug] = match;
++
++  const raw = fs.readFileSync(path.join(BLOG_DIR, filename), 'utf8');
++  const { data, content } = matter(raw);
++
++  if (!data.title || !data.excerpt) {
++    throw new Error(`Blog post "${filename}" is missing required frontmatter (title, excerpt)`);
++  }
++
++  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
++
++  return {
++    slug,
++    title: data.title as string,
++    date,
++    excerpt: data.excerpt as string,
++    tags: Array.isArray(data.tags) ? (data.tags as string[]) : [],
++    faq: Array.isArray(data.faq) ? (data.faq as BlogFaq[]) : [],
++    readingTime: Math.max(1, Math.ceil(wordCount / 200)),
++    content: content.trim(),
++  };
++}
++
++export function getAllPosts(): BlogPost[] {
++  if (!fs.existsSync(BLOG_DIR)) {
++    return [];
++  }
++  const filenames = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'));
++  return filenames.map(readPostFile).sort((a, b) => (a.date < b.date ? 1 : -1));
++}
++
++export function getPostBySlug(slug: string): BlogPost | undefined {
++  return getAllPosts().find((post) => post.slug === slug);
++}
++
++export function getAllTags(): string[] {
++  const tags = new Set<string>();
++  for (const post of getAllPosts()) {
++    for (const tag of post.tags) tags.add(tag);
++  }
++  return Array.from(tags).sort();
++}
+diff --git a/lib/blogToc.ts b/lib/blogToc.ts
+new file mode 100644
+index 0000000..74c1be7
+--- /dev/null
++++ b/lib/blogToc.ts
+@@ -0,0 +1,46 @@
++export type TocEntry = {
++  text: string;
++  slug: string;
++};
++
++const HEADING_PATTERN = /^##\s+(.+)$/gm;
++const USER_CONTENT_PREFIX = 'user-content-';
++
++function slugify(text: string): string {
++  return text
++    .toLowerCase()
++    .trim()
++    .replace(/[^a-z0-9\s-]/g, '')
++    .replace(/\s+/g, '-')
++    .replace(/-+/g, '-');
++}
++
++export function extractToc(content: string): TocEntry[] {
++  const entries: TocEntry[] = [];
++  const seen = new Map<string, number>();
++  for (const match of content.matchAll(HEADING_PATTERN)) {
++    const text = match[1].trim();
++    let slug = slugify(text);
++    const count = seen.get(slug) || 0;
++    seen.set(slug, count + 1);
++    if (count > 0) slug = `${slug}-${count}`;
++    entries.push({ text, slug });
++  }
++  return entries;
++}
++
++export function withHeadingAnchors(content: string): string {
++  const seen = new Map<string, number>();
++  return content.replace(HEADING_PATTERN, (_full, rawText: string) => {
++    const text = rawText.trim();
++    let slug = slugify(text);
++    const count = seen.get(slug) || 0;
++    seen.set(slug, count + 1);
++    if (count > 0) slug = `${slug}-${count}`;
++    return `<h2 id="${slug}">${text}</h2>`;
++  });
++}
++
++export function tocHref(slug: string): string {
++  return `#${USER_CONTENT_PREFIX}${slug}`;
++}

@@ -20,7 +20,7 @@
     { "pattern": "allmcps.com", "custom_domain": true }
   ],
   "triggers": {
-    "crons": ["0 */6 * * *"]
+    "crons": ["0 */4 * * *"]
   },
   "d1_databases": [
     {

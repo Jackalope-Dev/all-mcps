@@ -15,16 +15,16 @@ jobs:
           curl -f -X POST https://allmcps.com/api/cron/health \
           -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}"
 
-      - name: Ping Twitter Highlight API (4x daily at 00, 06, 12, 18 UTC)
+      - name: Ping Twitter Highlight API (6x daily at 00, 04, 08, 12, 16, 20 UTC)
         run: |
           HOUR=$(date -u +%H)
           MIN=$(date -u +%M)
-          # Execute on manual trigger OR at 00:00, 06:00, 12:00, 18:00 UTC (first 15 min window)
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ $((10#$HOUR % 6)) -eq 0 -a $((10#$MIN)) -lt 15 ]; then
-            echo "Triggering 4x daily Twitter Highlight Post..."
+          # Execute on manual trigger OR every 4 hours (00, 04, 08, 12, 16, 20 UTC in first 15 min window)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ $((10#$HOUR % 4)) -eq 0 -a $((10#$MIN)) -lt 15 ]; then
+            echo "Triggering 6x daily Twitter Highlight Post..."
             curl -f -X POST https://allmcps.com/api/cron/highlight \
             -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}"
           else
-            echo "Skipping Twitter Highlight (runs at 00:00, 06:00, 12:00, 18:00 UTC)"
+            echo "Skipping Twitter Highlight (runs at 00, 04, 08, 12, 16, 20 UTC)"
           fi
 
