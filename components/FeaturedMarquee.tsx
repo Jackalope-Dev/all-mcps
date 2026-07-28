@@ -13,12 +13,14 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
   // If we don't have enough servers to scroll seamlessly, duplicate them
   const displayServers = [...servers, ...servers, ...servers].slice(0, 20);
 
-  const MarqueeItems = () => (
+  const MarqueeItems = ({ isDuplicate = false }: { isDuplicate?: boolean }) => (
     <>
       {displayServers.map((server, i) => (
         <Link 
           key={`${server.id}-${i}`} 
           href={`/mcp/${server.id}`}
+          tabIndex={isDuplicate ? -1 : undefined}
+          aria-hidden={isDuplicate ? true : undefined}
           className="surface"
           style={{ 
             display: 'flex', 
@@ -46,7 +48,7 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
         <MarqueeItems />
       </div>
       <div className="marquee-content" aria-hidden="true">
-        <MarqueeItems />
+        <MarqueeItems isDuplicate />
       </div>
     </div>
   );

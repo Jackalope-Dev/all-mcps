@@ -151,7 +151,7 @@ export function ToastProvider() {
   if (!mounted || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="toast-viewport" aria-label="Notifications">
+    <div className="toast-viewport" role="region" aria-label="Notifications">
       {items.map((item) => (
         <ToastCard key={item.id} item={item} onDismiss={onDismiss} />
       ))}
