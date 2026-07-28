@@ -1322,12 +1322,18 @@ git commit -m "Recheck reciprocal badge presence in the health cron"
 
 ## Task 10: Remote migration and end-to-end smoke test
 
-**Files:** none (operational task — applies Task 1's migration to the live database and runs the spec's full manual test checklist).
+**Status: deferred to the user.** Tasks 1–9 are implemented, type-check (`npx tsc --noEmit`) and
+`npx next build` are clean. This task touches the remote/production D1 database and deploys —
+explicitly held back for the repo owner to run rather than executed autonomously.
 
-- [ ] **Step 1: Apply the migration to the remote D1 database**
+**Files:** none (operational task — applies migrations `0008`/`0009` to the live database and runs
+the full manual test checklist below).
+
+- [ ] **Step 1: Apply the migrations to the remote D1 database**
 
 Run: `npx wrangler d1 migrations apply all-mcps --remote`
-Expected: reports `0008_claim_ownership` applied (alongside any other already-applied migrations, which will no-op).
+Expected: reports `0008_claim_ownership` and `0009_pending_claim` applied (alongside any other
+already-applied migrations, which will no-op).
 
 - [ ] **Step 2: Deploy**
 
@@ -1337,14 +1343,29 @@ Run: `npm run deploy`
 
 Against the deployed site (`https://allmcps.com`), walk through, in order:
 
-1. Claim a listing as user A (real magic-link email round trip) → `/dashboard` shows the listing.
-2. Submit an edit → `/admin` shows a correct before/after diff → Approve → live fields update and A receives the approval email.
-3. Submit a second edit → Reject → `pendingRevision` clears and A receives the rejection email.
-4. Sign in as user B (different email) → re-prove control of the same listing (GitHub README / badge / DNS) → confirm `ownerUserId` reassigns to B (B now sees it on their `/dashboard`, A no longer does).
-5. As B, edit `websiteUrl` via the dashboard → after admin approval, confirm the website link shows `nofollow` until re-verified via DNS/badge.
-6. Remove the reciprocal badge from a live claimed site → after the next `cron/health` run (or a manual trigger), confirm the website link reverts to `nofollow`.
+1. Claim a listing as user A via GitHub README (real magic-link email round trip) → auto-approved
+   immediately → `/dashboard` shows the listing.
+2. Claim a *different*, unclaimed listing via DNS/website badge against a website that's new to
+   that listing (not already on file) → verification succeeds but ownership is **not** granted
+   immediately → listing shows up under `/admin`'s "Pending claims" → Approve → `ownerUserId`/
+   `isOfficial`/`websiteUrl`/`websiteVerified` now set, claimant emailed.
+3. Repeat with Reject instead → pending columns clear, nothing granted, claimant emailed.
+4. Claim a listing via DNS/website badge against a website that **was already** on file for that
+   listing → auto-approved immediately, no admin step.
+5. Submit an edit from `/dashboard` → `/admin` shows a correct before/after diff → Approve → live
+   fields update and the owner receives the approval email.
+6. Submit a second edit → Reject → `pendingRevision` clears and the owner receives the rejection
+   email with feedback.
+7. Sign in as user B (different email) → re-prove control of the same listing (GitHub README /
+   badge / DNS) → confirm `ownerUserId` reassigns to B (B now sees it on their `/dashboard`, A no
+   longer does).
+8. As B, edit `websiteUrl` via the dashboard → after admin approval, confirm the website link shows
+   `nofollow` until re-verified via DNS/badge.
+9. Remove the reciprocal badge from a live claimed site → after the next `cron/health` run (or a
+   manual trigger), confirm the website link reverts to `nofollow`.
 
 - [ ] **Step 4: Confirm nothing else regressed**
 
 Run: `npx next build`
-Expected: builds cleanly (no new errors).
+Expected: builds cleanly (no new errors) — already confirmed during implementation as of this
+session; re-run after any further local changes before deploying.
