@@ -14,6 +14,10 @@ const sans = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
+  // Next's bundled capsize metrics don't include this font yet, so the
+  // automatic fallback-metric calculation always fails; disable it to
+  // silence the "Failed to find font override values" build error.
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
