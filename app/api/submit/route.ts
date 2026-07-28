@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     
     // 2. Connect to Cloudflare D1
-    const { env } = getCloudflareContext<Env>();
+    const { env } = getCloudflareContext() as unknown as { env: Env };
     if (!env.DB) {
       throw new Error("Database binding not found");
     }

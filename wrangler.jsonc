@@ -13,5 +13,13 @@
   },
   "routes": [
     { "pattern": "allmcps.com", "custom_domain": true }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "all-mcps",
+      "database_id": "c0e237c4-fa3c-45f0-8400-b2dd44615f94",
+      "migrations_dir": "drizzle"
+    }
   ]
 }
