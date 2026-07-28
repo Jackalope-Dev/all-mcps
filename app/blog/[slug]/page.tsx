@@ -6,6 +6,7 @@ import { extractToc, tocHref, withHeadingAnchors } from '../../../lib/blogToc';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { Badge } from '../../../components/ui/Badge';
 
+export const dynamic = 'force-static';
 export const dynamicParams = false;
 
 export async function generateStaticParams() {

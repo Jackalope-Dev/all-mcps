@@ -4,6 +4,7 @@
  */
 
 const SEQUENZY_SUBSCRIBERS_URL = 'https://api.sequenzy.com/api/v1/subscribers';
+const SEQUENZY_FETCH_TIMEOUT_MS = 5000;
 
 /** AllMCPs company, "Product Subscribers" list. */
 export const PRODUCT_SUBSCRIBERS_LIST_ID = 'x8r0du7z66k34tdyuwnsvxwt';
@@ -16,6 +17,13 @@ export type SequenzySubscriberSync = {
   tags: string[];
   lists?: string[];
   customAttributes?: Record<string, string>;
+  /**
+   * Only a submit-flow opt-in should enroll into sequences. A purchase-tagging call
+   * must not request it: Sequenzy's native Stripe integration applies the `customer`
+   * suppression tag asynchronously, and a fresh purchaser enrolled before that lands
+   * could get an "you never paid" sequence. Defaults to false.
+   */
+  enrollInSequences?: boolean;
 };
 
 /**
@@ -38,17 +46,27 @@ export async function syncSequenzySubscriber(input: SequenzySubscriberSync): Pro
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: input.email,
+        // Normalized once here so the submit-flow and webhook call sites can never
+        // create two subscribers for the same person over a case/whitespace mismatch
+        // — which would defeat duplicateStrategy: 'merge' and drop the paid-* tag.
+        email: input.email.trim().toLowerCase(),
         tags: input.tags,
         lists: input.lists,
         customAttributes: input.customAttributes,
         duplicateStrategy: 'merge',
-        enrollInSequences: true,
+        enrollInSequences: input.enrollInSequences ?? false,
       }),
+      // Outbound fetches from Workers occasionally hang well past what's reasonable
+      // (same rationale as lib/stripe.ts) — this call sits on the Stripe webhook's
+      // critical path, and an unbounded hang there risks a Stripe retry that
+      // re-applies a non-idempotent entitlement (e.g. another 7 days of Featured).
+      signal: AbortSignal.timeout(SEQUENZY_FETCH_TIMEOUT_MS),
     });
 
     if (!res.ok) {
-      console.error('Sequenzy subscriber sync failed', res.status, await res.text());
+      // Don't log the response body — Sequenzy validation errors commonly echo the
+      // submitted email, and this app doesn't put PII in log retention anywhere else.
+      console.error('Sequenzy subscriber sync failed', res.status);
     }
   } catch (e) {
     console.error('Sequenzy subscriber sync error', e);

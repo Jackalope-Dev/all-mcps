@@ -10,6 +10,16 @@ Do **not** commit this key. It's created via the Sequenzy dashboard or MCP `crea
 tool, scoped to `data_ingest_safe` (create/tag subscribers only — this key ships in a
 publicly-deployed Worker's server-side code, never the client bundle).
 
+Production also needs this secret set on the deployed Worker (same mechanism as
+`STRIPE_SECRET_KEY` — see `docs/STRIPE_SETUP.md`'s "Secrets (Workers / local)" section):
+
+```bash
+npx wrangler secret put SEQUENZY_API_KEY
+```
+
+Until this is set, every submission and Stripe checkout logs a `console.warn` and the sync
+silently no-ops — submissions and webhooks still succeed either way, but no one gets synced.
+
 ## What syncs where
 
 - `POST /api/submit` — every submitter is added to the "Product Subscribers" list

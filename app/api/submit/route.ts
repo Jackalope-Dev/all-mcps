@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error.issues }, { status: 400 });
     }
 
-    const email = result.data.email;
+    const email = result.data.email.trim().toLowerCase();
     let websiteUrl = result.data.websiteUrl || '';
     let name = result.data.name || '';
     let description = result.data.description || '';
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
 
     const db = drizzle(env.DB as any);
 
-    await db
+    const insertResult = await db
       .insert(servers)
       .values({
         id,
@@ -146,13 +146,24 @@ export async function POST(req: Request) {
         status: 'pending',
         createdAt: new Date(),
       })
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning({ id: servers.id });
+
+    if (insertResult.length === 0) {
+      // Slug collision: another listing already has this id. Nothing was written, so
+      // don't sync Sequenzy — the customAttributes would point at someone else's listing.
+      return NextResponse.json(
+        { error: 'A listing with a matching name already exists. Please contact us if this is unexpected.' },
+        { status: 409 }
+      );
+    }
 
     await syncSequenzySubscriber({
       email,
       tags: ['submitted-listing'],
       lists: [PRODUCT_SUBSCRIBERS_LIST_ID],
       customAttributes: { serverId: id, serverName: name },
+      enrollInSequences: true,
     });
 
     return NextResponse.json({

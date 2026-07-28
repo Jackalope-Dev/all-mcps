@@ -43,6 +43,7 @@ export async function POST(req: Request) {
       tags: ['newsletter-signup'],
       lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
       customAttributes: { source },
+      enrollInSequences: true,
     });
 
     return NextResponse.json({ success: true });
