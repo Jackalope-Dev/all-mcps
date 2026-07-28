@@ -1,9 +1,0 @@
-name = "all-mcps"
-compatibility_date = "2024-03-20"
-pages_build_output_dir = ".vercel/output/static"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "all-mcps"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
-preview_database_id = "DB"
