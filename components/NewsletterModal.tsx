@@ -14,6 +14,7 @@ export function NewsletterModal() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (localStorage.getItem(DISMISS_KEY)) return;
+    if (document.cookie.includes('allmcps_subscribed=1')) return;
     if (SUPPRESSED_PREFIXES.some((p) => pathname?.startsWith(p))) return;
 
     const timer = setTimeout(() => setVisible(true), 10000);
