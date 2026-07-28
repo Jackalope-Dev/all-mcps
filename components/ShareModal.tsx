@@ -112,7 +112,7 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your GitHub README.</p>
               
               <div style={{ marginBottom: '1rem' }}>
-                 <img src={\`/api/badge/\${serverId}\`} alt="Featured on AllMCPs" />
+                 <img src={`/api/badge/${serverId}`} alt="Featured on AllMCPs" />
               </div>
 
               <div style={{ position: 'relative' }}>

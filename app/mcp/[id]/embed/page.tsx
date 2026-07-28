@@ -59,10 +59,10 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
   if (!server) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', background: '#0a0a0a', color: 'white', fontFamily: 'sans-serif', height: '100vh' }}>
-        <style dangerouslySetInnerHTML={{ __html: \`
+        <style dangerouslySetInnerHTML={{ __html: `
           header, footer { display: none !important; }
           body { background: transparent !important; margin: 0; overflow: hidden; padding: 0 !important; }
-        \`}} />
+        `}} />
         <h2>Not Found</h2>
       </div>
     );
@@ -70,7 +70,7 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <style dangerouslySetInnerHTML={{ __html: \`
+      <style dangerouslySetInnerHTML={{ __html: `
         header, footer { display: none !important; }
         body { background: transparent !important; margin: 0; overflow: hidden; padding: 0 !important; }
         .embed-card {
@@ -94,9 +94,9 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
           background: rgba(25, 25, 25, 0.9);
           border-color: rgba(255,255,255,0.2);
         }
-      \`}} />
+      `}} />
       
-      <Link href={\`/mcp/\${server.id}\`} target="_blank" rel="noopener noreferrer" className="embed-card">
+      <Link href={`/mcp/${server.id}`} target="_blank" rel="noopener noreferrer" className="embed-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: getGradient(server.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 800, textTransform: 'uppercase', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
             {server.name.charAt(0)}
