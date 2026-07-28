@@ -1,7 +1,7 @@
-import { auth } from "@/lib/auth";
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export default auth((req) => {
+export function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
   const acceptHeader = req.headers.get('accept') || '';
 
@@ -22,7 +22,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/dashboard/:path*", "/mcp/:path*"],
