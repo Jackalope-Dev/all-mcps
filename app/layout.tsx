@@ -16,14 +16,6 @@ export const metadata: Metadata = {
     description: 'Find, discover, and install the best Model Context Protocol (MCP) servers to give your AI agents superpowers.',
     url: 'https://allmcps.com',
     siteName: 'AllMCPs',
-    images: [
-      {
-        url: '/opengraph-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'AllMCPs Directory',
-      },
-    ],
     locale: 'en_US',
     type: 'website',
   },
@@ -31,7 +23,6 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'AllMCPs | The Directory for Model Context Protocol Servers',
     description: 'Find, discover, and install the best Model Context Protocol (MCP) servers to give your AI agents superpowers.',
-    images: ['/opengraph-image.jpg'],
   },
 };
 

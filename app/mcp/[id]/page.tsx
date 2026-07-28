@@ -48,13 +48,11 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     openGraph: {
       title: `${server.name} MCP | AllMCPs Directory`,
       description: server.description,
-      images: ['/opengraph-image.jpg'],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${server.name} MCP | AllMCPs Directory`,
       description: server.description,
-      images: ['/opengraph-image.jpg'],
     }
   };
 }
