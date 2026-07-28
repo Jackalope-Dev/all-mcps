@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, FolderGit2, Terminal } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, FolderGit2, Terminal, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import ShareModal from '../../../components/ShareModal';
@@ -55,15 +55,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
   
   return {
-    title: `${server.name} MCP`,
+    title: `${server.name} MCP Server - Install & Setup`,
     description: server.description,
+    keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
+    alternates: {
+      canonical: `https://allmcps.com/mcp/${server.id}`,
+    },
     openGraph: {
-      title: `${server.name} MCP | AllMCPs Directory`,
+      title: `${server.name} MCP Server - Install & Setup | AllMCPs`,
       description: server.description,
+      url: `https://allmcps.com/mcp/${server.id}`,
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${server.name} MCP | AllMCPs Directory`,
+      title: `${server.name} MCP Server - Install & Setup | AllMCPs`,
       description: server.description,
     }
   };
@@ -121,20 +126,70 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   const readme = await fetchReadme(server.url);
   const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'SoftwareApplication',
+        name: server.name,
+        description: server.description,
+        url: `https://allmcps.com/mcp/${server.id}`,
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'Cross-platform',
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: server.category,
+            item: `https://allmcps.com/categories#${encodeURIComponent(server.category)}`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: server.name,
+            item: `https://allmcps.com/mcp/${server.id}`,
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <>
       <ViewTracker serverId={server.id} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <main className="container" style={{ paddingBottom: '6rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <Link href="/" style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }} className="nav-link">
-          <ArrowLeft size={16} /> Back to Directory
-        </Link>
-      </div>
+      <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
+        <ol className="breadcrumb">
+          <li><Link href="/">Home</Link></li>
+          <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+          <li><Link href={`/categories#${encodeURIComponent(server.category)}`}>{server.category}</Link></li>
+          <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+          <li className="breadcrumb-current">{server.name}</li>
+        </ol>
+      </nav>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', alignItems: 'start' }}>
+      <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '3rem', alignItems: 'start' }}>
         
         {/* Main Content (Left Column) */}
-        <div style={{ gridColumn: '1 / span 2' }}>
+        <div style={{ minWidth: 0 }}>
           <h1 style={{ margin: '0 0 1rem 0' }}>{server.name}</h1>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             <Badge variant="category">{server.category}</Badge>
@@ -153,7 +208,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <SafeMarkdown content={server.description} />
           </div>
 
-          <div className="glass-panel" style={{ padding: '2rem', marginBottom: '3rem' }}>
+          <div className="glass-panel-static" style={{ padding: '2rem', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Terminal size={20} /> Quick Install (Claude Desktop)
             </h2>
@@ -163,20 +218,22 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
           <div>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Documentation Overview</h2>
-            <div className="markdown-body">
-              {readme ? (
-                <SafeMarkdown content={readme} />
-              ) : (
-                <p>No README found or this server is not hosted on GitHub.</p>
-              )}
+            <div className="detail-readme-scroll">
+              <div className="markdown-body">
+                {readme ? (
+                  <SafeMarkdown content={readme} />
+                ) : (
+                  <p>No README found or this server is not hosted on GitHub.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Sidebar (Right Column) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="detail-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 600 }}>
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
@@ -185,14 +242,14 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Last checked by Cloudflare Cron.</p>
           </div>
 
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
             <a href={server.url} target="_blank" rel={server.isOfficial ? "noopener noreferrer" : "noopener noreferrer nofollow"} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }} className="nav-link">
               <FolderGit2 size={18} /> View Repository
             </a>
           </div>
 
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share & Embed</h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add our SVG badge or dynamic widget to your website to get a free Featured boost in the directory.</p>
             <ShareModal serverId={server.id} serverName={server.name} />

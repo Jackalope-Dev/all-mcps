@@ -1,18 +1,33 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Share2, X, Copy, Check } from 'lucide-react';
 
 export default function ShareModal({ serverId, serverName }: { serverId: string, serverName: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
 
   const snippets = {
     badge: `[![Featured on AllMCPs](${baseUrl}/api/badge/${serverId})](${baseUrl}/mcp/${serverId})`,
-    widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="350" height="180" frameBorder="0" style="border-radius: 12px; overflow: hidden; background: transparent;"></iframe>`,
-    install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener noreferrer">Install ${serverName} via AllMCPs</a>`
+    widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="350" height="200" frameBorder="0" style="border-radius: 12px; overflow: hidden; background: transparent;"></iframe>`,
+    install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #3b82f6, #007BFF); color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,123,255,0.25); transition: transform 0.2s, box-shadow 0.2s;">Install ${serverName} via AllMCPs</a>`
   };
 
   const handleCopy = async (key: keyof typeof snippets) => {
@@ -26,6 +41,138 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
       console.error('Failed to copy text: ', err);
     }
   };
+
+  const CopyButton = ({ snippetKey }: { snippetKey: keyof typeof snippets }) => (
+    <button 
+      onClick={() => handleCopy(snippetKey)}
+      style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer', display: 'flex', transition: 'background 0.2s' }}
+      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+      onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+    >
+      {copiedStates[snippetKey] ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+    </button>
+  );
+
+  const CodeBlock = ({ snippetKey }: { snippetKey: keyof typeof snippets }) => (
+    <div style={{ position: 'relative' }}>
+      <div className="share-modal-label">Code</div>
+      <pre style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.75rem', overflowX: 'auto', color: '#a1a1aa', margin: 0 }}>
+        {snippets[snippetKey]}
+      </pre>
+      <CopyButton snippetKey={snippetKey} />
+    </div>
+  );
+
+  const modalContent = (
+    <div 
+      className="share-modal-overlay"
+      onClick={() => setIsOpen(false)}
+    >
+      <div 
+        className="share-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button 
+          onClick={() => setIsOpen(false)}
+          style={{
+            position: 'absolute',
+            top: '1.5rem',
+            right: '1.5rem',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            padding: '0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <X size={20} />
+        </button>
+
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white' }}>Share & Embed</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.875rem' }}>
+          Add these to your website or GitHub README to get a high-quality backlink and drive traffic to your tool.
+        </p>
+
+        {/* Badge Section */}
+        <div className="share-modal-section">
+          <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.25rem' }}>Dynamic SVG Badge</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your GitHub README. Paste the Markdown snippet below.</p>
+          
+          <div className="share-modal-label">Preview</div>
+          <div className="share-modal-preview" style={{ flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ background: '#0d1117', borderRadius: '8px', padding: '1rem 1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3fb950', flexShrink: 0 }}></div>
+              <img src={`/api/badge/${serverId}`} alt="Featured on AllMCPs" style={{ height: '32px' }} />
+            </div>
+            <span style={{ fontSize: '0.625rem', color: 'var(--text-secondary)', opacity: 0.6 }}>Simulated GitHub README context</span>
+          </div>
+
+          <CodeBlock snippetKey="badge" />
+        </div>
+
+        {/* Widget Section */}
+        <div className="share-modal-section">
+          <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.25rem' }}>Embeddable Widget</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your blog or landing page. Paste the HTML snippet below.</p>
+          
+          <div className="share-modal-label">Preview</div>
+          <div className="share-modal-preview" style={{ minHeight: '200px' }}>
+            <iframe 
+              src={`/mcp/${serverId}/embed`} 
+              width="350" 
+              height="200" 
+              frameBorder="0" 
+              style={{ borderRadius: '12px', overflow: 'hidden', background: 'transparent', border: 'none' }}
+              title={`${serverName} embed widget preview`}
+            />
+          </div>
+
+          <CodeBlock snippetKey="widget" />
+        </div>
+
+        {/* Install Link Section */}
+        <div className="share-modal-section">
+          <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.25rem' }}>Install Button</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Standard link to route users to the installation instructions.</p>
+          
+          <div className="share-modal-label">Preview</div>
+          <div className="share-modal-preview">
+            <a 
+              href={`/mcp/${serverId}`}
+              target="_blank" 
+              rel="noopener"
+              style={{ 
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                background: 'linear-gradient(135deg, #3b82f6, #007BFF)',
+                color: '#fff',
+                fontSize: '14px',
+                fontWeight: 600,
+                borderRadius: '8px',
+                textDecoration: 'none',
+                boxShadow: '0 4px 14px rgba(0,123,255,0.25)',
+                transition: 'transform 0.2s, box-shadow 0.2s'
+              }}
+              onClick={(e) => e.preventDefault()}
+            >
+              Install {serverName} via AllMCPs
+            </a>
+          </div>
+
+          <CodeBlock snippetKey="install" />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -52,121 +199,7 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
         <Share2 size={18} /> Share / Embed
       </button>
 
-      {isOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem'
-        }}
-        onClick={() => setIsOpen(false)}>
-          <div 
-            style={{
-              backgroundColor: '#1a1a1a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              padding: '2rem',
-              width: '100%',
-              maxWidth: '600px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              position: 'relative'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button 
-              onClick={() => setIsOpen(false)}
-              style={{
-                position: 'absolute',
-                top: '1.5rem',
-                right: '1.5rem',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                padding: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              <X size={20} />
-            </button>
-
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white' }}>Share & Embed</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.875rem' }}>
-              Add these to your website or GitHub README to get a high-quality backlink and drive traffic to your tool.
-            </p>
-
-            {/* Badge Section */}
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.5rem' }}>Dynamic SVG Badge (Markdown)</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your GitHub README.</p>
-              
-              <div style={{ marginBottom: '1rem' }}>
-                 <img src={`/api/badge/${serverId}`} alt="Featured on AllMCPs" />
-              </div>
-
-              <div style={{ position: 'relative' }}>
-                <pre style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.75rem', overflowX: 'auto', color: '#a1a1aa' }}>
-                  {snippets.badge}
-                </pre>
-                <button 
-                  onClick={() => handleCopy('badge')}
-                  style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
-                >
-                  {copiedStates.badge ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Widget Section */}
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.5rem' }}>Embeddable Widget (HTML)</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your blog or landing page.</p>
-              
-              <div style={{ position: 'relative' }}>
-                <pre style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.75rem', overflowX: 'auto', color: '#a1a1aa' }}>
-                  {snippets.widget}
-                </pre>
-                <button 
-                  onClick={() => handleCopy('widget')}
-                  style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
-                >
-                  {copiedStates.widget ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Install Link Section */}
-            <div>
-              <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.5rem' }}>Install Button (HTML)</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Standard link to route users to the installation instructions.</p>
-              
-              <div style={{ position: 'relative' }}>
-                <pre style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.75rem', overflowX: 'auto', color: '#a1a1aa' }}>
-                  {snippets.install}
-                </pre>
-                <button 
-                  onClick={() => handleCopy('install')}
-                  style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
-                >
-                  {copiedStates.install ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
+      {isOpen && mounted && createPortal(modalContent, document.body)}
     </>
   );
 }

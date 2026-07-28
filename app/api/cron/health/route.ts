@@ -13,7 +13,7 @@ const BATCH_SIZE = 50;
 
 export async function POST(req: Request) {
   try {
-    if (!isAdminAuthorized(req)) {
+    if (!(await isAdminAuthorized(req))) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 

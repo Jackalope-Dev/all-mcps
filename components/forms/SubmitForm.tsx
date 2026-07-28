@@ -33,7 +33,7 @@ export function SubmitForm() {
       if (res.ok) {
         setStatus('success');
       } else {
-        const errorData = await res.json().catch(() => null);
+        const errorData = await res.json().catch(() => null) as { error?: unknown } | null;
         const serverError = errorData?.error ? (typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error)) : 'Submission failed.';
         setErrorMsg(serverError);
         setStatus('error');

@@ -36,6 +36,33 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@graph': [
+                {
+                  '@type': 'Organization',
+                  name: 'AllMCPs',
+                  url: 'https://allmcps.com',
+                  logo: 'https://allmcps.com/logo-icon.svg',
+                  description: 'The definitive directory for discovering and installing Model Context Protocol servers.',
+                },
+                {
+                  '@type': 'WebSite',
+                  name: 'AllMCPs',
+                  url: 'https://allmcps.com',
+                  potentialAction: {
+                    '@type': 'SearchAction',
+                    target: 'https://allmcps.com/?q={search_term_string}',
+                    'query-input': 'required name=search_term_string',
+                  },
+                },
+              ],
+            }),
+          }}
+        />
         <header className="container">
           <div className="main-header">
             <Link href="/" className="logo animate-fade-in" style={{ fontSize: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: 'inherit' }} aria-label="Go to AllMCPs Homepage">
@@ -62,16 +89,17 @@ export default function RootLayout({
               <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Resources</h4>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <li><Link href="/blog" className="nav-link">Blog</Link></li>
-                <li><Link href="/what-is-mcp" className="nav-link">What is MCP?</Link></li>
+                <li><Link href="/what-is-mcp" className="nav-link">What is an MCP?</Link></li>
                 <li><Link href="/guide" className="nav-link">LLM Agents Guide</Link></li>
               </ul>
             </div>
             <div>
               <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Company</h4>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><Link href="/about" className="nav-link">About Jackalope Digital</Link></li>
+                <li><a href="https://jackalope.digital" target="_blank" rel="noopener noreferrer" className="nav-link">About</a></li>
                 <li><Link href="/contact" className="nav-link">Contact</Link></li>
-                <li><Link href="/terms" className="nav-link">Terms & Privacy</Link></li>
+                <li><Link href="/terms" className="nav-link">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="nav-link">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>

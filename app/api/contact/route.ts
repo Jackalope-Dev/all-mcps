@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json() as any;
     const token = body['cf-turnstile-response'];
 
     // 1. Validate Turnstile token
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       body: verifyForm,
     });
 
-    const verifyResult = await verifyRes.json();
+    const verifyResult = await verifyRes.json() as any;
     if (!verifyResult.success) {
       return NextResponse.json({ success: false, error: 'Turnstile verification failed' }, { status: 403 });
     }
