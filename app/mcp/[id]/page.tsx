@@ -149,7 +149,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', text padding: 'uppercase', letterSpacing: '0.05em' }}>Embed Badge</h3>
+            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Embed Badge</h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add this badge to your README to get a free Featured boost in the directory.</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '2rem', border: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.03)', fontSize: '0.75rem', color: 'var(--text-secondary)', justifyContent: 'center', marginBottom: '1rem' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></span>

@@ -14,7 +14,7 @@ async function seedData() {
   
   for (const line of lines) {
     if (line.startsWith('### ')) {
-      currentCategory = line.replace('### ', '').trim();
+      currentCategory = line.replace('### ', '').replace(/<[^>]*>?/gm, '').trim();
       continue;
     }
     
