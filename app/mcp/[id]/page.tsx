@@ -1,6 +1,7 @@
 import { ArrowLeft, CheckCircle2, FolderGit2, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import ShareModal from '../../../components/ShareModal';
 import serversData from '../../../data/mcp-servers.json';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
@@ -188,21 +189,15 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
-            <a href={server.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }} className="nav-link">
+            <a href={server.url} target="_blank" rel={server.isOfficial ? "noopener noreferrer" : "noopener noreferrer nofollow"} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }} className="nav-link">
               <FolderGit2 size={18} /> View Repository
             </a>
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Embed Badge</h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add this badge to your README to get a free Featured boost in the directory.</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '2rem', border: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.03)', fontSize: '0.75rem', color: 'var(--text-secondary)', justifyContent: 'center', marginBottom: '1rem' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></span>
-              Verified on AllMCPs
-            </div>
-            <pre style={{ background: 'rgba(0,0,0,0.4)', padding: '0.75rem', borderRadius: '8px', overflowX: 'auto', border: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-{`[![AllMCPs](https://img.shields.io/badge/AllMCPs-Verified-blue)](https://allmcps.com/mcp/${server.id})`}
-            </pre>
+            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share & Embed</h3>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add our SVG badge or dynamic widget to your website to get a free Featured boost in the directory.</p>
+            <ShareModal serverId={server.id} serverName={server.name} />
           </div>
           
         </div>

@@ -36,7 +36,8 @@ export default function RootLayout({
       <body className={inter.className}>
         <header className="container">
           <div className="main-header">
-            <div className="logo animate-fade-in" style={{ fontSize: '1.75rem' }}>
+            <div className="logo animate-fade-in" style={{ fontSize: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <img src="/logo-icon.svg" alt="AllMCPs Logo" width={40} height={40} />
               AllMCPs
             </div>
             <nav className="animate-fade-in delay-1" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>

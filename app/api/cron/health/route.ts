@@ -75,14 +75,14 @@ export async function POST(req: Request) {
                 healthStatus = 'healthy';
                 
                 // Autonomous Badge Check (Viral loop)
-                if (!isOfficial) {
-                  const readmeRes = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`);
-                  if (readmeRes.ok) {
-                    const text = await readmeRes.text();
-                    const badge = `[![AllMCPs Verified](https://img.shields.io/badge/AllMCPs-Verified-blue)](https://allmcps.com/mcp/${server.id})`;
-                    if (text.replace(/\s+/g, '').includes(badge.replace(/\s+/g, ''))) {
-                      isOfficial = true; // They added the badge!
-                    }
+                const readmeRes = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`);
+                if (readmeRes.ok) {
+                  const text = await readmeRes.text();
+                  const badge = `[![AllMCPs Verified](https://img.shields.io/badge/AllMCPs-Verified-blue)](https://allmcps.com/mcp/${server.id})`;
+                  if (text.replace(/\s+/g, '').includes(badge.replace(/\s+/g, ''))) {
+                    isOfficial = true; // They added the badge!
+                  } else {
+                    isOfficial = false; // Badge not found, remove verification
                   }
                 }
               }
