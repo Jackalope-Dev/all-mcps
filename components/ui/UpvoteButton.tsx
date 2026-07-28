@@ -13,7 +13,30 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
     const upvoted = localStorage.getItem(`upvote_${serverId}`);
     if (upvoted) {
       setHasUpvoted(true);
+      return;
     }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/mcp/${serverId}/metric`);
+        if (!res.ok) return;
+
+        const data = (await res.json()) as { alreadyVoted?: boolean };
+        if (!cancelled && data.alreadyVoted) {
+          setHasUpvoted(true);
+          localStorage.setItem(`upvote_${serverId}`, 'true');
+        }
+      } catch {
+        // Best-effort convenience check; leaving the button clickable on
+        // failure is fine — the POST below still enforces dedup server-side.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [serverId]);
 
   const handleUpvote = async () => {
@@ -25,11 +48,23 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
     localStorage.setItem(`upvote_${serverId}`, 'true');
 
     try {
-      await fetch(`/api/mcp/${serverId}/metric`, {
+      const res = await fetch(`/api/mcp/${serverId}/metric`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ metric: 'upvote' }),
       });
+
+      if (res.status === 409) {
+        // Already voted server-side (e.g. a stale/cleared localStorage flag).
+        // Keep hasUpvoted true, but undo the optimistic +1 since this click
+        // didn't register a new vote.
+        setUpvotes(prev => prev - 1);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Upvote request failed with status ${res.status}`);
+      }
     } catch (e) {
       console.error("Failed to upvote:", e);
       // Revert on failure

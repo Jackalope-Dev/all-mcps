@@ -53,8 +53,7 @@ export default function PrivacyPage() {
             for how Cloudflare handles this data.
           </p>
           <p>
-            We do not currently run any third-party advertising or analytics tracking (such as Google Analytics) on
-            the Site. If that changes, we will update this Policy.
+            We use Google Analytics to collect aggregate, anonymous statistics about site usage, traffic sources, and performance (such as page views and popular directory listings). This helps us understand how visitors interact with AllMCPs so we can improve the Service. Google Analytics processes data such as truncated IP addresses, browser type, device details, and pages visited.
           </p>
 
           <h3>Aggregate usage metrics</h3>
@@ -62,6 +61,12 @@ export default function PrivacyPage() {
             We track anonymous, non-identifying counters for each directory listing &mdash; such as view counts,
             copy actions, and upvotes &mdash; to power features like our &ldquo;Trending&rdquo; ranking. These
             counters are not linked to any individual visitor, account, or device identifier.
+          </p>
+          <p>
+            To prevent the same visitor from upvoting a listing multiple times, we check upvotes against a
+            one-way, salted hash of the submitting IP address. This hash cannot be reversed to recover the
+            original IP address, is used solely for this spam-prevention check, and is not used to track
+            visitors across the Site or for any other purpose.
           </p>
 
           <h2>2. How We Use Information</h2>
@@ -77,6 +82,7 @@ export default function PrivacyPage() {
           <p>We do not sell your personal information. We share information only with the following categories of service providers, who process it on our behalf:</p>
           <ul>
             <li><strong>Cloudflare</strong> &mdash; hosting, content delivery, DDoS and bot protection (Turnstile), and access control for our internal admin tools.</li>
+            <li><strong>Google Analytics (Google LLC)</strong> &mdash; site usage analytics and performance measurement. Google Analytics uses cookies to collect aggregate visitor statistics; for more information, see <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google&rsquo;s Privacy Policy</a>.</li>
             <li><strong>Resend</strong> &mdash; delivery of emails sent through our contact form.</li>
             <li><strong>GitHub</strong> &mdash; when a submitted URL points to a GitHub repository, our server queries GitHub&rsquo;s public API to auto-fill listing details (such as the repository&rsquo;s name and description). No personal information about you is sent to GitHub as part of this lookup.</li>
           </ul>
@@ -87,10 +93,10 @@ export default function PrivacyPage() {
 
           <h2>4. Cookies</h2>
           <p>
-            The public-facing Site does not set marketing, advertising, or analytics cookies. Our internal admin
-            dashboard, which is restricted to Jackalope Digital personnel via Cloudflare Access, uses an
-            authentication cookie to keep that login session active; this cookie is not set for ordinary visitors
-            browsing the directory.
+            We use analytics cookies (such as Google Analytics cookies) to measure site traffic, page usage, and performance. For visitors located in the European Union (EU), European Economic Area (EEA), and the United Kingdom (UK), we display a consent banner allowing you to accept or decline analytics cookies. Non-essential analytics cookies are only enabled for EU/EEA/UK visitors after explicit consent is granted. You can also control or block cookies at any time through your web browser settings.
+          </p>
+          <p>
+            Our internal admin dashboard, which is restricted to Jackalope Digital personnel via Cloudflare Access, uses an authentication cookie to keep that login session active; this cookie is not set for ordinary visitors browsing the directory.
           </p>
 
           <h2>5. Data Retention</h2>

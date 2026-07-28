@@ -1,91 +1,171 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import serversData from '../../data/mcp-servers.json';
+import { CategoryGrid } from '../../components/CategoryGrid';
 
 export const metadata: Metadata = {
-  title: 'Categories',
-  description: 'Browse Model Context Protocol (MCP) servers by category.',
+  title: 'Browse MCP Servers by Category | AllMCPs',
+  description:
+    'Explore thousands of Model Context Protocol servers organized into 55+ categories. Find the perfect AI agent tools for developer workflows, databases, security, finance, and more.',
   alternates: {
     canonical: 'https://allmcps.com/categories',
   },
+  openGraph: {
+    title: 'Browse MCP Servers by Category | AllMCPs',
+    description:
+      'Explore thousands of Model Context Protocol servers organized into 55+ categories.',
+    url: 'https://allmcps.com/categories',
+  },
 };
 
-type Server = {
+type ServerSlim = {
   id: string;
+  name: string;
   category: string;
 };
 
-async function getCategoryCounts(): Promise<Record<string, number>> {
-  let servers = serversData as Server[];
-
+async function getServers(): Promise<ServerSlim[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db.select({ id: serversTable.id, category: serversTable.category }).from(serversTable).where(eq(serversTable.status, 'active'));
-      if (dbServers.length > 0) {
-        servers = dbServers as unknown as Server[];
+      const rows = await db
+        .select({
+          id: serversTable.id,
+          name: serversTable.name,
+          category: serversTable.category,
+        })
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'));
+      return rows;
+    }
+  } catch {
+    // Fallback to local JSON if not running in wrangler / opennext
+  }
+  return (serversData as ServerSlim[]).map((s) => ({
+    id: s.id,
+    name: s.name,
+    category: s.category,
+  }));
+}
+
+/**
+ * Extract a leading emoji from a category string, if present.
+ * Handles multi-codepoint emoji (e.g. 👨‍💻, 🏠) via segmenter where available,
+ * and falls back to a broad regex pattern.
+ */
+function parseEmoji(category: string): { emoji: string; label: string } {
+  // Use Intl.Segmenter for robust emoji detection when available
+  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+    const segments = segmenter.segment(category);
+    const first = segments[Symbol.iterator]().next().value;
+    if (first) {
+      const char = first.segment;
+      // Check if this grapheme cluster looks like an emoji
+      const emojiTest = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/u;
+      if (emojiTest.test(char)) {
+        return { emoji: char, label: category.slice(char.length).trimStart() };
       }
     }
-  } catch (e) {}
-
-  const counts: Record<string, number> = {};
-  for (const s of servers) {
-    if (s.category) {
-      counts[s.category] = (counts[s.category] || 0) + 1;
-    }
   }
-
-  return counts;
+  // Fallback regex for environments without Segmenter
+  const emojiRegex = /^(\p{Extended_Pictographic}(?:\u200D\p{Extended_Pictographic}|\uFE0F)*)\s*/u;
+  const match = category.match(emojiRegex);
+  if (match) {
+    return { emoji: match[1], label: category.slice(match[0].length) };
+  }
+  return { emoji: '', label: category };
 }
 
 export default async function CategoriesPage() {
-  const categoryCounts = await getCategoryCounts();
-  const sortedCategories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
+  const servers = await getServers();
+
+  // Group by category and count
+  const categoryMap = new Map<string, number>();
+  for (const server of servers) {
+    categoryMap.set(server.category, (categoryMap.get(server.category) || 0) + 1);
+  }
+
+  // Sort by count descending (most popular first)
+  const categories = Array.from(categoryMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => {
+      const { emoji, label } = parseEmoji(name);
+      return { name, emoji, label, count };
+    });
+
+  const totalServers = servers.length;
+
+  // JSON-LD structured data
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'MCP Server Categories',
+    description: `Browse ${categories.length} categories of Model Context Protocol servers.`,
+    url: 'https://allmcps.com/categories',
+    numberOfItems: categories.length,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'AllMCPs',
+      url: 'https://allmcps.com',
+    },
+  };
 
   return (
-    <main className="container" style={{ padding: '6rem 0 8rem' }}>
-      <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-        <h1 style={{ marginBottom: '1rem' }}>Browse Categories</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', maxWidth: '600px', margin: '0 auto' }}>
-          Explore Model Context Protocol servers grouped by capabilities and integrations.
-        </p>
-      </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <main className="container" style={{ paddingBottom: '6rem' }}>
+        {/* Breadcrumb */}
+        <nav aria-label="Breadcrumb">
+          <ol className="breadcrumb" style={{ paddingTop: '6rem', marginBottom: '2rem' }}>
+            <li>
+              <Link href="/">Home</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
+            <li className="breadcrumb-current">Categories</li>
+          </ol>
+        </nav>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-        {sortedCategories.map(([cat, count]) => (
-          <Link 
-            href={`/?category=${encodeURIComponent(cat)}`} 
-            key={cat} 
-            className="glass-panel card-hoverable" 
-            style={{ 
-              padding: '2rem', 
-              display: 'flex', 
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              textDecoration: 'none',
-              color: 'inherit',
-              borderRadius: '16px',
-              border: '1px solid var(--border-color)',
-              transition: 'all 0.2s ease-in-out'
+        {/* Hero */}
+        <section
+          className="animate-fade-in delay-1"
+          style={{ textAlign: 'center', marginBottom: '3rem' }}
+        >
+          <h1>Browse by Category</h1>
+          <p
+            style={{
+              fontSize: '1.25rem',
+              maxWidth: '600px',
+              margin: '0 auto',
+              lineHeight: 1.7,
             }}
           >
-            <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>{cat}</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                {count} {count === 1 ? 'tool' : 'tools'} available
-              </p>
-            </div>
-            <div style={{ marginTop: '1.5rem', color: 'var(--accent-color)', fontSize: '0.875rem', fontWeight: 500 }}>
-              Explore category &rarr;
-            </div>
-          </Link>
-        ))}
-      </div>
-    </main>
+            Explore{' '}
+            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+              {totalServers.toLocaleString()}
+            </span>{' '}
+            MCP servers across{' '}
+            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+              {categories.length}
+            </span>{' '}
+            categories.
+          </p>
+        </section>
+
+        {/* Client-side search + grid */}
+        <CategoryGrid categories={categories} />
+      </main>
+    </>
   );
 }

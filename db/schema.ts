@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const servers = sqliteTable('servers', {
   id: text('id').primaryKey(),
@@ -16,3 +16,11 @@ export const servers = sqliteTable('servers', {
   upvotes: integer('upvotes').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
+
+export const upvoteRecords = sqliteTable('upvote_records', {
+  serverId: text('server_id').notNull(),
+  ipHash: text('ip_hash').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.serverId, table.ipHash] }),
+}));
