@@ -39,6 +39,16 @@ function getGradient(str: string) {
   return colors[Math.abs(hash) % colors.length];
 }
 
+// Helper to remove markdown characters for a clean plain-text preview
+function stripMarkdown(text: string) {
+  if (!text) return '';
+  return text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Replace links with just the link text
+    .replace(/[*_~`#]/g, '') // Remove markdown formatting characters like bold, italic, code
+    .replace(/<[^>]*>?/gm, '') // Remove any stray HTML
+    .trim();
+}
+
 export default async function Home() {
   const servers = await getServers();
   
@@ -109,7 +119,7 @@ export default async function Home() {
               </div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{server.name}</h3>
               <p style={{ fontSize: '0.875rem', marginBottom: '1.5rem', flexGrow: 1, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)' }}>
-                {server.description || 'No description provided.'}
+                {stripMarkdown(server.description) || 'No description provided.'}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.5)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>{server.category}</span>
