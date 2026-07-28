@@ -27,9 +27,12 @@ async function seedData() {
       const url = match[2].trim();
       let description = match[3] ? match[3].trim() : '';
       
-      // Basic cleanup
-      description = description.replace(/<[^>]*>?/gm, ''); // remove html tags
-      
+      // Aggressive cleanup for clean plain-text descriptions
+      description = description.replace(/!\[.*?\]\(.*?\)/g, ''); // remove images entirely
+      description = description.replace(/\[([^\]]+)\]\(.*?\)/g, '$1'); // replace markdown links with just their text
+      description = description.replace(/<[^>]*>?/gm, ''); // remove ALL HTML tags (including anchors)
+      description = description.replace(/[*_~`#]/g, ''); // remove formatting characters
+      description = description.trim();
       // Skip table of contents or awesome list links
       if (url.startsWith('http') && !name.toLowerCase().includes('awesome')) {
         servers.push({
