@@ -28,10 +28,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^9",
+    "eslint": "^9.39.5",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^7.0.2",
     "wrangler": "^4.114.0"
   }
 }

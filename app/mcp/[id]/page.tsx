@@ -2,8 +2,6 @@ import { ArrowLeft, CheckCircle2, FolderGit2, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import serversData from '../../../data/mcp-servers.json';
-import path from 'path';
-import fs from 'fs';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
@@ -30,10 +28,8 @@ async function getServer(id: string): Promise<Server | undefined> {
     }
   } catch (e) {}
 
-  // Fallback
-  const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
-  const fileContents = fs.readFileSync(filePath, 'utf8');
-  const servers: Server[] = JSON.parse(fileContents);
+  // Fallback to the bundled JSON snapshot
+  const servers = serversData as Server[];
   return servers.find((s) => s.id === id);
 }
 

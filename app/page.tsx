@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import DirectoryGrid from '../components/DirectoryGrid';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../db/schema';
@@ -30,14 +28,7 @@ async function getServers(): Promise<Server[]> {
     // Fallback to local JSON if not running in wrangler / opennext
   }
 
-  try {
-    const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
-    const fileContents = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(fileContents);
-  } catch (e) {
-    console.error("Failed to load servers", e);
-    return [];
-  }
+  return serversData as Server[];
 }
 
 export default async function Home() {

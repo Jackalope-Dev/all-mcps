@@ -4,8 +4,6 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../db/schema';
 import { z } from 'zod';
 
-export const runtime = 'edge';
-
 const submitSchema = z.object({
   url: z.string().url("Must be a valid URL"),
   name: z.string().optional(),
