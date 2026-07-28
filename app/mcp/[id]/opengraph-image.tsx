@@ -2,10 +2,7 @@ import { ImageResponse } from 'next/og';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
-import fs from 'fs';
-import path from 'path';
-
-export const runtime = 'edge';
+import serversData from '../../../data/mcp-servers.json';
 
 export const alt = 'AllMCPs - Tool Directory';
 export const size = { width: 1200, height: 630 };
@@ -22,10 +19,8 @@ async function getServer(id: string) {
     }
   } catch (e) {}
 
-  const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
-  const fileContents = fs.readFileSync(filePath, 'utf8');
-  const servers = JSON.parse(fileContents);
-  return servers.find((s: any) => s.id === id);
+  const servers = serversData as { id: string; name: string; description: string }[];
+  return servers.find((s) => s.id === id);
 }
 
 export default async function Image({ params }: { params: { id: string } }) {

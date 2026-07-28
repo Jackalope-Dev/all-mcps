@@ -14,6 +14,11 @@ type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  status: string;
+  lastCheckedAt?: string | null;
+  isVerifiedActive?: boolean;
+  healthStatus?: string;
+  createdAt: string;
 };
 
 async function getServer(id: string): Promise<Server | undefined> {
@@ -28,10 +33,8 @@ async function getServer(id: string): Promise<Server | undefined> {
     }
   } catch (e) {}
 
-  // Fallback
-  const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
-  const fileContents = fs.readFileSync(filePath, 'utf8');
-  const servers: Server[] = JSON.parse(fileContents);
+  // Fallback to the bundled JSON snapshot
+  const servers = serversData as Server[];
   return servers.find((s) => s.id === id);
 }
 
@@ -121,11 +124,19 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         
         {/* Main Content (Left Column) */}
         <div style={{ gridColumn: '1 / span 2' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0 }}>{server.name}</h1>
+          <h1 style={{ margin: '0 0 1rem 0' }}>{server.name}</h1>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            <span style={{ padding: '0.25rem 0.75rem', background: 'rgba(255,255,255,0.1)', borderRadius: '100px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              {server.category}
+            </span>
             {server.isOfficial && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', padding: '0.25rem 0.75rem', borderRadius: '2rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <CheckCircle2 size={14} /> Official
+              <span style={{ padding: '0.25rem 0.75rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '100px', fontSize: '0.875rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                ✓ Official
+              </span>
+            )}
+            {server.isVerifiedActive && (
+              <span style={{ padding: '0.25rem 0.75rem', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '100px', fontSize: '0.875rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }} title={server.lastCheckedAt ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}` : 'Recently checked'}>
+                🟢 Verified Active
               </span>
             )}
           </div>

@@ -3,10 +3,7 @@ import { servers } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import ClaimClient from './ClaimClient';
-import fs from 'fs';
-import path from 'path';
-
-export const runtime = 'edge';
+import serversData from '../../../../data/mcp-servers.json';
 
 async function getServer(id: string) {
   try {
@@ -19,10 +16,8 @@ async function getServer(id: string) {
     }
   } catch (e) {}
 
-  const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
-  const fileContents = fs.readFileSync(filePath, 'utf8');
-  const allServers = JSON.parse(fileContents);
-  return allServers.find((s: any) => s.id === id);
+  const allServers = serversData as { id: string; name: string; url: string }[];
+  return allServers.find((s) => s.id === id);
 }
 
 export default async function ClaimPage({ params }: { params: { id: string } }) {

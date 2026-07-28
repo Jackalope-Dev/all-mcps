@@ -8,6 +8,13 @@
       "when": 1785201343547,
       "tag": "0000_rainy_baron_strucker",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785203732341,
+      "tag": "0001_red_gambit",
+      "breakpoints": true
     }
   ]
 }

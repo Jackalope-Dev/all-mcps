@@ -17,7 +17,6 @@
 .wrangler/
 .open-next/
 .dev.vars
-cloudflare-env.d.ts
 
 # misc
 .DS_Store
