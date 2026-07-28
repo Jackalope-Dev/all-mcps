@@ -6,6 +6,7 @@ import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
 import { WebMCPProvider } from "../components/WebMCPProvider";
 import { CookieBanner } from "../components/CookieBanner";
+import { NewsletterModal } from "../components/NewsletterModal";
 import { ToastProvider } from "../components/ui/Toast";
 import { PurchaseTracker } from "../components/PurchaseTracker";
 import "./globals.css";
@@ -93,6 +94,7 @@ export default function RootLayout({
         </Suspense>
         <WebMCPProvider />
         <CookieBanner />
+        <NewsletterModal />
         <ToastProvider />
         <script
           type="application/ld+json"

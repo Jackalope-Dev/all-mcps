@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Share2, X, Copy, Check } from 'lucide-react';
 import { toast } from './ui/Toast';
 import { trackShare } from '../lib/gtag';
+import { BadgeEmbedBuilder } from './ui/BadgeEmbedBuilder';
 
 function getDisplayName(name: string) {
   const base = name.split('/').pop() || name;
@@ -122,71 +123,8 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
         </p>
 
         {/* Badge Section */}
-        <div className="share-modal-section">
-          <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.25rem' }}>Dynamic SVG Badge</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>
-            Directory-style or classic featured badge — dark and light themes for README or marketing sites.
-          </p>
-
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            {(['featured', 'directory'] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setBadgeStyle(s)}
-                style={{
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '999px',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  background: badgeStyle === s ? 'rgba(59,130,246,0.2)' : 'transparent',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                }}
-              >
-                {s === 'featured' ? 'Featured' : 'Directory'}
-              </button>
-            ))}
-            {(['dark', 'light'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setBadgeTheme(t)}
-                style={{
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '999px',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  background: badgeTheme === t ? 'rgba(59,130,246,0.2)' : 'transparent',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                }}
-              >
-                {t === 'dark' ? 'Dark' : 'Light'}
-              </button>
-            ))}
-          </div>
-          
-          <div className="share-modal-label">Preview</div>
-          <div className="share-modal-preview" style={{ flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ background: badgeTheme === 'light' ? '#f1f5f9' : '#0d1117', borderRadius: '8px', padding: '1rem 1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3fb950', flexShrink: 0 }}></div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/badge/${serverId}?style=${badgeStyle}&theme=${badgeTheme}`}
-                alt="AllMCPs badge"
-                style={{ height: badgeStyle === 'directory' ? '40px' : '32px' }}
-              />
-            </div>
-            <span style={{ fontSize: '0.625rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
-              {badgeTheme === 'light' ? 'Light site / docs context' : 'Dark / GitHub README context'}
-            </span>
-          </div>
-
-          <CodeBlock snippetKey="badge" />
-          <div style={{ marginTop: '0.75rem' }}>
-            <CodeBlock snippetKey="badgeHtml" />
-          </div>
+        <div className="mb-6">
+          <BadgeEmbedBuilder serverId={serverId} serverName={serverName} />
         </div>
 
         {/* Widget Section */}

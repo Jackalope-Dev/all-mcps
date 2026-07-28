@@ -1,10 +1,20 @@
 import Link from 'next/link';
 import { BrandLogo } from './BrandLogo';
+import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 
 export function SiteFooter() {
   return (
     <footer className="container site-footer">
       <hr className="brand-divider" />
+      <div className="newsletter-footer-cta">
+        <div>
+          <h4 className="footer-heading">Stay in the loop</h4>
+          <p className="site-footer-blurb" style={{ margin: 0 }}>
+            Get new MCP servers and top picks in your inbox.
+          </p>
+        </div>
+        <NewsletterSignupForm source="footer" compact />
+      </div>
       <div className="site-footer-grid">
         <div>
           <div style={{ marginBottom: '1rem' }}>
@@ -35,6 +45,11 @@ export function SiteFooter() {
             <li>
               <Link href="/guide" className="nav-link">
                 LLM Agents Guide
+              </Link>
+            </li>
+            <li>
+              <Link href="/build-mcp-server" className="nav-link">
+                Build an MCP Server
               </Link>
             </li>
           </ul>

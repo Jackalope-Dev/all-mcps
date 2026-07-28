@@ -4,6 +4,7 @@ import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import ShareModal from '../../../components/ShareModal';
 import { Badge } from '../../../components/ui/Badge';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
+import { McpConfigGenerator } from '../../../components/McpConfigGenerator';
 import { AgentPromptButton } from '../../../components/ui/AgentPromptButton';
 import { ViewTracker, InstallsStat } from '../../../components/ui/ViewTracker';
 import { UpvoteButton } from '../../../components/ui/UpvoteButton';
@@ -296,11 +297,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="surface" style={{ padding: '2rem', marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Terminal size={20} /> Quick Install (Claude Desktop)
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Terminal size={20} /> Quick Install
             </h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.875rem' }}>Add this directly to your <code>claude_desktop_config.json</code> file:</p>
-            <CopyBlock code={`"mcpServers": {\n  "${installSlug}": {\n    "command": "npx",\n    "args": ["-y", "${server.name}"]\n  }\n}`} serverId={server.id} />
+            <McpConfigGenerator serverId={server.id} serverName={server.name} url={server.url} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.5rem 0' }}>
               <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />

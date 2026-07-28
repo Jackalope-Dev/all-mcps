@@ -191,6 +191,7 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
           <ul>
             <li>Not sure what MCP actually is under the hood? Read <Link href="/what-is-mcp">What is an MCP?</Link></li>
             <li>Ready to find a server? <Link href="/browse">Browse the directory</Link></li>
+            <li>Want to build your own instead? See <Link href="/build-mcp-server">How to Build an MCP Server</Link>.</li>
             <li>Built something worth sharing? <Link href="/submit">Submit your MCP server</Link></li>
           </ul>
         </div>

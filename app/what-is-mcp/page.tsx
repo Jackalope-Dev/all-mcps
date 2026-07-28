@@ -198,6 +198,8 @@ export default function WhatIsMCPPage() {
           </ol>
           <p>
             For a hands-on walkthrough with real configuration examples, see our <Link href="/guide">LLM Agents Guide</Link>.
+            Want to build your own server instead of installing one? See{' '}
+            <Link href="/build-mcp-server">How to Build an MCP Server</Link>.
           </p>
 
           <h2 id="faq">Frequently asked questions</h2>

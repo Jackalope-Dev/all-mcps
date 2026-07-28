@@ -1,6 +1,16 @@
 import { Mail } from 'lucide-react';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { PageShell } from '@/components/PageShell';
+
+export const metadata: Metadata = {
+  title: 'Check your email',
+  description: 'A sign-in link has been sent to your email address.',
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default function VerifyRequestPage() {
   return (

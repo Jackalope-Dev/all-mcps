@@ -16,6 +16,7 @@ import {
   isVerifiedListing as isVerifiedListingShared,
 } from '../lib/featuredStatus';
 import { trackSearch, trackOutboundClick } from '../lib/gtag';
+import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 
 type Server = {
   id: string;
@@ -44,7 +45,8 @@ function isFeaturedListing(server: Server): boolean {
 }
 
 type ViewMode = 'grid' | 'list';
-type SortMode = 'trending' | 'most_viewed' | 'newest';
+type SortMode = 'trending' | 'most_upvoted' | 'most_viewed' | 'newest' | 'alpha';
+type TechStack = 'all' | 'typescript' | 'python' | 'go' | 'rust';
 
 // Deterministic brand-adjacent avatar gradients (cyan / blue / slate)
 function getGradient(str: string) {
@@ -101,6 +103,7 @@ export default function DirectoryGrid({
   const browseBase = '/browse';
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
+  const [selectedStack, setSelectedStack] = useState<TechStack>('all');
   const [sortMode, setSortMode] = useState<SortMode>('trending');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -143,7 +146,29 @@ export default function DirectoryGrid({
         server.category.toLowerCase().includes(q);
       const matchesCategory = selectedCategory ? server.category === selectedCategory : true;
       const matchesVerified = verifiedOnly ? isVerifiedListing(server) : true;
-      return matchesSearch && matchesCategory && matchesVerified;
+
+      const matchesStack = (() => {
+        if (selectedStack === 'all') return true;
+        const name = server.name.toLowerCase();
+        const desc = server.description.toLowerCase();
+        const url = server.url.toLowerCase();
+
+        if (selectedStack === 'typescript') {
+          return name.includes('ts') || name.includes('typescript') || desc.includes('typescript') || desc.includes('npm') || desc.includes('npx');
+        }
+        if (selectedStack === 'python') {
+          return name.includes('py') || name.includes('python') || desc.includes('python') || desc.includes('uvx') || desc.includes('pip');
+        }
+        if (selectedStack === 'go') {
+          return name.includes('go-') || name.includes('-go') || desc.includes('golang') || desc.includes(' go ');
+        }
+        if (selectedStack === 'rust') {
+          return name.includes('rust') || desc.includes('rust') || desc.includes('cargo');
+        }
+        return true;
+      })();
+
+      return matchesSearch && matchesCategory && matchesVerified && matchesStack;
     });
 
     result.sort((a, b) => {
@@ -151,8 +176,12 @@ export default function DirectoryGrid({
         const scoreA = (a.upvotes || 0) * 5 + (a.copies || 0);
         const scoreB = (b.upvotes || 0) * 5 + (b.copies || 0);
         if (scoreB !== scoreA) return scoreB - scoreA;
+      } else if (sortMode === 'most_upvoted') {
+        if ((b.upvotes || 0) !== (a.upvotes || 0)) return (b.upvotes || 0) - (a.upvotes || 0);
       } else if (sortMode === 'most_viewed') {
         if ((b.views || 0) !== (a.views || 0)) return (b.views || 0) - (a.views || 0);
+      } else if (sortMode === 'alpha') {
+        return a.name.localeCompare(b.name);
       }
 
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -161,7 +190,7 @@ export default function DirectoryGrid({
     });
 
     return result;
-  }, [initialServers, searchQuery, selectedCategory, sortMode, verifiedOnly]);
+  }, [initialServers, searchQuery, selectedCategory, selectedStack, sortMode, verifiedOnly]);
 
   const filteredCount = filteredServers.length;
 
@@ -226,6 +255,7 @@ export default function DirectoryGrid({
     setSelectedCategory(null);
     setSearchQuery('');
     setVerifiedOnly(false);
+    setSelectedStack('all');
     if (isBrowse) {
       updateUrl(null, '');
     }
@@ -241,12 +271,12 @@ export default function DirectoryGrid({
   // Reset pagination when searching, filtering, or sorting
   useEffect(() => {
     setVisibleCount(30);
-  }, [searchQuery, selectedCategory, sortMode, verifiedOnly]);
+  }, [searchQuery, selectedCategory, selectedStack, sortMode, verifiedOnly]);
 
   const visibleServers = filteredServers.slice(0, visibleCount);
   const hasMore = visibleCount < filteredServers.length;
 
-  const isFiltered = searchQuery.length > 0 || selectedCategory !== null || verifiedOnly;
+  const isFiltered = searchQuery.length > 0 || selectedCategory !== null || verifiedOnly || selectedStack !== 'all';
   // Discovery chrome (marquee / featured) only on the unfiltered marketing landing
   const showDiscovery = !isBrowse && !isFiltered;
   const categoryMeta = selectedCategory ? parseCategoryLabel(selectedCategory) : null;
@@ -315,6 +345,9 @@ export default function DirectoryGrid({
           </h1>
           <p className="text-lead">
             Find the best tools to connect your favorite LLMs directly to local files, databases, and external APIs.
+          </p>
+          <p className="text-meta" style={{ marginTop: '0.75rem' }}>
+            Building your own? See <Link href="/build-mcp-server">How to Build an MCP Server</Link>.
           </p>
         </section>
       )}
@@ -509,6 +542,18 @@ export default function DirectoryGrid({
       {/* Featured Cards (below search, hidden when filtering) */}
       {showDiscovery && <FeaturedCards servers={featuredCards} />}
 
+      {showDiscovery && (
+        <section className="container newsletter-homepage-section">
+          <div>
+            <h3 style={{ margin: '0 0 0.25rem' }}>Get new MCP servers in your inbox</h3>
+            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+              A roundup of new and top submissions — no spam, unsubscribe anytime.
+            </p>
+          </div>
+          <NewsletterSignupForm source="homepage" compact />
+        </section>
+      )}
+
       {/* Directory */}
       <section className="container animate-fade-in delay-3" style={{ marginBottom: '6rem' }}>
         <div className="directory-toolbar">
@@ -520,12 +565,36 @@ export default function DirectoryGrid({
           </h2>
 
           <div className="directory-toolbar-controls">
+            <div className="directory-segmented" role="group" aria-label="Tech stack filter">
+              {(
+                [
+                  ['all', 'All Stacks'],
+                  ['typescript', 'TypeScript'],
+                  ['python', 'Python'],
+                  ['go', 'Go'],
+                  ['rust', 'Rust'],
+                ] as const
+              ).map(([stack, label]) => (
+                <button
+                  key={stack}
+                  type="button"
+                  onClick={() => setSelectedStack(stack)}
+                  className={`directory-segmented-btn ${selectedStack === stack ? 'is-active' : ''}`}
+                  aria-pressed={selectedStack === stack}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <div className="directory-segmented" role="group" aria-label="Sort order">
               {(
                 [
                   ['trending', 'Trending'],
+                  ['most_upvoted', 'Top Voted'],
                   ['most_viewed', 'Most Viewed'],
                   ['newest', 'Newest'],
+                  ['alpha', 'A-Z'],
                 ] as const
               ).map(([mode, label]) => (
                 <button
