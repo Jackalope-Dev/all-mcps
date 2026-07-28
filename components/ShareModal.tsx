@@ -4,7 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Share2, X, Copy, Check } from 'lucide-react';
 
+function getDisplayName(name: string) {
+  const base = name.split('/').pop() || name;
+  return base
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export default function ShareModal({ serverId, serverName }: { serverId: string, serverName: string }) {
+  const displayName = getDisplayName(serverName);
   const [isOpen, setIsOpen] = useState(false);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
   const [mounted, setMounted] = useState(false);
@@ -26,8 +36,8 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
 
   const snippets = {
     badge: `[![Featured on AllMCPs](${baseUrl}/api/badge/${serverId})](${baseUrl}/mcp/${serverId})`,
-    widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="350" height="200" frameBorder="0" style="border-radius: 12px; overflow: hidden; background: transparent;"></iframe>`,
-    install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #3b82f6, #007BFF); color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,123,255,0.25); transition: transform 0.2s, box-shadow 0.2s;">Install ${serverName} via AllMCPs</a>`
+    widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="350" height="260" frameBorder="0" style="border-radius: 12px; overflow: hidden; background: transparent;"></iframe>`,
+    install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #3b82f6, #007BFF); color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,123,255,0.25); transition: transform 0.2s, box-shadow 0.2s;">Install ${displayName} via AllMCPs</a>`
   };
 
   const handleCopy = async (key: keyof typeof snippets) => {
@@ -123,12 +133,12 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your blog or landing page. Paste the HTML snippet below.</p>
           
           <div className="share-modal-label">Preview</div>
-          <div className="share-modal-preview" style={{ minHeight: '200px' }}>
-            <iframe 
-              src={`/mcp/${serverId}/embed`} 
-              width="350" 
-              height="200" 
-              frameBorder="0" 
+          <div className="share-modal-preview" style={{ minHeight: '260px' }}>
+            <iframe
+              src={`/mcp/${serverId}/embed`}
+              width="350"
+              height="260"
+              frameBorder="0"
               style={{ borderRadius: '12px', overflow: 'hidden', background: 'transparent', border: 'none' }}
               title={`${serverName} embed widget preview`}
             />
@@ -164,7 +174,7 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
               }}
               onClick={(e) => e.preventDefault()}
             >
-              Install {serverName} via AllMCPs
+              Install {displayName} via AllMCPs
             </a>
           </div>
 

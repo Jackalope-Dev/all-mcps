@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import serversData from '../../../../data/mcp-servers.json';
 import Link from 'next/link';
 import { Terminal } from 'lucide-react';
+import { SafeMarkdown } from '../../../../components/ui/SafeMarkdown';
 
 type Server = {
   id: string;
@@ -69,7 +70,7 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
       <style dangerouslySetInnerHTML={{ __html: `
         header, footer { display: none !important; }
         body { background: transparent !important; margin: 0; overflow: hidden; padding: 0 !important; }
@@ -97,7 +98,7 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
       `}} />
       
       <Link href={`/mcp/${server.id}`} target="_blank" rel="noopener noreferrer" className="embed-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', flexShrink: 0 }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: getGradient(server.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 800, textTransform: 'uppercase', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
             {server.name.charAt(0)}
           </div>
@@ -111,15 +112,15 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
         
-        <h3 style={{ fontSize: '1.125rem', margin: '0 0 0.5rem 0', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <h3 style={{ fontSize: '1.125rem', margin: '0 0 0.5rem 0', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
           {server.name}
         </h3>
         
-        <p style={{ fontSize: '0.8rem', margin: '0 0 1rem 0', flexGrow: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: '#a1a1aa', lineHeight: 1.5 }}>
-          {server.description || 'No description provided.'}
-        </p>
+        <div style={{ fontSize: '0.8rem', margin: '0 0 1rem 0', flexGrow: 1, flexShrink: 0, minHeight: '3.6rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: '#a1a1aa', lineHeight: 1.5 }}>
+          <SafeMarkdown content={server.description || 'No description provided.'} isInline />
+        </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#60a5fa', fontSize: '0.75rem', fontWeight: 600 }}>
              <Terminal size={12} /> Install via AllMCPs
           </div>

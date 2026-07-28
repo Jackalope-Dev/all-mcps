@@ -24,3 +24,45 @@ export const upvoteRecords = sqliteTable('upvote_records', {
 }, (table) => ({
   pk: primaryKey({ columns: [table.serverId, table.ipHash] }),
 }));
+
+// Auth.js (NextAuth) Drizzle adapter tables — see lib/auth.ts.
+// Column/table shape follows @auth/drizzle-adapter's SQLite defaults
+// (https://authjs.dev/getting-started/adapters/drizzle), renamed to
+// snake_case columns to match this project's convention.
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text('name'),
+  email: text('email').unique(),
+  emailVerified: integer('email_verified', { mode: 'timestamp_ms' }),
+  image: text('image'),
+});
+
+export const accounts = sqliteTable('accounts', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  provider: text('provider').notNull(),
+  providerAccountId: text('provider_account_id').notNull(),
+  refresh_token: text('refresh_token'),
+  access_token: text('access_token'),
+  expires_at: integer('expires_at'),
+  token_type: text('token_type'),
+  scope: text('scope'),
+  id_token: text('id_token'),
+  session_state: text('session_state'),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.provider, table.providerAccountId] }),
+}));
+
+export const sessions = sqliteTable('sessions', {
+  sessionToken: text('session_token').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  expires: integer('expires', { mode: 'timestamp_ms' }).notNull(),
+});
+
+export const verificationTokens = sqliteTable('verification_tokens', {
+  identifier: text('identifier').notNull(),
+  token: text('token').notNull(),
+  expires: integer('expires', { mode: 'timestamp_ms' }).notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.identifier, table.token] }),
+}));
