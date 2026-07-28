@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { ArrowLeft, CheckCircle2, Github, Terminal } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, FolderGit2, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 
@@ -144,7 +144,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
             <a href={server.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }} className="nav-link">
-              <Github size={18} /> View Repository
+              <FolderGit2 size={18} /> View Repository
             </a>
           </div>
 
