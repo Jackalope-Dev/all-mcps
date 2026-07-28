@@ -4,7 +4,9 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../db/schema';
 import { eq, desc, isNotNull } from 'drizzle-orm';
 import { getAuthorizedAdminEmail } from '../../lib/accessAuth';
+import { getAdminStats, type AdminStats } from '../../lib/adminStats';
 import AdminClient from './AdminClient';
+import { StatsBar } from './StatsBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +17,15 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+};
+
+const EMPTY_STATS: AdminStats = {
+  statusCounts: { pending: 0, active: 0, removed: 0 },
+  premiumCount: 0,
+  featuredCount: 0,
+  unhealthyCount: 0,
+  engagement: { totalViews: 0, totalUpvotes: 0, totalCopies: 0 },
+  topByViews: [],
 };
 
 async function getAdminData() {
@@ -29,12 +40,6 @@ async function getAdminData() {
         .from(servers)
         .where(eq(servers.status, 'pending'))
         .orderBy(desc(servers.reviewPriority), desc(servers.createdAt));
-      const activeServers = await db
-        .select()
-        .from(servers)
-        .where(eq(servers.status, 'active'))
-        .orderBy(desc(servers.createdAt))
-        .limit(50);
       const pendingEdits = await db
         .select()
         .from(servers)
@@ -53,15 +58,15 @@ async function getAdminData() {
 
       return {
         pending: pendingServers.map(map),
-        active: activeServers.map(map),
         pendingEdits: pendingEdits.map(map),
         pendingClaims: pendingClaims.map(map),
+        stats: await getAdminStats(db),
       };
     }
   } catch (e) {
     // Fallback if not in edge context
   }
-  return { pending: [], active: [], pendingEdits: [], pendingClaims: [] };
+  return { pending: [], pendingEdits: [], pendingClaims: [], stats: EMPTY_STATS };
 }
 
 export default async function AdminPage() {
@@ -77,18 +82,21 @@ export default async function AdminPage() {
     );
   }
 
-  const { pending, active, pendingEdits, pendingClaims } = await getAdminData();
+  const { pending, pendingEdits, pendingClaims, stats } = await getAdminData();
 
   return (
     <main className="container animate-fade-in" style={{ padding: '4rem 1rem' }}>
       <h1 style={{ marginBottom: '0.5rem', textAlign: 'center' }}>Admin Dashboard</h1>
       <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '3rem' }}>
-        Review submissions and manage premium (dofollow) listings. Logged in as {email}.
+        Review submissions and manage listings. Logged in as {email}.
       </p>
+
+      <div style={{ maxWidth: '1100px', margin: '0 auto 2rem' }}>
+        <StatsBar stats={stats} />
+      </div>
 
       <AdminClient
         initialPending={pending as any}
-        initialActive={active as any}
         initialPendingEdits={pendingEdits as any}
         initialPendingClaims={pendingClaims as any}
       />

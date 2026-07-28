@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { parsePendingRevision } from '../../lib/pendingRevision';
+import ManageListings from './ManageListings';
 
 type Server = {
   id: string;
@@ -22,25 +23,21 @@ type Server = {
 
 export default function AdminClient({
   initialPending,
-  initialActive = [],
   initialPendingEdits = [],
   initialPendingClaims = [],
 }: {
   initialPending: Server[];
-  initialActive?: Server[];
   initialPendingEdits?: Server[];
   initialPendingClaims?: Server[];
 }) {
   const [pending, setPending] = useState<Server[]>(initialPending);
-  const [active, setActive] = useState<Server[]>(initialActive);
   const [pendingEdits, setPendingEdits] = useState<Server[]>(initialPendingEdits);
   const [pendingClaims, setPendingClaims] = useState<Server[]>(initialPendingClaims);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handleAction = async (
     id: string,
-    action: 'approve' | 'reject' | 'set_premium' | 'unset_premium' | 'approve_edit' | 'reject_edit' | 'approve_claim' | 'reject_claim',
-    list: 'pending' | 'active' | 'pendingEdits' | 'pendingClaims' = 'pending'
+    action: 'approve' | 'reject' | 'approve_edit' | 'reject_edit' | 'approve_claim' | 'reject_claim'
   ) => {
     setLoadingId(id);
 
@@ -63,16 +60,9 @@ export default function AdminClient({
       } else if (action === 'approve_edit' || action === 'reject_edit') {
         setPendingEdits((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_edit' ? 'Edit approved' : 'Edit rejected');
-      } else if (action === 'approve_claim' || action === 'reject_claim') {
+      } else {
         setPendingClaims((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_claim' ? 'Claim approved' : 'Claim rejected');
-      } else {
-        const premium = action === 'set_premium';
-        const updater = (prev: Server[]) =>
-          prev.map((s) => (s.id === id ? { ...s, isPremium: premium } : s));
-        if (list === 'pending') setPending(updater);
-        else setActive(updater);
-        toast.success(premium ? 'Marked premium (dofollow)' : 'Premium removed (nofollow)');
       }
     } catch (err: any) {
       toast.error('Action failed', {
@@ -91,22 +81,7 @@ export default function AdminClient({
           servers={pending}
           empty="No pending submissions!"
           loadingId={loadingId}
-          showReviewActions
-          onAction={(id, action) => handleAction(id, action, 'pending')}
-        />
-      </section>
-
-      <section>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Active listings (premium)</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-          Premium listings get a dofollow website backlink. Free listings use nofollow.
-        </p>
-        <ServerTable
-          servers={active}
-          empty="No active listings loaded."
-          loadingId={loadingId}
-          showPremiumActions
-          onAction={(id, action) => handleAction(id, action, 'active')}
+          onAction={(id, action) => handleAction(id, action)}
         />
       </section>
 
@@ -119,8 +94,8 @@ export default function AdminClient({
         <PendingEditsTable
           servers={pendingEdits}
           loadingId={loadingId}
-          onApprove={(id) => handleAction(id, 'approve_edit', 'pendingEdits')}
-          onReject={(id) => handleAction(id, 'reject_edit', 'pendingEdits')}
+          onApprove={(id) => handleAction(id, 'approve_edit')}
+          onReject={(id) => handleAction(id, 'reject_edit')}
         />
       </section>
 
@@ -133,9 +108,18 @@ export default function AdminClient({
         <PendingClaimsTable
           servers={pendingClaims}
           loadingId={loadingId}
-          onApprove={(id) => handleAction(id, 'approve_claim', 'pendingClaims')}
-          onReject={(id) => handleAction(id, 'reject_claim', 'pendingClaims')}
+          onApprove={(id) => handleAction(id, 'approve_claim')}
+          onReject={(id) => handleAction(id, 'reject_claim')}
         />
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Manage listings</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          Search, edit, publish/unpublish, delete, and grant featured placement. Premium listings get
+          a dofollow website backlink; free listings use nofollow.
+        </p>
+        <ManageListings />
       </section>
     </div>
   );
@@ -145,16 +129,12 @@ function ServerTable({
   servers,
   empty,
   loadingId,
-  showReviewActions,
-  showPremiumActions,
   onAction,
 }: {
   servers: Server[];
   empty: string;
   loadingId: string | null;
-  showReviewActions?: boolean;
-  showPremiumActions?: boolean;
-  onAction: (id: string, action: 'approve' | 'reject' | 'set_premium' | 'unset_premium') => void;
+  onAction: (id: string, action: 'approve' | 'reject') => void;
 }) {
   return (
     <div
@@ -227,33 +207,20 @@ function ServerTable({
                 </td>
                 <td style={{ padding: '1rem' }}>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {showReviewActions && (
-                      <>
-                        <button
-                          onClick={() => onAction(server.id, 'approve')}
-                          disabled={loadingId === server.id}
-                          style={btnStyle('#047857', loadingId === server.id)}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => onAction(server.id, 'reject')}
-                          disabled={loadingId === server.id}
-                          style={btnStyle('#b91c1c', loadingId === server.id)}
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                    {showPremiumActions && (
-                      <button
-                        onClick={() => onAction(server.id, server.isPremium ? 'unset_premium' : 'set_premium')}
-                        disabled={loadingId === server.id}
-                        style={btnStyle(server.isPremium ? '#64748b' : '#0056b3', loadingId === server.id)}
-                      >
-                        {server.isPremium ? 'Remove premium' : 'Make premium'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onAction(server.id, 'approve')}
+                      disabled={loadingId === server.id}
+                      style={btnStyle('#047857', loadingId === server.id)}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => onAction(server.id, 'reject')}
+                      disabled={loadingId === server.id}
+                      style={btnStyle('#b91c1c', loadingId === server.id)}
+                    >
+                      Reject
+                    </button>
                   </div>
                 </td>
               </tr>
