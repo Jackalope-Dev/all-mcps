@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const result = submitSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json({ error: result.error.errors }, { status: 400 });
+      return NextResponse.json({ error: result.error.issues }, { status: 400 });
     }
     
     const { url } = result.data;
