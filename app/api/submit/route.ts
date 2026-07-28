@@ -5,12 +5,14 @@ import { servers } from '../../../db/schema';
 import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
 import { DEFAULT_SUBMIT_CATEGORY } from '../../../lib/categories';
+import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';
 
 const submitSchema = z.object({
   url: z.string().optional().or(z.literal('')),
   name: z.string().optional(),
   description: z.string().optional(),
   category: z.string().optional(),
+  email: z.string().email('Enter a valid email'),
   websiteUrl: z
     .string()
     .optional()
@@ -50,6 +52,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error.issues }, { status: 400 });
     }
 
+    const email = result.data.email;
     let websiteUrl = result.data.websiteUrl || '';
     let name = result.data.name || '';
     let description = result.data.description || '';
@@ -134,6 +137,7 @@ export async function POST(req: Request) {
         description: description || 'No description provided.',
         category,
         websiteUrl: websiteUrl || null,
+        submitterEmail: email,
         isPremium: false,
         websiteVerified: false,
         isOfficial: false,
@@ -143,6 +147,13 @@ export async function POST(req: Request) {
         createdAt: new Date(),
       })
       .onConflictDoNothing();
+
+    await syncSequenzySubscriber({
+      email,
+      tags: ['submitted-listing'],
+      lists: [PRODUCT_SUBSCRIBERS_LIST_ID],
+      customAttributes: { serverId: id, serverName: name },
+    });
 
     return NextResponse.json({
       success: true,

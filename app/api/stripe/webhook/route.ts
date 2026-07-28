@@ -6,6 +6,7 @@ import type Stripe from 'stripe';
 import { servers } from '../../../../db/schema';
 import { getStripe } from '../../../../lib/stripe';
 import type { PaidSku } from '../../../../lib/pricing';
+import { syncSequenzySubscriber } from '../../../../lib/sequenzy';
 
 async function getDb() {
   const ctx = await getCloudflareContext();
@@ -34,6 +35,9 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
       ? session.subscription
       : session.subscription?.id || null;
 
+  const rows = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+  const current = rows[0];
+
   if (sku === 'priority_review') {
     await db
       .update(servers)
@@ -42,12 +46,7 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
         ...(customerId ? { stripeCustomerId: customerId } : {}),
       })
       .where(eq(servers.id, serverId));
-    return;
-  }
-
-  if (sku === 'featured_7d') {
-    const rows = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
-    const current = rows[0];
+  } else if (sku === 'featured_7d') {
     const base =
       current?.featuredUntil && new Date(current.featuredUntil).getTime() > Date.now()
         ? new Date(current.featuredUntil)
@@ -59,10 +58,7 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
         ...(customerId ? { stripeCustomerId: customerId } : {}),
       })
       .where(eq(servers.id, serverId));
-    return;
-  }
-
-  if (sku === 'premium_monthly') {
+  } else if (sku === 'premium_monthly') {
     await db
       .update(servers)
       .set({
@@ -72,6 +68,14 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
         ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
       })
       .where(eq(servers.id, serverId));
+  }
+
+  const email = session.customer_details?.email || current?.submitterEmail || null;
+  if (email) {
+    await syncSequenzySubscriber({
+      email,
+      tags: [`paid-${sku}`],
+    });
   }
 }
 

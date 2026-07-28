@@ -15,6 +15,7 @@ export function SubmitForm() {
   const [prefillLoading, setPrefillLoading] = useState(false);
 
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [url, setUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -78,6 +79,7 @@ export function SubmitForm() {
     data['cf-turnstile-response'] = token;
     // Prefer explicit state (controlled inputs)
     data.name = name;
+    data.email = email;
     data.url = url.trim() || websiteUrl.trim();
     data.websiteUrl = websiteUrl;
     data.description = description;
@@ -178,6 +180,20 @@ export function SubmitForm() {
       </div>
 
       <Input name="name" label="Server Name" placeholder="e.g., GitHub MCP" value={name} onChange={(e) => setName(e.target.value)} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <Input
+          name="email"
+          label="Your email"
+          placeholder="you@example.com"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          We&apos;ll email you about your listing status and occasional offers.
+        </p>
+      </div>
       <Input
         name="websiteUrl"
         label="Website (optional if repo is the main link)"

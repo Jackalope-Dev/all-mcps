@@ -8,6 +8,8 @@ export const servers = sqliteTable('servers', {
   category: text('category').notNull(),
   /** Optional product/marketing website (separate from the repo `url`). */
   websiteUrl: text('website_url'),
+  /** Email the submitter gave at submit time. Used for status notices and the submission upsell sequence. */
+  submitterEmail: text('submitter_email'),
   /** Paid/premium listings get dofollow website backlinks; free listings use nofollow. */
   isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
   /** True when the owner proved control of `websiteUrl` (DNS TXT or site badge). */
