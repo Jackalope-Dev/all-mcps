@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Link from "next/link";
+import { Button } from "../components/ui/Button";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -36,18 +38,20 @@ export default function RootLayout({
       <body className={inter.className}>
         <header className="container">
           <div className="main-header">
-            <div className="logo animate-fade-in" style={{ fontSize: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <img src="/logo-icon.svg" alt="AllMCPs Logo" width={40} height={40} />
+            <Link href="/" className="logo animate-fade-in" style={{ fontSize: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: 'inherit' }} aria-label="Go to AllMCPs Homepage">
+              <img src="/logo-icon.svg" alt="" width={40} height={40} aria-hidden="true" />
               AllMCPs
-            </div>
-            <nav className="animate-fade-in delay-1" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-              <a href="#" className="nav-link">Browse</a>
-              <a href="#" className="nav-link">Categories</a>
-              <a href="#" className="glass-panel" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', fontWeight: 600 }}>Submit MCP</a>
+            </Link>
+            <nav className="animate-fade-in delay-1" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }} aria-label="Main Navigation">
+              <Link href="/" className="nav-link">Browse</Link>
+              <Link href="/categories" className="nav-link">Categories</Link>
+              <Button href="/submit" variant="primary">Submit MCP</Button>
             </nav>
           </div>
         </header>
+        
         {children}
+        
         <footer className="container" style={{ borderTop: '1px solid var(--border-color)', marginTop: '4rem', padding: '4rem 0', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
             <div>
@@ -57,17 +61,17 @@ export default function RootLayout({
             <div>
               <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Resources</h4>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><a href="#" className="nav-link">Blog</a></li>
-                <li><a href="#" className="nav-link">What is MCP?</a></li>
-                <li><a href="#" className="nav-link">LLM Agents Guide</a></li>
+                <li><Link href="/blog" className="nav-link">Blog</Link></li>
+                <li><Link href="/what-is-mcp" className="nav-link">What is MCP?</Link></li>
+                <li><Link href="/guide" className="nav-link">LLM Agents Guide</Link></li>
               </ul>
             </div>
             <div>
               <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Company</h4>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><a href="#" className="nav-link">About Jackalope Digital</a></li>
-                <li><a href="#" className="nav-link">Contact</a></li>
-                <li><a href="#" className="nav-link">Terms & Privacy</a></li>
+                <li><Link href="/about" className="nav-link">About Jackalope Digital</Link></li>
+                <li><Link href="/contact" className="nav-link">Contact</Link></li>
+                <li><Link href="/terms" className="nav-link">Terms & Privacy</Link></li>
               </ul>
             </div>
           </div>

@@ -1,4 +1,6 @@
 import DirectoryGrid from '../components/DirectoryGrid';
+import { FeaturedMarquee } from '../components/FeaturedMarquee';
+import { FeaturedCards } from '../components/FeaturedCards';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../db/schema';
 import { desc, eq } from 'drizzle-orm';
@@ -34,20 +36,29 @@ async function getServers(): Promise<Server[]> {
 export default async function Home() {
   const servers = await getServers();
   
-  // Take top 300 for the homepage to allow for meaningful searching
-  const featuredServers = servers.slice(0, 300);
+  // Since we don't have explicit paid featured servers yet, 
+  // we'll randomly select 15 for the marquee and 3 for the cards.
+  const shuffled = [...servers].sort(() => 0.5 - Math.random());
+  
+  const marqueeServers = shuffled.slice(0, 15);
+  const featuredCards = shuffled.slice(15, 18);
 
   return (
-    <main className="container">
+    <main>
       {/* Hero Section */}
-      <section style={{ textAlign: 'center', margin: '6rem 0 4rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }} className="animate-fade-in delay-1">
-        <h1>Give your AI agents <span style={{ background: 'linear-gradient(135deg, var(--accent-color), #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>superpowers</span>.</h1>
+      <section className="container animate-fade-in delay-1" style={{ textAlign: 'center', margin: '6rem auto 4rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <h1>Give your AI agents <span style={{ background: 'linear-gradient(135deg, var(--accent-color), #007BFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>superpowers</span>.</h1>
         <p style={{ fontSize: '1.25rem', maxWidth: '600px', margin: '1rem auto 0', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
           Find the best tools to connect your favorite LLMs directly to local files, databases, and external APIs.
         </p>
       </section>
 
-      <DirectoryGrid initialServers={featuredServers} />
+      {/* We pass all servers to DirectoryGrid so client search works perfectly. It now handles layout internally. */}
+      <DirectoryGrid 
+        initialServers={servers} 
+        marqueeServers={marqueeServers}
+        featuredCards={featuredCards}
+      />
     </main>
   );
 }

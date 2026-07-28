@@ -15,6 +15,13 @@
       "when": 1785203732341,
       "tag": "0001_red_gambit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785205653138,
+      "tag": "0002_brainy_grandmaster",
+      "breakpoints": true
     }
   ]
 }

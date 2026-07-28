@@ -11,5 +11,8 @@ export const servers = sqliteTable('servers', {
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   isVerifiedActive: integer('is_verified_active', { mode: 'boolean' }).notNull().default(false),
   healthStatus: text('health_status').notNull().default('unknown'),
+  views: integer('views').notNull().default(0),
+  copies: integer('copies').notNull().default(0),
+  upvotes: integer('upvotes').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });

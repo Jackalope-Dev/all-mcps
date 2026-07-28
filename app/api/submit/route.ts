@@ -3,6 +3,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../db/schema';
 import { z } from 'zod';
+import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
 
 const submitSchema = z.object({
   url: z.string().url("Must be a valid URL"),
@@ -14,6 +15,29 @@ const submitSchema = z.object({
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const token = body['cf-turnstile-response'];
+
+    // 1. Validate Turnstile token
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'Missing Turnstile token' }, { status: 400 });
+    }
+
+    const verifyForm = new URLSearchParams();
+    verifyForm.append('secret', process.env.TURNSTILE_SECRET || '');
+    verifyForm.append('response', token);
+    verifyForm.append('remoteip', req.headers.get('x-forwarded-for') || '');
+
+    const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: verifyForm,
+    });
+
+    const verifyResult = await verifyRes.json();
+    if (!verifyResult.success) {
+      return NextResponse.json({ success: false, error: 'Turnstile verification failed' }, { status: 403 });
+    }
+
+    // 2. Parse form body
     const result = submitSchema.safeParse(body);
     
     if (!result.success) {
@@ -21,11 +45,16 @@ export async function POST(req: Request) {
     }
     
     const { url } = result.data;
+
+    if (!isSafeSubmissionUrl(url)) {
+      return NextResponse.json({ error: "URL must be a public http(s) address." }, { status: 400 });
+    }
+
     let name = result.data.name || '';
     let description = result.data.description || '';
     let category = result.data.category || 'Community';
     
-    // 1. Auto-fill capability for GitHub URLs
+    // 3. Auto-fill capability for GitHub URLs
     const githubMatch = url.match(/github\.com\/([^/]+)\/([^/]+)/);
     if (githubMatch) {
       const owner = githubMatch[1];
@@ -52,7 +81,7 @@ export async function POST(req: Request) {
     
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     
-    // 2. Connect to Cloudflare D1
+    // 4. Connect to Cloudflare D1
     let env;
     try {
       const ctx = await getCloudflareContext();
@@ -67,7 +96,7 @@ export async function POST(req: Request) {
     
     const db = drizzle(env.DB as any);
     
-    // 3. Insert record as 'pending_review'
+    // 5. Insert record as 'pending_review'
     await db.insert(servers).values({
       id,
       name,

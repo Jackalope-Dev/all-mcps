@@ -1,0 +1,54 @@
+import { NextResponse } from 'next/server';
+import { Resend } from 'resend';
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const token = body['cf-turnstile-response'];
+
+    // 1. Validate Turnstile token
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'Missing Turnstile token' }, { status: 400 });
+    }
+
+    const verifyForm = new URLSearchParams();
+    verifyForm.append('secret', process.env.TURNSTILE_SECRET || '');
+    verifyForm.append('response', token);
+    verifyForm.append('remoteip', req.headers.get('x-forwarded-for') || '');
+
+    const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: verifyForm,
+    });
+
+    const verifyResult = await verifyRes.json();
+    if (!verifyResult.success) {
+      return NextResponse.json({ success: false, error: 'Turnstile verification failed' }, { status: 403 });
+    }
+
+    // 2. Send email via Resend
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    
+    // In production, the 'from' address must use a verified domain in Resend
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const toEmail = process.env.RESEND_TO_EMAIL || 'delivered@resend.dev';
+
+    const data = await resend.emails.send({
+      from: `Contact Form <${fromEmail}>`,
+      to: [toEmail],
+      subject: `New Contact Form Submission from ${body.name}`,
+      replyTo: body.email,
+      text: `Name: ${body.name}\nEmail: ${body.email}\n\nMessage:\n${body.message}`,
+    });
+
+    if (data.error) {
+      console.error("Resend API error:", data.error);
+      return NextResponse.json({ success: false, error: 'Failed to send email' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Message sent successfully' });
+  } catch (error) {
+    console.error("Contact API error:", error);
+    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+  }
+}

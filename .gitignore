@@ -2,6 +2,8 @@
 /node_modules
 /.pnp
 .pnp.js
+mcp-server/node_modules
+mcp-server/dist
 
 # testing
 /coverage

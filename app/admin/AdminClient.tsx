@@ -10,21 +10,48 @@ type Server = {
   createdAt: string;
 };
 
-export default function AdminClient({ initialPending }: { initialPending: Server[] }) {
-  const [servers, setServers] = useState<Server[]>(initialPending);
+export default function AdminClient() {
   const [secret, setSecret] = useState('');
+  const [authorized, setAuthorized] = useState(false);
+  const [servers, setServers] = useState<Server[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleAction = async (id: string, action: 'approve' | 'reject') => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!secret) {
       setError('Please enter the Admin Secret');
       return;
     }
-    
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/admin/pending', {
+        headers: { 'Authorization': `Bearer ${secret}` },
+      });
+
+      const data = await res.json() as { servers?: Server[]; error?: string };
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Authentication failed');
+      }
+
+      setServers(data.servers || []);
+      setAuthorized(true);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAction = async (id: string, action: 'approve' | 'reject') => {
     setLoadingId(id);
     setError('');
-    
+
     try {
       const res = await fetch('/api/admin/action', {
         method: 'POST',
@@ -34,13 +61,13 @@ export default function AdminClient({ initialPending }: { initialPending: Server
         },
         body: JSON.stringify({ id, action })
       });
-      
+
       const data = await res.json() as { error?: string };
 
       if (!res.ok) {
         throw new Error(data.error || 'Action failed');
       }
-      
+
       // Remove the item from the list
       setServers((prev) => prev.filter((s) => s.id !== id));
     } catch (err: any) {
@@ -50,19 +77,37 @@ export default function AdminClient({ initialPending }: { initialPending: Server
     }
   };
 
+  if (!authorized) {
+    return (
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <form
+          onSubmit={handleLogin}
+          style={{ marginBottom: '2rem', padding: '1rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px' }}
+        >
+          <h2 style={{ marginBottom: '1rem' }}>Authentication</h2>
+          <input
+            type="password"
+            placeholder="Enter ADMIN_SECRET"
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            style={{ width: '100%', padding: '0.75rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }}
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+          >
+            {loading ? 'Checking...' : 'Log In'}
+          </button>
+          {error && <p style={{ color: '#ef4444', marginTop: '1rem' }}>{error}</p>}
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '2rem', padding: '1rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
-        <h2 style={{ marginBottom: '1rem' }}>Authentication</h2>
-        <input 
-          type="password"
-          placeholder="Enter ADMIN_SECRET"
-          value={secret}
-          onChange={(e) => setSecret(e.target.value)}
-          style={{ width: '100%', padding: '0.75rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }}
-        />
-        {error && <p style={{ color: '#ef4444', marginTop: '1rem' }}>{error}</p>}
-      </div>
+      {error && <p style={{ color: '#ef4444', marginBottom: '1rem' }}>{error}</p>}
 
       <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -98,14 +143,14 @@ export default function AdminClient({ initialPending }: { initialPending: Server
                   </td>
                   <td style={{ padding: '1rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button 
+                      <button
                         onClick={() => handleAction(server.id, 'approve')}
                         disabled={loadingId === server.id}
                         style={{ padding: '0.5rem 1rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', opacity: loadingId === server.id ? 0.5 : 1 }}
                       >
                         Approve
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleAction(server.id, 'reject')}
                         disabled={loadingId === server.id}
                         style={{ padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', opacity: loadingId === server.id ? 0.5 : 1 }}

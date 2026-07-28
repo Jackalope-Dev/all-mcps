@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
+import { isAdminAuthorized } from '../../../../lib/adminAuth';
 
 const actionSchema = z.object({
   id: z.string().min(1),
@@ -12,10 +13,7 @@ const actionSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('authorization');
-    const secret = process.env.ADMIN_SECRET || 'dev_secret';
-    
-    if (authHeader !== `Bearer ${secret}`) {
+    if (!isAdminAuthorized(req)) {
       return NextResponse.json({ error: "Unauthorized. Invalid ADMIN_SECRET." }, { status: 401 });
     }
 

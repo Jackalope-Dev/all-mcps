@@ -1,7 +1,11 @@
 import { ArrowLeft, CheckCircle2, FolderGit2, Terminal } from 'lucide-react';
 import Link from 'next/link';
-import ReactMarkdown from 'react-markdown';
+import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import ShareModal from '../../../components/ShareModal';
+import { Badge } from '../../../components/ui/Badge';
+import { CopyBlock } from '../../../components/ui/CopyBlock';
+import { ViewTracker } from '../../../components/ui/ViewTracker';
+import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import serversData from '../../../data/mcp-servers.json';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
@@ -19,6 +23,9 @@ type Server = {
   lastCheckedAt?: string | null;
   isVerifiedActive?: boolean;
   healthStatus?: string;
+  views?: number;
+  copies?: number;
+  upvotes?: number;
   createdAt: string;
 };
 
@@ -39,8 +46,9 @@ async function getServer(id: string): Promise<Server | undefined> {
   return servers.find((s) => s.id === id);
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
-  const server = await getServer(params.id);
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const server = await getServer(id);
   
   if (!server) {
     return { title: 'Not Found' };
@@ -114,7 +122,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
   return (
-    <main className="container" style={{ paddingBottom: '6rem' }}>
+    <>
+      <ViewTracker serverId={server.id} />
+      <main className="container" style={{ paddingBottom: '6rem' }}>
       <div style={{ marginBottom: '2rem' }}>
         <Link href="/" style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }} className="nav-link">
           <ArrowLeft size={16} /> Back to Directory
@@ -127,47 +137,35 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <div style={{ gridColumn: '1 / span 2' }}>
           <h1 style={{ margin: '0 0 1rem 0' }}>{server.name}</h1>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            <span style={{ padding: '0.25rem 0.75rem', background: 'rgba(255,255,255,0.1)', borderRadius: '100px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              {server.category}
-            </span>
+            <Badge variant="category">{server.category}</Badge>
             {server.isOfficial && (
-              <span style={{ padding: '0.25rem 0.75rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '100px', fontSize: '0.875rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                ✓ Official
-              </span>
+              <Badge variant="official">✓ Official</Badge>
             )}
             {server.isVerifiedActive && (
-              <span style={{ padding: '0.25rem 0.75rem', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '100px', fontSize: '0.875rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }} title={server.lastCheckedAt ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}` : 'Recently checked'}>
+              <Badge variant="success" title={server.lastCheckedAt ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}` : 'Recently checked'}>
                 🟢 Verified Active
-              </span>
+              </Badge>
             )}
+            <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
           </div>
           
-          <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
-            {server.description}
-          </p>
+          <div style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
+            <SafeMarkdown content={server.description} />
+          </div>
 
           <div className="glass-panel" style={{ padding: '2rem', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Terminal size={20} /> Quick Install (Claude Desktop)
             </h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.875rem' }}>Add this directly to your <code>claude_desktop_config.json</code> file:</p>
-            <div style={{ position: 'relative' }}>
-              <pre style={{ background: 'rgba(0,0,0,0.4)', padding: '1.5rem', borderRadius: '8px', overflowX: 'auto', border: '1px solid var(--border-color)', fontSize: '0.875rem' }}>
-{`"mcpServers": {
-  "${installName}": {
-    "command": "npx",
-    "args": ["-y", "${installName}"]
-  }
-}`}
-              </pre>
-            </div>
+            <CopyBlock code={`"mcpServers": {\n  "${installName}": {\n    "command": "npx",\n    "args": ["-y", "${installName}"]\n  }\n}`} serverId={server.id} />
           </div>
 
           <div>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Documentation Overview</h2>
             <div className="markdown-body">
               {readme ? (
-                <ReactMarkdown>{readme}</ReactMarkdown>
+                <SafeMarkdown content={readme} />
               ) : (
                 <p>No README found or this server is not hosted on GitHub.</p>
               )}
@@ -203,5 +201,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         </div>
       </div>
     </main>
+    </>
   );
 }

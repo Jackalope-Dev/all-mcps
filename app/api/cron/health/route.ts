@@ -3,6 +3,8 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../../db/schema';
 import { eq, asc } from 'drizzle-orm';
+import { isAdminAuthorized } from '../../../../lib/adminAuth';
+import { isSafeFetchTarget } from '../../../../lib/urlSafety';
 
 export const runtime = 'edge';
 
@@ -11,10 +13,7 @@ const BATCH_SIZE = 50;
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('authorization');
-    const secret = process.env.ADMIN_SECRET || 'dev_secret';
-    
-    if (authHeader !== `Bearer ${secret}`) {
+    if (!isAdminAuthorized(req)) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
@@ -90,6 +89,8 @@ export async function POST(req: Request) {
               healthStatus = 'offline'; // Repo deleted or made private
             }
           }
+        } else if (!isSafeFetchTarget(server.url)) {
+          healthStatus = 'offline';
         } else {
           // Hosted Endpoint Check
           const pingRes = await fetch(server.url, { method: 'HEAD' }).catch(() => null);

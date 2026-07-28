@@ -1,0 +1,21 @@
+{
+  "name": "allmcps-server",
+  "version": "1.0.0",
+  "description": "The official MCP server for AllMCPs.com - submit and manage tools directly from your AI.",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "allmcps-server": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
