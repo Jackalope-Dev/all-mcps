@@ -1,8 +1,7 @@
-import fs from 'fs';
-import path from 'path';
 import { ArrowLeft, CheckCircle2, FolderGit2, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import serversData from '../../../data/mcp-servers.json';
 
 // Define the type for our server data
 type Server = {
@@ -15,9 +14,7 @@ type Server = {
 };
 
 async function getServer(id: string): Promise<Server | undefined> {
-  const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
-  const fileContents = fs.readFileSync(filePath, 'utf8');
-  const servers: Server[] = JSON.parse(fileContents);
+  const servers = serversData as Server[];
   return servers.find((s) => s.id === id);
 }
 
@@ -51,9 +48,7 @@ async function fetchReadme(url: string) {
 
 // Generate static params so Next.js can pre-render these pages at build time
 export async function generateStaticParams() {
-  const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
-  const fileContents = fs.readFileSync(filePath, 'utf8');
-  const servers: Server[] = JSON.parse(fileContents);
+  const servers = serversData as Server[];
   return servers.slice(0, 50).map((server) => ({
     id: server.id,
   }));

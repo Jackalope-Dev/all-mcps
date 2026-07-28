@@ -1,0 +1,114 @@
+
+ ⛅️ wrangler 4.114.0
+────────────────────
+Your Worker has access to the following bindings:
+Binding            Resource      Mode
+env.ASSETS         Assets        local
+
+Wrangler detected this dev session is running in an AI agent.
+The Local Explorer API is available at http://127.0.0.1:8788/cdn-cgi/explorer/api
+Useful routes:
+  GET http://127.0.0.1:8788/cdn-cgi/explorer/api - OpenAPI schema
+  GET http://127.0.0.1:8788/cdn-cgi/explorer/api/d1/database - D1 databases
+  GET http://127.0.0.1:8788/cdn-cgi/explorer/api/local/workers - local Workers and bindings
+  GET http://127.0.0.1:8788/cdn-cgi/explorer/api/r2/buckets - R2 buckets
+  GET http://127.0.0.1:8788/cdn-cgi/explorer/api/storage/kv/namespaces - KV namespaces
+  GET http://127.0.0.1:8788/cdn-cgi/explorer/api/workers/durable_objects/namespaces - Durable Object namespaces
+  GET http://127.0.0.1:8788/cdn-cgi/explorer/api/workflows - Workflows
+⎔ Starting local server...
+[wrangler:info] Ready on http://127.0.0.1:8788
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mFailed to load servers Error: no such file or directory, readAll '/bundle/data/mcp-servers.json'[0m
+
+      at null.<anonymous> (node-internal:internal_fs_sync:365:21)
+      at Object.readFileSync (node-internal:internal_fs_sync:366:7)
+      at f (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:275:14524)
+      at g (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:275:14667)
+      at eP (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:111:226)
+      at e11 (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:113:1010)
+      at eF (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:113:810)
+      at Array.toJSON (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:111:2060)
+      at stringify (<anonymous>)
+      at eV (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:123:1273) {
+    syscall: 'readAll',
+    code: 'ENOENT',
+    path: '/bundle/data/mcp-servers.json'
+  }
+
+
+[wrangler:info] GET / 200 OK (4663ms)
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mUncaught Error: no such file or directory, readAll '/bundle/data/mcp-servers.json' Error[0m
+
+      at null.<anonymous> (node-internal:internal_fs_sync:365:21)
+      at readFileSync (node-internal:internal_fs_sync:366:7)
+      at cI (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:268:12687)
+      at cL (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:268:13412)
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mUncaught Error: no such file or directory, readAll '/bundle/data/mcp-servers.json' [0m
+
+
+[wrangler:info] GET /mcp/-agentfund-mcp 500 Internal Server Error (164ms)
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mError: no such file or directory, readAll '/bundle/data/mcp-servers.json'[0m
+
+      at null.<anonymous> (node-internal:internal_fs_sync:365:21)
+      at Object.readFileSync (node-internal:internal_fs_sync:366:7)
+      at cI (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:268:12687)
+      at cL (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:268:13412) {
+    syscall: 'readAll',
+    code: 'ENOENT',
+    path: '/bundle/data/mcp-servers.json',
+    digest: '4075140479'
+  }
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mError: no such file or directory, readAll '/bundle/data/mcp-servers.json'[0m
+
+      at null.<anonymous> (node-internal:internal_fs_sync:365:21)
+      at Object.readFileSync (node-internal:internal_fs_sync:366:7)
+      at cI (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:268:12687)
+      at cL (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:268:13412) {
+    syscall: 'readAll',
+    code: 'ENOENT',
+    path: '/bundle/data/mcp-servers.json',
+    digest: '4075140479'
+  }
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1m⨯ Error: no such file or directory, readAll '/bundle/data/mcp-servers.json'[0m
+
+      at null.<anonymous> (node-internal:internal_fs_sync:365:21)
+      at Object.readFileSync (node-internal:internal_fs_sync:366:7)
+      at cI (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:268:12687)
+      at cL (file:///C:/Users/caden/OneDrive/Desktop/all-mcps/.open-next/server-functions/default/handler.mjs:268:13412) {
+    syscall: 'readAll',
+    code: 'ENOENT',
+    path: '/bundle/data/mcp-servers.json',
+    digest: '4075140479'
+  }
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mBuild failed with 3 errors:[0m
+
+  [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "./.build/durable-objects/queue.js"[0m
+  
+      .open-next/worker.js:10:31:
+  [37m      10 │ export { DOQueueHandler } from [32m"./.build/durable-objects/queue.js"[37m;
+           ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "./.build/durable-objects/sharded-tag-cache.js"[0m
+  
+      .open-next/worker.js:12:34:
+  [37m      12 │ ...edTagCache } from [32m"./.build/durable-objects/sharded-tag-cache.js"[37m;
+           ╵                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "./.build/durable-objects/bucket-cache-purge.js"[0m
+  
+      .open-next/worker.js:14:33:
+  [37m      14 │ ...achePurge } from [32m"./.build/durable-objects/bucket-cache-purge.js"[37m;
+           ╵                     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+
+

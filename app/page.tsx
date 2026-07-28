@@ -1,6 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import DirectoryGrid from '../components/DirectoryGrid';
+import serversData from '../data/mcp-servers.json';
 
 // Define the type for our server data
 type Server = {
@@ -12,16 +11,8 @@ type Server = {
   isOfficial: boolean;
 };
 
-// Fetch data from local JSON
 async function getServers(): Promise<Server[]> {
-  try {
-    const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
-    const fileContents = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(fileContents);
-  } catch (e) {
-    console.error("Failed to load servers", e);
-    return [];
-  }
+  return serversData as Server[];
 }
 
 export default async function Home() {
