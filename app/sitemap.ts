@@ -4,8 +4,6 @@ import { servers as serversTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 
-export const runtime = 'edge';
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://allmcps.com';
   

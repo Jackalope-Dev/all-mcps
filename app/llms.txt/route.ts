@@ -1,7 +1,5 @@
 import { getActiveServers } from '@/lib/servers';
 
-export const runtime = 'edge';
-
 export async function GET() {
   const servers = await getActiveServers();
 

@@ -6,8 +6,6 @@ import { eq, asc } from 'drizzle-orm';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { isSafeFetchTarget } from '../../../../lib/urlSafety';
 
-export const runtime = 'edge';
-
 // Maximum servers to check per cron run (keeps us under rate limits)
 const BATCH_SIZE = 50;
 

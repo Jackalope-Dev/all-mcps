@@ -1,7 +1,5 @@
 import { getServerById, fetchServerReadme } from '@/lib/servers';
 
-export const runtime = 'edge';
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

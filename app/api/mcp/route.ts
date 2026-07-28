@@ -1,7 +1,5 @@
 import { getActiveServers, getServerById, formatServerAsMarkdown } from '@/lib/servers';
 
-export const runtime = 'edge';
-
 const SERVER_INFO = {
   name: 'AllMCPs Directory Server',
   version: '1.0.0',

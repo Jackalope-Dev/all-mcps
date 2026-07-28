@@ -10,8 +10,6 @@ const metricSchema = z.object({
   metric: z.enum(["view", "copy", "upvote"])
 });
 
-export const runtime = 'edge';
-
 async function getDb() {
   const ctx = await getCloudflareContext();
   const env = ctx.env;
