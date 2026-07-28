@@ -4,16 +4,14 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../db/schema';
 import { z } from 'zod';
 
+export const runtime = 'edge';
+
 const submitSchema = z.object({
   url: z.string().url("Must be a valid URL"),
   name: z.string().optional(),
   description: z.string().optional(),
   category: z.string().optional(),
 });
-
-interface Env {
-  DB: D1Database;
-}
 
 export async function POST(req: Request) {
   try {
@@ -57,13 +55,21 @@ export async function POST(req: Request) {
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     
     // 2. Connect to Cloudflare D1
-    const { env } = getCloudflareContext() as unknown as { env: Env };
-    if (!env.DB) {
+    let env;
+    try {
+      const ctx = await getCloudflareContext();
+      env = ctx.env;
+    } catch (e) {
+      throw new Error("Could not get Cloudflare context.");
+    }
+
+    if (!env || !env.DB) {
       throw new Error("Database binding not found");
     }
-    const db = drizzle(env.DB);
     
-    // 3. Insert record as 'pending_review' (Security: Cross-tenant control)
+    const db = drizzle(env.DB as any);
+    
+    // 3. Insert record as 'pending_review'
     await db.insert(servers).values({
       id,
       name,
@@ -73,7 +79,7 @@ export async function POST(req: Request) {
       isOfficial: false,
       status: 'pending',
       createdAt: new Date(),
-    }).onConflictDoNothing(); // Prevent duplicate crashes
+    }).onConflictDoNothing();
     
     return NextResponse.json({ success: true, message: "Server submitted successfully for review!" });
   } catch (error) {

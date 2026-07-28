@@ -21,10 +21,10 @@ export default function SubmitPage() {
         body: JSON.stringify({ url }),
       });
       
-      const data = await res.json();
+      const data = await res.json() as { message?: string; error?: unknown };
       
       if (res.ok) {
-        setMessage({ text: data.message, type: 'success' });
+        setMessage({ text: data.message || 'Submitted successfully!', type: 'success' });
         setUrl('');
       } else {
         setMessage({ text: JSON.stringify(data.error) || 'Something went wrong', type: 'error' });

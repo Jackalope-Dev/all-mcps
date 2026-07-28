@@ -2,6 +2,11 @@ import { ArrowLeft, CheckCircle2, FolderGit2, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import serversData from '../../../data/mcp-servers.json';
+import path from 'path';
+import fs from 'fs';
+import { drizzle } from 'drizzle-orm/d1';
+import { servers as serversTable } from '../../../db/schema';
+import { eq } from 'drizzle-orm';
 
 // Define the type for our server data
 type Server = {
@@ -14,7 +19,21 @@ type Server = {
 };
 
 async function getServer(id: string): Promise<Server | undefined> {
-  const servers = serversData as Server[];
+  // Try D1 first
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const dbServers = await db.select().from(serversTable).where(eq(serversTable.id, id)).limit(1);
+      if (dbServers.length > 0) return dbServers[0] as unknown as Server;
+    }
+  } catch (e) {}
+
+  // Fallback
+  const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
+  const fileContents = fs.readFileSync(filePath, 'utf8');
+  const servers: Server[] = JSON.parse(fileContents);
   return servers.find((s) => s.id === id);
 }
 
