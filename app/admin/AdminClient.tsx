@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { parsePendingRevision } from '../../lib/pendingRevision';
+import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import ManageListings from './ManageListings';
 
 type Server = {
@@ -57,6 +58,7 @@ export default function AdminClient({
       if (action === 'approve' || action === 'reject') {
         setPending((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve' ? 'Listing approved' : 'Listing rejected');
+        notifyAdminStatsChanged();
       } else if (action === 'approve_edit' || action === 'reject_edit') {
         setPendingEdits((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_edit' ? 'Edit approved' : 'Edit rejected');

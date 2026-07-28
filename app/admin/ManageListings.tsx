@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, type CSSProperties } from 'react';
 import { toast } from '../../components/ui/Toast';
+import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 
 type Listing = {
   id: string;
@@ -133,6 +134,7 @@ export default function ManageListings() {
       }
 
       toast.success(data.message || 'Done');
+      notifyAdminStatsChanged();
     } catch (err: any) {
       toast.error('Action failed', { description: err?.message || 'Something went wrong.' });
     } finally {
@@ -173,7 +175,10 @@ export default function ManageListings() {
   };
 
   const deleteListing = (listing: Listing) => {
-    if (!window.confirm(`Permanently delete "${listing.name}"? This cannot be undone.`)) return;
+    const warning = listing.isPremium
+      ? `"${listing.name}" is a premium listing. Deleting it here does NOT cancel its Stripe subscription — cancel that separately in Stripe. Permanently delete anyway? This cannot be undone.`
+      : `Permanently delete "${listing.name}"? This cannot be undone.`;
+    if (!window.confirm(warning)) return;
     runAction(listing.id, 'delete');
   };
 

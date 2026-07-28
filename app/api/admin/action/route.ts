@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers, users } from '../../../../db/schema';
+import { servers, users, upvoteRecords, viewRecords } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
@@ -190,6 +190,11 @@ export async function POST(req: Request) {
       if (deleteResult.length === 0) {
         return NextResponse.json({ error: "Server not found." }, { status: 404 });
       }
+
+      // Clean up dependent per-IP gate rows so a reused id doesn't inherit stale
+      // upvote/view history (these have no FK/cascade — servers.id is plain text).
+      await db.delete(upvoteRecords).where(eq(upvoteRecords.serverId, id));
+      await db.delete(viewRecords).where(eq(viewRecords.serverId, id));
     } else if (action === 'feature') {
       if (!days) {
         return NextResponse.json({ error: "days is required." }, { status: 400 });

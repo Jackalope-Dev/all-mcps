@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, ne, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gt, ne, or, sum } from 'drizzle-orm';
 import { servers } from '../db/schema';
 
 export type AdminStats = {
@@ -18,10 +18,16 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     await Promise.all([
       db.select({ status: servers.status, total: count() }).from(servers).groupBy(servers.status),
       db.select({ total: count() }).from(servers).where(eq(servers.isPremium, true)),
+      // Matches lib/featuredStatus.ts's isFeaturedListing (premium counts as featured too).
       db
         .select({ total: count() })
         .from(servers)
-        .where(and(eq(servers.status, 'active'), gt(servers.featuredUntil, now))),
+        .where(
+          and(
+            eq(servers.status, 'active'),
+            or(eq(servers.isPremium, true), gt(servers.featuredUntil, now))
+          )
+        ),
       db
         .select({ total: count() })
         .from(servers)

@@ -51,7 +51,8 @@ export async function GET(req: Request) {
       conditions.push(eq(servers.isPremium, premium === 'true'));
     }
     if (featured === 'true') {
-      conditions.push(gt(servers.featuredUntil, new Date()));
+      // Matches lib/featuredStatus.ts's isFeaturedListing (premium counts as featured too).
+      conditions.push(or(eq(servers.isPremium, true), gt(servers.featuredUntil, new Date())));
     }
     if (health) {
       conditions.push(eq(servers.healthStatus, health));
@@ -60,7 +61,25 @@ export async function GET(req: Request) {
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [items, totalRows] = await Promise.all([
-      db.select().from(servers).where(where).orderBy(desc(servers.createdAt)).limit(limit).offset(offset),
+      db
+        .select({
+          id: servers.id,
+          name: servers.name,
+          url: servers.url,
+          websiteUrl: servers.websiteUrl,
+          description: servers.description,
+          category: servers.category,
+          createdAt: servers.createdAt,
+          isPremium: servers.isPremium,
+          status: servers.status,
+          healthStatus: servers.healthStatus,
+          featuredUntil: servers.featuredUntil,
+        })
+        .from(servers)
+        .where(where)
+        .orderBy(desc(servers.createdAt))
+        .limit(limit)
+        .offset(offset),
       db.select({ total: count() }).from(servers).where(where),
     ]);
 

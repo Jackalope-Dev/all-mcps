@@ -92,7 +92,7 @@ export default async function AdminPage() {
       </p>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto 2rem' }}>
-        <StatsBar stats={stats} />
+        <StatsBar initialStats={stats} />
       </div>
 
       <AdminClient

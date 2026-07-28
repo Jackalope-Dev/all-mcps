@@ -1,6 +1,27 @@
-import type { AdminStats } from '@/lib/adminStats';
+'use client';
 
-export function StatsBar({ stats }: { stats: AdminStats }) {
+import { useEffect, useState } from 'react';
+import type { AdminStats } from '@/lib/adminStats';
+import { ADMIN_STATS_REFRESH_EVENT } from '@/lib/adminStatsRefresh';
+
+export function StatsBar({ initialStats }: { initialStats: AdminStats }) {
+  const [stats, setStats] = useState<AdminStats>(initialStats);
+
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        const res = await fetch('/api/admin/stats');
+        if (!res.ok) return;
+        const data = (await res.json()) as AdminStats;
+        setStats(data);
+      } catch {
+        // Best-effort refresh — keep showing the last known stats on failure.
+      }
+    };
+    window.addEventListener(ADMIN_STATS_REFRESH_EVENT, refresh);
+    return () => window.removeEventListener(ADMIN_STATS_REFRESH_EVENT, refresh);
+  }, []);
+
   const cards: { label: string; value: string }[] = [
     { label: 'Pending', value: String(stats.statusCounts.pending) },
     { label: 'Active', value: String(stats.statusCounts.active) },
