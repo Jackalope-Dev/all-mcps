@@ -28,9 +28,35 @@ async function getServer(id: string): Promise<Server | undefined> {
     }
   } catch (e) {}
 
-  // Fallback to the bundled JSON snapshot
-  const servers = serversData as Server[];
+  // Fallback
+  const filePath = path.join(process.cwd(), 'data', 'mcp-servers.json');
+  const fileContents = fs.readFileSync(filePath, 'utf8');
+  const servers: Server[] = JSON.parse(fileContents);
   return servers.find((s) => s.id === id);
+}
+
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const server = await getServer(params.id);
+  
+  if (!server) {
+    return { title: 'Not Found' };
+  }
+  
+  return {
+    title: `${server.name} MCP`,
+    description: server.description,
+    openGraph: {
+      title: `${server.name} MCP | AllMCPs Directory`,
+      description: server.description,
+      images: ['/opengraph-image.jpg'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${server.name} MCP | AllMCPs Directory`,
+      description: server.description,
+      images: ['/opengraph-image.jpg'],
+    }
+  };
 }
 
 async function fetchReadme(url: string) {

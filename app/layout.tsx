@@ -5,8 +5,34 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "AllMCPs - The Model Context Protocol Directory",
-  description: "Discover, filter, and install the best MCP servers for your AI agents. The definitive directory for the Model Context Protocol ecosystem.",
+  title: {
+    default: 'AllMCPs | The Directory for Model Context Protocol Servers',
+    template: '%s | AllMCPs'
+  },
+  description: 'Find, discover, and install the best Model Context Protocol (MCP) servers to give your AI agents superpowers.',
+  metadataBase: new URL('https://allmcps.com'),
+  openGraph: {
+    title: 'AllMCPs | The Directory for Model Context Protocol Servers',
+    description: 'Find, discover, and install the best Model Context Protocol (MCP) servers to give your AI agents superpowers.',
+    url: 'https://allmcps.com',
+    siteName: 'AllMCPs',
+    images: [
+      {
+        url: '/opengraph-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs Directory',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AllMCPs | The Directory for Model Context Protocol Servers',
+    description: 'Find, discover, and install the best Model Context Protocol (MCP) servers to give your AI agents superpowers.',
+    images: ['/opengraph-image.jpg'],
+  },
 };
 
 export default function RootLayout({
