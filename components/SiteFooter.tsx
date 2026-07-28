@@ -74,6 +74,16 @@ export function SiteFooter() {
             </li>
             <li>
               <a
+                href="https://x.com/AllMCPs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-link"
+              >
+                X (@AllMCPs) ↗
+              </a>
+            </li>
+            <li>
+              <a
                 href="https://jackalope.digital"
                 target="_blank"
                 rel="noopener noreferrer"

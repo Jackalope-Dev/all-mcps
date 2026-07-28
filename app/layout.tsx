@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Atkinson_Hyperlegible_Next } from "next/font/google";
 import Script from "next/script";
 import { SiteHeader } from "../components/SiteHeader";
@@ -6,6 +7,7 @@ import { SiteFooter } from "../components/SiteFooter";
 import { WebMCPProvider } from "../components/WebMCPProvider";
 import { CookieBanner } from "../components/CookieBanner";
 import { ToastProvider } from "../components/ui/Toast";
+import { PurchaseTracker } from "../components/PurchaseTracker";
 import "./globals.css";
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
@@ -14,31 +16,40 @@ const sans = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
-  // Next's bundled capsize metrics don't include this font yet, so the
-  // automatic fallback-metric calculation always fails; disable it to
-  // silence the "Failed to find font override values" build error.
   adjustFontFallback: false,
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#020617",
+};
+
 export const metadata: Metadata = {
   title: {
-    default: 'AllMCPs | The Directory for Model Context Protocol Servers',
-    template: '%s | AllMCPs'
+    default: "AllMCPs | Directory for Model Context Protocol Servers",
+    template: "%s | AllMCPs",
   },
-  description: 'Find, discover, and install the best Model Context Protocol (MCP) servers to give your AI agents superpowers.',
-  metadataBase: new URL('https://allmcps.com'),
+  description:
+    "Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.",
+  metadataBase: new URL("https://allmcps.com"),
   openGraph: {
-    title: 'AllMCPs | The Directory for Model Context Protocol Servers',
-    description: 'Find, discover, and install the best Model Context Protocol (MCP) servers to give your AI agents superpowers.',
-    url: 'https://allmcps.com',
-    siteName: 'AllMCPs',
-    locale: 'en_US',
-    type: 'website',
+    title: "AllMCPs | Directory for Model Context Protocol Servers",
+    description:
+      "Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.",
+    url: "https://allmcps.com",
+    siteName: "AllMCPs",
+    locale: "en_US",
+    type: "website",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'AllMCPs | The Directory for Model Context Protocol Servers',
-    description: 'Find, discover, and install the best Model Context Protocol (MCP) servers to give your AI agents superpowers.',
+    card: "summary_large_image",
+    site: "@AllMCPs",
+    creator: "@AllMCPs",
+    title: "AllMCPs | Directory for Model Context Protocol Servers",
+    description:
+      "Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers.",
   },
 };
 
@@ -77,6 +88,9 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={sans.className}>
+        <Suspense fallback={null}>
+          <PurchaseTracker />
+        </Suspense>
         <WebMCPProvider />
         <CookieBanner />
         <ToastProvider />
@@ -84,23 +98,25 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@graph': [
+              "@context": "https://schema.org",
+              "@graph": [
                 {
-                  '@type': 'Organization',
-                  name: 'AllMCPs',
-                  url: 'https://allmcps.com',
-                  logo: 'https://allmcps.com/logo-icon.svg',
-                  description: 'The definitive directory for discovering and installing Model Context Protocol servers.',
+                  "@type": "Organization",
+                  name: "AllMCPs",
+                  url: "https://allmcps.com",
+                  logo: "https://allmcps.com/logo-icon.svg",
+                  sameAs: ["https://x.com/AllMCPs"],
+                  description:
+                    "The definitive directory for discovering and installing Model Context Protocol servers.",
                 },
                 {
-                  '@type': 'WebSite',
-                  name: 'AllMCPs',
-                  url: 'https://allmcps.com',
+                  "@type": "WebSite",
+                  name: "AllMCPs",
+                  url: "https://allmcps.com",
                   potentialAction: {
-                    '@type': 'SearchAction',
-                    target: 'https://allmcps.com/browse?q={search_term_string}',
-                    'query-input': 'required name=search_term_string',
+                    "@type": "SearchAction",
+                    target: "https://allmcps.com/browse?q={search_term_string}",
+                    "query-input": "required name=search_term_string",
                   },
                 },
               ],
@@ -114,3 +130,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -2,8 +2,24 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'What is an MCP?',
-  description: 'A clear, practical explanation of the Model Context Protocol (MCP): what it is, how it works, real-world examples, and how to get started.',
+  title: 'What is Model Context Protocol? (MCP Guide)',
+  description:
+    'Learn what Model Context Protocol (MCP) is, how it works, local vs remote servers, real-world examples, and how to connect AI agents.',
+  alternates: {
+    canonical: 'https://allmcps.com/what-is-mcp',
+  },
+  openGraph: {
+    title: 'What is Model Context Protocol? (MCP Guide) | AllMCPs',
+    description:
+      'Learn what Model Context Protocol (MCP) is, how it works, local vs remote servers, real-world examples, and how to connect AI agents.',
+    url: 'https://allmcps.com/what-is-mcp',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'What is Model Context Protocol? (MCP Guide) | AllMCPs',
+    description:
+      'Learn what Model Context Protocol (MCP) is, how it works, local vs remote servers, real-world examples, and how to connect AI agents.',
+  },
 };
 
 const faqs = [

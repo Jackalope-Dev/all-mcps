@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { TurnstileWidget } from '../ui/TurnstileWidget';
 import { toast } from '../ui/Toast';
+import { trackContactSubmit } from '../../lib/gtag';
 
 export function ContactForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -34,6 +35,10 @@ export function ContactForm() {
 
       if (res.ok) {
         setStatus('success');
+        trackContactSubmit({
+          name: typeof data.name === 'string' ? data.name : undefined,
+          messageLength: typeof data.message === 'string' ? data.message.length : 0,
+        });
         toast.success('Message sent', {
           description: "We'll get back to you soon.",
         });

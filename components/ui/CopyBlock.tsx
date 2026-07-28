@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { toast } from './Toast';
+import { trackCopyConfig } from '../../lib/gtag';
 
 export function CopyBlock({ code, serverId }: { code: string; serverId?: string }) {
   const [copied, setCopied] = useState(false);
@@ -13,6 +14,8 @@ export function CopyBlock({ code, serverId }: { code: string; serverId?: string 
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast.success('Copied to clipboard');
+
+      trackCopyConfig({ serverId, snippetType: 'install_command' });
 
       if (serverId) {
         fetch(`/api/mcp/${serverId}/metric`, {

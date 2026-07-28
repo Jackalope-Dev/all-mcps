@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { TurnstileWidget } from '../ui/TurnstileWidget';
 import { toast } from '../ui/Toast';
 import { DEFAULT_SUBMIT_CATEGORY, DIRECTORY_CATEGORIES } from '../../lib/categories';
+import { trackSubmitLead } from '../../lib/gtag';
 
 export function SubmitForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -92,6 +93,11 @@ export function SubmitForm() {
         const payload = (await res.json().catch(() => null)) as { id?: string } | null;
         setSubmittedId(payload?.id || null);
         setStatus('success');
+        trackSubmitLead({
+          serverName: name,
+          category: (data.category as string) || DEFAULT_SUBMIT_CATEGORY,
+          url: url || websiteUrl,
+        });
         toast.success('Server submitted', {
           description: 'Your listing is pending review.',
         });

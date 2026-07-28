@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
@@ -29,6 +30,15 @@ async function getServer(id: string): Promise<Server | undefined> {
 
   const servers = serversData as Server[];
   return servers.find((s) => s.id === id);
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const server = await getServer(id);
+  return {
+    title: server ? `${server.name} Widget` : 'MCP Widget',
+    robots: { index: false, follow: false },
+  };
 }
 
 // Generate static params so Next.js can pre-render these pages at build time

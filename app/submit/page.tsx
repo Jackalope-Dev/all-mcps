@@ -3,8 +3,24 @@ import { SubmitForm } from '../../components/forms/SubmitForm';
 import { PageShell, PageHeader } from '../../components/PageShell';
 
 export const metadata: Metadata = {
-  title: 'Submit an MCP Server',
-  description: 'Submit your Model Context Protocol server to the AllMCPs directory.',
+  title: 'Submit your MCP Server to AllMCPs',
+  description:
+    'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers and agent users.',
+  alternates: {
+    canonical: 'https://allmcps.com/submit',
+  },
+  openGraph: {
+    title: 'Submit your MCP Server to AllMCPs | AllMCPs',
+    description:
+      'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers and agent users.',
+    url: 'https://allmcps.com/submit',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Submit your MCP Server to AllMCPs | AllMCPs',
+    description:
+      'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers.',
+  },
 };
 
 export default function SubmitPage() {

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Sparkles, Zap, Crown } from 'lucide-react';
 import { toast } from './ui/Toast';
 import { formatUsd, PAID_PRODUCTS, type PaidSku } from '../lib/pricing';
+import { trackBeginCheckout } from '../lib/gtag';
 
 type Props = {
   serverId: string;
@@ -41,6 +42,7 @@ export function PremiumUpgrade({
 
   const startCheckout = async (sku: PaidSku) => {
     setLoadingSku(sku);
+    trackBeginCheckout({ sku, serverId });
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',

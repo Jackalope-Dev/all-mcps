@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
@@ -6,6 +7,15 @@ import { auth } from '@/lib/auth';
 import DashboardClient from './DashboardClient';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Developer Dashboard',
+  description: 'Manage your Model Context Protocol server listings on AllMCPs.',
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 async function getOwnedServers(userId: string) {
   try {

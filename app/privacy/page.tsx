@@ -3,7 +3,17 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Privacy Policy for AllMCPs, operated by Jackalope Digital LLC.',
+  description:
+    'Privacy policy for AllMCPs. Learn how we handle analytics, cookie consent, and data protection on our website.',
+  alternates: {
+    canonical: 'https://allmcps.com/privacy',
+  },
+  openGraph: {
+    title: 'Privacy Policy | AllMCPs',
+    description:
+      'Privacy policy for AllMCPs. Learn how we handle analytics, cookie consent, and data protection on our website.',
+    url: 'https://allmcps.com/privacy',
+  },
 };
 
 export default function PrivacyPage() {

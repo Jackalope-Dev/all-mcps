@@ -3,11 +3,23 @@ import { Button } from '../../components/ui/Button';
 import { PageShell, PageHeader } from '../../components/PageShell';
 
 export const metadata: Metadata = {
-  title: 'About AllMCPs & Jackalope Digital',
+  title: 'About AllMCPs - The MCP Directory',
   description:
-    'Learn about AllMCPs — the definitive directory for discovering, sharing, and installing Model Context Protocol (MCP) servers.',
+    'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
   alternates: {
     canonical: 'https://allmcps.com/about',
+  },
+  openGraph: {
+    title: 'About AllMCPs - The MCP Directory | AllMCPs',
+    description:
+      'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
+    url: 'https://allmcps.com/about',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About AllMCPs - The MCP Directory | AllMCPs',
+    description:
+      'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
   },
 };
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Share2, X, Copy, Check } from 'lucide-react';
 import { toast } from './ui/Toast';
+import { trackShare } from '../lib/gtag';
 
 function getDisplayName(name: string) {
   const base = name.split('/').pop() || name;
@@ -52,6 +53,7 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
       setTimeout(() => {
         setCopiedStates((prev) => ({ ...prev, [key]: false }));
       }, 2000);
+      trackShare({ method: `copy_${key}`, serverId });
       toast.success('Copied to clipboard');
     } catch (err) {
       console.error('Failed to copy text: ', err);

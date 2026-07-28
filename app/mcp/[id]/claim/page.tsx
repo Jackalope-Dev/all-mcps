@@ -36,10 +36,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const server = await getServer(id);
-  if (!server) return { title: 'Claim listing' };
+  if (!server) return { title: 'Claim listing', robots: { index: false } };
   return {
     title: `Claim ${server.name}`,
     description: `Verify ownership of ${server.name} on AllMCPs via GitHub README, site badge, or DNS.`,
+    robots: {
+      index: false,
+      follow: true,
+    },
   };
 }
 

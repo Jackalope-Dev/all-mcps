@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import DirectoryGrid from '../components/DirectoryGrid';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../db/schema';
@@ -5,6 +6,21 @@ import { desc, eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { redirect } from 'next/navigation';
 import { pickDiscoveryServers } from '../lib/featured';
+
+export const metadata: Metadata = {
+  title: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
+  description:
+    'Find, discover, and install the best Model Context Protocol (MCP) servers. Connect Claude, Cursor, and AI agents to files, databases, and APIs.',
+  alternates: {
+    canonical: 'https://allmcps.com',
+  },
+  openGraph: {
+    title: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
+    description:
+      'Find, discover, and install the best Model Context Protocol (MCP) servers. Connect Claude, Cursor, and AI agents to files, databases, and APIs.',
+    url: 'https://allmcps.com',
+  },
+};
 
 // Define the type for our server data
 type Server = {

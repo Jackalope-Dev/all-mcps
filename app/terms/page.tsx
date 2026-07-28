@@ -3,7 +3,17 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: 'Terms of Service for AllMCPs, operated by Jackalope Digital LLC.',
+  description:
+    'Terms of service and usage conditions for the AllMCPs directory, server submissions, and featured listing services.',
+  alternates: {
+    canonical: 'https://allmcps.com/terms',
+  },
+  openGraph: {
+    title: 'Terms of Service | AllMCPs',
+    description:
+      'Terms of service and usage conditions for the AllMCPs directory, server submissions, and featured listing services.',
+    url: 'https://allmcps.com/terms',
+  },
 };
 
 export default function TermsPage() {

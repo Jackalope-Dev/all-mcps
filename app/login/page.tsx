@@ -1,6 +1,16 @@
+import type { Metadata } from 'next';
 import { signIn } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageShell } from '@/components/PageShell';
+
+export const metadata: Metadata = {
+  title: 'Sign In',
+  description: 'Sign in to manage your AllMCPs server listings.',
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default async function LoginPage({
   searchParams,

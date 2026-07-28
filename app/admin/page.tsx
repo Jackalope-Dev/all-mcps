@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../db/schema';
@@ -6,6 +7,15 @@ import { getAuthorizedAdminEmail } from '../../lib/accessAuth';
 import AdminClient from './AdminClient';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Admin Dashboard',
+  description: 'Manage submissions and listings on AllMCPs.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 async function getAdminData() {
   try {

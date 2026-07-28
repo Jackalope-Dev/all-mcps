@@ -8,17 +8,23 @@ import serversData from '../../data/mcp-servers.json';
 import { CategoryGrid } from '../../components/CategoryGrid';
 
 export const metadata: Metadata = {
-  title: 'Browse MCP Servers by Category | AllMCPs',
+  title: 'Browse MCP Servers by Category',
   description:
-    'Explore thousands of Model Context Protocol servers organized into 55+ categories. Find the perfect AI agent tools for developer workflows, databases, security, finance, and more.',
+    'Explore Model Context Protocol servers across 50+ categories. Find AI agent tools for databases, developer workflows, security, and APIs.',
   alternates: {
     canonical: 'https://allmcps.com/categories',
   },
   openGraph: {
     title: 'Browse MCP Servers by Category | AllMCPs',
     description:
-      'Explore thousands of Model Context Protocol servers organized into 55+ categories.',
+      'Explore Model Context Protocol servers across 50+ categories. Find AI agent tools for databases, developer workflows, and security.',
     url: 'https://allmcps.com/categories',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Browse MCP Servers by Category | AllMCPs',
+    description:
+      'Explore Model Context Protocol servers across 50+ categories. Find AI agent tools for databases, developer workflows, and security.',
   },
 };
 

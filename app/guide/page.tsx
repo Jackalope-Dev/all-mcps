@@ -2,8 +2,24 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'LLM Agents Guide',
-  description: 'A practical, step-by-step guide to connecting Claude and other LLM agents to MCP servers, with real configuration examples, security tips, and troubleshooting.',
+  title: 'LLM Agents Setup & Configuration Guide',
+  description:
+    'Step-by-step guide to connecting Claude Desktop, Cursor, and LLM agents to MCP servers with configuration examples and security tips.',
+  alternates: {
+    canonical: 'https://allmcps.com/guide',
+  },
+  openGraph: {
+    title: 'LLM Agents Setup & Configuration Guide | AllMCPs',
+    description:
+      'Step-by-step guide to connecting Claude Desktop, Cursor, and LLM agents to MCP servers with configuration examples and security tips.',
+    url: 'https://allmcps.com/guide',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'LLM Agents Setup & Configuration Guide | AllMCPs',
+    description:
+      'Step-by-step guide to connecting Claude Desktop, Cursor, and LLM agents to MCP servers with configuration examples and security tips.',
+  },
 };
 
 const articleJsonLd = {

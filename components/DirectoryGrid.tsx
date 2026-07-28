@@ -15,6 +15,7 @@ import {
   isFeaturedListing as isFeaturedListingShared,
   isVerifiedListing as isVerifiedListingShared,
 } from '../lib/featuredStatus';
+import { trackSearch, trackOutboundClick } from '../lib/gtag';
 
 type Server = {
   id: string;
@@ -161,6 +162,20 @@ export default function DirectoryGrid({
 
     return result;
   }, [initialServers, searchQuery, selectedCategory, sortMode, verifiedOnly]);
+
+  const filteredCount = filteredServers.length;
+
+  useEffect(() => {
+    if (!searchQuery && !selectedCategory) return;
+    const timer = setTimeout(() => {
+      trackSearch({
+        searchTerm: searchQuery,
+        category: selectedCategory,
+        resultCount: filteredCount,
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedCategory, filteredCount]);
 
   // Restore preferred view mode once on mount
   useEffect(() => {

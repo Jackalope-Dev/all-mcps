@@ -8,6 +8,8 @@ import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
 
+import { tweetMcpServer } from '../../../../lib/twitter';
+
 const actionSchema = z.object({
   id: z.string().min(1),
   action: z.enum([
@@ -82,6 +84,20 @@ export async function POST(req: Request) {
 
       if (updateResult.length === 0) {
          return NextResponse.json({ error: "Server not found or not in pending state." }, { status: 400 });
+      }
+
+      // Auto-tweet newly approved MCP server
+      try {
+        const approvedServer = updateResult[0];
+        await tweetMcpServer({
+          id: approvedServer.id,
+          name: approvedServer.name,
+          description: approvedServer.description,
+          category: approvedServer.category,
+          isNew: true,
+        });
+      } catch (e) {
+        console.error('Failed to tweet on server approval:', e);
       }
     } else if (action === 'reject') {
       const deleteResult = await db.delete(servers)

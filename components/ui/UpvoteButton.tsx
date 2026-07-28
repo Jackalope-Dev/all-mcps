@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { toast } from './Toast';
+import { trackUpvote } from '../../lib/gtag';
 
 export function UpvoteButton({ serverId, initialCount }: { serverId: string; initialCount: number }) {
   const [upvotes, setUpvotes] = useState(initialCount || 0);
@@ -69,6 +70,8 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
       if (!res.ok) {
         throw new Error(`Upvote request failed with status ${res.status}`);
       }
+
+      trackUpvote({ serverId });
 
       toast.success('Upvoted', {
         description: 'Thanks for supporting this server.',

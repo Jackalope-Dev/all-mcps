@@ -4,10 +4,22 @@ import { PricingClient } from './PricingClient';
 import { PAID_PRODUCTS, formatUsd } from '../../lib/pricing';
 
 export const metadata: Metadata = {
-  title: 'Pricing',
+  title: 'Pricing & Featured MCP Listings',
   description:
-    'Promote your MCP on AllMCPs: $5 priority review, $12 seven-day featured boost, or $19/mo Premium for ongoing placement and dofollow links.',
+    'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, and priority verification for your AI tool.',
   alternates: { canonical: 'https://allmcps.com/pricing' },
+  openGraph: {
+    title: 'Pricing & Featured MCP Listings | AllMCPs',
+    description:
+      'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, and priority verification.',
+    url: 'https://allmcps.com/pricing',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Pricing & Featured MCP Listings | AllMCPs',
+    description:
+      'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, and priority verification.',
+  },
 };
 
 export default async function PricingPage({

@@ -14,6 +14,7 @@ import { eq } from 'drizzle-orm';
 import { repoLinkRel, websiteLinkRel } from '../../../lib/linkRel';
 import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
 import { isFeaturedListing } from '../../../lib/featuredStatus';
+import { OutboundLink } from '../../../components/ui/OutboundLink';
 
 // Define the type for our server data
 type Server = {
@@ -63,23 +64,28 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return { title: 'Not Found' };
   }
   
+  const desc =
+    server.description.length > 155
+      ? `${server.description.slice(0, 152)}...`
+      : server.description;
+
   return {
     title: `${server.name} MCP Server - Install & Setup`,
-    description: server.description,
+    description: desc,
     keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
     alternates: {
       canonical: `https://allmcps.com/mcp/${server.id}`,
     },
     openGraph: {
       title: `${server.name} MCP Server - Install & Setup | AllMCPs`,
-      description: server.description,
+      description: desc,
       url: `https://allmcps.com/mcp/${server.id}`,
     },
     twitter: {
       card: 'summary_large_image',
       title: `${server.name} MCP Server - Install & Setup | AllMCPs`,
-      description: server.description,
-    }
+      description: desc,
+    },
   };
 }
 
@@ -412,18 +418,22 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <a
+              <OutboundLink
                 href={server.url}
+                destinationType="github"
+                serverId={server.id}
                 target="_blank"
                 rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }}
                 className="nav-link"
               >
                 <FolderGit2 size={18} /> View Repository
-              </a>
+              </OutboundLink>
               {server.websiteUrl && (
-                <a
+                <OutboundLink
                   href={server.websiteUrl}
+                  destinationType="website"
+                  serverId={server.id}
                   target="_blank"
                   rel={websiteLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }}
@@ -435,7 +445,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   ) : (
                     <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>nofollow</span>
                   )}
-                </a>
+                </OutboundLink>
               )}
             </div>
             {!server.isPremium && server.websiteUrl && (
