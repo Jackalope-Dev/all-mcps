@@ -1,0 +1,96 @@
+'use client';
+
+import { useState } from 'react';
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
+import { TurnstileWidget } from '../ui/TurnstileWidget';
+import { toast } from '../ui/Toast';
+import { trackNewsletterSignup } from '../../lib/gtag';
+
+type NewsletterSource = 'footer' | 'homepage' | 'modal';
+
+export function NewsletterSignupForm({
+  source,
+  compact = false,
+  onSuccess,
+}: {
+  source: NewsletterSource;
+  compact?: boolean;
+  onSuccess?: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!token) {
+      toast.error('Complete the security check', {
+        description: 'Please try again in a moment.',
+      });
+      return;
+    }
+
+    setStatus('loading');
+    try {
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source, 'cf-turnstile-response': token }),
+      });
+
+      if (res.ok) {
+        setStatus('success');
+        trackNewsletterSignup({ source });
+        toast.success('Subscribed', { description: "You're on the list." });
+        onSuccess?.();
+      } else {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setStatus('error');
+        toast.error('Could not subscribe', { description: data?.error || 'Please try again.' });
+        (window as any).turnstile?.reset();
+        setToken('');
+      }
+    } catch {
+      setStatus('error');
+      toast.error('Could not subscribe', { description: 'Network error. Please try again.' });
+      (window as any).turnstile?.reset();
+      setToken('');
+    }
+  };
+
+  if (status === 'success') {
+    return (
+      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+        You&apos;re subscribed — thanks for joining!
+      </p>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={compact ? 'newsletter-form newsletter-form-compact' : 'newsletter-form'}
+    >
+      <Input
+        name="email"
+        type="email"
+        placeholder="you@example.com"
+        required
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        aria-label="Email address"
+      />
+      <TurnstileWidget
+        appearance="interaction-only"
+        compact
+        onSuccess={setToken}
+        onExpire={() => setToken('')}
+        onError={() => setToken('')}
+      />
+      <Button variant="primary" type="submit" disabled={status === 'loading'}>
+        {status === 'loading' ? 'Subscribing…' : 'Subscribe'}
+      </Button>
+    </form>
+  );
+}
