@@ -72,18 +72,39 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const email = session.customer_details?.email || current?.submitterEmail || null;
   if (email) {
-    await syncSequenzySubscriber({
-      email,
-      tags: [`paid-${sku}`],
-    });
+    try {
+      await syncSequenzySubscriber({
+        email,
+        tags: [`paid-${sku}`],
+      });
+    } catch (err) {
+      console.error(`Failed to sync Sequenzy subscriber for ${email}:`, err);
+    }
   }
 }
 
 async function applySubscriptionUpdated(sub: Stripe.Subscription) {
-  const serverId = sub.metadata?.serverId;
-  if (!serverId) return;
-
   const db = await getDb();
+  let serverId = sub.metadata?.serverId;
+
+  if (!serverId) {
+    const subId = sub.id;
+    const custId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
+
+    let matched = await db.select().from(servers).where(eq(servers.stripeSubscriptionId, subId)).limit(1);
+    if (!matched.length && custId) {
+      matched = await db.select().from(servers).where(eq(servers.stripeCustomerId, custId)).limit(1);
+    }
+    if (matched.length > 0) {
+      serverId = matched[0].id;
+    }
+  }
+
+  if (!serverId) {
+    console.warn(`Subscription updated event ${sub.id} missing serverId metadata and no DB match found`);
+    return;
+  }
+
   const active = sub.status === 'active' || sub.status === 'trialing';
   const pastDue = sub.status === 'past_due';
 
@@ -99,9 +120,21 @@ async function applySubscriptionUpdated(sub: Stripe.Subscription) {
 }
 
 async function applySubscriptionDeleted(sub: Stripe.Subscription) {
-  const serverId = sub.metadata?.serverId;
-  if (!serverId) return;
   const db = await getDb();
+  let serverId = sub.metadata?.serverId;
+
+  if (!serverId) {
+    const matched = await db.select().from(servers).where(eq(servers.stripeSubscriptionId, sub.id)).limit(1);
+    if (matched.length > 0) {
+      serverId = matched[0].id;
+    }
+  }
+
+  if (!serverId) {
+    console.warn(`Subscription deleted event ${sub.id} missing serverId metadata and no DB match found`);
+    return;
+  }
+
   await db
     .update(servers)
     .set({

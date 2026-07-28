@@ -8,6 +8,9 @@ const SEQUENZY_SUBSCRIBERS_URL = 'https://api.sequenzy.com/api/v1/subscribers';
 /** AllMCPs company, "Product Subscribers" list. */
 export const PRODUCT_SUBSCRIBERS_LIST_ID = 'x8r0du7z66k34tdyuwnsvxwt';
 
+/** AllMCPs company, "Newsletter Subscribers" list. */
+export const NEWSLETTER_SUBSCRIBERS_LIST_ID = 'ta0zh9e3l9rcjlfpzpk80tcn';
+
 export type SequenzySubscriberSync = {
   email: string;
   tags: string[];

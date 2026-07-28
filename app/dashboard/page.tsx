@@ -23,11 +23,18 @@ async function getOwnedServers(userId: string) {
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const rows = await db.select().from(servers).where(eq(servers.ownerUserId, userId));
-      return rows.map((s) => ({
-        ...s,
-        createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
-      }));
+      const rows = await db
+        .select({
+          id: servers.id,
+          name: servers.name,
+          description: servers.description,
+          category: servers.category,
+          websiteUrl: servers.websiteUrl,
+          pendingRevision: servers.pendingRevision,
+        })
+        .from(servers)
+        .where(eq(servers.ownerUserId, userId));
+      return rows;
     }
   } catch {
     // fall through with an empty list

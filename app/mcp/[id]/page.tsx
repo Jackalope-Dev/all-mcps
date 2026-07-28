@@ -15,6 +15,7 @@ import { repoLinkRel, websiteLinkRel } from '../../../lib/linkRel';
 import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
 import { isFeaturedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
+import { getRelatedServers, PUBLIC_SERVER_COLUMNS } from '../../../lib/servers';
 
 // Define the type for our server data
 type Server = {
@@ -46,7 +47,11 @@ async function getServer(id: string): Promise<Server | undefined> {
     const ctx = await getCloudflareContext();
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db.select().from(serversTable).where(eq(serversTable.id, id)).limit(1);
+      const dbServers = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.id, id))
+        .limit(1);
       if (dbServers.length > 0) return dbServers[0] as unknown as Server;
     }
   } catch (e) {}
@@ -148,6 +153,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   }
 
   const readme = await fetchReadme(server.url);
+  const relatedServers = await getRelatedServers(server as any, 4);
   // The mcpServers key just needs to be a readable identifier; the npx arg below
   // uses server.name verbatim since that's typically the real package name
   // (e.g. "@agentfund/mcp") and slugifying it would produce a nonexistent package.
@@ -319,6 +325,60 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </div>
             </div>
           </div>
+
+          {/* Related MCP Servers */}
+          {relatedServers && relatedServers.length > 0 && (
+            <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border-color)' }}>
+              <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Related MCP Servers
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.25rem' }}>
+                {relatedServers.map((rel) => (
+                  <Link
+                    key={rel.id}
+                    href={`/mcp/${rel.id}`}
+                    className="surface-interactive"
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: '12px',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      position: 'relative',
+                      border: isFeaturedListing(rel as any) ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid var(--border-color)',
+                      background: isFeaturedListing(rel as any)
+                        ? 'linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,123,255,0.04))'
+                        : undefined,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {rel.name}
+                      </span>
+                      {isFeaturedListing(rel as any) ? (
+                        <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '0.65rem', flexShrink: 0 }}>
+                          ★ Featured
+                        </Badge>
+                      ) : rel.isOfficial ? (
+                        <Badge variant="official" style={{ fontSize: '0.65rem', flexShrink: 0 }}>Verified</Badge>
+                      ) : null}
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
+                      {rel.description}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                      <Badge variant="category" style={{ fontSize: '0.7rem' }}>{rel.category}</Badge>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {(rel.views || 0).toLocaleString()} views
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar (Right Column) */}
@@ -522,6 +582,47 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               isPremium={!!server.isPremium}
             />
           )}
+
+          {/* Sidebar Highlight / Ad Slot */}
+          <div
+            className="surface"
+            style={{
+              padding: '1.5rem',
+              borderColor: 'rgba(0, 229, 255, 0.35)',
+              background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
+              boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)', fontSize: '0.7rem' }}>
+                ★ Spotlight Slot
+              </Badge>
+            </div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+              Feature Your MCP Server
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+              Get maximum visibility for your server across our directory, search results, and detail pages.
+            </p>
+            <Link
+              href="/pricing"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+                padding: '0.75rem 1rem',
+                background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
+                color: '#090d16',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                textDecoration: 'none',
+              }}
+            >
+              <Sparkles size={16} /> Spotlight Your Server →
+            </Link>
+          </div>
 
           <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share & Embed</h3>

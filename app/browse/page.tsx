@@ -4,6 +4,7 @@ import { servers as serversTable } from '../../db/schema';
 import { desc, eq } from 'drizzle-orm';
 import serversData from '../../data/mcp-servers.json';
 import type { Metadata } from 'next';
+import { PUBLIC_SERVER_COLUMNS } from '../../lib/servers';
 
 type Server = {
   id: string;
@@ -26,7 +27,7 @@ async function getServers(): Promise<Server[]> {
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const dbServers = await db
-        .select()
+        .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
         .where(eq(serversTable.status, 'active'))
         .orderBy(desc(serversTable.createdAt));

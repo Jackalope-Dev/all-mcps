@@ -202,6 +202,16 @@ export function trackShare(data: {
   });
 }
 
+/**
+ * GA4 Custom Event: newsletter_signup
+ * Fired when a user subscribes via the footer, homepage, or popup modal form.
+ * Mark this as a GA4 "Key Event" in Admin → Events once it has fired at least once —
+ * that step can't be done from code/API, only the GA4 Admin UI.
+ */
+export function trackNewsletterSignup(data: { source: 'footer' | 'homepage' | 'modal' }) {
+  trackEvent('newsletter_signup', { method: data.source });
+}
+
 function getDomain(urlStr: string): string {
   try {
     const parsed = new URL(urlStr);

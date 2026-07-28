@@ -6,6 +6,7 @@ import { desc, eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { redirect } from 'next/navigation';
 import { pickDiscoveryServers } from '../lib/featured';
+import { PUBLIC_SERVER_COLUMNS } from '../lib/servers';
 
 export const metadata: Metadata = {
   title: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
@@ -45,7 +46,7 @@ async function getServers(): Promise<Server[]> {
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const dbServers = await db
-        .select()
+        .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
         .where(eq(serversTable.status, 'active'))
         .orderBy(desc(serversTable.createdAt));

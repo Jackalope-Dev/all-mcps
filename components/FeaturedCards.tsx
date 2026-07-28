@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Plus, ArrowRight } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { SafeMarkdown } from './ui/SafeMarkdown';
@@ -33,7 +33,8 @@ function getGradient(str: string) {
 }
 
 export function FeaturedCards({ servers }: { servers: Server[] }) {
-  if (!servers || servers.length === 0) return null;
+  const displayServers = (servers || []).slice(0, 2);
+  const showUpsellCard = true; // Always reserve 1 slot for an open featured slot upsell if room permits up to 3 total slots
 
   return (
     <section className="container animate-fade-in delay-2" style={{ marginBottom: '4rem' }}>
@@ -42,7 +43,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
         Featured Servers
       </h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        {servers.slice(0, 3).map((server) => (
+        {displayServers.map((server) => (
           <Card key={server.id} href={`/mcp/${server.id}`} hoverable style={{ padding: '2rem', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)' }}></div>
             
@@ -67,6 +68,40 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
             </div>
           </Card>
         ))}
+
+        {showUpsellCard && (
+          <Card 
+            href="/pricing" 
+            hoverable 
+            style={{ 
+              padding: '2rem', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              position: 'relative', 
+              overflow: 'hidden', 
+              border: '1px dashed rgba(0, 229, 255, 0.4)', 
+              background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
+            }}
+          >
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #38bdf8)' }}></div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(0, 123, 255, 0.2))', border: '1px solid rgba(0, 229, 255, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Plus size={28} style={{ color: '#00E5FF' }} />
+              </div>
+              <Badge variant="success" style={{ background: 'rgba(0, 229, 255, 0.15)', color: '#00E5FF', borderColor: 'rgba(0, 229, 255, 0.4)' }}>★ Open Slot</Badge>
+            </div>
+            
+            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>Spotlight Your MCP Server</h3>
+            <p style={{ fontSize: '0.875rem', marginBottom: '1.5rem', flexGrow: 1, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Reach thousands of developers building AI agents with Claude &amp; Cursor. Feature your server at the top of the directory.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.9rem' }}>
+              <span>Feature Your Server</span>
+              <ArrowRight size={16} />
+            </div>
+          </Card>
+        )}
       </div>
     </section>
   );

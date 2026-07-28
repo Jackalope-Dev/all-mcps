@@ -570,13 +570,18 @@ export default function DirectoryGrid({
             <EmptyState
               icon={<Search size={22} aria-hidden="true" />}
               title="No tools found"
-              description="Nothing matches your current search or filters. Try a different query or clear filters."
+              description="Nothing matches your current search or filters. Build or own an MCP server for this?"
               actions={
-                isFiltered ? (
-                  <Button variant="secondary" onClick={clearAllFilters}>
-                    Clear all filters
-                  </Button>
-                ) : undefined
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <Link href="/submit" className="btn btn-primary">
+                    + Add Your MCP Server
+                  </Link>
+                  {isFiltered && (
+                    <Button variant="secondary" onClick={clearAllFilters}>
+                      Clear all filters
+                    </Button>
+                  )}
+                </div>
               }
             />
           </div>

@@ -3,6 +3,35 @@ import { servers as serversTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 
+/**
+ * Columns safe to expose to anonymous visitors and public API consumers.
+ * Deliberately excludes submitterEmail, stripeCustomerId, stripeSubscriptionId,
+ * ownerUserId, pendingClaimUserId/WebsiteUrl, premiumStatus, pendingRevision,
+ * reviewPriority, claimedAt, badgeLastCheckedAt — never bare `db.select()` a
+ * server row for a public page or API response; select this instead.
+ */
+export const PUBLIC_SERVER_COLUMNS = {
+  id: serversTable.id,
+  name: serversTable.name,
+  url: serversTable.url,
+  description: serversTable.description,
+  category: serversTable.category,
+  websiteUrl: serversTable.websiteUrl,
+  isPremium: serversTable.isPremium,
+  websiteVerified: serversTable.websiteVerified,
+  isOfficial: serversTable.isOfficial,
+  featuredUntil: serversTable.featuredUntil,
+  status: serversTable.status,
+  lastCheckedAt: serversTable.lastCheckedAt,
+  isVerifiedActive: serversTable.isVerifiedActive,
+  healthStatus: serversTable.healthStatus,
+  reciprocalBadgeOk: serversTable.reciprocalBadgeOk,
+  views: serversTable.views,
+  copies: serversTable.copies,
+  upvotes: serversTable.upvotes,
+  createdAt: serversTable.createdAt,
+} as const;
+
 export type Server = {
   id: string;
   name: string;
@@ -28,7 +57,10 @@ export async function getActiveServers(): Promise<Server[]> {
     const ctx = await getCloudflareContext();
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db.select().from(serversTable).where(eq(serversTable.status, 'active'));
+      const dbServers = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'));
       if (dbServers.length > 0) {
         servers = dbServers as unknown as Server[];
       }
@@ -45,7 +77,11 @@ export async function getServerById(id: string): Promise<Server | undefined> {
     const ctx = await getCloudflareContext();
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db.select().from(serversTable).where(eq(serversTable.id, id)).limit(1);
+      const dbServers = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.id, id))
+        .limit(1);
       if (dbServers.length > 0) {
         return dbServers[0] as unknown as Server;
       }
@@ -128,4 +164,32 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
   }
 
   return md;
+}
+
+export async function getRelatedServers(currentServer: Server, limit = 4): Promise<Server[]> {
+  const allServers = await getActiveServers();
+  const sameCategory = allServers.filter(
+    (s) => s.id !== currentServer.id && s.category === currentServer.category
+  );
+
+  sameCategory.sort((a, b) => {
+    const scoreA = (a.upvotes || 0) * 5 + (a.copies || 0) + (a.views || 0) * 0.05;
+    const scoreB = (b.upvotes || 0) * 5 + (b.copies || 0) + (b.views || 0) * 0.05;
+    return scoreB - scoreA;
+  });
+
+  if (sameCategory.length >= limit) {
+    return sameCategory.slice(0, limit);
+  }
+
+  const otherServers = allServers.filter(
+    (s) => s.id !== currentServer.id && s.category !== currentServer.category
+  );
+  otherServers.sort((a, b) => {
+    const scoreA = (a.upvotes || 0) * 5 + (a.copies || 0) + (a.views || 0) * 0.05;
+    const scoreB = (b.upvotes || 0) * 5 + (b.copies || 0) + (b.views || 0) * 0.05;
+    return scoreB - scoreA;
+  });
+
+  return [...sameCategory, ...otherServers].slice(0, limit);
 }
