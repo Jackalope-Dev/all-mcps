@@ -31,6 +31,10 @@ export const servers = sqliteTable('servers', {
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   isVerifiedActive: integer('is_verified_active', { mode: 'boolean' }).notNull().default(false),
   healthStatus: text('health_status').notNull().default('unknown'),
+  /** Whether the periodic recheck last found our badge/link still live (README or site). Drives dofollow for non-premium claimed listings. */
+  reciprocalBadgeOk: integer('reciprocal_badge_ok', { mode: 'boolean' }).notNull().default(false),
+  /** Last time the reciprocal-badge recheck ran for this listing (set alongside lastCheckedAt by the health cron). */
+  badgeLastCheckedAt: integer('badge_last_checked_at', { mode: 'timestamp' }),
   views: integer('views').notNull().default(0),
   copies: integer('copies').notNull().default(0),
   upvotes: integer('upvotes').notNull().default(0),

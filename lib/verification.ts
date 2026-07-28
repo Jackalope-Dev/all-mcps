@@ -19,6 +19,19 @@ export function readmeContainsClaimBadge(readmeText: string, serverId: string): 
  * - link/img pointing at this listing or badge
  * - meta name="allmcps-verification" content matching our token
  */
+/**
+ * True only if the page contains an actual visible AllMCPs badge/link (not just
+ * the hidden meta tag) — used for reciprocal-dofollow eligibility, which requires
+ * a real backlink, not a hidden verification marker.
+ */
+export function websiteHasReciprocalBadge(html: string, serverId: string): boolean {
+  const lower = html.toLowerCase();
+  return (
+    lower.includes(`allmcps.com/mcp/${serverId.toLowerCase()}`) ||
+    lower.includes(`allmcps.com/api/badge/${serverId.toLowerCase()}`)
+  );
+}
+
 export async function verifyWebsiteHtml(websiteUrl: string, serverId: string): Promise<{ ok: boolean; reason?: string }> {
   if (!isSafeSubmissionUrl(websiteUrl)) {
     return { ok: false, reason: 'Website URL is not a safe public http(s) address.' };
@@ -59,9 +72,7 @@ export async function verifyWebsiteHtml(websiteUrl: string, serverId: string): P
     lower.includes(`content="${token}"`) ||
     lower.includes(`content='${token}'`);
 
-  const hasBadgeLink =
-    lower.includes(`allmcps.com/mcp/${serverId.toLowerCase()}`) ||
-    lower.includes(`allmcps.com/api/badge/${serverId.toLowerCase()}`);
+  const hasBadgeLink = websiteHasReciprocalBadge(html, serverId);
 
   if (hasMeta || hasBadgeLink) {
     return { ok: true };
