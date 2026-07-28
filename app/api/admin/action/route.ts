@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { isAdminAuthorized } from '../../../../lib/adminAuth';
+import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
 
 const actionSchema = z.object({
   id: z.string().min(1),
@@ -13,8 +13,8 @@ const actionSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    if (!isAdminAuthorized(req)) {
-      return NextResponse.json({ error: "Unauthorized. Invalid ADMIN_SECRET." }, { status: 401 });
+    if (!(await getAuthorizedAdminEmail(req.headers))) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
     const body = await req.json();

@@ -11,6 +11,11 @@
   "observability": {
     "enabled": true
   },
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "https://catbird.cloudflareaccess.com",
+    "ACCESS_AUD": "1f1d6927fe441199ceac84e46059247f1dfe4caf5defb88e21d178add8fc9187",
+    "ADMIN_EMAIL": "cadenjsumner@gmail.com"
+  },
   "routes": [
     { "pattern": "allmcps.com", "custom_domain": true }
   ],
