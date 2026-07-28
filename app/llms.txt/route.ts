@@ -45,6 +45,7 @@ export async function GET(request: Request) {
   content += `- What is MCP: https://allmcps.com/what-is-mcp\n`;
   content += `- How to Build an MCP Server: https://allmcps.com/build-mcp-server\n`;
   content += `- Pricing: https://allmcps.com/pricing\n`;
+  content += `- Free Tools (Config Generator, Config Validator, Token Calculator): https://allmcps.com/tools\n`;
 
   // Log llms.txt access (best-effort)
   try {

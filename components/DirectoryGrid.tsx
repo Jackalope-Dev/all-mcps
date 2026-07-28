@@ -17,6 +17,7 @@ import {
 } from '../lib/featuredStatus';
 import { trackSearch, trackOutboundClick } from '../lib/gtag';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
+import { ImpressionBeacon } from './ImpressionTracker';
 
 type Server = {
   id: string;
@@ -656,9 +657,11 @@ export default function DirectoryGrid({
           </div>
         ) : viewMode === 'grid' ? (
           <div className="directory-grid">
-            {visibleServers.map((server) => (
+            {visibleServers.map((server) => {
+              const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_grid' as const;
+              return (
+              <ImpressionBeacon key={server.id} serverId={server.id} surface={surface}>
               <Card
-                key={server.id}
                 href={`/mcp/${server.id}`}
                 className={isFeaturedListing(server) ? 'directory-card-featured' : undefined}
                 style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
@@ -721,13 +724,17 @@ export default function DirectoryGrid({
                   <Stats server={server} />
                 </div>
               </Card>
-            ))}
+              </ImpressionBeacon>
+              );
+            })}
           </div>
         ) : (
           <div className="directory-list">
-            {visibleServers.map((server) => (
+            {visibleServers.map((server) => {
+              const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_list' as const;
+              return (
+              <ImpressionBeacon key={server.id} serverId={server.id} surface={surface}>
               <Link
-                key={server.id}
                 href={`/mcp/${server.id}`}
                 className={`directory-list-row surface-interactive${isFeaturedListing(server) ? ' directory-list-row-featured' : ''}`}
               >
@@ -756,7 +763,9 @@ export default function DirectoryGrid({
                 </div>
                 <Stats server={server} />
               </Link>
-            ))}
+              </ImpressionBeacon>
+              );
+            })}
           </div>
         )}
 

@@ -12,6 +12,7 @@ const NAV = [
   { href: '/categories', label: 'Categories' },
   { href: '/what-is-mcp', label: 'What is MCP?' },
   { href: '/guide', label: 'Guides' },
+  { href: '/tools', label: 'Tools' },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

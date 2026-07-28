@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
+import { useImpressionTracker } from './ImpressionTracker';
 
 type Server = {
   id: string;
@@ -11,6 +12,7 @@ type Server = {
 };
 
 export function FeaturedMarquee({ servers }: { servers: Server[] }) {
+  const { trackImpression } = useImpressionTracker();
   // If we don't have enough servers to scroll seamlessly, duplicate them
   const displayServers = [...servers, ...servers, ...servers].slice(0, 20);
 
@@ -32,7 +34,10 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
               whiteSpace: 'nowrap',
               transition: 'border-color 0.2s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-strong)';
+              trackImpression(server.id, 'homepage_marquee');
+            }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
           >
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-color)', boxShadow: '0 0 8px var(--accent-color)' }}></span>

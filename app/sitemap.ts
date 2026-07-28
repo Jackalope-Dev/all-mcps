@@ -135,6 +135,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: safeDateISO(new Date()),
       changeFrequency: 'monthly',
       priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/tools`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/tools/config-generator`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/tools/config-validator`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/tools/token-calculator`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'monthly',
+      priority: 0.8,
     }
   ];
 

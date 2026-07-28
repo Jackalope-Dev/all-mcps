@@ -5,6 +5,7 @@ import { Sparkles, Plus, ArrowRight } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { SafeMarkdown } from './ui/SafeMarkdown';
+import { ImpressionBeacon } from './ImpressionTracker';
 
 type Server = {
   id: string;
@@ -44,7 +45,8 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
       </h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
         {displayServers.map((server) => (
-          <Card key={server.id} href={`/mcp/${server.id}`} hoverable style={{ padding: '2rem', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
+          <ImpressionBeacon key={server.id} serverId={server.id} surface="homepage_featured">
+          <Card href={`/mcp/${server.id}`} hoverable style={{ padding: '2rem', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)' }}></div>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
@@ -67,6 +69,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               <Badge variant="category">{server.category}</Badge>
             </div>
           </Card>
+          </ImpressionBeacon>
         ))}
 
         {showUpsellCard && (

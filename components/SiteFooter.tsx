@@ -55,6 +55,26 @@ export function SiteFooter() {
           </ul>
         </div>
         <div>
+          <h4 className="footer-heading">Free Tools</h4>
+          <ul className="site-footer-links">
+            <li>
+              <Link href="/tools/config-generator" className="nav-link">
+                Config Generator
+              </Link>
+            </li>
+            <li>
+              <Link href="/tools/config-validator" className="nav-link">
+                Config Validator
+              </Link>
+            </li>
+            <li>
+              <Link href="/tools/token-calculator" className="nav-link">
+                Token Cost Calculator
+              </Link>
+            </li>
+          </ul>
+        </div>
+        <div>
           <h4 className="footer-heading">For AI &amp; Agents</h4>
           <ul className="site-footer-links">
             <li>
