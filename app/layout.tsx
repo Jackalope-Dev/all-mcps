@@ -99,7 +99,7 @@ export default function RootLayout({
           <div className="main-header">
             <Link href="/" className="logo animate-fade-in" style={{ fontSize: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: 'inherit' }} aria-label="Go to AllMCPs Homepage">
               <img src="/logo-icon.svg" alt="" width={40} height={40} aria-hidden="true" />
-              AllMCPs
+              <span style={{ background: 'linear-gradient(135deg, var(--accent-color), #007BFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>All</span>MCPs
             </Link>
             <nav className="animate-fade-in delay-1" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }} aria-label="Main Navigation">
               <Link href="/" className="nav-link">Browse</Link>
@@ -114,7 +114,9 @@ export default function RootLayout({
         <footer className="container" style={{ borderTop: '1px solid var(--border-color)', marginTop: '4rem', padding: '4rem 0', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>AllMCPs</h3>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>
+                <span style={{ background: 'linear-gradient(135deg, var(--accent-color), #007BFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>All</span>MCPs
+              </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>The definitive directory for discovering and installing Model Context Protocol servers.</p>
             </div>
             <div>

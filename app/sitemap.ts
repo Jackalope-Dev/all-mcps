@@ -11,7 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
+    const ctx = await getCloudflareContext({ async: true });
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const dbServers = await db.select().from(serversTable).where(eq(serversTable.status, 'active'));

@@ -4,6 +4,7 @@ import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import ShareModal from '../../../components/ShareModal';
 import { Badge } from '../../../components/ui/Badge';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
+import { AgentPromptButton } from '../../../components/ui/AgentPromptButton';
 import { ViewTracker } from '../../../components/ui/ViewTracker';
 import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import serversData from '../../../data/mcp-servers.json';
@@ -124,7 +125,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   }
 
   const readme = await fetchReadme(server.url);
-  const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  // The mcpServers key just needs to be a readable identifier; the npx arg below
+  // uses server.name verbatim since that's typically the real package name
+  // (e.g. "@agentfund/mcp") and slugifying it would produce a nonexistent package.
+  const installSlug = (server.name.split('/').pop() || server.name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'mcp-server';
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -153,7 +160,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             name: `How do I install the ${server.name} MCP server?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `Add the following block to your claude_desktop_config.json under mcpServers: "mcpServers": { "${installName}": { "command": "npx", "args": ["-y", "${installName}"] } }`,
+              text: `Add the following block to your claude_desktop_config.json under mcpServers: "mcpServers": { "${installSlug}": { "command": "npx", "args": ["-y", "${server.name}"] } }`,
             },
           },
           {
@@ -237,7 +244,17 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <Terminal size={20} /> Quick Install (Claude Desktop)
             </h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.875rem' }}>Add this directly to your <code>claude_desktop_config.json</code> file:</p>
-            <CopyBlock code={`"mcpServers": {\n  "${installName}": {\n    "command": "npx",\n    "args": ["-y", "${installName}"]\n  }\n}`} serverId={server.id} />
+            <CopyBlock code={`"mcpServers": {\n  "${installSlug}": {\n    "command": "npx",\n    "args": ["-y", "${server.name}"]\n  }\n}`} serverId={server.id} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.5rem 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+              Using an AI coding agent (Claude Code, Cursor, etc.)? Copy a ready-made prompt that tells it to fetch the setup instructions and install this server for you.
+            </p>
+            <AgentPromptButton serverId={server.id} serverName={server.name} />
           </div>
 
           <div>

@@ -87,7 +87,15 @@ export async function fetchServerReadme(url: string): Promise<string | null> {
 }
 
 export function formatServerAsMarkdown(server: Server, readme?: string | null): string {
-  const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  // The mcpServers object key just needs to be a readable identifier, not a real
+  // package name, so it's safe to slugify. The npx arg below uses server.name
+  // verbatim since that's typically the actual publishable package name
+  // (e.g. "@agentfund/mcp") and slugifying it would silently produce a
+  // nonexistent package (e.g. "-agentfund-mcp").
+  const slug = (server.name.split('/').pop() || server.name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'mcp-server';
   const officialBadge = server.isOfficial ? ' [Official]' : '';
   const activeBadge = server.isVerifiedActive ? ' [Verified Active]' : '';
 
@@ -100,18 +108,20 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
   md += `## Description\n${server.description}\n\n`;
 
   md += `## Claude Desktop Quick Installation\n`;
-  md += `Add the following block to your \`claude_desktop_config.json\` under \`mcpServers\`:\n\n`;
+  md += `This assumes the package is published to npm and installable via \`npx\`. Verify against the README/repository below first — some servers require Python (\`uvx\`), Docker, or other manual setup instead:\n\n`;
   md += `\`\`\`json\n`;
   md += `"mcpServers": {\n`;
-  md += `  "${installName}": {\n`;
+  md += `  "${slug}": {\n`;
   md += `    "command": "npx",\n`;
-  md += `    "args": ["-y", "${installName}"]\n`;
+  md += `    "args": ["-y", "${server.name}"]\n`;
   md += `  }\n`;
   md += `}\n`;
   md += `\`\`\`\n\n`;
 
   if (readme) {
     md += `## Documentation & README\n\n${readme}\n`;
+  } else {
+    md += `## Documentation\nNo README could be fetched automatically. Check the repository above for setup instructions before installing.\n\n`;
   }
 
   return md;
