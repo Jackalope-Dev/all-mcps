@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from 'react';
 import { toast } from '../../components/ui/Toast';
+import { parsePendingRevision } from '../../lib/pendingRevision';
 
 type Server = {
   id: string;
@@ -9,27 +10,37 @@ type Server = {
   url: string;
   websiteUrl?: string | null;
   description: string;
+  category?: string;
   createdAt: string;
   isPremium?: boolean;
   reviewPriority?: boolean;
   status?: string;
+  pendingRevision?: string | null;
+  pendingClaimUserId?: string | null;
+  pendingClaimWebsiteUrl?: string | null;
 };
 
 export default function AdminClient({
   initialPending,
   initialActive = [],
+  initialPendingEdits = [],
+  initialPendingClaims = [],
 }: {
   initialPending: Server[];
   initialActive?: Server[];
+  initialPendingEdits?: Server[];
+  initialPendingClaims?: Server[];
 }) {
   const [pending, setPending] = useState<Server[]>(initialPending);
   const [active, setActive] = useState<Server[]>(initialActive);
+  const [pendingEdits, setPendingEdits] = useState<Server[]>(initialPendingEdits);
+  const [pendingClaims, setPendingClaims] = useState<Server[]>(initialPendingClaims);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handleAction = async (
     id: string,
-    action: 'approve' | 'reject' | 'set_premium' | 'unset_premium',
-    list: 'pending' | 'active' = 'pending'
+    action: 'approve' | 'reject' | 'set_premium' | 'unset_premium' | 'approve_edit' | 'reject_edit' | 'approve_claim' | 'reject_claim',
+    list: 'pending' | 'active' | 'pendingEdits' | 'pendingClaims' = 'pending'
   ) => {
     setLoadingId(id);
 
@@ -49,6 +60,12 @@ export default function AdminClient({
       if (action === 'approve' || action === 'reject') {
         setPending((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve' ? 'Listing approved' : 'Listing rejected');
+      } else if (action === 'approve_edit' || action === 'reject_edit') {
+        setPendingEdits((prev) => prev.filter((s) => s.id !== id));
+        toast.success(action === 'approve_edit' ? 'Edit approved' : 'Edit rejected');
+      } else if (action === 'approve_claim' || action === 'reject_claim') {
+        setPendingClaims((prev) => prev.filter((s) => s.id !== id));
+        toast.success(action === 'approve_claim' ? 'Claim approved' : 'Claim rejected');
       } else {
         const premium = action === 'set_premium';
         const updater = (prev: Server[]) =>
@@ -90,6 +107,34 @@ export default function AdminClient({
           loadingId={loadingId}
           showPremiumActions
           onAction={(id, action) => handleAction(id, action, 'active')}
+        />
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Pending edits</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          Owner-submitted changes awaiting approval. Approving applies them immediately; a changed
+          website resets its verification.
+        </p>
+        <PendingEditsTable
+          servers={pendingEdits}
+          loadingId={loadingId}
+          onApprove={(id) => handleAction(id, 'approve_edit', 'pendingEdits')}
+          onReject={(id) => handleAction(id, 'reject_edit', 'pendingEdits')}
+        />
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Pending claims</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          A claimant proved control of a website that wasn&apos;t already on file for this listing.
+          Check the site actually relates to the project before approving.
+        </p>
+        <PendingClaimsTable
+          servers={pendingClaims}
+          loadingId={loadingId}
+          onApprove={(id) => handleAction(id, 'approve_claim', 'pendingClaims')}
+          onReject={(id) => handleAction(id, 'reject_claim', 'pendingClaims')}
         />
       </section>
     </div>
@@ -187,14 +232,14 @@ function ServerTable({
                         <button
                           onClick={() => onAction(server.id, 'approve')}
                           disabled={loadingId === server.id}
-                          style={btnStyle('#10b981', loadingId === server.id)}
+                          style={btnStyle('#047857', loadingId === server.id)}
                         >
                           Approve
                         </button>
                         <button
                           onClick={() => onAction(server.id, 'reject')}
                           disabled={loadingId === server.id}
-                          style={btnStyle('#ef4444', loadingId === server.id)}
+                          style={btnStyle('#b91c1c', loadingId === server.id)}
                         >
                           Reject
                         </button>
@@ -204,11 +249,195 @@ function ServerTable({
                       <button
                         onClick={() => onAction(server.id, server.isPremium ? 'unset_premium' : 'set_premium')}
                         disabled={loadingId === server.id}
-                        style={btnStyle(server.isPremium ? '#64748b' : '#007BFF', loadingId === server.id)}
+                        style={btnStyle(server.isPremium ? '#64748b' : '#0056b3', loadingId === server.id)}
                       >
                         {server.isPremium ? 'Remove premium' : 'Make premium'}
                       </button>
                     )}
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PendingEditsTable({
+  servers,
+  loadingId,
+  onApprove,
+  onReject,
+}: {
+  servers: Server[];
+  loadingId: string | null;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        background: 'var(--card-bg)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '12px',
+        overflow: 'hidden',
+      }}
+    >
+      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+            <th style={{ padding: '1rem' }}>Listing</th>
+            <th style={{ padding: '1rem' }}>Proposed changes</th>
+            <th style={{ padding: '1rem' }}>Submitted</th>
+            <th style={{ padding: '1rem' }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {servers.length === 0 ? (
+            <tr>
+              <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                No pending edits!
+              </td>
+            </tr>
+          ) : (
+            servers.map((server) => {
+              const pending = parsePendingRevision(server.pendingRevision);
+              if (!pending) return null;
+              const fields = Object.keys(pending.proposed) as (keyof typeof pending.proposed)[];
+              const currentValues: Record<string, string | undefined> = {
+                name: server.name,
+                description: server.description,
+                category: server.category,
+                websiteUrl: server.websiteUrl ?? '',
+              };
+              return (
+                <tr key={server.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  <td style={{ padding: '1rem' }}>
+                    <strong>{server.name}</strong>
+                  </td>
+                  <td style={{ padding: '1rem' }}>
+                    {fields.map((field) => (
+                      <div key={field} style={{ marginBottom: '0.5rem' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                          {field}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', textDecoration: 'line-through', color: 'var(--text-secondary)' }}>
+                          {currentValues[field] || '(empty)'}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: '#10b981' }}>{pending.proposed[field]}</div>
+                      </div>
+                    ))}
+                  </td>
+                  <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
+                    {new Date(pending.submittedAt).toLocaleDateString()}
+                  </td>
+                  <td style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => onApprove(server.id)}
+                        disabled={loadingId === server.id}
+                        style={btnStyle('#047857', loadingId === server.id)}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => onReject(server.id)}
+                        disabled={loadingId === server.id}
+                        style={btnStyle('#b91c1c', loadingId === server.id)}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PendingClaimsTable({
+  servers,
+  loadingId,
+  onApprove,
+  onReject,
+}: {
+  servers: Server[];
+  loadingId: string | null;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        background: 'var(--card-bg)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '12px',
+        overflow: 'hidden',
+      }}
+    >
+      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+            <th style={{ padding: '1rem' }}>Listing</th>
+            <th style={{ padding: '1rem' }}>Repo</th>
+            <th style={{ padding: '1rem' }}>Proven website</th>
+            <th style={{ padding: '1rem' }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {servers.length === 0 ? (
+            <tr>
+              <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                No pending claims!
+              </td>
+            </tr>
+          ) : (
+            servers.map((server) => (
+              <tr key={server.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <td style={{ padding: '1rem' }}>
+                  <strong>{server.name}</strong>
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  <a href={server.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}>
+                    Repo
+                  </a>
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  {server.pendingClaimWebsiteUrl ? (
+                    <a
+                      href={server.pendingClaimWebsiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
+                    >
+                      {server.pendingClaimWebsiteUrl}
+                    </a>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => onApprove(server.id)}
+                      disabled={loadingId === server.id}
+                      style={btnStyle('#047857', loadingId === server.id)}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => onReject(server.id)}
+                      disabled={loadingId === server.id}
+                      style={btnStyle('#b91c1c', loadingId === server.id)}
+                    >
+                      Reject
+                    </button>
                   </div>
                 </td>
               </tr>

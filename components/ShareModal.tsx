@@ -42,7 +42,7 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
     badge: `[![Listed on AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`,
     badgeHtml: `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="Listed on AllMCPs" height="${badgeStyle === 'directory' ? 40 : 32}" /></a>`,
     widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="350" height="260" frameBorder="0" style="border-radius: 12px; overflow: hidden; background: transparent;"></iframe>`,
-    install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #00E5FF, #007BFF); color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,123,255,0.25); transition: transform 0.2s, box-shadow 0.2s;">Install ${displayName} via AllMCPs</a>`
+    install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #00E5FF, #007BFF); color: #020617; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,123,255,0.25); transition: transform 0.2s, box-shadow 0.2s;">Install ${displayName} via AllMCPs</a>`
   };
 
   const handleCopy = async (key: keyof typeof snippets) => {
@@ -224,7 +224,7 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
                 gap: '8px',
                 padding: '10px 20px',
                 background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
-                color: '#fff',
+                color: '#020617',
                 fontSize: '14px',
                 fontWeight: 600,
                 borderRadius: '8px',
@@ -254,8 +254,8 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
           justifyContent: 'center',
           gap: '0.5rem', 
           padding: '0.75rem 1rem', 
-          backgroundColor: 'var(--accent-color)', 
-          color: 'white',
+          backgroundColor: 'var(--accent-color)',
+          color: 'var(--bg-color)',
           borderRadius: '8px', 
           fontWeight: 600, 
           cursor: 'pointer',

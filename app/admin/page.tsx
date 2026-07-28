@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, isNotNull } from 'drizzle-orm';
 import { getAuthorizedAdminEmail } from '../../lib/accessAuth';
 import AdminClient from './AdminClient';
 
@@ -25,6 +25,16 @@ async function getAdminData() {
         .where(eq(servers.status, 'active'))
         .orderBy(desc(servers.createdAt))
         .limit(50);
+      const pendingEdits = await db
+        .select()
+        .from(servers)
+        .where(isNotNull(servers.pendingRevision))
+        .orderBy(desc(servers.createdAt));
+      const pendingClaims = await db
+        .select()
+        .from(servers)
+        .where(isNotNull(servers.pendingClaimUserId))
+        .orderBy(desc(servers.createdAt));
 
       const map = (s: typeof pendingServers[0]) => ({
         ...s,
@@ -34,12 +44,14 @@ async function getAdminData() {
       return {
         pending: pendingServers.map(map),
         active: activeServers.map(map),
+        pendingEdits: pendingEdits.map(map),
+        pendingClaims: pendingClaims.map(map),
       };
     }
   } catch (e) {
     // Fallback if not in edge context
   }
-  return { pending: [], active: [] };
+  return { pending: [], active: [], pendingEdits: [], pendingClaims: [] };
 }
 
 export default async function AdminPage() {
@@ -55,7 +67,7 @@ export default async function AdminPage() {
     );
   }
 
-  const { pending, active } = await getAdminData();
+  const { pending, active, pendingEdits, pendingClaims } = await getAdminData();
 
   return (
     <main className="container animate-fade-in" style={{ padding: '4rem 1rem' }}>
@@ -64,7 +76,12 @@ export default async function AdminPage() {
         Review submissions and manage premium (dofollow) listings. Logged in as {email}.
       </p>
 
-      <AdminClient initialPending={pending as any} initialActive={active as any} />
+      <AdminClient
+        initialPending={pending as any}
+        initialActive={active as any}
+        initialPendingEdits={pendingEdits as any}
+        initialPendingClaims={pendingClaims as any}
+      />
     </main>
   );
 }

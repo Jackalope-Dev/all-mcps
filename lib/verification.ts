@@ -1,7 +1,5 @@
 import { isSafeSubmissionUrl } from './urlSafety';
-import { getDnsTxtRecordValue, getSiteVerificationToken } from './verificationTokens';
-
-export { getDnsTxtRecordValue, getSiteVerificationToken };
+import { getClaimVerificationToken } from './verificationTokens';
 
 /** Accepts legacy shields.io verified badge or any allmcps.com badge link for this listing. */
 export function readmeContainsClaimBadge(readmeText: string, serverId: string): boolean {
@@ -15,14 +13,11 @@ export function readmeContainsClaimBadge(readmeText: string, serverId: string): 
 }
 
 /**
- * Fetch a public website and look for ownership proof:
- * - link/img pointing at this listing or badge
- * - meta name="allmcps-verification" content matching our token
- */
-/**
  * True only if the page contains an actual visible AllMCPs badge/link (not just
  * the hidden meta tag) — used for reciprocal-dofollow eligibility, which requires
- * a real backlink, not a hidden verification marker.
+ * a real backlink, not a hidden verification marker. Not used for claim proof
+ * (see verifyWebsiteHtml) since a generic, unpersonalized badge/link can't tell
+ * which account should get credited with ownership.
  */
 export function websiteHasReciprocalBadge(html: string, serverId: string): boolean {
   const lower = html.toLowerCase();
@@ -32,7 +27,17 @@ export function websiteHasReciprocalBadge(html: string, serverId: string): boole
   );
 }
 
-export async function verifyWebsiteHtml(websiteUrl: string, serverId: string): Promise<{ ok: boolean; reason?: string }> {
+/**
+ * Fetch a public website and look for the *personalized* verification meta tag
+ * (see getClaimVerificationToken) — proves this specific signed-in user controls
+ * the site, for claim purposes. The generic visible badge/link is intentionally
+ * not accepted here (see websiteHasReciprocalBadge).
+ */
+export async function verifyWebsiteHtml(
+  websiteUrl: string,
+  serverId: string,
+  userId: string
+): Promise<{ ok: boolean; reason?: string }> {
   if (!isSafeSubmissionUrl(websiteUrl)) {
     return { ok: false, reason: 'Website URL is not a safe public http(s) address.' };
   }
@@ -64,29 +69,27 @@ export async function verifyWebsiteHtml(websiteUrl: string, serverId: string): P
 
   const html = (await res.text()).slice(0, 500_000);
   const lower = html.toLowerCase();
-  const token = getSiteVerificationToken(serverId).toLowerCase();
+  const token = getClaimVerificationToken(serverId, userId).toLowerCase();
 
-  const hasMeta =
-    (lower.includes('name="allmcps-verification"') && lower.includes(serverId.toLowerCase())) ||
-    (lower.includes("name='allmcps-verification'") && lower.includes(serverId.toLowerCase())) ||
-    lower.includes(`content="${token}"`) ||
-    lower.includes(`content='${token}'`);
+  const hasMeta = lower.includes(`content="${token}"`) || lower.includes(`content='${token}'`);
 
-  const hasBadgeLink = websiteHasReciprocalBadge(html, serverId);
-
-  if (hasMeta || hasBadgeLink) {
+  if (hasMeta) {
     return { ok: true };
   }
 
   return {
     ok: false,
     reason:
-      'Verification badge or meta tag not found. Embed an AllMCPs badge linking to this listing, or add a meta tag with the verification token.',
+      'Personalized verification meta tag not found. Add the meta tag shown on the claim page (it includes your account id) and try again.',
   };
 }
 
-/** Look up TXT records for a hostname via Cloudflare DNS-over-HTTPS. */
-export async function verifyDnsTxt(websiteUrl: string, serverId: string): Promise<{ ok: boolean; reason?: string }> {
+/** Look up TXT records for a hostname via Cloudflare DNS-over-HTTPS, checking for this user's personalized token. */
+export async function verifyDnsTxt(
+  websiteUrl: string,
+  serverId: string,
+  userId: string
+): Promise<{ ok: boolean; reason?: string }> {
   if (!isSafeSubmissionUrl(websiteUrl)) {
     return { ok: false, reason: 'Website URL is not a safe public http(s) address.' };
   }
@@ -101,7 +104,7 @@ export async function verifyDnsTxt(websiteUrl: string, serverId: string): Promis
   // Strip www. so apex and www share the same check; query both.
   const apex = hostname.replace(/^www\./i, '');
   const hosts = Array.from(new Set([hostname, apex, `www.${apex}`]));
-  const expected = getDnsTxtRecordValue(serverId).toLowerCase();
+  const expected = getClaimVerificationToken(serverId, userId).toLowerCase();
 
   for (const host of hosts) {
     try {
@@ -131,7 +134,7 @@ export async function verifyDnsTxt(websiteUrl: string, serverId: string): Promis
 
   return {
     ok: false,
-    reason: `DNS TXT record not found. Add a TXT record on ${apex} with value: ${getDnsTxtRecordValue(serverId)}`,
+    reason: `DNS TXT record not found. Add a TXT record on ${apex} with value: ${getClaimVerificationToken(serverId, userId)}`,
   };
 }
 

@@ -2,7 +2,17 @@ import { signIn } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageShell } from '@/components/PageShell';
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl } = await searchParams;
+  // Must be a same-app relative path: reject absolute/protocol-relative URLs
+  // (e.g. "//evil.com" starts with "/" but browsers treat it as external).
+  const redirectTo =
+    callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : undefined;
+
   return (
     <PageShell variant="auth" panel>
       <div style={{ marginBottom: '2rem' }}>
@@ -38,6 +48,8 @@ export default function LoginPage() {
             className="form-input"
           />
         </div>
+
+        {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
 
         <button type="submit" className="btn btn-primary btn-full">
           Send Magic Link

@@ -1,9 +1,10 @@
-/** Deterministic site-verification token for DNS TXT / meta tags. */
-export function getSiteVerificationToken(serverId: string): string {
-  return `allmcps-site-verification=${serverId}`;
-}
-
-/** DNS TXT value owners should publish. */
-export function getDnsTxtRecordValue(serverId: string): string {
-  return getSiteVerificationToken(serverId);
+/**
+ * Per-user claim verification token — proves the *currently signed-in account*
+ * controls the site, not just that someone, at some point, controlled it. This
+ * is what's checked by the DNS/meta-tag claim flow (never satisfied by a stale
+ * or another account's token, which matters since ownership can transfer to
+ * whoever next proves control).
+ */
+export function getClaimVerificationToken(serverId: string, userId: string): string {
+  return `allmcps-site-verification=${serverId}:${userId}`;
 }

@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import ClaimClient from './ClaimClient';
 import serversData from '../../../../data/mcp-servers.json';
+import { auth } from '../../../../lib/auth';
 import type { Metadata } from 'next';
 
 async function getServer(id: string) {
@@ -50,6 +51,8 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
     notFound();
   }
 
+  const session = await auth();
+
   return (
     <main className="page-shell page-shell--content animate-fade-in">
       <div className="page-shell-inner">
@@ -67,6 +70,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
           websiteUrl={(server as any).websiteUrl}
           isOfficial={(server as any).isOfficial}
           websiteVerified={(server as any).websiteVerified}
+          userId={session?.user?.id ?? null}
         />
       </div>
     </main>

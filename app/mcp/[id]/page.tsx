@@ -31,6 +31,7 @@ type Server = {
   lastCheckedAt?: string | null;
   isVerifiedActive?: boolean;
   healthStatus?: string;
+  reciprocalBadgeOk?: boolean;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -424,12 +425,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 <a
                   href={server.websiteUrl}
                   target="_blank"
-                  rel={websiteLinkRel(!!server.isPremium)}
+                  rel={websiteLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }}
                   className="nav-link"
                 >
                   <Globe size={18} /> Website
-                  {server.isPremium ? (
+                  {server.isPremium || server.reciprocalBadgeOk ? (
                     <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#00E5FF', fontWeight: 700 }}>DOFOLLOW</span>
                   ) : (
                     <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>nofollow</span>
@@ -462,7 +463,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   gap: '0.4rem',
                   padding: '0.75rem 1rem',
                   background: 'var(--brand-gradient)',
-                  color: 'white',
+                  color: 'var(--bg-color)',
                   borderRadius: '8px',
                   fontWeight: 700,
                   fontSize: '0.9rem',

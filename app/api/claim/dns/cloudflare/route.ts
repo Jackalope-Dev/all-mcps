@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../../../lib/urlSafety';
-import { getDnsTxtRecordValue } from '../../../../../lib/verificationTokens';
+import { getClaimVerificationToken } from '../../../../../lib/verificationTokens';
 import { getApexDomain } from '../../../../../lib/dnsProviders';
+import { auth } from '../../../../../lib/auth';
 
 /**
  * One-shot: create the AllMCPs verification TXT record via a user-supplied
@@ -37,6 +38,12 @@ type CfDnsCreate = {
 
 export async function POST(req: Request) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Sign in required.' }, { status: 401 });
+    }
+
     const json = await req.json();
     const parsed = bodySchema.safeParse(json);
     if (!parsed.success) {
@@ -55,7 +62,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Could not parse domain from website URL.' }, { status: 400 });
     }
 
-    const content = getDnsTxtRecordValue(serverId);
+    const content = getClaimVerificationToken(serverId, userId);
     const headers = {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',

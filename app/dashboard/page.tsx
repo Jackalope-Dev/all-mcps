@@ -1,0 +1,47 @@
+import { redirect } from 'next/navigation';
+import { drizzle } from 'drizzle-orm/d1';
+import { eq } from 'drizzle-orm';
+import { servers } from '@/db/schema';
+import { auth } from '@/lib/auth';
+import DashboardClient from './DashboardClient';
+
+export const dynamic = 'force-dynamic';
+
+async function getOwnedServers(userId: string) {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx?.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db.select().from(servers).where(eq(servers.ownerUserId, userId));
+      return rows.map((s) => ({
+        ...s,
+        createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
+      }));
+    }
+  } catch {
+    // fall through with an empty list
+  }
+  return [];
+}
+
+export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect('/login?callbackUrl=/dashboard');
+  }
+
+  const ownedServers = await getOwnedServers(session.user.id);
+
+  return (
+    <main className="page-shell page-shell--content animate-fade-in">
+      <div className="page-shell-inner">
+        <header className="page-header">
+          <h1 className="text-page-title">My listings</h1>
+          <p className="text-lead">Edits go live after a quick review.</p>
+        </header>
+        <DashboardClient initialServers={ownedServers as any} />
+      </div>
+    </main>
+  );
+}

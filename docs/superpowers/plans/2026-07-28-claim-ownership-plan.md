@@ -22,28 +22,36 @@
 ## File Structure
 
 ```
-db/schema.ts                                  MODIFY  add reciprocalBadgeOk, badgeLastCheckedAt
+db/schema.ts                                  MODIFY  add reciprocalBadgeOk, badgeLastCheckedAt (0008),
+                                                        pendingClaimUserId, pendingClaimWebsiteUrl (0009)
 drizzle/0008_claim_ownership.sql              CREATE  the two ALTER TABLE statements
-drizzle/meta/_journal.json                    MODIFY  register migration 0008
+drizzle/0009_pending_claim.sql                CREATE  pendingClaimUserId/pendingClaimWebsiteUrl columns
+drizzle/meta/_journal.json                    MODIFY  register migrations 0008, 0009
 
 lib/pendingRevision.ts                        CREATE  diff/serialize/parse for the pendingRevision JSON blob
-lib/verification.ts                           MODIFY  extract websiteHasReciprocalBadge()
+lib/verification.ts                           MODIFY  extract websiteHasReciprocalBadge(); personalize
+                                                        verifyWebsiteHtml/verifyDnsTxt claim checks
+lib/verificationTokens.ts                     MODIFY  add getClaimVerificationToken(serverId, userId)
 lib/linkRel.ts                                MODIFY  websiteLinkRel() gains reciprocalBadgeOk param
 lib/notify.ts                                 CREATE  shared NotificationEmail sender
 
 app/mcp/[id]/page.tsx                         MODIFY  Server type + websiteLinkRel call site
-app/api/claim/route.ts                        MODIFY  auth gate, ownerUserId assignment/transfer
-app/mcp/[id]/claim/page.tsx                   MODIFY  pass isSignedIn to ClaimClient
-app/mcp/[id]/claim/ClaimClient.tsx             MODIFY  redirect to /login when unauthenticated
+app/api/claim/route.ts                        MODIFY  auth gate; GitHub auto-approves; website/DNS
+                                                        auto-approve only when reconfirming the
+                                                        existing websiteUrl, else queue as a pending claim
+app/mcp/[id]/claim/page.tsx                   MODIFY  pass session user (id + signed-in flag) to ClaimClient
+app/mcp/[id]/claim/ClaimClient.tsx             MODIFY  redirect to /login when unauthenticated; show a
+                                                        personalized DNS/meta token once signed in
 app/login/page.tsx                            MODIFY  callbackUrl -> hidden redirectTo field
 
 app/api/dashboard/edit/route.ts               CREATE  owner submits an edit -> pendingRevision
 app/dashboard/page.tsx                        CREATE  owner's "my listings" page (server component)
 app/dashboard/DashboardClient.tsx             CREATE  edit form + pending-draft UI (client component)
 
-app/admin/page.tsx                            MODIFY  fetch pending-edit listings
-app/admin/AdminClient.tsx                     MODIFY  "Pending edits" section with before/after diff
-app/api/admin/action/route.ts                 MODIFY  approve_edit / reject_edit actions
+app/admin/page.tsx                            MODIFY  fetch pending-edit and pending-claim listings
+app/admin/AdminClient.tsx                     MODIFY  "Pending edits" and "Pending claims" sections
+app/api/admin/action/route.ts                 MODIFY  approve_edit/reject_edit and
+                                                        approve_claim/reject_claim actions
 
 app/api/cron/health/route.ts                  MODIFY  set reciprocalBadgeOk / badgeLastCheckedAt
 ```
@@ -478,215 +486,48 @@ git commit -m "Add shared sendNotificationEmail helper"
 
 ---
 
-## Task 6: Gate the claim flow behind sign-in; persist/transfer ownership
+## Task 6: Gate the claim flow behind sign-in; personalized proof; pending-claim queue for new websites
+
+**As implemented** (expanded mid-execution from the original single-file scope after review surfaced
+that the DNS/website badge token was generic and public — see the spec's "Amendment" section).
 
 **Files:**
-- Modify: `app/api/claim/route.ts`
-- Modify: `app/mcp/[id]/claim/page.tsx`
-- Modify: `app/mcp/[id]/claim/ClaimClient.tsx`
-- Modify: `app/login/page.tsx`
+- Migration: `db/schema.ts`, `drizzle/0009_pending_claim.sql`, `drizzle/meta/_journal.json` —
+  `pendingClaimUserId`/`pendingClaimWebsiteUrl` columns.
+- Modify: `lib/verificationTokens.ts` — replaced `getSiteVerificationToken`/`getDnsTxtRecordValue`
+  (generic, unused after this change) with `getClaimVerificationToken(serverId, userId)`.
+- Modify: `lib/verification.ts` — `verifyWebsiteHtml`/`verifyDnsTxt` now take `userId` and check
+  only the personalized meta tag (dropped the generic badge-link acceptance for claim purposes;
+  `websiteHasReciprocalBadge` from Task 3 remains generic, used only by the Task 9 cron).
+- Modify: `app/api/claim/dns/cloudflare/route.ts` — now requires `auth()` and writes the
+  personalized token, not the generic one.
+- Modify: `app/api/claim/route.ts` — auth gate; GitHub method auto-approves as before; website/DNS
+  auto-approves only when the proven URL matches the listing's existing `websiteUrl`, otherwise
+  writes `pendingClaimUserId`/`pendingClaimWebsiteUrl` and emails the admin instead of granting
+  ownership.
+- Modify: `app/mcp/[id]/claim/page.tsx` — passes `userId={session?.user?.id ?? null}` (not just a
+  boolean) so `ClaimClient` can compute the personalized token.
+- Modify: `app/mcp/[id]/claim/ClaimClient.tsx` — `website_badge`/`dns` method panels show a
+  `SignInGate` placeholder until signed in (personalized token can't be shown pre-login); GitHub's
+  panel is unaffected. `handleVerify` surfaces a distinct "submitted for review" toast when the API
+  responds `{ pending: true }`, instead of the claimed-success screen.
 
 **Interfaces:**
-- Consumes: `auth()` from `lib/auth.ts` (existing export).
-- Produces: `servers.ownerUserId` is now set/reassigned on successful claim/re-verify — consumed by Task 7's dashboard query and Task 8's owner-notification lookup.
+- Produces: `servers.ownerUserId` set/reassigned on auto-approved claims; `servers.pendingClaimUserId`/
+  `pendingClaimWebsiteUrl` set on queued ones — consumed by Task 8's new "Pending claims" admin section.
 
-- [ ] **Step 1: Add the auth gate and ownership assignment to `app/api/claim/route.ts`**
-
-Add the import near the top (after the existing `verification` import):
-
-```ts
-import { auth } from '../../../lib/auth';
-```
-
-Right after the `server` lookup (`const server = dbServers[0];` … `if (!server) { ... }`), add the session check — every method requires a signed-in user from here on:
-
-```ts
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: 'Sign in required to claim or update a listing.' }, { status: 401 });
-    }
-```
-
-In the `attach_website` branch, after the existing `if (!server.isOfficial) { ... }` check, add an ownership check (a listing claimed before this change has `ownerUserId === null`, so this only blocks a *mismatched* owner, not a not-yet-linked legacy claim):
-
-```ts
-      if (server.ownerUserId && server.ownerUserId !== userId) {
-        return NextResponse.json({ error: 'Only the listing owner can update its website.' }, { status: 403 });
-      }
-```
-
-In the final `updates` object (currently `{ isOfficial: true, claimedAt: server.claimedAt || new Date() }`), add `ownerUserId`:
-
-```ts
-    const updates: Record<string, unknown> = {
-      isOfficial: true,
-      claimedAt: server.claimedAt || new Date(),
-      ownerUserId: userId,
-    };
-```
-
-(This reassigns `ownerUserId` on every successful verify, including re-verifies by a different account — matching the decision that proof-of-control, not first-claimer, is the security boundary.)
-
-- [ ] **Step 2: Pass session state into `ClaimClient` from `app/mcp/[id]/claim/page.tsx`**
-
-Add the import:
-
-```ts
-import { auth } from '../../../../lib/auth';
-```
-
-In `ClaimPage`, before the `return`:
-
-```ts
-  const session = await auth();
-```
-
-Add `isSignedIn={!!session?.user}` to the `<ClaimClient ... />` props:
-
-```tsx
-        <ClaimClient
-          serverId={server.id}
-          serverName={server.name}
-          repoUrl={server.url}
-          websiteUrl={(server as any).websiteUrl}
-          isOfficial={(server as any).isOfficial}
-          websiteVerified={(server as any).websiteVerified}
-          isSignedIn={!!session?.user}
-        />
-```
-
-- [ ] **Step 3: Gate `ClaimClient`'s verify/attach actions on `isSignedIn`**
-
-Add `isSignedIn` to the props type and destructure it:
-
-```tsx
-export default function ClaimClient({
-  serverId,
-  serverName,
-  repoUrl,
-  websiteUrl: initialWebsite,
-  isOfficial,
-  websiteVerified,
-  isSignedIn,
-}: {
-  serverId: string;
-  serverName: string;
-  repoUrl: string;
-  websiteUrl?: string | null;
-  isOfficial?: boolean;
-  websiteVerified?: boolean;
-  isSignedIn: boolean;
-}) {
-```
-
-At the top of `handleVerify` (before `setLoading(true)`):
-
-```ts
-  const handleVerify = async () => {
-    if (!isSignedIn) {
-      window.location.href = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}/claim`)}`;
-      return;
-    }
-    setLoading(true);
-```
-
-At the top of `handleAttachWebsite` (before the `if (!websiteUrl.trim())` check):
-
-```ts
-  const handleAttachWebsite = async () => {
-    if (!isSignedIn) {
-      window.location.href = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}/claim`)}`;
-      return;
-    }
-    if (!websiteUrl.trim()) {
-```
-
-- [ ] **Step 4: Add `callbackUrl` support to `app/login/page.tsx`**
-
-Replace the file's export with an async component reading `searchParams` (matching the pattern in `app/pricing/page.tsx`) and forwarding a `redirectTo` hidden field to the existing `signIn('resend', formData)` call — NextAuth's `signIn` destructures `redirectTo` out of the FormData automatically (`options instanceof FormData ? Object.fromEntries(options) : options`), so no change to the `signIn` call itself is needed:
-
-```tsx
-import { signIn } from '@/lib/auth';
-import { BrandLogo } from '@/components/BrandLogo';
-import { PageShell } from '@/components/PageShell';
-
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ callbackUrl?: string }>;
-}) {
-  const { callbackUrl } = await searchParams;
-  // Must be a same-app relative path: reject absolute/protocol-relative URLs
-  // (e.g. "//evil.com" starts with "/" but browsers treat it as external).
-  const redirectTo =
-    callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : undefined;
-
-  return (
-    <PageShell variant="auth" panel>
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
-          <BrandLogo size="lg" href={null} showWordmark={false} />
-        </div>
-        <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
-          Sign in to <span className="text-brand-gradient">AllMCPs</span>
-        </h1>
-        <p className="text-meta" style={{ lineHeight: 1.5 }}>
-          Enter your email to receive a secure login link. No password required.
-        </p>
-      </div>
-
-      <form
-        action={async (formData) => {
-          'use server';
-          await signIn('resend', formData);
-        }}
-        className="form-stack"
-        style={{ textAlign: 'left' }}
-      >
-        <div className="form-field">
-          <label htmlFor="email" className="form-label">
-            Email address
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            placeholder="you@example.com"
-            className="form-input"
-          />
-        </div>
-
-        {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
-
-        <button type="submit" className="btn btn-primary btn-full">
-          Send Magic Link
-        </button>
-      </form>
-    </PageShell>
-  );
-}
-```
-
-- [ ] **Step 5: Manually verify the auth gate**
-
-Run: `npm run preview` (builds and serves with real Workers bindings via `opennextjs-cloudflare`).
-
-With the server running, confirm the unauthenticated-request path from a separate terminal:
-
-Run: `curl -s -X POST http://localhost:8771/api/claim -H "Content-Type: application/json" -d '{"id":"some-existing-server-id","method":"github"}'`
-(Substitute a real listing id from your local D1; check the preview server's printed port if not 8771.)
-Expected: `{"error":"Sign in required to claim or update a listing."}` with HTTP 401.
-
-Then in a browser: visit `/mcp/<id>/claim`, click **Verify & claim listing** while signed out — expect a redirect to `/login?callbackUrl=%2Fmcp%2F<id>%2Fclaim`. Sign in via the magic link and confirm you land back on the claim page.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add "app/api/claim/route.ts" "app/mcp/[id]/claim/page.tsx" "app/mcp/[id]/claim/ClaimClient.tsx" app/login/page.tsx
-git commit -m "Require sign-in to claim/re-verify a listing and persist ownerUserId"
-```
+**Verification performed:**
+- `npx tsc --noEmit` and `npx next build` — clean.
+- `npm run preview`, inserted a throwaway `tmp-test-server` row into local D1, confirmed:
+  - Unauthenticated `POST /api/claim` → `401 {"error":"Sign in required to claim or update a listing."}`.
+  - Unauthenticated `POST /api/claim/dns/cloudflare` → `401`.
+  - `/mcp/tmp-test-server/claim` still renders `200` (GitHub instructions visible, website/DNS
+    gated behind sign-in) without a session.
+  - Deleted the throwaway row afterward; stopped the preview server.
+- Not verified in this pass (needs a real browser + email + Cloudflare Access, deferred to Task 10's
+  end-to-end pass against the deployed site): the full magic-link round trip, the personalized-token
+  display after sign-in, the new-website pending-claim path, and the admin approval UI (behind
+  Cloudflare Access, not reachable from local curl).
 
 ---
 

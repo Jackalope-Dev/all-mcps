@@ -816,7 +816,9 @@ p {
 
 .btn-primary {
   background: var(--brand-gradient);
-  color: #fff;
+  /* White text fails contrast against the cyan end of the gradient (~1.5:1);
+     dark text holds >=5:1 across the full cyan-to-blue range. */
+  color: var(--bg-color);
   box-shadow: 0 4px 18px 0 rgba(0, 123, 255, 0.35);
 }
 .btn-primary:hover {
@@ -1332,7 +1334,7 @@ p {
 
 .directory-segmented-btn.is-active {
   background: var(--brand-gradient);
-  color: white;
+  color: var(--bg-color);
 }
 
 .directory-segmented-icon {

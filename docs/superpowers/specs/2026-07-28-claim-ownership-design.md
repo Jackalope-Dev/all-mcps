@@ -115,6 +115,58 @@ Extends the existing `AdminClient`/`admin/action` pattern rather than building a
 - The reciprocal-badge recheck reuses the existing `isSafeSubmissionUrl`/`isSafeFetchTarget` SSRF
   guards already applied to `verifyWebsiteHtml` and the claim flow — no new outbound-fetch surface.
 
+## Amendment: claim proof binding and new-website approval
+
+The initial design above auto-approved every successful claim (any method) instantly. Review
+surfaced two gaps in the underlying proof-of-control checks, both of which matter more now that a
+successful claim grants real ownership (edit rights, dofollow eligibility) rather than just a
+cosmetic badge:
+
+1. `lib/verificationTokens.ts`'s token is `allmcps-site-verification=${serverId}` — deterministic
+   and fully public (the id is visible in the URL). For the `website_badge`/`dns` claim methods,
+   this means anyone can type in **any website they personally control**, prove control of *that*
+   site, and be treated as having proven ownership of *the MCP listing* — even though nothing
+   connects the two. This is a real listing-takeover path for the common case of a listing with no
+   pre-existing `websiteUrl` on file.
+2. Neither the website token nor the GitHub README badge check is bound to *which* signed-in user
+   performed the check — they only prove "control exists right now," not "this specific account is
+   the one who established it." Combined with the "allow ownership transfer" decision, a stale,
+   never-removed token could let an unrelated signed-in account "re-verify" and take over a listing
+   without ever having touched the site/domain themselves.
+
+Resolution:
+
+- **GitHub README method is unchanged** (still auto-approves instantly). Editing an upstream
+  repo's actual README requires real, separately-authenticated repo access — a materially
+  different trust boundary than "type in any URL." The precondition (badge present in the README)
+  can only have been established by someone with real access to that specific repo.
+- **DNS/website-badge claim checks become personalized.** `lib/verificationTokens.ts` gains
+  `getClaimVerificationToken(serverId, userId)` → `` allmcps-site-verification=${serverId}:${userId} ``,
+  distinct from the existing `getSiteVerificationToken(serverId)`. `verifyDnsTxt`/`verifyWebsiteHtml`
+  (as used by the claim flow) now require this per-user token, not the generic one. The plain
+  visible badge link (`websiteHasReciprocalBadge`) is **no longer sufficient to claim** — it stays
+  generic and is used only for the periodic reciprocal-dofollow recheck (a different question:
+  "does this site show our public backlink," not "who is claiming ownership"). This closes gap #2
+  for the website path: a stale generic badge/link can no longer be replayed by an unrelated
+  account to take over a listing.
+- **New-website claims go through admin approval; reconfirming an on-file website does not.**
+  Personalizing the token proves *who* controls the site, but still doesn't prove the site is
+  *related* to the actual MCP project when there was no pre-existing `websiteUrl`. So: if the
+  `website_badge`/`dns` proof succeeds against a URL that already matched `servers.websiteUrl`
+  before this claim attempt, ownership is granted immediately (unchanged behavior — reconfirming
+  what was already on file). If it succeeds against a **new or different** URL, the proof is stored
+  as a pending claim (new `servers.pendingClaimUserId` / `servers.pendingClaimWebsiteUrl` columns,
+  migration `0009`) instead of immediately setting `ownerUserId`/`isOfficial`; an admin reviews it
+  in a new "Pending claims" section (parallel to the existing "Pending edits" one) and
+  approves (sets `ownerUserId`, `isOfficial`, `websiteUrl`, `websiteVerified` from the stored
+  values) or rejects (clears the two pending columns) it.
+- **Claim-page UX consequence:** the DNS/meta-tag instructions shown for the `website_badge`/`dns`
+  methods are now per-user, so they can't be rendered correctly before sign-in. Those two methods'
+  instructions show a "sign in to get your personalized verification tag" placeholder until
+  authenticated. The GitHub method's instructions are unaffected (not personalized) and remain
+  visible pre-login, preserving the original "gate only the final verify click" intent for that
+  path.
+
 ## Testing
 
 No test framework exists in this repo today; verify with a manual smoke-test pass:
@@ -128,4 +180,12 @@ No test framework exists in this repo today; verify with a manual smoke-test pas
   via DNS/badge.
 - Reciprocal badge removed from a live site → next `cron/health` run flips `reciprocalBadgeOk` to
   `false` → website link reverts to `nofollow`.
-- Apply `0008` with `npx wrangler d1 migrations apply all-mcps --remote` before deploying.
+- Claim via `dns`/`website_badge` against a URL that matches the listing's existing `websiteUrl` →
+  ownership granted immediately, no admin step.
+- Claim via `dns`/`website_badge` against a *new* URL → listing shows up under "Pending claims" in
+  admin, not immediately owned; approving sets `ownerUserId`/`isOfficial`/`websiteUrl`/
+  `websiteVerified`, rejecting clears the pending columns without granting anything.
+- A stale/generic badge link (no personalized token) does not satisfy the claim check even though
+  it still satisfies the reciprocal-dofollow recheck.
+- Apply `0008` and `0009` with `npx wrangler d1 migrations apply all-mcps --remote` before
+  deploying.

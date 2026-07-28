@@ -1,11 +1,13 @@
 /**
  * SEO link policy for outbound listing links.
  * - Premium/paid listings: dofollow website (and repo when claimed)
- * - Free listings: nofollow
- * Claimed/official free listings still use nofollow on the website unless premium.
+ * - Free listings: dofollow website only while a reciprocal AllMCPs badge is
+ *   confirmed live (rechecked periodically by the health cron); nofollow otherwise
+ * Claimed/official free listings still use nofollow on the website unless premium
+ * or reciprocal.
  */
-export function websiteLinkRel(isPremium: boolean): string {
-  return isPremium ? 'noopener noreferrer' : 'noopener noreferrer nofollow';
+export function websiteLinkRel(isPremium: boolean, reciprocalBadgeOk: boolean): string {
+  return isPremium || reciprocalBadgeOk ? 'noopener noreferrer' : 'noopener noreferrer nofollow';
 }
 
 export function repoLinkRel(isPremium: boolean, isOfficial: boolean): string {

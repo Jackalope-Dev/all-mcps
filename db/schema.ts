@@ -17,6 +17,10 @@ export const servers = sqliteTable('servers', {
   claimedAt: integer('claimed_at', { mode: 'timestamp' }),
   /** Auth.js user id after claim (optional until owners sign in). */
   ownerUserId: text('owner_user_id'),
+  /** Set when a website/DNS claim proves control of a *new* site (not already on file) — awaits admin approval before ownerUserId/isOfficial/websiteUrl take effect. */
+  pendingClaimUserId: text('pending_claim_user_id'),
+  /** The site the pending claimant proved control of. */
+  pendingClaimWebsiteUrl: text('pending_claim_website_url'),
   /** Timed featured placement (e.g. 7-day boost). */
   featuredUntil: integer('featured_until', { mode: 'timestamp' }),
   /** Paid priority in the admin review queue. */

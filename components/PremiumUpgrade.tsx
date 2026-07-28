@@ -46,6 +46,7 @@ export function PremiumUpgrade({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ serverId, sku }),
+        signal: AbortSignal.timeout(20000),
       });
       const data = (await res.json()) as { url?: string; error?: string; hint?: string };
       if (!res.ok || !data.url) {
@@ -53,8 +54,11 @@ export function PremiumUpgrade({
       }
       window.location.href = data.url;
     } catch (e: any) {
+      const timedOut = e?.name === 'TimeoutError' || e?.name === 'AbortError';
       toast.error('Could not start checkout', {
-        description: e?.message || 'Stripe may not be configured yet.',
+        description: timedOut
+          ? 'The request timed out. Please try again.'
+          : e?.message || 'Stripe may not be configured yet.',
       });
       setLoadingSku(null);
     }
@@ -67,12 +71,16 @@ export function PremiumUpgrade({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ serverId }),
+        signal: AbortSignal.timeout(20000),
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !data.url) throw new Error(data.error || 'Portal unavailable');
       window.location.href = data.url;
     } catch (e: any) {
-      toast.error('Billing portal', { description: e?.message });
+      const timedOut = e?.name === 'TimeoutError' || e?.name === 'AbortError';
+      toast.error('Billing portal', {
+        description: timedOut ? 'The request timed out. Please try again.' : e?.message,
+      });
       setLoadingSku(null);
     }
   };

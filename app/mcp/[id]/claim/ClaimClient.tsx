@@ -4,7 +4,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { ExternalLink, Copy, Cloud } from 'lucide-react';
 import { toast } from '../../../../components/ui/Toast';
-import { getDnsTxtRecordValue, getSiteVerificationToken } from '../../../../lib/verificationTokens';
+import { getClaimVerificationToken } from '../../../../lib/verificationTokens';
 import { getApexDomain, getDnsProviderLinks } from '../../../../lib/dnsProviders';
 
 type ClaimMethod = 'github' | 'website_badge' | 'dns';
@@ -16,6 +16,7 @@ export default function ClaimClient({
   websiteUrl: initialWebsite,
   isOfficial,
   websiteVerified,
+  userId,
 }: {
   serverId: string;
   serverName: string;
@@ -23,7 +24,9 @@ export default function ClaimClient({
   websiteUrl?: string | null;
   isOfficial?: boolean;
   websiteVerified?: boolean;
+  userId: string | null;
 }) {
+  const isSignedIn = !!userId;
   const [method, setMethod] = useState<ClaimMethod>(
     repoUrl.includes('github.com') ? 'github' : 'website_badge'
   );
@@ -41,16 +44,20 @@ export default function ClaimClient({
   const [badgeStyle, setBadgeStyle] = useState<'directory' | 'featured'>('directory');
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
-  const dnsValue = useMemo(() => getDnsTxtRecordValue(serverId), [serverId]);
-  const metaToken = useMemo(() => getSiteVerificationToken(serverId), [serverId]);
+  const personalizedToken = useMemo(
+    () => (userId ? getClaimVerificationToken(serverId, userId) : null),
+    [serverId, userId]
+  );
+  const dnsValue = personalizedToken ?? '';
   const apexDomain = useMemo(() => getApexDomain(websiteUrl.trim()), [websiteUrl]);
   const providerLinks = useMemo(() => getDnsProviderLinks(apexDomain), [apexDomain]);
 
   const badgeSrc = `${baseUrl}/api/badge/${serverId}?style=${badgeStyle}&theme=${badgeTheme}`;
   const badgeMarkdown = `[![Listed on AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`;
   const badgeHtml = `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="Listed on AllMCPs" height="${badgeStyle === 'directory' ? 40 : 32}" /></a>`;
-  const metaTag = `<meta name="allmcps-verification" content="${metaToken}" />`;
+  const metaTag = personalizedToken ? `<meta name="allmcps-verification" content="${personalizedToken}" />` : '';
   const githubBadgeMd = `[![AllMCPs Verified](https://img.shields.io/badge/AllMCPs-Verified-blue)](${baseUrl}/mcp/${serverId})`;
+  const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}/claim`)}`;
 
   const copyText = async (text: string, label: string) => {
     try {
@@ -62,6 +69,10 @@ export default function ClaimClient({
   };
 
   const handleVerify = async () => {
+    if (!isSignedIn) {
+      window.location.href = signInHref;
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -76,20 +87,26 @@ export default function ClaimClient({
         }),
       });
 
-      const data = (await res.json()) as { error?: string; message?: string };
+      const data = (await res.json()) as { error?: string; message?: string; pending?: boolean };
 
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Verification failed');
       }
 
-      setSuccess(true);
-      setClaimed(true);
-      if (method === 'website_badge' || method === 'dns') {
-        setSiteVerified(true);
+      if (data.pending) {
+        toast.success('Submitted for review', {
+          description: data.message || "We'll email you once an admin approves it.",
+        });
+      } else {
+        setSuccess(true);
+        setClaimed(true);
+        if (method === 'website_badge' || method === 'dns') {
+          setSiteVerified(true);
+        }
+        toast.success('Claim successful', {
+          description: data.message || 'Your listing is now verified.',
+        });
       }
-      toast.success('Claim successful', {
-        description: data.message || 'Your listing is now verified.',
-      });
     } catch (err: any) {
       const message = err?.message || 'Verification failed';
       setError(message);
@@ -100,6 +117,10 @@ export default function ClaimClient({
   };
 
   const handleAttachWebsite = async () => {
+    if (!isSignedIn) {
+      window.location.href = signInHref;
+      return;
+    }
     if (!websiteUrl.trim()) {
       toast.error('Enter a website URL');
       return;
@@ -207,7 +228,7 @@ export default function ClaimClient({
           style={{
             padding: '0.75rem 1.5rem',
             background: 'var(--accent-color)',
-            color: 'white',
+            color: 'var(--bg-color)',
             borderRadius: '8px',
             textDecoration: 'none',
             fontWeight: 'bold',
@@ -340,7 +361,7 @@ export default function ClaimClient({
                   right: '0.5rem',
                   background: 'var(--accent-color)',
                   border: 'none',
-                  color: 'white',
+                  color: 'var(--bg-color)',
                   padding: '0.25rem 0.75rem',
                   borderRadius: '4px',
                   cursor: 'pointer',
@@ -360,7 +381,9 @@ export default function ClaimClient({
         </>
       )}
 
-      {method === 'website_badge' && (
+      {method === 'website_badge' && (!isSignedIn ? (
+        <SignInGate href={signInHref} />
+      ) : (
         <>
           <div style={{ marginBottom: '1.25rem' }}>
             <h3 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>1. Choose a badge</h3>
@@ -446,9 +469,11 @@ export default function ClaimClient({
             </button>
           </div>
         </>
-      )}
+      ))}
 
-      {method === 'dns' && (
+      {method === 'dns' && (!isSignedIn ? (
+        <SignInGate href={signInHref} />
+      ) : (
         <div style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>1. Add a DNS TXT record</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: 1.6 }}>
@@ -616,7 +641,7 @@ export default function ClaimClient({
             and www.
           </p>
         </div>
-      )}
+      ))}
 
       <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
         <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>
@@ -630,7 +655,7 @@ export default function ClaimClient({
             width: '100%',
             padding: '1rem',
             background: loading ? '#374151' : 'var(--accent-color)',
-            color: 'white',
+            color: loading ? 'white' : 'var(--bg-color)',
             border: 'none',
             borderRadius: '8px',
             fontWeight: 'bold',
@@ -656,6 +681,27 @@ export default function ClaimClient({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function SignInGate({ href }: { href: string }) {
+  return (
+    <div
+      style={{
+        padding: '1.5rem',
+        textAlign: 'center',
+        border: '1px dashed var(--border-color)',
+        borderRadius: '12px',
+        marginBottom: '1.5rem',
+      }}
+    >
+      <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+        Sign in to get your personalized verification tag for this method.
+      </p>
+      <a href={href} className="btn btn-primary" style={{ textDecoration: 'none' }}>
+        Sign in
+      </a>
     </div>
   );
 }

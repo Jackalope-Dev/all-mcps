@@ -64,6 +64,13 @@
       "when": 1785236000000,
       "tag": "0008_claim_ownership",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785237000000,
+      "tag": "0009_pending_claim",
+      "breakpoints": true
     }
   ]
 }

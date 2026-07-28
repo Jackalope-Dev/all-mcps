@@ -42,7 +42,7 @@ export function AgentPromptButton({ serverId, serverName }: { serverId: string; 
         width: '100%',
         padding: '0.9rem 1.25rem',
         background: 'var(--brand-gradient)',
-        color: '#fff',
+        color: 'var(--bg-color)',
         fontWeight: 700,
         fontSize: '0.9rem',
         border: 'none',

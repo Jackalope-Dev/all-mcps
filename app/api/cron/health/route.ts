@@ -5,6 +5,7 @@ import { servers } from '../../../../db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { isSafeFetchTarget } from '../../../../lib/urlSafety';
+import { websiteHasReciprocalBadge } from '../../../../lib/verification';
 
 // Maximum servers to check per cron run (keeps us under rate limits)
 const BATCH_SIZE = 50;
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
       let isVerifiedActive = false;
       let healthStatus = 'unknown';
       let isOfficial = server.isOfficial;
-      
+      let reciprocalBadgeOk = server.reciprocalBadgeOk;
+
       try {
         if (server.url.includes('github.com')) {
           // GitHub Check
@@ -78,8 +80,10 @@ export async function POST(req: Request) {
                   const badge = `[![AllMCPs Verified](https://img.shields.io/badge/AllMCPs-Verified-blue)](https://allmcps.com/mcp/${server.id})`;
                   if (text.replace(/\s+/g, '').includes(badge.replace(/\s+/g, ''))) {
                     isOfficial = true; // They added the badge!
+                    reciprocalBadgeOk = true;
                   } else {
                     isOfficial = false; // Badge not found, remove verification
+                    reciprocalBadgeOk = false;
                   }
                 }
               }
@@ -109,13 +113,30 @@ export async function POST(req: Request) {
       } catch (e) {
         healthStatus = 'offline';
       }
-      
+
+      // Reciprocal badge recheck for a separate marketing website (non-premium
+      // only — premium is already dofollow — and only a site whose control was
+      // already proven, not an arbitrary stored URL).
+      if (!server.isPremium && server.websiteUrl && server.websiteVerified && isSafeFetchTarget(server.websiteUrl)) {
+        try {
+          const siteRes = await fetch(server.websiteUrl, {
+            method: 'GET',
+            signal: AbortSignal.timeout(10000),
+          });
+          reciprocalBadgeOk = siteRes.ok && websiteHasReciprocalBadge(await siteRes.text(), server.id);
+        } catch {
+          reciprocalBadgeOk = false;
+        }
+      }
+
       // Update the record in D1
       await db.update(servers).set({
         lastCheckedAt: now,
         isVerifiedActive,
         healthStatus,
-        isOfficial
+        isOfficial,
+        reciprocalBadgeOk,
+        badgeLastCheckedAt: now,
       }).where(eq(servers.id, server.id));
       
       processed++;
