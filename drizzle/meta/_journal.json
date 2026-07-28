@@ -50,6 +50,13 @@
       "when": 1785225000000,
       "tag": "0006_view_records",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1785230000000,
+      "tag": "0007_stripe_premium",
+      "breakpoints": true
     }
   ]
 }

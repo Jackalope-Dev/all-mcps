@@ -44,7 +44,7 @@ export default async function Image({ params }: { params: { id: string } }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '40px' }}>
-          <div style={{ width: '40px', height: '40px', background: '#3b82f6', borderRadius: '8px', marginRight: '16px', display: 'flex' }} />
+          <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #00E5FF, #007BFF)', borderRadius: '8px', marginRight: '16px', display: 'flex' }} />
           <h2 style={{ fontSize: '32px', fontWeight: 600, color: '#a3a3a3', margin: 0, letterSpacing: '-0.01em' }}>
             AllMCPs.com
           </h2>
@@ -58,7 +58,7 @@ export default async function Image({ params }: { params: { id: string } }) {
           {desc}
         </p>
 
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '8px', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', display: 'flex' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '8px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)', display: 'flex' }} />
       </div>
     ),
     { ...size }

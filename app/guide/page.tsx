@@ -17,19 +17,20 @@ const articleJsonLd = {
 
 export default function GuidePage() {
   return (
-    <main className="container" style={{ padding: '6rem 0' }}>
+    <main className="page-shell page-shell--content">
+      <div className="page-shell-inner">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
-      <div className="glass-panel" style={{ padding: '4rem', maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ marginBottom: '0.5rem' }}>LLM Agents Guide</h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+      <div className="surface page-panel">
+        <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>LLM Agents Guide</h1>
+        <p className="text-lead" style={{ marginBottom: '2rem' }}>
           A practical, step-by-step guide to connecting your AI agent to MCP servers &mdash; with real configuration
           examples. New to the protocol itself? Start with <Link href="/what-is-mcp">What is an MCP?</Link> first.
         </p>
 
-        <nav aria-label="On this page" style={{ marginBottom: '2.5rem', padding: '1.25rem 1.5rem', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+        <nav aria-label="On this page" className="surface-muted" style={{ marginBottom: '2.5rem', padding: '1.25rem 1.5rem' }}>
           <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>On this page</strong>
           <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingLeft: '1.25rem', margin: 0, fontSize: '0.9rem' }}>
             <li><a href="#prerequisites">Before you start</a></li>
@@ -177,6 +178,7 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
             <li>Built something worth sharing? <Link href="/submit">Submit your MCP server</Link></li>
           </ul>
         </div>
+      </div>
       </div>
     </main>
   );

@@ -12,6 +12,8 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { repoLinkRel, websiteLinkRel } from '../../../lib/linkRel';
+import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
+import { isFeaturedListing } from '../../../lib/featuredStatus';
 
 // Define the type for our server data
 type Server = {
@@ -22,6 +24,7 @@ type Server = {
   category: string;
   websiteUrl?: string | null;
   isPremium?: boolean;
+  featuredUntil?: string | Date | null;
   websiteVerified?: boolean;
   isOfficial: boolean;
   status: string;
@@ -121,10 +124,19 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
   if (!server) {
     return (
-      <div className="container" style={{ paddingTop: '6rem', textAlign: 'center' }}>
-        <h1>Server Not Found</h1>
-        <Link href="/browse" style={{ color: 'var(--accent-color)', marginTop: '1rem', display: 'inline-block' }}>← Back to Directory</Link>
-      </div>
+      <main className="page-shell page-shell--status">
+        <div className="page-shell-inner">
+          <div className="surface page-panel">
+            <div className="empty-state">
+              <h1 className="empty-state-title">Server Not Found</h1>
+              <p className="empty-state-body">This MCP listing may have been removed or the URL is incorrect.</p>
+              <div className="empty-state-actions">
+                <Link href="/browse" className="btn btn-primary">← Back to Directory</Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     );
   }
 
@@ -209,7 +221,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="container" style={{ paddingBottom: '6rem' }}>
+      <main className="container page-shell" style={{ paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-16)' }}>
       <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
         <ol className="breadcrumb">
           <li><Link href="/">Home</Link></li>
@@ -224,7 +236,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         
         {/* Main Content (Left Column) */}
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ margin: '0 0 1rem 0' }}>{server.name}</h1>
+          <h1 className="text-page-title" style={{ margin: '0 0 1rem 0' }}>{server.name}</h1>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             <Badge variant="category" href={`/browse?category=${encodeURIComponent(server.category)}`}>
               {server.category}
@@ -236,6 +248,18 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             )}
             {server.websiteVerified && (
               <Badge variant="success">Website verified</Badge>
+            )}
+            {isFeaturedListing(server) && (
+              <Badge
+                variant="success"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
+                  color: '#00E5FF',
+                  borderColor: 'rgba(0,229,255,0.35)',
+                }}
+              >
+                ★ Featured
+              </Badge>
             )}
             {server.isPremium && (
               <Badge variant="success" style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.25)' }}>
@@ -258,7 +282,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <SafeMarkdown content={server.description} utmContent={server.id} />
           </div>
 
-          <div className="glass-panel-static" style={{ padding: '2rem', marginBottom: '3rem' }}>
+          <div className="surface" style={{ padding: '2rem', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Terminal size={20} /> Quick Install (Claude Desktop)
             </h2>
@@ -293,7 +317,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         {/* Sidebar (Right Column) */}
         <div className="detail-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
+          <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engagement</h3>
             <dl className="listing-engagement-dl">
               <div>
@@ -314,18 +338,77 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </p>
           </div>
 
-          <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
+          <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 600 }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
-              Verified Active
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-              {server.lastCheckedAt ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}` : 'Not yet checked.'}
-            </p>
+            {(() => {
+              const healthKey = server.isVerifiedActive
+                ? 'active'
+                : server.healthStatus === 'down' || server.healthStatus === 'unhealthy'
+                  ? 'down'
+                  : 'unknown';
+              const healthUi = {
+                active: {
+                  label: 'Health: Active',
+                  color: '#10b981',
+                  detail: 'Recent health check succeeded.',
+                },
+                down: {
+                  label: 'Health: Issues detected',
+                  color: '#f87171',
+                  detail: 'Last health check failed or the endpoint looked unhealthy.',
+                },
+                unknown: {
+                  label: 'Health: Not checked yet',
+                  color: '#a1a1aa',
+                  detail: 'We have not completed a health check for this listing yet.',
+                },
+              }[healthKey];
+
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                    <div
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: healthUi.color,
+                        boxShadow: healthKey === 'active' ? `0 0 10px ${healthUi.color}` : 'none',
+                        flexShrink: 0,
+                      }}
+                    />
+                    {healthUi.label}
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 0.75rem' }}>
+                    {healthUi.detail}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    {server.lastCheckedAt
+                      ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}`
+                      : 'No check timestamp yet.'}
+                  </p>
+                  <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    {server.isOfficial || server.isPremium ? (
+                      <span>
+                        <strong style={{ color: '#34d399' }}>Verified listing</strong>
+                        {server.isPremium ? ' · Premium' : ''}
+                        {server.websiteVerified ? ' · Website verified' : ''}
+                      </span>
+                    ) : (
+                      <span>
+                        Unclaimed listing (imported or pending owner verification).{' '}
+                        <Link href={`/mcp/${server.id}/claim`} style={{ color: 'var(--accent-color)' }}>
+                          Claim it →
+                        </Link>
+                      </span>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
-          <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
+          <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <a
@@ -361,13 +444,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             )}
           </div>
 
-          {!server.isOfficial && (
-            <div className="glass-panel-static" style={{ padding: '1.5rem', borderColor: 'rgba(59,130,246,0.35)' }}>
+          {!server.isOfficial ? (
+            <div className="surface" style={{ padding: '1.5rem', borderColor: 'rgba(0,229,255,0.35)' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <BadgeCheck size={18} color="var(--accent-color)" /> Own this project?
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
-                This directory is pre-filled from public sources. Claim the page via GitHub README, a site badge, or DNS TXT to get the verified badge
+                This directory is pre-filled from public sources. Claim via GitHub README, site badge, or DNS TXT to get the verified badge
                 {server.websiteUrl ? '' : ' and attach your website'}.
               </p>
               <Link
@@ -388,9 +471,48 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 <Sparkles size={16} /> Claim this listing
               </Link>
             </div>
+          ) : (
+            <div className="surface" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Globe size={18} color="var(--accent-color)" /> Listing owner
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                {server.websiteUrl
+                  ? server.websiteVerified
+                    ? 'Website is attached and verified. You can re-verify or change it anytime.'
+                    : 'Website is attached but not verified yet — prove control for a stronger listing.'
+                  : 'Add your product site, then verify with a badge or DNS TXT.'}
+              </p>
+              <Link
+                href={`/mcp/${server.id}/claim`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  padding: '0.75rem 1rem',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                }}
+              >
+                Manage website &amp; verification
+              </Link>
+            </div>
           )}
 
-          <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
+          {server.status === 'active' && (
+            <PremiumUpgrade
+              serverId={server.id}
+              listingStatus={server.status}
+              isPremium={!!server.isPremium}
+            />
+          )}
+
+          <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share & Embed</h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add our SVG badge (dark/light directory styles) or embeddable widget to your site.</p>
             <ShareModal serverId={server.id} serverName={server.name} />

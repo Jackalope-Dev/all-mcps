@@ -8,10 +8,11 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main className="container" style={{ padding: '6rem 0' }}>
-      <div className="glass-panel" style={{ padding: '4rem', maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ marginBottom: '0.5rem' }}>Privacy Policy</h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Effective date: July 28, 2026</p>
+    <main className="page-shell page-shell--content">
+      <div className="page-shell-inner">
+      <div className="surface page-panel">
+        <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Privacy Policy</h1>
+        <p className="text-meta" style={{ marginBottom: '2rem' }}>Effective date: July 28, 2026</p>
 
         <div className="markdown-body">
           <p>
@@ -161,6 +162,7 @@ export default function PrivacyPage() {
             See also our <Link href="/terms">Terms of Service</Link>.
           </p>
         </div>
+      </div>
       </div>
     </main>
   );

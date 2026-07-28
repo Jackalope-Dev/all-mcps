@@ -13,7 +13,12 @@ async function getAdminData() {
     const ctx = await getCloudflareContext();
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const pendingServers = await db.select().from(servers).where(eq(servers.status, 'pending'));
+      // Priority-review paid listings first
+      const pendingServers = await db
+        .select()
+        .from(servers)
+        .where(eq(servers.status, 'pending'))
+        .orderBy(desc(servers.reviewPriority), desc(servers.createdAt));
       const activeServers = await db
         .select()
         .from(servers)

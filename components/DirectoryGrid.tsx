@@ -8,8 +8,13 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
+import { EmptyState } from './EmptyState';
+import {
+  isFeaturedListing as isFeaturedListingShared,
+  isVerifiedListing as isVerifiedListingShared,
+} from '../lib/featuredStatus';
 
 type Server = {
   id: string;
@@ -20,6 +25,7 @@ type Server = {
   isOfficial: boolean;
   /** Paid listing — counts as verified for browse filters. */
   isPremium?: boolean;
+  featuredUntil?: string | Date | null;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -28,20 +34,26 @@ type Server = {
 
 /** Claimed (badge/DNS) or premium/paid — shown as "Verified" in the directory. */
 function isVerifiedListing(server: Server): boolean {
-  return !!(server.isOfficial || server.isPremium);
+  return isVerifiedListingShared(server);
+}
+
+/** Premium subscription or active timed featured boost. */
+function isFeaturedListing(server: Server): boolean {
+  return isFeaturedListingShared(server);
 }
 
 type ViewMode = 'grid' | 'list';
 type SortMode = 'trending' | 'most_viewed' | 'newest';
 
-// Generate a random gradient based on the string (for colorful icons)
+// Deterministic brand-adjacent avatar gradients (cyan / blue / slate)
 function getGradient(str: string) {
   const colors = [
-    'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-    'linear-gradient(135deg, #10b981, #047857)',
-    'linear-gradient(135deg, #f59e0b, #b45309)',
-    'linear-gradient(135deg, #8b5cf6, #5b21b6)',
-    'linear-gradient(135deg, #ec4899, #be185d)',
+    'linear-gradient(135deg, #00e5ff, #007bff)',
+    'linear-gradient(135deg, #007bff, #0f172a)',
+    'linear-gradient(135deg, #22d3ee, #0369a1)',
+    'linear-gradient(135deg, #38bdf8, #1e3a8a)',
+    'linear-gradient(135deg, #0ea5e9, #164e63)',
+    'linear-gradient(135deg, #67e8f9, #1d4ed8)',
   ];
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -282,38 +294,11 @@ export default function DirectoryGrid({
     <>
       {/* Marketing hero — only on the unfiltered homepage landing */}
       {!isBrowse && !selectedCategory && (
-        <section
-          className="container animate-fade-in delay-1"
-          style={{
-            textAlign: 'center',
-            margin: '6rem auto 4rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <h1>
-            Give your AI agents{' '}
-            <span
-              style={{
-                background: 'var(--brand-gradient)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              superpowers
-            </span>
-            .
+        <section className="container animate-fade-in delay-1 landing-hero">
+          <h1 className="text-display">
+            Give your AI agents <span className="text-brand-gradient">superpowers</span>.
           </h1>
-          <p
-            style={{
-              fontSize: '1.25rem',
-              maxWidth: '600px',
-              margin: '1rem auto 0',
-              color: 'var(--text-secondary)',
-              lineHeight: '1.8',
-            }}
-          >
+          <p className="text-lead">
             Find the best tools to connect your favorite LLMs directly to local files, databases, and external APIs.
           </p>
         </section>
@@ -566,23 +551,19 @@ export default function DirectoryGrid({
         </div>
 
         {filteredServers.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '4rem',
-              color: 'var(--text-secondary)',
-              border: '1px dashed var(--border-color)',
-              borderRadius: '16px',
-            }}
-          >
-            No tools found matching your criteria.
-            {isFiltered && (
-              <div style={{ marginTop: '1rem' }}>
-                <Button variant="secondary" onClick={clearAllFilters}>
-                  Clear all filters
-                </Button>
-              </div>
-            )}
+          <div className="surface" style={{ borderStyle: 'dashed' }}>
+            <EmptyState
+              icon={<Search size={22} aria-hidden="true" />}
+              title="No tools found"
+              description="Nothing matches your current search or filters. Try a different query or clear filters."
+              actions={
+                isFiltered ? (
+                  <Button variant="secondary" onClick={clearAllFilters}>
+                    Clear all filters
+                  </Button>
+                ) : undefined
+              }
+            />
           </div>
         ) : viewMode === 'grid' ? (
           <div className="directory-grid">
@@ -590,6 +571,7 @@ export default function DirectoryGrid({
               <Card
                 key={server.id}
                 href={`/mcp/${server.id}`}
+                className={isFeaturedListing(server) ? 'directory-card-featured' : undefined}
                 style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
               >
                 <div
@@ -601,7 +583,21 @@ export default function DirectoryGrid({
                   }}
                 >
                   <ServerIcon name={server.name} />
-                  {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {isFeaturedListing(server) && (
+                      <Badge
+                        variant="success"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
+                          color: '#00E5FF',
+                          borderColor: 'rgba(0,229,255,0.35)',
+                        }}
+                      >
+                        ★ Featured
+                      </Badge>
+                    )}
+                    {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
+                  </div>
                 </div>
                 <h3
                   style={{
@@ -641,11 +637,27 @@ export default function DirectoryGrid({
         ) : (
           <div className="directory-list">
             {visibleServers.map((server) => (
-              <Link key={server.id} href={`/mcp/${server.id}`} className="directory-list-row glass-panel">
+              <Link
+                key={server.id}
+                href={`/mcp/${server.id}`}
+                className={`directory-list-row surface-interactive${isFeaturedListing(server) ? ' directory-list-row-featured' : ''}`}
+              >
                 <ServerIcon name={server.name} size={44} />
                 <div className="directory-list-body">
                   <div className="directory-list-title-row">
                     <h3 className="directory-list-name">{server.name}</h3>
+                    {isFeaturedListing(server) && (
+                      <Badge
+                        variant="success"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
+                          color: '#00E5FF',
+                          borderColor: 'rgba(0,229,255,0.35)',
+                        }}
+                      >
+                        ★ Featured
+                      </Badge>
+                    )}
                     {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
                     {!selectedCategory && <Badge variant="category">{server.category}</Badge>}
                   </div>

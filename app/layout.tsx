@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible_Next } from "next/font/google";
-import Link from "next/link";
 import Script from "next/script";
-import { Button } from "../components/ui/Button";
-import { BrandLogo } from "../components/BrandLogo";
+import { SiteHeader } from "../components/SiteHeader";
+import { SiteFooter } from "../components/SiteFooter";
 import { WebMCPProvider } from "../components/WebMCPProvider";
 import { CookieBanner } from "../components/CookieBanner";
 import { ToastProvider } from "../components/ui/Toast";
@@ -104,61 +103,9 @@ export default function RootLayout({
             }),
           }}
         />
-        <header className="container">
-          <div className="main-header">
-            <BrandLogo size="md" />
-            <nav className="animate-fade-in delay-1" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }} aria-label="Main Navigation">
-              <Link href="/browse" className="nav-link">Browse</Link>
-              <Link href="/categories" className="nav-link">Categories</Link>
-              <Button href="/submit" variant="primary">Submit MCP</Button>
-            </nav>
-          </div>
-        </header>
-        
+        <SiteHeader />
         {children}
-        
-        <footer className="container" style={{ marginTop: '4rem', padding: '4rem 0', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <hr className="brand-divider" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2rem' }}>
-            <div>
-              <div style={{ marginBottom: '1rem' }}>
-                <BrandLogo size="sm" href="/" />
-              </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                The definitive directory for discovering and installing Model Context Protocol servers.
-              </p>
-            </div>
-            <div>
-              <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Resources</h4>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><Link href="/blog" className="nav-link">Blog</Link></li>
-                <li><Link href="/what-is-mcp" className="nav-link">What is an MCP?</Link></li>
-                <li><Link href="/guide" className="nav-link">LLM Agents Guide</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>For AI & Agents</h4>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><a href="/llms.txt" className="nav-link" target="_blank" rel="noopener">llms.txt Standard ↗</a></li>
-                <li><a href="/api/mcp" className="nav-link" target="_blank" rel="noopener">Remote MCP Server ↗</a></li>
-                <li><a href="/api/v1/search" className="nav-link" target="_blank" rel="noopener">Agent Search API ↗</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Company</h4>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><Link href="/about" className="nav-link">About</Link></li>
-                <li><Link href="/contact" className="nav-link">Contact</Link></li>
-                <li><a href="https://jackalope.digital" target="_blank" rel="noopener noreferrer" className="nav-link">Jackalope Digital ↗</a></li>
-                <li><Link href="/terms" className="nav-link">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="nav-link">Privacy Policy</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2rem', textAlign: 'center' }}>
-            &copy; {new Date().getFullYear()} Jackalope Digital LLC. All rights reserved.
-          </div>
-        </footer>
+        <SiteFooter />
       </body>
     </html>
   );

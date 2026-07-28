@@ -11,16 +11,19 @@ type Server = {
   name: string;
   description: string;
   category: string;
+  isOfficial?: boolean;
+  isPremium?: boolean;
 };
 
-// Generate a random gradient based on the string
+// Brand-adjacent avatar gradients
 function getGradient(str: string) {
   const colors = [
-    'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-    'linear-gradient(135deg, #10b981, #047857)',
-    'linear-gradient(135deg, #f59e0b, #b45309)',
-    'linear-gradient(135deg, #8b5cf6, #5b21b6)',
-    'linear-gradient(135deg, #ec4899, #be185d)',
+    'linear-gradient(135deg, #00e5ff, #007bff)',
+    'linear-gradient(135deg, #007bff, #0f172a)',
+    'linear-gradient(135deg, #22d3ee, #0369a1)',
+    'linear-gradient(135deg, #38bdf8, #1e3a8a)',
+    'linear-gradient(135deg, #0ea5e9, #164e63)',
+    'linear-gradient(135deg, #67e8f9, #1d4ed8)',
   ];
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -34,7 +37,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
 
   return (
     <section className="container animate-fade-in delay-2" style={{ marginBottom: '4rem' }}>
-      <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <h2 className="text-section" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <Sparkles size={24} style={{ color: 'var(--accent-color)' }} />
         Featured Servers
       </h2>
@@ -47,7 +50,12 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: getGradient(server.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
                 {server.name.charAt(0)}
               </div>
-              <Badge variant="success" style={{ background: 'linear-gradient(135deg, rgba(0,229,255,0.1), rgba(0,123,255,0.1))', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.2)' }}>★ Featured</Badge>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {(server.isPremium || server.isOfficial) && (
+                  <Badge variant="official">Verified</Badge>
+                )}
+                <Badge variant="success" style={{ background: 'linear-gradient(135deg, rgba(0,229,255,0.1), rgba(0,123,255,0.1))', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.2)' }}>★ Featured</Badge>
+              </div>
             </div>
             
             <h3 style={{ fontSize: '1.5rem', marginBottom: '0.75rem', fontWeight: 700 }}>{server.name}</h3>

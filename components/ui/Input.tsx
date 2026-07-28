@@ -3,17 +3,30 @@ import React from 'react';
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   inputClassName?: string;
+  error?: boolean;
 }
 
-export function Input({ label, id, style, className = '', inputClassName = '', ...props }: InputProps) {
+export function Input({
+  label,
+  id,
+  style,
+  className = '',
+  inputClassName = '',
+  error = false,
+  ...props
+}: InputProps) {
   const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', ...style }} className={className}>
-      {label && <label htmlFor={inputId} style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>{label}</label>}
-      <input 
+    <div className={`form-field ${className}`.trim()} style={style}>
+      {label ? (
+        <label htmlFor={inputId} className="form-label">
+          {label}
+        </label>
+      ) : null}
+      <input
         id={inputId}
-        className={`form-input ${inputClassName}`.trim()}
+        className={`form-input ${error ? 'form-input-error' : ''} ${inputClassName}`.trim()}
         {...props}
       />
     </div>

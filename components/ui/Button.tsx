@@ -2,31 +2,50 @@ import React from 'react';
 import Link from 'next/link';
 
 type ButtonVariant = 'primary' | 'secondary' | 'glass';
+type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
   href?: string;
   className?: string;
 }
 
-export function Button({ variant = 'primary', href, className = '', children, style, ...props }: ButtonProps) {
-  let btnClass = 'btn';
-  if (variant === 'primary') btnClass += ' btn-primary';
-  if (variant === 'secondary') btnClass += ' btn-secondary';
-  if (variant === 'glass') btnClass += ' glass-panel';
-
-  const combinedClass = `${btnClass} ${className}`.trim();
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  fullWidth = false,
+  href,
+  className = '',
+  children,
+  style,
+  ...props
+}: ButtonProps) {
+  const classes = [
+    'btn',
+    variant === 'primary' ? 'btn-primary' : '',
+    variant === 'secondary' ? 'btn-secondary' : '',
+    variant === 'glass' ? 'btn-glass' : '',
+    size === 'sm' ? 'btn-sm' : '',
+    size === 'md' ? 'btn-md' : '',
+    size === 'lg' ? 'btn-lg' : '',
+    fullWidth ? 'btn-full' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   if (href) {
     return (
-      <Link href={href} className={combinedClass} style={style}>
+      <Link href={href} className={classes} style={style}>
         {children}
       </Link>
     );
   }
 
   return (
-    <button className={combinedClass} style={style} {...props}>
+    <button className={classes} style={style} {...props}>
       {children}
     </button>
   );

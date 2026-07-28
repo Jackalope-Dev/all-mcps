@@ -15,6 +15,18 @@ export const servers = sqliteTable('servers', {
   /** Claimed/verified ownership (GitHub README, site badge, or DNS). */
   isOfficial: integer('is_official', { mode: 'boolean' }).notNull().default(false),
   claimedAt: integer('claimed_at', { mode: 'timestamp' }),
+  /** Auth.js user id after claim (optional until owners sign in). */
+  ownerUserId: text('owner_user_id'),
+  /** Timed featured placement (e.g. 7-day boost). */
+  featuredUntil: integer('featured_until', { mode: 'timestamp' }),
+  /** Paid priority in the admin review queue. */
+  reviewPriority: integer('review_priority', { mode: 'boolean' }).notNull().default(false),
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  /** free | active | past_due | canceled */
+  premiumStatus: text('premium_status').notNull().default('free'),
+  /** JSON blob of pending owner edits awaiting admin approval. */
+  pendingRevision: text('pending_revision'),
   status: text('status').notNull().default('pending'),
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   isVerifiedActive: integer('is_verified_active', { mode: 'boolean' }).notNull().default(false),

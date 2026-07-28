@@ -37,7 +37,7 @@ export default async function Image() {
             style={{
               width: '60px',
               height: '60px',
-              background: '#3b82f6',
+              background: '#00E5FF',
               borderRadius: '12px',
               marginRight: '24px',
               display: 'flex',
@@ -88,7 +88,7 @@ export default async function Image() {
             left: 0,
             right: 0,
             height: '8px',
-            background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+            background: 'linear-gradient(90deg, #00E5FF, #007BFF)',
             display: 'flex',
           }}
         />

@@ -4,9 +4,10 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../db/schema';
 import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
+import { DEFAULT_SUBMIT_CATEGORY } from '../../../lib/categories';
 
 const submitSchema = z.object({
-  url: z.string().url('Must be a valid URL'),
+  url: z.string().optional().or(z.literal('')),
   name: z.string().optional(),
   description: z.string().optional(),
   category: z.string().optional(),
@@ -49,14 +50,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error.issues }, { status: 400 });
     }
 
-    const { url } = result.data;
     let websiteUrl = result.data.websiteUrl || '';
     let name = result.data.name || '';
     let description = result.data.description || '';
-    let category = result.data.category || 'Community';
+    let category = result.data.category || DEFAULT_SUBMIT_CATEGORY;
+    let url = (result.data.url || '').trim();
+
+    // Website-only: use website as primary url when repo omitted
+    if (!url && websiteUrl) {
+      url = websiteUrl;
+    }
+    if (!websiteUrl && url && !url.includes('github.com')) {
+      websiteUrl = url;
+    }
+
+    if (!url) {
+      return NextResponse.json(
+        { error: 'Provide a repository URL and/or website URL.' },
+        { status: 400 }
+      );
+    }
 
     if (!isSafeSubmissionUrl(url)) {
-      return NextResponse.json({ error: 'Repository URL must be a public http(s) address.' }, { status: 400 });
+      return NextResponse.json({ error: 'Primary URL must be a public http(s) address.' }, { status: 400 });
     }
 
     if (websiteUrl && !isSafeSubmissionUrl(websiteUrl)) {
@@ -93,7 +109,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `mcp-${Date.now()}`;
 
     let env;
     try {
@@ -121,6 +137,8 @@ export async function POST(req: Request) {
         isPremium: false,
         websiteVerified: false,
         isOfficial: false,
+        reviewPriority: false,
+        premiumStatus: 'free',
         status: 'pending',
         createdAt: new Date(),
       })

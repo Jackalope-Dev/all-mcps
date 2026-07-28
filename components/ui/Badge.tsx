@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 
-type BadgeVariant = 'default' | 'official' | 'success' | 'category';
+type BadgeVariant = 'default' | 'official' | 'verified' | 'success' | 'premium' | 'category';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
@@ -10,62 +10,45 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   href?: string;
 }
 
-function getVariantStyle(variant: BadgeVariant): React.CSSProperties {
+function variantClass(variant: BadgeVariant): string {
   switch (variant) {
     case 'official':
-      return {
-        background: 'rgba(16, 185, 129, 0.1)',
-        color: '#10b981',
-        border: '1px solid rgba(16, 185, 129, 0.2)',
-      };
+      return 'badge-official';
+    case 'verified':
+      return 'badge-verified';
+    case 'premium':
+      return 'badge-premium';
     case 'success':
-      return {
-        background: 'rgba(59, 130, 246, 0.1)',
-        color: '#3b82f6',
-        border: '1px solid rgba(59, 130, 246, 0.2)',
-      };
+      return 'badge-success';
     case 'category':
-      return {
-        background: 'rgba(255, 255, 255, 0.08)',
-        color: 'var(--text-secondary)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-      };
+      return 'badge-category';
     default:
-      return {
-        background: 'rgba(0, 0, 0, 0.5)',
-        color: 'var(--text-secondary)',
-        borderRadius: '4px',
-      };
+      return 'badge-default';
   }
 }
 
-export function Badge({ variant = 'default', children, style, href, className = '', ...props }: BadgeProps) {
-  const baseStyle: React.CSSProperties = {
-    padding: '0.25rem 0.75rem',
-    borderRadius: '100px',
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.375rem',
-    whiteSpace: 'nowrap',
-    textDecoration: 'none',
-    ...getVariantStyle(variant),
-    ...style,
-  };
-
-  const classes = ['badge', href ? 'badge-link' : '', className].filter(Boolean).join(' ');
+export function Badge({
+  variant = 'default',
+  children,
+  style,
+  href,
+  className = '',
+  ...props
+}: BadgeProps) {
+  const classes = ['badge', variantClass(variant), href ? 'badge-link' : '', className]
+    .filter(Boolean)
+    .join(' ');
 
   if (href) {
     return (
-      <Link href={href} className={classes} style={baseStyle} {...(props as any)}>
+      <Link className={classes} style={style} {...(props as React.ComponentProps<typeof Link>)} href={href}>
         {children}
       </Link>
     );
   }
 
   return (
-    <span className={classes} style={baseStyle} {...props}>
+    <span className={classes} style={style} {...props}>
       {children}
     </span>
   );

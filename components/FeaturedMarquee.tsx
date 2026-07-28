@@ -19,7 +19,7 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
         <Link 
           key={`${server.id}-${i}`} 
           href={`/mcp/${server.id}`}
-          className="glass-panel"
+          className="surface"
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -27,10 +27,10 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
             padding: '0.5rem 1rem', 
             borderRadius: '100px',
             whiteSpace: 'nowrap',
-            transition: 'border-color 0.2s'
+            transition: 'border-color 0.2s',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
-          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
         >
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-color)', boxShadow: '0 0 8px var(--accent-color)' }}></span>
           <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{server.name}</span>

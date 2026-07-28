@@ -41,7 +41,7 @@ export async function generateStaticParams() {
 
 function getGradient(str: string) {
   const colors = [
-    'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+    'linear-gradient(135deg, #00e5ff, #007bff)',
     'linear-gradient(135deg, #10b981, #047857)',
     'linear-gradient(135deg, #f59e0b, #b45309)',
     'linear-gradient(135deg, #8b5cf6, #5b21b6)',

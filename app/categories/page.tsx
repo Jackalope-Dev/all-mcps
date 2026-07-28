@@ -123,10 +123,10 @@ export default async function CategoriesPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="container" style={{ paddingBottom: '6rem' }}>
+      <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb">
-          <ol className="breadcrumb" style={{ paddingTop: '6rem', marginBottom: '2rem' }}>
+          <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
             <li>
               <Link href="/">Home</Link>
             </li>
@@ -142,13 +142,12 @@ export default async function CategoriesPage() {
           className="animate-fade-in delay-1"
           style={{ textAlign: 'center', marginBottom: '3rem' }}
         >
-          <h1>Browse by Category</h1>
+          <h1 className="text-display" style={{ marginBottom: '1rem' }}>Browse by Category</h1>
           <p
+            className="text-lead"
             style={{
-              fontSize: '1.25rem',
-              maxWidth: '600px',
               margin: '0 auto',
-              lineHeight: 1.7,
+              textAlign: 'center',
             }}
           >
             Explore{' '}

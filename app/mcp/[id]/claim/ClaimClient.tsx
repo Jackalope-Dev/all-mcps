@@ -29,11 +29,14 @@ export default function ClaimClient({
   );
   const [websiteUrl, setWebsiteUrl] = useState(initialWebsite || '');
   const [loading, setLoading] = useState(false);
+  const [attachLoading, setAttachLoading] = useState(false);
   const [cfLoading, setCfLoading] = useState(false);
   const [cfToken, setCfToken] = useState('');
   const [showCfToken, setShowCfToken] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [claimed, setClaimed] = useState(!!isOfficial);
+  const [siteVerified, setSiteVerified] = useState(!!websiteVerified);
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
   const [badgeStyle, setBadgeStyle] = useState<'directory' | 'featured'>('directory');
 
@@ -80,6 +83,10 @@ export default function ClaimClient({
       }
 
       setSuccess(true);
+      setClaimed(true);
+      if (method === 'website_badge' || method === 'dns') {
+        setSiteVerified(true);
+      }
       toast.success('Claim successful', {
         description: data.message || 'Your listing is now verified.',
       });
@@ -89,6 +96,40 @@ export default function ClaimClient({
       toast.error('Verification failed', { description: message });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAttachWebsite = async () => {
+    if (!websiteUrl.trim()) {
+      toast.error('Enter a website URL');
+      return;
+    }
+    setAttachLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: serverId,
+          method: 'attach_website',
+          websiteUrl: websiteUrl.trim(),
+        }),
+      });
+      const data = (await res.json()) as { error?: string; message?: string; websiteVerified?: boolean };
+      if (!res.ok) {
+        throw new Error(typeof data.error === 'string' ? data.error : 'Could not save website');
+      }
+      setSiteVerified(!!data.websiteVerified);
+      toast.success('Website saved', {
+        description: data.message || 'Verify with badge or DNS when ready.',
+      });
+    } catch (err: any) {
+      const message = err?.message || 'Could not save website';
+      setError(message);
+      toast.error('Save failed', { description: message });
+    } finally {
+      setAttachLoading(false);
     }
   };
 
@@ -186,13 +227,49 @@ export default function ClaimClient({
 
   return (
     <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '2rem' }}>
-      <h2 style={{ marginBottom: '0.5rem' }}>Claim {serverName}</h2>
+      <h2 style={{ marginBottom: '0.5rem' }}>{claimed ? 'Manage' : 'Claim'} {serverName}</h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-        Many listings were imported from public data. Prove you own this project to get the{' '}
-        <strong>Verified</strong> badge
-        {isOfficial ? ' (already claimed)' : ''}.
-        {websiteVerified ? ' Website already verified.' : ''}
+        {claimed
+          ? 'This listing is verified. Attach or update your website, then prove control with a badge or DNS if you have not already.'
+          : 'Many listings were imported from public data. Prove you own this project to get the Verified badge.'}
+        {siteVerified ? ' Website is verified.' : claimed && websiteUrl ? ' Website not verified yet.' : ''}
       </p>
+
+      {claimed && (
+        <div
+          style={{
+            marginBottom: '1.75rem',
+            padding: '1.1rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(0,229,255,0.25)',
+            background: 'rgba(0,229,255,0.05)',
+          }}
+        >
+          <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Website on this listing</h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
+            Free listings show this URL with nofollow; premium gets dofollow. Saving does not require re-claiming.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'stretch' }}>
+            <input
+              type="url"
+              className="form-input"
+              placeholder="https://yoursite.com"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              style={{ flex: '1 1 220px', margin: 0 }}
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={attachLoading}
+              onClick={handleAttachWebsite}
+              style={{ padding: '0.65rem 1rem', fontSize: '0.85rem', opacity: attachLoading ? 0.7 : 1 }}
+            >
+              {attachLoading ? 'Saving…' : 'Save website'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
         {methods.map((m) => (
@@ -206,7 +283,7 @@ export default function ClaimClient({
               borderRadius: '8px',
               border: method === m.id ? '1px solid rgba(59,130,246,0.5)' : '1px solid var(--border-color)',
               background: method === m.id ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.04)',
-              color: method === m.id ? '#93c5fd' : 'var(--text-secondary)',
+              color: method === m.id ? 'var(--accent-color)' : 'var(--text-secondary)',
               cursor: 'pointer',
               fontWeight: 600,
               fontSize: '0.85rem',
@@ -561,7 +638,7 @@ export default function ClaimClient({
             cursor: loading ? 'not-allowed' : 'pointer',
           }}
         >
-          {loading ? 'Verifying...' : 'Verify & claim listing'}
+          {loading ? 'Verifying...' : claimed ? 'Re-verify ownership' : 'Verify & claim listing'}
         </button>
         {error && (
           <div

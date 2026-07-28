@@ -11,6 +11,7 @@ type Server = {
   description: string;
   createdAt: string;
   isPremium?: boolean;
+  reviewPriority?: boolean;
   status?: string;
 };
 
@@ -140,6 +141,11 @@ function ServerTable({
               <tr key={server.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                 <td style={{ padding: '1rem' }}>
                   <strong>{server.name}</strong>
+                  {server.reviewPriority && (
+                    <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#fbbf24', fontWeight: 700 }}>
+                      PRIORITY
+                    </span>
+                  )}
                   {server.isPremium && (
                     <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#00E5FF', fontWeight: 700 }}>
                       PREMIUM

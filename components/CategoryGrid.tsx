@@ -70,7 +70,7 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
             key={cat.name}
             href={`/browse?category=${encodeURIComponent(cat.name)}`}
             id={cat.name}
-            className="category-card glass-panel"
+            className="category-card surface-interactive"
             style={{ animationDelay: `${Math.min(i * 0.03, 0.6)}s` }}
           >
             <div className="category-card-emoji" aria-hidden="true">
@@ -88,14 +88,10 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
       </div>
 
       {filtered.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '4rem',
-          color: 'var(--text-secondary)',
-          border: '1px dashed var(--border-color)',
-          borderRadius: '16px',
-        }}>
-          No categories found matching &ldquo;{searchQuery}&rdquo;.
+        <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>
+          <p className="empty-state-body" style={{ margin: 0 }}>
+            No categories found matching &ldquo;{searchQuery}&rdquo;.
+          </p>
         </div>
       )}
     </>

@@ -51,19 +51,24 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <main className="container animate-fade-in" style={{ padding: '4rem 1rem', maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{ marginBottom: '0.75rem', textAlign: 'center' }}>Claim this listing</h1>
-      <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '36rem', marginInline: 'auto' }}>
-        Prove you own this MCP to unlock the verified badge, attach your website, and qualify for premium dofollow backlinks.
-      </p>
-      <ClaimClient
-        serverId={server.id}
-        serverName={server.name}
-        repoUrl={server.url}
-        websiteUrl={(server as any).websiteUrl}
-        isOfficial={(server as any).isOfficial}
-        websiteVerified={(server as any).websiteVerified}
-      />
+    <main className="page-shell page-shell--content animate-fade-in">
+      <div className="page-shell-inner">
+        <header className="page-header" style={{ textAlign: 'center' }}>
+          <h1 className="text-page-title">Claim this listing</h1>
+          <p className="text-lead" style={{ margin: '0 auto', textAlign: 'center' }}>
+            Prove you own this MCP to unlock the verified badge, attach your website, and qualify for premium dofollow
+            backlinks.
+          </p>
+        </header>
+        <ClaimClient
+          serverId={server.id}
+          serverName={server.name}
+          repoUrl={server.url}
+          websiteUrl={(server as any).websiteUrl}
+          isOfficial={(server as any).isOfficial}
+          websiteVerified={(server as any).websiteVerified}
+        />
+      </div>
     </main>
   );
 }

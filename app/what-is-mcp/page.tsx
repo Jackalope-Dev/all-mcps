@@ -44,18 +44,19 @@ const faqJsonLd = {
 
 export default function WhatIsMCPPage() {
   return (
-    <main className="container" style={{ padding: '6rem 0' }}>
+    <main className="page-shell page-shell--content">
+      <div className="page-shell-inner">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <div className="glass-panel" style={{ padding: '4rem', maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ marginBottom: '0.5rem' }}>What is an MCP?</h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+      <div className="surface page-panel">
+        <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>What is an MCP?</h1>
+        <p className="text-lead" style={{ marginBottom: '2rem' }}>
           A plain-language guide to the Model Context Protocol &mdash; what it is, how it works, and why it matters.
         </p>
 
-        <nav aria-label="On this page" style={{ marginBottom: '2.5rem', padding: '1.25rem 1.5rem', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+        <nav aria-label="On this page" className="surface-muted" style={{ marginBottom: '2.5rem', padding: '1.25rem 1.5rem' }}>
           <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>On this page</strong>
           <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingLeft: '1.25rem', margin: 0, fontSize: '0.9rem' }}>
             <li><a href="#short-answer">The short answer</a></li>
@@ -191,6 +192,7 @@ export default function WhatIsMCPPage() {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </main>
   );

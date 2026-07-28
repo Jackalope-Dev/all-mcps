@@ -4,6 +4,7 @@ import { servers as serversTable } from '../db/schema';
 import { desc, eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { redirect } from 'next/navigation';
+import { pickDiscoveryServers } from '../lib/featured';
 
 // Define the type for our server data
 type Server = {
@@ -59,10 +60,11 @@ export default async function Home({
 
   const servers = await getServers();
 
-  // Discovery chrome is only useful on the unfiltered homepage landing
-  const shuffled = [...servers].sort(() => 0.5 - Math.random());
-  const marqueeServers = shuffled.slice(0, 15);
-  const featuredCards = shuffled.slice(15, 18);
+  // Prefer premium / verified / high-engagement for discovery chrome
+  const { marquee: marqueeServers, featured: featuredCards } = pickDiscoveryServers(servers, {
+    marquee: 15,
+    featured: 3,
+  });
 
   return (
     <main>
