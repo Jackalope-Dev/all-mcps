@@ -10,18 +10,59 @@ import { getAllPosts } from '../lib/blog';
  * Handles Date objects, Unix timestamps (seconds or ms), ISO strings,
  * SQLite datetime strings ("YYYY-MM-DD HH:MM:SS"), null, undefined,
  * or invalid strings, always returning a valid Date instance.
+ *
+ * Includes a year-range sanity check (2000–2100) to catch double-scaled
+ * timestamps — e.g. when Drizzle `mode:'timestamp'` multiplies a value
+ * already stored as milliseconds by 1000 again.
  */
 function safeDateISO(val: unknown): string {
-  let d = new Date();
+  const MIN_YEAR = 2000;
+  const MAX_YEAR = 2100;
+  const now = new Date();
+
+  /** Return true when `d` falls within the plausible year window. */
+  function plausible(d: Date): boolean {
+    if (isNaN(d.getTime())) return false;
+    const y = d.getFullYear();
+    return y >= MIN_YEAR && y <= MAX_YEAR;
+  }
+
+  /**
+   * Try to rescue an out-of-range Date that was created from a
+   * double-scaled timestamp (ms interpreted as seconds, then ×1000).
+   * Dividing the underlying ms value by 1000 recovers the real date.
+   */
+  function rescue(d: Date): Date | null {
+    const fixed = new Date(Math.floor(d.getTime() / 1000));
+    return plausible(fixed) ? fixed : null;
+  }
+
+  let d: Date = now;
+
   if (val) {
     if (val instanceof Date) {
-      if (!isNaN(val.getTime())) d = val;
+      if (plausible(val)) {
+        d = val;
+      } else {
+        // Possibly double-scaled; try dividing ms by 1000
+        d = rescue(val) ?? now;
+      }
     } else if (typeof val === 'number') {
       if (!isNaN(val) && val > 0) {
-        // If 10-digit Unix timestamp in seconds (< 10_000_000_000), convert to ms
-        const ms = val < 10000000000 ? val * 1000 : val;
-        const parsed = new Date(ms);
-        if (!isNaN(parsed.getTime())) d = parsed;
+        // Try as-is (milliseconds)
+        let parsed = new Date(val);
+        if (plausible(parsed)) {
+          d = parsed;
+        } else {
+          // Try as seconds → ms
+          parsed = new Date(val * 1000);
+          if (plausible(parsed)) {
+            d = parsed;
+          } else {
+            // Try rescuing (divide by 1000)
+            d = rescue(new Date(val)) ?? rescue(new Date(val * 1000)) ?? now;
+          }
+        }
       }
     } else if (typeof val === 'string') {
       let str = val.trim();
@@ -31,10 +72,20 @@ function safeDateISO(val: unknown): string {
           str = str.replace(' ', 'T') + 'Z';
         }
         const parsed = new Date(str);
-        if (!isNaN(parsed.getTime())) d = parsed;
+        if (plausible(parsed)) {
+          d = parsed;
+        } else if (!isNaN(parsed.getTime())) {
+          d = rescue(parsed) ?? now;
+        }
       }
     }
   }
+
+  // Final guard: if the result is still out of range, use now
+  if (!plausible(d)) {
+    d = now;
+  }
+
   return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
