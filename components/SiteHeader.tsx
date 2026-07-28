@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, BookOpen, Sparkles, Layers } from 'lucide-react';
+import { Menu, X, BookOpen, Sparkles, Layers, Search } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { Button } from './ui/Button';
 
@@ -60,6 +60,16 @@ export function SiteHeader() {
                 {label}
               </Link>
             ))}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+              className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Search directory (Cmd+K)"
+            >
+              <Search size={13} className="text-cyan-400" />
+              <span>Search</span>
+              <kbd className="px-1 py-0.5 rounded bg-white/10 text-[10px] text-zinc-400 font-mono">⌘K</kbd>
+            </button>
             <Button href="/submit" variant="primary" size="sm" className="site-nav-cta">
               Submit MCP
             </Button>

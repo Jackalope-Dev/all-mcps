@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
 
 export const servers = sqliteTable('servers', {
   id: text('id').primaryKey(),
@@ -104,4 +104,33 @@ export const verificationTokens = sqliteTable('verification_tokens', {
   expires: integer('expires', { mode: 'timestamp_ms' }).notNull(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.identifier, table.token] }),
+}));
+
+/** API access logs — tracks which LLMs/agents call our programmatic endpoints. */
+export const apiAccessLogs = sqliteTable('api_access_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  serverId: text('server_id'),
+  endpoint: text('endpoint').notNull(),
+  methodOrTool: text('method_or_tool'),
+  userAgent: text('user_agent'),
+  callerClass: text('caller_class').notNull().default('unknown'),
+  ipCountry: text('ip_country'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  serverIdx: index('idx_access_server').on(table.serverId),
+  createdIdx: index('idx_access_created').on(table.createdAt),
+  callerIdx: index('idx_access_caller').on(table.callerClass),
+}));
+
+/** Impression logs — tracks where listings appear on the site (homepage, search, sidebar, etc.). */
+export const impressionLogs = sqliteTable('impression_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  serverId: text('server_id').notNull(),
+  surface: text('surface').notNull(),
+  sessionHash: text('session_hash'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  serverIdx: index('idx_impression_server').on(table.serverId),
+  createdIdx: index('idx_impression_created').on(table.createdAt),
+  surfaceIdx: index('idx_impression_surface').on(table.surface),
 }));

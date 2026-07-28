@@ -1,4 +1,5 @@
 import { getActiveServers } from '@/lib/servers';
+import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -45,6 +46,23 @@ export async function GET(request: Request) {
       markdownUrl: `https://allmcps.com/mcp/${server.id}.md`,
     };
   });
+
+  // Log search API access (best-effort, non-blocking)
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const cfCtx = await getCloudflareContext();
+    if (cfCtx?.env && (cfCtx.env as any).DB) {
+      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const meta = extractRequestMeta(request);
+      cfCtx.ctx.waitUntil(logApiAccess(logDb, {
+        serverId: null,
+        endpoint: 'v1_search',
+        methodOrTool: query || null,
+        userAgent: meta.userAgent,
+        ipCountry: meta.ipCountry,
+      }));
+    }
+  } catch { /* logging is best-effort */ }
 
   return Response.json(
     {

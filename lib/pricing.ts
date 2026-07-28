@@ -56,10 +56,13 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     mode: 'subscription',
     priceEnv: 'STRIPE_PRICE_PREMIUM_MONTHLY',
     benefits: [
-      'Featured rotation while subscription is active',
-      'Dofollow website backlink',
-      'Verified / Premium presentation',
-      'Owner stats (views, installs, upvotes)',
+      'Guaranteed featured rotation on homepage',
+      'Rich analytics: see which LLMs & agents use your MCP',
+      'Impression tracking across all directory surfaces',
+      'Search discovery insights (what queries find you)',
+      'Dofollow website backlink (SEO boost)',
+      'Verified / Premium badge & glowing card',
+      'Priority support & listing edits',
     ],
   },
 };

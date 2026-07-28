@@ -78,9 +78,12 @@ export default async function Home({
   const servers = await getServers();
 
   // Prefer premium / verified / high-engagement for discovery chrome
+  // Seed changes every 5 minutes so different visitors see different featured servers
+  const discoverySeed = Math.floor(Date.now() / (5 * 60 * 1000));
   const { marquee: marqueeServers, featured: featuredCards } = pickDiscoveryServers(servers, {
     marquee: 15,
     featured: 3,
+    seed: discoverySeed,
   });
 
   return (

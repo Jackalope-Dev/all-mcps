@@ -1,6 +1,7 @@
 import { getActiveServers } from '@/lib/servers';
+import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
-export async function GET() {
+export async function GET(request: Request) {
   const servers = await getActiveServers();
 
   // Group servers by category
@@ -42,6 +43,23 @@ export async function GET() {
   content += `- Categories: https://allmcps.com/categories\n`;
   content += `- MCP Guide: https://allmcps.com/guide\n`;
   content += `- What is MCP: https://allmcps.com/what-is-mcp\n`;
+  content += `- How to Build an MCP Server: https://allmcps.com/build-mcp-server\n`;
+  content += `- Pricing: https://allmcps.com/pricing\n`;
+
+  // Log llms.txt access (best-effort)
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const cfCtx = await getCloudflareContext();
+    if (cfCtx?.env && (cfCtx.env as any).DB) {
+      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const meta = extractRequestMeta(request);
+      cfCtx.ctx.waitUntil(logApiAccess(logDb, {
+        endpoint: 'llms_txt',
+        userAgent: meta.userAgent,
+        ipCountry: meta.ipCountry,
+      }));
+    }
+  } catch { /* logging is best-effort */ }
 
   return new Response(content, {
     headers: {

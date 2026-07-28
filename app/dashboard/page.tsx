@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { servers } from '@/db/schema';
 import { auth } from '@/lib/auth';
+import { getServerAnalyticsBatch, type AnalyticsSummary } from '@/lib/analytics';
 import DashboardClient from './DashboardClient';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,24 @@ export const metadata: Metadata = {
   },
 };
 
-async function getOwnedServers(userId: string) {
+type OwnedServer = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  websiteUrl?: string | null;
+  pendingRevision?: string | null;
+  isPremium: boolean;
+  views: number;
+  copies: number;
+  upvotes: number;
+};
+
+async function getOwnedServers(userId: string): Promise<{
+  servers: OwnedServer[];
+  analytics: Record<string, AnalyticsSummary>;
+  isPremium: boolean;
+}> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -31,15 +49,33 @@ async function getOwnedServers(userId: string) {
           category: servers.category,
           websiteUrl: servers.websiteUrl,
           pendingRevision: servers.pendingRevision,
+          isPremium: servers.isPremium,
+          views: servers.views,
+          copies: servers.copies,
+          upvotes: servers.upvotes,
         })
         .from(servers)
         .where(eq(servers.ownerUserId, userId));
-      return rows;
+
+      const isPremium = rows.some((r) => r.isPremium);
+      const serverIds = rows.map((r) => r.id);
+
+      // Fetch batch analytics summaries
+      let analytics: Record<string, AnalyticsSummary> = {};
+      if (serverIds.length > 0) {
+        try {
+          analytics = await getServerAnalyticsBatch(db, serverIds, 30);
+        } catch {
+          // Analytics may fail before migration runs — graceful fallback
+        }
+      }
+
+      return { servers: rows as OwnedServer[], analytics, isPremium };
     }
   } catch {
-    // fall through with an empty list
+    // fall through with empty list
   }
-  return [];
+  return { servers: [], analytics: {}, isPremium: false };
 }
 
 export default async function DashboardPage() {
@@ -48,7 +84,7 @@ export default async function DashboardPage() {
     redirect('/login?callbackUrl=/dashboard');
   }
 
-  const ownedServers = await getOwnedServers(session.user.id);
+  const { servers: ownedServers, analytics, isPremium } = await getOwnedServers(session.user.id);
 
   return (
     <main className="page-shell page-shell--content animate-fade-in">
@@ -57,7 +93,11 @@ export default async function DashboardPage() {
           <h1 className="text-page-title">My listings</h1>
           <p className="text-lead">Edits go live after a quick review.</p>
         </header>
-        <DashboardClient initialServers={ownedServers as any} />
+        <DashboardClient
+          initialServers={ownedServers as any}
+          initialAnalytics={analytics}
+          isPremium={isPremium}
+        />
       </div>
     </main>
   );

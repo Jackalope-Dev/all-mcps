@@ -43,6 +43,9 @@ export function NewsletterSignupForm({
         setStatus('success');
         trackNewsletterSignup({ source });
         toast.success('Subscribed', { description: "You're on the list." });
+        // Persist a cookie so the newsletter modal won't reappear
+        document.cookie =
+          'allmcps_subscribed=1; path=/; max-age=31536000; SameSite=Lax';
         onSuccess?.();
       } else {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;

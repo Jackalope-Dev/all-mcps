@@ -1,4 +1,5 @@
 import { getActiveServers, getServerById, formatServerAsMarkdown } from '@/lib/servers';
+import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
 const SERVER_INFO = {
   name: 'AllMCPs Directory Server',
@@ -70,6 +71,24 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  async function logMcp(serverId: string | null, tool: string) {
+    try {
+      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+      const cfCtx = await getCloudflareContext();
+      if (cfCtx?.env && (cfCtx.env as any).DB) {
+        const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+        const meta = extractRequestMeta(request);
+        cfCtx.ctx.waitUntil(logApiAccess(logDb, {
+          serverId,
+          endpoint: 'mcp_jsonrpc',
+          methodOrTool: tool,
+          userAgent: meta.userAgent,
+          ipCountry: meta.ipCountry,
+        }));
+      }
+    } catch { /* best-effort */ }
+  }
+
   try {
     const body = (await request.json()) as any;
     const { jsonrpc, id, method, params } = body || {};
@@ -83,6 +102,9 @@ export async function POST(request: Request) {
 
     // Handle MCP initialize request
     if (method === 'initialize') {
+      const clientName = params?.clientInfo?.name;
+      const methodOrTool = clientName ? `initialize (${clientName})` : 'initialize';
+      await logMcp(null, methodOrTool);
       return Response.json(
         {
           jsonrpc: '2.0',
@@ -151,6 +173,7 @@ export async function POST(request: Request) {
           ? results.map((s) => formatServerAsMarkdown(s)).join('\n---\n\n')
           : `No MCP servers found matching query: "${query}"`;
 
+        await logMcp(null, `search_mcp_servers${query ? ` query: ${query}` : ''}`);
         return Response.json(
           {
             jsonrpc: '2.0',
@@ -182,6 +205,7 @@ export async function POST(request: Request) {
         }
 
         const textOutput = formatServerAsMarkdown(server);
+        await logMcp(serverId, 'get_mcp_install_config');
         return Response.json(
           {
             jsonrpc: '2.0',
@@ -206,6 +230,7 @@ export async function POST(request: Request) {
           md += `- **${cat}**: ${count} servers\n`;
         }
 
+        await logMcp(null, 'list_mcp_categories');
         return Response.json(
           {
             jsonrpc: '2.0',

@@ -9,6 +9,7 @@ import { CookieBanner } from "../components/CookieBanner";
 import { NewsletterModal } from "../components/NewsletterModal";
 import { ToastProvider } from "../components/ui/Toast";
 import { PurchaseTracker } from "../components/PurchaseTracker";
+import { CommandPalette } from "../components/ui/CommandPalette";
 import "./globals.css";
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
@@ -35,6 +36,7 @@ export const metadata: Metadata = {
   description:
     "Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.",
   metadataBase: new URL("https://allmcps.com"),
+  manifest: "/manifest.webmanifest",
   openGraph: {
     title: "AllMCPs | Directory for Model Context Protocol Servers",
     description:
@@ -93,6 +95,7 @@ export default function RootLayout({
           <PurchaseTracker />
         </Suspense>
         <WebMCPProvider />
+        <CommandPalette />
         <CookieBanner />
         <NewsletterModal />
         <ToastProvider />

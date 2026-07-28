@@ -17,6 +17,7 @@
     "@marsidev/react-turnstile": "^1.5.4",
     "@react-email/components": "^1.0.12",
     "drizzle-orm": "^0.45.2",
+    "gpt-tokenizer": "^3.4.0",
     "gray-matter": "^4.0.3",
     "jimp": "^0.22.12",
     "jose": "^6.2.4",

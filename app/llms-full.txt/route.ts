@@ -1,6 +1,7 @@
 import { getActiveServers, formatServerAsMarkdown } from '@/lib/servers';
+import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
-export async function GET() {
+export async function GET(request: Request) {
   const servers = await getActiveServers();
 
   let content = `# AllMCPs - Complete Catalog Export (LLM Format)\n\n`;
@@ -11,6 +12,21 @@ export async function GET() {
     content += formatServerAsMarkdown(server);
     content += `\n---\n\n`;
   }
+
+  // Log llms-full.txt access (best-effort)
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const cfCtx = await getCloudflareContext();
+    if (cfCtx?.env && (cfCtx.env as any).DB) {
+      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const meta = extractRequestMeta(request);
+      cfCtx.ctx.waitUntil(logApiAccess(logDb, {
+        endpoint: 'llms_full_txt',
+        userAgent: meta.userAgent,
+        ipCountry: meta.ipCountry,
+      }));
+    }
+  } catch { /* logging is best-effort */ }
 
   return new Response(content, {
     headers: {
