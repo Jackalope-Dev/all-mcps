@@ -96,8 +96,9 @@ export default function RootLayout({
             <div>
               <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Company</h4>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><a href="https://jackalope.digital" target="_blank" rel="noopener noreferrer" className="nav-link">About</a></li>
+                <li><Link href="/about" className="nav-link">About</Link></li>
                 <li><Link href="/contact" className="nav-link">Contact</Link></li>
+                <li><a href="https://jackalope.digital" target="_blank" rel="noopener noreferrer" className="nav-link">Jackalope Digital ↗</a></li>
                 <li><Link href="/terms" className="nav-link">Terms of Service</Link></li>
                 <li><Link href="/privacy" className="nav-link">Privacy Policy</Link></li>
               </ul>

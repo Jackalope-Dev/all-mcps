@@ -81,22 +81,33 @@ meant to be deduped).
 
 ### UI change
 
-`app/mcp/[id]/page.tsx` (server component): query `upvote_records` for the current
-request's IP hash + this server's id, and pass the result as `initialHasUpvoted` into
-`UpvoteButton`. This means a visitor who's already voted (e.g. from another browser
-session, or the localStorage flag got cleared) sees the button already in its
-"upvoted" state on first paint, rather than being able to click it and see an
-optimistic +1 that then gets silently reverted.
+**Revised during planning** (see plan doc for why): rather than checking
+`upvote_records` in the `app/mcp/[id]/page.tsx` server component and passing an
+`initialHasUpvoted` prop, the check happens client-side via a new `GET` handler on
+the metric route. Reason: `app/mcp/[id]/page.tsx` currently supports static
+generation for its top 50 listings via `generateStaticParams`; reading the
+per-visitor IP in the server component would require Next's `headers()`, a
+request-time API that forces the whole page into dynamic rendering. A small
+client-side status check achieves the same UX goal without that regression.
+
+`app/api/mcp/[id]/metric/route.ts` gains a `GET` handler: compute the same
+`ip_hash` for the request, check whether a row exists in `upvote_records` for
+`(server_id, ip_hash)`, and respond `{ alreadyVoted: boolean }`.
 
 `components/ui/UpvoteButton.tsx`:
-- Accept `initialHasUpvoted` prop; seed `hasUpvoted` state from
-  `initialHasUpvoted || localStorage flag`.
-- On a `409` response from the POST: undo the optimistic `+1` (the click didn't
-  register a new vote server-side, so the count should return to its pre-click
-  value), but set `hasUpvoted = true` and keep the localStorage flag set rather than
-  resetting to the clickable state. This differs from the existing `catch` (network
-  failure) path only in the end state: both undo the `+1`, but `catch` leaves the
-  button clickable again while `409` leaves it permanently disabled/voted.
+- On mount, if the localStorage flag for this `serverId` isn't already set, call the
+  new `GET` endpoint. If it reports `alreadyVoted: true`, set `hasUpvoted = true` and
+  set the localStorage flag (this converges a visitor who voted from a different
+  browser/after clearing storage, without blocking on the network for the initial
+  render — the button briefly renders clickable, then flips to voted if the check
+  comes back positive).
+- On a `409` response from the POST (the click path, not the mount check): undo the
+  optimistic `+1` (the click didn't register a new vote server-side, so the count
+  should return to its pre-click value), but set `hasUpvoted = true` and keep the
+  localStorage flag set rather than resetting to the clickable state. This differs
+  from the existing `catch` (network failure) path only in the end state: both undo
+  the `+1`, but `catch` leaves the button clickable again while `409` leaves it
+  permanently disabled/voted.
 
 ### Privacy policy touch-up — `app/privacy/page.tsx`
 
@@ -127,9 +138,10 @@ this becomes a real complaint pattern.
 - Route test: first `upvote` POST for a given (server, IP) succeeds and increments;
   second POST for the same pair returns `409` and does not increment further.
 - `view` and `copy` metrics remain un-deduped (can be incremented repeatedly).
-- UI: manually verify in a private window that a listing already upvoted from that
-  IP renders pre-disabled (`initialHasUpvoted`), and that clicking an already-voted
-  button (e.g. via direct API call after localStorage is cleared) reflects the `409`
+- UI: manually verify that loading a listing already upvoted from the current IP
+  (e.g. after clearing localStorage, or in a private window) flips the button to its
+  voted state shortly after mount via the `GET` status check, and that clicking an
+  already-voted button (e.g. via direct API call racing the UI) reflects the `409`
   path rather than a revert.
 
 ## Open risks / accepted tradeoffs (recap)

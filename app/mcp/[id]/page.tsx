@@ -134,13 +134,37 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         name: server.name,
         description: server.description,
         url: `https://allmcps.com/mcp/${server.id}`,
+        sameAs: server.url,
+        codeRepository: server.url,
         applicationCategory: 'DeveloperApplication',
         operatingSystem: 'Cross-platform',
+        softwareRequirements: 'Node.js, npx, Claude Desktop or MCP compatible client',
         offers: {
           '@type': 'Offer',
           price: '0',
           priceCurrency: 'USD',
         },
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: `How do I install the ${server.name} MCP server?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `Add the following block to your claude_desktop_config.json under mcpServers: "mcpServers": { "${installName}": { "command": "npx", "args": ["-y", "${installName}"] } }`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `What does ${server.name} do?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: server.description,
+            },
+          },
+        ],
       },
       {
         '@type': 'BreadcrumbList',
@@ -155,7 +179,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             '@type': 'ListItem',
             position: 2,
             name: server.category,
-            item: `https://allmcps.com/categories#${encodeURIComponent(server.category)}`,
+            item: `https://allmcps.com/?category=${encodeURIComponent(server.category)}`,
           },
           {
             '@type': 'ListItem',
@@ -180,7 +204,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <ol className="breadcrumb">
           <li><Link href="/">Home</Link></li>
           <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
-          <li><Link href={`/categories#${encodeURIComponent(server.category)}`}>{server.category}</Link></li>
+          <li><Link href={`/?category=${encodeURIComponent(server.category)}`}>{server.category}</Link></li>
           <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
           <li className="breadcrumb-current">{server.name}</li>
         </ol>
@@ -239,7 +263,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
               Verified Active
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Last checked by Cloudflare Cron.</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+              {server.lastCheckedAt ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}` : 'Not yet checked.'}
+            </p>
           </div>
 
           <div className="glass-panel-static" style={{ padding: '1.5rem' }}>

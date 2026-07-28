@@ -84,6 +84,44 @@ export default function DirectoryGrid({
     return result;
   }, [initialServers, searchQuery, selectedCategory, sortMode]);
 
+  // Read initial query parameters from URL on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const catParam = params.get('category');
+      const qParam = params.get('q');
+      if (catParam) setSelectedCategory(catParam);
+      if (qParam) setSearchQuery(qParam);
+    }
+  }, []);
+
+  // Update URL search parameters when category or search changes
+  const handleCategorySelect = (cat: string | null) => {
+    setSelectedCategory(cat);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (cat) {
+        url.searchParams.set('category', cat);
+      } else {
+        url.searchParams.delete('category');
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  const handleSearchChange = (q: string) => {
+    setSearchQuery(q);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (q.trim()) {
+        url.searchParams.set('q', q);
+      } else {
+        url.searchParams.delete('q');
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
   // Reset pagination when searching, filtering, or sorting
   React.useEffect(() => {
     setVisibleCount(30);
@@ -108,7 +146,7 @@ export default function DirectoryGrid({
             type="text" 
             placeholder="Search for tools (e.g. GitHub, Postgres, File System)..." 
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             aria-label="Search MCP Servers"
             inputClassName="search-input"
             style={{ flexGrow: 1, flexBasis: '400px', margin: 0 }}
@@ -130,7 +168,7 @@ export default function DirectoryGrid({
               height: 'auto'
             }}
             value={selectedCategory || ''}
-            onChange={(e) => setSelectedCategory(e.target.value === '' ? null : e.target.value)}
+            onChange={(e) => handleCategorySelect(e.target.value === '' ? null : e.target.value)}
             aria-label="Filter by Category"
           >
             <option value="">All Categories</option>
