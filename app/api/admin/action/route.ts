@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers } from '../../../../db/schema';
+import { servers, users } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
+import { parsePendingRevision } from '../../../../lib/pendingRevision';
+import { sendNotificationEmail } from '../../../../lib/notify';
+import { getAppUrl } from '../../../../lib/stripe';
 
 import { tweetMcpServer } from '../../../../lib/twitter';
 
@@ -22,6 +25,10 @@ const actionSchema = z.object({
     'republish',
     'delete',
     'feature',
+    'approve_edit',
+    'reject_edit',
+    'approve_claim',
+    'reject_claim',
   ]),
   fields: z
     .object({
@@ -45,6 +52,10 @@ const MESSAGES: Record<string, string> = {
   republish: 'Listing republished.',
   delete: 'Listing permanently deleted.',
   feature: 'Featured placement granted.',
+  approve_edit: 'Edit approved and applied.',
+  reject_edit: 'Edit rejected.',
+  approve_claim: 'Claim approved.',
+  reject_claim: 'Claim rejected.',
 };
 
 export async function POST(req: Request) {
@@ -57,7 +68,10 @@ export async function POST(req: Request) {
     const result = actionSchema.safeParse(body);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error.issues }, { status: 400 });
+      const message = result.error.issues
+        .map((issue) => `${issue.path.join('.') || 'request'}: ${issue.message}`)
+        .join('; ');
+      return NextResponse.json({ error: message }, { status: 400 });
     }
 
     const { id, action, fields, days } = result.data;
@@ -136,6 +150,9 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Website URL must be a public http(s) address." }, { status: 400 });
         }
         updates.websiteUrl = fields.websiteUrl || null;
+        // Admin retargeted the website — it hasn't been re-proven, so drop verification
+        // (matches the behavior of the owner-edit approval path and the claim flow).
+        updates.websiteVerified = false;
       }
 
       if (Object.keys(updates).length === 0) {
@@ -198,6 +215,87 @@ export async function POST(req: Request) {
         message: MESSAGES.feature,
         featuredUntil: newFeaturedUntil.toISOString(),
       });
+    } else if (action === 'approve_edit' || action === 'reject_edit') {
+      const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
+      const server = rows[0];
+      if (!server || !server.pendingRevision) {
+        return NextResponse.json({ error: 'No pending edit for this listing.' }, { status: 400 });
+      }
+
+      const pending = parsePendingRevision(server.pendingRevision);
+      if (!pending) {
+        // Corrupt blob — clear it rather than getting permanently stuck.
+        await db.update(servers).set({ pendingRevision: null }).where(eq(servers.id, id));
+        return NextResponse.json({ error: 'Stored edit was corrupt and has been cleared.' }, { status: 400 });
+      }
+
+      if (action === 'approve_edit') {
+        const fieldUpdates: Record<string, unknown> = { ...pending.proposed, pendingRevision: null };
+        if ('websiteUrl' in pending.proposed) {
+          fieldUpdates.websiteVerified = false;
+        }
+        await db.update(servers).set(fieldUpdates).where(eq(servers.id, id));
+      } else {
+        await db.update(servers).set({ pendingRevision: null }).where(eq(servers.id, id));
+      }
+
+      if (server.ownerUserId) {
+        const ownerRows = await db.select().from(users).where(eq(users.id, server.ownerUserId)).limit(1);
+        const ownerEmail = ownerRows[0]?.email;
+        if (ownerEmail) {
+          await sendNotificationEmail({
+            to: ownerEmail,
+            heading: action === 'approve_edit' ? 'Your edit was approved' : 'Your edit needs changes',
+            message:
+              action === 'approve_edit'
+                ? `Your changes to ${server.name} are now live.`
+                : `Your proposed changes to ${server.name} were not approved. You can submit a new edit from your dashboard.`,
+            actionText: 'View listing',
+            actionUrl: `${getAppUrl()}/mcp/${id}`,
+          });
+        }
+      }
+    } else if (action === 'approve_claim' || action === 'reject_claim') {
+      const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
+      const server = rows[0];
+      if (!server || !server.pendingClaimUserId) {
+        return NextResponse.json({ error: 'No pending claim for this listing.' }, { status: 400 });
+      }
+
+      if (action === 'approve_claim') {
+        await db
+          .update(servers)
+          .set({
+            isOfficial: true,
+            claimedAt: server.claimedAt || new Date(),
+            ownerUserId: server.pendingClaimUserId,
+            websiteUrl: server.pendingClaimWebsiteUrl,
+            websiteVerified: true,
+            pendingClaimUserId: null,
+            pendingClaimWebsiteUrl: null,
+          })
+          .where(eq(servers.id, id));
+      } else {
+        await db
+          .update(servers)
+          .set({ pendingClaimUserId: null, pendingClaimWebsiteUrl: null })
+          .where(eq(servers.id, id));
+      }
+
+      const claimantRows = await db.select().from(users).where(eq(users.id, server.pendingClaimUserId)).limit(1);
+      const claimantEmail = claimantRows[0]?.email;
+      if (claimantEmail) {
+        await sendNotificationEmail({
+          to: claimantEmail,
+          heading: action === 'approve_claim' ? 'Your claim was approved' : 'Your claim needs review',
+          message:
+            action === 'approve_claim'
+              ? `Your claim on ${server.name} is now approved — the listing is yours.`
+              : `Your claim on ${server.name} wasn't approved. Contact us if you believe this is a mistake.`,
+          actionText: 'View listing',
+          actionUrl: `${getAppUrl()}/mcp/${id}`,
+        });
+      }
     }
 
     return NextResponse.json({ success: true, message: MESSAGES[action] });
