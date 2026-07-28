@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Atkinson_Hyperlegible_Next } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
 import { Button } from "../components/ui/Button";
+import { BrandLogo } from "../components/BrandLogo";
 import { WebMCPProvider } from "../components/WebMCPProvider";
 import { CookieBanner } from "../components/CookieBanner";
+import { ToastProvider } from "../components/ui/Toast";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+// Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
+// lowercase "l" has a clear tail (not a plain vertical bar). Critical for "AllMCPs".
+const sans = Atkinson_Hyperlegible_Next({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -37,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={sans.variable}>
       <head>
         <Script id="google-consent-mode" strategy="beforeInteractive">
           {`
@@ -65,9 +73,10 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={inter.className}>
+      <body className={sans.className}>
         <WebMCPProvider />
         <CookieBanner />
+        <ToastProvider />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -87,7 +96,7 @@ export default function RootLayout({
                   url: 'https://allmcps.com',
                   potentialAction: {
                     '@type': 'SearchAction',
-                    target: 'https://allmcps.com/?q={search_term_string}',
+                    target: 'https://allmcps.com/browse?q={search_term_string}',
                     'query-input': 'required name=search_term_string',
                   },
                 },
@@ -97,12 +106,9 @@ export default function RootLayout({
         />
         <header className="container">
           <div className="main-header">
-            <Link href="/" className="logo animate-fade-in" style={{ fontSize: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: 'inherit' }} aria-label="Go to AllMCPs Homepage">
-              <img src="/logo-icon.svg" alt="" width={40} height={40} aria-hidden="true" />
-              <span style={{ background: 'linear-gradient(135deg, var(--accent-color), #007BFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>All</span>MCPs
-            </Link>
-            <nav className="animate-fade-in delay-1" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }} aria-label="Main Navigation">
-              <Link href="/" className="nav-link">Browse</Link>
+            <BrandLogo size="md" />
+            <nav className="animate-fade-in delay-1" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }} aria-label="Main Navigation">
+              <Link href="/browse" className="nav-link">Browse</Link>
               <Link href="/categories" className="nav-link">Categories</Link>
               <Button href="/submit" variant="primary">Submit MCP</Button>
             </nav>
@@ -111,13 +117,16 @@ export default function RootLayout({
         
         {children}
         
-        <footer className="container" style={{ borderTop: '1px solid var(--border-color)', marginTop: '4rem', padding: '4rem 0', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <footer className="container" style={{ marginTop: '4rem', padding: '4rem 0', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <hr className="brand-divider" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>
-                <span style={{ background: 'linear-gradient(135deg, var(--accent-color), #007BFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>All</span>MCPs
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>The definitive directory for discovering and installing Model Context Protocol servers.</p>
+              <div style={{ marginBottom: '1rem' }}>
+                <BrandLogo size="sm" href="/" />
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+                The definitive directory for discovering and installing Model Context Protocol servers.
+              </p>
             </div>
             <div>
               <h4 style={{ fontWeight: 600, marginBottom: '1rem' }}>Resources</h4>

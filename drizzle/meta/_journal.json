@@ -36,6 +36,20 @@
       "when": 1785213185336,
       "tag": "0004_sturdy_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1785219000000,
+      "tag": "0005_website_claim",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1785225000000,
+      "tag": "0006_view_records",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,7 @@ export type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  isPremium?: boolean;
   status: string;
   lastCheckedAt?: string | Date | null;
   isVerifiedActive?: boolean;
@@ -96,12 +97,14 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'mcp-server';
-  const officialBadge = server.isOfficial ? ' [Official]' : '';
-  const activeBadge = server.isVerifiedActive ? ' [Verified Active]' : '';
+  const verifiedBadge = server.isOfficial || server.isPremium ? ' [Verified]' : '';
+  const activeBadge = server.isVerifiedActive ? ' [Health: Active]' : '';
 
-  let md = `# ${server.name}${officialBadge}${activeBadge}\n\n`;
+  let md = `# ${server.name}${verifiedBadge}${activeBadge}\n\n`;
   md += `**Category:** ${server.category}  \n`;
   md += `**Repository:** ${server.url}  \n`;
+  md += `**Views:** ${server.views || 0}  \n`;
+  md += `**Installs:** ${server.copies || 0}  \n`;
   md += `**Upvotes:** ${server.upvotes || 0}  \n`;
   md += `**Directory Page:** https://allmcps.com/mcp/${server.id}\n\n`;
 

@@ -4,97 +4,113 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
+import {
+  verifyDnsTxt,
+  verifyGithubReadme,
+  verifyWebsiteHtml,
+} from '../../../lib/verification';
 
 const claimSchema = z.object({
-  id: z.string().min(1)
+  id: z.string().min(1),
+  method: z.enum(['github', 'website_badge', 'dns']).default('github'),
+  /** Optional website to attach/verify when claiming (or update if empty). */
+  websiteUrl: z.string().url().optional().or(z.literal('')),
 });
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const result = claimSchema.safeParse(body);
-    
+
     if (!result.success) {
       return NextResponse.json({ error: result.error.issues }, { status: 400 });
     }
-    
-    const { id } = result.data;
-    
+
+    const { id, method } = result.data;
+    const websiteInput = (result.data.websiteUrl || '').trim();
+
     let env;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
     } catch (e) {
-      throw new Error("Could not get Cloudflare context.");
+      throw new Error('Could not get Cloudflare context.');
     }
 
     if (!env || !env.DB) {
-      throw new Error("Database binding not found");
+      throw new Error('Database binding not found');
     }
-    
+
     const db = drizzle(env.DB as any);
-    
-    // 1. Get the exact server URL from the database
+
     const dbServers = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
     const server = dbServers[0];
-    
+
     if (!server) {
-      return NextResponse.json({ error: "Server not found" }, { status: 404 });
+      return NextResponse.json({ error: 'Server not found' }, { status: 404 });
     }
-    
-    if (server.isOfficial) {
-      return NextResponse.json({ success: true, message: "Already verified!" });
+
+    // Resolve website for badge/DNS methods
+    let websiteUrl = websiteInput || server.websiteUrl || '';
+    if (websiteUrl && !isSafeSubmissionUrl(websiteUrl)) {
+      return NextResponse.json({ error: 'Website URL must be a public http(s) address.' }, { status: 400 });
     }
-    
-    // 2. Extract GitHub details
-    const githubMatch = server.url.match(/github\.com\/([^/]+)\/([^/]+)/);
-    if (!githubMatch) {
-      return NextResponse.json({ error: "Cannot verify non-GitHub URLs yet." }, { status: 400 });
-    }
-    
-    const owner = githubMatch[1];
-    let repo = githubMatch[2];
-    if (repo.endsWith('.git')) repo = repo.slice(0, -4);
-    
-    // 3. Fetch README (Try main then master)
-    let readmeText = '';
-    const branches = ['main', 'master'];
-    let fetched = false;
-    
-    for (const branch of branches) {
-      try {
-        const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`);
-        if (res.ok) {
-          readmeText = await res.text();
-          fetched = true;
-          break;
-        }
-      } catch (e) {
-        // ignore and try next
+
+    let verification;
+    if (method === 'github') {
+      verification = await verifyGithubReadme(server.url, id);
+    } else if (method === 'website_badge') {
+      if (!websiteUrl) {
+        return NextResponse.json(
+          { error: 'Provide a website URL to verify with a site badge.' },
+          { status: 400 }
+        );
       }
+      verification = await verifyWebsiteHtml(websiteUrl, id);
+    } else {
+      if (!websiteUrl) {
+        return NextResponse.json(
+          { error: 'Provide a website URL to verify via DNS TXT.' },
+          { status: 400 }
+        );
+      }
+      verification = await verifyDnsTxt(websiteUrl, id);
     }
-    
-    if (!fetched) {
-       return NextResponse.json({ error: "Could not fetch README from GitHub. Ensure it exists on main or master." }, { status: 400 });
+
+    if (!verification.ok) {
+      return NextResponse.json({ error: verification.reason || 'Verification failed' }, { status: 400 });
     }
-    
-    // 4. Check for the badge
-    const expectedBadge = `[![AllMCPs Verified](https://img.shields.io/badge/AllMCPs-Verified-blue)](https://allmcps.com/mcp/${id})`;
-    
-    // We do a simple includes check, removing whitespace in case they formatted it weirdly
-    const normalizedReadme = readmeText.replace(/\s+/g, '');
-    const normalizedBadge = expectedBadge.replace(/\s+/g, '');
-    
-    if (!normalizedReadme.includes(normalizedBadge)) {
-      return NextResponse.json({ error: "Verification badge not found in README." }, { status: 400 });
+
+    const updates: Record<string, unknown> = {
+      isOfficial: true,
+      claimedAt: new Date(),
+    };
+
+    if (websiteUrl) {
+      updates.websiteUrl = websiteUrl;
     }
-    
-    // 5. Success! Update database
-    await db.update(servers).set({ isOfficial: true }).where(eq(servers.id, id));
-    
-    return NextResponse.json({ success: true, message: "Successfully verified! Your profile is now official." });
+
+    // Website methods prove control of the site
+    if (method === 'website_badge' || method === 'dns') {
+      updates.websiteVerified = true;
+    }
+
+    // If already official, still allow attaching/verifying website
+    await db.update(servers).set(updates).where(eq(servers.id, id));
+
+    return NextResponse.json({
+      success: true,
+      message:
+        method === 'github'
+          ? 'Successfully claimed via GitHub README. Your listing is now verified.'
+          : method === 'dns'
+            ? 'Successfully claimed via DNS. Website verified and listing claimed.'
+            : 'Successfully claimed via site badge. Website verified and listing claimed.',
+      websiteVerified: method === 'website_badge' || method === 'dns',
+    });
   } catch (error) {
-    console.error("Claim error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error('Claim error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

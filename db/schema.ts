@@ -6,7 +6,15 @@ export const servers = sqliteTable('servers', {
   url: text('url').notNull(),
   description: text('description').notNull(),
   category: text('category').notNull(),
+  /** Optional product/marketing website (separate from the repo `url`). */
+  websiteUrl: text('website_url'),
+  /** Paid/premium listings get dofollow website backlinks; free listings use nofollow. */
+  isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
+  /** True when the owner proved control of `websiteUrl` (DNS TXT or site badge). */
+  websiteVerified: integer('website_verified', { mode: 'boolean' }).notNull().default(false),
+  /** Claimed/verified ownership (GitHub README, site badge, or DNS). */
   isOfficial: integer('is_official', { mode: 'boolean' }).notNull().default(false),
+  claimedAt: integer('claimed_at', { mode: 'timestamp' }),
   status: text('status').notNull().default('pending'),
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   isVerifiedActive: integer('is_verified_active', { mode: 'boolean' }).notNull().default(false),
@@ -18,6 +26,15 @@ export const servers = sqliteTable('servers', {
 });
 
 export const upvoteRecords = sqliteTable('upvote_records', {
+  serverId: text('server_id').notNull(),
+  ipHash: text('ip_hash').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.serverId, table.ipHash] }),
+}));
+
+/** One unique view per (server, hashed IP) — same gate model as upvote_records. */
+export const viewRecords = sqliteTable('view_records', {
   serverId: text('server_id').notNull(),
   ipHash: text('ip_hash').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),

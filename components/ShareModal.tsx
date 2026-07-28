@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Share2, X, Copy, Check } from 'lucide-react';
+import { toast } from './ui/Toast';
 
 function getDisplayName(name: string) {
   const base = name.split('/').pop() || name;
@@ -18,6 +19,8 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
   const [isOpen, setIsOpen] = useState(false);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
   const [mounted, setMounted] = useState(false);
+  const [badgeStyle, setBadgeStyle] = useState<'featured' | 'directory'>('featured');
+  const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
     setMounted(true);
@@ -33,9 +36,11 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
   }, [isOpen]);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
+  const badgeSrc = `${baseUrl}/api/badge/${serverId}?style=${badgeStyle}&theme=${badgeTheme}`;
 
   const snippets = {
-    badge: `[![Featured on AllMCPs](${baseUrl}/api/badge/${serverId})](${baseUrl}/mcp/${serverId})`,
+    badge: `[![Listed on AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`,
+    badgeHtml: `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="Listed on AllMCPs" height="${badgeStyle === 'directory' ? 40 : 32}" /></a>`,
     widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="350" height="260" frameBorder="0" style="border-radius: 12px; overflow: hidden; background: transparent;"></iframe>`,
     install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #3b82f6, #007BFF); color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,123,255,0.25); transition: transform 0.2s, box-shadow 0.2s;">Install ${displayName} via AllMCPs</a>`
   };
@@ -47,8 +52,12 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
       setTimeout(() => {
         setCopiedStates((prev) => ({ ...prev, [key]: false }));
       }, 2000);
+      toast.success('Copied to clipboard');
     } catch (err) {
       console.error('Failed to copy text: ', err);
+      toast.error('Could not copy', {
+        description: 'Your browser blocked clipboard access.',
+      });
     }
   };
 
@@ -113,18 +122,69 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
         {/* Badge Section */}
         <div className="share-modal-section">
           <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.25rem' }}>Dynamic SVG Badge</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your GitHub README. Paste the Markdown snippet below.</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>
+            Directory-style or classic featured badge — dark and light themes for README or marketing sites.
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            {(['featured', 'directory'] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setBadgeStyle(s)}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: badgeStyle === s ? 'rgba(59,130,246,0.2)' : 'transparent',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                }}
+              >
+                {s === 'featured' ? 'Featured' : 'Directory'}
+              </button>
+            ))}
+            {(['dark', 'light'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setBadgeTheme(t)}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: badgeTheme === t ? 'rgba(59,130,246,0.2)' : 'transparent',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                }}
+              >
+                {t === 'dark' ? 'Dark' : 'Light'}
+              </button>
+            ))}
+          </div>
           
           <div className="share-modal-label">Preview</div>
           <div className="share-modal-preview" style={{ flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ background: '#0d1117', borderRadius: '8px', padding: '1rem 1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ background: badgeTheme === 'light' ? '#f1f5f9' : '#0d1117', borderRadius: '8px', padding: '1rem 1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3fb950', flexShrink: 0 }}></div>
-              <img src={`/api/badge/${serverId}`} alt="Featured on AllMCPs" style={{ height: '32px' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/badge/${serverId}?style=${badgeStyle}&theme=${badgeTheme}`}
+                alt="AllMCPs badge"
+                style={{ height: badgeStyle === 'directory' ? '40px' : '32px' }}
+              />
             </div>
-            <span style={{ fontSize: '0.625rem', color: 'var(--text-secondary)', opacity: 0.6 }}>Simulated GitHub README context</span>
+            <span style={{ fontSize: '0.625rem', color: 'var(--text-secondary)', opacity: 0.6 }}>
+              {badgeTheme === 'light' ? 'Light site / docs context' : 'Dark / GitHub README context'}
+            </span>
           </div>
 
           <CodeBlock snippetKey="badge" />
+          <div style={{ marginTop: '0.75rem' }}>
+            <CodeBlock snippetKey="badgeHtml" />
+          </div>
         </div>
 
         {/* Widget Section */}

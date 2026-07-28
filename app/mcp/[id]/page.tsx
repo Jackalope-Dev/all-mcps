@@ -1,16 +1,17 @@
-import { ArrowLeft, CheckCircle2, FolderGit2, Terminal, ChevronRight } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import ShareModal from '../../../components/ShareModal';
 import { Badge } from '../../../components/ui/Badge';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 import { AgentPromptButton } from '../../../components/ui/AgentPromptButton';
-import { ViewTracker } from '../../../components/ui/ViewTracker';
+import { ViewTracker, InstallsStat } from '../../../components/ui/ViewTracker';
 import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import serversData from '../../../data/mcp-servers.json';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
+import { repoLinkRel, websiteLinkRel } from '../../../lib/linkRel';
 
 // Define the type for our server data
 type Server = {
@@ -19,6 +20,9 @@ type Server = {
   url: string;
   description: string;
   category: string;
+  websiteUrl?: string | null;
+  isPremium?: boolean;
+  websiteVerified?: boolean;
   isOfficial: boolean;
   status: string;
   lastCheckedAt?: string | null;
@@ -119,7 +123,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
     return (
       <div className="container" style={{ paddingTop: '6rem', textAlign: 'center' }}>
         <h1>Server Not Found</h1>
-        <Link href="/" style={{ color: 'var(--accent-color)', marginTop: '1rem', display: 'inline-block' }}>← Back to Directory</Link>
+        <Link href="/browse" style={{ color: 'var(--accent-color)', marginTop: '1rem', display: 'inline-block' }}>← Back to Directory</Link>
       </div>
     );
   }
@@ -186,7 +190,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             '@type': 'ListItem',
             position: 2,
             name: server.category,
-            item: `https://allmcps.com/?category=${encodeURIComponent(server.category)}`,
+            item: `https://allmcps.com/browse?category=${encodeURIComponent(server.category)}`,
           },
           {
             '@type': 'ListItem',
@@ -201,7 +205,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <ViewTracker serverId={server.id} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -211,7 +214,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <ol className="breadcrumb">
           <li><Link href="/">Home</Link></li>
           <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
-          <li><Link href={`/?category=${encodeURIComponent(server.category)}`}>{server.category}</Link></li>
+          <li><Link href={`/browse?category=${encodeURIComponent(server.category)}`}>{server.category}</Link></li>
           <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
           <li className="breadcrumb-current">{server.name}</li>
         </ol>
@@ -223,20 +226,36 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <div style={{ minWidth: 0 }}>
           <h1 style={{ margin: '0 0 1rem 0' }}>{server.name}</h1>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            <Badge variant="category">{server.category}</Badge>
-            {server.isOfficial && (
-              <Badge variant="official">✓ Official</Badge>
+            <Badge variant="category" href={`/browse?category=${encodeURIComponent(server.category)}`}>
+              {server.category}
+            </Badge>
+            {(server.isOfficial || server.isPremium) && (
+              <Badge variant="official" title={server.isPremium && !server.isOfficial ? 'Premium listing' : 'Ownership verified'}>
+                ✓ Verified
+              </Badge>
+            )}
+            {server.websiteVerified && (
+              <Badge variant="success">Website verified</Badge>
+            )}
+            {server.isPremium && (
+              <Badge variant="success" style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.25)' }}>
+                Premium
+              </Badge>
             )}
             {server.isVerifiedActive && (
               <Badge variant="success" title={server.lastCheckedAt ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}` : 'Recently checked'}>
                 🟢 Verified Active
               </Badge>
             )}
+          </div>
+          <div className="listing-metrics-row" style={{ marginBottom: '1.5rem' }}>
+            <ViewTracker serverId={server.id} initialCount={server.views || 0} />
+            <InstallsStat count={server.copies || 0} />
             <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
           </div>
           
           <div style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
-            <SafeMarkdown content={server.description} />
+            <SafeMarkdown content={server.description} utmContent={server.id} />
           </div>
 
           <div className="glass-panel-static" style={{ padding: '2rem', marginBottom: '3rem' }}>
@@ -262,7 +281,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <div className="detail-readme-scroll">
               <div className="markdown-body">
                 {readme ? (
-                  <SafeMarkdown content={readme} />
+                  <SafeMarkdown content={readme} utmContent={server.id} />
                 ) : (
                   <p>No README found or this server is not hosted on GitHub.</p>
                 )}
@@ -274,6 +293,27 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         {/* Sidebar (Right Column) */}
         <div className="detail-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
+          <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engagement</h3>
+            <dl className="listing-engagement-dl">
+              <div>
+                <dt>Views</dt>
+                <dd>{(server.views || 0).toLocaleString()}</dd>
+              </div>
+              <div>
+                <dt>Installs</dt>
+                <dd>{(server.copies || 0).toLocaleString()}</dd>
+              </div>
+              <div>
+                <dt>Upvotes</dt>
+                <dd>{(server.upvotes || 0).toLocaleString()}</dd>
+              </div>
+            </dl>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.85rem', lineHeight: 1.45 }}>
+              Views and upvotes are unique per visitor network (hashed IP). Installs count copy actions.
+            </p>
+          </div>
+
           <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 600 }}>
@@ -287,14 +327,72 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
           <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
-            <a href={server.url} target="_blank" rel={server.isOfficial ? "noopener noreferrer" : "noopener noreferrer nofollow"} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }} className="nav-link">
-              <FolderGit2 size={18} /> View Repository
-            </a>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <a
+                href={server.url}
+                target="_blank"
+                rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }}
+                className="nav-link"
+              >
+                <FolderGit2 size={18} /> View Repository
+              </a>
+              {server.websiteUrl && (
+                <a
+                  href={server.websiteUrl}
+                  target="_blank"
+                  rel={websiteLinkRel(!!server.isPremium)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }}
+                  className="nav-link"
+                >
+                  <Globe size={18} /> Website
+                  {server.isPremium ? (
+                    <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#00E5FF', fontWeight: 700 }}>DOFOLLOW</span>
+                  ) : (
+                    <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>nofollow</span>
+                  )}
+                </a>
+              )}
+            </div>
+            {!server.isPremium && server.websiteUrl && (
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.75rem', lineHeight: 1.5 }}>
+                Free listings use nofollow website links. Premium listings get a dofollow backlink.
+              </p>
+            )}
           </div>
+
+          {!server.isOfficial && (
+            <div className="glass-panel-static" style={{ padding: '1.5rem', borderColor: 'rgba(59,130,246,0.35)' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <BadgeCheck size={18} color="var(--accent-color)" /> Own this project?
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                This directory is pre-filled from public sources. Claim the page via GitHub README, a site badge, or DNS TXT to get the verified badge
+                {server.websiteUrl ? '' : ' and attach your website'}.
+              </p>
+              <Link
+                href={`/mcp/${server.id}/claim`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  padding: '0.75rem 1rem',
+                  background: 'var(--brand-gradient)',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                }}
+              >
+                <Sparkles size={16} /> Claim this listing
+              </Link>
+            </div>
+          )}
 
           <div className="glass-panel-static" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share & Embed</h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add our SVG badge or dynamic widget to your website to get a free Featured boost in the directory.</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add our SVG badge (dark/light directory styles) or embeddable widget to your site.</p>
             <ShareModal serverId={server.id} serverName={server.name} />
           </div>
           

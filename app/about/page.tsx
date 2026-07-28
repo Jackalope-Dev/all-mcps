@@ -15,7 +15,11 @@ export default function AboutPage() {
     <main className="container" style={{ padding: '6rem 0 8rem' }}>
       <div className="glass-panel animate-fade-in" style={{ padding: '4rem', maxWidth: '850px', margin: '0 auto', borderRadius: '24px' }}>
         <h1 style={{ marginBottom: '1.5rem', fontSize: '2.5rem' }}>
-          About <span style={{ background: 'linear-gradient(135deg, var(--accent-color), #007BFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>AllMCPs</span>
+          About{' '}
+          <span className="wordmark-text">
+            <span className="wordmark-all">All</span>
+            <span className="wordmark-mcps">MCPs</span>
+          </span>
         </h1>
         
         <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', lineHeight: '1.8', marginBottom: '2.5rem' }}>

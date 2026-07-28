@@ -1,6 +1,6 @@
 /**
- * Client-IP based dedup for the upvote metric — not tied to any account or
- * cookie. See docs/superpowers/specs/2026-07-27-upvote-dedup-design.md.
+ * Client-IP based dedup for engagement metrics (upvotes, views) — not tied to
+ * any account or cookie. See docs/superpowers/specs/2026-07-27-upvote-dedup-design.md.
  */
 
 export function getClientIp(req: Request): string {
@@ -17,8 +17,10 @@ export function getClientIp(req: Request): string {
  * One-way, salted hash of (ip, serverId). Returns null if the server-only
  * pepper isn't configured, so callers can fail closed instead of silently
  * hashing without a secret.
+ *
+ * Used for both upvote and view uniqueness tables (separate storage, same hash).
  */
-export async function hashUpvoteVoter(ip: string, serverId: string): Promise<string | null> {
+export async function hashVisitorForServer(ip: string, serverId: string): Promise<string | null> {
   const pepper = process.env.UPVOTE_HASH_SECRET;
   if (!pepper) return null;
 
@@ -30,4 +32,9 @@ export async function hashUpvoteVoter(ip: string, serverId: string): Promise<str
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+/** @deprecated Prefer hashVisitorForServer — same implementation. */
+export async function hashUpvoteVoter(ip: string, serverId: string): Promise<string | null> {
+  return hashVisitorForServer(ip, serverId);
 }

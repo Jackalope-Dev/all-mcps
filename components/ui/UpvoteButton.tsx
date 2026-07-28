@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
+import { toast } from './Toast';
 
 export function UpvoteButton({ serverId, initialCount }: { serverId: string; initialCount: number }) {
   const [upvotes, setUpvotes] = useState(initialCount || 0);
@@ -58,19 +59,29 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
         // Already voted server-side (e.g. a stale/cleared localStorage flag).
         // Keep hasUpvoted true, but undo the optimistic +1 since this click
         // didn't register a new vote.
-        setUpvotes(prev => prev - 1);
+        setUpvotes((prev) => prev - 1);
+        toast.info('Already upvoted', {
+          description: 'You have already supported this server.',
+        });
         return;
       }
 
       if (!res.ok) {
         throw new Error(`Upvote request failed with status ${res.status}`);
       }
+
+      toast.success('Upvoted', {
+        description: 'Thanks for supporting this server.',
+      });
     } catch (e) {
-      console.error("Failed to upvote:", e);
+      console.error('Failed to upvote:', e);
       // Revert on failure
-      setUpvotes(prev => prev - 1);
+      setUpvotes((prev) => prev - 1);
       setHasUpvoted(false);
       localStorage.removeItem(`upvote_${serverId}`);
+      toast.error('Could not upvote', {
+        description: 'Something went wrong. Please try again.',
+      });
     }
   };
 

@@ -6,18 +6,25 @@ import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
 
 const submitSchema = z.object({
-  url: z.string().url("Must be a valid URL"),
+  url: z.string().url('Must be a valid URL'),
   name: z.string().optional(),
   description: z.string().optional(),
   category: z.string().optional(),
+  websiteUrl: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .transform((v) => (v || '').trim())
+    .refine((v) => !v || z.string().url().safeParse(v).success, {
+      message: 'Website must be a valid URL',
+    }),
 });
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json() as any;
+    const body = (await req.json()) as any;
     const token = body['cf-turnstile-response'];
 
-    // 1. Validate Turnstile token
     if (!token) {
       return NextResponse.json({ success: false, error: 'Missing Turnstile token' }, { status: 400 });
     }
@@ -32,85 +39,100 @@ export async function POST(req: Request) {
       body: verifyForm,
     });
 
-    const verifyResult = await verifyRes.json() as any;
+    const verifyResult = (await verifyRes.json()) as any;
     if (!verifyResult.success) {
       return NextResponse.json({ success: false, error: 'Turnstile verification failed' }, { status: 403 });
     }
 
-    // 2. Parse form body
     const result = submitSchema.safeParse(body);
-    
     if (!result.success) {
       return NextResponse.json({ error: result.error.issues }, { status: 400 });
     }
-    
+
     const { url } = result.data;
-
-    if (!isSafeSubmissionUrl(url)) {
-      return NextResponse.json({ error: "URL must be a public http(s) address." }, { status: 400 });
-    }
-
+    let websiteUrl = result.data.websiteUrl || '';
     let name = result.data.name || '';
     let description = result.data.description || '';
     let category = result.data.category || 'Community';
-    
-    // 3. Auto-fill capability for GitHub URLs
+
+    if (!isSafeSubmissionUrl(url)) {
+      return NextResponse.json({ error: 'Repository URL must be a public http(s) address.' }, { status: 400 });
+    }
+
+    if (websiteUrl && !isSafeSubmissionUrl(websiteUrl)) {
+      return NextResponse.json({ error: 'Website URL must be a public http(s) address.' }, { status: 400 });
+    }
+
     const githubMatch = url.match(/github\.com\/([^/]+)\/([^/]+)/);
     if (githubMatch) {
       const owner = githubMatch[1];
       let repo = githubMatch[2];
       if (repo.endsWith('.git')) repo = repo.slice(0, -4);
-      
+
       try {
         const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-          headers: { 'User-Agent': 'AllMCPs-Directory' }
+          headers: { 'User-Agent': 'AllMCPs-Directory' },
         });
         if (ghRes.ok) {
-          const ghData = await ghRes.json() as any;
+          const ghData = (await ghRes.json()) as any;
           if (!name) name = ghData.name;
           if (!description && ghData.description) description = ghData.description;
+          if (!websiteUrl && ghData.homepage && isSafeSubmissionUrl(ghData.homepage)) {
+            websiteUrl = ghData.homepage;
+          }
         }
       } catch (e) {
-        console.error("GitHub API fetch failed", e);
+        console.error('GitHub API fetch failed', e);
       }
     }
-    
+
     if (!name) {
-      return NextResponse.json({ error: "Name could not be auto-filled, please provide it manually." }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Name could not be auto-filled, please provide it manually.' },
+        { status: 400 }
+      );
     }
-    
+
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    
-    // 4. Connect to Cloudflare D1
+
     let env;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
     } catch (e) {
-      throw new Error("Could not get Cloudflare context.");
+      throw new Error('Could not get Cloudflare context.');
     }
 
     if (!env || !env.DB) {
-      throw new Error("Database binding not found");
+      throw new Error('Database binding not found');
     }
-    
+
     const db = drizzle(env.DB as any);
-    
-    // 5. Insert record as 'pending_review'
-    await db.insert(servers).values({
+
+    await db
+      .insert(servers)
+      .values({
+        id,
+        name,
+        url,
+        description: description || 'No description provided.',
+        category,
+        websiteUrl: websiteUrl || null,
+        isPremium: false,
+        websiteVerified: false,
+        isOfficial: false,
+        status: 'pending',
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Server submitted successfully for review!',
       id,
-      name,
-      url,
-      description: description || 'No description provided.',
-      category,
-      isOfficial: false,
-      status: 'pending',
-      createdAt: new Date(),
-    }).onConflictDoNothing();
-    
-    return NextResponse.json({ success: true, message: "Server submitted successfully for review!" });
+    });
   } catch (error) {
-    console.error("Submission error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error('Submission error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

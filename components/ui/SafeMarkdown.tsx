@@ -5,15 +5,49 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
+import { isOutboundHttpUrl, withAllMcpsUtm } from '../../lib/outboundLinks';
 
 interface SafeMarkdownProps {
   content: string;
   isInline?: boolean;
+  /** When set, stored as utm_content on outbound README links (e.g. server id). */
+  utmContent?: string;
 }
 
-export function SafeMarkdown({ content, isInline }: SafeMarkdownProps) {
+function MarkdownLink({
+  href,
+  children,
+  utmContent,
+  ...rest
+}: React.AnchorHTMLAttributes<HTMLAnchorElement> & { utmContent?: string }) {
+  // In-page anchors stay same-tab, no UTM
+  if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  }
+
+  const trackedHref = isOutboundHttpUrl(href)
+    ? withAllMcpsUtm(href, { content: utmContent })
+    : href;
+
+  return (
+    <a
+      href={trackedHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      {...rest}
+    >
+      {children}
+    </a>
+  );
+}
+
+export function SafeMarkdown({ content, isInline, utmContent }: SafeMarkdownProps) {
   let processedContent = content;
-  
+
   // If rendering inline (like in a card paragraph), we want to avoid block wrappers like <p>
   // that might conflict with a parent clamping <div> or <p>.
   // We also strip links to prevent nested <a> tags since cards themselves are links.
@@ -41,6 +75,13 @@ export function SafeMarkdown({ content, isInline }: SafeMarkdownProps) {
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeRaw, rehypeSanitize]}
+      components={{
+        a: ({ href, children, node: _node, ...props }) => (
+          <MarkdownLink href={href} utmContent={utmContent} {...props}>
+            {children}
+          </MarkdownLink>
+        ),
+      }}
     >
       {content}
     </ReactMarkdown>

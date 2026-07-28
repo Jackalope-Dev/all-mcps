@@ -8,7 +8,7 @@ import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
 
 const actionSchema = z.object({
   id: z.string().min(1),
-  action: z.enum(['approve', 'reject']),
+  action: z.enum(['approve', 'reject', 'set_premium', 'unset_premium']),
 });
 
 export async function POST(req: Request) {
@@ -56,6 +56,15 @@ export async function POST(req: Request) {
         
       if (deleteResult.length === 0) {
          return NextResponse.json({ error: "Server not found or not in pending state." }, { status: 400 });
+      }
+    } else if (action === 'set_premium' || action === 'unset_premium') {
+      const updateResult = await db.update(servers)
+        .set({ isPremium: action === 'set_premium' })
+        .where(eq(servers.id, id))
+        .returning();
+
+      if (updateResult.length === 0) {
+        return NextResponse.json({ error: "Server not found." }, { status: 404 });
       }
     }
     

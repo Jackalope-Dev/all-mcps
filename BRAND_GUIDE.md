@@ -14,12 +14,14 @@ This document outlines the core brand identity, colors, typography, and assets f
 ## 2. Colors
 
 ### Primary Accents
-- **Cyan:** `#00E5FF` (Used for active states, vibrant highlights, primary brand identity)
-- **Blue:** `#007BFF` (Used as the secondary color in brand gradients)
+- **Cyan:** `#00E5FF` (logo, active states, focus rings, highlights) — CSS `--brand-cyan` / `--accent-color`
+- **Blue:** `#007BFF` (secondary brand stop) — CSS `--brand-blue` / `--accent-secondary`
 
 **Primary Gradient (Cyan to Blue):**
-Used in the main logo and for key hero text / superpowers text.
-`background: linear-gradient(135deg, #00E5FF, #007BFF)`
+Used in the logo mark, primary buttons, nav hairline, hero “superpowers”, and wordmark “All”.
+```css
+--brand-gradient: linear-gradient(135deg, #00E5FF, #007BFF);
+```
 
 ### Backgrounds (Dark Mode First)
 - **Base Background:** `#020617` (Slate 950)
@@ -31,9 +33,11 @@ Used in the main logo and for key hero text / superpowers text.
 - **Secondary Text:** `#94a3b8` (Slate 400, for body and subtext)
 
 ## 3. Typography
-- **Primary Font:** Inter, Roboto, or Geist (sans-serif)
-- Use tight letter spacing (`letter-spacing: -2px` or similar) and heavy font weights (`800` or `900`) for main hero text and logos.
+- **Primary Font:** [Atkinson Hyperlegible Next](https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next) (sans-serif) — designed so easily confused characters stay distinct (`l` vs `I` vs `1`, `O` vs `0`). Lowercase **`l` has a clear tail**, not a plain vertical bar, so **AllMCPs** does not read as `A11` / `AII`.
+- **Fallbacks:** system UI stack (`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, sans-serif).
+- Use moderately tight letter spacing on large headings (`letter-spacing: -0.01em` to `-0.03em`) and heavy font weights (`700`–`800`) for hero text and logos. Avoid ultra-tight tracking on the wordmark — it collapses the double-`l`.
 - Use `400` or `500` font weights for body text to ensure readability.
+- Wordmark markup: split as `All` (gradient) + `MCPs` (solid), via the `.wordmark-all` / `.wordmark-mcps` classes.
 
 ## 4. Logo & Assets
 All official brand assets are located in the `/brand-assets/` directory.
@@ -43,4 +47,6 @@ All official brand assets are located in the `/brand-assets/` directory.
 - `promo-banner.svg` / `.png` - 1200x630 card for social media and OpenGraph sharing.
 
 **Usage:**
-- When adding the logo to the website, use the SVG format located at `/public/logo-icon.svg` to ensure perfect transparency and scaling.
+- Prefer the shared React component `components/BrandLogo.tsx` (icon tile + optional wordmark) so size, glow, and gradient stay consistent.
+- SVG source of truth: `/public/logo-icon.svg` (also under `/brand-assets/`).
+- Header: `size="md"` with wordmark. Footer / compact: `size="sm"`. Auth / empty states: `size="lg"` icon-only is fine.

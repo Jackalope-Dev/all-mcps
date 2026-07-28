@@ -13,6 +13,7 @@ type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  isPremium?: boolean;
 };
 
 async function getServer(id: string): Promise<Server | undefined> {
@@ -103,8 +104,8 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
             {server.name.charAt(0)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-             {server.isOfficial && (
-                <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', fontWeight: 600 }}>Official</span>
+             {(server.isOfficial || server.isPremium) && (
+                <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', fontWeight: 600 }}>Verified</span>
              )}
             <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#a1a1aa' }}>
               {server.category}
@@ -120,12 +121,12 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
           <SafeMarkdown content={server.description || 'No description provided.'} isInline />
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#60a5fa', fontSize: '0.75rem', fontWeight: 600 }}>
-             <Terminal size={12} /> Install via AllMCPs
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem', flexShrink: 0, minHeight: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#60a5fa', fontSize: '0.75rem', fontWeight: 600, lineHeight: 1 }}>
+             <Terminal size={12} style={{ flexShrink: 0 }} /> Install via AllMCPs
           </div>
-          <div style={{ fontSize: '0.65rem', color: '#52525b', fontWeight: 500, letterSpacing: '0.02em' }}>
-            ALLMCPS.COM
+          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.65rem', color: '#52525b', fontWeight: 500, letterSpacing: '0.02em', lineHeight: 1 }}>
+            allmcps.com
           </div>
         </div>
       </Link>

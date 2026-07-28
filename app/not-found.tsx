@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <main className="container" style={{ padding: '8rem 1rem', textAlign: 'center' }}>
       <div className="glass-panel animate-fade-in" style={{ maxWidth: '600px', margin: '0 auto', padding: '4rem 2rem', borderRadius: '24px' }}>
-        <div style={{ fontSize: '4rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--accent-color), #007BFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '4rem', fontWeight: 800, background: 'var(--brand-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '1rem' }}>
           404
         </div>
         <h1 style={{ fontSize: '2rem', marginBottom: '1rem', fontWeight: 700 }}>Page Not Found</h1>
@@ -14,8 +14,8 @@ export default function NotFound() {
         </p>
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Button href="/" variant="primary">
-            Return to Directory
+          <Button href="/browse" variant="primary">
+            Browse Directory
           </Button>
           <Button href="/categories" variant="secondary">
             Browse Categories

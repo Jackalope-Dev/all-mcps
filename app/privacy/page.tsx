@@ -58,15 +58,17 @@ export default function PrivacyPage() {
 
           <h3>Aggregate usage metrics</h3>
           <p>
-            We track anonymous, non-identifying counters for each directory listing &mdash; such as view counts,
-            copy actions, and upvotes &mdash; to power features like our &ldquo;Trending&rdquo; ranking. These
-            counters are not linked to any individual visitor, account, or device identifier.
+            We track counters for each directory listing &mdash; unique views, copy/install actions, and
+            upvotes &mdash; to power features like our &ldquo;Trending&rdquo; and &ldquo;Most Viewed&rdquo;
+            rankings. Copy/install actions are simple aggregate counts. Unique views and upvotes are not tied
+            to an account; they use the abuse-prevention check described below.
           </p>
           <p>
-            To prevent the same visitor from upvoting a listing multiple times, we check upvotes against a
-            one-way, salted hash of the submitting IP address. This hash cannot be reversed to recover the
-            original IP address, is used solely for this spam-prevention check, and is not used to track
-            visitors across the Site or for any other purpose.
+            To prevent the same visitor from inflating a listing&rsquo;s unique views or upvotes, we check those
+            actions against a one-way, salted hash of the submitting IP address. This hash cannot be reversed
+            to recover the original IP address, is used solely for this spam-prevention check, and is not used
+            to track visitors across the Site or for any other purpose. Your browser may also store a small
+            local flag so we do not re-submit a view or vote you already recorded.
           </p>
 
           <h2>2. How We Use Information</h2>

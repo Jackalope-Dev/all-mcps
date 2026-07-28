@@ -24,7 +24,7 @@ export default function GlobalError({
           justifyContent: 'center',
           background: '#020617',
           color: '#ffffff',
-          fontFamily: 'Inter, Roboto, system-ui, sans-serif',
+          fontFamily: '"Atkinson Hyperlegible Next", system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
         }}
       >
         <div

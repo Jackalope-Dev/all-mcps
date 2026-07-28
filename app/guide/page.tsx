@@ -117,7 +117,7 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
           <p>
             The exact field names for remote servers vary slightly between clients as this part of the protocol
             has evolved, so always follow the specific instructions on the server&rsquo;s own listing &mdash;
-            every <Link href="/">AllMCPs directory</Link> entry includes the setup snippet its maintainer provides.
+            every <Link href="/browse">AllMCPs directory</Link> entry includes the setup snippet its maintainer provides.
           </p>
 
           <h2 id="common-setups">Common setups</h2>
@@ -173,7 +173,7 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
           <h2 id="next-steps">Next steps</h2>
           <ul>
             <li>Not sure what MCP actually is under the hood? Read <Link href="/what-is-mcp">What is an MCP?</Link></li>
-            <li>Ready to find a server? <Link href="/">Browse the directory</Link></li>
+            <li>Ready to find a server? <Link href="/browse">Browse the directory</Link></li>
             <li>Built something worth sharing? <Link href="/submit">Submit your MCP server</Link></li>
           </ul>
         </div>

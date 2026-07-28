@@ -68,7 +68,7 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
         {filtered.map((cat, i) => (
           <Link
             key={cat.name}
-            href={`/?category=${encodeURIComponent(cat.name)}`}
+            href={`/browse?category=${encodeURIComponent(cat.name)}`}
             id={cat.name}
             className="category-card glass-panel"
             style={{ animationDelay: `${Math.min(i * 0.03, 0.6)}s` }}

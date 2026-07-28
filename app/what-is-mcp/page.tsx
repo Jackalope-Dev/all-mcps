@@ -154,7 +154,7 @@ export default function WhatIsMCPPage() {
             </tbody>
           </table>
           <p>
-            You can browse working examples of all of these in the <Link href="/">AllMCPs directory</Link>, organized by <Link href="/categories">category</Link>.
+            You can browse working examples of all of these in the <Link href="/browse">AllMCPs directory</Link>, organized by <Link href="/categories">category</Link>.
           </p>
 
           <h2 id="safety">Is MCP safe to use?</h2>
@@ -176,7 +176,7 @@ export default function WhatIsMCPPage() {
           <h2 id="getting-started">Getting started in three steps</h2>
           <ol>
             <li>Install or open an MCP-compatible client, such as Claude Desktop or Claude Code.</li>
-            <li>Browse the <Link href="/">AllMCPs directory</Link> to find a server for what you want your agent to do.</li>
+            <li>Browse the <Link href="/browse">AllMCPs directory</Link> to find a server for what you want your agent to do.</li>
             <li>Follow that listing&rsquo;s setup instructions &mdash; usually a short configuration snippet &mdash; then restart your client.</li>
           </ol>
           <p>
