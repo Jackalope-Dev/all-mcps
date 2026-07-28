@@ -35,8 +35,8 @@ export default function AdminClient({ initialPending }: { initialPending: Server
         body: JSON.stringify({ id, action })
       });
       
-      const data = await res.json();
-      
+      const data = await res.json() as { error?: string };
+
       if (!res.ok) {
         throw new Error(data.error || 'Action failed');
       }

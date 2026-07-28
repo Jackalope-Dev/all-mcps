@@ -5,8 +5,6 @@ import { servers } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 
-export const runtime = 'edge';
-
 const actionSchema = z.object({
   id: z.string().min(1),
   action: z.enum(['approve', 'reject']),
@@ -25,7 +23,7 @@ export async function POST(req: Request) {
     const result = actionSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json({ error: result.error.errors }, { status: 400 });
+      return NextResponse.json({ error: result.error.issues }, { status: 400 });
     }
     
     const { id, action } = result.data;

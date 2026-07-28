@@ -3,7 +3,6 @@ import { servers } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import AdminClient from './AdminClient';
 
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 async function getPendingServers() {

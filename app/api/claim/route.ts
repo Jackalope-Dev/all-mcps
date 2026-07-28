@@ -5,8 +5,6 @@ import { servers } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-export const runtime = 'edge';
-
 const claimSchema = z.object({
   id: z.string().min(1)
 });
@@ -17,7 +15,7 @@ export async function POST(req: Request) {
     const result = claimSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json({ error: result.error.errors }, { status: 400 });
+      return NextResponse.json({ error: result.error.issues }, { status: 400 });
     }
     
     const { id } = result.data;
