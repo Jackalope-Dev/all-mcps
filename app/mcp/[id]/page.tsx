@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { ArrowLeft, CheckCircle2, Github, Terminal } from 'lucide-react';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 
 // Define the type for our server data
 type Server = {
@@ -18,6 +19,34 @@ async function getServer(id: string): Promise<Server | undefined> {
   const fileContents = fs.readFileSync(filePath, 'utf8');
   const servers: Server[] = JSON.parse(fileContents);
   return servers.find((s) => s.id === id);
+}
+
+async function fetchReadme(url: string) {
+  try {
+    const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
+    if (!match) return null;
+    
+    const owner = match[1];
+    let repo = match[2];
+    
+    if (repo.endsWith('.git')) {
+      repo = repo.slice(0, -4);
+    }
+    
+    // Attempt to fetch from 'main' branch first
+    let res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`, { next: { revalidate: 3600 } });
+    if (!res.ok) {
+      // Fallback to 'master' branch
+      res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`, { next: { revalidate: 3600 } });
+    }
+    
+    if (res.ok) {
+      return await res.text();
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
 }
 
 // Generate static params so Next.js can pre-render these pages at build time
@@ -43,7 +72,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
     );
   }
 
-  // The command name usually strips out 'mcp-' prefixes or uses the raw name for the npm package
+  const readme = await fetchReadme(server.url);
   const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
   return (
@@ -90,8 +119,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
           <div>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Documentation Overview</h2>
-            <div style={{ color: 'var(--text-secondary)', lineHeight: '1.8' }}>
-              <p>This is a placeholder for the dynamically fetched README content. Once we set up the GitHub API integration in the Cloudflare Worker, the full markdown documentation for <strong>{server.name}</strong> will render here automatically!</p>
+            <div className="markdown-body">
+              {readme ? (
+                <ReactMarkdown>{readme}</ReactMarkdown>
+              ) : (
+                <p>No README found or this server is not hosted on GitHub.</p>
+              )}
             </div>
           </div>
         </div>
@@ -116,7 +149,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Embed Badge</h3>
+            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', text padding: 'uppercase', letterSpacing: '0.05em' }}>Embed Badge</h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add this badge to your README to get a free Featured boost in the directory.</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '2rem', border: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.03)', fontSize: '0.75rem', color: 'var(--text-secondary)', justifyContent: 'center', marginBottom: '1rem' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></span>
