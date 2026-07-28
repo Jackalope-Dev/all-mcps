@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState, useRef, type CSSProperties } from 'react';
 import { toast } from '../../components/ui/Toast';
 
 type Listing = {
@@ -50,7 +50,10 @@ export default function ManageListings() {
   });
   const [featureDays, setFeatureDays] = useState<Record<string, string>>({});
 
+  const requestIdRef = useRef<number>(0);
+
   const fetchListings = async (nextOffset: number) => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -66,13 +69,22 @@ export default function ManageListings() {
       const data = (await res.json()) as { items?: Listing[]; total?: number; error?: string };
       if (!res.ok) throw new Error(data.error || 'Could not load listings');
 
+      // Guard: only apply state if this is still the latest request
+      if (requestId !== requestIdRef.current) return;
+
       setItems(data.items || []);
       setTotal(data.total || 0);
       setOffset(nextOffset);
     } catch (err: any) {
-      toast.error('Could not load listings', { description: err?.message });
+      // Only show error toast for genuine failures, not for stale requests
+      if (requestId === requestIdRef.current) {
+        toast.error('Could not load listings', { description: err?.message });
+      }
     } finally {
-      setLoading(false);
+      // Only clear loading if this is still the latest request
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
