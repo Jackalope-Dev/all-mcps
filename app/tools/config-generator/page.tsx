@@ -78,7 +78,7 @@ const faqJsonLd = {
 
 export default function ConfigGeneratorPage() {
   return (
-    <main className="page-shell page-shell--content">
+    <main className="page-shell page-shell--tool">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}

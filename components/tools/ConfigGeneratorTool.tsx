@@ -193,7 +193,7 @@ export function ConfigGeneratorTool() {
           <pre
             style={{
               background: 'rgba(0,0,0,0.4)',
-              padding: '1.5rem',
+              padding: '1.25rem 4rem 1.25rem 1.25rem',
               borderRadius: '8px',
               overflowX: 'auto',
               border: '1px solid var(--border-color)',

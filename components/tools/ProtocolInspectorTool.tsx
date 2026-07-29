@@ -343,7 +343,7 @@ export function ProtocolInspectorTool() {
       </Card>
 
       {/* Editor & Diagnostic Output Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1.5rem' }}>
         {/* Left Column: JSON Editor */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem' }}>
@@ -365,6 +365,7 @@ export function ProtocolInspectorTool() {
               fontSize: '0.85rem',
               outline: 'none',
               resize: 'vertical',
+              boxSizing: 'border-box',
             }}
           />
         </div>
@@ -372,7 +373,7 @@ export function ProtocolInspectorTool() {
         {/* Right Column: Diagnostic Inspection Report */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <Card style={{ padding: '1.25rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ShieldCheck size={18} style={{ color: 'var(--accent-color)' }} />
                 Protocol Diagnostic Report
@@ -413,10 +414,10 @@ export function ProtocolInspectorTool() {
                   {check.status === 'warn' && <AlertTriangle size={16} style={{ color: '#f59e0b', flexShrink: 0, marginTop: '2px' }} />}
                   {check.status === 'fail' && <XCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />}
                   <div>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.15rem' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.15rem', wordBreak: 'break-word' }}>
                       {check.label}
                     </div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', wordBreak: 'break-word' }}>
                       {check.message}
                     </div>
                   </div>
@@ -439,7 +440,7 @@ export function ProtocolInspectorTool() {
 
         <Card style={{ padding: '1.5rem', background: '#090d16', border: '1px solid rgba(255,255,255,0.12)' }}>
           {/* Client Header Mock */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: result.isErrorState ? '#ef4444' : '#10b981' }} />
               <span>AI Client Tool Execution Window</span>

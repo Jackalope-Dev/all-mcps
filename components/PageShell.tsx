@@ -1,6 +1,6 @@
 import React from 'react';
 
-type PageShellVariant = 'default' | 'narrow' | 'content' | 'auth' | 'status';
+type PageShellVariant = 'default' | 'narrow' | 'content' | 'tool' | 'auth' | 'status';
 
 interface PageShellProps {
   children: React.ReactNode;

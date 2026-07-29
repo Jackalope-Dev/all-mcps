@@ -50,6 +50,7 @@
   /* Layout */
   --header-height: 4.5rem;
   --container-max: 1200px;
+  --tool-max: 1140px;
   --content-max: 850px;
   --narrow-max: 720px;
   --auth-max: 440px;
@@ -642,6 +643,11 @@ p {
 
 .page-shell--content .page-shell-inner {
   max-width: var(--content-max);
+  padding: 0 var(--space-8);
+}
+
+.page-shell--tool .page-shell-inner {
+  max-width: var(--tool-max);
   padding: 0 var(--space-8);
 }
 
@@ -2674,7 +2680,8 @@ nav[aria-label="Table of contents"] {
 
   .page-shell--default .page-shell-inner,
   .page-shell--narrow .page-shell-inner,
-  .page-shell--content .page-shell-inner {
+  .page-shell--content .page-shell-inner,
+  .page-shell--tool .page-shell-inner {
     padding: 0 var(--space-4);
   }
 

@@ -14,12 +14,12 @@ export const metadata: Metadata = {
 
 export default function BadgeGeneratorPage() {
   return (
-    <PageShell variant="content">
+    <PageShell variant="tool" panel>
       <PageHeader
         title="MCP Badge & Embed Generator"
         description="Customize dynamic SVG badges for your GitHub README, documentation site, or blog. Automatically claims verified badge status when added to your repository."
       />
-      <div className="max-w-3xl mx-auto py-6">
+      <div style={{ marginTop: '2rem' }}>
         <BadgeEmbedBuilder />
       </div>
     </PageShell>

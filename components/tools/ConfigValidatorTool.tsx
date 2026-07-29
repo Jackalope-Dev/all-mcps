@@ -53,16 +53,16 @@ export function ConfigValidatorTool() {
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
         placeholder={'{\n  "mcpServers": {\n    "example": {\n      "command": "npx",\n      "args": ["-y", "@example/mcp-server"]\n    }\n  }\n}'}
-        rows={16}
+        rows={14}
         className="form-input"
-        style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+        style={{ fontFamily: 'monospace', fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }}
         aria-label="Paste your MCP config JSON"
       />
 
       {raw.trim() && (
         <div>
           {parseError ? (
-            <div className="surface-muted" style={{ padding: '1rem', borderLeft: '3px solid #ef4444' }}>
+            <div className="surface-muted" style={{ padding: '1rem', borderLeft: '3px solid #ef4444', wordBreak: 'break-word' }}>
               <strong>Invalid JSON:</strong> {parseError}
             </div>
           ) : errors.length === 0 && warnings.length === 0 ? (
@@ -75,20 +75,20 @@ export function ConfigValidatorTool() {
                 <div
                   key={`e${i}`}
                   className="surface-muted"
-                  style={{ padding: '0.75rem 1rem', borderLeft: '3px solid #ef4444' }}
+                  style={{ padding: '0.75rem 1rem', borderLeft: '3px solid #ef4444', wordBreak: 'break-word' }}
                 >
                   <Badge variant="default" style={{ marginRight: '0.5rem' }}>error</Badge>
-                  <code>{f.path}</code> &mdash; {f.message}
+                  <code style={{ wordBreak: 'break-all' }}>{f.path}</code> &mdash; {f.message}
                 </div>
               ))}
               {warnings.map((f, i) => (
                 <div
                   key={`w${i}`}
                   className="surface-muted"
-                  style={{ padding: '0.75rem 1rem', borderLeft: '3px solid #f59e0b' }}
+                  style={{ padding: '0.75rem 1rem', borderLeft: '3px solid #f59e0b', wordBreak: 'break-word' }}
                 >
                   <Badge variant="default" style={{ marginRight: '0.5rem' }}>warning</Badge>
-                  <code>{f.path}</code> &mdash; {f.message}
+                  <code style={{ wordBreak: 'break-all' }}>{f.path}</code> &mdash; {f.message}
                 </div>
               ))}
             </div>

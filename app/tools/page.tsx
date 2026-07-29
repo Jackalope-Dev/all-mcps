@@ -61,7 +61,7 @@ const TOOLS = [
 
 export default function ToolsHubPage() {
   return (
-    <main className="page-shell page-shell--content">
+    <main className="page-shell page-shell--tool">
       <div className="page-shell-inner">
         <div className="surface page-panel">
           <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Free MCP Developer Tools</h1>

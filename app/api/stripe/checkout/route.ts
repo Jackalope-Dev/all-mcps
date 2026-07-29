@@ -135,6 +135,8 @@ export async function POST(req: Request) {
       {
         error: 'Checkout failed',
         details: e?.message || 'Unknown Stripe API error',
+        stack: String(e?.stack || ''),
+        raw: String(e),
       },
       { status: 500 }
     );

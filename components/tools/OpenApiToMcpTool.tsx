@@ -484,7 +484,7 @@ export function OpenApiToMcpTool() {
       </Card>
 
       {/* Inputs Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1.5rem' }}>
         {/* Left Column: Spec & Configuration */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
@@ -510,6 +510,7 @@ export function OpenApiToMcpTool() {
                 fontSize: '0.85rem',
                 outline: 'none',
                 resize: 'vertical',
+                boxSizing: 'border-box',
               }}
             />
             {parseError && (
@@ -569,7 +570,7 @@ export function OpenApiToMcpTool() {
         {/* Right Column: Parsed Tool Preview */}
         <div>
           <Card style={{ padding: '1.25rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Code2 size={18} style={{ color: 'var(--accent-color)' }} />
                 Parsed MCP Tools ({tools.length})
@@ -598,11 +599,11 @@ export function OpenApiToMcpTool() {
                       fontSize: '0.85rem',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-color)', wordBreak: 'break-all' }}>
                         {t.name}
                       </span>
-                      <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', borderRadius: '3px', background: 'rgba(255,255,255,0.1)', fontFamily: 'monospace' }}>
+                      <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', borderRadius: '3px', background: 'rgba(255,255,255,0.1)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
                         {t.method} {t.path}
                       </span>
                     </div>
@@ -610,7 +611,7 @@ export function OpenApiToMcpTool() {
                       {t.description}
                     </p>
                     {t.parameters.length > 0 && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
                         <strong>Params:</strong> {t.parameters.map((p) => `${p.name} (${p.type}${p.required ? '*' : ''})`).join(', ')}
                       </div>
                     )}
@@ -632,7 +633,7 @@ export function OpenApiToMcpTool() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               type="button"
               className={`btn btn-sm ${targetLang === 'typescript' ? 'btn-primary' : 'btn-secondary'}`}
@@ -655,7 +656,7 @@ export function OpenApiToMcpTool() {
         </div>
 
         {/* Required dependencies notice */}
-        <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid var(--border-color)' }}>
+        <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid var(--border-color)', wordBreak: 'break-word', overflowX: 'auto' }}>
           <strong>Install dependencies:</strong>{' '}
           <code style={{ color: 'var(--accent-color)' }}>
             {targetLang === 'typescript' ? 'npm install @modelcontextprotocol/sdk zod' : 'pip install "mcp[cli]" httpx'}

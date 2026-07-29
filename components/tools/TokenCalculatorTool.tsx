@@ -63,14 +63,14 @@ export function TokenCalculatorTool() {
           <textarea
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
-            rows={14}
+            rows={12}
             className="form-input"
-            style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+            style={{ fontFamily: 'monospace', fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }}
             placeholder='{"result": {"tools": [{"name": "search", "description": "...", "inputSchema": {}}]}}'
             aria-label="Paste your tools JSON"
           />
           {pasteResult && 'error' in pasteResult && (
-            <div className="surface-muted" style={{ padding: '1rem', borderLeft: '3px solid #ef4444' }}>
+            <div className="surface-muted" style={{ padding: '1rem', borderLeft: '3px solid #ef4444', wordBreak: 'break-word' }}>
               {pasteResult.error}
             </div>
           )}
@@ -79,7 +79,7 @@ export function TokenCalculatorTool() {
               <h3 className="text-section" style={{ marginBottom: '0.5rem' }}>
                 Total: {pasteResult.total.toLocaleString()} tokens
               </h3>
-              <ul style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              <ul style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', paddingLeft: '1.25rem' }}>
                 {CONTEXT_WINDOWS.map((w) => (
                   <li key={w.label}>
                     ≈ {((pasteResult.total / w.size) * 100).toFixed(2)}% of a {w.label} context window
@@ -93,13 +93,16 @@ export function TokenCalculatorTool() {
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
                       fontSize: '0.85rem',
                       borderBottom: '1px solid var(--border-color)',
                       padding: '0.4rem 0',
                     }}
                   >
-                    <code>{t.name}</code>
-                    <span>{t.tokens.toLocaleString()} tokens</span>
+                    <code style={{ wordBreak: 'break-all' }}>{t.name}</code>
+                    <span style={{ flexShrink: 0, fontWeight: 500 }}>{t.tokens.toLocaleString()} tokens</span>
                   </div>
                 ))}
               </div>
