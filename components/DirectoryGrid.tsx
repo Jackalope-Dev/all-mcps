@@ -683,14 +683,7 @@ export default function DirectoryGrid({
                 className={isFeaturedListing(server) ? 'directory-card-featured' : undefined}
                 style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: '1rem',
-                  }}
-                >
+                <div className="directory-card-header">
                   <ServerIcon name={server.name} logoUrl={server.logoUrl} />
                   <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {isFeaturedListing(server) && (
@@ -734,7 +727,7 @@ export default function DirectoryGrid({
                 >
                   <SafeMarkdown content={server.description || 'No description provided.'} isInline />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="directory-card-footer">
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0 }}>
                     <Badge variant="category">{server.category}</Badge>
                   </div>

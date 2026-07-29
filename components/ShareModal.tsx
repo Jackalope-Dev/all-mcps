@@ -125,13 +125,13 @@ export default function ShareModal({
           <X size={20} />
         </button>
 
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white' }}>Share & Embed</h2>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white', paddingRight: '3rem' }}>Share & Embed</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.875rem' }}>
           Add these to your website or GitHub README to get a high-quality backlink and drive traffic to your tool.
         </p>
 
         {/* Badge Section */}
-        <div className="mb-6">
+        <div className="share-modal-section">
           <BadgeEmbedBuilder serverId={serverId} serverName={serverName} />
         </div>
 

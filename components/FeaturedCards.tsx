@@ -49,7 +49,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
           <Card href={`/mcp/${server.id}`} hoverable style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)' }}></div>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+            <div className="featured-card-header">
               <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: getGradient(server.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
                 {server.name.charAt(0)}
               </div>
@@ -88,7 +88,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
           >
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #38bdf8)' }}></div>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+            <div className="featured-card-header">
               <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(0, 123, 255, 0.2))', border: '1px solid rgba(0, 229, 255, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Plus size={28} style={{ color: '#00E5FF' }} />
               </div>

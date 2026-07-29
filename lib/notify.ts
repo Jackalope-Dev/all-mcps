@@ -21,7 +21,7 @@ export async function getEmailEnv() {
 
   return {
     apiKey,
-    fromEmail: fromEmail || 'onboarding@resend.dev',
+    fromEmail: `AllMCPs <${fromEmail || 'onboarding@resend.dev'}>`,
     adminEmail: adminEmail || 'cadenjsumner@gmail.com',
   };
 }

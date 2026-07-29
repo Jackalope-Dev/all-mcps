@@ -51,156 +51,100 @@ export function BadgeEmbedBuilder({
     }
   };
 
+  const styleOptions: { value: typeof badgeStyle; label: string }[] = [
+    { value: 'shield', label: 'Standard Badge (20px)' },
+    { value: 'flat-square', label: 'Flat Square (20px)' },
+    { value: 'featured', label: 'Featured Banner (32px)' },
+    { value: 'directory', label: 'Directory Card (40px)' },
+  ];
+
+  const metricOptions: { value: typeof badgeMetric; label: string }[] = [
+    { value: 'status', label: 'Status (Verified)' },
+    { value: 'upvotes', label: 'Upvotes' },
+    { value: 'views', label: 'Views' },
+    { value: 'installs', label: 'Installs' },
+  ];
+
   return (
-    <div className={`rounded-xl border border-white/10 bg-black/40 backdrop-blur-md p-6 ${className}`}>
-      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+    <div className={`badge-embed-builder ${className}`}>
+      <div className="badge-embed-builder-header">
         <div>
-          <h3 className="text-base font-semibold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-cyan-400" /> Dynamic SVG Verification Badge
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <Sparkles size={16} style={{ color: 'var(--accent-color)' }} />
+            Dynamic SVG Verification Badge
           </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
             Embed on your GitHub README or project site to showcase your listing and automatically claim Verified status.
           </p>
         </div>
 
         {/* Server ID Override Input if generic builder */}
         {!serverId && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-zinc-400">Server ID:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>Server ID:</span>
             <input
               type="text"
               value={customId}
               onChange={(e) => setCustomId(e.target.value)}
               placeholder="e.g. sqlite-mcp"
-              className="px-2.5 py-1 rounded bg-zinc-900 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-cyan-500"
+              className="form-input"
+              style={{ padding: '0.25rem 0.625rem', fontSize: '0.75rem', fontFamily: 'monospace', width: 'auto', maxWidth: '180px' }}
             />
           </div>
         )}
       </div>
 
       {/* Style & Data Metric Toggles */}
-      <div className="space-y-4 mb-5">
+      <div className="badge-embed-builder-toggles">
         {/* Style selection */}
         <div>
-          <div className="text-xs font-medium text-zinc-400 mb-1.5">Badge Style</div>
-          <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-lg border border-white/10 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setBadgeStyle('shield')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                badgeStyle === 'shield'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Standard Badge (20px)
-            </button>
-            <button
-              type="button"
-              onClick={() => setBadgeStyle('flat-square')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                badgeStyle === 'flat-square'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Flat Square (20px)
-            </button>
-            <button
-              type="button"
-              onClick={() => setBadgeStyle('featured')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                badgeStyle === 'featured'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Featured Banner (32px)
-            </button>
-            <button
-              type="button"
-              onClick={() => setBadgeStyle('directory')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                badgeStyle === 'directory'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Directory Card (40px)
-            </button>
+          <div className="badge-embed-label">Badge Style</div>
+          <div className="badge-embed-toggle-group">
+            {styleOptions.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setBadgeStyle(value)}
+                className={`badge-embed-toggle-btn ${badgeStyle === value ? 'is-active' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Metric selection & Theme selection */}
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="badge-embed-metric-row">
           <div>
-            <div className="text-xs font-medium text-zinc-400 mb-1.5">Displayed Data / Metric</div>
-            <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-lg border border-white/10 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setBadgeMetric('status')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  badgeMetric === 'status'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Status (Verified)
-              </button>
-              <button
-                type="button"
-                onClick={() => setBadgeMetric('upvotes')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  badgeMetric === 'upvotes'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Upvotes
-              </button>
-              <button
-                type="button"
-                onClick={() => setBadgeMetric('views')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  badgeMetric === 'views'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Views
-              </button>
-              <button
-                type="button"
-                onClick={() => setBadgeMetric('installs')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  badgeMetric === 'installs'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Installs
-              </button>
+            <div className="badge-embed-label">Displayed Data / Metric</div>
+            <div className="badge-embed-toggle-group">
+              {metricOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setBadgeMetric(value)}
+                  className={`badge-embed-toggle-btn ${badgeMetric === value ? 'is-active' : ''}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
           <div>
-            <div className="text-xs font-medium text-zinc-400 mb-1.5">Theme</div>
-            <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-lg border border-white/10">
+            <div className="badge-embed-label">Theme</div>
+            <div className="badge-embed-toggle-group">
               <button
                 type="button"
                 onClick={() => setBadgeTheme('dark')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  badgeTheme === 'dark' ? 'bg-white/15 text-white' : 'text-zinc-400 hover:text-white'
-                }`}
+                className={`badge-embed-toggle-btn ${badgeTheme === 'dark' ? 'is-active-light' : ''}`}
               >
                 Dark
               </button>
               <button
                 type="button"
                 onClick={() => setBadgeTheme('light')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  badgeTheme === 'light' ? 'bg-white text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-white'
-                }`}
+                className={`badge-embed-toggle-btn ${badgeTheme === 'light' ? 'is-active-solid' : ''}`}
               >
                 Light
               </button>
@@ -210,69 +154,64 @@ export function BadgeEmbedBuilder({
       </div>
 
       {/* Live Badge Preview */}
-      <div className="mb-5">
-        <div className="text-xs text-zinc-400 font-medium mb-1.5">Live Preview</div>
-        <div
-          className={`p-4 rounded-xl border flex items-center justify-center transition-colors min-h-[64px] ${
-            badgeTheme === 'light' ? 'bg-slate-100 border-slate-300' : 'bg-zinc-950 border-white/10'
-          }`}
-        >
+      <div>
+        <div className="badge-embed-label">Live Preview</div>
+        <div className={`badge-embed-preview ${badgeTheme === 'light' ? 'badge-embed-preview--light' : 'badge-embed-preview--dark'}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/badge/${cleanId}${queryString}`}
             alt={`${serverName} AllMCPs Badge`}
-            style={{ height: `${badgeHeight}px` }}
-            className="max-w-full"
+            style={{ height: `${badgeHeight}px`, maxWidth: '100%' }}
           />
         </div>
       </div>
 
       {/* Verification Bonus Callout */}
-      <div className="mb-5 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5">
-        <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-        <div className="text-xs text-emerald-200">
-          <span className="font-semibold">Automatic Health & Verification Sync</span>: Adding this badge to your GitHub README triggers automated verification on the next health check run!
+      <div className="badge-embed-callout">
+        <ShieldCheck size={16} style={{ color: '#34d399', flexShrink: 0, marginTop: '0.125rem' }} />
+        <div className="badge-embed-callout-text">
+          <span style={{ fontWeight: 600 }}>Automatic Health & Verification Sync</span>: Adding this badge to your GitHub README triggers automated verification on the next health check run!
         </div>
       </div>
 
       {/* Code Snippet Outputs */}
-      <div className="space-y-3">
+      <div className="badge-embed-snippets">
         {/* Markdown Snippet */}
-        <div>
-          <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
+        <div className="badge-embed-snippet-block">
+          <div className="badge-embed-snippet-label">
             <span>Markdown (for GitHub README.md)</span>
           </div>
-          <div className="relative group rounded-lg bg-zinc-950 border border-white/10 p-2.5">
-            <pre className="text-xs text-zinc-300 font-mono overflow-x-auto pr-16">
+          <div className="badge-embed-snippet-code">
+            <pre>
               <code>{markdownSnippet}</code>
             </pre>
             <button
               type="button"
               onClick={() => copyToClipboard(markdownSnippet, 'markdown')}
-              className="absolute top-2 right-2 p-1.5 rounded bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition-all flex items-center gap-1 text-xs"
+              className="badge-embed-copy-btn"
             >
-              {copiedKey === 'markdown' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="text-xs">{copiedKey === 'markdown' ? 'Copied' : 'Copy'}</span>
+              {copiedKey === 'markdown' ? <Check size={14} style={{ color: '#34d399' }} /> : <Copy size={14} />}
+              <span>{copiedKey === 'markdown' ? 'Copied' : 'Copy'}</span>
             </button>
           </div>
         </div>
 
         {/* HTML Snippet */}
-        <div>
-          <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
+        <div className="badge-embed-snippet-block">
+          <div className="badge-embed-snippet-label">
             <span>HTML (for Website or Blog)</span>
           </div>
-          <div className="relative group rounded-lg bg-zinc-950 border border-white/10 p-2.5">
-            <pre className="text-xs text-zinc-300 font-mono overflow-x-auto pr-16">
+          <div className="badge-embed-snippet-code">
+            <pre>
               <code>{htmlSnippet}</code>
             </pre>
             <button
               type="button"
               onClick={() => copyToClipboard(htmlSnippet, 'html')}
-              className="absolute top-2 right-2 p-1.5 rounded bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition-all flex items-center gap-1 text-xs"
+              className="badge-embed-copy-btn"
             >
-              {copiedKey === 'html' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="text-xs">{copiedKey === 'html' ? 'Copied' : 'Copy'}</span>
+              {copiedKey === 'html' ? <Check size={14} style={{ color: '#34d399' }} /> : <Copy size={14} />}
+              <span>{copiedKey === 'html' ? 'Copied' : 'Copy'}</span>
             </button>
           </div>
         </div>

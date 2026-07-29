@@ -94,6 +94,8 @@ const container = {
 };
 
 const header = {
+  backgroundColor: "#020617", // Slate 950 — explicit so Outlook's per-table
+  // rendering doesn't default this cell to white and hide the white wordmark.
   padding: "20px 0",
   textAlign: "center" as const,
 };
