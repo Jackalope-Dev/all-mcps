@@ -210,9 +210,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
       detail: 'We have not completed a health check for this listing yet.',
     },
   }[healthKey];
-  const healthTooltip = `${healthUi.label} — ${healthUi.detail}${
-    server.lastCheckedAt ? ` Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}.` : ''
-  }`;
 
   // Sidebar ad slot rotates between paid featured listings and the "spotlight your own
   // server" upsell — one extra slot in the pool reserved for the upsell keeps it showing
