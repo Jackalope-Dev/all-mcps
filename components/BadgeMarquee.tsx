@@ -69,6 +69,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://startupfa.me/s/allmcps?utm_source=allmcps.com',
     imageUrl: 'https://startupfa.me/badges/featured-badge.webp',
     rel: 'noopener'
+  },
+  {
+    id: 'launchkiwi',
+    name: 'Featured on LaunchKiwi',
+    href: 'https://launchkiwi.com/p/all-mcps',
+    imageUrl: 'https://launchkiwi.com/badge-dark.svg',
+    rel: 'noopener'
   }
 ];
 
