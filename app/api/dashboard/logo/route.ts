@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'You do not own this listing.' }, { status: 403 });
     }
 
-    let processed: Buffer;
+    let processed: Uint8Array;
     try {
       processed = await processLogoUpload(await file.arrayBuffer());
     } catch (err) {

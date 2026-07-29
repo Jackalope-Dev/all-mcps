@@ -94,16 +94,11 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       disabled={hasUpvoted}
+      className="listing-metric-pill"
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
         background: hasUpvoted ? 'rgba(236, 72, 153, 0.15)' : 'rgba(255, 255, 255, 0.05)',
         border: `1px solid ${hasUpvoted ? 'rgba(236, 72, 153, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`,
-        borderRadius: '100px',
-        padding: '0.5rem 1rem',
         color: hasUpvoted ? '#ec4899' : (isHovered ? 'white' : 'var(--text-secondary)'),
-        fontSize: '0.875rem',
         fontWeight: hasUpvoted ? 600 : 500,
         cursor: hasUpvoted ? 'default' : 'pointer',
         transition: 'all 0.2s ease',

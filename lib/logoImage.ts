@@ -1,4 +1,4 @@
-import Jimp from 'jimp';
+import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
 
 export class LogoValidationError extends Error {}
 
@@ -22,8 +22,17 @@ function isPngOrJpeg(bytes: Uint8Array): boolean {
  * Validates, decodes, and re-encodes an uploaded logo. Re-encoding (not just
  * passing the original bytes through) is what strips embedded
  * metadata/payloads — the decode step alone isn't enough.
+ *
+ * Uses @cf-wasm/photon (a WASM port of the Rust `photon` image library)
+ * rather than a Node-oriented library. PNG decode/encode in the actual
+ * Workers runtime needs a codec that doesn't depend on Node's private zlib
+ * internals — jimp (via pngjs's sync codec, which subclasses Node's
+ * internal zlib.Inflate/Deflate classes) decodes/encodes fine in plain
+ * Node but throws in production Workers, since nodejs_compat only
+ * implements the public zlib API, not those private internals. Photon's
+ * WASM build has no such dependency.
  */
-export async function processLogoUpload(bytes: ArrayBuffer): Promise<Buffer> {
+export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array> {
   if (bytes.byteLength === 0) {
     throw new LogoValidationError('Uploaded file is empty.');
   }
@@ -36,18 +45,39 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Buffer> {
     throw new LogoValidationError('Logo must be a PNG or JPEG image.');
   }
 
-  let image: Jimp;
+  let input: PhotonImage;
   try {
-    image = await Jimp.read(Buffer.from(bytes));
+    input = PhotonImage.new_from_byteslice(view);
   } catch (err) {
-    console.error('Jimp failed to decode uploaded logo:', err);
+    console.error('Photon failed to decode uploaded logo:', err);
     throw new LogoValidationError('Could not read this file as an image.');
   }
 
-  if (image.bitmap.width < MIN_SOURCE_DIMENSION || image.bitmap.height < MIN_SOURCE_DIMENSION) {
-    throw new LogoValidationError(`Image must be at least ${MIN_SOURCE_DIMENSION}x${MIN_SOURCE_DIMENSION}px.`);
-  }
+  try {
+    const width = input.get_width();
+    const height = input.get_height();
+    if (width < MIN_SOURCE_DIMENSION || height < MIN_SOURCE_DIMENSION) {
+      throw new LogoValidationError(`Image must be at least ${MIN_SOURCE_DIMENSION}x${MIN_SOURCE_DIMENSION}px.`);
+    }
 
-  image.cover(OUTPUT_SIZE, OUTPUT_SIZE);
-  return image.getBufferAsync(Jimp.MIME_PNG);
+    // Crop to a centered square, then resize to the fixed output size —
+    // equivalent to a "cover" fit (fills the square, no letterboxing).
+    const side = Math.min(width, height);
+    const x1 = Math.floor((width - side) / 2);
+    const y1 = Math.floor((height - side) / 2);
+
+    const cropped = crop(input, x1, y1, x1 + side, y1 + side);
+    try {
+      const resized = resize(cropped, OUTPUT_SIZE, OUTPUT_SIZE, SamplingFilter.Lanczos3);
+      try {
+        return resized.get_bytes();
+      } finally {
+        resized.free();
+      }
+    } finally {
+      cropped.free();
+    }
+  } finally {
+    input.free();
+  }
 }

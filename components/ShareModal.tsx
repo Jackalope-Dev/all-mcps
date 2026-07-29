@@ -196,16 +196,11 @@ export default function ShareModal({
       {variant === 'mini' ? (
         <button
           onClick={() => setIsOpen(true)}
+          className="listing-metric-pill"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
             background: 'rgba(255, 255, 255, 0.05)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '100px',
-            padding: '0.5rem 1rem',
             color: 'var(--text-secondary)',
-            fontSize: '0.875rem',
             fontWeight: 500,
             cursor: 'pointer',
             transition: 'all 0.2s ease',
