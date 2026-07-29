@@ -16,7 +16,15 @@ function getDisplayName(name: string) {
     .join(' ');
 }
 
-export default function ShareModal({ serverId, serverName }: { serverId: string, serverName: string }) {
+export default function ShareModal({ 
+  serverId, 
+  serverName,
+  variant = 'full',
+}: { 
+  serverId: string; 
+  serverName: string;
+  variant?: 'full' | 'mini';
+}) {
   const displayName = getDisplayName(serverName);
   const [isOpen, setIsOpen] = useState(false);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
@@ -185,28 +193,62 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
 
   return (
     <>
-      <button 
-        onClick={() => setIsOpen(true)}
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          gap: '0.5rem', 
-          padding: '0.75rem 1rem', 
-          backgroundColor: 'var(--accent-color)',
-          color: 'var(--bg-color)',
-          borderRadius: '8px', 
-          fontWeight: 600, 
-          cursor: 'pointer',
-          border: 'none',
-          width: '100%',
-          transition: 'opacity 0.2s'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-        onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-      >
-        <Share2 size={18} /> Share / Embed
-      </button>
+      {variant === 'mini' ? (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '100px',
+            padding: '0.5rem 1rem',
+            color: 'var(--text-secondary)',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'white';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+          }}
+          title="Share & Embed Badge or Widget"
+        >
+          <Share2 size={16} />
+          <span>Share &amp; Embed</span>
+        </button>
+      ) : (
+        <button 
+          onClick={() => setIsOpen(true)}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: '0.5rem', 
+            padding: '0.75rem 1rem', 
+            backgroundColor: 'var(--accent-color)',
+            color: 'var(--bg-color)',
+            borderRadius: '8px', 
+            fontWeight: 600, 
+            cursor: 'pointer',
+            border: 'none',
+            width: '100%',
+            transition: 'opacity 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+        >
+          <Share2 size={18} /> Share / Embed
+        </button>
+      )}
 
       {isOpen && mounted && createPortal(modalContent, document.body)}
     </>

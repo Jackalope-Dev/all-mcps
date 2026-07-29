@@ -47,7 +47,7 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
 
           {(i + 1) % 6 === 0 && (
             <Link
-              href="/pricing"
+              href="/submit"
               tabIndex={isDuplicate ? -1 : undefined}
               aria-hidden={isDuplicate ? true : undefined}
               className="surface"

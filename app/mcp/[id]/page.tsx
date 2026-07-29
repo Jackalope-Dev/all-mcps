@@ -17,6 +17,7 @@ import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
 import { isFeaturedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
 import { getRelatedServers, PUBLIC_SERVER_COLUMNS } from '../../../lib/servers';
+import { auth } from '../../../lib/auth';
 
 // Define the type for our server data
 type Server = {
@@ -134,6 +135,8 @@ export async function generateStaticParams() {
 export default async function MCPDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const server = await getServer(id);
+  const session = await auth();
+  const isSignedIn = !!session?.user;
 
   if (!server) {
     return (
@@ -290,6 +293,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <ViewTracker serverId={server.id} initialCount={server.views || 0} />
             <InstallsStat count={server.copies || 0} />
             <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
+            <ShareModal serverId={server.id} serverName={server.name} variant="mini" />
           </div>
           
           <div style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
@@ -475,6 +479,47 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             })()}
           </div>
 
+          {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) */}
+          <div
+            className="surface"
+            style={{
+              padding: '1.5rem',
+              borderColor: 'rgba(0, 229, 255, 0.35)',
+              background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
+              boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)', fontSize: '0.7rem' }}>
+                ★ Spotlight Slot
+              </Badge>
+            </div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+              Feature Your MCP Server
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+              Get maximum visibility for your server across our directory, search results, and detail pages.
+            </p>
+            <Link
+              href="/submit"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+                padding: '0.75rem 1rem',
+                background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
+                color: '#090d16',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                textDecoration: 'none',
+              }}
+            >
+              <Sparkles size={16} /> Submit &amp; Spotlight Your Server &rarr;
+            </Link>
+          </div>
+
           <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -543,36 +588,38 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </Link>
             </div>
           ) : (
-            <div className="surface" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Globe size={18} color="var(--accent-color)" /> Listing owner
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
-                {server.websiteUrl
-                  ? server.websiteVerified
-                    ? 'Website is attached and verified. You can re-verify or change it anytime.'
-                    : 'Website is attached but not verified yet — prove control for a stronger listing.'
-                  : 'Add your product site, then verify with a badge or DNS TXT.'}
-              </p>
-              <Link
-                href={`/mcp/${server.id}/claim`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.4rem',
-                  padding: '0.75rem 1rem',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                }}
-              >
-                Manage website &amp; verification
-              </Link>
-            </div>
+            isSignedIn && (
+              <div className="surface" style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Globe size={18} color="var(--accent-color)" /> Listing owner
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                  {server.websiteUrl
+                    ? server.websiteVerified
+                      ? 'Website is attached and verified. You can re-verify or change it anytime.'
+                      : 'Website is attached but not verified yet — prove control for a stronger listing.'
+                    : 'Add your product site, then verify with a badge or DNS TXT.'}
+                </p>
+                <Link
+                  href={`/mcp/${server.id}/claim`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.4rem',
+                    padding: '0.75rem 1rem',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  Manage website &amp; verification
+                </Link>
+              </div>
+            )
           )}
 
           {server.status === 'active' && (
@@ -582,47 +629,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               isPremium={!!server.isPremium}
             />
           )}
-
-          {/* Sidebar Highlight / Ad Slot */}
-          <div
-            className="surface"
-            style={{
-              padding: '1.5rem',
-              borderColor: 'rgba(0, 229, 255, 0.35)',
-              background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
-              boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)', fontSize: '0.7rem' }}>
-                ★ Spotlight Slot
-              </Badge>
-            </div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-              Feature Your MCP Server
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
-              Get maximum visibility for your server across our directory, search results, and detail pages.
-            </p>
-            <Link
-              href="/pricing"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                padding: '0.75rem 1rem',
-                background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
-                color: '#090d16',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '0.875rem',
-                textDecoration: 'none',
-              }}
-            >
-              <Sparkles size={16} /> Spotlight Your Server →
-            </Link>
-          </div>
 
           <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share & Embed</h3>
