@@ -2344,12 +2344,52 @@ nav[aria-label="Table of contents"] {
   border-bottom-color: var(--card-bg);
 }
 
-.mcp-icon-tooltip:hover .mcp-icon-tooltip-bubble,
-.mcp-icon-tooltip:focus-within .mcp-icon-tooltip-bubble {
+/* Hover/focus only reveal the tooltip on devices that can actually hover.
+   On touch devices :hover sticks after a tap with no way to dismiss, so those
+   are driven by the JS `is-open` class (IconTooltip) instead. */
+@media (hover: hover) {
+  .mcp-icon-tooltip:hover .mcp-icon-tooltip-bubble,
+  .mcp-icon-tooltip:focus-within .mcp-icon-tooltip-bubble {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+    transition-delay: 0.1s;
+  }
+}
+
+.mcp-icon-tooltip.is-open .mcp-icon-tooltip-bubble {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
-  transition-delay: 0.1s;
+  transition-delay: 0s;
+}
+
+/* On narrow screens an absolutely-positioned, icon-centered bubble can extend
+   past the viewport edge and force horizontal scrolling. Detach it into a
+   fixed, near-full-width popover pinned to the bottom so it always fits. */
+@media (max-width: 640px) {
+  .mcp-icon-tooltip-bubble {
+    position: fixed;
+    top: auto;
+    bottom: 1.25rem;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    transform: translateY(8px);
+  }
+
+  .mcp-icon-tooltip.is-open .mcp-icon-tooltip-bubble {
+    transform: translateY(0);
+  }
+
+  /* The little caret assumes the bubble sits directly under the icon; it makes
+     no sense once the bubble is a detached bottom popover. */
+  .mcp-icon-tooltip-bubble::before,
+  .mcp-icon-tooltip-bubble::after {
+    display: none;
+  }
 }
 
 .mcp-icon-tooltip-title {

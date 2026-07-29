@@ -19,6 +19,7 @@ import { OutboundLink } from '../../../components/ui/OutboundLink';
 import { getRelatedServers, getFeaturedServers, PUBLIC_SERVER_COLUMNS } from '../../../lib/servers';
 import { auth } from '../../../lib/auth';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
+import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { parseServerName } from '../../../lib/displayName';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 
@@ -314,8 +315,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: org ? '0.2rem' : '1rem' }}>
             <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
-            <span className="mcp-icon-tooltip">
-              <span className="mcp-icon-tooltip-trigger" tabIndex={0}>
+            <IconTooltip
+              label={`Health status: ${healthUi.label}`}
+              trigger={
                 <span
                   style={{
                     display: 'inline-block',
@@ -327,54 +329,49 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     flexShrink: 0,
                   }}
                 />
+              }
+            >
+              <span className="mcp-icon-tooltip-title">
+                <span className="mcp-icon-tooltip-dot" style={{ backgroundColor: healthUi.color }} />
+                {healthUi.label}
               </span>
-              <span className="mcp-icon-tooltip-bubble" role="tooltip">
-                <span className="mcp-icon-tooltip-title">
-                  <span className="mcp-icon-tooltip-dot" style={{ backgroundColor: healthUi.color }} />
-                  {healthUi.label}
-                </span>
-                <span className="mcp-icon-tooltip-body">{healthUi.detail}</span>
-                <span className="mcp-icon-tooltip-meta">
-                  {server.lastCheckedAt
-                    ? `Last checked ${new Date(server.lastCheckedAt).toLocaleString()}`
-                    : 'No health check has run yet.'}
-                </span>
+              <span className="mcp-icon-tooltip-body">{healthUi.detail}</span>
+              <span className="mcp-icon-tooltip-meta">
+                {server.lastCheckedAt
+                  ? `Last checked ${new Date(server.lastCheckedAt).toLocaleString()}`
+                  : 'No health check has run yet.'}
               </span>
-            </span>
+            </IconTooltip>
             <h1 className="text-page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.45rem' }}>
               {displayName}
               {server.isPremium && (
-                <span className="mcp-icon-tooltip">
-                  <span className="mcp-icon-tooltip-trigger" tabIndex={0}>
-                    <Crown size={20} color="#facc15" fill="#facc15" />
+                <IconTooltip
+                  label="Premium listing"
+                  trigger={<Crown size={20} color="#facc15" fill="#facc15" />}
+                >
+                  <span className="mcp-icon-tooltip-title">
+                    <Crown size={14} color="#facc15" fill="#facc15" /> Premium listing
                   </span>
-                  <span className="mcp-icon-tooltip-bubble" role="tooltip">
-                    <span className="mcp-icon-tooltip-title">
-                      <Crown size={14} color="#facc15" fill="#facc15" /> Premium listing
-                    </span>
-                    <span className="mcp-icon-tooltip-body">
-                      This owner pays for enhanced visibility — priority placement in search, category pages, and rotating spotlight slots across the directory.
-                    </span>
+                  <span className="mcp-icon-tooltip-body">
+                    This owner pays for enhanced visibility — priority placement in search, category pages, and rotating spotlight slots across the directory.
                   </span>
-                </span>
+                </IconTooltip>
               )}
               {isVerifiedListing(server) && (
-                <span className="mcp-icon-tooltip">
-                  <span className="mcp-icon-tooltip-trigger" tabIndex={0}>
-                    <BadgeCheck size={20} color="var(--accent-color)" />
+                <IconTooltip
+                  label={server.isOfficial ? 'Ownership verified' : 'Premium listing'}
+                  trigger={<BadgeCheck size={20} color="var(--accent-color)" />}
+                >
+                  <span className="mcp-icon-tooltip-title">
+                    <BadgeCheck size={14} color="var(--accent-color)" />
+                    {server.isOfficial ? 'Ownership verified' : 'Premium listing'}
                   </span>
-                  <span className="mcp-icon-tooltip-bubble" role="tooltip">
-                    <span className="mcp-icon-tooltip-title">
-                      <BadgeCheck size={14} color="var(--accent-color)" />
-                      {server.isOfficial ? 'Ownership verified' : 'Premium listing'}
-                    </span>
-                    <span className="mcp-icon-tooltip-body">
-                      {server.isOfficial
-                        ? 'The owner proved control of this listing via a GitHub README, site badge, or DNS TXT record.'
-                        : 'This listing has an active Premium subscription. Ownership has not been separately verified.'}
-                    </span>
+                  <span className="mcp-icon-tooltip-body">
+                    {server.isOfficial
+                      ? 'The owner proved control of this listing via a GitHub README, site badge, or DNS TXT record.'
+                      : 'This listing has an active Premium subscription. Ownership has not been separately verified.'}
                   </span>
-                </span>
+                </IconTooltip>
               )}
             </h1>
           </div>
