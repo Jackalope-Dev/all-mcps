@@ -1,58 +1,41 @@
-# Curated Directory Submission List for AllMCPs
+# 🛠️ Curated Tool, AI Directory & Launch Platform Master List (82 Platforms)
 
-This document contains top high-authority directories, AI registries, and startup submission sites offering **free listings**, **dofollow links**, or **reciprocal badge/link options**.
+Filtered specifically for **Tool & AI Directories, Launch Platforms, Indie Developer Sites, and Backlink Submissions** (excluding corporate review portals like Trustpilot/G2/Capterra).
 
----
-
-## 🟢 Category 1: Developer & Open Source Tools (Highest Relevance)
-
-| Directory Name | Domain | Submission Type | Link Type | Reciprocal Required? | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **DevHunt** | `devhunt.org` | Free Launch | Dofollow | Optional | Product Hunt for developer tools. High conversion & tech audience. |
-| **GitHub Topics / Awesome-MCP** | `github.com` | PR Submission | Dofollow | No | Submit AllMCPs to awesome-mcp lists and topic tags. |
-| **StackShare** | `stackshare.io` | Free Tool Profile | Dofollow | No | Great for listing tech stacks and developer integrations. |
-| **Peerlist** | `peerlist.io` | Free Project Listing | Dofollow | No | Professional network for developers & makers. Great traffic. |
-| **AlternativeTo** | `alternativeto.net` | Free Listing | Dofollow / Indexed | No | High-intent search traffic for users looking for developer tools. |
+All 82 sites below offer **FREE listings** and are sorted by **Domain Rank (DR)**.
 
 ---
 
-## 🤖 Category 2: AI & Agent Directories
+## 🚀 Top Tool & Launch Directories (DR 70–92)
 
-| Directory Name | Domain | Submission Type | Link Type | Reciprocal Required? | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Toolify.ai** | `toolify.ai` | Free Submission | Dofollow / Indexed | No | One of the largest AI tool directories on the web. |
-| **Futurepedia** | `futurepedia.io` | Free Submission | Dofollow | No | Curated AI tools directory. High organic search authority. |
-| **FutureTools** | `futuretools.io` | Free Submission | Dofollow | No | AI discovery engine run by Matt Wolfe. |
-| **AI Top Tools** | `aitoptools.com` | Free Submission | Dofollow | Badge Optional | High DR AI directory. |
-| **There's An AI For That** | `theresanaiforthat.com` | Free / Freemium | Indexed | No | Popular AI aggregator. |
-| **All Things AI** | `allthingsai.com` | Free Submission | Dofollow | No | Clean AI directory focused on AI applications & infrastructure. |
-
----
-
-## 🚀 Category 3: Startup & SaaS Directories (Free / Reciprocal)
-
-| Directory Name | Domain | Submission Type | Link Type | Reciprocal Required? | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **SaaSHub** | `saashub.com` | Free / Reciprocal | Dofollow | **Yes (Badge)** | Highly trusted SaaS comparison directory. |
-| **Product Hunt** | `producthunt.com` | Free Launch | Dofollow / High DR | No | Gold standard for tech launches. |
-| **BetaList** | `betalist.com` | Free Submission | Dofollow | No | For early-stage products and startups. |
-| **LaunchingNext** | `launchingnext.com` | Free Listing | Dofollow | **Yes (Reciprocal)** | Promotes upcoming tech startups. |
-| **MicroLaunch** | `microlaunch.net` | Free Submission | Dofollow | Optional | Platform for micro-SaaS and indie developer products. |
-| **Uneed** | `uneed.best` | Free Launch | Dofollow | **Yes (Badge)** | Popular daily launch tool platform for tech projects. |
-| **StartupBase** | `startupbase.io` | Free Submission | Dofollow | No | Community of startup founders and early adopters. |
-| **Indie Hackers** | `indiehackers.com` | Free Product Page | Dofollow | No | Create product profile and update milestones. |
-| **PitchWall** | `pitchwall.co` | Free Listing | Dofollow | No | Startup discovery platform. |
+| # | Directory Name | Link | DR | Category |
+|---|---|---|---|---|
+| 1 | **Product Hunt** | [producthunt.com](https://producthunt.com) | 92 | Launch Platform |
+| 2 | **AI Tools (Neil Patel)** | [aitools.neilpatel.com](https://aitools.neilpatel.com) | 90 | AI Directory |
+| 3 | **Stack Share** | [stackshare.io](https://stackshare.io) | 89 | Tech Stack / Tool |
+| 4 | **Alternative To** | [alternativeto.net](https://alternativeto.net) | 87 | Software Alternatives |
+| 5 | **Indie Hackers** | [indiehackers.com](https://indiehackers.com) | 87 | Indie Developer Launch |
+| 6 | **Peerlist** | [peerlist.io](https://peerlist.io) | 80 | Project Launch |
+| 7 | **SaaS Worthy** | [saasworthy.com](https://saasworthy.com) | 80 | SaaS Directory |
+| 8 | **Startup Stash** | [startupstash.com](https://startupstash.com/) | 76 | Tool Directory |
+| 9 | **OECD AI** | [oecd.ai](https://oecd.ai/en/catalogue/tools/submit) | 76 | AI Tool Directory |
+| 10 | **Alternative.me** | [alternative.me](https://alternative.me) | 75 | Alternatives |
+| 11 | **SaaS Hub** | [saashub.com](https://www.saashub.com/services/submit) | 75 | SaaS Directory |
+| 12 | **Launching Next** | [launchingnext.com](https://www.launchingnext.com/submit) | 73 | Launch Platform |
+| 13 | **Side Projectors** | [sideprojectors.com](https://sideprojectors.com) | 73 | Side Projects |
+| 14 | **Future Tools** | [futuretools.io](https://www.futuretools.io/submit-a-tool) | 70 | AI Directory |
+| 15 | **TechDirectory** | [techdirectory.io](https://techdirectory.io) | 70 | Tech Directory |
 
 ---
 
-## 📋 Quick Submission Checklist
+## 🤖 AI Tools & Micro Launch Platforms (DR 40–69)
 
-1. **URL:** `https://allmcps.com`
-2. **Tagline:** `The Open Directory & Registry for Model Context Protocol (MCP) Servers`
-3. **Short Pitch:** `Discover, search, and connect verified MCP servers to AI tools like Claude Desktop, Cursor, Windsurf, and Antigravity.`
-4. **Logos:** [brand-assets/logo-icon.png](file:///c:/Users/caden/OneDrive/Desktop/all-mcps/brand-assets/logo-icon.png)
-5. **Screenshots:**
-   - Desktop HD: `https://allmcps.com/screenshots/homepage-screenshot-1920x1080.png`
-   - Desktop Standard: `https://allmcps.com/screenshots/homepage-screenshot-desktop.png`
-   - Mobile: `https://allmcps.com/screenshots/homepage-screenshot-mobile.png`
-6. **Reciprocal Badge Marquee:** Automatically live in `SiteFooter` ([components/BadgeMarquee.tsx](file:///c:/Users/caden/OneDrive/Desktop/all-mcps/components/BadgeMarquee.tsx)).
+Includes **Dang.ai**, **AI Tool Directory**, **Dev Hunt**, **PitchWall**, **SaaS AI Tools**, **Tiny Launch**, **AIAI.Tools**, **Ben's Bites**, **No Code Founders**, **Five Taco**, **AI ToolBoard**, **Lib Hunt**, **U Need**, **Open Startup List**, **Startup Buffer**, **Insidr.ai**, **MarsX**, **The AI Navigator**, **StartupBase**, **AI Directories**, **All GPTs**, **AI Hub**, **Public APIs**, **Ai Valley**, **PoweredbyAI**, **AI Depot**, **Productivity Directory**, **AI of The Day**, **Canopy Directory**, **AI Tool Guru**, **AI Tools**, **Gpts Hunter**, and 50+ additional curated platforms.
+
+---
+
+### Command to Launch Chrome AI Agent:
+```bash
+npm run submit-directories
+```
+The AI Agent will drive Chrome through these 82 tool launch and backlink directories in order of authority.

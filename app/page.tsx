@@ -77,6 +77,10 @@ export default async function Home({
 
   const servers = await getServers();
 
+  // Prune initialServers for landing page to keep HTML payload lightweight (~50KB instead of 2.65MB)
+  // so external AI scrapers & submission platforms do not hit response size limit errors
+  const landingServers = servers.slice(0, 48);
+
   // Prefer premium / verified / high-engagement for discovery chrome
   // Seed changes every 5 minutes so different visitors see different featured servers
   const discoverySeed = Math.floor(Date.now() / (5 * 60 * 1000));
@@ -89,7 +93,7 @@ export default async function Home({
   return (
     <main>
       <DirectoryGrid
-        initialServers={servers}
+        initialServers={landingServers}
         marqueeServers={marqueeServers}
         featuredCards={featuredCards}
         variant="landing"
