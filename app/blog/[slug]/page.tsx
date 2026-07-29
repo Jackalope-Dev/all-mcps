@@ -226,7 +226,7 @@ export default async function BlogPostPage({
             </article>
 
             {tocItems.length > 1 && (
-              <div className="hidden lg:block">
+              <div className="hidden lg:block h-full">
                 <TableOfContents items={tocItems} />
               </div>
             )}

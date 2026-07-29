@@ -116,7 +116,7 @@ export function TableOfContents({
   const activeItem = items.find((item) => item.id === activeId) || items[0];
 
   return (
-    <nav aria-label="Table of contents" className={className}>
+    <nav aria-label="Table of contents" className={`h-full ${className}`}>
       {/* Mobile Top Accordion (visible on < 1024px) */}
       <div className="lg:hidden toc-sidebar-card mb-6">
         <button

@@ -533,7 +533,7 @@ export default {
           </div>
 
           {/* Desktop Right Sidebar Table of Contents */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block h-full">
             <TableOfContents items={tocItems} />
           </div>
         </div>

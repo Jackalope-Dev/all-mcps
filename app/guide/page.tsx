@@ -202,7 +202,7 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
           </div>
 
           {/* Desktop Right Sidebar Table of Contents */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block h-full">
             <TableOfContents items={tocItems} />
           </div>
         </div>

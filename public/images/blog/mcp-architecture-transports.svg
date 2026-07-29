@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </linearGradient>
+    
+    <linearGradient id="brandCyanBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#007BFF"/>
+    </linearGradient>
+
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </linearGradient>
+
+    <linearGradient id="accentGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#007BFF" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Grid Pattern -->
+  <g stroke="#1e293b" stroke-width="1" opacity="0.3">
+    <path d="M 0 90 L 1200 90 M 0 180 L 1200 180 M 0 270 L 1200 270 M 0 360 L 1200 360 M 0 450 L 1200 450 M 0 540 L 1200 540" />
+    <path d="M 150 0 L 150 630 M 300 0 L 300 630 M 450 0 L 450 630 M 600 0 L 600 630 M 750 0 L 750 630 M 900 0 L 900 630 M 1050 0 L 1050 630" />
+  </g>
+
+  <!-- Title Header -->
+  <text x="60" y="55" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.02em">
+    Model Context Protocol (MCP) Architecture &amp; Transport Dynamics
+  </text>
+  <text x="60" y="80" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="14" fill="#94a3b8">
+    Client Host Application → JSON-RPC Transport Layer → Executable MCP Server Runtimes
+  </text>
+
+  <!-- SECTION 1: MCP HOST / CLIENT -->
+  <rect x="60" y="120" width="260" height="450" rx="12" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.5"/>
+  <rect x="60" y="120" width="260" height="6" fill="url(#brandCyanBlue)"/>
+  
+  <text x="80" y="160" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#00E5FF">
+    1. AI Host Client
+  </text>
+  <text x="80" y="182" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="13" fill="#94a3b8">
+    Executes model &amp; orchestrates tools
+  </text>
+
+  <!-- Host Items -->
+  <rect x="80" y="210" width="220" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="95" y="238" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#ffffff">Claude Desktop / IDE</text>
+  <text x="95" y="258" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Local user context &amp; configs</text>
+
+  <rect x="80" y="295" width="220" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="95" y="323" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#ffffff">Claude Code / CLI</text>
+  <text x="95" y="343" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Developer agent subprocesses</text>
+
+  <rect x="80" y="380" width="220" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="95" y="408" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#ffffff">Autonomous AI Agent</text>
+  <text x="95" y="428" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Custom multi-tool orchestrator</text>
+
+  <!-- Protocol badge inside client -->
+  <rect x="80" y="475" width="220" height="65" rx="8" fill="url(#accentGlow)" stroke="#00E5FF" stroke-opacity="0.3" stroke-width="1"/>
+  <text x="95" y="502" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#00E5FF">Protocol Capabilities</text>
+  <text x="95" y="522" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">tools/list · tools/call · resources</text>
+
+  <!-- ARROWS HOST -> TRANSPORTS -->
+  <!-- Stdio arrow -->
+  <path d="M 320 250 L 450 250" stroke="#00E5FF" stroke-width="2" stroke-dasharray="6,4"/>
+  <polygon points="450,250 442,245 442,255" fill="#00E5FF"/>
+
+  <!-- SSE arrow -->
+  <path d="M 320 415 L 450 415" stroke="#007BFF" stroke-width="2" stroke-dasharray="6,4"/>
+  <polygon points="450,415 442,410 442,420" fill="#007BFF"/>
+
+  <!-- SECTION 2: TRANSPORTS -->
+  <!-- Stdio Box -->
+  <rect x="450" y="160" width="310" height="180" rx="12" fill="url(#cardGrad)" stroke="#00E5FF" stroke-width="1.5" stroke-opacity="0.6"/>
+  <rect x="465" y="180" width="90" height="24" rx="4" fill="#00E5FF" fill-opacity="0.15"/>
+  <text x="473" y="196" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="11" fill="#00E5FF" letter-spacing="0.05em">STDIO</text>
+  <text x="565" y="196" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="15" fill="#ffffff">Standard Input / Output</text>
+  
+  <text x="465" y="230" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="13" fill="#94a3b8">• Spawns local process via stdio pipes</text>
+  <text x="465" y="252" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="13" fill="#94a3b8">• Near-zero latency &amp; process isolation</text>
+  <text x="465" y="274" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="13" fill="#94a3b8">• Ideal for desktop tools &amp; local dev</text>
+  
+  <rect x="465" y="295" width="280" height="30" rx="6" fill="#020617" stroke="#1e293b"/>
+  <text x="475" y="315" font-family="monospace" font-size="11" fill="#00E5FF">JSON-RPC 2.0 via stdin/stdout</text>
+
+  <!-- SSE Box -->
+  <rect x="450" y="360" width="310" height="180" rx="12" fill="url(#cardGrad)" stroke="#007BFF" stroke-width="1.5" stroke-opacity="0.6"/>
+  <rect x="465" y="380" width="115" height="24" rx="4" fill="#007BFF" fill-opacity="0.2"/>
+  <text x="473" y="396" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="11" fill="#38BDF8" letter-spacing="0.05em">HTTP / SSE</text>
+  <text x="590" y="396" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="15" fill="#ffffff">Streamable HTTP</text>
+  
+  <text x="465" y="430" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="13" fill="#94a3b8">• Server-Sent Events (SSE) + POST</text>
+  <text x="465" y="452" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="13" fill="#94a3b8">• Centralized remote microservice host</text>
+  <text x="465" y="474" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="13" fill="#94a3b8">• OAuth2 / API key token auth</text>
+  
+  <rect x="465" y="495" width="280" height="30" rx="6" fill="#020617" stroke="#1e293b"/>
+  <text x="475" y="515" font-family="monospace" font-size="11" fill="#38BDF8">POST /message &amp; GET /sse</text>
+
+  <!-- ARROWS TRANSPORTS -> MCP SERVER RUNTIME -->
+  <path d="M 760 250 L 880 250" stroke="#00E5FF" stroke-width="2"/>
+  <polygon points="880,250 872,245 872,255" fill="#00E5FF"/>
+
+  <path d="M 760 450 L 880 450" stroke="#007BFF" stroke-width="2"/>
+  <polygon points="880,450 872,445 872,455" fill="#007BFF"/>
+
+  <!-- SECTION 3: MCP SERVER & BACKEND INTEGRATIONS -->
+  <rect x="880" y="120" width="260" height="450" rx="12" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.5"/>
+  <rect x="880" y="120" width="260" height="6" fill="url(#brandCyanBlue)"/>
+  
+  <text x="900" y="160" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#ffffff">
+    3. Target Resources
+  </text>
+  <text x="900" y="182" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="13" fill="#94a3b8">
+    Executed tools &amp; APIs
+  </text>
+
+  <!-- Resource boxes -->
+  <rect x="900" y="210" width="220" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="915" y="238" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#38BDF8">Databases &amp; Warehouses</text>
+  <text x="915" y="258" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">PostgreSQL, Snowflake, SQLite</text>
+
+  <rect x="900" y="295" width="220" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="915" y="323" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#38BDF8">Developer Infrastructure</text>
+  <text x="915" y="343" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">GitHub, GitLab, Kubernetes, CI</text>
+
+  <rect x="900" y="380" width="220" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="915" y="408" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#38BDF8">Enterprise SaaS APIs</text>
+  <text x="915" y="428" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Jira, Slack, Linear, Salesforce</text>
+
+  <rect x="900" y="465" width="220" height="75" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="915" y="493" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14" fill="#38BDF8">Local Filesystem &amp; OS</text>
+  <text x="915" y="513" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Scoped directory file IO &amp; CLI</text>
+</svg>

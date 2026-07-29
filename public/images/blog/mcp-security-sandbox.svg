@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#0b1120"/>
+    </linearGradient>
+
+    <linearGradient id="brandCyanBlue2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#007BFF"/>
+    </linearGradient>
+
+    <linearGradient id="cardGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad2)"/>
+
+  <g stroke="#1e293b" stroke-width="1" opacity="0.25">
+    <path d="M 0 100 L 1200 100 M 0 200 L 1200 200 M 0 300 L 1200 300 M 0 400 L 1200 400 M 0 500 L 1200 500" />
+    <path d="M 200 0 L 200 630 M 400 0 L 400 630 M 600 0 L 600 630 M 800 0 L 800 630 M 1000 0 L 1000 630" />
+  </g>
+
+  <!-- Header -->
+  <text x="60" y="55" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.02em">
+    Defense-in-Depth Security Framework for MCP Servers
+  </text>
+  <text x="60" y="80" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="14" fill="#94a3b8">
+    Four isolated defensive perimeters protecting host infrastructure from prompt injection and tool exploitation
+  </text>
+
+  <!-- LAYER 1 -->
+  <g transform="translate(60, 130)">
+    <rect width="250" height="430" rx="12" fill="url(#cardGrad2)" stroke="#00E5FF" stroke-width="1.5"/>
+    <rect width="250" height="6" fill="#00E5FF" rx="3"/>
+    
+    <text x="20" y="40" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="13" fill="#00E5FF" letter-spacing="0.05em">LAYER 1</text>
+    <text x="20" y="65" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#ffffff">Schema &amp; Input</text>
+    <text x="20" y="85" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Strict Parameter Validation</text>
+
+    <line x1="20" y1="105" x2="230" y2="105" stroke="#1e293b" stroke-width="1"/>
+
+    <rect x="20" y="125" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="150" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Zod / JSON Schema</text>
+    <text x="32" y="168" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Enforce types, enums &amp; max lens</text>
+
+    <rect x="20" y="195" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="220" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Sanitization Pipeline</text>
+    <text x="32" y="238" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Strip non-printable &amp; escape paths</text>
+
+    <rect x="20" y="265" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="290" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Payload Size Guard</text>
+    <text x="32" y="308" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Reject oversized JSON arguments</text>
+    
+    <rect x="20" y="340" width="210" height="60" rx="6" fill="#020617" stroke="#00E5FF" stroke-opacity="0.3"/>
+    <text x="32" y="365" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#00E5FF">Goal:</text>
+    <text x="32" y="383" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Block malformed inputs early</text>
+  </g>
+
+  <!-- LAYER 2 -->
+  <g transform="translate(340, 130)">
+    <rect width="250" height="430" rx="12" fill="url(#cardGrad2)" stroke="#007BFF" stroke-width="1.5"/>
+    <rect width="250" height="6" fill="#007BFF" rx="3"/>
+
+    <text x="20" y="40" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="13" fill="#38BDF8" letter-spacing="0.05em">LAYER 2</text>
+    <text x="20" y="65" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#ffffff">Least Privilege</text>
+    <text x="20" y="85" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Scoped Access Tokens</text>
+
+    <line x1="20" y1="105" x2="230" y2="105" stroke="#1e293b" stroke-width="1"/>
+
+    <rect x="20" y="125" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="150" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Root Folder Chroot</text>
+    <text x="32" y="168" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Lock FS access to relative root</text>
+
+    <rect x="20" y="195" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="220" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Read-Only DB Roles</text>
+    <text x="32" y="238" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Prevent DROP / UPDATE mutation</text>
+
+    <rect x="20" y="265" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="290" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Scoped OAuth Scopes</text>
+    <text x="32" y="308" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Grant minimal API permissions</text>
+
+    <rect x="20" y="340" width="210" height="60" rx="6" fill="#020617" stroke="#007BFF" stroke-opacity="0.3"/>
+    <text x="32" y="365" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#38BDF8">Goal:</text>
+    <text x="32" y="383" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Limit Blast Radius</text>
+  </g>
+
+  <!-- LAYER 3 -->
+  <g transform="translate(620, 130)">
+    <rect width="250" height="430" rx="12" fill="url(#cardGrad2)" stroke="#818CF8" stroke-width="1.5"/>
+    <rect width="250" height="6" fill="#818CF8" rx="3"/>
+
+    <text x="20" y="40" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="13" fill="#A5B4FC" letter-spacing="0.05em">LAYER 3</text>
+    <text x="20" y="65" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#ffffff">Process Isolation</text>
+    <text x="20" y="85" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Sandboxed Runtimes</text>
+
+    <line x1="20" y1="105" x2="230" y2="105" stroke="#1e293b" stroke-width="1"/>
+
+    <rect x="20" y="125" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="150" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Non-Root User Context</text>
+    <text x="32" y="168" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Run under unprivileged uid:10001</text>
+
+    <rect x="20" y="195" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="220" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Container Isolation</text>
+    <text x="32" y="238" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Docker / gVisor container bounds</text>
+
+    <rect x="20" y="265" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="290" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Network Egress Filters</text>
+    <text x="32" y="308" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Restrict outbound IP whitelist</text>
+
+    <rect x="20" y="340" width="210" height="60" rx="6" fill="#020617" stroke="#818CF8" stroke-opacity="0.3"/>
+    <text x="32" y="365" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#A5B4FC">Goal:</text>
+    <text x="32" y="383" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Prevent Host Escape</text>
+  </g>
+
+  <!-- LAYER 4 -->
+  <g transform="translate(900, 130)">
+    <rect width="240" height="430" rx="12" fill="url(#cardGrad2)" stroke="#34D399" stroke-width="1.5"/>
+    <rect width="240" height="6" fill="#34D399" rx="3"/>
+
+    <text x="20" y="40" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="13" fill="#34D399" letter-spacing="0.05em">LAYER 4</text>
+    <text x="20" y="65" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="16" fill="#ffffff">Audit &amp; Observability</text>
+    <text x="20" y="85" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="12" fill="#94a3b8">Structured Telemetry</text>
+
+    <line x1="20" y1="105" x2="220" y2="105" stroke="#1e293b" stroke-width="1"/>
+
+    <rect x="20" y="125" width="200" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="150" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Structured Logs</text>
+    <text x="32" y="168" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Log tool calls to stderr/JSON</text>
+
+    <rect x="20" y="195" width="200" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="220" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Execution Timeouts</text>
+    <text x="32" y="238" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Strict deadline budget per call</text>
+
+    <rect x="20" y="265" width="200" height="60" rx="6" fill="#1e293b"/>
+    <text x="32" y="290" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="13" fill="#ffffff">Rate Limit Thresholds</text>
+    <text x="32" y="308" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Prevent loop resource exhaustion</text>
+
+    <rect x="20" y="340" width="200" height="60" rx="6" fill="#020617" stroke="#34D399" stroke-opacity="0.3"/>
+    <text x="32" y="365" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="12" fill="#34D399">Goal:</text>
+    <text x="32" y="383" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="11" fill="#94a3b8">Detect anomalous calls</text>
+  </g>
+</svg>
