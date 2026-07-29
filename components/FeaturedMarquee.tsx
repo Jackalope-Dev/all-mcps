@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 import { useImpressionTracker } from './ImpressionTracker';
+import { parseServerName } from '../lib/displayName';
 
 type Server = {
   id: string;
@@ -41,7 +42,7 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
           >
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-color)', boxShadow: '0 0 8px var(--accent-color)' }}></span>
-            <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{server.name}</span>
+            <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{parseServerName(server.name).displayName}</span>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{server.category}</span>
           </Link>
 

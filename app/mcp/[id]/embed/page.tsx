@@ -6,6 +6,9 @@ import serversData from '../../../../data/mcp-servers.json';
 import Link from 'next/link';
 import { Terminal } from 'lucide-react';
 import { SafeMarkdown } from '../../../../components/ui/SafeMarkdown';
+import { ServerAvatar } from '../../../../components/ui/ServerAvatar';
+import { parseServerName } from '../../../../lib/displayName';
+import { PUBLIC_SERVER_COLUMNS } from '../../../../lib/servers';
 
 type Server = {
   id: string;
@@ -13,6 +16,7 @@ type Server = {
   url: string;
   description: string;
   category: string;
+  logoUrl?: string | null;
   isOfficial: boolean;
   isPremium?: boolean;
 };
@@ -23,7 +27,11 @@ async function getServer(id: string): Promise<Server | undefined> {
     const ctx = await getCloudflareContext();
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db.select().from(serversTable).where(eq(serversTable.id, id)).limit(1);
+      const dbServers = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.id, id))
+        .limit(1);
       if (dbServers.length > 0) return dbServers[0] as unknown as Server;
     }
   } catch (e) {}
@@ -49,24 +57,10 @@ export async function generateStaticParams() {
   }));
 }
 
-function getGradient(str: string) {
-  const colors = [
-    'linear-gradient(135deg, #00e5ff, #007bff)',
-    'linear-gradient(135deg, #10b981, #047857)',
-    'linear-gradient(135deg, #f59e0b, #b45309)',
-    'linear-gradient(135deg, #8b5cf6, #5b21b6)',
-    'linear-gradient(135deg, #ec4899, #be185d)',
-  ];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
-
 export default async function EmbedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const server = await getServer(id);
+  const { displayName, org } = server ? parseServerName(server.name) : { displayName: '', org: null };
 
   if (!server) {
     return (
@@ -110,9 +104,7 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
       
       <Link href={`/mcp/${server.id}`} target="_blank" rel="noopener noreferrer" className="embed-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', flexShrink: 0 }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: getGradient(server.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 800, textTransform: 'uppercase', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-            {server.name.charAt(0)}
-          </div>
+          <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={40} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
              {(server.isOfficial || server.isPremium) && (
                 <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', fontWeight: 600 }}>Verified</span>
@@ -123,10 +115,15 @@ export default async function EmbedPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
         
-        <h3 style={{ fontSize: '1.125rem', margin: '0 0 0.5rem 0', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-          {server.name}
+        <h3 style={{ fontSize: '1.125rem', margin: org ? '0 0 0.15rem 0' : '0 0 0.5rem 0', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {displayName}
         </h3>
-        
+        {org && (
+          <div style={{ fontSize: '0.7rem', color: '#71717a', margin: '0 0 0.5rem 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {org}
+          </div>
+        )}
+
         <div style={{ fontSize: '0.8rem', margin: '0 0 1rem 0', flexGrow: 1, flexShrink: 0, minHeight: '3.6rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: '#a1a1aa', lineHeight: 1.5 }}>
           <SafeMarkdown content={server.description || 'No description provided.'} isInline />
         </div>

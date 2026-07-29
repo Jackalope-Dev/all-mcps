@@ -41,8 +41,9 @@ export function CommandPalette() {
     fetchedRef.current = true;
     fetch('/api/search-index')
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { servers?: IndexedServer[] } | null) => {
-        if (data?.servers) setLiveServers(data.servers);
+      .then((data) => {
+        const servers = (data as { servers?: IndexedServer[] } | null)?.servers;
+        if (servers) setLiveServers(servers);
       })
       .catch(() => {
         // Silently keep using the bundled static snapshot as a fallback.

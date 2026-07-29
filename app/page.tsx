@@ -97,6 +97,7 @@ export default async function Home({
         marqueeServers={marqueeServers}
         featuredCards={featuredCards}
         variant="landing"
+        totalCount={servers.length}
       />
     </main>
   );

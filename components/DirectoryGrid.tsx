@@ -77,6 +77,7 @@ export default function DirectoryGrid({
   initialCategory = null,
   initialQuery = '',
   variant = 'landing',
+  totalCount,
 }: {
   initialServers: Server[];
   marqueeServers?: Server[];
@@ -85,6 +86,8 @@ export default function DirectoryGrid({
   initialQuery?: string;
   /** `landing` = homepage with marketing hero; `browse` = dedicated list/filter page */
   variant?: 'landing' | 'browse';
+  /** Full catalog size, when `initialServers` is a truncated subset (landing page only). Drives the "browse all" callout. */
+  totalCount?: number;
 }) {
   const isBrowse = variant === 'browse';
   const browseBase = '/browse';
@@ -600,6 +603,37 @@ export default function DirectoryGrid({
             </div>
           </div>
         </div>
+
+        {!isBrowse && typeof totalCount === 'number' && totalCount > initialServers.length && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              padding: '0.85rem 1.1rem',
+              marginBottom: '1.5rem',
+              borderRadius: '10px',
+              border: '1px solid rgba(0, 229, 255, 0.25)',
+              background: 'rgba(0, 229, 255, 0.06)',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <span>
+              {isFiltered
+                ? `Search and sort here only cover the ${initialServers.length} listings shown below — not the full catalog.`
+                : `Showing the ${initialServers.length} most recently added listings of ${totalCount.toLocaleString()} total.`}
+            </span>
+            <Link
+              href={searchQuery ? `/browse?q=${encodeURIComponent(searchQuery)}` : '/browse'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700, color: '#00E5FF', whiteSpace: 'nowrap' }}
+            >
+              Browse all {totalCount.toLocaleString()} servers <ChevronRight size={14} />
+            </Link>
+          </div>
+        )}
 
         {filteredServers.length === 0 ? (
           <div className="surface" style={{ borderStyle: 'dashed' }}>
