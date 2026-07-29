@@ -1,0 +1,141 @@
+================================================================================
+ALLMCPS - DIRECTORY SUBMISSION COPY & TARGET CHEAT SHEET
+================================================================================
+
+--------------------------------------------------------------------------------
+1. PRODUCT & APP METADATA (COPY + PASTE VALUES)
+--------------------------------------------------------------------------------
+
+[PRODUCT / APP NAME]
+AllMCPs
+
+[WEBSITE URL]
+https://allmcps.com
+
+[TAGLINE / ONE-LINER (SHORT - 65 CHARS)]
+Open Directory & Registry for Model Context Protocol (MCP) Servers
+
+[TAGLINE / HEADLINE (MEDIUM - 95 CHARS)]
+Discover, search, and connect verified MCP servers to Claude Desktop, Cursor, and AI Agents.
+
+[SHORT DESCRIPTION (180 CHARS)]
+AllMCPs is the open registry and discovery platform for Model Context Protocol (MCP) servers. Effortlessly search, test, and install verified MCP tools for Claude, Cursor, & AI agents.
+
+[LONG DESCRIPTION / ABOUT / OVERVIEW]
+AllMCPs is the definitive public registry and ecosystem hub for Model Context Protocol (MCP) servers. It provides developers, AI engineers, and teams with instant access to hundreds of verified MCP servers for file management, database connectors, browser automation, search integrations, and API workflows. Features include deep semantic search, developer documentation, badge verification, automated config generation for Claude Desktop and Cursor, token cost calculators, and llms.txt standards for agentic frameworks.
+
+[FIRST COMMENT / MAKER INTRO PITCH / FOUNDER STORY]
+Hi everyone! AllMCPs is the open directory & ecosystem hub for Model Context Protocol (MCP) servers. We built this to help developers discover, verify, and connect MCP servers into Claude Desktop, Cursor, Windsurf, and custom AI agents. Excited to hear your thoughts and feedback!
+
+[WHAT DO PEOPLE SEARCH FOR TO FIND A TOOL LIKE YOURS? / SEARCH QUERIES]
+MCP, Model Context Protocol, Claude Desktop MCP, Cursor MCP, AI agent tools, MCP server registry
+
+[KEYWORDS / CATEGORY TAGS (COMMA SEPARATED)]
+MCP, Model Context Protocol, AI tools, Claude Desktop, Cursor, AI Agent Tools, Developer Registry, MCP Servers, AI Connectors, Open Source
+
+[CATEGORIES / INDUSTRY]
+Developer Tools, Artificial Intelligence, Open Source, AI Agents, Productivity Tools, SaaS
+
+[PRICING MODEL]
+Free / Open Source
+
+[MAKER / FOUNDER NAME]
+Jackalope Digital
+
+[CONTACT EMAIL]
+contact@allmcps.com
+
+[TWITTER / X PROFILE URL]
+https://x.com/allmcps
+
+[TWITTER / X USERNAME / HANDLE]
+AllMCPs (or @AllMCPs)
+
+[GITHUB REPOSITORY URL]
+https://github.com
+
+[RSS FEED URL]
+https://allmcps.com/blog/rss.xml
+
+[LLMS.TXT URL]
+https://allmcps.com/llms.txt
+
+
+--------------------------------------------------------------------------------
+2. BRAND ASSETS & SCREENSHOT FILE PATHS ON YOUR DISK
+--------------------------------------------------------------------------------
+
+[LOGO ICON]
+c:\Users\caden\OneDrive\Desktop\all-mcps\brand-assets\logo-icon.png
+
+[SCREENSHOT 1 - HOMEPAGE]
+c:\Users\caden\OneDrive\Desktop\all-mcps\brand-assets\homepage-desktop.png
+
+[SCREENSHOT 2 - BROWSE DIRECTORY]
+c:\Users\caden\OneDrive\Desktop\all-mcps\brand-assets\browse-directory-desktop.png
+
+[SCREENSHOT 3 - CONFIG GENERATOR TOOL]
+c:\Users\caden\OneDrive\Desktop\all-mcps\brand-assets\config-generator-tool-desktop.png
+
+[SCREENSHOT 4 - CATEGORIES]
+c:\Users\caden\OneDrive\Desktop\all-mcps\brand-assets\categories-desktop.png
+
+
+--------------------------------------------------------------------------------
+3. MASTER DIRECTORY TARGET LIST (52 FAST MICRO LAUNCH & TOOL DIRECTORIES)
+--------------------------------------------------------------------------------
+
+ [1] Nick Launches           https://nicklaunches.com/
+ [2] MicroLaunch             https://microlaunch.net/
+ [3] Uneed Best Tools        https://www.uneed.best/
+ [4] DevHunt                 https://devhunt.org/
+ [5] Launching Next          https://www.launchingnext.com/
+ [6] LaunchDock              https://launchdock.org/
+ [7] Launch Lama             https://launchlama.com/
+ [8] 100xTools               https://100xtools.com/
+ [9] AI Tool Hunt            https://aitoolhunt.com/
+[10] Futurepedia             https://www.futurepedia.io/
+[11] Toolify AI              https://www.toolify.ai/
+[12] There's An AI For That  https://theresanaiforthat.com/
+[13] Insanely Cool Tools     https://insanelycooltools.com/
+[14] AI Directory            https://aidirectory.org/
+[15] AI Top Tools            https://aitoptools.com/
+[16] Top AI Tools            https://topai.tools/
+[17] Easy With AI            https://easywithai.com/
+[18] All Things AI           https://allthingsai.com/
+[19] Supertools (Baan)       https://supertools.therundown.ai/
+[20] Future Tools            https://www.futuretools.io/
+[21] AI Aggregator           https://aiaggregators.com/
+[22] NextGenTools            https://nextgentools.me/
+[23] Tool Pilot              https://www.toolpilot.ai/
+[24] AlternativeTo           https://alternativeto.net/
+[25] Startup Stash           https://startupstash.com/
+[26] BetaList                https://betalist.com/
+[27] SideProjectors          https://www.sideprojectors.com/
+[28] Startup Base            https://startupbase.io/
+[29] SAAS Hub                https://www.saashub.com/
+[30] StackShare              https://stackshare.io/
+[31] PitchWall               https://pitchwall.co/
+[32] Peerlist                https://peerlist.io/
+[33] Showwcase              https://www.showwcase.com/
+[34] Indie Hackers Showcase  https://www.indiehackers.com/product/allmcps
+[35] Product Hunt (Reference)https://www.producthunt.com/
+[36] Altern                  https://altern.ai/
+[37] PostMake                https://postmake.io/
+[38] Micro Startups          https://microstartups.co/
+[39] FoundrList              https://foundrlist.com/
+[40] LaunchingLab            https://launchinglab.com/
+[41] Startup Buffer          https://startupbuffer.com/
+[42] AI Hunter               https://aihunter.io/
+[43] ToolSurfer              https://toolsurfer.com/
+[44] Best AI Tools          https://bestaitools.org/
+[45] AI Center               https://aicenter.ai/
+[46] Free AI Finder          https://freeaifinder.com/
+[47] Micro SaaS Hub          https://microsaashub.com/
+[48] Web3 & AI Directory     https://web3aidirectory.com/
+[49] TinyStartups            https://tinystartups.co/
+[50] Launch Igniter          https://launchigniter.com/
+[51] Next AI Tools           https://nextaitools.org/
+[52] LaunchPedia             https://launchpedia.co/
+
+================================================================================
