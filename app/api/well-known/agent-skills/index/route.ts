@@ -18,6 +18,13 @@ export async function GET() {
         url: 'https://allmcps.com/.well-known/agent-skills/mcp-registry/SKILL.md',
         sha256: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
       },
+      {
+        name: 'mcp-monetization',
+        type: 'monetization',
+        description: 'Feature MCP servers, query sponsorship tiers, and initiate agentic commerce payments',
+        url: 'https://allmcps.com/.well-known/agent-skills/mcp-monetization/SKILL.md',
+        sha256: '3a884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542e9',
+      },
     ],
   };
 

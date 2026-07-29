@@ -5,8 +5,8 @@ export async function GET() {
     $schema: 'https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/server-card.schema.json',
     serverInfo: {
       name: 'AllMCPs Directory & Discovery Server',
-      version: '1.0.0',
-      description: 'Comprehensive index and search engine for Model Context Protocol (MCP) servers and agent tools.',
+      version: '1.1.0',
+      description: 'Comprehensive index, search engine, and agentic commerce server for Model Context Protocol (MCP) servers and tools.',
       vendor: 'AllMCPs',
       homepage: 'https://allmcps.com',
     },
@@ -24,6 +24,12 @@ export async function GET() {
       resources: {
         subscribe: false,
         listChanged: true,
+      },
+      payments: {
+        supported: true,
+        protocol: ['x402-v1', 'stripe_checkout'],
+        pricingEndpoint: 'https://allmcps.com/api/v1/boost/pricing',
+        checkoutEndpoint: 'https://allmcps.com/api/v1/boost/checkout',
       },
     },
   };

@@ -1,9 +1,10 @@
 import { getActiveServers, getServerById, formatServerAsMarkdown } from '@/lib/servers';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
+import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
 
 const SERVER_INFO = {
   name: 'AllMCPs Directory Server',
-  version: '1.0.0',
+  version: '1.1.0',
 };
 
 const TOOLS = [
@@ -38,6 +39,42 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    name: 'get_boost_pricing',
+    description: 'Get pricing and features for boosting / featuring an MCP server on AllMCPs.com.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'boost_mcp_server',
+    description: 'Initiate a sponsorship / boost order for an MCP server by ID, returning a Stripe checkout session URL and x402 invoice.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'The server ID to boost (e.g. "github-mcp")' },
+        sku: {
+          type: 'string',
+          enum: ['featured_7d', 'premium_monthly', 'priority_review'],
+          description: 'Sponsorship tier (default: featured_7d)',
+        },
+        email: { type: 'string', description: 'Optional contact/billing email' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'get_boost_status',
+    description: 'Check current boost status, verified badge level, and sponsorship expiration for an MCP server by ID.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'The server ID to check' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function OPTIONS() {
@@ -58,7 +95,7 @@ export async function GET() {
       name: SERVER_INFO.name,
       version: SERVER_INFO.version,
       mcpEndpoint: 'https://allmcps.com/api/mcp',
-      description: 'Model Context Protocol Remote Server endpoint. Send POST JSON-RPC 2.0 requests to query tools.',
+      description: 'Model Context Protocol Remote Server endpoint with Agentic Commerce support.',
       tools: TOOLS.map((t) => t.name),
     },
     {
@@ -78,15 +115,19 @@ export async function POST(request: Request) {
       if (cfCtx?.env && (cfCtx.env as any).DB) {
         const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
         const meta = extractRequestMeta(request);
-        cfCtx.ctx.waitUntil(logApiAccess(logDb, {
-          serverId,
-          endpoint: 'mcp_jsonrpc',
-          methodOrTool: tool,
-          userAgent: meta.userAgent,
-          ipCountry: meta.ipCountry,
-        }));
+        cfCtx.ctx.waitUntil(
+          logApiAccess(logDb, {
+            serverId,
+            endpoint: 'mcp_jsonrpc',
+            methodOrTool: tool,
+            userAgent: meta.userAgent,
+            ipCountry: meta.ipCountry,
+          })
+        );
       }
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
   }
 
   try {
@@ -100,7 +141,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle MCP initialize request
     if (method === 'initialize') {
       const clientName = params?.clientInfo?.name;
       const methodOrTool = clientName ? `initialize (${clientName})` : 'initialize';
@@ -121,15 +161,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle MCP notifications/initialized
     if (method === 'notifications/initialized') {
-      return Response.json(
-        { jsonrpc: '2.0', id: null, result: {} },
-        { headers: { 'Access-Control-Allow-Origin': '*' } }
-      );
+      return Response.json({ jsonrpc: '2.0', id: null, result: {} }, { headers: { 'Access-Control-Allow-Origin': '*' } });
     }
 
-    // Handle MCP tools/list
     if (method === 'tools/list') {
       return Response.json(
         {
@@ -143,7 +178,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle MCP tools/call
     if (method === 'tools/call') {
       const toolName = params?.name;
       const args = params?.arguments || {};
@@ -169,9 +203,10 @@ export async function POST(request: Request) {
         }
 
         const results = servers.slice(0, limit);
-        const textOutput = results.length > 0
-          ? results.map((s) => formatServerAsMarkdown(s)).join('\n---\n\n')
-          : `No MCP servers found matching query: "${query}"`;
+        const textOutput =
+          results.length > 0
+            ? results.map((s) => formatServerAsMarkdown(s)).join('\n---\n\n')
+            : `No MCP servers found matching query: "${query}"`;
 
         await logMcp(null, `search_mcp_servers${query ? ` query: ${query}` : ''}`);
         return Response.json(
@@ -231,6 +266,134 @@ export async function POST(request: Request) {
         }
 
         await logMcp(null, 'list_mcp_categories');
+        return Response.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{ type: 'text', text: md }],
+            },
+          },
+          { headers: { 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      if (toolName === 'get_boost_pricing') {
+        let md = `# AllMCPs Server Boosting & Sponsorship Tiers\n\n`;
+        for (const p of Object.values(PAID_PRODUCTS)) {
+          md += `### ${p.name} (${p.sku})\n`;
+          md += `- **Price**: ${formatUsd(p.unitAmount)} (${p.interval})\n`;
+          md += `- **Tagline**: ${p.tagline}\n`;
+          md += `- **Benefits**:\n`;
+          for (const b of p.benefits) {
+            md += `  - ${b}\n`;
+          }
+          md += `\n`;
+        }
+
+        await logMcp(null, 'get_boost_pricing');
+        return Response.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{ type: 'text', text: md }],
+            },
+          },
+          { headers: { 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      if (toolName === 'boost_mcp_server') {
+        const serverId = args.id;
+        const sku = (args.sku || 'featured_7d') as PaidSku;
+        const email = args.email;
+
+        const server = await getServerById(serverId);
+        if (!server) {
+          return Response.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              result: {
+                content: [{ type: 'text', text: `Server "${serverId}" not found in AllMCPs directory.` }],
+                isError: true,
+              },
+            },
+            { headers: { 'Access-Control-Allow-Origin': '*' } }
+          );
+        }
+
+        const product = PAID_PRODUCTS[sku];
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
+        const checkoutUrl = `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&sku=${sku}`;
+
+        const outputText = `# Boost Order Created for "${server.name}"
+
+- **Server ID**: ${server.id}
+- **Selected Tier**: ${product ? product.name : sku}
+- **Price**: ${product ? formatUsd(product.unitAmount) : 'N/A'}
+- **Checkout URL**: [Complete Payment via Stripe](${checkoutUrl})
+
+### Autonomous Agent Payment (x402 Protocol)
+\`\`\`json
+{
+  "spec": "x402-v1",
+  "asset": "USD",
+  "amount": ${product ? product.unitAmount / 100 : 0},
+  "payee": "AllMCPs Directory",
+  "checkout_url": "${checkoutUrl}"
+}
+\`\`\`
+
+To complete activation, open the checkout URL or trigger autonomous agent payment.`;
+
+        await logMcp(serverId, `boost_mcp_server sku:${sku}`);
+        return Response.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{ type: 'text', text: outputText }],
+            },
+          },
+          { headers: { 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      if (toolName === 'get_boost_status') {
+        const serverId = args.id;
+        const server = await getServerById(serverId);
+
+        if (!server) {
+          return Response.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              result: {
+                content: [{ type: 'text', text: `Server "${serverId}" not found.` }],
+                isError: true,
+              },
+            },
+            { headers: { 'Access-Control-Allow-Origin': '*' } }
+          );
+        }
+
+        const isFeatured = !!(server as any).isFeatured;
+        const isPremium = !!(server as any).isPremium;
+        const featuredUntil = (server as any).featuredUntil ? new Date((server as any).featuredUntil).toISOString() : 'N/A';
+
+        const md = `# Boost Status for "${server.name}"
+
+- **Server ID**: ${server.id}
+- **Status**: ${server.status}
+- **Featured Boost**: ${isFeatured ? '✅ Active' : '❌ Inactive'}
+- **Premium Subscription**: ${isPremium ? '✅ Active' : '❌ Inactive'}
+- **Featured Expiration**: ${featuredUntil}
+- **Category**: ${server.category}
+`;
+
+        await logMcp(serverId, 'get_boost_status');
         return Response.json(
           {
             jsonrpc: '2.0',

@@ -58,6 +58,39 @@ export function WebMCPProvider() {
           return { categories };
         },
       },
+      {
+        name: 'get_boost_pricing',
+        description: 'Get pricing, tiers, and features for boosting an MCP server.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+        execute: async () => {
+          const res = await fetch('/api/v1/boost/pricing');
+          return await res.json();
+        },
+      },
+      {
+        name: 'boost_mcp_server',
+        description: 'Initiate a server boost order, returning a checkout link and x402 invoice.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The unique server ID' },
+            sku: { type: 'string', description: 'Tier (featured_7d, premium_monthly, priority_review)' },
+            email: { type: 'string', description: 'Optional email' },
+          },
+          required: ['id'],
+        },
+        execute: async ({ id, sku = 'featured_7d', email }: { id: string; sku?: string; email?: string }) => {
+          const res = await fetch('/api/v1/boost/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ serverId: id, sku, email }),
+          });
+          return await res.json();
+        },
+      },
     ];
 
     // Standard WebMCP API (navigator.modelContext.provideContext)
@@ -73,7 +106,7 @@ export function WebMCPProvider() {
     // Fallback/Legacy window object declaration
     window.webMCP = {
       name: 'AllMCPs Web Client Provider',
-      version: '1.0.0',
+      version: '1.1.0',
       tools,
     };
 
