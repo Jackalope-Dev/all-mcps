@@ -428,26 +428,28 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         {/* Sidebar (Right Column) */}
         <div className="detail-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          <div className="surface" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engagement</h3>
-            <dl className="listing-engagement-dl">
-              <div>
-                <dt>Views</dt>
-                <dd>{(server.views || 0).toLocaleString()}</dd>
-              </div>
-              <div>
-                <dt>Installs</dt>
-                <dd>{(server.copies || 0).toLocaleString()}</dd>
-              </div>
-              <div>
-                <dt>Upvotes</dt>
-                <dd>{(server.upvotes || 0).toLocaleString()}</dd>
-              </div>
-            </dl>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.85rem', lineHeight: 1.45 }}>
-              Views and upvotes are unique per visitor network (hashed IP). Installs count copy actions.
-            </p>
-          </div>
+          {isOwner && (
+            <div className="surface" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engagement</h3>
+              <dl className="listing-engagement-dl">
+                <div>
+                  <dt>Views</dt>
+                  <dd>{(server.views || 0).toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt>Installs</dt>
+                  <dd>{(server.copies || 0).toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt>Upvotes</dt>
+                  <dd>{(server.upvotes || 0).toLocaleString()}</dd>
+                </div>
+              </dl>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.85rem', lineHeight: 1.45 }}>
+                Views and upvotes are unique per visitor network (hashed IP). Installs count copy actions.
+              </p>
+            </div>
+          )}
 
           <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</h3>

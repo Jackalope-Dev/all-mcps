@@ -200,6 +200,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/tools/openapi-to-mcp`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/tools/protocol-inspector`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/tools/config-generator`,
       lastModified: safeDateISO(new Date()),
       changeFrequency: 'monthly',
