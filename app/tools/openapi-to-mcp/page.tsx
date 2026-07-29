@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import { OpenApiToMcpTool } from '../../../components/tools/OpenApiToMcpTool';
 
 export const metadata: Metadata = {
@@ -28,6 +29,8 @@ const webAppJsonLd = {
   url: 'https://allmcps.com/tools/openapi-to-mcp',
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'All',
+  isAccessibleForFree: true,
+  provider: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
   offers: {
     '@type': 'Offer',
     price: '0',
@@ -35,6 +38,16 @@ const webAppJsonLd = {
   },
   description:
     'Browser-based generator that parses OpenAPI 3.0/3.1 JSON or YAML specs and generates Model Context Protocol (MCP) server code in TypeScript or Python.',
+};
+
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+    { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://allmcps.com/tools' },
+    { '@type': 'ListItem', position: 3, name: 'OpenAPI to MCP', item: 'https://allmcps.com/tools/openapi-to-mcp' },
+  ],
 };
 
 const faqJsonLd = {
@@ -95,8 +108,21 @@ export default function OpenApiToMcpPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
       <div className="page-shell-inner">
+        <nav aria-label="Breadcrumb">
+          <ol className="breadcrumb" style={{ marginBottom: '1.5rem' }}>
+            <li><Link href="/">Home</Link></li>
+            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li><Link href="/tools">Tools</Link></li>
+            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li className="breadcrumb-current">OpenAPI to MCP</li>
+          </ol>
+        </nav>
         <div className="surface page-panel">
           <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
             OpenAPI to MCP Server Code Generator

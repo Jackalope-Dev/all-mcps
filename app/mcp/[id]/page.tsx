@@ -109,8 +109,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
     alternates: {
       canonical: `https://allmcps.com/mcp/${server.id}`,
+      // Expose the agent-readable markdown representation so LLM crawlers and
+      // MCP-aware clients can discover the plain-text version of this listing.
+      types: {
+        'text/markdown': `https://allmcps.com/api/v1/mcp/${server.id}/markdown`,
+      },
     },
     openGraph: {
+      type: 'article',
       title: `${server.name} MCP Server - Install & Setup | AllMCPs`,
       description: desc,
       url: `https://allmcps.com/mcp/${server.id}`,
@@ -226,6 +232,29 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'mcp-server';
 
+  const canonicalUrl = `https://allmcps.com/mcp/${server.id}`;
+  // The route-generated OG card always exists for every listing, so it's a safe,
+  // stable image for structured data (Google requires an image for the richest
+  // SoftwareApplication results, and answer engines surface it in citations).
+  const ogImage = `${canonicalUrl}/opengraph-image`;
+  const sameAs = [server.url, server.websiteUrl].filter(Boolean) as string[];
+  const publishedDate = server.createdAt ? new Date(server.createdAt) : null;
+  const publishedIso =
+    publishedDate && !Number.isNaN(publishedDate.getTime()) ? publishedDate.toISOString() : undefined;
+  // Map real engagement counters to schema.org InteractionCounter — never a
+  // fabricated aggregateRating, which we don't collect and which risks penalties.
+  const interactionStatistic = [
+    server.views
+      ? { '@type': 'InteractionCounter', interactionType: 'https://schema.org/ViewAction', userInteractionCount: server.views }
+      : null,
+    server.copies
+      ? { '@type': 'InteractionCounter', interactionType: 'https://schema.org/InstallAction', userInteractionCount: server.copies }
+      : null,
+    server.upvotes
+      ? { '@type': 'InteractionCounter', interactionType: 'https://schema.org/LikeAction', userInteractionCount: server.upvotes }
+      : null,
+  ].filter(Boolean);
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -233,17 +262,30 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         '@type': 'SoftwareApplication',
         name: server.name,
         description: server.description,
-        url: `https://allmcps.com/mcp/${server.id}`,
-        sameAs: server.url,
+        url: canonicalUrl,
+        mainEntityOfPage: canonicalUrl,
+        image: ogImage,
+        sameAs,
         codeRepository: server.url,
         applicationCategory: 'DeveloperApplication',
+        applicationSubCategory: 'Model Context Protocol Server',
         operatingSystem: 'Cross-platform',
         softwareRequirements: 'Node.js, npx, Claude Desktop or MCP compatible client',
+        isAccessibleForFree: true,
+        keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
+        ...(publishedIso ? { datePublished: publishedIso } : {}),
+        ...(org ? { author: { '@type': 'Organization', name: org, ...(server.url ? { url: server.url } : {}) } } : {}),
+        provider: {
+          '@type': 'Organization',
+          name: 'AllMCPs',
+          url: 'https://allmcps.com',
+        },
         offers: {
           '@type': 'Offer',
           price: '0',
           priceCurrency: 'USD',
         },
+        ...(interactionStatistic.length ? { interactionStatistic } : {}),
       },
       {
         '@type': 'FAQPage',
@@ -262,6 +304,14 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             acceptedAnswer: {
               '@type': 'Answer',
               text: server.description,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `Is the ${server.name} MCP server free to use?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `Yes. ${server.name} is listed on AllMCPs as a free, open Model Context Protocol server you can install into Claude Desktop, Cursor, or any MCP-compatible client.`,
             },
           },
         ],
