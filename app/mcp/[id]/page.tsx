@@ -246,7 +246,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         </ol>
       </nav>
 
-      <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '3rem', alignItems: 'start' }}>
+      <div className="detail-grid">
         
         {/* Main Content (Left Column) */}
         <div style={{ minWidth: 0 }}>

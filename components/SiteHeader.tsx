@@ -105,6 +105,18 @@ export function SiteHeader() {
                   {label}
                 </Link>
               ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+                }}
+                className="mobile-nav-link"
+                style={{ width: '100%', justifyContent: 'flex-start', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <Search size={18} className="text-cyan-400" />
+                <span>Search Directory</span>
+              </button>
               <Link
                 href="/build-mcp-server"
                 className={`mobile-nav-link${isActive(pathname, '/build-mcp-server') ? ' is-active' : ''}`}

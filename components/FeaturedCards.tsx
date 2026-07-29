@@ -43,10 +43,10 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
         <Sparkles size={24} style={{ color: 'var(--accent-color)' }} />
         Featured Servers
       </h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
         {displayServers.map((server) => (
           <ImpressionBeacon key={server.id} serverId={server.id} surface="homepage_featured">
-          <Card href={`/mcp/${server.id}`} hoverable style={{ padding: '2rem', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
+          <Card href={`/mcp/${server.id}`} hoverable style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)' }}></div>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
@@ -77,7 +77,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
             href="/pricing" 
             hoverable 
             style={{ 
-              padding: '2rem', 
+              padding: 'clamp(1.25rem, 4vw, 2rem)', 
               display: 'flex', 
               flexDirection: 'column', 
               position: 'relative', 

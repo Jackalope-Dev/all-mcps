@@ -43,7 +43,7 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
   const snippets = {
     badge: `[![Listed on AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`,
     badgeHtml: `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="Listed on AllMCPs" height="${badgeStyle === 'directory' ? 40 : 32}" /></a>`,
-    widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="350" height="260" frameBorder="0" style="border-radius: 12px; overflow: hidden; background: transparent;"></iframe>`,
+    widget: `<iframe src="${baseUrl}/mcp/${serverId}/embed" width="100%" height="260" style="max-width: 350px; border-radius: 12px; overflow: hidden; background: transparent; border: none;"></iframe>`,
     install: `<a href="${baseUrl}/mcp/${serverId}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, #00E5FF, #007BFF); color: #020617; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,123,255,0.25); transition: transform 0.2s, box-shadow 0.2s;">Install ${displayName} via AllMCPs</a>`
   };
 
@@ -136,10 +136,9 @@ export default function ShareModal({ serverId, serverName }: { serverId: string,
           <div className="share-modal-preview" style={{ minHeight: '260px' }}>
             <iframe
               src={`/mcp/${serverId}/embed`}
-              width="350"
               height="260"
               frameBorder="0"
-              style={{ borderRadius: '12px', overflow: 'hidden', background: 'transparent', border: 'none' }}
+              style={{ width: '100%', maxWidth: '350px', borderRadius: '12px', overflow: 'hidden', background: 'transparent', border: 'none' }}
               title={`${serverName} embed widget preview`}
             />
           </div>
