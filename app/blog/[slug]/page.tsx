@@ -173,8 +173,8 @@ export default async function BlogPostPage({
             </ol>
           </nav>
 
-          <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10 items-start">
-            <article className="surface page-panel min-w-0" style={{ marginTop: '1.5rem' }}>
+          <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10 mt-6">
+            <article className="surface page-panel min-w-0">
               <header>
                 <h1 className="text-page-title">{post.title}</h1>
                 <div
@@ -226,7 +226,7 @@ export default async function BlogPostPage({
             </article>
 
             {tocItems.length > 1 && (
-              <div className="hidden lg:block pt-6">
+              <div className="hidden lg:block">
                 <TableOfContents items={tocItems} />
               </div>
             )}

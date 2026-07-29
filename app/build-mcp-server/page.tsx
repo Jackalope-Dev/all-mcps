@@ -114,7 +114,7 @@ export default function BuildMCPServerPage() {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
-        <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10 items-start">
+        <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">
             <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
               How to Build an MCP Server

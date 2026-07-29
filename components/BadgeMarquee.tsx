@@ -62,6 +62,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://findly.tools/all-mcps?utm_source=all-mcps',
     imageUrl: 'https://findly.tools/badges/findly-tools-badge-light.svg',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'startupfame',
+    name: 'Featured on Startup Fame',
+    href: 'https://startupfa.me/s/allmcps?utm_source=allmcps.com',
+    imageUrl: 'https://startupfa.me/badges/featured-badge.webp',
+    rel: 'noopener'
   }
 ];
 

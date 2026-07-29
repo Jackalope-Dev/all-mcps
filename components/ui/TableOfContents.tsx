@@ -166,7 +166,7 @@ export function TableOfContents({
       <div className="hidden lg:block toc-sidebar-container">
         <div className="toc-sidebar-card">
           <div className="toc-sidebar-header">
-            <List size={16} className="text-cyan-400" />
+            <List size={16} className="text-cyan-400 shrink-0" />
             <h3 className="toc-sidebar-title">{title}</h3>
           </div>
           <ul className="toc-sidebar-list">
