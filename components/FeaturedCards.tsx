@@ -74,7 +74,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
 
         {showUpsellCard && (
           <Card 
-            href="/pricing" 
+            href="/submit" 
             hoverable 
             style={{ 
               padding: 'clamp(1.25rem, 4vw, 2rem)', 
@@ -97,10 +97,10 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
             
             <h3 style={{ fontSize: '1.4rem', marginBottom: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>Spotlight Your MCP Server</h3>
             <p style={{ fontSize: '0.875rem', marginBottom: '1.5rem', flexGrow: 1, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Reach thousands of developers building AI agents with Claude &amp; Cursor. Feature your server at the top of the directory.
+              Reach thousands of developers building AI agents with Claude &amp; Cursor. Submit your server and feature it at the top of the directory.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.9rem' }}>
-              <span>Feature Your Server</span>
+              <span>Submit &amp; Feature Your Server</span>
               <ArrowRight size={16} />
             </div>
           </Card>
