@@ -20,7 +20,9 @@ export async function GET() {
     agent_auth: {
       skill: 'https://allmcps.com/auth.md',
       manifest: 'https://allmcps.com/auth.md',
+      url: 'https://allmcps.com/auth.md',
       register_uri: 'https://allmcps.com/api/v1/agent/register',
+      registration_endpoint: 'https://allmcps.com/api/v1/agent/register',
       identity_types_supported: ['ephemeral_session', 'did', 'oauth_client'],
       supported_identity_types: ['ephemeral_session', 'did', 'oauth_client'],
       credential_types_supported: ['bearer_token', 'jwt'],
