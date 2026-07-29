@@ -1,0 +1,25 @@
+name: Submit Pages to IndexNow
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *' # Runs daily at 3 AM UTC
+
+jobs:
+  indexnow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Submit URLs to IndexNow
+        run: npm run submit-index

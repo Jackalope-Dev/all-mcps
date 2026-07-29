@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { BrandLogo } from './BrandLogo';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
+import { BadgeMarquee } from './BadgeMarquee';
 
 export function SiteFooter() {
   return (
@@ -140,6 +141,7 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
+      <BadgeMarquee />
       <div className="site-footer-copy">
         &copy; {new Date().getFullYear()} Jackalope Digital LLC. All rights reserved.
       </div>

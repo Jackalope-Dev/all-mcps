@@ -1,0 +1,38 @@
+{
+  "name": "AllMCPs",
+  "url": "https://allmcps.com",
+  "tagline": "The Open Directory & Registry for Model Context Protocol (MCP) Servers",
+  "shortDescription": "Discover, search, and connect verified MCP servers to AI tools like Claude Desktop, Cursor, Windsurf, and Antigravity.",
+  "longDescription": "AllMCPs is the definitive public registry and ecosystem hub for Model Context Protocol (MCP) servers. It provides developers, AI enthusiasts, and teams with instant access to hundreds of verified MCP servers for file management, database connectors, browser automation, search integrations, and API workflows. Features include deep semantic search, developer documentation, badge verification, and single-click config generation for Claude Desktop, Cursor, and custom agentic frameworks.",
+  "categories": [
+    "Developer Tools",
+    "Artificial Intelligence",
+    "Open Source",
+    "AI Agents",
+    "Productivity Tools"
+  ],
+  "keywords": [
+    "MCP",
+    "Model Context Protocol",
+    "AI tools",
+    "Claude Desktop",
+    "Cursor",
+    "AI Agent Tools",
+    "Developer Registry",
+    "MCP Servers"
+  ],
+  "pricing": "Free / Open Source",
+  "contactEmail": "contact@allmcps.com",
+  "twitter": "https://x.com/allmcps",
+  "github": "https://github.com",
+  "assets": {
+    "logoIconSvg": "https://allmcps.com/logo-icon.svg",
+    "logoFullLightPng": "https://allmcps.com/logo-full-light.png",
+    "screenshotDesktop": "https://allmcps.com/screenshots/homepage-screenshot-desktop.png",
+    "screenshotMobile": "https://allmcps.com/screenshots/homepage-screenshot-mobile.png"
+  },
+  "reciprocalBadges": {
+    "htmlFooterCode": "<a href=\"https://allmcps.com\" target=\"_blank\" rel=\"noopener noreferrer\"><img src=\"https://allmcps.com/logo-icon.svg\" alt=\"AllMCPs Verified\" width=\"24\" height=\"24\" /></a>",
+    "markdownCode": "[![AllMCPs](https://allmcps.com/logo-icon.svg)](https://allmcps.com)"
+  }
+}
