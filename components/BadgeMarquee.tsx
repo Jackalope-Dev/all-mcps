@@ -76,6 +76,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://launchkiwi.com/p/all-mcps',
     imageUrl: 'https://launchkiwi.com/badge-dark.svg',
     rel: 'noopener'
+  },
+  {
+    id: 'scrolllaunch',
+    name: 'Featured on ScrollLaunch',
+    href: 'https://www.scrolllaunch.com/products/allmcps?utm_source=badge&utm_medium=embed&utm_campaign=allmcps&ref=scrolllaunch',
+    imageUrl: 'https://www.scrolllaunch.com/api/badge/allmcps',
+    rel: 'noopener noreferrer'
   }
 ];
 
