@@ -118,34 +118,23 @@ export async function POST(req: Request) {
       };
     }
 
-    let session: any;
-    if (coupon) {
-      try {
-        session = await stripe.checkout.sessions.create({
-          ...sessionParams,
-          allow_promotion_codes: undefined,
-          discounts: [{ coupon }],
-        });
-      } catch (couponErr: any) {
-        console.warn(`Direct discount coupon "${coupon}" failed, falling back to standard checkout:`, couponErr?.message);
-        session = await stripe.checkout.sessions.create(sessionParams);
-      }
-    } else {
-      session = await stripe.checkout.sessions.create(sessionParams);
-    }
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     if (!session?.url) {
       return NextResponse.json({ error: 'Could not create Checkout session' }, { status: 500 });
     }
 
-    return NextResponse.json({ url: session.url, sessionId: session.id });
+    const finalUrl = coupon
+      ? `${session.url}${session.url.includes('?') ? '&' : '?'}prefilled_promo_code=${encodeURIComponent(coupon.trim())}`
+      : session.url;
+
+    return NextResponse.json({ url: finalUrl, sessionId: session.id });
   } catch (e: any) {
     console.error('Stripe checkout error:', e);
     return NextResponse.json(
       {
         error: 'Checkout failed',
         details: e?.message || 'Unknown Stripe API error',
-        hint: 'Ensure STRIPE_SECRET_KEY and STRIPE_PRICE_* environment variables are set in Cloudflare Workers Dashboard.',
       },
       { status: 500 }
     );
