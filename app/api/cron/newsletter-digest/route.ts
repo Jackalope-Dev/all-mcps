@@ -8,8 +8,6 @@ import { isAdminAuthorized } from '../../../../lib/adminAuth';
 const NEW_WINDOW_DAYS = 7;
 const MAX_PER_SECTION = 6;
 const NEWSLETTER_SUBSCRIBERS_LIST_ID = 'ta0zh9e3l9rcjlfpzpk80tcn';
-const SENDER_PROFILE_ID = 'p1dmte08v6jd67cnlvz43396';
-const REPLY_PROFILE_ID = 'nmr7hkbzz2qpkq3mgs7dmhjk';
 const APP_URL = 'https://allmcps.com';
 
 type ListingSummary = { id: string; name: string; description: string };
@@ -19,10 +17,25 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
+// Source descriptions carry scraped README cruft: a leading badge link (e.g. the
+// Glama verification badge, often with no link text), then platform-icon emoji,
+// then " - ", before the actual human-readable sentence.
+function cleanDescription(description: string): string {
+  return description
+    .replace(/^(\[[^\]]*\]\([^)]*\)\s*)+/g, '')
+    .replace(/^[\p{Extended_Pictographic}️\s]+/gu, '')
+    .replace(/^[-–—]\s*/, '')
+    .trim();
+}
+
 function listingBlocks(listing: ListingSummary): SequenzyBlock[] {
   return [
     { type: 'heading', content: listing.name, level: 3 },
-    { type: 'text', content: `<p>${truncate(listing.description, 140)}</p>`, variant: 'paragraph' },
+    {
+      type: 'text',
+      content: `<p>${truncate(cleanDescription(listing.description), 140)}</p>`,
+      variant: 'paragraph',
+    },
     { type: 'button', text: 'View →', url: `${APP_URL}/mcp/${listing.id}`, variant: 'secondary' },
   ];
 }
@@ -31,7 +44,10 @@ function buildDigestBlocks(
   newListings: ListingSummary[],
   trendingListings: ListingSummary[]
 ): SequenzyBlock[] {
-  const blocks: SequenzyBlock[] = [{ type: 'heading', content: 'This week on AllMCPs', level: 1 }];
+  const blocks: SequenzyBlock[] = [
+    { type: 'logo', alt: 'AllMCPs Logo', align: 'center', width: 64 },
+    { type: 'heading', content: 'This week on AllMCPs', level: 1 },
+  ];
 
   if (newListings.length > 0) {
     blocks.push({ type: 'heading', content: 'New this week', level: 2 });
@@ -44,6 +60,13 @@ function buildDigestBlocks(
   }
 
   blocks.push({ type: 'button', text: 'Browse the full directory →', url: `${APP_URL}/browse`, variant: 'primary' });
+  blocks.push({
+    type: 'footer',
+    address: 'Jackalope Digital \n1500 N GRANT ST # 7225 \nDENVER, CO 80203',
+    variant: 'full',
+    companyName: 'AllMCPs',
+    privacyPolicyUrl: 'https://allmcps.com/privacy',
+  });
 
   return blocks;
 }
@@ -60,8 +83,9 @@ async function createSequenzyCampaign(input: { subject: string; blocks: Sequenzy
       subject: input.subject,
       blocks: input.blocks,
       targetLists: { type: 'lists', listIds: [NEWSLETTER_SUBSCRIBERS_LIST_ID] },
-      senderProfileId: SENDER_PROFILE_ID,
-      replyProfileId: REPLY_PROFILE_ID,
+      // No senderProfileId/replyProfileId here on purpose: this inherits the
+      // company's default sender/reply identity so it can't go stale if that
+      // default ever changes (it hardcoded an old sender profile ID before).
     }),
   });
 

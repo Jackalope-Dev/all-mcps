@@ -25,6 +25,30 @@ function isActive(pathname: string, href: string): boolean {
 export function SiteHeader() {
   const pathname = usePathname() || '/';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  // Signed-in state isn't known until this client-side check resolves, so the
+  // CTA starts as "Submit MCP" (correct for the common logged-out case) and
+  // swaps to "Manage" rather than blocking render on a server session check.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = res.ok ? ((await res.json()) as { user?: unknown }) : null;
+        if (!cancelled) setIsSignedIn(Boolean(data?.user));
+      } catch {
+        // Network error — leave the logged-out default in place.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const ctaHref = isSignedIn ? '/dashboard' : '/submit';
+  const ctaLabel = isSignedIn ? 'Manage' : 'Submit MCP';
+  const mobileCtaLabel = isSignedIn ? 'Manage Your Listings' : 'Submit MCP Server';
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -71,8 +95,8 @@ export function SiteHeader() {
               <span>Search</span>
               <kbd className="header-search-kbd">⌘K</kbd>
             </button>
-            <Button href="/submit" variant="primary" size="sm" className="site-nav-cta">
-              Submit MCP
+            <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
+              {ctaLabel}
             </Button>
           </nav>
 
@@ -126,13 +150,13 @@ export function SiteHeader() {
               </Link>
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 <Button
-                  href="/submit"
+                  href={ctaHref}
                   variant="primary"
                   size="md"
                   style={{ width: '100%', justifyContent: 'center' }}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <Sparkles size={16} /> Submit MCP Server
+                  <Sparkles size={16} /> {mobileCtaLabel}
                 </Button>
               </div>
             </nav>
