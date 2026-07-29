@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
 import { DEFAULT_SUBMIT_CATEGORY } from '../../../lib/categories';
 import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';
+import { sendNotificationEmail, getEmailEnv } from '../../../lib/notify';
+import { getAppUrl } from '../../../lib/stripe';
 
 const submitSchema = z.object({
   url: z.string().optional().or(z.literal('')),
@@ -165,6 +167,28 @@ export async function POST(req: Request) {
       customAttributes: { serverId: id, serverName: name },
       enrollInSequences: true,
     });
+
+    // 1. Send confirmation email to the submitter
+    await sendNotificationEmail({
+      to: email,
+      heading: `Submission Received: ${name}`,
+      message: `Thank you for submitting "${name}" to AllMCPs! Your listing is currently queued for review. You can get verified immediately by adding your official AllMCPs badge to your repository or website.`,
+      actionText: 'Verify & Claim Listing',
+      actionUrl: `${getAppUrl()}/mcp/${id}/claim`,
+    });
+
+    // 2. Send alert email to the admin
+    const emailEnv = await getEmailEnv();
+    const adminEmail = emailEnv.adminEmail;
+    if (adminEmail) {
+      await sendNotificationEmail({
+        to: adminEmail,
+        heading: `New MCP Submission: ${name}`,
+        message: `A new MCP server "${name}" (${url}) was submitted by ${email}.`,
+        actionText: 'Review in Admin Panel',
+        actionUrl: `${getAppUrl()}/admin`,
+      });
+    }
 
     return NextResponse.json({
       success: true,

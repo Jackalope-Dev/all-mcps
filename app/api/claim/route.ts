@@ -11,7 +11,7 @@ import {
   verifyWebsiteHtml,
 } from '../../../lib/verification';
 import { auth } from '../../../lib/auth';
-import { sendNotificationEmail } from '../../../lib/notify';
+import { sendNotificationEmail, getEmailEnv } from '../../../lib/notify';
 import { getAppUrl } from '../../../lib/stripe';
 
 const claimSchema = z.object({
@@ -131,6 +131,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: verification.reason || 'Verification failed' }, { status: 400 });
     }
 
+    const emailEnv = await getEmailEnv();
+    const userEmail = session?.user?.email || server.submitterEmail;
+    const adminEmail = emailEnv.adminEmail;
+
     // GitHub proof is tied to real repo write access — always auto-approve.
     if (method === 'github') {
       await db
@@ -141,6 +145,26 @@ export async function POST(req: Request) {
           ownerUserId: userId,
         })
         .where(eq(servers.id, id));
+
+      if (userEmail) {
+        await sendNotificationEmail({
+          to: userEmail,
+          heading: `Listing Verified & Claimed: ${server.name}`,
+          message: `Congratulations! Your ownership proof for "${server.name}" was successfully verified via GitHub README. Your listing now features the Verified badge on AllMCPs.`,
+          actionText: 'View Listing',
+          actionUrl: `${getAppUrl()}/mcp/${id}`,
+        });
+      }
+
+      if (adminEmail) {
+        await sendNotificationEmail({
+          to: adminEmail,
+          heading: `Listing Claimed: ${server.name}`,
+          message: `"${server.name}" was successfully claimed and verified via GitHub README by ${userEmail || userId}.`,
+          actionText: 'View Listing',
+          actionUrl: `${getAppUrl()}/mcp/${id}`,
+        });
+      }
 
       return NextResponse.json({
         success: true,
@@ -169,6 +193,26 @@ export async function POST(req: Request) {
         })
         .where(eq(servers.id, id));
 
+      if (userEmail) {
+        await sendNotificationEmail({
+          to: userEmail,
+          heading: `Listing Verified & Claimed: ${server.name}`,
+          message: `Congratulations! Your ownership proof for "${server.name}" was successfully verified via ${method === 'dns' ? 'DNS TXT record' : 'site badge'}. Your listing now features the Verified badge on AllMCPs.`,
+          actionText: 'View Listing',
+          actionUrl: `${getAppUrl()}/mcp/${id}`,
+        });
+      }
+
+      if (adminEmail) {
+        await sendNotificationEmail({
+          to: adminEmail,
+          heading: `Listing Claimed: ${server.name}`,
+          message: `"${server.name}" was successfully claimed and verified via ${method} by ${userEmail || userId}.`,
+          actionText: 'View Listing',
+          actionUrl: `${getAppUrl()}/mcp/${id}`,
+        });
+      }
+
       return NextResponse.json({
         success: true,
         message:
@@ -184,13 +228,22 @@ export async function POST(req: Request) {
       .set({ pendingClaimUserId: userId, pendingClaimWebsiteUrl: websiteUrl })
       .where(eq(servers.id, id));
 
-    const adminEmail = process.env.ADMIN_EMAIL;
+    if (userEmail) {
+      await sendNotificationEmail({
+        to: userEmail,
+        heading: `Claim Under Review: ${server.name}`,
+        message: `Your ownership proof for "${server.name}" was received! Because this claim includes a new website URL (${websiteUrl}), an admin will perform a quick review before approving it. We'll notify you as soon as it's approved.`,
+        actionText: 'View Listing',
+        actionUrl: `${getAppUrl()}/mcp/${id}`,
+      });
+    }
+
     if (adminEmail) {
       await sendNotificationEmail({
         to: adminEmail,
-        heading: 'New pending claim',
-        message: `${server.name} has a claim awaiting review (new website: ${websiteUrl}).`,
-        actionText: 'Review in admin',
+        heading: `New Pending Claim: ${server.name}`,
+        message: `${server.name} has a claim awaiting review by ${userEmail || userId} (new website: ${websiteUrl}).`,
+        actionText: 'Review in Admin Panel',
         actionUrl: `${getAppUrl()}/admin`,
       });
     }
