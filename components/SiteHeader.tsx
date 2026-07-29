@@ -49,6 +49,7 @@ export function SiteHeader() {
   const ctaHref = isSignedIn ? '/dashboard' : '/submit';
   const ctaLabel = isSignedIn ? 'Manage' : 'Submit MCP';
   const mobileCtaLabel = isSignedIn ? 'Manage Your Listings' : 'Submit MCP Server';
+  const loginHref = `/login?callbackUrl=${encodeURIComponent(pathname)}`;
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -95,6 +96,11 @@ export function SiteHeader() {
               <span>Search</span>
               <kbd className="header-search-kbd">⌘K</kbd>
             </button>
+            {!isSignedIn && (
+              <Link href={loginHref} className="nav-link">
+                Log in
+              </Link>
+            )}
             <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
               {ctaLabel}
             </Button>
@@ -149,6 +155,16 @@ export function SiteHeader() {
                 Build an MCP Server
               </Link>
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                {!isSignedIn && (
+                  <Link
+                    href={loginHref}
+                    className="mobile-nav-link"
+                    style={{ marginBottom: '0.5rem' }}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Log in
+                  </Link>
+                )}
                 <Button
                   href={ctaHref}
                   variant="primary"

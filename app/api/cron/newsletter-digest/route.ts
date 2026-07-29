@@ -17,27 +17,41 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const INSTALL_COMMAND_RE =
+  /\b(npx|npm\s+install|pip3?\s+install|uvx|uv\s+pip|docker\s+run|go\s+install|cargo\s+install|brew\s+install)\b/i;
+
 // Source descriptions carry scraped README cruft: a leading badge link (e.g. the
 // Glama verification badge, often with no link text), then platform-icon emoji,
-// then " - ", before the actual human-readable sentence.
+// then " - ", before the actual human-readable sentence, and sometimes a trailing
+// install-command clause ("npx -y ...", "Install: npx ...") that reads as noise
+// in a marketing email rather than the directory page it belongs on.
 function cleanDescription(description: string): string {
-  return description
+  let text = description
     .replace(/^(\[[^\]]*\]\([^)]*\)\s*)+/g, '')
     .replace(/^[\p{Extended_Pictographic}️\s]+/gu, '')
     .replace(/^[-–—]\s*/, '')
     .trim();
+
+  const installIdx = text.search(INSTALL_COMMAND_RE);
+  if (installIdx !== -1) {
+    text = text.slice(0, installIdx).replace(/[\s.;:,(\-–—]+$/, '').trim();
+  }
+
+  return text;
 }
 
 function listingBlocks(listing: ListingSummary): SequenzyBlock[] {
-  return [
-    { type: 'heading', content: listing.name, level: 3 },
-    {
-      type: 'text',
-      content: `<p>${truncate(cleanDescription(listing.description), 140)}</p>`,
-      variant: 'paragraph',
-    },
-    { type: 'button', text: 'View →', url: `${APP_URL}/mcp/${listing.id}`, variant: 'secondary' },
-  ];
+  const description = truncate(cleanDescription(listing.description), 140);
+  const blocks: SequenzyBlock[] = [{ type: 'heading', content: listing.name, level: 3 }];
+  if (/[\p{L}\p{N}]/u.test(description)) {
+    blocks.push({ type: 'text', content: `<p>${escapeHtml(description)}</p>`, variant: 'paragraph' });
+  }
+  blocks.push({ type: 'button', text: 'View →', url: `${APP_URL}/mcp/${listing.id}`, variant: 'secondary' });
+  return blocks;
 }
 
 function buildDigestBlocks(
@@ -47,6 +61,11 @@ function buildDigestBlocks(
   const blocks: SequenzyBlock[] = [
     { type: 'logo', alt: 'AllMCPs Logo', align: 'center', width: 64 },
     { type: 'heading', content: 'This week on AllMCPs', level: 1 },
+    {
+      type: 'text',
+      variant: 'paragraph',
+      content: '<p>Fresh MCP servers and community favorites, hand-picked from the directory.</p>',
+    },
   ];
 
   if (newListings.length > 0) {
