@@ -20,6 +20,7 @@ import { parseServerName } from '../lib/displayName';
 import { trackSearch, trackOutboundClick } from '../lib/gtag';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { ImpressionBeacon } from './ImpressionTracker';
+import { DIRECTORY_CATEGORIES } from '../lib/categories';
 
 type Server = {
   id: string;
@@ -232,6 +233,13 @@ export default function DirectoryGrid({
   };
 
   const handleCategorySelect = (cat: string | null) => {
+    if (!isBrowse && cat) {
+      const url = new URL(browseBase, window.location.origin);
+      url.searchParams.set('category', cat);
+      if (searchQuery.trim()) url.searchParams.set('q', searchQuery.trim());
+      window.location.assign(url.pathname + url.search);
+      return;
+    }
     setSelectedCategory(cat);
     updateUrl(cat, searchQuery);
   };
@@ -451,7 +459,7 @@ export default function DirectoryGrid({
               aria-label="Filter by Category"
             >
               <option value="">All Categories</option>
-              {categories.map((cat) => (
+              {(DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories).map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>
@@ -494,7 +502,8 @@ export default function DirectoryGrid({
               </button>
             )}
 
-            {!selectedCategory &&
+            {isBrowse &&
+              !selectedCategory &&
               topCategories.map((cat) => (
                 <button
                   key={cat}

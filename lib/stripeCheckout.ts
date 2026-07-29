@@ -146,13 +146,33 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     };
   }
 
+  let promoFound = false;
+  if (coupon && coupon.trim()) {
+    const cleanCoupon = coupon.trim();
+    try {
+      const promoList = await stripe.promotionCodes.list({
+        code: cleanCoupon,
+        active: true,
+        limit: 1,
+      });
+
+      if (promoList.data && promoList.data.length > 0) {
+        sessionParams.discounts = [{ promotion_code: promoList.data[0].id }];
+        sessionParams.allow_promotion_codes = undefined;
+        promoFound = true;
+      }
+    } catch {
+      /* fallback to prefilled_promo_code parameter */
+    }
+  }
+
   const session = await stripe.checkout.sessions.create(sessionParams);
 
   if (!session?.url) {
     return { success: false, status: 500, error: 'Could not create Checkout session' };
   }
 
-  const finalUrl = coupon ? appendPrefilledPromoCode(session.url, coupon) : session.url;
+  const finalUrl = coupon && !promoFound ? appendPrefilledPromoCode(session.url, coupon) : session.url;
 
   return {
     success: true,
