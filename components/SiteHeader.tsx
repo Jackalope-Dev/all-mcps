@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, BookOpen, Sparkles, Layers, Search } from 'lucide-react';
@@ -26,6 +27,13 @@ export function SiteHeader() {
   const pathname = usePathname() || '/';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // The mobile drawer is portaled to <body>, so it must wait for the client
+  // mount before createPortal has a DOM target.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Signed-in state isn't known until this client-side check resolves, so the
   // CTA starts as "Submit MCP" (correct for the common logged-out case) and
@@ -119,8 +127,11 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {/* Mobile Drawer Overlay */}
-      {mobileMenuOpen && (
+      {/* Mobile Drawer Overlay — portaled to <body> so it isn't trapped by the
+          header's backdrop-filter, which establishes a containing block for
+          position: fixed descendants and would otherwise collapse the overlay
+          to the header's height (making the menu appear to do nothing). */}
+      {mounted && mobileMenuOpen && createPortal(
         <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)}>
           <div className="mobile-menu-drawer" onClick={(e) => e.stopPropagation()}>
             <nav className="mobile-nav-list" aria-label="Mobile Navigation">
@@ -177,7 +188,8 @@ export function SiteHeader() {
               </div>
             </nav>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </header>
   );
