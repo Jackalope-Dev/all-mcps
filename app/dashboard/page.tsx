@@ -82,13 +82,18 @@ async function getOwnedServers(userId: string): Promise<{
   return { servers: [], analytics: {}, isPremium: false };
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/login?callbackUrl=/dashboard');
   }
 
   const { servers: ownedServers, analytics, isPremium } = await getOwnedServers(session.user.id);
+  const { edit } = await searchParams;
 
   return (
     <main className="page-shell page-shell--content animate-fade-in">
@@ -101,6 +106,7 @@ export default async function DashboardPage() {
           initialServers={ownedServers as any}
           initialAnalytics={analytics}
           isPremium={isPremium}
+          initialEditId={edit ?? null}
         />
       </div>
     </main>

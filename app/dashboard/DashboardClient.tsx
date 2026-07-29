@@ -32,9 +32,11 @@ type Props = {
   initialServers: Server[];
   initialAnalytics?: Record<string, AnalyticsSummary>;
   isPremium?: boolean;
+  /** Deep-links from a listing's "Manage listing" button (`/dashboard?edit=<id>`) straight into that listing's edit form. */
+  initialEditId?: string | null;
 };
 
-export default function DashboardClient({ initialServers, initialAnalytics = {}, isPremium = false }: Props) {
+export default function DashboardClient({ initialServers, initialAnalytics = {}, isPremium = false, initialEditId = null }: Props) {
   const [servers, setServers] = useState(initialServers);
   const [analytics, setAnalytics] = useState(initialAnalytics);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -111,6 +113,16 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
     }
   };
 
+  useEffect(() => {
+    if (!initialEditId) return;
+    const target = servers.find((s) => s.id === initialEditId);
+    if (!target) return;
+    startEdit(target);
+    document.getElementById(`server-${initialEditId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Only run once on mount — initialEditId comes from the server-rendered ?edit= param.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const toggleExpand = async (serverId: string) => {
     if (expandedId === serverId) {
       setExpandedId(null);
@@ -170,7 +182,7 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
         const isLoadingDetail = loadingDetail === server.id;
 
         return (
-          <div key={server.id} style={cardStyle}>
+          <div key={server.id} id={`server-${server.id}`} style={cardStyle}>
             {/* Header row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
               <div>

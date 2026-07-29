@@ -63,6 +63,28 @@ async function getServer(id: string): Promise<Server | undefined> {
   return servers.find((s) => s.id === id);
 }
 
+/**
+ * ownerUserId is deliberately excluded from PUBLIC_SERVER_COLUMNS (see lib/servers.ts),
+ * so it's queried separately here — only when a session exists — purely to compute a
+ * boolean, never exposed to the client.
+ */
+async function checkIsOwner(id: string, userId: string): Promise<boolean> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select({ ownerUserId: serversTable.ownerUserId })
+        .from(serversTable)
+        .where(eq(serversTable.id, id))
+        .limit(1);
+      return rows[0]?.ownerUserId === userId;
+    }
+  } catch (e) {}
+  return false;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const server = await getServer(id);
@@ -136,7 +158,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const server = await getServer(id);
   const session = await auth();
-  const isSignedIn = !!session?.user;
+  const isOwner = session?.user?.id ? await checkIsOwner(id, session.user.id) : false;
 
   if (!server) {
     return (
@@ -370,7 +392,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       ) : null}
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
-                      {rel.description}
+                      <SafeMarkdown content={rel.description || 'No description provided.'} isInline />
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
                       <Badge variant="category" style={{ fontSize: '0.7rem' }}>{rel.category}</Badge>
@@ -545,19 +567,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   className="nav-link"
                 >
                   <Globe size={18} /> Website
-                  {server.isPremium || server.reciprocalBadgeOk ? (
-                    <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#00E5FF', fontWeight: 700 }}>DOFOLLOW</span>
-                  ) : (
-                    <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>nofollow</span>
-                  )}
                 </OutboundLink>
               )}
             </div>
-            {!server.isPremium && server.websiteUrl && (
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.75rem', lineHeight: 1.5 }}>
-                Free listings use nofollow website links. Premium listings get a dofollow backlink.
-              </p>
-            )}
           </div>
 
           {!server.isOfficial ? (
@@ -588,7 +600,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </Link>
             </div>
           ) : (
-            isSignedIn && (
+            isOwner && (
               <div className="surface" style={{ padding: '1.5rem' }}>
                 <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Globe size={18} color="var(--accent-color)" /> Listing owner
@@ -600,24 +612,89 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       : 'Website is attached but not verified yet — prove control for a stronger listing.'
                     : 'Add your product site, then verify with a badge or DNS TXT.'}
                 </p>
-                <Link
-                  href={`/mcp/${server.id}/claim`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    padding: '0.75rem 1rem',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--text-primary)',
-                    borderRadius: '8px',
-                    fontWeight: 600,
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  Manage website &amp; verification
-                </Link>
+
+                {server.websiteUrl && (() => {
+                  const dofollow = !!server.isPremium || !!server.reciprocalBadgeOk;
+                  return (
+                    <div
+                      style={{
+                        padding: '0.85rem 1rem',
+                        borderRadius: '8px',
+                        marginBottom: '1rem',
+                        background: dofollow ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${dofollow ? 'rgba(16,185,129,0.3)' : 'var(--border-color)'}`,
+                      }}
+                    >
+                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: dofollow ? '#34d399' : 'var(--text-secondary)', marginBottom: dofollow ? 0 : '0.5rem' }}>
+                        {dofollow
+                          ? `Website link is dofollow${server.isPremium ? ' — Premium' : ' — reciprocal badge verified'}`
+                          : 'Website link is nofollow'}
+                      </p>
+                      {!dofollow && (
+                        <>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
+                            Add the AllMCPs badge to your site and verify it to earn a free dofollow backlink — rechecked periodically to stay live. Premium listings get dofollow instantly, no badge required.
+                          </p>
+                          <Link
+                            href={`/mcp/${server.id}/claim`}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              padding: '0.5rem 0.85rem',
+                              background: 'rgba(0,229,255,0.1)',
+                              border: '1px solid rgba(0,229,255,0.3)',
+                              color: '#00E5FF',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            <Sparkles size={14} /> Get a free dofollow link
+                          </Link>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <Link
+                    href={`/mcp/${server.id}/claim`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      padding: '0.75rem 1rem',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-primary)',
+                      borderRadius: '8px',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    Manage website &amp; verification
+                  </Link>
+                  <Link
+                    href={`/dashboard?edit=${server.id}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      padding: '0.75rem 1rem',
+                      background: 'var(--brand-gradient)',
+                      color: 'var(--bg-color)',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    Manage listing
+                  </Link>
+                </div>
               </div>
             )
           )}
