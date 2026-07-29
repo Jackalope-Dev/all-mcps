@@ -130,9 +130,16 @@ export async function GET() {
             {
               name: 'style',
               in: 'query',
-              description: 'Badge style',
+              description: 'Badge style layout',
               required: false,
-              schema: { type: 'string', enum: ['featured', 'directory'], default: 'featured' },
+              schema: { type: 'string', enum: ['shield', 'flat-square', 'featured', 'directory'], default: 'shield' },
+            },
+            {
+              name: 'metric',
+              in: 'query',
+              description: 'Displayed data metric',
+              required: false,
+              schema: { type: 'string', enum: ['status', 'upvotes', 'views', 'installs'], default: 'status' },
             },
             {
               name: 'theme',

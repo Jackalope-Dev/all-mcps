@@ -16,18 +16,28 @@ export function BadgeEmbedBuilder({
   serverName = 'Sample MCP Server',
   className = '',
 }: BadgeEmbedBuilderProps) {
-  const [badgeStyle, setBadgeStyle] = useState<'featured' | 'directory'>('featured');
+  const [badgeStyle, setBadgeStyle] = useState<'shield' | 'flat-square' | 'featured' | 'directory'>('shield');
+  const [badgeMetric, setBadgeMetric] = useState<'status' | 'upvotes' | 'views' | 'installs'>('status');
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [customId, setCustomId] = useState(serverId);
 
   const cleanId = customId.trim() || 'sample-mcp-server';
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
-  const badgeSrc = `${baseUrl}/api/badge/${cleanId}?style=${badgeStyle}&theme=${badgeTheme}`;
+
+  const queryParams = new URLSearchParams();
+  if (badgeStyle !== 'shield') queryParams.set('style', badgeStyle);
+  if (badgeMetric !== 'status') queryParams.set('metric', badgeMetric);
+  if (badgeTheme !== 'dark') queryParams.set('theme', badgeTheme);
+
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  const badgeSrc = `${baseUrl}/api/badge/${cleanId}${queryString}`;
   const targetUrl = `${baseUrl}/mcp/${cleanId}`;
 
-  const markdownSnippet = `[![Listed on AllMCPs](${badgeSrc})](${targetUrl})`;
-  const htmlSnippet = `<a href="${targetUrl}"><img src="${badgeSrc}" alt="Listed on AllMCPs" height="${badgeStyle === 'directory' ? 40 : 32}" /></a>`;
+  const badgeHeight = badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
+
+  const markdownSnippet = `[![AllMCPs](${badgeSrc})](${targetUrl})`;
+  const htmlSnippet = `<a href="${targetUrl}"><img src="${badgeSrc}" alt="AllMCPs" height="${badgeHeight}" /></a>`;
 
   const copyToClipboard = async (text: string, key: string) => {
     try {
@@ -68,48 +78,134 @@ export function BadgeEmbedBuilder({
         )}
       </div>
 
-      {/* Style & Theme Toggles */}
-      <div className="flex items-center gap-4 mb-5 flex-wrap">
-        <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-lg border border-white/10">
-          <button
-            type="button"
-            onClick={() => setBadgeStyle('featured')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-              badgeStyle === 'featured' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Featured Style
-          </button>
-          <button
-            type="button"
-            onClick={() => setBadgeStyle('directory')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-              badgeStyle === 'directory' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Directory Style
-          </button>
+      {/* Style & Data Metric Toggles */}
+      <div className="space-y-4 mb-5">
+        {/* Style selection */}
+        <div>
+          <div className="text-xs font-medium text-zinc-400 mb-1.5">Badge Style</div>
+          <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-lg border border-white/10 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setBadgeStyle('shield')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                badgeStyle === 'shield'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Standard Badge (20px)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBadgeStyle('flat-square')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                badgeStyle === 'flat-square'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Flat Square (20px)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBadgeStyle('featured')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                badgeStyle === 'featured'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Featured Banner (32px)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBadgeStyle('directory')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                badgeStyle === 'directory'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Directory Card (40px)
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-lg border border-white/10">
-          <button
-            type="button"
-            onClick={() => setBadgeTheme('dark')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-              badgeTheme === 'dark' ? 'bg-white/15 text-white' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Dark Theme
-          </button>
-          <button
-            type="button"
-            onClick={() => setBadgeTheme('light')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-              badgeTheme === 'light' ? 'bg-white text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Light Theme
-          </button>
+        {/* Metric selection & Theme selection */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div>
+            <div className="text-xs font-medium text-zinc-400 mb-1.5">Displayed Data / Metric</div>
+            <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-lg border border-white/10 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setBadgeMetric('status')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  badgeMetric === 'status'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Status (Verified)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBadgeMetric('upvotes')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  badgeMetric === 'upvotes'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Upvotes
+              </button>
+              <button
+                type="button"
+                onClick={() => setBadgeMetric('views')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  badgeMetric === 'views'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Views
+              </button>
+              <button
+                type="button"
+                onClick={() => setBadgeMetric('installs')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  badgeMetric === 'installs'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Installs
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs font-medium text-zinc-400 mb-1.5">Theme</div>
+            <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-lg border border-white/10">
+              <button
+                type="button"
+                onClick={() => setBadgeTheme('dark')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  badgeTheme === 'dark' ? 'bg-white/15 text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Dark
+              </button>
+              <button
+                type="button"
+                onClick={() => setBadgeTheme('light')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  badgeTheme === 'light' ? 'bg-white text-zinc-900 font-semibold' : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Light
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -117,15 +213,15 @@ export function BadgeEmbedBuilder({
       <div className="mb-5">
         <div className="text-xs text-zinc-400 font-medium mb-1.5">Live Preview</div>
         <div
-          className={`p-4 rounded-xl border flex items-center justify-center transition-colors ${
+          className={`p-4 rounded-xl border flex items-center justify-center transition-colors min-h-[64px] ${
             badgeTheme === 'light' ? 'bg-slate-100 border-slate-300' : 'bg-zinc-950 border-white/10'
           }`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/badge/${cleanId}?style=${badgeStyle}&theme=${badgeTheme}`}
+            src={`/api/badge/${cleanId}${queryString}`}
             alt={`${serverName} AllMCPs Badge`}
-            style={{ height: badgeStyle === 'directory' ? '40px' : '32px' }}
+            style={{ height: `${badgeHeight}px` }}
             className="max-w-full"
           />
         </div>

@@ -41,7 +41,8 @@ export default function ClaimClient({
   const [claimed, setClaimed] = useState(!!isOfficial);
   const [siteVerified, setSiteVerified] = useState(!!websiteVerified);
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
-  const [badgeStyle, setBadgeStyle] = useState<'directory' | 'featured'>('directory');
+  const [badgeStyle, setBadgeStyle] = useState<'shield' | 'flat-square' | 'featured' | 'directory'>('shield');
+  const [badgeMetric, setBadgeMetric] = useState<'status' | 'upvotes' | 'views' | 'installs'>('status');
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
   const personalizedToken = useMemo(
@@ -52,11 +53,19 @@ export default function ClaimClient({
   const apexDomain = useMemo(() => getApexDomain(websiteUrl.trim()), [websiteUrl]);
   const providerLinks = useMemo(() => getDnsProviderLinks(apexDomain), [apexDomain]);
 
-  const badgeSrc = `${baseUrl}/api/badge/${serverId}?style=${badgeStyle}&theme=${badgeTheme}`;
-  const badgeMarkdown = `[![Listed on AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`;
-  const badgeHtml = `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="Listed on AllMCPs" height="${badgeStyle === 'directory' ? 40 : 32}" /></a>`;
+  const queryParams = new URLSearchParams();
+  if (badgeStyle !== 'shield') queryParams.set('style', badgeStyle);
+  if (badgeMetric !== 'status') queryParams.set('metric', badgeMetric);
+  if (badgeTheme !== 'dark') queryParams.set('theme', badgeTheme);
+
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  const badgeSrc = `${baseUrl}/api/badge/${serverId}${queryString}`;
+  const badgeHeight = badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
+
+  const badgeMarkdown = `[![AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`;
+  const badgeHtml = `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="AllMCPs" height="${badgeHeight}" /></a>`;
   const metaTag = personalizedToken ? `<meta name="allmcps-verification" content="${personalizedToken}" />` : '';
-  const githubBadgeMd = `[![AllMCPs Verified](https://img.shields.io/badge/AllMCPs-Verified-blue)](${baseUrl}/mcp/${serverId})`;
+  const githubBadgeMd = `[![AllMCPs Verified](${baseUrl}/api/badge/${serverId}?style=shield)](${baseUrl}/mcp/${serverId})`;
   const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}/claim`)}`;
 
   const copyText = async (text: string, label: string) => {
@@ -386,45 +395,93 @@ export default function ClaimClient({
       ) : (
         <>
           <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>1. Choose a badge</h3>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-              {(['directory', 'featured'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setBadgeStyle(s)}
-                  style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '999px',
-                    border: '1px solid var(--border-color)',
-                    background: badgeStyle === s ? 'rgba(59,130,246,0.15)' : 'transparent',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  {s === 'directory' ? 'Directory' : 'Featured'}
-                </button>
-              ))}
-              {(['dark', 'light'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setBadgeTheme(t)}
-                  style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '999px',
-                    border: '1px solid var(--border-color)',
-                    background: badgeTheme === t ? 'rgba(59,130,246,0.15)' : 'transparent',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  {t === 'dark' ? 'Dark' : 'Light'}
-                </button>
-              ))}
+            <h3 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>1. Customize your badge</h3>
+            
+            {/* Style buttons */}
+            <div style={{ marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Style:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'shield', label: 'Standard (20px)' },
+                  { id: 'flat-square', label: 'Square (20px)' },
+                  { id: 'featured', label: 'Featured Banner (32px)' },
+                  { id: 'directory', label: 'Directory Card (40px)' },
+                ].map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setBadgeStyle(s.id as any)}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '999px',
+                      border: '1px solid var(--border-color)',
+                      background: badgeStyle === s.id ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      color: badgeStyle === s.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Metric buttons */}
+            <div style={{ marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Displayed Metric:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'status', label: 'Status' },
+                  { id: 'upvotes', label: 'Upvotes' },
+                  { id: 'views', label: 'Views' },
+                  { id: 'installs', label: 'Installs' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setBadgeMetric(m.id as any)}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '999px',
+                      border: '1px solid var(--border-color)',
+                      background: badgeMetric === m.id ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      color: badgeMetric === m.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Theme buttons */}
+            <div style={{ marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Theme:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {(['dark', 'light'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setBadgeTheme(t)}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '999px',
+                      border: '1px solid var(--border-color)',
+                      background: badgeTheme === t ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    {t === 'dark' ? 'Dark' : 'Light'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div
               style={{
                 padding: '1rem',
@@ -432,10 +489,13 @@ export default function ClaimClient({
                 background: badgeTheme === 'light' ? '#f1f5f9' : '#0a0a0a',
                 border: '1px solid var(--border-color)',
                 display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '48px',
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={badgeSrc} alt="AllMCPs badge preview" height={badgeStyle === 'directory' ? 40 : 32} />
+              <img src={badgeSrc} alt="AllMCPs badge preview" height={badgeHeight} />
             </div>
           </div>
 
