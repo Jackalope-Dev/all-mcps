@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
+import { createStripeCheckoutSession } from '@/lib/stripeCheckout';
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as any;
+    let env: any;
+    try {
+      const ctx = await getCloudflareContext();
+      env = ctx.env;
+    } catch {
+      /* fallback */
+    }
+
+    const body = (await req.json().catch(() => ({}))) as any;
     const { serverId, sku = 'featured_7d', email, coupon = 'AGENTREADY' } = body || {};
 
     if (!serverId) {
@@ -25,44 +35,38 @@ export async function POST(req: Request) {
     const isAgentReadyPromo = effectiveCoupon === 'AGENTREADY';
     const discountedCents = isAgentReadyPromo ? Math.round(product.unitAmount * 0.5) : product.unitAmount;
 
-    // Attempt Stripe session creation via internal endpoint
-    try {
-      const checkoutRes = await fetch(`${appUrl}/api/stripe/checkout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serverId, sku, email, coupon: effectiveCoupon }),
-      });
+    // Call direct Stripe session creation helper in-memory (no HTTP fetch subrequest overhead)
+    const checkoutResult = await createStripeCheckoutSession({
+      serverId,
+      sku: sku as PaidSku,
+      email,
+      coupon: effectiveCoupon,
+      env,
+    });
 
-      if (checkoutRes.ok) {
-        const data = (await checkoutRes.json()) as any;
-        if (data.url) {
-          const promoUrl = `${data.url}${data.url.includes('?') ? '&' : '?'}prefilled_promo_code=${effectiveCoupon}`;
-          return NextResponse.json({
-            success: true,
-            serverId,
-            sku,
-            product: product.name,
-            original_price: formatUsd(product.unitAmount),
-            discounted_price: formatUsd(discountedCents),
-            applied_coupon: effectiveCoupon,
-            checkout_url: promoUrl,
-            session_id: data.sessionId,
-            x402_invoice: {
-              spec: 'x402-v1',
-              asset: 'USD',
-              amount: discountedCents / 100,
-              coupon: effectiveCoupon,
-              payee: 'AllMCPs Directory',
-              checkout_url: promoUrl,
-            },
-          });
-        }
-      }
-    } catch {
-      /* fallback below if fetch fails */
+    if (checkoutResult.success && checkoutResult.url) {
+      return NextResponse.json({
+        success: true,
+        serverId,
+        sku,
+        product: product.name,
+        original_price: formatUsd(product.unitAmount),
+        discounted_price: formatUsd(discountedCents),
+        applied_coupon: effectiveCoupon,
+        checkout_url: checkoutResult.url,
+        session_id: checkoutResult.sessionId,
+        x402_invoice: {
+          spec: 'x402-v1',
+          asset: 'USD',
+          amount: discountedCents / 100,
+          coupon: effectiveCoupon,
+          payee: 'AllMCPs Directory',
+          checkout_url: checkoutResult.url,
+        },
+      });
     }
 
-    // Fallback checkout URL (pricing page)
+    // Fallback checkout URL (pricing page) if Stripe secrets are not yet configured in env
     const fallbackCheckoutUrl = `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&sku=${sku}&coupon=${effectiveCoupon}`;
     return NextResponse.json({
       success: true,
