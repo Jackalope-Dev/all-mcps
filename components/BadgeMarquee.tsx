@@ -55,6 +55,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://saaspa.ge/product/cms5fgv4u004sl804ite33b01',
     imageUrl: 'https://saaspa.ge/api/embed/product/cms5fgv4u004sl804ite33b01/badge.png?theme=orange',
     rel: 'nofollow'
+  },
+  {
+    id: 'findlytools',
+    name: 'Featured on Findly.tools',
+    href: 'https://findly.tools/all-mcps?utm_source=all-mcps',
+    imageUrl: 'https://findly.tools/badges/findly-tools-badge-light.svg',
+    rel: 'noopener noreferrer'
   }
 ];
 
