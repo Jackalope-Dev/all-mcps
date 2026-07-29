@@ -28,11 +28,11 @@ type Server = {
 
 type Props = {
   initialServers: Server[];
-  initialAnalytics: Record<string, AnalyticsSummary>;
-  isPremium: boolean;
+  initialAnalytics?: Record<string, AnalyticsSummary>;
+  isPremium?: boolean;
 };
 
-export default function DashboardClient({ initialServers, initialAnalytics, isPremium }: Props) {
+export default function DashboardClient({ initialServers, initialAnalytics = {}, isPremium = false }: Props) {
   const [servers, setServers] = useState(initialServers);
   const [analytics, setAnalytics] = useState(initialAnalytics);
   const [editingId, setEditingId] = useState<string | null>(null);

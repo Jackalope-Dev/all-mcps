@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   /* Surfaces — brand guide slate (dark mode first) */
   --bg-color: #020617;
@@ -289,6 +291,36 @@ p {
 
 .site-nav .nav-link.is-active {
   color: var(--accent-color);
+}
+
+.header-search-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-search-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.header-search-kbd {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.65rem;
+  font-family: monospace;
+  color: var(--text-secondary);
 }
 
 /* Mobile Navigation Toggle & Drawer */

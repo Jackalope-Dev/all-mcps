@@ -10,7 +10,7 @@ import { Button } from './ui/Button';
 const NAV = [
   { href: '/browse', label: 'Browse' },
   { href: '/categories', label: 'Categories' },
-  { href: '/what-is-mcp', label: 'What is MCP?' },
+  { href: '/what-is-mcp', label: 'What is an MCP?' },
   { href: '/guide', label: 'Guides' },
   { href: '/tools', label: 'Tools' },
 ] as const;
@@ -64,12 +64,12 @@ export function SiteHeader() {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-              className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+              className="header-search-btn"
               title="Search directory (Cmd+K)"
             >
               <Search size={13} className="text-cyan-400" />
               <span>Search</span>
-              <kbd className="px-1 py-0.5 rounded bg-white/10 text-[10px] text-zinc-400 font-mono">⌘K</kbd>
+              <kbd className="header-search-kbd">⌘K</kbd>
             </button>
             <Button href="/submit" variant="primary" size="sm" className="site-nav-cta">
               Submit MCP

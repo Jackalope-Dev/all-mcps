@@ -9,58 +9,23 @@ export interface DirectoryBadge {
   rel?: string;
 }
 
-const BADGES: DirectoryBadge[] = [
-  {
-    id: 'saashub',
-    name: 'SaaSHub',
-    href: 'https://www.saashub.com',
-    rel: 'nofollow'
-  },
-  {
-    id: 'producthunt',
-    name: 'Featured on Product Hunt',
-    href: 'https://www.producthunt.com',
-    rel: 'nofollow'
-  },
-  {
-    id: 'devhunt',
-    name: 'DevHunt',
-    href: 'https://devhunt.org',
-    rel: 'nofollow'
-  },
-  {
-    id: 'alternativeto',
-    name: 'AlternativeTo',
-    href: 'https://alternativeto.net',
-    rel: 'nofollow'
-  },
-  {
-    id: 'uneed',
-    name: 'Uneed Best Tools',
-    href: 'https://www.uneed.best',
-    rel: 'nofollow'
-  },
-  {
-    id: 'microlaunch',
-    name: 'MicroLaunch',
-    href: 'https://microlaunch.net',
-    rel: 'nofollow'
-  },
-  {
-    id: 'launchingnext',
-    name: 'Launching Next',
-    href: 'https://www.launchingnext.com',
-    rel: 'nofollow'
-  },
-  {
-    id: 'indiehackers',
-    name: 'Indie Hackers',
-    href: 'https://www.indiehackers.com',
-    rel: 'nofollow'
-  }
-];
+/**
+ * Add your directory badges and reciprocal links here once approved.
+ * Example:
+ * {
+ *   id: 'saashub',
+ *   name: 'SaaSHub',
+ *   href: 'https://www.saashub.com/s/allmcps',
+ *   imageUrl: 'https://www.saashub.com/badge.png'
+ * }
+ */
+const BADGES: DirectoryBadge[] = [];
 
 export function BadgeMarquee() {
+  if (!BADGES || BADGES.length === 0) {
+    return null; // Stays completely hidden until badges are added
+  }
+
   // Duplicate array for seamless infinite looping scroll
   const doubleBadges = [...BADGES, ...BADGES];
 
