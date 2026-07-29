@@ -2504,6 +2504,13 @@ nav[aria-label="Table of contents"] {
    which once columns start wrapping, so each row becomes a labeled card
    instead of trying to keep the grid intact. */
 @media (max-width: 720px) {
+  .admin-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+
   .admin-table thead {
     display: none;
   }
@@ -2516,8 +2523,17 @@ nav[aria-label="Table of contents"] {
     width: 100%;
   }
 
+  .admin-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
   .admin-table tr {
     padding: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
   }
 
   .admin-table td {

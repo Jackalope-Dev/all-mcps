@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { parsePendingRevision } from '../../lib/pendingRevision';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
@@ -83,9 +83,9 @@ export default function AdminClient({
   };
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+    <div className="admin-shell">
       <section>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Pending submissions</h2>
+        <h2 className="admin-section-title">Pending submissions</h2>
         <ServerTable
           servers={pending}
           empty="No pending submissions!"
@@ -95,8 +95,8 @@ export default function AdminClient({
       </section>
 
       <section>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Pending edits</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+        <h2 className="admin-section-title">Pending edits</h2>
+        <p className="admin-section-desc">
           Owner-submitted changes awaiting approval. Approving applies them immediately; a changed
           website resets its verification.
         </p>
@@ -109,8 +109,8 @@ export default function AdminClient({
       </section>
 
       <section>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Pending claims</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+        <h2 className="admin-section-title">Pending claims</h2>
+        <p className="admin-section-desc">
           A claimant proved control of a website that wasn&apos;t already on file for this listing.
           Check the site actually relates to the project before approving.
         </p>
@@ -123,8 +123,8 @@ export default function AdminClient({
       </section>
 
       <section>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Pending logos</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+        <h2 className="admin-section-title">Pending logos</h2>
+        <p className="admin-section-desc">
           Owner-uploaded logos awaiting approval. Nothing here is public until approved.
         </p>
         <PendingLogosTable
@@ -136,8 +136,8 @@ export default function AdminClient({
       </section>
 
       <section>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Manage listings</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+        <h2 className="admin-section-title">Manage listings</h2>
+        <p className="admin-section-desc">
           Search, edit, publish/unpublish, delete, and grant featured placement. Premium listings get
           a dofollow website backlink; free listings use nofollow.
         </p>
@@ -159,61 +159,42 @@ function ServerTable({
   onAction: (id: string, action: 'approve' | 'reject') => void;
 }) {
   return (
-    <div
-      style={{
-        background: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '12px',
-        overflow: 'hidden',
-      }}
-    >
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+    <div className="admin-card">
+      <table className="admin-table">
         <thead>
-          <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-            <th style={{ padding: '1rem' }}>Name</th>
-            <th style={{ padding: '1rem' }}>Links</th>
-            <th style={{ padding: '1rem' }}>Submitted</th>
-            <th style={{ padding: '1rem' }}>Actions</th>
+          <tr>
+            <th>Name</th>
+            <th>Links</th>
+            <th>Submitted</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {servers.length === 0 ? (
             <tr>
-              <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <td colSpan={4} className="admin-table-empty">
                 {empty}
               </td>
             </tr>
           ) : (
             servers.map((server) => (
-              <tr key={server.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <td style={{ padding: '1rem' }}>
+              <tr key={server.id}>
+                <td data-label="Name">
                   <strong>{server.name}</strong>
                   {server.reviewPriority && (
-                    <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#fbbf24', fontWeight: 700 }}>
+                    <span className="admin-badge" style={{ color: '#fbbf24' }}>
                       PRIORITY
                     </span>
                   )}
                   {server.isPremium && (
-                    <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#00E5FF', fontWeight: 700 }}>
+                    <span className="admin-badge" style={{ color: '#00E5FF' }}>
                       PREMIUM
                     </span>
                   )}
-                  <div
-                    style={{
-                      fontSize: '0.875rem',
-                      color: 'var(--text-secondary)',
-                      marginTop: '0.25rem',
-                      maxWidth: '300px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {server.description}
-                  </div>
+                  <div className="admin-desc-line">{server.description}</div>
                 </td>
-                <td style={{ padding: '1rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <td data-label="Links">
+                  <div className="admin-links-cell">
                     <a href={server.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}>
                       Repo
                     </a>
@@ -224,22 +205,24 @@ function ServerTable({
                     )}
                   </div>
                 </td>
-                <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
+                <td data-label="Submitted" style={{ color: 'var(--text-secondary)' }}>
                   {new Date(server.createdAt).toLocaleDateString()}
                 </td>
-                <td style={{ padding: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <td data-label="Actions">
+                  <div className="admin-actions">
                     <button
                       onClick={() => onAction(server.id, 'approve')}
                       disabled={loadingId === server.id}
-                      style={btnStyle('#047857', loadingId === server.id)}
+                      className="admin-btn"
+                      style={{ background: '#047857' }}
                     >
                       Approve
                     </button>
                     <button
                       onClick={() => onAction(server.id, 'reject')}
                       disabled={loadingId === server.id}
-                      style={btnStyle('#b91c1c', loadingId === server.id)}
+                      className="admin-btn"
+                      style={{ background: '#b91c1c' }}
                     >
                       Reject
                     </button>
@@ -266,27 +249,20 @@ function PendingEditsTable({
   onReject: (id: string) => void;
 }) {
   return (
-    <div
-      style={{
-        background: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '12px',
-        overflow: 'hidden',
-      }}
-    >
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+    <div className="admin-card">
+      <table className="admin-table">
         <thead>
-          <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-            <th style={{ padding: '1rem' }}>Listing</th>
-            <th style={{ padding: '1rem' }}>Proposed changes</th>
-            <th style={{ padding: '1rem' }}>Submitted</th>
-            <th style={{ padding: '1rem' }}>Actions</th>
+          <tr>
+            <th>Listing</th>
+            <th>Proposed changes</th>
+            <th>Submitted</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {servers.length === 0 ? (
             <tr>
-              <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <td colSpan={4} className="admin-table-empty">
                 No pending edits!
               </td>
             </tr>
@@ -302,11 +278,11 @@ function PendingEditsTable({
                 websiteUrl: server.websiteUrl ?? '',
               };
               return (
-                <tr key={server.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '1rem' }}>
+                <tr key={server.id}>
+                  <td data-label="Listing">
                     <strong>{server.name}</strong>
                   </td>
-                  <td style={{ padding: '1rem' }}>
+                  <td data-label="Proposed changes">
                     {fields.map((field) => (
                       <div key={field} style={{ marginBottom: '0.5rem' }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
@@ -319,22 +295,24 @@ function PendingEditsTable({
                       </div>
                     ))}
                   </td>
-                  <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
+                  <td data-label="Submitted" style={{ color: 'var(--text-secondary)' }}>
                     {new Date(pending.submittedAt).toLocaleDateString()}
                   </td>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <td data-label="Actions">
+                    <div className="admin-actions">
                       <button
                         onClick={() => onApprove(server.id)}
                         disabled={loadingId === server.id}
-                        style={btnStyle('#047857', loadingId === server.id)}
+                        className="admin-btn"
+                        style={{ background: '#047857' }}
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => onReject(server.id)}
                         disabled={loadingId === server.id}
-                        style={btnStyle('#b91c1c', loadingId === server.id)}
+                        className="admin-btn"
+                        style={{ background: '#b91c1c' }}
                       >
                         Reject
                       </button>
@@ -362,48 +340,41 @@ function PendingClaimsTable({
   onReject: (id: string) => void;
 }) {
   return (
-    <div
-      style={{
-        background: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '12px',
-        overflow: 'hidden',
-      }}
-    >
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+    <div className="admin-card">
+      <table className="admin-table">
         <thead>
-          <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-            <th style={{ padding: '1rem' }}>Listing</th>
-            <th style={{ padding: '1rem' }}>Repo</th>
-            <th style={{ padding: '1rem' }}>Proven website</th>
-            <th style={{ padding: '1rem' }}>Actions</th>
+          <tr>
+            <th>Listing</th>
+            <th>Repo</th>
+            <th>Proven website</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {servers.length === 0 ? (
             <tr>
-              <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <td colSpan={4} className="admin-table-empty">
                 No pending claims!
               </td>
             </tr>
           ) : (
             servers.map((server) => (
-              <tr key={server.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <td style={{ padding: '1rem' }}>
+              <tr key={server.id}>
+                <td data-label="Listing">
                   <strong>{server.name}</strong>
                 </td>
-                <td style={{ padding: '1rem' }}>
+                <td data-label="Repo">
                   <a href={server.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}>
                     Repo
                   </a>
                 </td>
-                <td style={{ padding: '1rem' }}>
+                <td data-label="Proven website">
                   {server.pendingClaimWebsiteUrl ? (
                     <a
                       href={server.pendingClaimWebsiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
+                      style={{ color: 'var(--accent-color)', fontSize: '0.85rem', overflowWrap: 'anywhere' }}
                     >
                       {server.pendingClaimWebsiteUrl}
                     </a>
@@ -411,19 +382,21 @@ function PendingClaimsTable({
                     '—'
                   )}
                 </td>
-                <td style={{ padding: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <td data-label="Actions">
+                  <div className="admin-actions">
                     <button
                       onClick={() => onApprove(server.id)}
                       disabled={loadingId === server.id}
-                      style={btnStyle('#047857', loadingId === server.id)}
+                      className="admin-btn"
+                      style={{ background: '#047857' }}
                     >
                       Approve
                     </button>
                     <button
                       onClick={() => onReject(server.id)}
                       disabled={loadingId === server.id}
-                      style={btnStyle('#b91c1c', loadingId === server.id)}
+                      className="admin-btn"
+                      style={{ background: '#b91c1c' }}
                     >
                       Reject
                     </button>
@@ -450,36 +423,29 @@ function PendingLogosTable({
   onReject: (id: string) => void;
 }) {
   return (
-    <div
-      style={{
-        background: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '12px',
-        overflow: 'hidden',
-      }}
-    >
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+    <div className="admin-card">
+      <table className="admin-table">
         <thead>
-          <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-            <th style={{ padding: '1rem' }}>Listing</th>
-            <th style={{ padding: '1rem' }}>Preview</th>
-            <th style={{ padding: '1rem' }}>Actions</th>
+          <tr>
+            <th>Listing</th>
+            <th>Preview</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {servers.length === 0 ? (
             <tr>
-              <td colSpan={3} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <td colSpan={3} className="admin-table-empty">
                 No pending logos!
               </td>
             </tr>
           ) : (
             servers.map((server) => (
-              <tr key={server.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <td style={{ padding: '1rem' }}>
+              <tr key={server.id}>
+                <td data-label="Listing">
                   <strong>{server.name}</strong>
                 </td>
-                <td style={{ padding: '1rem' }}>
+                <td data-label="Preview">
                   {server.pendingLogoKey && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -491,19 +457,21 @@ function PendingLogosTable({
                     />
                   )}
                 </td>
-                <td style={{ padding: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <td data-label="Actions">
+                  <div className="admin-actions">
                     <button
                       onClick={() => onApprove(server.id)}
                       disabled={loadingId === server.id}
-                      style={btnStyle('#047857', loadingId === server.id)}
+                      className="admin-btn"
+                      style={{ background: '#047857' }}
                     >
                       Approve
                     </button>
                     <button
                       onClick={() => onReject(server.id)}
                       disabled={loadingId === server.id}
-                      style={btnStyle('#b91c1c', loadingId === server.id)}
+                      className="admin-btn"
+                      style={{ background: '#b91c1c' }}
                     >
                       Reject
                     </button>
@@ -516,18 +484,4 @@ function PendingLogosTable({
       </table>
     </div>
   );
-}
-
-function btnStyle(bg: string, disabled: boolean): CSSProperties {
-  return {
-    padding: '0.5rem 1rem',
-    background: bg,
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.5 : 1,
-    fontSize: '0.85rem',
-    fontWeight: 600,
-  };
 }

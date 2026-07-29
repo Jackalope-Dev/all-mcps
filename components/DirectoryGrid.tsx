@@ -26,6 +26,7 @@ type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  logoUrl?: string | null;
   /** Paid listing — counts as verified for browse filters. */
   isPremium?: boolean;
   featuredUntil?: string | Date | null;
@@ -64,6 +65,42 @@ function getGradient(str: string) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   return colors[Math.abs(hash) % colors.length];
+}
+
+function ServerIcon({ name, logoUrl, size = 48 }: { name: string; logoUrl?: string | null; size?: number }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  if (logoUrl && !imgFailed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        alt=""
+        width={size}
+        height={size}
+        style={{ borderRadius: size > 40 ? 12 : 10, flexShrink: 0, objectFit: 'cover' }}
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size > 40 ? 12 : 10,
+        background: getGradient(name),
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size > 40 ? '1.5rem' : '1.1rem',
+        fontWeight: 800,
+        textTransform: 'uppercase',
+        flexShrink: 0,
+      }}
+    >
+      {name.charAt(0)}
+    </div>
+  );
 }
 
 function parseCategoryLabel(category: string): { emoji: string; label: string } {
@@ -285,26 +322,6 @@ export default function DirectoryGrid({
   // Width for the category select so long names are never clipped
   const selectLabel = selectedCategory || 'All Categories';
   const selectMinCh = Math.min(Math.max(selectLabel.length + 4, 16), 48);
-
-  const ServerIcon = ({ name, size = 48 }: { name: string; size?: number }) => (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size > 40 ? 12 : 10,
-        background: getGradient(name),
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size > 40 ? '1.5rem' : '1.1rem',
-        fontWeight: 800,
-        textTransform: 'uppercase',
-        flexShrink: 0,
-      }}
-    >
-      {name.charAt(0)}
-    </div>
-  );
 
   const Stats = ({ server }: { server: Server }) => (
     <div className="directory-stats">
@@ -674,7 +691,7 @@ export default function DirectoryGrid({
                     marginBottom: '1rem',
                   }}
                 >
-                  <ServerIcon name={server.name} />
+                  <ServerIcon name={server.name} logoUrl={server.logoUrl} />
                   <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {isFeaturedListing(server) && (
                       <Badge
@@ -738,7 +755,7 @@ export default function DirectoryGrid({
                 href={`/mcp/${server.id}`}
                 className={`directory-list-row surface-interactive${isFeaturedListing(server) ? ' directory-list-row-featured' : ''}`}
               >
-                <ServerIcon name={server.name} size={44} />
+                <ServerIcon name={server.name} logoUrl={server.logoUrl} size={44} />
                 <div className="directory-list-body">
                   <div className="directory-list-title-row">
                     <h3 className="directory-list-name">{server.name}</h3>

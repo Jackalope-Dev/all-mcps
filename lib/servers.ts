@@ -17,6 +17,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   description: serversTable.description,
   category: serversTable.category,
   websiteUrl: serversTable.websiteUrl,
+  logoUrl: serversTable.logoUrl,
   isPremium: serversTable.isPremium,
   websiteVerified: serversTable.websiteVerified,
   isOfficial: serversTable.isOfficial,
@@ -39,6 +40,7 @@ export type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  logoUrl?: string | null;
   isPremium?: boolean;
   status: string;
   lastCheckedAt?: string | Date | null;
