@@ -126,29 +126,125 @@ export function SubmitForm() {
   };
 
   if (status === 'success') {
+    const isGithub = url.includes('github.com');
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
+    const sampleId = submittedId || 'your-server';
+    const badgeSrc = `${baseUrl}/api/badge/${sampleId}?style=shield`;
+    const badgeMarkdown = `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${sampleId})`;
+
     return (
-      <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-        <h3>Server submitted successfully!</h3>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-          It is now pending review. Optional:{' '}
-          <a href="/pricing" style={{ color: 'var(--accent-color)' }}>
-            Priority review ($5)
-          </a>{' '}
-          if you need a faster queue. After approval you can claim ownership and promote the listing.
+      <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎉</div>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Submitted Successfully!</h3>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem', maxWidth: '500px', margin: '0.5rem auto 1.5rem' }}>
+          Your MCP server has been added to our queue for review and indexing. You can get verified immediately by adding your official AllMCPs badge.
         </p>
+
         {submittedId && (
-          <p style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-            <a href={`/mcp/${submittedId}/claim`} style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
-              Claim &amp; verify ownership →
-            </a>
-            <a
-              href={`/pricing?serverId=${encodeURIComponent(submittedId)}`}
-              style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}
-            >
-              Priority review / promote →
-            </a>
-          </p>
+          <div
+            style={{
+              textAlign: 'left',
+              maxWidth: '540px',
+              margin: '0 auto 1.75rem',
+              padding: '1.25rem',
+              borderRadius: '12px',
+              border: '1px solid rgba(0,229,255,0.25)',
+              background: 'rgba(0,229,255,0.04)',
+            }}
+          >
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#00E5FF', marginBottom: '0.5rem' }}>
+              Step 1: Add your AllMCPs Badge
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
+              {isGithub
+                ? 'Embed this standard 20px badge in your GitHub repository README.md. Adding it triggers automatic verification and marks your listing as Verified.'
+                : 'Embed this badge or HTML verification tag on your website to claim ownership.'}
+            </p>
+
+            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+              <pre
+                style={{
+                  background: 'rgba(0,0,0,0.6)',
+                  padding: '0.85rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  color: '#10b981',
+                  fontSize: '0.75rem',
+                  overflowX: 'auto',
+                  margin: 0,
+                }}
+              >
+                <code>{badgeMarkdown}</code>
+              </pre>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(badgeMarkdown);
+                    toast.success('Badge Markdown copied!');
+                  } catch {
+                    toast.error('Could not copy automatically.');
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '0.4rem',
+                  right: '0.4rem',
+                  background: 'var(--accent-color)',
+                  color: 'var(--bg-color)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '0.2rem 0.6rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Copy
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Badge Preview:</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={badgeSrc} alt="AllMCPs badge preview" height={20} />
+            </div>
+          </div>
         )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+          {submittedId && (
+            <a
+              href={`/mcp/${submittedId}/claim`}
+              style={{
+                padding: '0.65rem 1.25rem',
+                background: 'var(--accent-color)',
+                color: 'var(--bg-color)',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                fontSize: '0.9rem',
+                textDecoration: 'none',
+              }}
+            >
+              Verify &amp; Claim Listing →
+            </a>
+          )}
+          <a
+            href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}` : '/pricing'}
+            style={{
+              padding: '0.65rem 1.25rem',
+              border: '1px solid var(--border-color)',
+              background: 'rgba(255,255,255,0.05)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              textDecoration: 'none',
+            }}
+          >
+            Priority Review ($5) / Promote →
+          </a>
+        </div>
       </div>
     );
   }

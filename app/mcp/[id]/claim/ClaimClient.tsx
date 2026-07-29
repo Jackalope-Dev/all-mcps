@@ -249,10 +249,27 @@ export default function ClaimClient({
     );
   }
 
+  const hasGithub = repoUrl.includes('github.com');
   const methods: { id: ClaimMethod; label: string; hint: string }[] = [
-    { id: 'github', label: 'GitHub README', hint: 'Best if your listing points at a public GitHub repo' },
-    { id: 'website_badge', label: 'Website badge', hint: 'Embed a badge or meta tag on your site' },
-    { id: 'dns', label: 'DNS TXT', hint: 'Add a TXT record on your domain' },
+    ...(hasGithub
+      ? [
+          {
+            id: 'github' as ClaimMethod,
+            label: 'GitHub README Badge',
+            hint: 'Recommended for GitHub repos. Adding a badge to your README.md proves write access for instant verification.',
+          },
+        ]
+      : []),
+    {
+      id: 'website_badge' as ClaimMethod,
+      label: 'Website Badge / Meta Tag',
+      hint: 'Recommended for websites. Embed a dynamic badge or HTML verification tag on your domain.',
+    },
+    {
+      id: 'dns' as ClaimMethod,
+      label: 'DNS TXT Record',
+      hint: 'Add a TXT record to your domain DNS settings to prove domain ownership.',
+    },
   ];
 
   return (
@@ -261,7 +278,7 @@ export default function ClaimClient({
       <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
         {claimed
           ? 'This listing is verified. Attach or update your website, then prove control with a badge or DNS if you have not already.'
-          : 'Many listings were imported from public data. Prove you own this project to get the Verified badge.'}
+          : 'Prove you own this project to get the Verified badge and unlock owner management.'}
         {siteVerified ? ' Website is verified.' : claimed && websiteUrl ? ' Website not verified yet.' : ''}
       </p>
 
@@ -346,8 +363,67 @@ export default function ClaimClient({
       {method === 'github' && (
         <>
           <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>1. Add this to your README</h3>
-            <div style={{ position: 'relative' }}>
+            <h3 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>1. Add badge to your GitHub README</h3>
+
+            {/* Badge controls for GitHub */}
+            <div style={{ marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Style:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'shield', label: 'Standard (20px)' },
+                  { id: 'flat-square', label: 'Square (20px)' },
+                  { id: 'featured', label: 'Featured Banner (32px)' },
+                ].map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setBadgeStyle(s.id as any)}
+                    style={{
+                      padding: '0.3rem 0.65rem',
+                      borderRadius: '999px',
+                      border: '1px solid var(--border-color)',
+                      background: badgeStyle === s.id ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      color: badgeStyle === s.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Displayed Metric:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'status', label: 'Status' },
+                  { id: 'upvotes', label: 'Upvotes' },
+                  { id: 'views', label: 'Views' },
+                  { id: 'installs', label: 'Installs' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setBadgeMetric(m.id as any)}
+                    style={{
+                      padding: '0.3rem 0.65rem',
+                      borderRadius: '999px',
+                      border: '1px solid var(--border-color)',
+                      background: badgeMetric === m.id ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      color: badgeMetric === m.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
               <pre
                 style={{
                   background: 'rgba(0,0,0,0.5)',
@@ -359,11 +435,11 @@ export default function ClaimClient({
                   fontSize: '0.8rem',
                 }}
               >
-                <code>{githubBadgeMd}</code>
+                <code>{badgeMarkdown}</code>
               </pre>
               <button
                 type="button"
-                onClick={() => copyText(githubBadgeMd, 'README badge')}
+                onClick={() => copyText(badgeMarkdown, 'README badge snippet')}
                 style={{
                   position: 'absolute',
                   top: '0.5rem',
@@ -377,12 +453,28 @@ export default function ClaimClient({
                   fontSize: '0.8rem',
                 }}
               >
-                Copy
+                Copy Markdown
               </button>
+            </div>
+            
+            <div
+              style={{
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                background: badgeTheme === 'light' ? '#f1f5f9' : '#0a0a0a',
+                border: '1px solid var(--border-color)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Badge Preview:</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={badgeSrc} alt="GitHub badge preview" height={badgeHeight} />
             </div>
           </div>
           <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>2. Repo</h3>
+            <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>2. Target Repository</h3>
             <a href={repoUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)' }}>
               {repoUrl}
             </a>
