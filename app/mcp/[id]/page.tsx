@@ -314,28 +314,66 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: org ? '0.2rem' : '1rem' }}>
             <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
-            <span
-              title={healthTooltip}
-              style={{
-                display: 'inline-block',
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: healthUi.color,
-                boxShadow: healthKey === 'active' ? `0 0 8px ${healthUi.color}` : 'none',
-                flexShrink: 0,
-              }}
-            />
+            <span className="mcp-icon-tooltip">
+              <span className="mcp-icon-tooltip-trigger" tabIndex={0}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    backgroundColor: healthUi.color,
+                    boxShadow: healthKey === 'active' ? `0 0 8px ${healthUi.color}` : 'none',
+                    flexShrink: 0,
+                  }}
+                />
+              </span>
+              <span className="mcp-icon-tooltip-bubble" role="tooltip">
+                <span className="mcp-icon-tooltip-title">
+                  <span className="mcp-icon-tooltip-dot" style={{ backgroundColor: healthUi.color }} />
+                  {healthUi.label}
+                </span>
+                <span className="mcp-icon-tooltip-body">{healthUi.detail}</span>
+                <span className="mcp-icon-tooltip-meta">
+                  {server.lastCheckedAt
+                    ? `Last checked ${new Date(server.lastCheckedAt).toLocaleString()}`
+                    : 'No health check has run yet.'}
+                </span>
+              </span>
+            </span>
             <h1 className="text-page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.45rem' }}>
               {displayName}
               {server.isPremium && (
-                <span title="Premium listing" style={{ display: 'inline-flex' }}>
-                  <Crown size={20} color="#facc15" fill="#facc15" />
+                <span className="mcp-icon-tooltip">
+                  <span className="mcp-icon-tooltip-trigger" tabIndex={0}>
+                    <Crown size={20} color="#facc15" fill="#facc15" />
+                  </span>
+                  <span className="mcp-icon-tooltip-bubble" role="tooltip">
+                    <span className="mcp-icon-tooltip-title">
+                      <Crown size={14} color="#facc15" fill="#facc15" /> Premium listing
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      This owner pays for enhanced visibility — priority placement in search, category pages, and rotating spotlight slots across the directory.
+                    </span>
+                  </span>
                 </span>
               )}
               {isVerifiedListing(server) && (
-                <span title={server.isPremium && !server.isOfficial ? 'Premium listing' : 'Ownership verified'} style={{ display: 'inline-flex' }}>
-                  <BadgeCheck size={20} color="var(--accent-color)" />
+                <span className="mcp-icon-tooltip">
+                  <span className="mcp-icon-tooltip-trigger" tabIndex={0}>
+                    <BadgeCheck size={20} color="var(--accent-color)" />
+                  </span>
+                  <span className="mcp-icon-tooltip-bubble" role="tooltip">
+                    <span className="mcp-icon-tooltip-title">
+                      <BadgeCheck size={14} color="var(--accent-color)" />
+                      {server.isOfficial ? 'Ownership verified' : 'Premium listing'}
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      {server.isOfficial
+                        ? 'The owner proved control of this listing via a GitHub README, site badge, or DNS TXT record.'
+                        : 'This listing has an active Premium subscription. Ownership has not been separately verified.'}
+                    </span>
+                  </span>
                 </span>
               )}
             </h1>
