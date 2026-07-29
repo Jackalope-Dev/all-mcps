@@ -41,6 +41,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://saasgrow.app?ref=allmcps.com',
     imageUrl: 'https://saasgrow.app/api/badge?type=featured&style=dark',
     rel: 'noopener'
+  },
+  {
+    id: 'twelvetools',
+    name: 'Featured on Twelve Tools',
+    href: 'https://twelve.tools',
+    imageUrl: 'https://twelve.tools/badge3-dark.svg',
+    rel: 'noopener'
   }
 ];
 
