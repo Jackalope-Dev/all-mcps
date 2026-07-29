@@ -8,7 +8,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { TableOfContents, TocItem } from '../../../components/ui/TableOfContents';
 
 export const dynamic = 'force-static';
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 export async function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));

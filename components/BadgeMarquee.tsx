@@ -5,30 +5,34 @@ export interface DirectoryBadge {
   name: string;
   href: string;
   imageUrl?: string;
-  width?: number;
-  height?: number;
   svgIcon?: React.ReactNode;
   rel?: string;
 }
 
 /**
  * Verified reciprocal badges and dofollow directory links.
+ * Standardized pill card design across all badges.
  */
 const BADGES: DirectoryBadge[] = [
   {
     id: 'nicklaunches',
-    name: 'AllMCPs on Nick Launches',
+    name: 'Featured on Nick Launches',
     href: 'https://nicklaunches.com/products/allmcps/?utm_source=allmcps.com&utm_medium=badge&utm_campaign=featured',
     imageUrl: 'https://nicklaunches.com/badges/featured-dark.png',
-    width: 244,
-    height: 56,
     rel: 'noopener'
+  },
+  {
+    id: 'launchllama',
+    name: 'Launch Llama Newsletter',
+    href: 'https://tools.launchllama.co?utm_source=badge&utm_medium=referral',
+    imageUrl: 'https://tools.launchllama.co/featured-badge-white.png?v=2',
+    rel: 'noopener noreferrer'
   }
 ];
 
 export function BadgeMarquee() {
   if (!BADGES || BADGES.length === 0) {
-    return null; // Stays completely hidden until badges are added
+    return null;
   }
 
   // Repeat array for smooth infinite marquee scrolling animation
@@ -48,21 +52,18 @@ export function BadgeMarquee() {
             className="badge-marquee-item"
             title={badge.name}
           >
-            {badge.imageUrl ? (
-              <img
-                src={badge.imageUrl}
-                alt={badge.name}
-                className="badge-marquee-img"
-                width={badge.width || 244}
-                height={badge.height || 56}
-                style={{ height: 'auto', maxHeight: '38px', width: 'auto' }}
-              />
-            ) : (
-              <span className="badge-marquee-pill">
+            <span className="badge-marquee-pill">
+              {badge.imageUrl ? (
+                <img
+                  src={badge.imageUrl}
+                  alt={badge.name}
+                  className="badge-marquee-icon-thumb"
+                />
+              ) : (
                 <span className="badge-marquee-dot" />
-                <span>{badge.name}</span>
-              </span>
-            )}
+              )}
+              <span className="badge-marquee-label">{badge.name}</span>
+            </span>
           </a>
         ))}
       </div>
