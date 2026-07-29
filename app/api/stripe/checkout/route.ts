@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: `Missing Stripe Price ID for ${product.name}.`,
-          hint: `Set ${product.priceEnv} in environment variables.`,
+          hint: `Set ${product.priceEnv} in Cloudflare Dashboard environment secrets.`,
         },
         { status: 503 }
       );
@@ -103,13 +103,8 @@ export async function POST(req: Request) {
         sku,
       },
       client_reference_id: serverId,
+      allow_promotion_codes: true,
     };
-
-    if (coupon) {
-      sessionParams.discounts = [{ coupon }];
-    } else {
-      sessionParams.allow_promotion_codes = true;
-    }
 
     if (email) {
       sessionParams.customer_email = email;
@@ -123,15 +118,36 @@ export async function POST(req: Request) {
       };
     }
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    let session: any;
+    if (coupon) {
+      try {
+        session = await stripe.checkout.sessions.create({
+          ...sessionParams,
+          allow_promotion_codes: undefined,
+          discounts: [{ coupon }],
+        });
+      } catch (couponErr: any) {
+        console.warn(`Direct discount coupon "${coupon}" failed, falling back to standard checkout:`, couponErr?.message);
+        session = await stripe.checkout.sessions.create(sessionParams);
+      }
+    } else {
+      session = await stripe.checkout.sessions.create(sessionParams);
+    }
 
-    if (!session.url) {
+    if (!session?.url) {
       return NextResponse.json({ error: 'Could not create Checkout session' }, { status: 500 });
     }
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (e: any) {
     console.error('Stripe checkout error:', e);
-    return NextResponse.json({ error: 'Checkout failed', details: e?.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Checkout failed',
+        details: e?.message || 'Unknown Stripe API error',
+        hint: 'Ensure STRIPE_SECRET_KEY and STRIPE_PRICE_* environment variables are set in Cloudflare Workers Dashboard.',
+      },
+      { status: 500 }
+    );
   }
 }
