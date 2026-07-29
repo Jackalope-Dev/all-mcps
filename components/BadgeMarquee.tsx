@@ -27,6 +27,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://tools.launchllama.co?utm_source=badge&utm_medium=referral',
     imageUrl: 'https://tools.launchllama.co/featured-badge-white.png?v=2',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'verifieddr',
+    name: 'Verified DR - allmcps.com',
+    href: 'https://verifieddr.com/website/allmcps-com',
+    imageUrl: 'https://verifieddr.com/badge/allmcps-com-dark.svg',
+    rel: 'noopener'
   }
 ];
 
