@@ -31,6 +31,13 @@ function isPngOrJpeg(bytes: Uint8Array): boolean {
  * Node but throws in production Workers, since nodejs_compat only
  * implements the public zlib API, not those private internals. Photon's
  * WASM build has no such dependency.
+ *
+ * The `@cf-wasm/photon/workerd` import is deferred to inside this function
+ * (rather than a top-level import) because its raw ESM `.wasm` import only
+ * resolves correctly once Cloudflare's own Worker bundler processes it —
+ * Next's build-time "collecting page data" step imports route modules in
+ * plain Node to statically inspect their exports, and a top-level import
+ * here would execute (and fail) during that step too.
  */
 export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array> {
   if (bytes.byteLength === 0) {
@@ -45,7 +52,9 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array>
     throw new LogoValidationError('Logo must be a PNG or JPEG image.');
   }
 
-  let input: PhotonImage;
+  const { PhotonImage, SamplingFilter, crop, resize } = await import('@cf-wasm/photon/workerd');
+
+  let input: PhotonImageType;
   try {
     input = PhotonImage.new_from_byteslice(view);
   } catch (err) {
