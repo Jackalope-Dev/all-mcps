@@ -28,7 +28,10 @@
   "assets": {
     "logoIconSvg": "https://allmcps.com/logo-icon.svg",
     "logoFullLightPng": "https://allmcps.com/logo-full-light.png",
-    "screenshotDesktop": "https://allmcps.com/screenshots/homepage-screenshot-desktop.png",
+    "screenshotHomepage": "https://allmcps.com/screenshots/homepage-desktop.png",
+    "screenshotBrowse": "https://allmcps.com/screenshots/browse-directory-desktop.png",
+    "screenshotConfigTool": "https://allmcps.com/screenshots/config-generator-tool-desktop.png",
+    "screenshotCategories": "https://allmcps.com/screenshots/categories-desktop.png",
     "screenshotMobile": "https://allmcps.com/screenshots/homepage-screenshot-mobile.png"
   },
   "reciprocalBadges": {
