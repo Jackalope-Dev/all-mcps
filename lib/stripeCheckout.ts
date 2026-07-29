@@ -21,6 +21,20 @@ export type CreateCheckoutResult = {
   status?: number;
 };
 
+function appendPrefilledPromoCode(url: string, code: string): string {
+  const cleanCode = code.trim();
+  if (!cleanCode) return url;
+  const hashIndex = url.indexOf('#');
+  if (hashIndex !== -1) {
+    const base = url.substring(0, hashIndex);
+    const hash = url.substring(hashIndex);
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}prefilled_promo_code=${encodeURIComponent(cleanCode)}${hash}`;
+  }
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}prefilled_promo_code=${encodeURIComponent(cleanCode)}`;
+}
+
 export async function createStripeCheckoutSession(params: CreateCheckoutParams): Promise<CreateCheckoutResult> {
   let { serverId, sku, email, coupon, env } = params;
 
@@ -34,6 +48,33 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     } catch {
       /* fallback */
     }
+  }
+
+  if (!env?.DB) {
+    return { success: false, status: 500, error: 'Database unavailable' };
+  }
+
+  const db = drizzle(env.DB);
+  const rows = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+  const server = rows[0];
+  if (!server) {
+    return { success: false, status: 404, error: 'Listing not found' };
+  }
+
+  if (sku === 'priority_review' && server.status !== 'pending') {
+    return {
+      success: false,
+      status: 400,
+      error: 'Priority review is only available for listings still awaiting approval.',
+    };
+  }
+
+  if ((sku === 'featured_7d' || sku === 'premium_monthly') && server.status !== 'active') {
+    return {
+      success: false,
+      status: 400,
+      error: 'Featured and Premium are available after your listing is approved.',
+    };
   }
 
   const secretKey = env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
@@ -62,33 +103,6 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
       status: 503,
       error: `Missing Stripe Price ID for ${product.name}.`,
       hint: `Set ${product.priceEnv} in Cloudflare Dashboard environment secrets.`,
-    };
-  }
-
-  if (!env?.DB) {
-    return { success: false, status: 500, error: 'Database unavailable' };
-  }
-
-  const db = drizzle(env.DB);
-  const rows = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
-  const server = rows[0];
-  if (!server) {
-    return { success: false, status: 404, error: 'Listing not found' };
-  }
-
-  if (sku === 'priority_review' && server.status !== 'pending') {
-    return {
-      success: false,
-      status: 400,
-      error: 'Priority review is only available for listings still awaiting approval.',
-    };
-  }
-
-  if ((sku === 'featured_7d' || sku === 'premium_monthly') && server.status !== 'active') {
-    return {
-      success: false,
-      status: 400,
-      error: 'Featured and Premium are available after your listing is approved.',
     };
   }
 
@@ -138,9 +152,7 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     return { success: false, status: 500, error: 'Could not create Checkout session' };
   }
 
-  const finalUrl = coupon
-    ? `${session.url}${session.url.includes('?') ? '&' : '?'}prefilled_promo_code=${encodeURIComponent(coupon.trim())}`
-    : session.url;
+  const finalUrl = coupon ? appendPrefilledPromoCode(session.url, coupon) : session.url;
 
   return {
     success: true,
