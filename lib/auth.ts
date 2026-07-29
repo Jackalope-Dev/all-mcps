@@ -30,7 +30,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           const { host } = new URL(url);
 
           const result = await resend.emails.send({
-            from: provider.from,
+            from: provider.from || `AllMCPs <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`,
             to: identifier,
             subject: `Sign in to ${host}`,
             react: MagicLinkEmail({ loginUrl: url }) as React.ReactElement,
