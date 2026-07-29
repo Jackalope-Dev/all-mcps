@@ -41,6 +41,9 @@ export async function generateMetadata({
       url,
       type: 'article',
       publishedTime: `${post.date}T12:00:00.000Z`,
+      modifiedTime: `${post.date}T12:00:00.000Z`,
+      authors: ['AllMCPs'],
+      tags: post.tags,
     },
     twitter: {
       card: 'summary_large_image',
@@ -93,6 +96,7 @@ export default async function BlogPostPage({
     text: entry.text,
   }));
   const contentWithAnchors = withHeadingAnchors(post.content);
+  const wordCount = post.content.trim().split(/\s+/).filter(Boolean).length;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -102,9 +106,15 @@ export default async function BlogPostPage({
         headline: post.title,
         description: post.excerpt,
         url,
+        image: 'https://allmcps.com/opengraph-image',
         datePublished: post.date,
         dateModified: post.date,
         keywords: post.tags.join(', '),
+        articleSection: post.tags,
+        inLanguage: 'en-US',
+        wordCount,
+        timeRequired: `PT${post.readingTime}M`,
+        isAccessibleForFree: true,
         author: {
           '@type': 'Organization',
           name: 'AllMCPs',
