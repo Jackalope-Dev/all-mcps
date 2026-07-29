@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import blogManifest from './blog-manifest.json';
 
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
 const FILENAME_PATTERN = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/;
@@ -50,11 +51,18 @@ function readPostFile(filename: string): BlogPost {
 }
 
 export function getAllPosts(): BlogPost[] {
-  if (!fs.existsSync(BLOG_DIR)) {
-    return [];
+  try {
+    if (fs.existsSync(BLOG_DIR)) {
+      const filenames = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'));
+      if (filenames.length > 0) {
+        return filenames.map(readPostFile).sort((a, b) => (a.date < b.date ? 1 : -1));
+      }
+    }
+  } catch {
+    // If fs fails (e.g. in Cloudflare Worker environment), fall back to static blogManifest
   }
-  const filenames = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'));
-  return filenames.map(readPostFile).sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  return (blogManifest as BlogPost[]).sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
@@ -68,3 +76,4 @@ export function getAllTags(): string[] {
   }
   return Array.from(tags).sort();
 }
+

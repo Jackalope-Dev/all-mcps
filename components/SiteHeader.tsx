@@ -11,7 +11,7 @@ const NAV = [
   { href: '/browse', label: 'Browse' },
   { href: '/categories', label: 'Categories' },
   { href: '/what-is-mcp', label: 'What is an MCP?' },
-  { href: '/guide', label: 'Guides' },
+  { href: '/guides', label: 'Guides' },
   { href: '/tools', label: 'Tools' },
 ] as const;
 

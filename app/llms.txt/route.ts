@@ -40,8 +40,9 @@ export async function GET(request: Request) {
 
   content += `## Useful Links\n`;
   content += `- Directory Homepage: https://allmcps.com\n`;
+  content += `- All Guides: https://allmcps.com/guides\n`;
   content += `- Categories: https://allmcps.com/categories\n`;
-  content += `- MCP Guide: https://allmcps.com/guide\n`;
+  content += `- MCP Setup Guide: https://allmcps.com/guide\n`;
   content += `- What is MCP: https://allmcps.com/what-is-mcp\n`;
   content += `- How to Build an MCP Server: https://allmcps.com/build-mcp-server\n`;
   content += `- Pricing: https://allmcps.com/pricing\n`;

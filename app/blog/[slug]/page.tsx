@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { getAllPosts, getPostBySlug } from '../../../lib/blog';
-import { extractToc, tocHref, withHeadingAnchors } from '../../../lib/blogToc';
+import { extractToc, withHeadingAnchors } from '../../../lib/blogToc';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { Badge } from '../../../components/ui/Badge';
+import { TableOfContents, TocItem } from '../../../components/ui/TableOfContents';
 
 export const dynamic = 'force-static';
 export const dynamicParams = false;
@@ -86,7 +87,11 @@ export default async function BlogPostPage({
   }
 
   const url = `https://allmcps.com/blog/${post.slug}`;
-  const toc = extractToc(post.content);
+  const rawToc = extractToc(post.content);
+  const tocItems: TocItem[] = rawToc.map((entry) => ({
+    id: entry.slug,
+    text: entry.text,
+  }));
   const contentWithAnchors = withHeadingAnchors(post.content);
 
   const jsonLd = {
@@ -148,7 +153,7 @@ export default async function BlogPostPage({
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <main className="page-shell page-shell--content">
+      <main className="page-shell page-shell--default">
         <div className="page-shell-inner">
           <nav aria-label="Breadcrumb">
             <ol className="breadcrumb">
@@ -168,69 +173,64 @@ export default async function BlogPostPage({
             </ol>
           </nav>
 
-          <article className="surface page-panel" style={{ marginTop: '1.5rem' }}>
-            <header>
-              <h1 className="text-page-title">{post.title}</h1>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '0.75rem',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  marginBottom: '1rem',
-                }}
-              >
-                <time dateTime={post.date} className="text-meta" style={{ fontWeight: 600 }}>
-                  {formatDate(post.date)}
-                </time>
-                <span className="text-meta">· {post.readingTime} min read</span>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                {post.tags.map((tag) => (
-                  <Badge key={tag} variant="category">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </header>
-
-            {toc.length > 1 && (
-              <nav
-                aria-label="Table of contents"
-                className="surface-muted"
-                style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem' }}
-              >
-                <p className="text-meta" style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
-                  On this page
-                </p>
-                <ol style={{ margin: 0, paddingLeft: '1.25rem' }}>
-                  {toc.map((entry) => (
-                    <li key={entry.slug} style={{ marginBottom: '0.35rem' }}>
-                      <a href={tocHref(entry.slug)}>{entry.text}</a>
-                    </li>
+          <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10 items-start">
+            <article className="surface page-panel min-w-0" style={{ marginTop: '1.5rem' }}>
+              <header>
+                <h1 className="text-page-title">{post.title}</h1>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0.75rem',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  <time dateTime={post.date} className="text-meta" style={{ fontWeight: 600 }}>
+                    {formatDate(post.date)}
+                  </time>
+                  <span className="text-meta">· {post.readingTime} min read</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                  {post.tags.map((tag) => (
+                    <Badge key={tag} variant="category">
+                      {tag}
+                    </Badge>
                   ))}
-                </ol>
-              </nav>
-            )}
+                </div>
+              </header>
 
-            <div className="markdown-body">
-              <SafeMarkdown content={contentWithAnchors} />
-            </div>
+              {tocItems.length > 1 && (
+                <div className="lg:hidden mb-6">
+                  <TableOfContents items={tocItems} />
+                </div>
+              )}
 
-            {post.faq.length > 0 && (
-              <div style={{ marginTop: '2.5rem' }}>
-                <h2 className="text-section">Frequently asked questions</h2>
-                {post.faq.map((item) => (
-                  <div key={item.q} style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{ color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.4rem' }}>
-                      {item.q}
-                    </h3>
-                    <p style={{ color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{item.a}</p>
-                  </div>
-                ))}
+              <div className="markdown-body">
+                <SafeMarkdown content={contentWithAnchors} />
+              </div>
+
+              {post.faq.length > 0 && (
+                <div style={{ marginTop: '2.5rem' }}>
+                  <h2 className="text-section">Frequently asked questions</h2>
+                  {post.faq.map((item) => (
+                    <div key={item.q} style={{ marginBottom: '1.5rem' }}>
+                      <h3 style={{ color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.4rem' }}>
+                        {item.q}
+                      </h3>
+                      <p style={{ color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{item.a}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </article>
+
+            {tocItems.length > 1 && (
+              <div className="hidden lg:block pt-6">
+                <TableOfContents items={tocItems} />
               </div>
             )}
-          </article>
+          </div>
 
           <div style={{ marginTop: '2rem' }}>
             <Link href="/blog" className="btn btn-secondary">

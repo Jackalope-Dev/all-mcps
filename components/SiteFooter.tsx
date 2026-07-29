@@ -29,6 +29,11 @@ export function SiteFooter() {
           <h4 className="footer-heading">Resources</h4>
           <ul className="site-footer-links">
             <li>
+              <Link href="/guides" className="nav-link">
+                Guides Hub
+              </Link>
+            </li>
+            <li>
               <Link href="/blog" className="nav-link">
                 Blog
               </Link>

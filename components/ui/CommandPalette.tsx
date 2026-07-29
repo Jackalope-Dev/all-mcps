@@ -4,12 +4,15 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight, X, Cpu, FileText, Tag, Sparkles } from 'lucide-react';
 import serversData from '../../data/mcp-servers.json';
+import { SafeMarkdown } from './SafeMarkdown';
+import { Badge } from './Badge';
 
 interface CommandItem {
   id: string;
   title: string;
   subtitle: string;
-  category: 'server' | 'page' | 'category';
+  category: string;
+  categoryType: 'server' | 'page' | 'category';
   url: string;
   icon?: React.ReactNode;
 }
@@ -50,20 +53,21 @@ export function CommandPalette() {
 
   const items: CommandItem[] = useMemo(() => {
     const staticPages: CommandItem[] = [
-      { id: 'nav-browse', title: 'Browse All Servers', subtitle: 'Explore and filter MCP servers', category: 'page', url: '/browse', icon: <Search className="w-4 h-4 text-cyan-400" /> },
-      { id: 'nav-categories', title: 'Browse Categories', subtitle: 'Explore 50+ categories of MCP tools', category: 'page', url: '/categories', icon: <Tag className="w-4 h-4 text-cyan-400" /> },
-      { id: 'nav-build', title: 'Build an MCP Server', subtitle: 'Developer reference and specs', category: 'page', url: '/build-mcp-server', icon: <FileText className="w-4 h-4 text-cyan-400" /> },
-      { id: 'nav-badge', title: 'Badge Embed Builder', subtitle: 'Dynamic SVG README badges', category: 'page', url: '/badge-generator', icon: <Sparkles className="w-4 h-4 text-cyan-400" /> },
-      { id: 'nav-pricing', title: 'Pricing & Featured Listings', subtitle: 'Promote your server', category: 'page', url: '/pricing', icon: <Sparkles className="w-4 h-4 text-cyan-400" /> },
+      { id: 'nav-browse', title: 'Browse All Servers', subtitle: 'Explore and filter MCP servers', category: 'Page', categoryType: 'page', url: '/browse', icon: <Search size={18} className="text-cyan-400" /> },
+      { id: 'nav-categories', title: 'Browse Categories', subtitle: 'Explore 50+ categories of MCP tools', category: 'Page', categoryType: 'page', url: '/categories', icon: <Tag size={18} className="text-cyan-400" /> },
+      { id: 'nav-build', title: 'Build an MCP Server', subtitle: 'Developer reference and specs', category: 'Page', categoryType: 'page', url: '/build-mcp-server', icon: <FileText size={18} className="text-cyan-400" /> },
+      { id: 'nav-badge', title: 'Badge Embed Builder', subtitle: 'Dynamic SVG README badges', category: 'Page', categoryType: 'page', url: '/badge-generator', icon: <Sparkles size={18} className="text-cyan-400" /> },
+      { id: 'nav-pricing', title: 'Pricing & Featured Listings', subtitle: 'Promote your server', category: 'Page', categoryType: 'page', url: '/pricing', icon: <Sparkles size={18} className="text-cyan-400" /> },
     ];
 
     const serverItems: CommandItem[] = (serversData as any[]).slice(0, 200).map((s) => ({
       id: `server-${s.id}`,
       title: s.name,
       subtitle: s.description,
-      category: 'server',
+      category: s.category || 'Server',
+      categoryType: 'server',
       url: `/mcp/${s.id}`,
-      icon: <Cpu className="w-4 h-4 text-blue-400" />,
+      icon: <Cpu size={18} className="text-blue-400" />,
     }));
 
     return [...staticPages, ...serverItems];
@@ -103,39 +107,81 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 md:pt-24 px-4 animate-fade-in"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        backgroundColor: 'rgba(2, 6, 23, 0.85)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: '5rem',
+        paddingLeft: '1rem',
+        paddingRight: '1rem',
+        paddingBottom: '2rem',
+      }}
       onClick={() => setIsOpen(false)}
     >
       <div
-        className="w-full max-w-xl rounded-2xl bg-slate-950 border border-white/15 shadow-2xl overflow-hidden flex flex-col"
+        style={{
+          width: '100%',
+          maxWidth: '42rem',
+          borderRadius: '20px',
+          backgroundColor: '#090d16',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 229, 255, 0.15)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {/* Search Header */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/10 bg-slate-900/60">
-          <Search className="w-5 h-5 text-cyan-400 shrink-0" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.6)' }}>
+          <Search size={20} style={{ color: '#00E5FF', flexShrink: 0 }} />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search MCP servers, docs, or pages... (e.g. SQLite, GitHub, Cursor)"
-            className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
+            placeholder="Search 150+ MCP servers, docs, or pages... (e.g. SQLite, GitHub, Cursor)"
+            style={{
+              width: '100%',
+              backgroundColor: 'transparent',
+              fontSize: '0.95rem',
+              color: '#ffffff',
+              border: 'none',
+              outline: 'none',
+            }}
           />
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+            style={{
+              padding: '0.4rem',
+              borderRadius: '8px',
+              color: '#94a3b8',
+              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+            }}
             title="Close (ESC)"
           >
-            <X className="w-4 h-4" />
+            <X size={16} />
           </button>
         </div>
 
         {/* Results List */}
-        <div className="max-h-[380px] overflow-y-auto p-2">
+        <div style={{ maxHeight: '400px', overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           {filtered.length === 0 ? (
-            <div className="py-10 text-center text-xs text-zinc-500">
+            <div style={{ padding: '3rem 1rem', textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8' }}>
               No matching servers or pages found for &ldquo;{query}&rdquo;
             </div>
           ) : (
@@ -145,26 +191,37 @@ export function CommandPalette() {
                 type="button"
                 onClick={() => handleSelect(item)}
                 onMouseEnter={() => setSelectedIndex(idx)}
-                className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl text-left transition-all ${
-                  selectedIndex === idx
-                    ? 'bg-cyan-500/15 border border-cyan-500/30 text-white'
-                    : 'text-zinc-300 hover:bg-white/5 border border-transparent'
-                }`}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: selectedIndex === idx ? 'rgba(0, 229, 255, 0.12)' : 'transparent',
+                  border: `1px solid ${selectedIndex === idx ? 'rgba(0, 229, 255, 0.3)' : 'transparent'}`,
+                  cursor: 'pointer',
+                }}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-white/5 border border-white/10 shrink-0">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {item.icon}
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-white truncate">{item.title}</div>
-                    <div className="text-[11px] text-zinc-400 truncate mt-0.5">{item.subtitle}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                    <div style={{ fontSize: '0.775rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '0.2rem' }}>
+                      <SafeMarkdown content={item.subtitle} isInline />
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-zinc-400">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                  <Badge variant={item.categoryType === 'server' ? 'category' : 'default'}>
                     {item.category}
-                  </span>
-                  <ArrowRight className={`w-4 h-4 transition-opacity ${selectedIndex === idx ? 'opacity-100 text-cyan-400' : 'opacity-0'}`} />
+                  </Badge>
+                  <ArrowRight size={16} style={{ color: '#00E5FF', opacity: selectedIndex === idx ? 1 : 0, transition: 'opacity 0.2s ease' }} />
                 </div>
               </button>
             ))
@@ -172,13 +229,13 @@ export function CommandPalette() {
         </div>
 
         {/* Footer shortcuts */}
-        <div className="px-4 py-2.5 bg-slate-900/80 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400">
-          <div className="flex items-center gap-2">
-            <span className="px-1.5 py-0.5 rounded bg-white/10 text-zinc-300 font-mono">↑↓</span> navigate
-            <span className="ml-2 px-1.5 py-0.5 rounded bg-white/10 text-zinc-300 font-mono">↵</span> select
+        <div style={{ padding: '0.85rem 1.25rem', backgroundColor: 'rgba(15, 23, 42, 0.9)', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.775rem', color: '#94a3b8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', fontFamily: 'monospace' }}>↑↓</span> navigate
+            <span style={{ marginLeft: '0.75rem', padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', fontFamily: 'monospace' }}>↵</span> select
           </div>
-          <div className="flex items-center gap-1">
-            <span className="px-1.5 py-0.5 rounded bg-white/10 text-zinc-300 font-mono">ESC</span> close
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', fontFamily: 'monospace' }}>ESC</span> close
           </div>
         </div>
       </div>
