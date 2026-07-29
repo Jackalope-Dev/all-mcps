@@ -20,6 +20,19 @@ export function SubmitForm() {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [description, setDescription] = useState('');
 
+  const agentPromptText = `Read this repository's package.json and README.md to extract the MCP server name, description, category, and repository URL. Then submit this MCP server to AllMCPs.com by sending a POST request to https://allmcps.com/api/v1/submit with JSON: {"name": "<name>", "url": "<repo_url>", "description": "<description>", "category": "<category>", "email": "<your_email>"}`;
+
+  const copyAgentPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(agentPromptText);
+      toast.success('AI Agent Prompt Copied!', {
+        description: 'Paste this prompt in Cursor, Claude Code, Windsurf, or Antigravity inside your project repo.',
+      });
+    } catch {
+      toast.error('Could not copy automatically.');
+    }
+  };
+
   const runPrefill = async (fromUrl: string) => {
     if (!fromUrl.trim()) {
       toast.error('Enter a URL to prefill from');
@@ -77,7 +90,6 @@ export function SubmitForm() {
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
     data['cf-turnstile-response'] = token;
-    // Prefer explicit state (controlled inputs)
     data.name = name;
     data.email = email;
     data.url = url.trim() || websiteUrl.trim();
@@ -250,95 +262,139 @@ export function SubmitForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <Input
-          name="url"
-          label="Repository or website URL"
-          placeholder="https://github.com/... or https://yoursite.com"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-          <Button
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div
+        style={{
+          background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
+          border: '1px solid rgba(0, 229, 255, 0.3)',
+          borderRadius: '12px',
+          padding: '1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.95rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>🤖</span>
+            <span>Let your AI Agent submit this repository automatically!</span>
+          </div>
+          <button
             type="button"
-            variant="secondary"
-            disabled={prefillLoading}
-            onClick={() => runPrefill(url || websiteUrl)}
-            style={{ fontSize: '0.85rem', padding: '0.5rem 0.9rem' }}
+            onClick={copyAgentPrompt}
+            style={{
+              background: '#00E5FF',
+              color: '#090d16',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.825rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              boxShadow: '0 2px 8px rgba(0, 229, 255, 0.2)',
+            }}
           >
-            {prefillLoading ? 'Fetching…' : 'Prefill from URL'}
-          </Button>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            Works with GitHub repos or any public website (title + meta description).
-          </span>
+            📋 Copy Agent Prompt
+          </button>
         </div>
-      </div>
-
-      <Input name="name" label="Server Name" placeholder="e.g., GitHub MCP" value={name} onChange={(e) => setName(e.target.value)} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <Input
-          name="email"
-          label="Your email"
-          placeholder="you@example.com"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          We&apos;ll email you about your listing status and occasional offers.
+        <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          Paste this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your MCP project repository. Your agent will extract metadata and submit to AllMCPs automatically!
         </p>
       </div>
-      <Input
-        name="websiteUrl"
-        label="Website (optional if repo is the main link)"
-        placeholder="https://yoursite.com"
-        type="url"
-        value={websiteUrl}
-        onChange={(e) => setWebsiteUrl(e.target.value)}
-      />
-      <p style={{ margin: '-0.75rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-        Free listings show website links with <strong>nofollow</strong>. Premium adds a <strong>dofollow</strong>{' '}
-        backlink. GitHub is optional — website-only MCP products are welcome.
-      </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Short Description</label>
-        <textarea
-          name="description"
-          className="form-input"
-          rows={3}
-          placeholder="What this server does"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <Input
+            name="url"
+            label="Repository or website URL"
+            placeholder="https://github.com/... or https://yoursite.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={prefillLoading}
+              onClick={() => runPrefill(url || websiteUrl)}
+              style={{ fontSize: '0.85rem', padding: '0.5rem 0.9rem' }}
+            >
+              {prefillLoading ? 'Fetching…' : 'Prefill from URL'}
+            </Button>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Works with GitHub repos or any public website (title + meta description).
+            </span>
+          </div>
+        </div>
+
+        <Input name="name" label="Server Name" placeholder="e.g., GitHub MCP" value={name} onChange={(e) => setName(e.target.value)} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <Input
+            name="email"
+            label="Your email"
+            placeholder="you@example.com"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            We&apos;ll email you about your listing status and occasional offers.
+          </p>
+        </div>
+        <Input
+          name="websiteUrl"
+          label="Website (optional if repo is the main link)"
+          placeholder="https://yoursite.com"
+          type="url"
+          value={websiteUrl}
+          onChange={(e) => setWebsiteUrl(e.target.value)}
         />
-      </div>
+        <p style={{ margin: '-0.75rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          Free listings show website links with <strong>nofollow</strong>. Premium adds a <strong>dofollow</strong>{' '}
+          backlink. GitHub is optional — website-only MCP products are welcome.
+        </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <label htmlFor="submit-category" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-          Category
-        </label>
-        <select
-          id="submit-category"
-          name="category"
-          className="form-input"
-          defaultValue={DEFAULT_SUBMIT_CATEGORY}
-          required
-        >
-          {DIRECTORY_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
-      </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Short Description</label>
+          <textarea
+            name="description"
+            className="form-input"
+            rows={3}
+            placeholder="What this server does"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
 
-      <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <label htmlFor="submit-category" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            Category
+          </label>
+          <select
+            id="submit-category"
+            name="category"
+            className="form-input"
+            defaultValue={DEFAULT_SUBMIT_CATEGORY}
+            required
+          >
+            {DIRECTORY_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <Button variant="primary" type="submit" disabled={status === 'loading'} style={{ marginTop: '1rem', alignSelf: 'flex-start' }}>
-        {status === 'loading' ? 'Submitting...' : 'Submit Server'}
-      </Button>
-    </form>
+        <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />
+
+        <Button variant="primary" type="submit" disabled={status === 'loading'} style={{ marginTop: '1rem', alignSelf: 'flex-start' }}>
+          {status === 'loading' ? 'Submitting...' : 'Submit Server'}
+        </Button>
+      </form>
+    </div>
   );
 }

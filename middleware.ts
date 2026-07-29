@@ -7,7 +7,7 @@ export function middleware(req: NextRequest) {
 
   let response: NextResponse;
 
-  // 1. Well-known & Auth.md rewrites
+  // 1. Well-known, OpenAPI & Auth.md rewrites
   if (pathname === '/.well-known/api-catalog') {
     response = NextResponse.rewrite(new URL('/api/well-known/api-catalog', req.url));
   } else if (
@@ -27,8 +27,12 @@ export function middleware(req: NextRequest) {
     pathname === '/.well-known/agent-skills/index'
   ) {
     response = NextResponse.rewrite(new URL('/api/well-known/agent-skills/index', req.url));
+  } else if (pathname === '/.well-known/acp.json' || pathname === '/.well-known/acp') {
+    response = NextResponse.rewrite(new URL('/api/well-known/acp', req.url));
   } else if (pathname === '/auth.md') {
     response = NextResponse.rewrite(new URL('/api/well-known/auth-md', req.url));
+  } else if (pathname === '/openapi.json') {
+    response = NextResponse.rewrite(new URL('/api/v1/openapi.json', req.url));
   }
   // 2. Existing MCP Markdown rewrite
   else if (pathname.startsWith('/mcp/')) {

@@ -82,6 +82,23 @@ export default function ClaimClient({
     }
   };
 
+  const agentClaimPromptText = `Read this repository's README.md. Embed the following AllMCPs verification badge into README.md:
+
+${badgeMarkdown}
+
+Then commit and push your changes to GitHub. Once pushed, call the verification API to claim ownership of "${serverId}" on AllMCPs.com!`;
+
+  const copyAgentClaimPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(agentClaimPromptText);
+      toast.success('AI Agent Claim Prompt Copied!', {
+        description: 'Paste this prompt in Cursor, Claude Code, Windsurf, or Antigravity inside your project repo.',
+      });
+    } catch {
+      toast.error('Could not copy automatically.');
+    }
+  };
+
   const handleVerify = async () => {
     if (!isSignedIn) {
       window.location.href = signInHref;
@@ -286,6 +303,49 @@ export default function ClaimClient({
           : 'Prove you own this project to get the Verified badge and unlock owner management.'}
         {siteVerified ? ' Website is verified.' : claimed && websiteUrl ? ' Website not verified yet.' : ''}
       </p>
+
+      <div
+        style={{
+          background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
+          border: '1px solid rgba(0, 229, 255, 0.3)',
+          borderRadius: '12px',
+          padding: '1.25rem',
+          marginBottom: '1.75rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.95rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>🤖</span>
+            <span>Have an AI Agent claim &amp; verify this server for you!</span>
+          </div>
+          <button
+            type="button"
+            onClick={copyAgentClaimPrompt}
+            style={{
+              background: '#00E5FF',
+              color: '#090d16',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.825rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              boxShadow: '0 2px 8px rgba(0, 229, 255, 0.2)',
+            }}
+          >
+            📋 Copy Agent Claim Prompt
+          </button>
+        </div>
+        <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          Paste this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your MCP project repository. Your agent will add the badge, commit/push, and verify ownership automatically!
+        </p>
+      </div>
 
       {claimed && (
         <div

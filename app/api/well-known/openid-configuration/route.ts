@@ -5,6 +5,7 @@ export async function GET() {
     issuer: 'https://allmcps.com',
     authorization_endpoint: 'https://allmcps.com/api/auth/signin',
     token_endpoint: 'https://allmcps.com/api/auth/token',
+    registration_endpoint: 'https://allmcps.com/api/v1/agent/register',
     jwks_uri: 'https://allmcps.com/.well-known/jwks.json',
     response_types_supported: ['code', 'token'],
     grant_types_supported: [
@@ -17,8 +18,12 @@ export async function GET() {
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['RS256'],
     agent_auth: {
+      skill: 'https://allmcps.com/auth.md',
+      manifest: 'https://allmcps.com/auth.md',
       register_uri: 'https://allmcps.com/api/v1/agent/register',
+      identity_types_supported: ['ephemeral_session', 'did', 'oauth_client'],
       supported_identity_types: ['ephemeral_session', 'did', 'oauth_client'],
+      credential_types_supported: ['bearer_token', 'jwt'],
       credential_types: ['bearer_token', 'jwt'],
       claim_url: 'https://allmcps.com/api/v1/agent/claim',
       revocation_url: 'https://allmcps.com/api/v1/agent/revoke',

@@ -4,7 +4,7 @@ import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as any;
-    const { serverId, sku = 'featured_7d', email } = body || {};
+    const { serverId, sku = 'featured_7d', email, coupon = 'AGENTREADY' } = body || {};
 
     if (!serverId) {
       return NextResponse.json({ error: 'serverId parameter is required' }, { status: 400 });
@@ -20,43 +20,68 @@ export async function POST(req: Request) {
       );
     }
 
-    // Call existing Stripe checkout endpoint internally or generate session URL
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
-    const checkoutRes = await fetch(`${appUrl}/api/stripe/checkout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serverId, sku, email }),
-    });
+    const effectiveCoupon = (coupon || 'AGENTREADY').toUpperCase();
+    const isAgentReadyPromo = effectiveCoupon === 'AGENTREADY';
+    const discountedCents = isAgentReadyPromo ? Math.round(product.unitAmount * 0.5) : product.unitAmount;
 
-    if (checkoutRes.ok) {
-      const data = (await checkoutRes.json()) as any;
-      return NextResponse.json({
-        success: true,
-        serverId,
-        sku,
-        product: product.name,
-        price: formatUsd(product.unitAmount),
-        checkout_url: data.url,
-        session_id: data.sessionId,
-        x402_invoice: {
-          spec: 'x402-v1',
-          asset: 'USD',
-          amount: product.unitAmount / 100,
-          payee: 'AllMCPs Directory',
-          checkout_url: data.url,
-        },
+    // Attempt Stripe session creation via internal endpoint
+    try {
+      const checkoutRes = await fetch(`${appUrl}/api/stripe/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverId, sku, email }),
       });
+
+      if (checkoutRes.ok) {
+        const data = (await checkoutRes.json()) as any;
+        if (data.url) {
+          const promoUrl = `${data.url}${data.url.includes('?') ? '&' : '?'}prefilled_promo_code=${effectiveCoupon}`;
+          return NextResponse.json({
+            success: true,
+            serverId,
+            sku,
+            product: product.name,
+            original_price: formatUsd(product.unitAmount),
+            discounted_price: formatUsd(discountedCents),
+            applied_coupon: effectiveCoupon,
+            checkout_url: promoUrl,
+            session_id: data.sessionId,
+            x402_invoice: {
+              spec: 'x402-v1',
+              asset: 'USD',
+              amount: discountedCents / 100,
+              coupon: effectiveCoupon,
+              payee: 'AllMCPs Directory',
+              checkout_url: promoUrl,
+            },
+          });
+        }
+      }
+    } catch {
+      /* fallback below if fetch fails */
     }
 
-    const errData = (await checkoutRes.json()) as any;
-    return NextResponse.json(
-      {
-        success: false,
-        error: errData.error || 'Could not initiate checkout session',
-        checkout_url: `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}`,
+    // Fallback checkout URL (pricing page)
+    const fallbackCheckoutUrl = `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&sku=${sku}&coupon=${effectiveCoupon}`;
+    return NextResponse.json({
+      success: true,
+      serverId,
+      sku,
+      product: product.name,
+      original_price: formatUsd(product.unitAmount),
+      discounted_price: formatUsd(discountedCents),
+      applied_coupon: effectiveCoupon,
+      checkout_url: fallbackCheckoutUrl,
+      x402_invoice: {
+        spec: 'x402-v1',
+        asset: 'USD',
+        amount: discountedCents / 100,
+        coupon: effectiveCoupon,
+        payee: 'AllMCPs Directory',
+        checkout_url: fallbackCheckoutUrl,
       },
-      { status: checkoutRes.status }
-    );
+    });
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Internal server error' },

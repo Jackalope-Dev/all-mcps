@@ -186,6 +186,34 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   const relatedServers = await getRelatedServers(server as any, 4);
   const { displayName, org } = parseServerName(server.name);
 
+  // Drives the health dot by the display name — replaces both the old "Verified Active"
+  // row badge and the big sidebar Status card with one tooltip-bearing indicator.
+  const healthKey = server.isVerifiedActive
+    ? 'active'
+    : server.healthStatus === 'down' || server.healthStatus === 'unhealthy'
+      ? 'down'
+      : 'unknown';
+  const healthUi = {
+    active: {
+      label: 'Health: Active',
+      color: '#10b981',
+      detail: 'Recent health check succeeded.',
+    },
+    down: {
+      label: 'Health: Issues detected',
+      color: '#f87171',
+      detail: 'Last health check failed or the endpoint looked unhealthy.',
+    },
+    unknown: {
+      label: 'Health: Not checked yet',
+      color: '#a1a1aa',
+      detail: 'We have not completed a health check for this listing yet.',
+    },
+  }[healthKey];
+  const healthTooltip = `${healthUi.label} — ${healthUi.detail}${
+    server.lastCheckedAt ? ` Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}.` : ''
+  }`;
+
   // Sidebar ad slot rotates between paid featured listings and the "spotlight your own
   // server" upsell — one extra slot in the pool reserved for the upsell keeps it showing
   // occasionally even as more advertisers are in rotation.
@@ -287,8 +315,20 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
         {/* Main Content (Left Column) */}
         <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: org ? '0.2rem' : '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: org ? '0.2rem' : '1rem' }}>
             <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
+            <span
+              title={healthTooltip}
+              style={{
+                display: 'inline-block',
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: healthUi.color,
+                boxShadow: healthKey === 'active' ? `0 0 8px ${healthUi.color}` : 'none',
+                flexShrink: 0,
+              }}
+            />
             <h1 className="text-page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.45rem' }}>
               {displayName}
               {server.isPremium && (
@@ -325,11 +365,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 }}
               >
                 ★ Featured
-              </Badge>
-            )}
-            {server.isVerifiedActive && (
-              <Badge variant="success" title={server.lastCheckedAt ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}` : 'Recently checked'}>
-                🟢 Verified Active
               </Badge>
             )}
           </div>
@@ -460,76 +495,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </p>
             </div>
           )}
-
-          <div className="surface" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</h3>
-            {(() => {
-              const healthKey = server.isVerifiedActive
-                ? 'active'
-                : server.healthStatus === 'down' || server.healthStatus === 'unhealthy'
-                  ? 'down'
-                  : 'unknown';
-              const healthUi = {
-                active: {
-                  label: 'Health: Active',
-                  color: '#10b981',
-                  detail: 'Recent health check succeeded.',
-                },
-                down: {
-                  label: 'Health: Issues detected',
-                  color: '#f87171',
-                  detail: 'Last health check failed or the endpoint looked unhealthy.',
-                },
-                unknown: {
-                  label: 'Health: Not checked yet',
-                  color: '#a1a1aa',
-                  detail: 'We have not completed a health check for this listing yet.',
-                },
-              }[healthKey];
-
-              return (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>
-                    <div
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: healthUi.color,
-                        boxShadow: healthKey === 'active' ? `0 0 10px ${healthUi.color}` : 'none',
-                        flexShrink: 0,
-                      }}
-                    />
-                    {healthUi.label}
-                  </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 0.75rem' }}>
-                    {healthUi.detail}
-                  </p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
-                    {server.lastCheckedAt
-                      ? `Last checked: ${new Date(server.lastCheckedAt).toLocaleString()}`
-                      : 'No check timestamp yet.'}
-                  </p>
-                  <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    {server.isOfficial || server.isPremium ? (
-                      <span>
-                        <strong style={{ color: '#34d399' }}>Verified listing</strong>
-                        {server.isPremium ? ' · Premium' : ''}
-                        {server.websiteVerified ? ' · Website verified' : ''}
-                      </span>
-                    ) : (
-                      <span>
-                        Unclaimed listing (imported or pending owner verification).{' '}
-                        <Link href={`/mcp/${server.id}/claim`} style={{ color: 'var(--accent-color)' }}>
-                          Claim it →
-                        </Link>
-                      </span>
-                    )}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
 
           {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) — rotates between paid
               featured listings and the self-serve upsell */}

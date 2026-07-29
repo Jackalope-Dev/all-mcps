@@ -91,9 +91,52 @@ export function WebMCPProvider() {
           return await res.json();
         },
       },
+      {
+        name: 'submit_mcp_server',
+        description: 'Programmatically submit a new MCP server repository to AllMCPs.com for indexing.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Server name' },
+            url: { type: 'string', description: 'Repository URL' },
+            description: { type: 'string', description: 'Server description' },
+            category: { type: 'string', description: 'Category' },
+            email: { type: 'string', description: 'Submitter email' },
+          },
+          required: ['name', 'url', 'email'],
+        },
+        execute: async (payload: { name: string; url: string; email: string; description?: string; category?: string }) => {
+          const res = await fetch('/api/v1/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          return await res.json();
+        },
+      },
+      {
+        name: 'verify_mcp_claim',
+        description: 'Verify ownership and claim an MCP server listing by checking GitHub README badge, website badge, or DNS TXT record.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The server ID' },
+            method: { type: 'string', description: 'Verification method (github, website_badge, dns)' },
+            websiteUrl: { type: 'string', description: 'Optional website URL' },
+          },
+          required: ['id'],
+        },
+        execute: async (payload: { id: string; method?: string; websiteUrl?: string }) => {
+          const res = await fetch('/api/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          return await res.json();
+        },
+      },
     ];
 
-    // Standard WebMCP API (navigator.modelContext.provideContext)
     const nav = navigator as any;
     if (nav?.modelContext?.provideContext) {
       try {
@@ -103,10 +146,9 @@ export function WebMCPProvider() {
       }
     }
 
-    // Fallback/Legacy window object declaration
     window.webMCP = {
       name: 'AllMCPs Web Client Provider',
-      version: '1.1.0',
+      version: '1.3.0',
       tools,
     };
 

@@ -4,7 +4,7 @@ import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
 
 const SERVER_INFO = {
   name: 'AllMCPs Directory Server',
-  version: '1.1.0',
+  version: '1.3.0',
 };
 
 const TOOLS = [
@@ -75,6 +75,39 @@ const TOOLS = [
       required: ['id'],
     },
   },
+  {
+    name: 'submit_mcp_server',
+    description: 'Programmatically submit a new MCP server repository to AllMCPs.com for indexing and review.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Server name (e.g., "PostgreSQL MCP")' },
+        url: { type: 'string', description: 'GitHub repository or website URL' },
+        description: { type: 'string', description: 'Short summary of what this MCP server does' },
+        category: { type: 'string', description: 'Category (e.g., "Databases", "Developer Tools")' },
+        email: { type: 'string', description: 'Contact email for listing verification & status updates' },
+        websiteUrl: { type: 'string', description: 'Optional official website URL' },
+      },
+      required: ['name', 'url', 'email'],
+    },
+  },
+  {
+    name: 'verify_mcp_claim',
+    description: 'Verify ownership and claim an MCP server listing by checking GitHub README badge, website badge, or DNS TXT record.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'The server ID to claim & verify (e.g. "github-mcp")' },
+        method: {
+          type: 'string',
+          enum: ['github', 'website_badge', 'dns'],
+          description: 'Verification method (default: github)',
+        },
+        websiteUrl: { type: 'string', description: 'Optional website URL for website/dns verification' },
+      },
+      required: ['id'],
+    },
+  },
 ];
 
 export async function OPTIONS() {
@@ -95,7 +128,7 @@ export async function GET() {
       name: SERVER_INFO.name,
       version: SERVER_INFO.version,
       mcpEndpoint: 'https://allmcps.com/api/mcp',
-      description: 'Model Context Protocol Remote Server endpoint with Agentic Commerce support.',
+      description: 'Model Context Protocol Remote Server endpoint with Agentic Submissions, Verification, and Commerce support.',
       tools: TOOLS.map((t) => t.name),
     },
     {
@@ -280,9 +313,12 @@ export async function POST(request: Request) {
 
       if (toolName === 'get_boost_pricing') {
         let md = `# AllMCPs Server Boosting & Sponsorship Tiers\n\n`;
+        md += `🎁 **AI Agent Exclusive 50% Off Promo**: Use promo code \`AGENTREADY\` at checkout for 50% off any tier!\n\n`;
         for (const p of Object.values(PAID_PRODUCTS)) {
+          const halfPrice = formatUsd(Math.round(p.unitAmount * 0.5));
           md += `### ${p.name} (${p.sku})\n`;
-          md += `- **Price**: ${formatUsd(p.unitAmount)} (${p.interval})\n`;
+          md += `- **Regular Price**: ${formatUsd(p.unitAmount)} (${p.interval})\n`;
+          md += `- **Agent 50% Off Price (\`AGENTREADY\`)**: ${halfPrice}\n`;
           md += `- **Tagline**: ${p.tagline}\n`;
           md += `- **Benefits**:\n`;
           for (const b of p.benefits) {
@@ -326,14 +362,18 @@ export async function POST(request: Request) {
 
         const product = PAID_PRODUCTS[sku];
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
-        const checkoutUrl = `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&sku=${sku}`;
+        const checkoutUrl = `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&sku=${sku}&coupon=AGENTREADY`;
+        const regularPrice = product ? formatUsd(product.unitAmount) : 'N/A';
+        const discountedPrice = product ? formatUsd(Math.round(product.unitAmount * 0.5)) : 'N/A';
 
         const outputText = `# Boost Order Created for "${server.name}"
 
 - **Server ID**: ${server.id}
 - **Selected Tier**: ${product ? product.name : sku}
-- **Price**: ${product ? formatUsd(product.unitAmount) : 'N/A'}
-- **Checkout URL**: [Complete Payment via Stripe](${checkoutUrl})
+- **Regular Price**: ${regularPrice}
+- **Agent Discounted Price (50% Off with AGENTREADY)**: **${discountedPrice}**
+- **Applied Coupon**: \`AGENTREADY\`
+- **Checkout URL**: [Complete 50% Off Payment via Stripe](${checkoutUrl})
 
 ### Autonomous Agent Payment (x402 Protocol)
 \`\`\`json
@@ -400,6 +440,104 @@ To complete activation, open the checkout URL or trigger autonomous agent paymen
             id,
             result: {
               content: [{ type: 'text', text: md }],
+            },
+          },
+          { headers: { 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      if (toolName === 'submit_mcp_server') {
+        const { name, url, description, category, email, websiteUrl } = args;
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
+        const submitRes = await fetch(`${appUrl}/api/v1/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, url, description, category, email, websiteUrl }),
+        });
+
+        if (submitRes.ok) {
+          const data = (await submitRes.json()) as any;
+          const md = `# MCP Server "${data.name}" Submitted Successfully! 🎉
+
+- **Server ID**: ${data.id}
+- **Status**: ${data.status} (Pending Manual Review & Verification)
+- **Claim & Verify URL**: [Verify Listing](${data.claim_url})
+
+### Add Verification Badge to your README.md
+To verify your listing automatically and trigger immediate indexing, embed this markdown badge in your GitHub repository:
+
+\`\`\`markdown
+${data.badge_markdown}
+\`\`\`
+`;
+          await logMcp(data.id, 'submit_mcp_server');
+          return Response.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              result: {
+                content: [{ type: 'text', text: md }],
+              },
+            },
+            { headers: { 'Access-Control-Allow-Origin': '*' } }
+          );
+        }
+
+        const errData = (await submitRes.json().catch(() => ({}))) as any;
+        return Response.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{ type: 'text', text: `Submission failed: ${errData.error || 'Invalid submission payload'}` }],
+              isError: true,
+            },
+          },
+          { headers: { 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      if (toolName === 'verify_mcp_claim') {
+        const { id, method = 'github', websiteUrl } = args;
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
+        const claimRes = await fetch(`${appUrl}/api/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, method, websiteUrl }),
+        });
+
+        if (claimRes.ok) {
+          const data = (await claimRes.json()) as any;
+          const md = `# Listing Verification Result for "${id}"
+
+- **Server ID**: ${id}
+- **Method**: ${method}
+- **Status**: ${data.pending ? '⏳ Under Admin Review' : '✅ Verified & Claimed!'}
+- **Message**: ${data.message}
+`;
+          await logMcp(id, `verify_mcp_claim method:${method}`);
+          return Response.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              result: {
+                content: [{ type: 'text', text: md }],
+              },
+            },
+            { headers: { 'Access-Control-Allow-Origin': '*' } }
+          );
+        }
+
+        const errData = (await claimRes.json().catch(() => ({}))) as any;
+        return Response.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{ type: 'text', text: `Verification failed: ${errData.error || 'Proof not found or sign-in required.'}` }],
+              isError: true,
             },
           },
           { headers: { 'Access-Control-Allow-Origin': '*' } }

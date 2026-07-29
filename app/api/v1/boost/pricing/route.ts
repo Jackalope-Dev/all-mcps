@@ -18,6 +18,11 @@ export async function GET() {
       {
         currency: 'USD',
         provider: 'Stripe',
+        agent_exclusive_promo: {
+          code: 'AGENTREADY',
+          discount_percent: 50,
+          description: 'Exclusive 50% off for AI agents on one-time and subscription server boosting',
+        },
         agent_commerce_support: {
           x402_header: true,
           direct_checkout_link: true,

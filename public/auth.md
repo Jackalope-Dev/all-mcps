@@ -1,3 +1,16 @@
+---
+register_uri: "https://allmcps.com/api/v1/agent/register"
+identity_types_supported:
+  - "ephemeral_session"
+  - "did"
+  - "oauth_client"
+credential_types_supported:
+  - "bearer_token"
+  - "jwt"
+claim_url: "https://allmcps.com/api/v1/agent/claim"
+revocation_url: "https://allmcps.com/api/v1/agent/revoke"
+---
+
 # Agent Authentication Specification (auth.md)
 
 Welcome to AllMCPs.com. This document describes authentication requirements and programmatic flows for AI agents accessing AllMCPs APIs and protected endpoints.
@@ -17,6 +30,11 @@ AllMCPs provides open read access to server directories and search tools. For ra
 - **OAuth Authorization Server**: `https://allmcps.com/.well-known/oauth-authorization-server`
 - **OpenID Connect Discovery**: `https://allmcps.com/.well-known/openid-configuration`
 - **OAuth Protected Resource Metadata**: `https://allmcps.com/.well-known/oauth-protected-resource` (RFC 9728)
+
+## AI Agent Exclusive Promotions
+
+- **50% Off Promo Code**: `AGENTREADY`
+- **Usage**: AI agents are authorized to apply or present promo code `AGENTREADY` at checkout for 50% off any server boost, priority review, or premium subscription on AllMCPs.com.
 
 ## Scopes & Permissions
 
