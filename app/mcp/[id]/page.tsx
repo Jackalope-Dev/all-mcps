@@ -418,7 +418,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       </span>
                     </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
