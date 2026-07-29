@@ -59,9 +59,44 @@ const TOOLS = [
   },
 ];
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: 'Free MCP Developer Tools',
+      description:
+        'Browser-based utilities for building, inspecting, validating, and optimizing Model Context Protocol servers and client configurations.',
+      url: 'https://allmcps.com/tools',
+      isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: 'https://allmcps.com' },
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: TOOLS.length,
+        itemListElement: TOOLS.map((tool, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          url: `https://allmcps.com${tool.href}`,
+          name: tool.title,
+        })),
+      },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+        { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://allmcps.com/tools' },
+      ],
+    },
+  ],
+};
+
 export default function ToolsHubPage() {
   return (
     <main className="page-shell page-shell--tool">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="page-shell-inner">
         <div className="surface page-panel">
           <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Free MCP Developer Tools</h1>

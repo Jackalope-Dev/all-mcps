@@ -113,8 +113,66 @@ export default async function BrowsePage({
 
   const servers = await getServers();
 
+  // Structured data reflects the server-rendered initial state. For category
+  // views we filter to the matching servers so the ItemList is accurate; search
+  // ranking happens client-side, so we omit the ItemList there rather than
+  // misrepresent it.
+  const label = category ? parseCategoryLabel(category) : null;
+  const canonical = category
+    ? `https://allmcps.com/browse?category=${encodeURIComponent(category)}`
+    : q
+      ? `https://allmcps.com/browse?q=${encodeURIComponent(q)}`
+      : 'https://allmcps.com/browse';
+  const relevant = category ? servers.filter((s) => s.category === category) : servers;
+  const itemList = q
+    ? []
+    : relevant.slice(0, 50).map((s, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `https://allmcps.com/mcp/${s.id}`,
+        name: s.name,
+      }));
+
+  const breadcrumbItems = [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+    { '@type': 'ListItem', position: 2, name: 'Browse', item: 'https://allmcps.com/browse' },
+    ...(label ? [{ '@type': 'ListItem', position: 3, name: label, item: canonical }] : []),
+  ];
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        name: label ? `${label} MCP Servers` : q ? `Search results for “${q}”` : 'Browse MCP Servers',
+        description: label
+          ? `Model Context Protocol servers in the ${label} category.`
+          : 'Browse and search thousands of Model Context Protocol servers for AI agents.',
+        url: canonical,
+        isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: 'https://allmcps.com' },
+        ...(itemList.length
+          ? {
+              mainEntity: {
+                '@type': 'ItemList',
+                numberOfItems: relevant.length,
+                itemListElement: itemList,
+              },
+            }
+          : {}),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: breadcrumbItems,
+      },
+    ],
+  };
+
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <DirectoryGrid
         initialServers={servers}
         initialCategory={category}

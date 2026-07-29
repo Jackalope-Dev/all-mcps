@@ -111,16 +111,37 @@ export default async function CategoriesPage() {
   // JSON-LD structured data
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
-    name: 'MCP Server Categories',
-    description: `Browse ${categories.length} categories of Model Context Protocol servers.`,
-    url: 'https://allmcps.com/categories',
-    numberOfItems: categories.length,
-    isPartOf: {
-      '@type': 'WebSite',
-      name: 'AllMCPs',
-      url: 'https://allmcps.com',
-    },
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        name: 'MCP Server Categories',
+        description: `Browse ${categories.length} categories of Model Context Protocol servers.`,
+        url: 'https://allmcps.com/categories',
+        numberOfItems: categories.length,
+        isPartOf: {
+          '@type': 'WebSite',
+          name: 'AllMCPs',
+          url: 'https://allmcps.com',
+        },
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: categories.length,
+          itemListElement: categories.map((cat, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            name: cat.label,
+            url: `https://allmcps.com/browse?category=${encodeURIComponent(cat.name)}`,
+          })),
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+          { '@type': 'ListItem', position: 2, name: 'Categories', item: 'https://allmcps.com/categories' },
+        ],
+      },
+    ],
   };
 
   return (

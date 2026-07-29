@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import { ProtocolInspectorTool } from '../../../components/tools/ProtocolInspectorTool';
 
 export const metadata: Metadata = {
@@ -28,6 +29,8 @@ const webAppJsonLd = {
   url: 'https://allmcps.com/tools/protocol-inspector',
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'All',
+  isAccessibleForFree: true,
+  provider: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
   offers: {
     '@type': 'Offer',
     price: '0',
@@ -35,6 +38,16 @@ const webAppJsonLd = {
   },
   description:
     'Browser-based protocol inspector and visual simulator for Model Context Protocol (MCP) JSON-RPC requests, responses, tools, resources, and image payloads.',
+};
+
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+    { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://allmcps.com/tools' },
+    { '@type': 'ListItem', position: 3, name: 'Protocol Inspector', item: 'https://allmcps.com/tools/protocol-inspector' },
+  ],
 };
 
 const faqJsonLd = {
@@ -87,8 +100,21 @@ export default function ProtocolInspectorPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
       <div className="page-shell-inner">
+        <nav aria-label="Breadcrumb">
+          <ol className="breadcrumb" style={{ marginBottom: '1.5rem' }}>
+            <li><Link href="/">Home</Link></li>
+            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li><Link href="/tools">Tools</Link></li>
+            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li className="breadcrumb-current">Protocol Inspector</li>
+          </ol>
+        </nav>
         <div className="surface page-panel">
           <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
             MCP Protocol Inspector &amp; Response Debugger
