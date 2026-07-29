@@ -1,5 +1,5 @@
-const CACHE_NAME = 'allmcps-cache-v1';
-const STATIC_ASSETS = ['/', '/browse', '/categories', '/manifest.webmanifest', '/icon.jpg'];
+const CACHE_NAME = 'allmcps-cache-v2';
+const STATIC_ASSETS = ['/', '/browse', '/categories', '/manifest.webmanifest', '/icon.jpg', '/logo-icon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

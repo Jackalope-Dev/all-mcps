@@ -18,6 +18,8 @@ import { isFeaturedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
 import { getRelatedServers, PUBLIC_SERVER_COLUMNS } from '../../../lib/servers';
 import { auth } from '../../../lib/auth';
+import { ServerAvatar } from '../../../components/ui/ServerAvatar';
+import { parseServerName } from '../../../lib/displayName';
 
 // Define the type for our server data
 type Server = {
@@ -27,6 +29,7 @@ type Server = {
   description: string;
   category: string;
   websiteUrl?: string | null;
+  logoUrl?: string | null;
   isPremium?: boolean;
   featuredUntil?: string | Date | null;
   websiteVerified?: boolean;
@@ -180,6 +183,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
   const readme = await fetchReadme(server.url);
   const relatedServers = await getRelatedServers(server as any, 4);
+  const { displayName, org } = parseServerName(server.name);
   // The mcpServers key just needs to be a readable identifier; the npx arg below
   // uses server.name verbatim since that's typically the real package name
   // (e.g. "@agentfund/mcp") and slugifying it would produce a nonexistent package.
@@ -267,15 +271,23 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
           <li><Link href={`/browse?category=${encodeURIComponent(server.category)}`}>{server.category}</Link></li>
           <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
-          <li className="breadcrumb-current">{server.name}</li>
+          <li className="breadcrumb-current">{displayName}</li>
         </ol>
       </nav>
 
       <div className="detail-grid">
-        
+
         {/* Main Content (Left Column) */}
         <div style={{ minWidth: 0 }}>
-          <h1 className="text-page-title" style={{ margin: '0 0 1rem 0' }}>{server.name}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: org ? '0.2rem' : '1rem' }}>
+            <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
+            <h1 className="text-page-title" style={{ margin: 0 }}>{displayName}</h1>
+          </div>
+          {org && (
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              {org}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             <Badge variant="category" href={`/browse?category=${encodeURIComponent(server.category)}`}>
               {server.category}
@@ -359,7 +371,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Related MCP Servers
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.25rem' }}>
-                {relatedServers.map((rel) => (
+                {relatedServers.map((rel) => {
+                  const relName = parseServerName(rel.name).displayName;
+                  return (
                   <Link
                     key={rel.id}
                     href={`/mcp/${rel.id}`}
@@ -380,9 +394,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {rel.name}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+                        <ServerAvatar name={rel.name} logoUrl={rel.logoUrl} size={32} />
+                        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {relName}
+                        </span>
+                      </div>
                       {isFeaturedListing(rel as any) ? (
                         <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '0.65rem', flexShrink: 0 }}>
                           ★ Featured

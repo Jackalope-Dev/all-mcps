@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ArrowRight, X, Cpu, FileText, Tag, Sparkles } from 'lucide-react';
+import { Search, ArrowRight, X, FileText, Tag, Sparkles } from 'lucide-react';
 import serversData from '../../data/mcp-servers.json';
 import { SafeMarkdown } from './SafeMarkdown';
 import { Badge } from './Badge';
+import { ServerAvatar } from './ServerAvatar';
+import { parseServerName } from '../../lib/displayName';
 
 interface CommandItem {
   id: string;
@@ -15,14 +17,37 @@ interface CommandItem {
   categoryType: 'server' | 'page' | 'category';
   url: string;
   icon?: React.ReactNode;
+  /** Raw server name + logo, only set for categoryType 'server' — used to render ServerAvatar. */
+  rawName?: string;
+  logoUrl?: string | null;
 }
+
+type IndexedServer = { id: string; name: string; description: string; category: string; logoUrl?: string | null };
 
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [liveServers, setLiveServers] = useState<IndexedServer[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fetchedRef = useRef(false);
   const router = useRouter();
+
+  // Fetch the full live directory (DB-backed, includes user-submitted listings
+  // that never made it into the bundled data/mcp-servers.json snapshot) the
+  // first time the palette is opened, rather than on every page load.
+  useEffect(() => {
+    if (!isOpen || fetchedRef.current) return;
+    fetchedRef.current = true;
+    fetch('/api/search-index')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { servers?: IndexedServer[] } | null) => {
+        if (data?.servers) setLiveServers(data.servers);
+      })
+      .catch(() => {
+        // Silently keep using the bundled static snapshot as a fallback.
+      });
+  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -60,24 +85,37 @@ export function CommandPalette() {
       { id: 'nav-pricing', title: 'Pricing & Featured Listings', subtitle: 'Promote your server', category: 'Page', categoryType: 'page', url: '/pricing', icon: <Sparkles size={18} className="text-cyan-400" /> },
     ];
 
-    const serverItems: CommandItem[] = (serversData as any[]).slice(0, 200).map((s) => ({
-      id: `server-${s.id}`,
-      title: s.name,
-      subtitle: s.description,
-      category: s.category || 'Server',
-      categoryType: 'server',
-      url: `/mcp/${s.id}`,
-      icon: <Cpu size={18} className="text-blue-400" />,
-    }));
+    // Prefer the live DB-backed directory once loaded (includes user-submitted
+    // listings the bundled JSON snapshot doesn't have); fall back to the
+    // static snapshot for instant results before that fetch resolves.
+    const source: IndexedServer[] = liveServers ?? (serversData as any[]).slice(0, 200);
+    const serverItems: CommandItem[] = source.map((s) => {
+      const { displayName } = parseServerName(s.name);
+      return {
+        id: `server-${s.id}`,
+        title: displayName,
+        subtitle: s.description,
+        category: s.category || 'Server',
+        categoryType: 'server',
+        url: `/mcp/${s.id}`,
+        rawName: s.name,
+        logoUrl: s.logoUrl ?? null,
+      };
+    });
 
     return [...staticPages, ...serverItems];
-  }, []);
+  }, [liveServers]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items.slice(0, 10);
     const q = query.toLowerCase();
     return items
-      .filter((item) => item.title.toLowerCase().includes(q) || item.subtitle.toLowerCase().includes(q))
+      .filter(
+        (item) =>
+          item.title.toLowerCase().includes(q) ||
+          item.subtitle.toLowerCase().includes(q) ||
+          (item.rawName && item.rawName.toLowerCase().includes(q))
+      )
       .slice(0, 12);
   }, [items, query]);
 
@@ -207,9 +245,13 @@ export function CommandPalette() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {item.icon}
-                  </div>
+                  {item.categoryType === 'server' && item.rawName ? (
+                    <ServerAvatar name={item.rawName} logoUrl={item.logoUrl} size={40} />
+                  ) : (
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {item.icon}
+                    </div>
+                  )}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
                     <div style={{ fontSize: '0.775rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '0.2rem' }}>
