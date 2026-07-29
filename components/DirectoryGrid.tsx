@@ -11,10 +11,12 @@ import { FeaturedCards } from './FeaturedCards';
 import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
+import { ServerAvatar } from './ui/ServerAvatar';
 import {
   isFeaturedListing as isFeaturedListingShared,
   isVerifiedListing as isVerifiedListingShared,
 } from '../lib/featuredStatus';
+import { parseServerName } from '../lib/displayName';
 import { trackSearch, trackOutboundClick } from '../lib/gtag';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { ImpressionBeacon } from './ImpressionTracker';
@@ -49,59 +51,6 @@ function isFeaturedListing(server: Server): boolean {
 type ViewMode = 'grid' | 'list';
 type SortMode = 'trending' | 'most_upvoted' | 'most_viewed' | 'newest' | 'alpha';
 type TechStack = 'all' | 'typescript' | 'python' | 'go' | 'rust';
-
-// Deterministic brand-adjacent avatar gradients (cyan / blue / slate)
-function getGradient(str: string) {
-  const colors = [
-    'linear-gradient(135deg, #00e5ff, #007bff)',
-    'linear-gradient(135deg, #007bff, #0f172a)',
-    'linear-gradient(135deg, #22d3ee, #0369a1)',
-    'linear-gradient(135deg, #38bdf8, #1e3a8a)',
-    'linear-gradient(135deg, #0ea5e9, #164e63)',
-    'linear-gradient(135deg, #67e8f9, #1d4ed8)',
-  ];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
-
-function ServerIcon({ name, logoUrl, size = 48 }: { name: string; logoUrl?: string | null; size?: number }) {
-  const [imgFailed, setImgFailed] = useState(false);
-  if (logoUrl && !imgFailed) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={logoUrl}
-        alt=""
-        width={size}
-        height={size}
-        style={{ borderRadius: size > 40 ? 12 : 10, flexShrink: 0, objectFit: 'cover' }}
-        onError={() => setImgFailed(true)}
-      />
-    );
-  }
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size > 40 ? 12 : 10,
-        background: getGradient(name),
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size > 40 ? '1.5rem' : '1.1rem',
-        fontWeight: 800,
-        textTransform: 'uppercase',
-        flexShrink: 0,
-      }}
-    >
-      {name.charAt(0)}
-    </div>
-  );
-}
 
 function parseCategoryLabel(category: string): { emoji: string; label: string } {
   if (typeof Intl !== 'undefined' && Intl.Segmenter) {
@@ -681,10 +630,10 @@ export default function DirectoryGrid({
               <Card
                 href={`/mcp/${server.id}`}
                 className={isFeaturedListing(server) ? 'directory-card-featured' : undefined}
-                style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
+                style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', minHeight: '300px' }}
               >
                 <div className="directory-card-header">
-                  <ServerIcon name={server.name} logoUrl={server.logoUrl} />
+                  <ServerAvatar name={server.name} logoUrl={server.logoUrl} />
                   <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {isFeaturedListing(server) && (
                       <Badge
@@ -701,18 +650,39 @@ export default function DirectoryGrid({
                     {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
                   </div>
                 </div>
-                <h3
-                  style={{
-                    fontSize: '1.25rem',
-                    marginBottom: '0.5rem',
-                    fontWeight: 600,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {server.name}
-                </h3>
+                {(() => {
+                  const { displayName, org } = parseServerName(server.name);
+                  return (
+                    <>
+                      <h3
+                        style={{
+                          fontSize: '1.25rem',
+                          marginBottom: org ? '0.15rem' : '0.5rem',
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {displayName}
+                      </h3>
+                      {org && (
+                        <div
+                          style={{
+                            fontSize: '0.75rem',
+                            marginBottom: '0.5rem',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: 'var(--text-secondary)',
+                          }}
+                        >
+                          {org}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 <div
                   style={{
                     fontSize: '0.875rem',
@@ -748,10 +718,18 @@ export default function DirectoryGrid({
                 href={`/mcp/${server.id}`}
                 className={`directory-list-row surface-interactive${isFeaturedListing(server) ? ' directory-list-row-featured' : ''}`}
               >
-                <ServerIcon name={server.name} logoUrl={server.logoUrl} size={44} />
+                <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
                 <div className="directory-list-body">
                   <div className="directory-list-title-row">
-                    <h3 className="directory-list-name">{server.name}</h3>
+                    {(() => {
+                      const { displayName, org } = parseServerName(server.name);
+                      return (
+                        <div className="directory-list-name-col">
+                          <h3 className="directory-list-name">{displayName}</h3>
+                          {org && <span className="directory-list-org">{org}</span>}
+                        </div>
+                      );
+                    })()}
                     {isFeaturedListing(server) && (
                       <Badge
                         variant="success"

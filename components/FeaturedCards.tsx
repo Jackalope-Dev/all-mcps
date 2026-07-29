@@ -5,33 +5,19 @@ import { Sparkles, Plus, ArrowRight } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { SafeMarkdown } from './ui/SafeMarkdown';
+import { ServerAvatar } from './ui/ServerAvatar';
 import { ImpressionBeacon } from './ImpressionTracker';
+import { parseServerName } from '../lib/displayName';
 
 type Server = {
   id: string;
   name: string;
   description: string;
   category: string;
+  logoUrl?: string | null;
   isOfficial?: boolean;
   isPremium?: boolean;
 };
-
-// Brand-adjacent avatar gradients
-function getGradient(str: string) {
-  const colors = [
-    'linear-gradient(135deg, #00e5ff, #007bff)',
-    'linear-gradient(135deg, #007bff, #0f172a)',
-    'linear-gradient(135deg, #22d3ee, #0369a1)',
-    'linear-gradient(135deg, #38bdf8, #1e3a8a)',
-    'linear-gradient(135deg, #0ea5e9, #164e63)',
-    'linear-gradient(135deg, #67e8f9, #1d4ed8)',
-  ];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
 
 export function FeaturedCards({ servers }: { servers: Server[] }) {
   const displayServers = (servers || []).slice(0, 2);
@@ -46,13 +32,11 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
         {displayServers.map((server) => (
           <ImpressionBeacon key={server.id} serverId={server.id} surface="homepage_featured">
-          <Card href={`/mcp/${server.id}`} hoverable style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
+          <Card href={`/mcp/${server.id}`} hoverable style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', minHeight: '320px', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)' }}></div>
-            
+
             <div className="featured-card-header">
-              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: getGradient(server.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
-                {server.name.charAt(0)}
-              </div>
+              <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {(server.isPremium || server.isOfficial) && (
                   <Badge variant="official">Verified</Badge>
@@ -60,8 +44,32 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
                 <Badge variant="success" style={{ background: 'linear-gradient(135deg, rgba(0,229,255,0.1), rgba(0,123,255,0.1))', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.2)' }}>★ Featured</Badge>
               </div>
             </div>
-            
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '0.75rem', fontWeight: 700 }}>{server.name}</h3>
+
+            {(() => {
+              const { displayName, org } = parseServerName(server.name);
+              return (
+                <>
+                  <h3
+                    style={{
+                      fontSize: '1.5rem',
+                      marginBottom: org ? '0.2rem' : '0.75rem',
+                      fontWeight: 700,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {displayName}
+                  </h3>
+                  {org && (
+                    <div style={{ fontSize: '0.8rem', marginBottom: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {org}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             <div style={{ fontSize: '0.875rem', marginBottom: '1.5rem', flexGrow: 1, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)' }}>
               <SafeMarkdown content={server.description || 'No description provided.'} isInline />
             </div>
@@ -73,16 +81,17 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
         ))}
 
         {showUpsellCard && (
-          <Card 
-            href="/submit" 
-            hoverable 
-            style={{ 
-              padding: 'clamp(1.25rem, 4vw, 2rem)', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              position: 'relative', 
-              overflow: 'hidden', 
-              border: '1px dashed rgba(0, 229, 255, 0.4)', 
+          <Card
+            href="/submit"
+            hoverable
+            style={{
+              padding: 'clamp(1.25rem, 4vw, 2rem)',
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: '320px',
+              position: 'relative',
+              overflow: 'hidden',
+              border: '1px dashed rgba(0, 229, 255, 0.4)',
               background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
             }}
           >

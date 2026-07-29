@@ -2103,21 +2103,22 @@ nav[aria-label="Table of contents"] {
   text-decoration: none;
   color: inherit;
   border-radius: 14px;
+  min-height: 104px;
 }
 
 /* Paid / featured placement — cyan–blue glow so it stands out in dense list mode */
 .directory-list-row-featured {
   position: relative;
-  border-color: rgba(0, 229, 255, 0.35) !important;
+  border-color: rgba(0, 229, 255, 0.55) !important;
   background: linear-gradient(
     135deg,
-    rgba(0, 229, 255, 0.08) 0%,
-    rgba(0, 123, 255, 0.05) 45%,
+    rgba(0, 229, 255, 0.14) 0%,
+    rgba(0, 123, 255, 0.08) 45%,
     rgba(20, 20, 20, 0.45) 100%
   ) !important;
   box-shadow:
-    0 0 0 1px rgba(0, 229, 255, 0.12),
-    0 0 28px rgba(0, 123, 255, 0.18),
+    0 0 0 1px rgba(0, 229, 255, 0.22),
+    0 0 36px rgba(0, 123, 255, 0.28),
     0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
@@ -2143,10 +2144,16 @@ nav[aria-label="Table of contents"] {
 
 .directory-card-featured {
   position: relative;
-  border-color: rgba(0, 229, 255, 0.3) !important;
+  border-color: rgba(0, 229, 255, 0.5) !important;
+  background: linear-gradient(
+    160deg,
+    rgba(0, 229, 255, 0.1) 0%,
+    rgba(0, 123, 255, 0.05) 40%,
+    transparent 100%
+  );
   box-shadow:
-    0 0 0 1px rgba(0, 229, 255, 0.1),
-    0 0 32px rgba(0, 123, 255, 0.16);
+    0 0 0 1px rgba(0, 229, 255, 0.2),
+    0 0 40px rgba(0, 123, 255, 0.24);
   overflow: hidden;
 }
 
@@ -2183,10 +2190,26 @@ nav[aria-label="Table of contents"] {
   min-width: 0;
 }
 
+.directory-list-name-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .directory-list-name {
   font-size: 1.05rem;
   font-weight: 600;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.directory-list-org {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

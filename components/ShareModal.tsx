@@ -6,17 +6,9 @@ import { Share2, X, Copy, Check } from 'lucide-react';
 import { toast } from './ui/Toast';
 import { trackShare } from '../lib/gtag';
 import { BadgeEmbedBuilder } from './ui/BadgeEmbedBuilder';
+import { parseServerName } from '../lib/displayName';
 
-function getDisplayName(name: string) {
-  const base = name.split('/').pop() || name;
-  return base
-    .split(/[-_]+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
-export default function ShareModal({ 
+export default function ShareModal({
   serverId, 
   serverName,
   variant = 'full',
@@ -25,7 +17,7 @@ export default function ShareModal({
   serverName: string;
   variant?: 'full' | 'mini';
 }) {
-  const displayName = getDisplayName(serverName);
+  const { displayName } = parseServerName(serverName);
   const [isOpen, setIsOpen] = useState(false);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
   const [mounted, setMounted] = useState(false);
