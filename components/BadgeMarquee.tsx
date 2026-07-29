@@ -34,6 +34,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://verifieddr.com/website/allmcps-com',
     imageUrl: 'https://verifieddr.com/badge/allmcps-com-dark.svg',
     rel: 'noopener'
+  },
+  {
+    id: 'saasgrow',
+    name: 'Featured on SaaSGrow',
+    href: 'https://saasgrow.app?ref=allmcps.com',
+    imageUrl: 'https://saasgrow.app/api/badge?type=featured&style=dark',
+    rel: 'noopener'
   }
 ];
 
