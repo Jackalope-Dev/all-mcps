@@ -77,11 +77,21 @@ export function formatUsd(cents: number): string {
 
 export function getPriceId(sku: PaidSku, envCtx?: any): string | null {
   const envName = PAID_PRODUCTS[sku].priceEnv;
-  const value = (envCtx && envCtx[envName]) || process.env[envName];
-  return value && typeof value === 'string' && value.startsWith('price_') ? value.trim() : null;
+  let value = (envCtx && envCtx[envName]) || process.env[envName];
+  if (!value || typeof value !== 'string') return null;
+  value = value.trim();
+  while (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1).trim();
+  }
+  return value.startsWith('price_') ? value : null;
 }
 
 export function isStripeConfigured(envCtx?: any): boolean {
-  const key = (envCtx && envCtx.STRIPE_SECRET_KEY) || process.env.STRIPE_SECRET_KEY;
-  return !!(key && typeof key === 'string' && key.startsWith('sk_'));
+  let key = (envCtx && envCtx.STRIPE_SECRET_KEY) || process.env.STRIPE_SECRET_KEY;
+  if (!key || typeof key !== 'string') return false;
+  key = key.trim();
+  return key.startsWith('sk_') || key.startsWith('rk_');
 }
