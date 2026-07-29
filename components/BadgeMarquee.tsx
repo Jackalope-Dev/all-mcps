@@ -48,6 +48,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://twelve.tools',
     imageUrl: 'https://twelve.tools/badge3-dark.svg',
     rel: 'noopener'
+  },
+  {
+    id: 'saaspage',
+    name: 'Featured on Saaspa.ge',
+    href: 'https://saaspa.ge/product/cms5fgv4u004sl804ite33b01',
+    imageUrl: 'https://saaspa.ge/api/embed/product/cms5fgv4u004sl804ite33b01/badge.png?theme=orange',
+    rel: 'nofollow'
   }
 ];
 
