@@ -20,25 +20,29 @@ type Server = {
   pendingRevision?: string | null;
   pendingClaimUserId?: string | null;
   pendingClaimWebsiteUrl?: string | null;
+  pendingLogoKey?: string | null;
 };
 
 export default function AdminClient({
   initialPending,
   initialPendingEdits = [],
   initialPendingClaims = [],
+  initialPendingLogos = [],
 }: {
   initialPending: Server[];
   initialPendingEdits?: Server[];
   initialPendingClaims?: Server[];
+  initialPendingLogos?: Server[];
 }) {
   const [pending, setPending] = useState<Server[]>(initialPending);
   const [pendingEdits, setPendingEdits] = useState<Server[]>(initialPendingEdits);
   const [pendingClaims, setPendingClaims] = useState<Server[]>(initialPendingClaims);
+  const [pendingLogos, setPendingLogos] = useState<Server[]>(initialPendingLogos);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handleAction = async (
     id: string,
-    action: 'approve' | 'reject' | 'approve_edit' | 'reject_edit' | 'approve_claim' | 'reject_claim'
+    action: 'approve' | 'reject' | 'approve_edit' | 'reject_edit' | 'approve_claim' | 'reject_claim' | 'approve_logo' | 'reject_logo'
   ) => {
     setLoadingId(id);
 
@@ -62,9 +66,12 @@ export default function AdminClient({
       } else if (action === 'approve_edit' || action === 'reject_edit') {
         setPendingEdits((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_edit' ? 'Edit approved' : 'Edit rejected');
-      } else {
+      } else if (action === 'approve_claim' || action === 'reject_claim') {
         setPendingClaims((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_claim' ? 'Claim approved' : 'Claim rejected');
+      } else {
+        setPendingLogos((prev) => prev.filter((s) => s.id !== id));
+        toast.success(action === 'approve_logo' ? 'Logo approved' : 'Logo rejected');
       }
     } catch (err: any) {
       toast.error('Action failed', {
@@ -112,6 +119,19 @@ export default function AdminClient({
           loadingId={loadingId}
           onApprove={(id) => handleAction(id, 'approve_claim')}
           onReject={(id) => handleAction(id, 'reject_claim')}
+        />
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Pending logos</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          Owner-uploaded logos awaiting approval. Nothing here is public until approved.
+        </p>
+        <PendingLogosTable
+          servers={pendingLogos}
+          loadingId={loadingId}
+          onApprove={(id) => handleAction(id, 'approve_logo')}
+          onReject={(id) => handleAction(id, 'reject_logo')}
         />
       </section>
 
@@ -389,6 +409,86 @@ function PendingClaimsTable({
                     </a>
                   ) : (
                     '—'
+                  )}
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => onApprove(server.id)}
+                      disabled={loadingId === server.id}
+                      style={btnStyle('#047857', loadingId === server.id)}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => onReject(server.id)}
+                      disabled={loadingId === server.id}
+                      style={btnStyle('#b91c1c', loadingId === server.id)}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PendingLogosTable({
+  servers,
+  loadingId,
+  onApprove,
+  onReject,
+}: {
+  servers: Server[];
+  loadingId: string | null;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        background: 'var(--card-bg)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '12px',
+        overflow: 'hidden',
+      }}
+    >
+      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+            <th style={{ padding: '1rem' }}>Listing</th>
+            <th style={{ padding: '1rem' }}>Preview</th>
+            <th style={{ padding: '1rem' }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {servers.length === 0 ? (
+            <tr>
+              <td colSpan={3} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                No pending logos!
+              </td>
+            </tr>
+          ) : (
+            servers.map((server) => (
+              <tr key={server.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <td style={{ padding: '1rem' }}>
+                  <strong>{server.name}</strong>
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  {server.pendingLogoKey && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/api/admin/logo-preview?key=${encodeURIComponent(server.pendingLogoKey)}`}
+                      alt={`${server.name} pending logo`}
+                      width={64}
+                      height={64}
+                      style={{ borderRadius: 8, display: 'block' }}
+                    />
                   )}
                 </td>
                 <td style={{ padding: '1rem' }}>

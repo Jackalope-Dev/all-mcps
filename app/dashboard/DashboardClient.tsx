@@ -20,6 +20,8 @@ type Server = {
   category: string;
   websiteUrl?: string | null;
   pendingRevision?: string | null;
+  logoUrl?: string | null;
+  pendingLogoKey?: string | null;
   isPremium?: boolean;
   views?: number;
   copies?: number;
@@ -41,6 +43,33 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', description: '', category: '', websiteUrl: '' });
   const [saving, setSaving] = useState(false);
+  const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null);
+
+  const uploadLogo = async (serverId: string, file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Logo too large', { description: 'Must be 5MB or smaller.' });
+      return;
+    }
+    setUploadingLogoId(serverId);
+    try {
+      const formData = new FormData();
+      formData.append('id', serverId);
+      formData.append('logo', file);
+      const res = await fetch('/api/dashboard/logo', { method: 'POST', body: formData });
+      const data = (await res.json()) as { error?: string; message?: string };
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not upload logo');
+      }
+      setServers((prev) =>
+        prev.map((s) => (s.id === serverId ? { ...s, pendingLogoKey: 'pending' } : s))
+      );
+      toast.success('Logo submitted', { description: data.message || 'Awaiting review.' });
+    } catch (err: any) {
+      toast.error('Could not upload logo', { description: err?.message });
+    } finally {
+      setUploadingLogoId(null);
+    }
+  };
 
   const startEdit = (server: Server) => {
     setEditingId(server.id);
@@ -151,6 +180,41 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                     Awaiting review since {new Date(pending.submittedAt).toLocaleDateString()}
                   </p>
                 )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {server.logoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={server.logoUrl}
+                    alt={`${server.name} logo`}
+                    width={40}
+                    height={40}
+                    style={{ borderRadius: 8, flexShrink: 0 }}
+                  />
+                )}
+                <label
+                  className="btn btn-secondary"
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  {uploadingLogoId === server.id
+                    ? 'Uploading…'
+                    : server.pendingLogoKey
+                    ? 'Logo pending review'
+                    : server.logoUrl
+                    ? 'Replace logo'
+                    : 'Upload logo'}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    style={{ display: 'none' }}
+                    disabled={uploadingLogoId === server.id}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadLogo(server.id, file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 {server.isPremium && (

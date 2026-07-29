@@ -50,6 +50,11 @@ async function getAdminData() {
         .from(servers)
         .where(isNotNull(servers.pendingClaimUserId))
         .orderBy(desc(servers.createdAt));
+      const pendingLogos = await db
+        .select()
+        .from(servers)
+        .where(isNotNull(servers.pendingLogoKey))
+        .orderBy(desc(servers.createdAt));
 
       const map = (s: typeof pendingServers[0]) => ({
         ...s,
@@ -60,13 +65,14 @@ async function getAdminData() {
         pending: pendingServers.map(map),
         pendingEdits: pendingEdits.map(map),
         pendingClaims: pendingClaims.map(map),
+        pendingLogos: pendingLogos.map(map),
         stats: await getAdminStats(db),
       };
     }
   } catch (e) {
     // Fallback if not in edge context
   }
-  return { pending: [], pendingEdits: [], pendingClaims: [], stats: EMPTY_STATS };
+  return { pending: [], pendingEdits: [], pendingClaims: [], pendingLogos: [], stats: EMPTY_STATS };
 }
 
 export default async function AdminPage() {
@@ -82,7 +88,7 @@ export default async function AdminPage() {
     );
   }
 
-  const { pending, pendingEdits, pendingClaims, stats } = await getAdminData();
+  const { pending, pendingEdits, pendingClaims, pendingLogos, stats } = await getAdminData();
 
   return (
     <main className="container animate-fade-in" style={{ padding: '4rem 1rem' }}>
@@ -99,6 +105,7 @@ export default async function AdminPage() {
         initialPending={pending as any}
         initialPendingEdits={pendingEdits as any}
         initialPendingClaims={pendingClaims as any}
+        initialPendingLogos={pendingLogos as any}
       />
     </main>
   );

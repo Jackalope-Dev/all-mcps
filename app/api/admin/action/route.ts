@@ -29,6 +29,8 @@ const actionSchema = z.object({
     'reject_edit',
     'approve_claim',
     'reject_claim',
+    'approve_logo',
+    'reject_logo',
   ]),
   fields: z
     .object({
@@ -56,6 +58,8 @@ const MESSAGES: Record<string, string> = {
   reject_edit: 'Edit rejected.',
   approve_claim: 'Claim approved.',
   reject_claim: 'Claim rejected.',
+  approve_logo: 'Logo approved.',
+  reject_logo: 'Logo rejected.',
 };
 
 export async function POST(req: Request) {
@@ -195,6 +199,12 @@ export async function POST(req: Request) {
       // upvote/view history (these have no FK/cascade — servers.id is plain text).
       await db.delete(upvoteRecords).where(eq(upvoteRecords.serverId, id));
       await db.delete(viewRecords).where(eq(viewRecords.serverId, id));
+
+      // Best-effort — an id that never had a logo just no-ops here.
+      if (env.LOGOS) {
+        await env.LOGOS.delete(`live/${id}.png`).catch(() => {});
+        await env.LOGOS.delete(`pending/${id}.png`).catch(() => {});
+      }
     } else if (action === 'feature') {
       if (!days) {
         return NextResponse.json({ error: "days is required." }, { status: 400 });
@@ -300,6 +310,49 @@ export async function POST(req: Request) {
           actionText: 'View listing',
           actionUrl: `${getAppUrl()}/mcp/${id}`,
         });
+      }
+    } else if (action === 'approve_logo' || action === 'reject_logo') {
+      const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
+      const server = rows[0];
+      if (!server || !server.pendingLogoKey) {
+        return NextResponse.json({ error: 'No pending logo for this listing.' }, { status: 400 });
+      }
+
+      if (action === 'approve_logo') {
+        const pendingObject = await env.LOGOS.get(server.pendingLogoKey);
+        if (!pendingObject) {
+          await db.update(servers).set({ pendingLogoKey: null }).where(eq(servers.id, id));
+          return NextResponse.json({ error: 'Pending logo was missing in storage; cleared.' }, { status: 400 });
+        }
+        const liveKey = `live/${id}.png`;
+        await env.LOGOS.put(liveKey, await pendingObject.arrayBuffer(), {
+          httpMetadata: { contentType: 'image/png' },
+        });
+        await env.LOGOS.delete(server.pendingLogoKey);
+        await db
+          .update(servers)
+          .set({ logoUrl: `/logos/${id}`, pendingLogoKey: null })
+          .where(eq(servers.id, id));
+      } else {
+        await env.LOGOS.delete(server.pendingLogoKey);
+        await db.update(servers).set({ pendingLogoKey: null }).where(eq(servers.id, id));
+      }
+
+      if (server.ownerUserId) {
+        const ownerRows = await db.select().from(users).where(eq(users.id, server.ownerUserId)).limit(1);
+        const ownerEmail = ownerRows[0]?.email;
+        if (ownerEmail) {
+          await sendNotificationEmail({
+            to: ownerEmail,
+            heading: action === 'approve_logo' ? 'Your logo was approved' : 'Your logo needs changes',
+            message:
+              action === 'approve_logo'
+                ? `Your new logo for ${server.name} is now live.`
+                : `Your uploaded logo for ${server.name} was not approved. You can upload a different one from your dashboard.`,
+            actionText: 'View listing',
+            actionUrl: `${getAppUrl()}/mcp/${id}`,
+          });
+        }
       }
     }
 

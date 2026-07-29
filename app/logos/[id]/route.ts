@@ -1,0 +1,34 @@
+import { NextResponse } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+
+const ID_PATTERN = /^[a-z0-9-]+$/;
+
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!ID_PATTERN.test(id)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  let env: any;
+  try {
+    const ctx = await getCloudflareContext();
+    env = ctx.env;
+  } catch {
+    return new NextResponse(null, { status: 404 });
+  }
+  if (!env?.LOGOS) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  const object = await env.LOGOS.get(`live/${id}.png`);
+  if (!object) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  return new NextResponse(object.body, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=300',
+    },
+  });
+}

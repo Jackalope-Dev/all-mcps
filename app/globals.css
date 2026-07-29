@@ -2348,3 +2348,215 @@ nav[aria-label="Table of contents"] {
   }
 }
 
+/* ── Admin Panel ── */
+.admin-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.admin-section-title {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-section-desc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.admin-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.admin-table th {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+  font-weight: 600;
+}
+
+.admin-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.admin-badge {
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-links-cell,
+.admin-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-edit-form {
+  gap: 0.5rem;
+  min-width: 260px;
+}
+
+.admin-desc-line {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-btn {
+  padding: 0.5rem 1rem;
+  min-height: 38px;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.admin-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.admin-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.admin-filter-selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-filter-selects .form-input {
+  width: auto;
+  flex: 1 1 150px;
+}
+
+.admin-feature-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-feature-controls {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.admin-feature-controls .form-input {
+  width: 80px;
+}
+
+.admin-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Below this width the table header no longer communicates which cell is
+   which once columns start wrapping, so each row becomes a labeled card
+   instead of trying to keep the grid intact. */
+@media (max-width: 720px) {
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table tr {
+    padding: 1rem;
+  }
+
+  .admin-table td {
+    padding: 0.5rem 0;
+    border-bottom: none;
+  }
+
+  .admin-table td:empty {
+    display: none;
+  }
+
+  .admin-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+  }
+
+  .admin-table-empty {
+    padding: 1.5rem 0;
+  }
+
+  .admin-desc-line,
+  .admin-edit-form {
+    max-width: none;
+    min-width: 0;
+  }
+
+  .admin-actions {
+    width: 100%;
+  }
+
+  .admin-actions .admin-btn {
+    flex: 1 1 auto;
+  }
+}
+
+

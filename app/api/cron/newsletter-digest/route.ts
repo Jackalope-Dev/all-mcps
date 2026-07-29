@@ -10,7 +10,13 @@ const MAX_PER_SECTION = 6;
 const NEWSLETTER_SUBSCRIBERS_LIST_ID = 'ta0zh9e3l9rcjlfpzpk80tcn';
 const APP_URL = 'https://allmcps.com';
 
-type ListingSummary = { id: string; name: string; description: string };
+type ListingSummary = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  logoUrl: string | null;
+};
 type SequenzyBlock = Record<string, any>;
 
 function truncate(text: string, max: number): string {
@@ -44,13 +50,51 @@ function cleanDescription(description: string): string {
   return text;
 }
 
+// Solid-color counterparts of DirectoryGrid.tsx's getGradient() palette (the darker
+// stop of each gradient, for contrast with white text) — CSS gradients aren't
+// reliably supported in email clients, but using the same hash keeps a given
+// listing's fallback color consistent between the site and this email.
+const FALLBACK_COLORS = ['#007bff', '#0f172a', '#0369a1', '#1e3a8a', '#164e63', '#1d4ed8'];
+
+function fallbackColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
+}
+
+function initialLetter(name: string): string {
+  const match = name.match(/[\p{L}\p{N}]/u);
+  return (match ? match[0] : 'M').toUpperCase();
+}
+
+function listingHeaderHtml(listing: ListingSummary): string {
+  const name = escapeHtml(listing.name);
+  const category = escapeHtml(listing.category);
+  const icon = listing.logoUrl
+    ? `<img src="${escapeHtml(listing.logoUrl)}" width="48" height="48" alt="" style="display:block;border-radius:8px;object-fit:cover" />`
+    : `<table role="presentation" width="48" height="48" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" height="48" align="center" valign="middle" style="width:48px;height:48px;border-radius:8px;background-color:${fallbackColor(
+        listing.name
+      )};color:#ffffff;font-family:Arial,sans-serif;font-size:20px;font-weight:800">${escapeHtml(
+        initialLetter(listing.name)
+      )}</td></tr></table>`;
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" valign="top" style="width:48px;padding-right:12px">${icon}</td><td valign="top"><div style="font-weight:700;font-size:16px;color:#020617;line-height:1.3;margin-bottom:4px">${name}</div><span style="display:inline-block;background-color:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600">${category}</span></td></tr></table>`;
+}
+
 function listingBlocks(listing: ListingSummary): SequenzyBlock[] {
   const description = truncate(cleanDescription(listing.description), 140);
-  const blocks: SequenzyBlock[] = [{ type: 'heading', content: listing.name, level: 3 }];
+  const blocks: SequenzyBlock[] = [
+    { type: 'text', variant: 'paragraph', content: listingHeaderHtml(listing) },
+  ];
   if (/[\p{L}\p{N}]/u.test(description)) {
     blocks.push({ type: 'text', content: `<p>${escapeHtml(description)}</p>`, variant: 'paragraph' });
   }
-  blocks.push({ type: 'button', text: 'View →', url: `${APP_URL}/mcp/${listing.id}`, variant: 'secondary' });
+  blocks.push({
+    type: 'button',
+    text: `View ${truncate(listing.name, 30)} →`,
+    url: `${APP_URL}/mcp/${listing.id}`,
+    variant: 'secondary',
+  });
   return blocks;
 }
 
@@ -156,7 +200,13 @@ export async function POST(req: Request) {
     const sinceDate = new Date(Date.now() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
     const newRows = await db
-      .select({ id: servers.id, name: servers.name, description: servers.description })
+      .select({
+        id: servers.id,
+        name: servers.name,
+        description: servers.description,
+        category: servers.category,
+        logoUrl: servers.logoUrl,
+      })
       .from(servers)
       .where(and(eq(servers.status, 'active'), gte(servers.createdAt, sinceDate)))
       .orderBy(desc(servers.createdAt))
@@ -165,7 +215,13 @@ export async function POST(req: Request) {
     const newIds = newRows.map((r) => r.id);
 
     const trendingRows = await db
-      .select({ id: servers.id, name: servers.name, description: servers.description })
+      .select({
+        id: servers.id,
+        name: servers.name,
+        description: servers.description,
+        category: servers.category,
+        logoUrl: servers.logoUrl,
+      })
       .from(servers)
       .where(
         newIds.length > 0

@@ -25,6 +25,8 @@ type OwnedServer = {
   category: string;
   websiteUrl?: string | null;
   pendingRevision?: string | null;
+  logoUrl?: string | null;
+  pendingLogoKey?: string | null;
   isPremium: boolean;
   views: number;
   copies: number;
@@ -49,6 +51,8 @@ async function getOwnedServers(userId: string): Promise<{
           category: servers.category,
           websiteUrl: servers.websiteUrl,
           pendingRevision: servers.pendingRevision,
+          logoUrl: servers.logoUrl,
+          pendingLogoKey: servers.pendingLogoKey,
           isPremium: servers.isPremium,
           views: servers.views,
           copies: servers.copies,

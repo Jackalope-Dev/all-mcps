@@ -29,5 +29,11 @@
       "database_id": "c0e237c4-fa3c-45f0-8400-b2dd44615f94",
       "migrations_dir": "drizzle"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "LOGOS",
+      "bucket_name": "all-mcps-logos"
+    }
   ]
 }

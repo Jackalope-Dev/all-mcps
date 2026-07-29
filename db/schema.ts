@@ -33,6 +33,10 @@ export const servers = sqliteTable('servers', {
   premiumStatus: text('premium_status').notNull().default('free'),
   /** JSON blob of pending owner edits awaiting admin approval. */
   pendingRevision: text('pending_revision'),
+  /** Live, admin-approved logo URL (e.g. `/logos/<id>`). Null = use the generated gradient avatar. */
+  logoUrl: text('logo_url'),
+  /** R2 key of an uploaded logo awaiting admin approval (e.g. `pending/<id>.png`). Null = nothing pending. */
+  pendingLogoKey: text('pending_logo_key'),
   status: text('status').notNull().default('pending'),
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   isVerifiedActive: integer('is_verified_active', { mode: 'boolean' }).notNull().default(false),
