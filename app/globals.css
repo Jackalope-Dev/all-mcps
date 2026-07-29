@@ -824,14 +824,6 @@ p {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 14px;
-  background: var(--brand-gradient-soft);
-  box-shadow:
-    0 0 0 1px rgba(0, 229, 255, 0.22),
-    0 8px 28px rgba(0, 123, 255, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  padding: 0.3rem;
-  box-sizing: content-box;
 }
 
 .brand-logo-img {
@@ -2303,9 +2295,11 @@ nav[aria-label="Table of contents"] {
 
 .mcp-icon-tooltip-bubble {
   position: absolute;
-  bottom: calc(100% + 11px);
+  /* Opens downward, not upward — these icons sit right under the sticky header
+     (z-index: 100), so an upward bubble has nowhere to go but behind it. */
+  top: calc(100% + 11px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateX(-50%) translateY(-4px);
   width: max-content;
   min-width: 200px;
   max-width: 260px;
@@ -2319,7 +2313,7 @@ nav[aria-label="Table of contents"] {
   pointer-events: none;
   transition: opacity 0.15s ease, transform 0.15s ease;
   transition-delay: 0s;
-  z-index: 40;
+  z-index: 150;
   text-align: left;
   white-space: normal;
 }
@@ -2327,21 +2321,21 @@ nav[aria-label="Table of contents"] {
 .mcp-icon-tooltip-bubble::before {
   content: '';
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--border-strong);
+  border-bottom-color: var(--border-strong);
 }
 
 .mcp-icon-tooltip-bubble::after {
   content: '';
   position: absolute;
-  top: calc(100% - 1px);
+  bottom: calc(100% - 1px);
   left: 50%;
   transform: translateX(-50%);
   border: 5px solid transparent;
-  border-top-color: var(--card-bg);
+  border-bottom-color: var(--card-bg);
 }
 
 .mcp-icon-tooltip:hover .mcp-icon-tooltip-bubble,
@@ -2370,13 +2364,18 @@ nav[aria-label="Table of contents"] {
   flex-shrink: 0;
 }
 
+/* display: block matters here — these are <span>s (valid nested inside the h1),
+   and an inline element with padding/border-top (.mcp-icon-tooltip-meta below)
+   inflates its line box instead of stacking normally, which read as huge gaps. */
 .mcp-icon-tooltip-body {
+  display: block;
   font-size: 0.72rem;
   color: var(--text-secondary);
   line-height: 1.5;
 }
 
 .mcp-icon-tooltip-meta {
+  display: block;
   margin-top: 0.4rem;
   padding-top: 0.4rem;
   border-top: 1px solid var(--border-color);

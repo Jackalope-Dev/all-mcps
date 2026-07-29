@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json() as any;
+    let env: any;
+    try {
+      const ctx = await getCloudflareContext();
+      env = ctx.env;
+    } catch {
+      /* fallback */
+    }
+
+    const body = (await req.json()) as any;
     const token = body['cf-turnstile-response'];
 
     // 1. Validate Turnstile token
@@ -11,8 +20,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Missing Turnstile token' }, { status: 400 });
     }
 
+    const turnstileSecret = env?.TURNSTILE_SECRET || process.env.TURNSTILE_SECRET || '';
     const verifyForm = new URLSearchParams();
-    verifyForm.append('secret', process.env.TURNSTILE_SECRET || '');
+    verifyForm.append('secret', turnstileSecret);
     verifyForm.append('response', token);
     verifyForm.append('remoteip', req.headers.get('x-forwarded-for') || '');
 
@@ -21,17 +31,17 @@ export async function POST(req: Request) {
       body: verifyForm,
     });
 
-    const verifyResult = await verifyRes.json() as any;
+    const verifyResult = (await verifyRes.json()) as any;
     if (!verifyResult.success) {
       return NextResponse.json({ success: false, error: 'Turnstile verification failed' }, { status: 403 });
     }
 
     // 2. Send email via Resend
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    
-    // In production, the 'from' address must use a verified domain in Resend
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-    const toEmail = process.env.RESEND_TO_EMAIL || 'delivered@resend.dev';
+    const apiKey = env?.RESEND_API_KEY || process.env.RESEND_API_KEY;
+    const resend = new Resend(apiKey);
+
+    const fromEmail = env?.RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const toEmail = env?.RESEND_TO_EMAIL || process.env.RESEND_TO_EMAIL || 'delivered@resend.dev';
 
     const data = await resend.emails.send({
       from: `Contact Form <${fromEmail}>`,
@@ -42,13 +52,13 @@ export async function POST(req: Request) {
     });
 
     if (data.error) {
-      console.error("Resend API error:", data.error);
+      console.error('Resend API error:', data.error);
       return NextResponse.json({ success: false, error: 'Failed to send email' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: 'Message sent successfully' });
   } catch (error) {
-    console.error("Contact API error:", error);
+    console.error('Contact API error:', error);
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }

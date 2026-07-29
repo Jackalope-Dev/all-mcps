@@ -146,8 +146,17 @@ async function applySubscriptionDeleted(sub: Stripe.Subscription) {
 }
 
 export async function POST(req: Request) {
-  const stripe = getStripe();
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  let env: any;
+  try {
+    const ctx = await getCloudflareContext();
+    env = ctx.env;
+  } catch {
+    /* fallback */
+  }
+
+  const secretKey = env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = env?.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET;
+  const stripe = getStripe(secretKey);
 
   if (!webhookSecret) {
     console.error('STRIPE_WEBHOOK_SECRET missing');

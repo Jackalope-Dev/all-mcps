@@ -16,11 +16,20 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY) {
+    let env: any;
+    try {
+      const ctx = await getCloudflareContext();
+      env = ctx.env;
+    } catch {
+      /* fallback */
+    }
+
+    const secretKey = env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
       return NextResponse.json(
         {
           error: 'Stripe is not configured yet.',
-          hint: 'Set STRIPE_SECRET_KEY and price IDs, then redeploy.',
+          hint: 'Set STRIPE_SECRET_KEY and Price IDs in environment variables, then redeploy.',
         },
         { status: 503 }
       );
@@ -28,30 +37,23 @@ export async function POST(req: Request) {
 
     const parsed = bodySchema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 });
     }
 
     const { serverId, sku, email, coupon } = parsed.data;
     const product = PAID_PRODUCTS[sku as PaidSku];
-    const priceId = getPriceId(sku as PaidSku);
+    const priceId = getPriceId(sku as PaidSku, env);
 
     if (!priceId) {
       return NextResponse.json(
         {
           error: `Missing Stripe Price ID for ${product.name}.`,
-          hint: `Set ${product.priceEnv} to a price_… id from the Stripe Dashboard.`,
+          hint: `Set ${product.priceEnv} in environment variables.`,
         },
         { status: 503 }
       );
     }
 
-    let env: any;
-    try {
-      const ctx = await getCloudflareContext();
-      env = ctx.env;
-    } catch {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
-    }
     if (!env?.DB) {
       return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
     }
@@ -84,7 +86,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const stripe = getStripe();
+    const stripe = getStripe(secretKey);
     const appUrl = getAppUrl();
     const successPath =
       sku === 'priority_review'

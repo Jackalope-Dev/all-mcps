@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { syncSequenzySubscriber, NEWSLETTER_SUBSCRIBERS_LIST_ID } from '../../../../lib/sequenzy';
 
 const subscribeSchema = z.object({
@@ -9,6 +10,14 @@ const subscribeSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    let env: any;
+    try {
+      const ctx = await getCloudflareContext();
+      env = ctx.env;
+    } catch {
+      /* fallback */
+    }
+
     const body = (await req.json()) as any;
     const token = body['cf-turnstile-response'];
 
@@ -16,8 +25,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing Turnstile token' }, { status: 400 });
     }
 
+    const turnstileSecret = env?.TURNSTILE_SECRET || process.env.TURNSTILE_SECRET || '';
     const verifyForm = new URLSearchParams();
-    verifyForm.append('secret', process.env.TURNSTILE_SECRET || '');
+    verifyForm.append('secret', turnstileSecret);
     verifyForm.append('response', token);
     verifyForm.append('remoteip', req.headers.get('x-forwarded-for') || '');
 

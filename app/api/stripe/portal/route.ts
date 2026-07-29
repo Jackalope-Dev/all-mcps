@@ -12,7 +12,16 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY) {
+    let env: any;
+    try {
+      const ctx = await getCloudflareContext();
+      env = ctx.env;
+    } catch {
+      /* fallback */
+    }
+
+    const secretKey = env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
       return NextResponse.json({ error: 'Stripe is not configured' }, { status: 503 });
     }
 
@@ -21,8 +30,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const ctx = await getCloudflareContext();
-    const env = ctx.env as any;
     if (!env?.DB) {
       return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
     }
@@ -37,7 +44,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const stripe = getStripe();
+    const stripe = getStripe(secretKey);
     const session = await stripe.billingPortal.sessions.create({
       customer: server.stripeCustomerId,
       return_url: `${getAppUrl()}/mcp/${encodeURIComponent(server.id)}`,

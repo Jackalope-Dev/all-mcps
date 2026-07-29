@@ -75,12 +75,13 @@ export function formatUsd(cents: number): string {
   }).format(cents / 100);
 }
 
-export function getPriceId(sku: PaidSku): string | null {
+export function getPriceId(sku: PaidSku, envCtx?: any): string | null {
   const envName = PAID_PRODUCTS[sku].priceEnv;
-  const value = process.env[envName];
-  return value && value.startsWith('price_') ? value : null;
+  const value = (envCtx && envCtx[envName]) || process.env[envName];
+  return value && typeof value === 'string' && value.startsWith('price_') ? value.trim() : null;
 }
 
-export function isStripeConfigured(): boolean {
-  return !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_'));
+export function isStripeConfigured(envCtx?: any): boolean {
+  const key = (envCtx && envCtx.STRIPE_SECRET_KEY) || process.env.STRIPE_SECRET_KEY;
+  return !!(key && typeof key === 'string' && key.startsWith('sk_'));
 }

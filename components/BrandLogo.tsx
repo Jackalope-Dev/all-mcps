@@ -9,9 +9,9 @@ type BrandLogoProps = {
 };
 
 const SIZES = {
-  sm: 32,
-  md: 48,
-  lg: 56,
+  sm: 28,
+  md: 36,
+  lg: 48,
 } as const;
 
 /**

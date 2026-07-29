@@ -32,7 +32,17 @@ export type SequenzySubscriberSync = {
  * Always merges (adds tags to an existing subscriber) rather than skipping or overwriting.
  */
 export async function syncSequenzySubscriber(input: SequenzySubscriberSync): Promise<void> {
-  const key = process.env.SEQUENZY_API_KEY;
+  let key = process.env.SEQUENZY_API_KEY;
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx?.env && (ctx.env as any).SEQUENZY_API_KEY) {
+      key = (ctx.env as any).SEQUENZY_API_KEY;
+    }
+  } catch {
+    /* fallback */
+  }
+
   if (!key) {
     console.warn('SEQUENZY_API_KEY not configured; skipping Sequenzy sync');
     return;

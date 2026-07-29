@@ -27,6 +27,15 @@ const submitSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    let env: any;
+    try {
+      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+      const ctx = await getCloudflareContext();
+      env = ctx.env;
+    } catch {
+      /* fallback */
+    }
+
     const body = (await req.json()) as any;
     const token = body['cf-turnstile-response'];
 
@@ -35,7 +44,7 @@ export async function POST(req: Request) {
     }
 
     const verifyForm = new URLSearchParams();
-    verifyForm.append('secret', process.env.TURNSTILE_SECRET || '');
+    verifyForm.append('secret', env?.TURNSTILE_SECRET || process.env.TURNSTILE_SECRET || '');
     verifyForm.append('response', token);
     verifyForm.append('remoteip', req.headers.get('x-forwarded-for') || '');
 
@@ -116,12 +125,14 @@ export async function POST(req: Request) {
 
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `mcp-${Date.now()}`;
 
-    let env;
-    try {
-      const ctx = await getCloudflareContext();
-      env = ctx.env;
-    } catch (e) {
-      throw new Error('Could not get Cloudflare context.');
+    if (!env) {
+      try {
+        const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+        const ctx = await getCloudflareContext();
+        env = ctx.env;
+      } catch (e) {
+        throw new Error('Could not get Cloudflare context.');
+      }
     }
 
     if (!env || !env.DB) {
