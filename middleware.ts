@@ -7,7 +7,31 @@ export function middleware(req: NextRequest) {
 
   let response: NextResponse;
 
-  if (pathname.startsWith('/mcp/')) {
+  // 1. Well-known & Auth.md rewrites
+  if (pathname === '/.well-known/api-catalog') {
+    response = NextResponse.rewrite(new URL('/api/well-known/api-catalog', req.url));
+  } else if (
+    pathname === '/.well-known/openid-configuration' ||
+    pathname === '/.well-known/oauth-authorization-server'
+  ) {
+    response = NextResponse.rewrite(new URL('/api/well-known/openid-configuration', req.url));
+  } else if (pathname === '/.well-known/oauth-protected-resource') {
+    response = NextResponse.rewrite(new URL('/api/well-known/oauth-protected-resource', req.url));
+  } else if (
+    pathname === '/.well-known/mcp/server-card.json' ||
+    pathname === '/.well-known/mcp/server-card'
+  ) {
+    response = NextResponse.rewrite(new URL('/api/well-known/mcp-server-card', req.url));
+  } else if (
+    pathname === '/.well-known/agent-skills/index.json' ||
+    pathname === '/.well-known/agent-skills/index'
+  ) {
+    response = NextResponse.rewrite(new URL('/api/well-known/agent-skills/index', req.url));
+  } else if (pathname === '/auth.md') {
+    response = NextResponse.rewrite(new URL('/api/well-known/auth-md', req.url));
+  }
+  // 2. Existing MCP Markdown rewrite
+  else if (pathname.startsWith('/mcp/')) {
     const isMarkdownAccept = acceptHeader.includes('text/markdown');
     const isMarkdownFormat = searchParams.get('format') === 'md';
     const isDotMdPath = pathname.endsWith('.md');
@@ -23,10 +47,34 @@ export function middleware(req: NextRequest) {
     } else {
       response = NextResponse.next();
     }
+  }
+  // 3. Markdown negotiation for agents on general pages
+  else if (
+    (acceptHeader.includes('text/markdown') || searchParams.get('format') === 'md') &&
+    !pathname.startsWith('/api/') &&
+    !pathname.startsWith('/_next/') &&
+    !pathname.startsWith('/.well-known/')
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/api/v1/markdown-renderer';
+    url.searchParams.set('path', pathname);
+    response = NextResponse.rewrite(url);
   } else {
     response = NextResponse.next();
   }
 
+  // RFC 8288 Link Header for Agent Discovery
+  const linkHeader = [
+    '</.well-known/api-catalog>; rel="api-catalog"',
+    '</docs/api>; rel="service-doc"',
+    '</.well-known/agent-skills/index.json>; rel="agent-skills"',
+    '</.well-known/mcp/server-card.json>; rel="mcp-server-card"',
+    '</.well-known/openid-configuration>; rel="oauth-authorization-server"',
+    '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"',
+    '</auth.md>; rel="authorizing-agent"',
+  ].join(', ');
+
+  response.headers.set('Link', linkHeader);
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -39,4 +87,3 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };
-

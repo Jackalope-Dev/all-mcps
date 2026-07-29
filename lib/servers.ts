@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
+import { isFeaturedListing } from './featuredStatus';
 
 /**
  * Columns safe to expose to anonymous visitors and public API consumers.
@@ -42,6 +43,7 @@ export type Server = {
   isOfficial: boolean;
   logoUrl?: string | null;
   isPremium?: boolean;
+  featuredUntil?: string | Date | null;
   status: string;
   lastCheckedAt?: string | Date | null;
   isVerifiedActive?: boolean;
@@ -194,4 +196,10 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
   });
 
   return [...sameCategory, ...otherServers].slice(0, limit);
+}
+
+/** Paid/featured listings eligible to rotate into promotional ad slots, excluding the given server. */
+export async function getFeaturedServers(excludeId?: string, limit = 10): Promise<Server[]> {
+  const allServers = await getActiveServers();
+  return allServers.filter((s) => s.id !== excludeId && isFeaturedListing(s)).slice(0, limit);
 }

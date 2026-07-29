@@ -1,4 +1,4 @@
-import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import ShareModal from '../../../components/ShareModal';
@@ -14,12 +14,13 @@ import { servers as serversTable } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { repoLinkRel, websiteLinkRel } from '../../../lib/linkRel';
 import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
-import { isFeaturedListing } from '../../../lib/featuredStatus';
+import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
-import { getRelatedServers, PUBLIC_SERVER_COLUMNS } from '../../../lib/servers';
+import { getRelatedServers, getFeaturedServers, PUBLIC_SERVER_COLUMNS } from '../../../lib/servers';
 import { auth } from '../../../lib/auth';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { parseServerName } from '../../../lib/displayName';
+import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 
 // Define the type for our server data
 type Server = {
@@ -184,6 +185,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   const readme = await fetchReadme(server.url);
   const relatedServers = await getRelatedServers(server as any, 4);
   const { displayName, org } = parseServerName(server.name);
+
+  // Sidebar ad slot rotates between paid featured listings and the "spotlight your own
+  // server" upsell — one extra slot in the pool reserved for the upsell keeps it showing
+  // occasionally even as more advertisers are in rotation.
+  const featuredPool = await getFeaturedServers(server.id, 10);
+  const spotlightCandidates = [...featuredPool, null];
+  const spotlightPick = spotlightCandidates[Math.floor(Math.random() * spotlightCandidates.length)];
   // The mcpServers key just needs to be a readable identifier; the npx arg below
   // uses server.name verbatim since that's typically the real package name
   // (e.g. "@agentfund/mcp") and slugifying it would produce a nonexistent package.
@@ -281,22 +289,29 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: org ? '0.2rem' : '1rem' }}>
             <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
-            <h1 className="text-page-title" style={{ margin: 0 }}>{displayName}</h1>
+            <h1 className="text-page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.45rem' }}>
+              {displayName}
+              {server.isPremium && (
+                <span title="Premium listing" style={{ display: 'inline-flex' }}>
+                  <Crown size={20} color="#facc15" fill="#facc15" />
+                </span>
+              )}
+              {isVerifiedListing(server) && (
+                <span title={server.isPremium && !server.isOfficial ? 'Premium listing' : 'Ownership verified'} style={{ display: 'inline-flex' }}>
+                  <BadgeCheck size={20} color="var(--accent-color)" />
+                </span>
+              )}
+            </h1>
           </div>
           {org && (
             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
               {org}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             <Badge variant="category" href={`/browse?category=${encodeURIComponent(server.category)}`}>
               {server.category}
             </Badge>
-            {(server.isOfficial || server.isPremium) && (
-              <Badge variant="official" title={server.isPremium && !server.isOfficial ? 'Premium listing' : 'Ownership verified'}>
-                ✓ Verified
-              </Badge>
-            )}
             {server.websiteVerified && (
               <Badge variant="success">Website verified</Badge>
             )}
@@ -310,11 +325,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 }}
               >
                 ★ Featured
-              </Badge>
-            )}
-            {server.isPremium && (
-              <Badge variant="success" style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.25)' }}>
-                Premium
               </Badge>
             )}
             {server.isVerifiedActive && (
@@ -521,46 +531,121 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             })()}
           </div>
 
-          {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) */}
-          <div
-            className="surface"
-            style={{
-              padding: '1.5rem',
-              borderColor: 'rgba(0, 229, 255, 0.35)',
-              background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
-              boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)', fontSize: '0.7rem' }}>
-                ★ Spotlight Slot
-              </Badge>
-            </div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-              Feature Your MCP Server
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
-              Get maximum visibility for your server across our directory, search results, and detail pages.
-            </p>
-            <Link
-              href="/submit"
+          {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) — rotates between paid
+              featured listings and the self-serve upsell */}
+          {spotlightPick ? (
+            (() => {
+              const { displayName: spotlightName } = parseServerName(spotlightPick.name);
+              return (
+                <ImpressionBeacon serverId={spotlightPick.id} surface="detail_sidebar">
+                  <div
+                    className="surface"
+                    style={{
+                      padding: '1.5rem',
+                      borderColor: 'rgba(0, 229, 255, 0.35)',
+                      background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
+                      boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                      <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)', fontSize: '0.7rem' }}>
+                        ★ Featured
+                      </Badge>
+                      <ServerAvatar name={spotlightPick.name} logoUrl={spotlightPick.logoUrl} size={32} />
+                    </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                      {spotlightName}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)',
+                        marginBottom: '1rem',
+                        lineHeight: 1.5,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {spotlightPick.description}
+                    </p>
+                    <Link
+                      href={`/mcp/${spotlightPick.id}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                        padding: '0.75rem 1rem',
+                        background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
+                        color: '#090d16',
+                        borderRadius: '8px',
+                        fontWeight: 700,
+                        fontSize: '0.875rem',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <Sparkles size={16} /> View Server
+                    </Link>
+                    <Link
+                      href="/submit"
+                      style={{
+                        display: 'block',
+                        textAlign: 'center',
+                        marginTop: '0.65rem',
+                        fontSize: '0.7rem',
+                        color: 'var(--text-secondary)',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Feature your own server →
+                    </Link>
+                  </div>
+                </ImpressionBeacon>
+              );
+            })()
+          ) : (
+            <div
+              className="surface"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                padding: '0.75rem 1rem',
-                background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
-                color: '#090d16',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '0.875rem',
-                textDecoration: 'none',
+                padding: '1.5rem',
+                borderColor: 'rgba(0, 229, 255, 0.35)',
+                background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
+                boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
               }}
             >
-              <Sparkles size={16} /> Spotlight Your Server
-            </Link>
-          </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)', fontSize: '0.7rem' }}>
+                  ★ Spotlight Slot
+                </Badge>
+              </div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                Feature Your MCP Server
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+                Get maximum visibility for your server across our directory, search results, and detail pages.
+              </p>
+              <Link
+                href="/submit"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  padding: '0.75rem 1rem',
+                  background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
+                  color: '#090d16',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  textDecoration: 'none',
+                }}
+              >
+                <Sparkles size={16} /> Spotlight Your Server
+              </Link>
+            </div>
+          )}
 
           <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
