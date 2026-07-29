@@ -1,4 +1,4 @@
-import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
+import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon/workerd';
 
 export class LogoValidationError extends Error {}
 
