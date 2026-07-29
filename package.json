@@ -5,7 +5,7 @@
   "scripts": {
     "prebuild": "node scripts/build-blog-manifest.mjs",
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

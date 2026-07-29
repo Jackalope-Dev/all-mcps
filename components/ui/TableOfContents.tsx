@@ -52,11 +52,11 @@ export function TableOfContents({
     const handleScroll = () => {
       if (isClickScrolling.current) return;
 
-      const scrollPosition = window.scrollY + 100;
+      const scrollPosition = window.scrollY + 120;
 
-      // Check if we are near the bottom of the page
+      // Check if near bottom of page
       const isAtBottom =
-        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 50;
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 60;
 
       if (isAtBottom && headingElements.length > 0) {
         setActiveId(headingElements[headingElements.length - 1].id);
@@ -74,14 +74,13 @@ export function TableOfContents({
         }
       }
 
-      // Fallback to first item if scrolled near top
       if (headingElements.length > 0) {
         setActiveId(headingElements[0].id);
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial check
+    handleScroll();
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -104,7 +103,6 @@ export function TableOfContents({
       const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
 
-      // Update URL hash without jumping
       if (window.history.pushState) {
         window.history.pushState(null, '', `#${id}`);
       }
@@ -120,19 +118,17 @@ export function TableOfContents({
   return (
     <nav aria-label="Table of contents" className={className}>
       {/* Mobile Top Accordion (visible on < 1024px) */}
-      <div className="lg:hidden surface-muted rounded-xl p-3.5 mb-6 border border-slate-800/80 shadow-sm">
+      <div className="lg:hidden toc-sidebar-card mb-6">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between gap-2 text-left text-sm font-semibold text-slate-200 focus:outline-none"
+          className="w-full flex items-center justify-between gap-2 text-left focus:outline-none"
           aria-expanded={isOpen}
         >
           <div className="flex items-center gap-2 overflow-hidden">
             <List size={16} className="text-cyan-400 shrink-0" />
-            <span className="text-xs uppercase tracking-wider text-slate-400 font-bold shrink-0">
-              {title}:
-            </span>
-            <span className="truncate text-cyan-300 text-sm font-medium">
+            <span className="toc-sidebar-title shrink-0">{title}:</span>
+            <span className="truncate text-cyan-300 text-sm font-semibold">
               {activeItem?.text}
             </span>
           </div>
@@ -144,7 +140,7 @@ export function TableOfContents({
         </button>
 
         {isOpen && (
-          <ol className="mt-3 pt-3 border-t border-slate-800 flex flex-col gap-1.5 max-h-[60vh] overflow-y-auto">
+          <ul className="toc-sidebar-list mt-3 pt-3 border-t border-slate-800 max-h-[60vh] overflow-y-auto">
             {items.map((item) => {
               const isActive = item.id === activeId;
               const isH3 = item.level === 3;
@@ -153,12 +149,8 @@ export function TableOfContents({
                   <a
                     href={`#${item.id}`}
                     onClick={(e) => handleLinkClick(e, item.id)}
-                    className={`block text-sm py-1 px-2.5 rounded-lg transition-colors ${
-                      isH3 ? 'ml-3 text-xs' : ''
-                    } ${
-                      isActive
-                        ? 'bg-cyan-500/15 text-cyan-300 font-semibold border-l-2 border-cyan-400'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    className={`toc-link ${isH3 ? 'toc-link--h3' : ''} ${
+                      isActive ? 'is-active' : ''
                     }`}
                   >
                     {item.text}
@@ -166,41 +158,37 @@ export function TableOfContents({
                 </li>
               );
             })}
-          </ol>
+          </ul>
         )}
       </div>
 
       {/* Desktop Sticky Sidebar (visible on >= 1024px) */}
-      <div className="hidden lg:block sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 custom-scrollbar">
-        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-800/80">
-          <List size={15} className="text-cyan-400" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-            {title}
-          </h3>
+      <div className="hidden lg:block toc-sidebar-container">
+        <div className="toc-sidebar-card">
+          <div className="toc-sidebar-header">
+            <List size={16} className="text-cyan-400" />
+            <h3 className="toc-sidebar-title">{title}</h3>
+          </div>
+          <ul className="toc-sidebar-list">
+            {items.map((item) => {
+              const isActive = item.id === activeId;
+              const isH3 = item.level === 3;
+              return (
+                <li key={item.id}>
+                  <a
+                    href={`#${item.id}`}
+                    onClick={(e) => handleLinkClick(e, item.id)}
+                    className={`toc-link ${isH3 ? 'toc-link--h3' : ''} ${
+                      isActive ? 'is-active' : ''
+                    }`}
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
         </div>
-        <ol className="flex flex-col gap-1 text-sm border-l border-slate-800/60 pl-0">
-          {items.map((item) => {
-            const isActive = item.id === activeId;
-            const isH3 = item.level === 3;
-            return (
-              <li key={item.id}>
-                <a
-                  href={`#${item.id}`}
-                  onClick={(e) => handleLinkClick(e, item.id)}
-                  className={`block py-1.5 pr-2 transition-all duration-150 leading-snug ${
-                    isH3 ? 'pl-6 text-xs' : 'pl-3'
-                  } ${
-                    isActive
-                      ? 'border-l-2 -ml-[1px] border-cyan-400 text-cyan-300 font-semibold bg-gradient-to-r from-cyan-500/10 to-transparent'
-                      : 'border-l-2 -ml-[1px] border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600'
-                  }`}
-                >
-                  {item.text}
-                </a>
-              </li>
-            );
-          })}
-        </ol>
       </div>
     </nav>
   );
