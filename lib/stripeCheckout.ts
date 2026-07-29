@@ -22,7 +22,19 @@ export type CreateCheckoutResult = {
 };
 
 export async function createStripeCheckoutSession(params: CreateCheckoutParams): Promise<CreateCheckoutResult> {
-  const { serverId, sku, email, coupon, env } = params;
+  let { serverId, sku, email, coupon, env } = params;
+
+  if (!env || !env.DB || !env.STRIPE_SECRET_KEY) {
+    try {
+      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+      const ctx = await getCloudflareContext();
+      if (ctx?.env) {
+        env = { ...ctx.env, ...env };
+      }
+    } catch {
+      /* fallback */
+    }
+  }
 
   const secretKey = env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
