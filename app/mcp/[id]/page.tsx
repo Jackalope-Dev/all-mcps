@@ -516,7 +516,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 textDecoration: 'none',
               }}
             >
-              <Sparkles size={16} /> Submit &amp; Spotlight Your Server &rarr;
+              <Sparkles size={16} /> Spotlight Your Server
             </Link>
           </div>
 

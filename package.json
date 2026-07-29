@@ -18,6 +18,7 @@
   "dependencies": {
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
+    "@cf-wasm/photon": "^0.3.7",
     "@marsidev/react-turnstile": "^1.5.4",
     "@react-email/components": "^1.0.12",
     "drizzle-orm": "^0.45.2",

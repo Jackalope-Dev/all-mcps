@@ -108,7 +108,7 @@ export async function POST(req: Request) {
 
     let verification;
     if (method === 'github') {
-      verification = await verifyGithubReadme(server.url, id);
+      verification = await verifyGithubReadme(server.url, id, userId);
     } else if (method === 'website_badge') {
       if (!websiteUrl) {
         return NextResponse.json(

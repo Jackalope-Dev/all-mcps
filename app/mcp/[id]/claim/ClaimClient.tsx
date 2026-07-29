@@ -65,7 +65,12 @@ export default function ClaimClient({
   const badgeMarkdown = `[![AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`;
   const badgeHtml = `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="AllMCPs" height="${badgeHeight}" /></a>`;
   const metaTag = personalizedToken ? `<meta name="allmcps-verification" content="${personalizedToken}" />` : '';
-  const githubBadgeMd = `[![AllMCPs Verified](${baseUrl}/api/badge/${serverId}?style=shield)](${baseUrl}/mcp/${serverId})`;
+  // The link (not the badge image) carries the `verify` token — it's what
+  // proves *this* signed-in account added the badge, not just that a generic
+  // AllMCPs link exists somewhere in the README (see readmeContainsClaimBadge).
+  const githubVerifyMarkdown = userId
+    ? `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${serverId}?verify=${userId})`
+    : null;
   const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}/claim`)}`;
 
   const copyText = async (text: string, label: string) => {
@@ -360,7 +365,9 @@ export default function ClaimClient({
         </div>
       )}
 
-      {method === 'github' && (
+      {method === 'github' && (!isSignedIn ? (
+        <SignInGate href={signInHref} />
+      ) : (
         <>
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>1. Add badge to your GitHub README</h3>
@@ -373,6 +380,7 @@ export default function ClaimClient({
                   { id: 'shield', label: 'Standard (20px)' },
                   { id: 'flat-square', label: 'Square (20px)' },
                   { id: 'featured', label: 'Featured Banner (32px)' },
+                  { id: 'directory', label: 'Directory Card (40px)' },
                 ].map((s) => (
                   <button
                     key={s.id}
@@ -423,6 +431,30 @@ export default function ClaimClient({
               </div>
             </div>
 
+            <div style={{ marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Theme:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {(['dark', 'light'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setBadgeTheme(t)}
+                    style={{
+                      padding: '0.3rem 0.65rem',
+                      borderRadius: '999px',
+                      border: '1px solid var(--border-color)',
+                      background: badgeTheme === t ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    {t === 'dark' ? 'Dark' : 'Light'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
               <pre
                 style={{
@@ -435,11 +467,11 @@ export default function ClaimClient({
                   fontSize: '0.8rem',
                 }}
               >
-                <code>{badgeMarkdown}</code>
+                <code>{githubVerifyMarkdown}</code>
               </pre>
               <button
                 type="button"
-                onClick={() => copyText(badgeMarkdown, 'README badge snippet')}
+                onClick={() => copyText(githubVerifyMarkdown || '', 'README badge snippet')}
                 style={{
                   position: 'absolute',
                   top: '0.5rem',
@@ -456,7 +488,10 @@ export default function ClaimClient({
                 Copy Markdown
               </button>
             </div>
-            
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+              This link includes your account — it's what ties the claim to you, not just the badge image.
+            </p>
+
             <div
               style={{
                 padding: '0.75rem 1rem',
@@ -480,7 +515,7 @@ export default function ClaimClient({
             </a>
           </div>
         </>
-      )}
+      ))}
 
       {method === 'website_badge' && (!isSignedIn ? (
         <SignInGate href={signInHref} />

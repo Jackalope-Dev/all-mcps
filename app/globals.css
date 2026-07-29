@@ -405,7 +405,8 @@ p {
 
 .site-footer {
   margin-top: var(--space-16);
-  padding: var(--space-16) 0 var(--space-8);
+  padding-top: var(--space-16);
+  padding-bottom: var(--space-8);
   display: flex;
   flex-direction: column;
   gap: var(--space-8);

@@ -1,15 +1,18 @@
 import { isSafeSubmissionUrl } from './urlSafety';
 import { getClaimVerificationToken } from './verificationTokens';
 
-/** Accepts legacy shields.io verified badge or any allmcps.com badge link for this listing. */
-export function readmeContainsClaimBadge(readmeText: string, serverId: string): boolean {
+/**
+ * True only if the README links to this listing *and* carries this specific
+ * user's `verify` token — a bare `allmcps.com/mcp/{id}` link isn't enough,
+ * since that's public and generic (anyone could copy it), so it can't tell
+ * which account should be credited with ownership. Requiring both means the
+ * badge has to be the one this exact signed-in user generated on the claim page.
+ */
+export function readmeContainsClaimBadge(readmeText: string, serverId: string, userId: string): boolean {
   const normalized = readmeText.replace(/\s+/g, '').toLowerCase();
-  const needles = [
-    `allmcps.com/mcp/${serverId}`.toLowerCase(),
-    `allmcps.com/api/badge/${serverId}`.toLowerCase(),
-    `[![allmcps verified](https://img.shields.io/badge/allmcps-verified-blue)](https://allmcps.com/mcp/${serverId})`.replace(/\s+/g, '').toLowerCase(),
-  ];
-  return needles.some((n) => normalized.includes(n));
+  const hasListingLink = normalized.includes(`allmcps.com/mcp/${serverId}`.toLowerCase());
+  const hasUserToken = normalized.includes(`verify=${userId}`.toLowerCase());
+  return hasListingLink && hasUserToken;
 }
 
 /**
@@ -138,7 +141,7 @@ export async function verifyDnsTxt(
   };
 }
 
-export async function verifyGithubReadme(repoUrl: string, serverId: string): Promise<{ ok: boolean; reason?: string }> {
+export async function verifyGithubReadme(repoUrl: string, serverId: string, userId: string): Promise<{ ok: boolean; reason?: string }> {
   const githubMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!githubMatch) {
     return { ok: false, reason: 'Repository is not a GitHub URL. Use website badge or DNS verification instead.' };
@@ -156,12 +159,12 @@ export async function verifyGithubReadme(repoUrl: string, serverId: string): Pro
       });
       if (!res.ok) continue;
       const readmeText = await res.text();
-      if (readmeContainsClaimBadge(readmeText, serverId)) {
+      if (readmeContainsClaimBadge(readmeText, serverId, userId)) {
         return { ok: true };
       }
       return {
         ok: false,
-        reason: 'Verification badge not found in README. Add an AllMCPs badge linking to this listing.',
+        reason: 'Personalized verification badge not found in README. Copy the badge markdown shown on the claim page (it includes your account link) and try again.',
       };
     } catch {
       // try next branch

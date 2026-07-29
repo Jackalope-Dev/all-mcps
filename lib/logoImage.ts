@@ -39,7 +39,8 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Buffer> {
   let image: Jimp;
   try {
     image = await Jimp.read(Buffer.from(bytes));
-  } catch {
+  } catch (err) {
+    console.error('Jimp failed to decode uploaded logo:', err);
     throw new LogoValidationError('Could not read this file as an image.');
   }
 
