@@ -1,86 +1,50 @@
-// Bump this whenever the caching strategy changes — the activate handler purges
-// every cache that doesn't match, so a version bump clears poisoned entries left
-// by older service workers on the next visit.
-const CACHE_NAME = 'allmcps-cache-v3';
+// Self-destructing service worker.
+//
+// Earlier versions of this site registered a service worker whose caching logic
+// could serve stale HTML pointing at content-hashed assets that 404 after a
+// deploy, leaving returning visitors (mobile especially) with an unstyled page.
+// The site no longer registers a service worker at all, so this file exists only
+// to fully remove any lingering installation from devices that still have one:
+// it clears every cache, unregisters itself, and reloads open tabs so they
+// re-fetch directly from the network and render with styles. After this runs, no
+// service worker controls the origin and the stale-cache bug cannot recur.
 
-// Only precache assets whose URL is stable across deploys. Never precache '/' or
-// other HTML here: HTML references content-hashed asset URLs, so a stale cached
-// document can point at CSS/JS filenames that no longer exist on the server.
-const PRECACHE = ['/manifest.webmanifest', '/icon.jpg', '/logo-icon.svg'];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)).catch(() => {}));
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim())
-  );
-});
+    (async () => {
+      // Take control of any tabs the previous worker was controlling.
+      try {
+        await self.clients.claim();
+      } catch {}
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+      // Drop every cache this origin ever stored (including the old poisoned one).
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      } catch {}
 
-  const url = new URL(event.request.url);
-  if (url.origin !== location.origin) return; // let the browser handle cross-origin requests
+      // Remove the registration so nothing controls this origin going forward.
+      try {
+        await self.registration.unregister();
+      } catch {}
 
-  // Content-hashed build output (/_next/static/...) is immutable: the filename
-  // changes whenever the content changes. Serve it cache-first so a returning
-  // visitor whose cached HTML references an older build still gets a matching,
-  // consistent asset from the cache instead of a 404 for a hash that's been
-  // deployed away. This is what prevents the "unstyled after deploy" bug.
-  if (url.pathname.startsWith('/_next/static/')) {
-    event.respondWith(
-      caches.match(event.request).then(
-        (cached) =>
-          cached ||
-          fetch(event.request).then((response) => {
-            if (response.status === 200) {
-              const copy = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-            }
-            return response;
-          })
-      )
-    );
-    return;
-  }
-
-  // HTML navigations: network-first so online visitors always get fresh markup
-  // (and therefore current asset hashes), falling back to the cached copy of the
-  // SAME page only when the network is unavailable. Critically, we never fall
-  // back to a different page — returning '/' HTML for another request is what
-  // previously served HTML in place of CSS/JS and broke styling.
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.status === 200) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
-    return;
-  }
-
-  // Everything else (images, fonts, API GETs): network-first with a cache
-  // fallback for the exact same request only — never a cross-request fallback.
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.status === 200) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      // Reload open tabs so they re-fetch from the network and repaint styled
+      // instead of showing the previously cached, unstyled response.
+      try {
+        const clients = await self.clients.matchAll({ type: 'window' });
+        for (const client of clients) {
+          try {
+            client.navigate(client.url);
+          } catch {}
         }
-        return response;
-      })
-      .catch(() => caches.match(event.request))
+      } catch {}
+    })()
   );
 });
+
+// No fetch handler: while this worker is briefly active before unregistering,
+// requests fall through to the network by default. Nothing is served from cache.
