@@ -60,10 +60,31 @@
   margin: 0;
 }
 
+html,
+body,
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-family: var(--font-sans), "Atkinson Hyperlegible Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+p, h1, h2, h3, h4, h5, h6, span, a, li, td, th, label, div {
+  overflow-wrap: break-word;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-primary);
-  font-family: var(--font-sans), "Atkinson Hyperlegible Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.6;
   min-height: 100vh;
   /* Ambient brand glows on slate-950 */
@@ -81,21 +102,23 @@ a {
 
 /* Typography — page defaults (hero opts into .text-display) */
 h1 {
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-primary);
   margin-bottom: 1rem;
   line-height: 1.2;
+  overflow-wrap: break-word;
 }
 
 h2 {
-  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text-primary);
   margin-bottom: 1rem;
   line-height: 1.25;
+  overflow-wrap: break-word;
 }
 
 h3 {
@@ -103,31 +126,35 @@ h3 {
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
+  overflow-wrap: break-word;
 }
 
 p {
   color: var(--text-secondary);
+  overflow-wrap: break-word;
 }
 
 .text-display {
-  font-size: clamp(2.5rem, 5vw, 3.75rem);
+  font-size: clamp(1.85rem, 6vw, 3.75rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.15;
   background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 1rem;
+  overflow-wrap: break-word;
 }
 
 .text-page-title {
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-size: clamp(1.5rem, 4.5vw, 2.25rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-primary);
   margin-bottom: 1rem;
   line-height: 1.2;
+  overflow-wrap: break-word;
 }
 
 .text-section {
@@ -883,13 +910,17 @@ p {
   border-radius: 4px;
   font-size: 0.875em;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .markdown-body pre {
   background: rgba(0, 0, 0, 0.4);
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: 8px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
   border: 1px solid var(--border-color);
   margin-bottom: 1.5rem;
 }
@@ -898,6 +929,9 @@ p {
   background: transparent;
   padding: 0;
   border-radius: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: pre;
 }
 
 .markdown-body blockquote {
@@ -1895,8 +1929,61 @@ p {
     padding: 0 var(--space-4);
   }
 
+  .page-panel {
+    padding: 1.25rem !important;
+  }
+
+  .surface {
+    padding: 1.25rem;
+  }
+
   .site-nav {
     gap: 1rem;
+  }
+
+  .newsletter-form-compact {
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .newsletter-form-compact .form-field {
+    width: 100%;
+  }
+
+  .newsletter-form-compact button {
+    width: 100%;
+  }
+
+  .directory-segmented {
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    padding: 0.35rem;
+  }
+
+  .directory-segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  .directory-segmented-btn {
+    white-space: nowrap;
+    min-height: 38px;
+    padding: 0.4rem 0.85rem;
+  }
+
+  .breadcrumb {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+    line-height: 1.5;
+  }
+
+  .share-modal-content,
+  .newsletter-modal-card {
+    padding: 1.25rem;
+    max-width: calc(100vw - 2rem);
   }
 }
 

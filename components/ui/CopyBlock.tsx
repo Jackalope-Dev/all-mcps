@@ -36,9 +36,11 @@ export function CopyBlock({ code, serverId }: { code: string; serverId?: string 
       <pre
         style={{
           background: 'rgba(0,0,0,0.4)',
-          padding: '1.5rem',
+          padding: '1.25rem 3.5rem 1.25rem 1.25rem',
           borderRadius: '8px',
           overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          maxWidth: '100%',
           border: '1px solid var(--border-color)',
           fontSize: '0.875rem',
           margin: 0,
