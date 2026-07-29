@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       const checkoutRes = await fetch(`${appUrl}/api/stripe/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serverId, sku, email }),
+        body: JSON.stringify({ serverId, sku, email, coupon: effectiveCoupon }),
       });
 
       if (checkoutRes.ok) {

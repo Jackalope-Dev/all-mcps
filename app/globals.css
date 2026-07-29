@@ -2283,6 +2283,108 @@ nav[aria-label="Table of contents"] {
   font-weight: 500;
 }
 
+/* Rich hover tooltip for the small status/verification icons beside the listing title.
+   Pure CSS (no JS) so it works from a server component; :focus-within keeps it
+   keyboard-accessible via the wrapping button's focus ring. */
+.mcp-icon-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mcp-icon-tooltip-trigger {
+  display: inline-flex;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: default;
+}
+
+.mcp-icon-tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 11px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  min-width: 200px;
+  max-width: 260px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.9rem;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition-delay: 0s;
+  z-index: 40;
+  text-align: left;
+  white-space: normal;
+}
+
+.mcp-icon-tooltip-bubble::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--border-strong);
+}
+
+.mcp-icon-tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--card-bg);
+}
+
+.mcp-icon-tooltip:hover .mcp-icon-tooltip-bubble,
+.mcp-icon-tooltip:focus-within .mcp-icon-tooltip-bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 0.1s;
+}
+
+.mcp-icon-tooltip-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+  line-height: 1.3;
+}
+
+.mcp-icon-tooltip-title .mcp-icon-tooltip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mcp-icon-tooltip-body {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.mcp-icon-tooltip-meta {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
 .listing-engagement-dl dd {
   margin: 0;
   font-size: 1rem;

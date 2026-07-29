@@ -11,6 +11,7 @@ const bodySchema = z.object({
   serverId: z.string().min(1),
   sku: z.enum(['priority_review', 'featured_7d', 'premium_monthly']),
   email: z.string().email().optional(),
+  coupon: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const { serverId, sku, email } = parsed.data;
+    const { serverId, sku, email, coupon } = parsed.data;
     const product = PAID_PRODUCTS[sku as PaidSku];
     const priceId = getPriceId(sku as PaidSku);
 
@@ -100,8 +101,13 @@ export async function POST(req: Request) {
         sku,
       },
       client_reference_id: serverId,
-      // Omit payment_method_types — dynamic payment methods (Stripe best practice)
     };
+
+    if (coupon) {
+      sessionParams.discounts = [{ coupon }];
+    } else {
+      sessionParams.allow_promotion_codes = true;
+    }
 
     if (email) {
       sessionParams.customer_email = email;
@@ -122,8 +128,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
-  } catch (e) {
+  } catch (e: any) {
     console.error('Stripe checkout error:', e);
-    return NextResponse.json({ error: 'Checkout failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Checkout failed', details: e?.message }, { status: 500 });
   }
 }
