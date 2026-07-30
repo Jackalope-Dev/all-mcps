@@ -1,4 +1,5 @@
 import { getActiveServers, getServerById, formatServerAsMarkdown } from '@/lib/servers';
+import { rankServers } from '@/lib/search';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
 
@@ -227,12 +228,7 @@ export async function POST(request: Request) {
         }
 
         if (query) {
-          servers = servers.filter(
-            (s) =>
-              s.name.toLowerCase().includes(query) ||
-              s.description.toLowerCase().includes(query) ||
-              s.category.toLowerCase().includes(query)
-          );
+          servers = rankServers(servers, query);
         }
 
         const results = servers.slice(0, limit);
