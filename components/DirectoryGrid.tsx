@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
@@ -79,6 +79,7 @@ export default function DirectoryGrid({
   initialQuery = '',
   variant = 'landing',
   totalCount,
+  lazyFeedUrl,
 }: {
   initialServers: Server[];
   marqueeServers?: Server[];
@@ -89,9 +90,18 @@ export default function DirectoryGrid({
   variant?: 'landing' | 'browse';
   /** Full catalog size, when `initialServers` is a truncated subset (landing page only). Drives the "browse all" callout. */
   totalCount?: number;
+  /**
+   * When set, the grid renders `initialServers` for the first paint (kept small
+   * for SEO + fast HTML) and fetches the full catalog from this URL on mount so
+   * search/sort/filter cover everything without shipping the whole catalog in HTML.
+   */
+  lazyFeedUrl?: string;
 }) {
   const isBrowse = variant === 'browse';
   const browseBase = '/browse';
+  // Working dataset: seeded from the server-rendered slice, then replaced by the
+  // full feed once `lazyFeedUrl` resolves (browse only).
+  const [servers, setServers] = useState<Server[]>(initialServers);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
   const [selectedStack, setSelectedStack] = useState<TechStack>('all');
@@ -109,26 +119,55 @@ export default function DirectoryGrid({
     setSearchQuery(initialQuery);
   }, [initialQuery]);
 
+  // Track whether the full feed has arrived so a server re-render (e.g. category
+  // navigation swapping in a new SSR slice) doesn't shrink the working set back.
+  const loadedFullRef = useRef(false);
+  useEffect(() => {
+    if (!loadedFullRef.current) setServers(initialServers);
+  }, [initialServers]);
+
+  // Lazy-load the full catalog once, replacing the SSR slice, so client-side
+  // search/sort/filter cover everything (browse only). Failures keep the slice.
+  useEffect(() => {
+    if (!lazyFeedUrl) return;
+    let cancelled = false;
+    fetch(lazyFeedUrl)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const full = (data as { servers?: Server[] } | null)?.servers;
+        if (!cancelled && full && full.length) {
+          loadedFullRef.current = true;
+          setServers(full);
+        }
+      })
+      .catch(() => {
+        // Keep the server-rendered slice if the feed can't load.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lazyFeedUrl]);
+
   // Extract unique categories for the filter pill list
   const categories = useMemo(() => {
-    const cats = new Set(initialServers.map((s) => s.category));
+    const cats = new Set(servers.map((s) => s.category));
     return Array.from(cats).sort();
-  }, [initialServers]);
+  }, [servers]);
 
   // Top categories by count for quick-filter tags
   const topCategories = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const s of initialServers) {
+    for (const s of servers) {
       counts.set(s.category, (counts.get(s.category) || 0) + 1);
     }
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
       .map(([name]) => name);
-  }, [initialServers]);
+  }, [servers]);
 
   const filteredServers = useMemo(() => {
-    let result = initialServers.filter((server) => {
+    let result = servers.filter((server) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         !q ||
@@ -181,7 +220,7 @@ export default function DirectoryGrid({
     });
 
     return result;
-  }, [initialServers, searchQuery, selectedCategory, selectedStack, sortMode, verifiedOnly]);
+  }, [servers, searchQuery, selectedCategory, selectedStack, sortMode, verifiedOnly]);
 
   const filteredCount = filteredServers.length;
 

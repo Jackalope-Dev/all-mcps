@@ -97,6 +97,12 @@ export default async function BrowsePage({
       ? `https://allmcps.com/browse?q=${encodeURIComponent(q)}`
       : 'https://allmcps.com/browse';
   const relevant = category ? servers.filter((s) => s.category === category) : servers;
+
+  // Server-render only a small slice for fast HTML + SEO; DirectoryGrid fetches the
+  // full catalog from /api/directory-feed on mount so search/sort/filter cover
+  // everything. Previously the entire catalog was inlined into the browse HTML.
+  const initialForGrid = relevant.slice(0, 60);
+
   const itemList = q
     ? []
     : relevant.slice(0, 50).map((s, i) => ({
@@ -147,10 +153,11 @@ export default async function BrowsePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <DirectoryGrid
-        initialServers={servers}
+        initialServers={initialForGrid}
         initialCategory={category}
         initialQuery={q}
         variant="browse"
+        lazyFeedUrl="/api/directory-feed"
       />
     </main>
   );

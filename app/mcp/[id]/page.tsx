@@ -453,9 +453,17 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           {/* Related MCP Servers */}
           {relatedServers && relatedServers.length > 0 && (
             <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border-color)' }}>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Related MCP Servers
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.5rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Related MCP Servers
+                </h2>
+                <Link
+                  href={`/mcp/${server.id}/alternatives`}
+                  style={{ fontSize: '0.85rem', color: 'var(--accent-color)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}
+                >
+                  View all alternatives <ChevronRight size={14} />
+                </Link>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.25rem' }}>
                 {relatedServers.map((rel) => {
                   const relName = parseServerName(rel.name).displayName;
