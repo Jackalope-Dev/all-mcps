@@ -1,0 +1,19 @@
+name: 🐦 Twitter Highlight Post
+
+on:
+  schedule:
+    # Every 4 hours (6x daily): 00, 04, 08, 12, 16, 20 UTC.
+    # Each intended post is its own scheduled tick, so a delayed GitHub run just
+    # posts a bit late instead of being skipped for the whole 4-hour block — the
+    # failure mode of the old minute-window guard inside the 15-min health cron.
+    - cron: '0 0,4,8,12,16,20 * * *'
+  workflow_dispatch: # Manual trigger for testing
+
+jobs:
+  post-highlight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Twitter Highlight API
+        run: |
+          curl -f -X POST https://allmcps.com/api/cron/highlight \
+          -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}"
