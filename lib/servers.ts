@@ -3,6 +3,16 @@ import { servers as serversTable } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
+import { cleanListingDescription } from './description';
+
+/**
+ * Normalizes a raw listing so downstream consumers never see scraped README chrome.
+ * Returns a shallow copy — the imported JSON module is shared across requests and
+ * must not be mutated in place.
+ */
+function normalizeServer<T extends { description?: string | null }>(server: T): T {
+  return { ...server, description: cleanListingDescription(server.description) };
+}
 
 /**
  * Columns safe to expose to anonymous visitors and public API consumers.
@@ -41,13 +51,16 @@ export type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  websiteUrl?: string | null;
   logoUrl?: string | null;
   isPremium?: boolean;
+  websiteVerified?: boolean;
   featuredUntil?: string | Date | null;
   status: string;
   lastCheckedAt?: string | Date | null;
   isVerifiedActive?: boolean;
   healthStatus?: string;
+  reciprocalBadgeOk?: boolean;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -72,7 +85,7 @@ export async function getActiveServers(): Promise<Server[]> {
   } catch (e) {
     // Fall back to static JSON
   }
-  return servers;
+  return servers.map(normalizeServer);
 }
 
 export async function getServerById(id: string): Promise<Server | undefined> {
@@ -87,14 +100,15 @@ export async function getServerById(id: string): Promise<Server | undefined> {
         .where(eq(serversTable.id, id))
         .limit(1);
       if (dbServers.length > 0) {
-        return dbServers[0] as unknown as Server;
+        return normalizeServer(dbServers[0] as unknown as Server);
       }
     }
   } catch (e) {
     // Fall back to static JSON
   }
   const servers = serversData as unknown as Server[];
-  return servers.find((s) => s.id === id);
+  const found = servers.find((s) => s.id === id);
+  return found ? normalizeServer(found) : undefined;
 }
 
 export async function fetchServerReadme(url: string): Promise<string | null> {

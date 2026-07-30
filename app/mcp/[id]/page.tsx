@@ -16,57 +16,16 @@ import { repoLinkRel, websiteLinkRel } from '../../../lib/linkRel';
 import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
-import { getRelatedServers, getFeaturedServers, PUBLIC_SERVER_COLUMNS } from '../../../lib/servers';
+import { getRelatedServers, getFeaturedServers, getServerById, type Server } from '../../../lib/servers';
 import { auth } from '../../../lib/auth';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { parseServerName } from '../../../lib/displayName';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 
-// Define the type for our server data
-type Server = {
-  id: string;
-  name: string;
-  url: string;
-  description: string;
-  category: string;
-  websiteUrl?: string | null;
-  logoUrl?: string | null;
-  isPremium?: boolean;
-  featuredUntil?: string | Date | null;
-  websiteVerified?: boolean;
-  isOfficial: boolean;
-  status: string;
-  lastCheckedAt?: string | null;
-  isVerifiedActive?: boolean;
-  healthStatus?: string;
-  reciprocalBadgeOk?: boolean;
-  views?: number;
-  copies?: number;
-  upvotes?: number;
-  createdAt: string;
-};
-
-async function getServer(id: string): Promise<Server | undefined> {
-  // Try D1 first
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select(PUBLIC_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(eq(serversTable.id, id))
-        .limit(1);
-      if (dbServers.length > 0) return dbServers[0] as unknown as Server;
-    }
-  } catch (e) {}
-
-  // Fallback to the bundled JSON snapshot
-  const servers = serversData as Server[];
-  return servers.find((s) => s.id === id);
-}
+// Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
+// sanitization) live in lib/servers so every page/route stays consistent.
+const getServer = getServerById;
 
 /**
  * ownerUserId is deliberately excluded from PUBLIC_SERVER_COLUMNS (see lib/servers.ts),
