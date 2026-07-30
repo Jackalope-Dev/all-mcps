@@ -29,6 +29,16 @@ export function SiteFooter() {
           <h4 className="footer-heading">Resources</h4>
           <ul className="site-footer-links">
             <li>
+              <Link href="/best" className="nav-link">
+                Best MCP Servers
+              </Link>
+            </li>
+            <li>
+              <Link href="/categories" className="nav-link">
+                Browse Categories
+              </Link>
+            </li>
+            <li>
               <Link href="/guides" className="nav-link">
                 Guides Hub
               </Link>
@@ -96,6 +106,11 @@ export function SiteFooter() {
             <li>
               <a href="/api/v1/search" className="nav-link" target="_blank" rel="noopener">
                 Agent Search API ↗
+              </a>
+            </li>
+            <li>
+              <a href="/data.json" className="nav-link" target="_blank" rel="noopener">
+                Catalog Dataset (JSON) ↗
               </a>
             </li>
           </ul>
