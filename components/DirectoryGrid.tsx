@@ -21,6 +21,7 @@ import { trackSearch, trackOutboundClick } from '../lib/gtag';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { DIRECTORY_CATEGORIES } from '../lib/categories';
+import { compileQuery, scoreServerMatch, engagementScore } from '../lib/search';
 
 type Server = {
   id: string;
@@ -50,7 +51,7 @@ function isFeaturedListing(server: Server): boolean {
 }
 
 type ViewMode = 'grid' | 'list';
-type SortMode = 'trending' | 'most_upvoted' | 'most_viewed' | 'newest' | 'alpha';
+type SortMode = 'relevance' | 'trending' | 'most_upvoted' | 'most_viewed' | 'newest' | 'alpha';
 type TechStack = 'all' | 'typescript' | 'python' | 'go' | 'rust';
 
 function parseCategoryLabel(category: string): { emoji: string; label: string } {
@@ -105,7 +106,8 @@ export default function DirectoryGrid({
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
   const [selectedStack, setSelectedStack] = useState<TechStack>('all');
-  const [sortMode, setSortMode] = useState<SortMode>('trending');
+  // Default to relevance ordering whenever there's a query (incl. deep links).
+  const [sortMode, setSortMode] = useState<SortMode>(initialQuery.trim() ? 'relevance' : 'trending');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(30);
@@ -118,6 +120,20 @@ export default function DirectoryGrid({
   useEffect(() => {
     setSearchQuery(initialQuery);
   }, [initialQuery]);
+
+  // Auto-toggle relevance sorting as the query appears/clears, without overriding
+  // a sort the user explicitly picked. Entering a query switches to relevance;
+  // clearing it drops relevance back to trending (any other pick is preserved).
+  const prevQueryEmptyRef = useRef(!initialQuery.trim());
+  useEffect(() => {
+    const empty = !searchQuery.trim();
+    if (!empty && prevQueryEmptyRef.current) {
+      setSortMode('relevance');
+    } else if (empty && !prevQueryEmptyRef.current) {
+      setSortMode((prev) => (prev === 'relevance' ? 'trending' : prev));
+    }
+    prevQueryEmptyRef.current = empty;
+  }, [searchQuery]);
 
   // Track whether the full feed has arrived so a server re-render (e.g. category
   // navigation swapping in a new SSR slice) doesn't shrink the working set back.
@@ -166,51 +182,65 @@ export default function DirectoryGrid({
       .map(([name]) => name);
   }, [servers]);
 
+  // Precompile the query once per keystroke; scoring stays cheap per row.
+  const queryTerms = useMemo(() => compileQuery(searchQuery), [searchQuery]);
+  const fullQuery = useMemo(() => queryTerms.map((t) => t.term).join(' '), [queryTerms]);
+
   const filteredServers = useMemo(() => {
-    let result = servers.filter((server) => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
-        !q ||
-        server.name.toLowerCase().includes(q) ||
-        server.description.toLowerCase().includes(q) ||
-        server.category.toLowerCase().includes(q);
-      const matchesCategory = selectedCategory ? server.category === selectedCategory : true;
-      const matchesVerified = verifiedOnly ? isVerifiedListing(server) : true;
+    const hasQuery = queryTerms.length > 0;
 
-      const matchesStack = (() => {
-        if (selectedStack === 'all') return true;
-        const name = server.name.toLowerCase();
-        const desc = server.description.toLowerCase();
-        const url = server.url.toLowerCase();
+    const stackMatch = (server: Server): boolean => {
+      if (selectedStack === 'all') return true;
+      const name = server.name.toLowerCase();
+      const desc = server.description.toLowerCase();
+      if (selectedStack === 'typescript') {
+        return name.includes('ts') || name.includes('typescript') || desc.includes('typescript') || desc.includes('npm') || desc.includes('npx');
+      }
+      if (selectedStack === 'python') {
+        return name.includes('py') || name.includes('python') || desc.includes('python') || desc.includes('uvx') || desc.includes('pip');
+      }
+      if (selectedStack === 'go') {
+        return name.includes('go-') || name.includes('-go') || desc.includes('golang') || desc.includes(' go ');
+      }
+      if (selectedStack === 'rust') {
+        return name.includes('rust') || desc.includes('rust') || desc.includes('cargo');
+      }
+      return true;
+    };
 
-        if (selectedStack === 'typescript') {
-          return name.includes('ts') || name.includes('typescript') || desc.includes('typescript') || desc.includes('npm') || desc.includes('npx');
-        }
-        if (selectedStack === 'python') {
-          return name.includes('py') || name.includes('python') || desc.includes('python') || desc.includes('uvx') || desc.includes('pip');
-        }
-        if (selectedStack === 'go') {
-          return name.includes('go-') || name.includes('-go') || desc.includes('golang') || desc.includes(' go ');
-        }
-        if (selectedStack === 'rust') {
-          return name.includes('rust') || desc.includes('rust') || desc.includes('cargo');
-        }
-        return true;
-      })();
+    // Score once, filter on non-search facets, and drop query non-matches.
+    const scored: Array<{ server: Server; relevance: number }> = [];
+    for (const server of servers) {
+      if (selectedCategory && server.category !== selectedCategory) continue;
+      if (verifiedOnly && !isVerifiedListing(server)) continue;
+      if (!stackMatch(server)) continue;
 
-      return matchesSearch && matchesCategory && matchesVerified && matchesStack;
-    });
+      const relevance = hasQuery ? scoreServerMatch(server, queryTerms, fullQuery) : 0;
+      if (hasQuery && relevance <= 0) continue;
+      scored.push({ server, relevance });
+    }
 
-    result.sort((a, b) => {
-      if (sortMode === 'trending') {
+    // With a query, relevance is meaningful; fall back to trending when the user
+    // has cleared the query but the sort state briefly still reads 'relevance'.
+    const effectiveSort: SortMode = sortMode === 'relevance' && !hasQuery ? 'trending' : sortMode;
+
+    scored.sort((x, y) => {
+      const a = x.server;
+      const b = y.server;
+      if (effectiveSort === 'relevance') {
+        if (y.relevance !== x.relevance) return y.relevance - x.relevance;
+        const ea = engagementScore(a);
+        const eb = engagementScore(b);
+        if (eb !== ea) return eb - ea;
+      } else if (effectiveSort === 'trending') {
         const scoreA = (a.upvotes || 0) * 5 + (a.copies || 0);
         const scoreB = (b.upvotes || 0) * 5 + (b.copies || 0);
         if (scoreB !== scoreA) return scoreB - scoreA;
-      } else if (sortMode === 'most_upvoted') {
+      } else if (effectiveSort === 'most_upvoted') {
         if ((b.upvotes || 0) !== (a.upvotes || 0)) return (b.upvotes || 0) - (a.upvotes || 0);
-      } else if (sortMode === 'most_viewed') {
+      } else if (effectiveSort === 'most_viewed') {
         if ((b.views || 0) !== (a.views || 0)) return (b.views || 0) - (a.views || 0);
-      } else if (sortMode === 'alpha') {
+      } else if (effectiveSort === 'alpha') {
         return a.name.localeCompare(b.name);
       }
 
@@ -219,8 +249,8 @@ export default function DirectoryGrid({
       return dateB - dateA;
     });
 
-    return result;
-  }, [servers, searchQuery, selectedCategory, selectedStack, sortMode, verifiedOnly]);
+    return scored.map((s) => s.server);
+  }, [servers, queryTerms, fullQuery, selectedCategory, selectedStack, sortMode, verifiedOnly]);
 
   const filteredCount = filteredServers.length;
 
@@ -608,12 +638,14 @@ export default function DirectoryGrid({
             <div className="directory-segmented" role="group" aria-label="Sort order">
               {(
                 [
+                  // Relevance only applies while searching; hidden otherwise.
+                  ...(searchQuery.trim() ? [['relevance', 'Relevance']] : []),
                   ['trending', 'Trending'],
                   ['most_upvoted', 'Top Voted'],
                   ['most_viewed', 'Most Viewed'],
                   ['newest', 'Newest'],
                   ['alpha', 'A-Z'],
-                ] as const
+                ] as [SortMode, string][]
               ).map(([mode, label]) => (
                 <button
                   key={mode}

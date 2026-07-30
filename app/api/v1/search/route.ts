@@ -1,4 +1,5 @@
 import { getActiveServers } from '@/lib/servers';
+import { rankServers } from '@/lib/search';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
 export async function GET(request: Request) {
@@ -14,12 +15,9 @@ export async function GET(request: Request) {
     servers = servers.filter((s) => s.category.toLowerCase() === category);
   }
 
+  // Rank by relevance when a query is present (falls back to catalog order otherwise).
   if (query) {
-    servers = servers.filter((s) =>
-      s.name.toLowerCase().includes(query) ||
-      s.description.toLowerCase().includes(query) ||
-      s.category.toLowerCase().includes(query)
-    );
+    servers = rankServers(servers, query);
   }
 
   const results = servers.slice(0, limit).map((server) => {
