@@ -1,43 +1,16 @@
 import DirectoryGrid from '../../components/DirectoryGrid';
-import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable } from '../../db/schema';
-import { desc, eq } from 'drizzle-orm';
-import serversData from '../../data/mcp-servers.json';
 import type { Metadata } from 'next';
-import { PUBLIC_SERVER_COLUMNS } from '../../lib/servers';
+import { getActiveServers } from '../../lib/servers';
 
-type Server = {
-  id: string;
-  name: string;
-  url: string;
-  description: string;
-  category: string;
-  isOfficial: boolean;
-  isPremium?: boolean;
-  views?: number;
-  copies?: number;
-  upvotes?: number;
-  createdAt?: string;
+const toTime = (v: unknown): number => {
+  const t = new Date(v as string | number | Date).getTime();
+  return Number.isNaN(t) ? 0 : t;
 };
 
-async function getServers(): Promise<Server[]> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select(PUBLIC_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(eq(serversTable.status, 'active'))
-        .orderBy(desc(serversTable.createdAt));
-      return dbServers as unknown as Server[];
-    }
-  } catch {
-    // Fallback to local JSON if not running in wrangler / opennext
-  }
-
-  return serversData as Server[];
+/** Active listings, sanitized via lib/servers, newest first (matching the prior query order). */
+async function getServers() {
+  const servers = await getActiveServers();
+  return servers.sort((a, b) => toTime(b.createdAt) - toTime(a.createdAt));
 }
 
 function parseCategoryLabel(category: string): string {

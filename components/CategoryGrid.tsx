@@ -8,6 +8,7 @@ type CategoryItem = {
   emoji: string;
   label: string;
   count: number;
+  slug: string;
 };
 
 export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
@@ -68,7 +69,7 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
         {filtered.map((cat, i) => (
           <Link
             key={cat.name}
-            href={`/browse?category=${encodeURIComponent(cat.name)}`}
+            href={`/categories/${cat.slug}`}
             id={cat.name}
             className="category-card surface-interactive"
             style={{ animationDelay: `${Math.min(i * 0.03, 0.6)}s` }}

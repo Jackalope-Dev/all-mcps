@@ -6,6 +6,7 @@ import { servers as serversTable } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import serversData from '../../data/mcp-servers.json';
 import { CategoryGrid } from '../../components/CategoryGrid';
+import { categorySlug } from '../../lib/categories';
 
 export const metadata: Metadata = {
   title: 'Browse MCP Servers by Category',
@@ -103,7 +104,7 @@ export default async function CategoriesPage() {
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => {
       const { emoji, label } = parseEmoji(name);
-      return { name, emoji, label, count };
+      return { name, emoji, label, count, slug: categorySlug(name) };
     });
 
   const totalServers = servers.length;
@@ -130,7 +131,7 @@ export default async function CategoriesPage() {
             '@type': 'ListItem',
             position: i + 1,
             name: cat.label,
-            url: `https://allmcps.com/browse?category=${encodeURIComponent(cat.name)}`,
+            url: `https://allmcps.com/categories/${cat.slug}`,
           })),
         },
       },
