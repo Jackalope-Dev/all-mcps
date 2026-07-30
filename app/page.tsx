@@ -57,8 +57,38 @@ export default async function Home({
     seed: discoverySeed,
   });
 
+  // Advertise the machine-readable catalog export so agents/answer engines can
+  // discover /data.json as a citable structured data source.
+  const datasetJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: 'AllMCPs — Model Context Protocol Server Directory',
+    description:
+      'Structured export of every active MCP (Model Context Protocol) server on AllMCPs, with categories, descriptions, install identifiers, and directory links.',
+    url: 'https://allmcps.com',
+    keywords: ['Model Context Protocol', 'MCP servers', 'AI agents', 'Claude', 'Cursor'],
+    creator: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
+    isAccessibleForFree: true,
+    distribution: [
+      {
+        '@type': 'DataDownload',
+        encodingFormat: 'application/json',
+        contentUrl: 'https://allmcps.com/data.json',
+      },
+      {
+        '@type': 'DataDownload',
+        encodingFormat: 'text/markdown',
+        contentUrl: 'https://allmcps.com/llms-full.txt',
+      },
+    ],
+  };
+
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(datasetJsonLd) }}
+      />
       <DirectoryGrid
         initialServers={landingServers}
         marqueeServers={marqueeServers}

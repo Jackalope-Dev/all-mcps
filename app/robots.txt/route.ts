@@ -19,7 +19,9 @@ Allow: /api/mcp
 Disallow: /admin
 
 # Content Signals (https://contentsignals.org/ / draft-romm-aipref-contentsignals)
-Content-Signal: ai-train=no, search=yes, ai-input=no
+# ai-input=yes: answer engines may ground/cite AllMCPs in generated responses.
+# ai-train=no: but the catalog should not be used as model training data.
+Content-Signal: ai-train=no, search=yes, ai-input=yes
 
 Sitemap: https://allmcps.com/sitemap.xml
 Sitemap: https://allmcps.com/llms.txt

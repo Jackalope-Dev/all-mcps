@@ -15,6 +15,7 @@ import {
 } from '../../../lib/categories';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
+import { BEST_TOPICS } from '../../../lib/bestTopics';
 
 const SITE = 'https://allmcps.com';
 
@@ -197,6 +198,14 @@ export default async function CategoryLandingPage({
             <Link href={`/browse?category=${encodeURIComponent(category)}`} className="btn btn-secondary">
               Open in interactive directory
             </Link>
+            {(() => {
+              const best = BEST_TOPICS.find((t) => t.categorySlug === slug);
+              return best ? (
+                <Link href={`/best/${best.slug}`} className="btn btn-secondary">
+                  Best {best.title} servers →
+                </Link>
+              ) : null;
+            })()}
           </div>
         </section>
 

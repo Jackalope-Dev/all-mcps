@@ -44,6 +44,38 @@ const breadcrumbJsonLd = {
   ],
 };
 
+// HowTo structured data for the core install flow — answer engines surface these
+// steps directly for "how to connect Claude / an AI agent to an MCP server" prompts.
+const howToJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: 'How to connect an AI agent to an MCP server',
+  description:
+    'Connect Claude Desktop, Claude Code, Cursor, or another MCP-compatible client to a Model Context Protocol server.',
+  totalTime: 'PT10M',
+  tool: [{ '@type': 'HowToTool', name: 'An MCP-compatible client (Claude Desktop, Claude Code, Cursor, or Windsurf)' }],
+  step: [
+    {
+      '@type': 'HowToStep',
+      name: 'Find your client’s configuration',
+      text: 'Open your client’s MCP configuration file — in Claude Desktop, Settings → Developer → Edit Config opens claude_desktop_config.json.',
+      url: 'https://allmcps.com/guide#find-config',
+    },
+    {
+      '@type': 'HowToStep',
+      name: 'Add a local (stdio) server',
+      text: 'Add the server under mcpServers with its command and args, e.g. "command": "npx", "args": ["-y", "package-name"], then restart the client.',
+      url: 'https://allmcps.com/guide#local-server',
+    },
+    {
+      '@type': 'HowToStep',
+      name: 'Add a remote (hosted) server',
+      text: 'For hosted servers, point the client at the server’s HTTP/SSE URL and supply any required auth token, then restart to connect.',
+      url: 'https://allmcps.com/guide#remote-server',
+    },
+  ],
+};
+
 const tocItems: TocItem[] = [
   { id: 'prerequisites', text: 'Before you start' },
   { id: 'find-config', text: 'Step 1: Find your client’s configuration' },
@@ -67,6 +99,10 @@ export default function GuidePage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
         />
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">

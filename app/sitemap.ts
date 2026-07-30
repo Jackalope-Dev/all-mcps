@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { getAllPosts } from '../lib/blog';
 import { DIRECTORY_CATEGORIES, categorySlug } from '../lib/categories';
+import { BEST_TOPICS } from '../lib/bestTopics';
 
 /**
  * Safely parses and normalizes any date input into a valid Date object.
@@ -126,6 +127,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/categories`,
       lastModified: safeDateISO(new Date()),
       changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/best`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
@@ -259,6 +266,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  return [...sitemapEntries, ...categoryEntries, ...blogEntries, ...serverEntries];
+  const bestEntries: MetadataRoute.Sitemap = BEST_TOPICS.map((t) => ({
+    url: `${baseUrl}/best/${t.slug}`,
+    lastModified: safeDateISO(new Date()),
+    changeFrequency: 'weekly' as const,
+    priority: 0.85,
+  }));
+
+  return [...sitemapEntries, ...categoryEntries, ...bestEntries, ...blogEntries, ...serverEntries];
 }
 
