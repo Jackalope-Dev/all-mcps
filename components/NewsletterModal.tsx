@@ -7,13 +7,29 @@ import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 const DISMISS_KEY = 'allmcps_newsletter_dismissed';
 const SUPPRESSED_PREFIXES = ['/login', '/dashboard', '/admin'];
 
+function getDismissed(): boolean {
+  try {
+    return Boolean(localStorage.getItem(DISMISS_KEY));
+  } catch {
+    return false;
+  }
+}
+
+function setDismissed() {
+  try {
+    localStorage.setItem(DISMISS_KEY, '1');
+  } catch {
+    // Ignore storage write failures (for example, Safari private mode).
+  }
+}
+
 export function NewsletterModal() {
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (localStorage.getItem(DISMISS_KEY)) return;
+    if (getDismissed()) return;
     if (document.cookie.includes('allmcps_subscribed=1')) return;
     if (SUPPRESSED_PREFIXES.some((p) => pathname?.startsWith(p))) return;
 
@@ -22,12 +38,12 @@ export function NewsletterModal() {
   }, [pathname]);
 
   const dismiss = () => {
-    localStorage.setItem(DISMISS_KEY, '1');
+    setDismissed();
     setVisible(false);
   };
 
   const handleSuccess = () => {
-    localStorage.setItem(DISMISS_KEY, '1');
+    setDismissed();
     setTimeout(() => setVisible(false), 2500);
   };
 
