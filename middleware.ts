@@ -5,6 +5,18 @@ export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
   const acceptHeader = req.headers.get('accept') || '';
 
+  // Never run rewrite/header logic for framework and static asset requests.
+  // This avoids touching CSS/JS/font delivery paths where iOS Safari is
+  // particularly sensitive to stale or mismatched responses.
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/sw.js' ||
+    /\.(?:css|js|mjs|map|txt|xml|webmanifest|ico|svg|png|jpg|jpeg|gif|webp|avif|woff|woff2|ttf|eot)$/i.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   let response: NextResponse;
 
   // 1. Well-known, OpenAPI & Auth.md rewrites
@@ -89,5 +101,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/|favicon.ico|sw.js|.*\\.(?:css|js|mjs|map|txt|xml|webmanifest|ico|svg|png|jpg|jpeg|gif|webp|avif|woff|woff2|ttf|eot)$).*)'],
 };

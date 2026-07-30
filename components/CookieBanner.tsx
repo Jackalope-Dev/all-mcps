@@ -40,13 +40,29 @@ function isUserInEU(countryProp?: string): boolean {
   return false;
 }
 
+function getStoredConsent(): string | null {
+  try {
+    return localStorage.getItem('allmcps_cookie_consent');
+  } catch {
+    return null;
+  }
+}
+
+function setStoredConsent(value: 'granted' | 'denied') {
+  try {
+    localStorage.setItem('allmcps_cookie_consent', value);
+  } catch {
+    // Ignore storage write failures (for example, Safari private mode).
+  }
+}
+
 export function CookieBanner({ country }: { country?: string }) {
   const [showBanner, setShowBanner] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const savedConsent = localStorage.getItem('allmcps_cookie_consent');
+    const savedConsent = getStoredConsent();
 
     if (savedConsent === 'granted') {
       if (typeof window.gtag === 'function') {
@@ -70,7 +86,7 @@ export function CookieBanner({ country }: { country?: string }) {
       setShowBanner(true);
     } else {
       // Non-EU users default to granted
-      localStorage.setItem('allmcps_cookie_consent', 'granted');
+      setStoredConsent('granted');
       if (typeof window.gtag === 'function') {
         window.gtag('consent', 'update', { analytics_storage: 'granted' });
       }
@@ -78,7 +94,7 @@ export function CookieBanner({ country }: { country?: string }) {
   }, [country]);
 
   const handleAccept = () => {
-    localStorage.setItem('allmcps_cookie_consent', 'granted');
+    setStoredConsent('granted');
     if (typeof window.gtag === 'function') {
       window.gtag('consent', 'update', { analytics_storage: 'granted' });
     }
@@ -86,7 +102,7 @@ export function CookieBanner({ country }: { country?: string }) {
   };
 
   const handleDecline = () => {
-    localStorage.setItem('allmcps_cookie_consent', 'denied');
+    setStoredConsent('denied');
     if (typeof window.gtag === 'function') {
       window.gtag('consent', 'update', { analytics_storage: 'denied' });
     }
