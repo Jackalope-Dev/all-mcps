@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import serversData from '../../../data/mcp-servers.json';
+import { cleanListingDescription } from '../../../lib/description';
 
 export const alt = 'AllMCPs - Tool Directory';
 export const size = { width: 1200, height: 630 };
@@ -38,7 +39,9 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const rawTitle = server ? server.name : 'Model Context Protocol Server';
   const cleanTitle = rawTitle.includes('/') ? rawTitle.split('/').pop()?.replace(/[-_]+/g, ' ') || rawTitle : rawTitle;
   const displayTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
-  const desc = server ? server.description : 'Discover, filter, and install MCP tools on AllMCPs.com';
+  const desc = server
+    ? cleanListingDescription(server.description)
+    : 'Discover, filter, and install MCP tools on AllMCPs.com';
 
   return new ImageResponse(
     (

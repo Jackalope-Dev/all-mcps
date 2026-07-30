@@ -1,12 +1,8 @@
 import type { Metadata } from 'next';
 import DirectoryGrid from '../components/DirectoryGrid';
-import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable } from '../db/schema';
-import { desc, eq } from 'drizzle-orm';
-import serversData from '../data/mcp-servers.json';
 import { redirect } from 'next/navigation';
 import { pickDiscoveryServers } from '../lib/featured';
-import { PUBLIC_SERVER_COLUMNS } from '../lib/servers';
+import { getActiveServers } from '../lib/servers';
 
 export const metadata: Metadata = {
   title: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
@@ -22,42 +18,6 @@ export const metadata: Metadata = {
     url: 'https://allmcps.com',
   },
 };
-
-// Define the type for our server data
-type Server = {
-  id: string;
-  name: string;
-  url: string;
-  description: string;
-  category: string;
-  isOfficial: boolean;
-  isPremium?: boolean;
-  views?: number;
-  copies?: number;
-  upvotes?: number;
-  createdAt?: string;
-};
-
-// Fetch data from local JSON or D1
-async function getServers(): Promise<Server[]> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select(PUBLIC_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(eq(serversTable.status, 'active'))
-        .orderBy(desc(serversTable.createdAt));
-      return dbServers as unknown as Server[];
-    }
-  } catch (e) {
-    // Fallback to local JSON if not running in wrangler / opennext
-  }
-
-  return serversData as Server[];
-}
 
 export default async function Home({
   searchParams,
@@ -75,7 +35,14 @@ export default async function Home({
     redirect(`/browse?${sp.toString()}`);
   }
 
-  const servers = await getServers();
+  const servers = await getActiveServers();
+
+  // Newest-first so the landing slice below surfaces the most recent listings.
+  const toTime = (v: unknown): number => {
+    const t = new Date(v as string | number | Date).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  };
+  servers.sort((a, b) => toTime(b.createdAt) - toTime(a.createdAt));
 
   // Prune initialServers for landing page to keep HTML payload lightweight (~50KB instead of 2.65MB)
   // so external AI scrapers & submission platforms do not hit response size limit errors

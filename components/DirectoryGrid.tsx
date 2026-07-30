@@ -36,7 +36,7 @@ type Server = {
   views?: number;
   copies?: number;
   upvotes?: number;
-  createdAt?: string;
+  createdAt?: string | Date;
 };
 
 /** Claimed (badge/DNS) or premium/paid — shown as "Verified" in the directory. */

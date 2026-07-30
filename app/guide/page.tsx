@@ -30,6 +30,18 @@ const articleJsonLd = {
   description: 'A practical, step-by-step guide to connecting Claude and other LLM agents to MCP servers.',
   author: { '@type': 'Organization', name: 'Jackalope Digital LLC' },
   publisher: { '@type': 'Organization', name: 'AllMCPs' },
+  isPartOf: { '@type': 'CollectionPage', name: 'MCP Guides', '@id': 'https://allmcps.com/guides' },
+};
+
+// Establishes this page as a child of the /guides hub so crawlers see the hierarchy
+// rather than two competing top-level "guide(s)" URLs.
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Guides', item: 'https://allmcps.com/guides' },
+    { '@type': 'ListItem', position: 2, name: 'LLM Agents Guide', item: 'https://allmcps.com/guide' },
+  ],
 };
 
 const tocItems: TocItem[] = [
@@ -52,8 +64,17 @@ export default function GuidePage() {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        />
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">
+            <nav aria-label="Breadcrumb" style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+              <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>Guides</Link>
+              <span style={{ color: 'var(--text-secondary)', margin: '0 0.4rem' }}>/</span>
+              <span style={{ color: 'var(--text-primary)' }}>LLM Agents Guide</span>
+            </nav>
             <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>LLM Agents Guide</h1>
             <p className="text-lead" style={{ marginBottom: '2rem' }}>
               A practical, step-by-step guide to connecting your AI agent to MCP servers &mdash; with real configuration

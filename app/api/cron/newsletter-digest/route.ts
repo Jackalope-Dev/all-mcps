@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { and, eq, gte, desc, notInArray, sql } from 'drizzle-orm';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
+import { cleanListingDescription } from '../../../../lib/description';
 
 const NEW_WINDOW_DAYS = 7;
 const MAX_PER_SECTION = 6;
@@ -30,17 +31,12 @@ function escapeHtml(text: string): string {
 const INSTALL_COMMAND_RE =
   /\b(npx|npm\s+install|pip3?\s+install|uvx|uv\s+pip|docker\s+run|go\s+install|cargo\s+install|brew\s+install)\b/i;
 
-// Source descriptions carry scraped README cruft: a leading badge link (e.g. the
-// Glama verification badge, often with no link text), then platform-icon emoji,
-// then " - ", before the actual human-readable sentence, and sometimes a trailing
-// install-command clause ("npx -y ...", "Install: npx ...") that reads as noise
-// in a marketing email rather than the directory page it belongs on.
+// Shared cleaner strips the scraped README chrome (leading badge link, platform-icon
+// emoji, separator dash). On top of that, a marketing email also wants the trailing
+// install-command clause ("npx -y ...", "Install: npx ...") gone — it reads as noise
+// here rather than on the directory page it belongs on.
 function cleanDescription(description: string): string {
-  let text = description
-    .replace(/^(\[[^\]]*\]\([^)]*\)\s*)+/g, '')
-    .replace(/^[\p{Extended_Pictographic}️\s]+/gu, '')
-    .replace(/^[-–—]\s*/, '')
-    .trim();
+  let text = cleanListingDescription(description);
 
   const installIdx = text.search(INSTALL_COMMAND_RE);
   if (installIdx !== -1) {
