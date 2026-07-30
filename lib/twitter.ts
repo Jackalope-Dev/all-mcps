@@ -215,6 +215,86 @@ export function getHashtags(category?: string): string {
   return baseTags.sort(() => Math.random() - 0.5).join(' ');
 }
 
+// Install-command clause ("npx -y ...", "Install: pip install ...") that reads as
+// noise in a tweet — it belongs on the directory page, not in a highlight post.
+const INSTALL_COMMAND_RE =
+  /\b(npx|npm\s+install|pnpm\s+add|yarn\s+add|pip3?\s+install|uvx|uv\s+pip|docker\s+run|go\s+install|cargo\s+install|brew\s+install)\b/i;
+
+/**
+ * Descriptions are scraped from READMEs and carry markdown/HTML cruft — badge
+ * images, links, bold/italic, inline code, headings, list bullets, raw tags.
+ * Strip all of it down to a single line of plain text suitable for a tweet.
+ */
+export function stripMarkdown(input: string): string {
+  if (!input) return '';
+  let text = input;
+
+  // Fenced/inline code -> keep inner text, drop the backticks/fences.
+  text = text.replace(/```[\w-]*\n?([\s\S]*?)```/g, ' $1 ');
+  text = text.replace(/`([^`]+)`/g, '$1');
+  // Images (incl. badges): drop entirely. Do this before links so nested
+  // badge-links like [![badge](img)](href) collapse cleanly.
+  text = text.replace(/!\[[^\]]*\]\([^)]*\)/g, '');
+  // Inline + reference links -> keep the visible text only.
+  text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+  text = text.replace(/\[([^\]]*)\]\[[^\]]*\]/g, '$1');
+  // Raw HTML tags (<img>, <br>, <sub>, ...).
+  text = text.replace(/<[^>]+>/g, ' ');
+  // Emphasis / strikethrough markers.
+  text = text.replace(/(\*\*|__)(.*?)\1/g, '$2');
+  text = text.replace(/(\*|_)(.*?)\1/g, '$2');
+  text = text.replace(/~~(.*?)~~/g, '$1');
+  // Line-leading markers: headings, blockquotes, list bullets, numbered lists.
+  text = text.replace(/^\s{0,3}(#{1,6}\s+|>\s+|[-*+]\s+|\d+[.)]\s+)/gm, '');
+  // HTML entities that survive scraping.
+  text = text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+  // Leftover empty brackets/parens from stripped images/links.
+  text = text.replace(/\[\s*\]|\(\s*\)/g, '');
+  // Collapse all whitespace (incl. newlines) to single spaces.
+  text = text.replace(/\s+/g, ' ').trim();
+  // Drop a leading platform-badge emoji run (READMEs often open with one), then
+  // any leftover separator — e.g. "🐍 - Run Python" -> "Run Python".
+  text = text.replace(/^[\p{Extended_Pictographic}️‍\s]+/u, '').trim();
+  text = text.replace(/^[-–—:|]\s*/, '').trim();
+
+  return text;
+}
+
+/**
+ * Clean a scraped description into tweet-ready plain text: strip markdown, drop a
+ * trailing install-command clause, then truncate on a word boundary.
+ */
+export function cleanTweetDescription(description: string | undefined, maxLen = 165): string {
+  let text = stripMarkdown(description || '');
+  if (!text) return '';
+
+  const installIdx = text.search(INSTALL_COMMAND_RE);
+  if (installIdx > 0) {
+    text = text
+      .slice(0, installIdx)
+      .replace(/[\s.;:,(\-–—]+$/, '')
+      // Drop a now-dangling lead-in label left behind by the cut ("... to start. Run").
+      .replace(/\b(install(?:ation)?|usage|setup|run|quick\s?start|example|getting started)\s*$/i, '')
+      .replace(/[\s.;:,(\-–—]+$/, '')
+      .trim();
+  }
+
+  if (text.length > maxLen) {
+    const slice = text.slice(0, maxLen - 1);
+    const lastSpace = slice.lastIndexOf(' ');
+    // Prefer a word boundary unless that would chop off too much.
+    text = (lastSpace > maxLen * 0.6 ? slice.slice(0, lastSpace) : slice).replace(/[\s.,;:]+$/, '') + '…';
+  }
+
+  return text;
+}
+
 /**
  * Format and post an open-graph optimized tweet for an MCP server
  */
@@ -234,9 +314,7 @@ export async function tweetMcpServer(server: McpServerTweetPayload) {
     badge = ' ⭐';
   }
 
-  const cleanDesc = server.description
-    ? (server.description.length > 165 ? server.description.slice(0, 162) + '...' : server.description)
-    : '';
+  const cleanDesc = cleanTweetDescription(server.description);
 
   const tweetText = `${header}\n\n${displayTitle}${badge}\n${cleanDesc}\n\n${cta}\n${url}\n\n${hashtags}`;
 
