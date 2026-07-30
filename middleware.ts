@@ -97,6 +97,11 @@ export function middleware(req: NextRequest) {
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
+  // Prevent stale HTML from referencing outdated hashed CSS/JS bundles after deploys.
+  if (!pathname.startsWith('/api/') && acceptHeader.includes('text/html')) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+  }
+
   return response;
 }
 
