@@ -48,6 +48,8 @@ export const servers = sqliteTable('servers', {
   views: integer('views').notNull().default(0),
   copies: integer('copies').notNull().default(0),
   upvotes: integer('upvotes').notNull().default(0),
+  /** Last time this listing was posted to X/Twitter (highlight cron or new-listing announce). Drives least-recently-posted rotation so highlights don't repeat. */
+  lastTweetedAt: integer('last_tweeted_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 

@@ -107,13 +107,18 @@ export async function POST(req: Request) {
       // Auto-tweet newly approved MCP server
       try {
         const approvedServer = updateResult[0];
-        await tweetMcpServer({
+        const tweetResult = await tweetMcpServer({
           id: approvedServer.id,
           name: approvedServer.name,
           description: approvedServer.description,
           category: approvedServer.category,
           isNew: true,
         });
+        // Stamp the rotation clock so the highlight cron doesn't immediately
+        // re-post a server we just announced.
+        if (tweetResult?.success) {
+          await db.update(servers).set({ lastTweetedAt: new Date() }).where(eq(servers.id, approvedServer.id));
+        }
       } catch (e) {
         console.error('Failed to tweet on server approval:', e);
       }
