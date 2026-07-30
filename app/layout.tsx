@@ -89,6 +89,13 @@ export default function RootLayout({
             gtag('config', 'G-NZ92KYZX74');
           `}
         </Script>
+        <Script id="recovery-service-worker" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js').catch(() => {});
+            }
+          `}
+        </Script>
       </head>
       <body className={sans.className}>
         <Suspense fallback={null}>
@@ -135,4 +142,3 @@ export default function RootLayout({
     </html>
   );
 }
-
