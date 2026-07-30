@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight, X, FileText, Tag, Sparkles } from 'lucide-react';
-import serversData from '../../data/mcp-servers.json';
 import { SafeMarkdown } from './SafeMarkdown';
 import { Badge } from './Badge';
 import { ServerAvatar } from './ServerAvatar';
@@ -23,30 +22,35 @@ interface CommandItem {
 }
 
 type IndexedServer = { id: string; name: string; description: string; category: string; logoUrl?: string | null };
+type IndexedCategory = { name: string; label: string; slug: string; count: number };
 
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [liveServers, setLiveServers] = useState<IndexedServer[] | null>(null);
+  const [liveCategories, setLiveCategories] = useState<IndexedCategory[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const fetchedRef = useRef(false);
   const router = useRouter();
 
-  // Fetch the full live directory (DB-backed, includes user-submitted listings
-  // that never made it into the bundled data/mcp-servers.json snapshot) the
-  // first time the palette is opened, rather than on every page load.
+  // Fetch the full live directory (DB-backed) the first time the palette is
+  // opened, rather than on every page load. The catalog JSON is deliberately NOT
+  // imported into this client component — it would ship ~1.5 MB into the bundle;
+  // the palette shows page/category shortcuts instantly and fills in server
+  // results the moment this fetch resolves.
   useEffect(() => {
     if (!isOpen || fetchedRef.current) return;
     fetchedRef.current = true;
     fetch('/api/search-index')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const servers = (data as { servers?: IndexedServer[] } | null)?.servers;
-        if (servers) setLiveServers(servers);
+        const payload = data as { servers?: IndexedServer[]; categories?: IndexedCategory[] } | null;
+        if (payload?.servers) setLiveServers(payload.servers);
+        if (payload?.categories) setLiveCategories(payload.categories);
       })
       .catch(() => {
-        // Silently keep using the bundled static snapshot as a fallback.
+        // Silently degrade to page/category shortcuts if the index can't load.
       });
   }, [isOpen]);
 
@@ -86,11 +90,20 @@ export function CommandPalette() {
       { id: 'nav-pricing', title: 'Pricing & Featured Listings', subtitle: 'Promote your server', category: 'Page', categoryType: 'page', url: '/pricing', icon: <Sparkles size={18} className="text-cyan-400" /> },
     ];
 
-    // Prefer the live DB-backed directory once loaded (includes user-submitted
-    // listings the bundled JSON snapshot doesn't have); fall back to the
-    // static snapshot for instant results before that fetch resolves.
-    const source: IndexedServer[] = liveServers ?? (serversData as any[]).slice(0, 200);
-    const serverItems: CommandItem[] = source.map((s) => {
+    // Category shortcuts (from the fetched index) navigate to landing pages.
+    const categoryItems: CommandItem[] = liveCategories.map((c) => ({
+      id: `category-${c.slug}`,
+      title: `${c.label} servers`,
+      subtitle: `${c.count.toLocaleString()} ${c.count === 1 ? 'server' : 'servers'} in this category`,
+      category: 'Category',
+      categoryType: 'category',
+      url: `/categories/${c.slug}`,
+      icon: <Tag size={18} className="text-cyan-400" />,
+    }));
+
+    // Server results come from the live DB-backed index once the fetch resolves;
+    // before that, only page/category shortcuts are shown (no bundled snapshot).
+    const serverItems: CommandItem[] = (liveServers ?? []).map((s) => {
       const { displayName } = parseServerName(s.name);
       return {
         id: `server-${s.id}`,
@@ -104,8 +117,8 @@ export function CommandPalette() {
       };
     });
 
-    return [...staticPages, ...serverItems];
-  }, [liveServers]);
+    return [...staticPages, ...categoryItems, ...serverItems];
+  }, [liveServers, liveCategories]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items.slice(0, 10);

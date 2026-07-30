@@ -1,12 +1,15 @@
-import serversData from '../data/mcp-servers.json';
+import categoryManifest from './category-manifest.json';
 
 /**
  * Full directory category list (emoji labels as stored on listings).
- * Derived from the catalog so submit form options stay in sync with browse filters.
+ *
+ * Sourced from lib/category-manifest.json — a tiny build-time snapshot of the
+ * catalog's categories (see scripts/build-category-manifest.mjs). This module is
+ * imported by 'use client' components (DirectoryGrid, SubmitForm), so it must NOT
+ * import the ~1.5 MB data/mcp-servers.json, which would ship the whole catalog in
+ * the client bundle. The manifest keeps this in sync with the data at build time.
  */
-export const DIRECTORY_CATEGORIES: string[] = Array.from(
-  new Set((serversData as { category: string }[]).map((s) => s.category).filter(Boolean))
-).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+export const DIRECTORY_CATEGORIES: string[] = categoryManifest as string[];
 
 export const DEFAULT_SUBMIT_CATEGORY =
   DIRECTORY_CATEGORIES.find((c) => c.includes('Developer Tools')) ||
