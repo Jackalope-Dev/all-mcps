@@ -48,7 +48,6 @@ export async function POST(req: Request) {
       const now = new Date();
       let isVerifiedActive = false;
       let healthStatus = 'unknown';
-      let isOfficial = server.isOfficial;
       let reciprocalBadgeOk = server.reciprocalBadgeOk;
 
       try {
@@ -72,19 +71,20 @@ export async function POST(req: Request) {
               } else {
                 isVerifiedActive = true;
                 healthStatus = 'healthy';
-                
-                // Autonomous Badge Check (Viral loop)
+
+                // Reciprocal badge recheck (viral loop) — a generic AllMCPs
+                // badge/link in the README earns reciprocal-dofollow eligibility
+                // only. It must NOT toggle `isOfficial`: the badge markdown is
+                // public (the badge generator, submit form, and embed builder all
+                // hand it out for any listing), so its mere presence proves nothing
+                // about who controls the repo. Ownership is established solely
+                // through the personalized claim flow (/api/claim), which requires
+                // a per-user verification token — so we leave `isOfficial` untouched
+                // here in both directions.
                 const readmeRes = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`);
                 if (readmeRes.ok) {
                   const text = await readmeRes.text();
-                  const badge = `[![AllMCPs Verified](https://img.shields.io/badge/AllMCPs-Verified-blue)](https://allmcps.com/mcp/${server.id})`;
-                  if (text.replace(/\s+/g, '').includes(badge.replace(/\s+/g, ''))) {
-                    isOfficial = true; // They added the badge!
-                    reciprocalBadgeOk = true;
-                  } else {
-                    isOfficial = false; // Badge not found, remove verification
-                    reciprocalBadgeOk = false;
-                  }
+                  reciprocalBadgeOk = websiteHasReciprocalBadge(text, server.id);
                 }
               }
             } else if (ghRes.status === 404) {
@@ -130,11 +130,13 @@ export async function POST(req: Request) {
       }
 
       // Update the record in D1
+      // NOTE: `isOfficial` is intentionally not written here — ownership
+      // verification is owned solely by the personalized claim flow
+      // (/api/claim) and admin approval, never by this health/badge recheck.
       await db.update(servers).set({
         lastCheckedAt: now,
         isVerifiedActive,
         healthStatus,
-        isOfficial,
         reciprocalBadgeOk,
         badgeLastCheckedAt: now,
       }).where(eq(servers.id, server.id));
