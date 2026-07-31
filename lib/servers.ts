@@ -5,13 +5,34 @@ import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
 
+export type ServerTool = { name: string; description?: string };
+
+/** Parse the `tools` column (JSON string) into a typed array, tolerating bad data. */
+export function parseServerTools(raw: unknown): ServerTool[] {
+  if (Array.isArray(raw)) return raw as ServerTool[];
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((t) => t && typeof t.name === 'string')
+      .map((t) => ({ name: String(t.name), description: t.description ? String(t.description) : undefined }));
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Normalizes a raw listing so downstream consumers never see scraped README chrome.
  * Returns a shallow copy — the imported JSON module is shared across requests and
- * must not be mutated in place.
+ * must not be mutated in place. Also parses the `tools` JSON column into an array.
  */
-function normalizeServer<T extends { description?: string | null }>(server: T): T {
-  return { ...server, description: cleanListingDescription(server.description) };
+function normalizeServer<T extends { description?: string | null; tools?: unknown }>(server: T): T {
+  return {
+    ...server,
+    description: cleanListingDescription(server.description),
+    tools: parseServerTools((server as { tools?: unknown }).tools),
+  };
 }
 
 /**
@@ -38,6 +59,9 @@ export const PUBLIC_SERVER_COLUMNS = {
   isVerifiedActive: serversTable.isVerifiedActive,
   healthStatus: serversTable.healthStatus,
   reciprocalBadgeOk: serversTable.reciprocalBadgeOk,
+  githubStars: serversTable.githubStars,
+  npmDownloads: serversTable.npmDownloads,
+  tools: serversTable.tools,
   views: serversTable.views,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
@@ -61,6 +85,10 @@ export type Server = {
   isVerifiedActive?: boolean;
   healthStatus?: string;
   reciprocalBadgeOk?: boolean;
+  githubStars?: number | null;
+  npmDownloads?: number | null;
+  /** Parsed by normalizeServer from the `tools` JSON column. */
+  tools?: ServerTool[];
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -157,12 +185,22 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
   let md = `# ${server.name}${verifiedBadge}${activeBadge}\n\n`;
   md += `**Category:** ${server.category}  \n`;
   md += `**Repository:** ${server.url}  \n`;
+  if (typeof server.githubStars === 'number') md += `**GitHub Stars:** ${server.githubStars}  \n`;
+  if (typeof server.npmDownloads === 'number') md += `**npm Downloads (last month):** ${server.npmDownloads}  \n`;
   md += `**Views:** ${server.views || 0}  \n`;
   md += `**Installs:** ${server.copies || 0}  \n`;
   md += `**Upvotes:** ${server.upvotes || 0}  \n`;
   md += `**Directory Page:** https://allmcps.com/mcp/${server.id}\n\n`;
 
   md += `## Description\n${server.description}\n\n`;
+
+  if (server.tools && server.tools.length > 0) {
+    md += `## Tools\nCapabilities this server exposes over MCP:\n\n`;
+    for (const tool of server.tools) {
+      md += `- **${tool.name}**${tool.description ? ` — ${tool.description}` : ''}\n`;
+    }
+    md += `\n`;
+  }
 
   md += `## Claude Desktop Quick Installation\n`;
   md += `This assumes the package is published to npm and installable via \`npx\`. Verify against the README/repository below first — some servers require Python (\`uvx\`), Docker, or other manual setup instead:\n\n`;

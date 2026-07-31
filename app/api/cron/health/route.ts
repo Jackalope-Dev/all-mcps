@@ -6,6 +6,25 @@ import { eq, asc } from 'drizzle-orm';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { isSafeFetchTarget } from '../../../../lib/urlSafety';
 import { websiteHasReciprocalBadge } from '../../../../lib/verification';
+import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
+
+/** Best-effort npm last-month downloads for a package name. Returns null if not on npm. */
+async function fetchNpmDownloads(pkg: string): Promise<number | null> {
+  const name = pkg.trim();
+  // Skip obvious non-package names (paths, URLs, names with spaces).
+  if (!name || /\s/.test(name) || name.includes('://')) return null;
+  try {
+    const res = await fetch(`https://api.npmjs.org/downloads/point/last-month/${name}`, {
+      headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { downloads?: number };
+    return typeof data.downloads === 'number' ? data.downloads : null;
+  } catch {
+    return null;
+  }
+}
 
 // Maximum servers to check per cron run (keeps us under rate limits)
 const BATCH_SIZE = 50;
@@ -49,6 +68,12 @@ export async function POST(req: Request) {
       let isVerifiedActive = false;
       let healthStatus = 'unknown';
       let reciprocalBadgeOk = server.reciprocalBadgeOk;
+      let githubStars: number | null = server.githubStars ?? null;
+      let toolsJson: string | null = server.tools ?? null;
+      let toolsCheckedAt: Date | null = server.toolsCheckedAt ?? null;
+
+      // npm downloads refresh runs regardless of transport (name is the package).
+      const npmDownloads = await fetchNpmDownloads(server.name);
 
       try {
         if (server.url.includes('github.com')) {
@@ -66,6 +91,9 @@ export async function POST(req: Request) {
             
             if (ghRes.ok) {
               const ghData = await ghRes.json() as any;
+              if (typeof ghData.stargazers_count === 'number') {
+                githubStars = ghData.stargazers_count;
+              }
               if (ghData.archived || ghData.disabled) {
                 healthStatus = 'archived';
               } else {
@@ -109,6 +137,19 @@ export async function POST(req: Request) {
                healthStatus = 'offline';
             }
           }
+
+          // If the URL is a live MCP endpoint, capture its tool list so the
+          // listing can show real capabilities (best-effort; sparse by design —
+          // most listings are stdio repos with no callable endpoint).
+          if (isVerifiedActive) {
+            const introspection = await callMcpEndpoint(server.url, { method: 'tools/list' });
+            toolsCheckedAt = now;
+            if (introspection.ok && introspection.tools && introspection.tools.length > 0) {
+              toolsJson = JSON.stringify(
+                introspection.tools.map((t) => ({ name: t.name, description: t.description }))
+              );
+            }
+          }
         }
       } catch (e) {
         healthStatus = 'offline';
@@ -139,6 +180,10 @@ export async function POST(req: Request) {
         healthStatus,
         reciprocalBadgeOk,
         badgeLastCheckedAt: now,
+        githubStars,
+        npmDownloads,
+        tools: toolsJson,
+        toolsCheckedAt,
       }).where(eq(servers.id, server.id));
       
       processed++;

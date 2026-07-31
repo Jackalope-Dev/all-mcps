@@ -1,4 +1,5 @@
 import { getActiveServers } from '@/lib/servers';
+import { computeQualityScore } from '@/lib/qualityScore';
 import { rankServers } from '@/lib/search';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
       isOfficial: server.isOfficial,
       isVerifiedActive: server.isVerifiedActive,
       upvotes: server.upvotes || 0,
+      githubStars: server.githubStars ?? null,
+      npmDownloads: server.npmDownloads ?? null,
+      qualityScore: computeQualityScore(server).score,
       installName,
       claudeConfigSnippet: {
         mcpServers: {

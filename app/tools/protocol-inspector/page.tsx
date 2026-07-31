@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { ProtocolInspectorTool } from '../../../components/tools/ProtocolInspectorTool';
+import { LiveMcpInspector } from '../../../components/tools/LiveMcpInspector';
 
 export const metadata: Metadata = {
   title: 'Free MCP Protocol Inspector & Response Debugger — Validate JSON-RPC Payloads',
@@ -120,9 +121,22 @@ export default function ProtocolInspectorPage() {
             MCP Protocol Inspector &amp; Response Debugger
           </h1>
           <p className="text-lead" style={{ marginBottom: '2rem' }}>
-            Validate Model Context Protocol (MCP) JSON-RPC 2.0 payloads, verify content block schemas, catch protocol
-            errors, and preview how AI clients display execution results.
+            Connect to a live MCP server to list and call its tools, or validate Model Context Protocol (MCP)
+            JSON-RPC 2.0 payloads, verify content block schemas, catch protocol errors, and preview how AI clients
+            display execution results.
           </p>
+
+          <div style={{ marginBottom: '2.5rem' }}>
+            <LiveMcpInspector />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0 0 2rem' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Or validate a payload
+            </span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+          </div>
 
           <ProtocolInspectorTool />
 
