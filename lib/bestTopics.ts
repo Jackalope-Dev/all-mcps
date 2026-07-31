@@ -150,6 +150,171 @@ export const BEST_TOPICS: BestTopic[] = [
       { q: 'Can MCP servers access cloud storage like S3 or Google Drive?', a: 'Yes — several servers wrap cloud storage APIs so agents can list, read, and write objects with credentials you provide.' },
     ],
   },
+  {
+    slug: 'version-control',
+    categorySlug: 'version-control',
+    title: 'Git & Version Control',
+    lead: 'The best MCP servers for Git and version control — let AI agents read repositories, inspect diffs, manage branches, and open pull requests on GitHub, GitLab, and more.',
+    faq: [
+      { q: 'What is the best MCP server for GitHub?', a: 'The official GitHub MCP server is the most widely installed — it covers issues, pull requests, code search, and Actions. This page ranks version-control servers by real usage across the AllMCPs directory.' },
+      { q: 'Can an MCP server open pull requests for me?', a: 'Yes. GitHub and GitLab MCP servers can create branches, commit files, and open PRs when you grant a token with write scope. Use a fine-grained token limited to the specific repositories the agent should touch.' },
+      { q: 'Do I need a personal access token to use a Git MCP server?', a: 'For hosted platforms like GitHub or GitLab, yes — you supply a token via an environment variable. Local Git servers that operate on a checked-out repo on disk usually need no token at all.' },
+    ],
+  },
+  {
+    slug: 'workplace-productivity',
+    categorySlug: 'workplace-and-productivity',
+    title: 'Workplace & Productivity',
+    lead: 'The best MCP servers for workplace productivity — connect AI agents to Notion, Google Workspace, calendars, task managers, and the tools your team runs on every day.',
+    faq: [
+      { q: 'What are the best MCP servers for productivity tools?', a: 'Servers for Notion, Google Workspace, Linear, and calendar apps are the most installed. This page ranks productivity MCP servers by real usage so you can start with proven options.' },
+      { q: 'Can an AI agent manage my calendar or tasks over MCP?', a: 'Yes — calendar and task-manager MCP servers let agents read events, create tasks, and update statuses using OAuth or an API key you provide. Prefer read-only scopes until you trust the workflow.' },
+      { q: 'Do these work with Claude Desktop and Cursor?', a: 'Yes. MCP is a shared protocol, so every server listed here works with any MCP-compatible client, including Claude Desktop, Claude Code, Cursor, and Windsurf.' },
+    ],
+  },
+  {
+    slug: 'marketing',
+    categorySlug: 'marketing',
+    title: 'Marketing & SEO',
+    lead: 'The best MCP servers for marketing and SEO — give AI agents access to analytics, ad platforms, SEO data, email tools, and CRMs to research, report, and automate campaigns.',
+    faq: [
+      { q: 'What is the best MCP server for marketing?', a: 'The most popular marketing MCP servers connect analytics, SEO data, and ad or email platforms. This page ranks them by real usage across the AllMCPs directory.' },
+      { q: 'Can MCP servers pull SEO or analytics data?', a: 'Yes — several wrap analytics and search APIs so an agent can fetch traffic, keyword, and ranking data and turn it into reports. You supply the account credentials or API key.' },
+      { q: 'Can an agent send marketing emails through MCP?', a: 'Some email-platform MCP servers support sending, but treat that access carefully — scope the API key narrowly and keep a human in the loop for anything that reaches real recipients.' },
+    ],
+  },
+  {
+    slug: 'social-media',
+    categorySlug: 'social-media',
+    title: 'Social Media',
+    lead: 'The best MCP servers for social media — let AI agents read, post, schedule, and analyze content across X, Reddit, LinkedIn, Discord, and other platforms.',
+    faq: [
+      { q: 'What is the best MCP server for social media?', a: 'It depends on the platform — servers for X, Reddit, and Discord are the most installed. This page ranks social media MCP servers by real usage.' },
+      { q: 'Can an AI agent post to social media through MCP?', a: 'Yes, when you provide platform credentials with posting scope. Because posts are public and hard to undo, keep a human approval step for anything an agent publishes.' },
+      { q: 'Do social media MCP servers need API keys?', a: 'Almost always — each platform requires its own app credentials or OAuth token, which you set via environment variables. Read-heavy servers may work with lighter, read-only scopes.' },
+    ],
+  },
+  {
+    slug: 'data-platforms',
+    categorySlug: 'data-platforms',
+    title: 'Data Platforms',
+    lead: 'The best MCP servers for data platforms — connect AI agents to warehouses, lakes, and analytics engines like Snowflake, BigQuery, and ClickHouse to query and explore data.',
+    faq: [
+      { q: 'What is the best MCP server for a data warehouse?', a: 'Servers for Snowflake, BigQuery, and ClickHouse are the most widely installed. This page ranks data-platform MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'Can an agent run analytics queries safely?', a: 'Yes — connect the server with a read-only role scoped to the datasets the agent should see. Most data-platform servers support parameterized, read-only querying by default.' },
+      { q: 'How is this different from a plain database MCP server?', a: 'Database servers target transactional systems like Postgres and MySQL; data-platform servers target analytical warehouses and lakes built for large-scale queries and reporting.' },
+    ],
+  },
+  {
+    slug: 'research',
+    categorySlug: 'research',
+    title: 'Research',
+    lead: 'The best MCP servers for research — let AI agents search academic papers, pull references, query knowledge bases, and gather primary sources with citations.',
+    faq: [
+      { q: 'What is the best MCP server for academic research?', a: 'Servers wrapping arXiv, PubMed, and scholarly search APIs are the most installed. This page ranks research MCP servers by real usage so you can pick a proven one.' },
+      { q: 'Can MCP servers return citations, not just summaries?', a: 'Yes — most research servers return structured metadata (title, authors, DOI, and links) alongside content, so an agent can cite primary sources rather than paraphrase them.' },
+      { q: 'Do research MCP servers need paid API access?', a: 'Many use free public APIs like arXiv or PubMed; some premium databases require your own subscription key, supplied via an environment variable.' },
+    ],
+  },
+  {
+    slug: 'data-science',
+    categorySlug: 'data-science-tools',
+    title: 'Data Science',
+    lead: 'The best MCP servers for data science — give AI agents tools to run notebooks, execute Python, analyze datasets, and generate charts as part of an analysis workflow.',
+    faq: [
+      { q: 'What are the best MCP servers for data science?', a: 'Servers that run Python, Jupyter, or dataframe operations are the most installed. This page ranks data-science MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'Can an MCP server run Python code for analysis?', a: 'Yes — code-execution and notebook MCP servers let an agent run Python in a sandboxed kernel and return results, tables, and plots. Run them in an isolated environment, not against production systems.' },
+      { q: 'Can these generate charts and visualizations?', a: 'Several return rendered charts or the data behind them, so an agent can visualize a dataset and hand you back an image or a reproducible script.' },
+    ],
+  },
+  {
+    slug: 'code-execution',
+    categorySlug: 'code-execution',
+    title: 'Code Execution',
+    lead: 'The best MCP servers for code execution — let AI agents run code, shell commands, and scripts in sandboxed environments and get results back.',
+    faq: [
+      { q: 'What is the best MCP server for running code?', a: 'Sandboxed code-execution servers that support Python and JavaScript are the most installed. This page ranks code-execution MCP servers by real usage.' },
+      { q: 'Is it safe to let an AI agent execute code?', a: 'Only inside a sandbox. Prefer servers that run code in an isolated container or ephemeral environment, never with direct access to your host, credentials, or production data.' },
+      { q: 'Which languages do code-execution MCP servers support?', a: 'Python and JavaScript are the most common; several also handle shell commands or arbitrary languages via a container. Check each listing for the exact runtime.' },
+    ],
+  },
+  {
+    slug: 'command-line',
+    categorySlug: 'command-line',
+    title: 'Command Line & Terminal',
+    lead: 'The best MCP servers for the command line — let AI agents run terminal commands, manage processes, and drive CLI tools with scoped, auditable access.',
+    faq: [
+      { q: 'What is the best MCP server for terminal access?', a: 'Shell and terminal MCP servers that support allow-lists and working-directory limits are the most trusted. This page ranks command-line MCP servers by real usage.' },
+      { q: 'How do I stop an agent from running dangerous commands?', a: 'Use a server that supports command allow-lists or confirmation prompts, run it as a low-privilege user, and scope it to a specific working directory. Never grant unrestricted root shell access.' },
+      { q: 'Can these run long-running processes?', a: 'Some manage background processes and stream output; others are built for one-shot commands. Check each listing for process-management support.' },
+    ],
+  },
+  {
+    slug: 'e-commerce',
+    categorySlug: 'e-commerce',
+    title: 'E-Commerce',
+    lead: 'The best MCP servers for e-commerce — connect AI agents to Shopify, payment processors, and storefront APIs to manage products, orders, and customers.',
+    faq: [
+      { q: 'What is the best MCP server for e-commerce?', a: 'Servers for Shopify and major payment processors are the most installed. This page ranks e-commerce MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'Can an agent manage orders and products over MCP?', a: 'Yes — storefront MCP servers let agents read and update products, inventory, and orders with an API key you provide. Start with read-only scope before allowing writes to live stores.' },
+      { q: 'Are payment MCP servers safe to use?', a: 'Use them with restricted, test-mode, or narrowly scoped keys. Never give an agent unrestricted access to a live payments account, and keep a human step for refunds or charges.' },
+    ],
+  },
+  {
+    slug: 'legal',
+    categorySlug: 'legal',
+    title: 'Legal',
+    lead: 'The best MCP servers for legal work — give AI agents access to case law, contract analysis, and legal research tools with careful, scoped permissions.',
+    faq: [
+      { q: 'What are the best MCP servers for legal research?', a: 'Servers wrapping case-law and legal-database APIs are the most installed. This page ranks legal MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'Can an MCP server review contracts?', a: 'Some servers extract clauses and structure from contract text so an agent can analyze them, but treat output as a draft aid, not legal advice — keep a qualified reviewer in the loop.' },
+      { q: 'Is it safe to send confidential documents to a legal MCP server?', a: 'Only to servers you control or trust with clear data-handling terms. For sensitive matters, prefer self-hosted servers and avoid sending privileged material to third-party APIs.' },
+    ],
+  },
+  {
+    slug: 'multimedia',
+    categorySlug: 'multimedia-process',
+    title: 'Multimedia & Media Processing',
+    lead: 'The best MCP servers for multimedia — let AI agents generate, edit, transcribe, and process images, audio, and video through a single protocol.',
+    faq: [
+      { q: 'What is the best MCP server for image or video processing?', a: 'Servers for image generation, transcription, and media conversion are the most installed. This page ranks multimedia MCP servers by real usage.' },
+      { q: 'Can an AI agent transcribe audio through MCP?', a: 'Yes — several servers wrap speech-to-text APIs so an agent can transcribe audio and video, returning timestamps and text you can act on.' },
+      { q: 'Do multimedia MCP servers need paid API keys?', a: 'Those backed by commercial generation or transcription APIs need your own key; self-contained tools that use local libraries (for format conversion, for example) usually do not.' },
+    ],
+  },
+  {
+    slug: 'gaming',
+    categorySlug: 'gaming',
+    title: 'Gaming',
+    lead: 'The best MCP servers for gaming — connect AI agents to game engines, servers, and platform APIs to build, automate, and interact with games.',
+    faq: [
+      { q: 'What are the best MCP servers for gaming?', a: 'Servers for game engines and popular platform APIs are the most installed. This page ranks gaming MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'Can an AI agent control a game through MCP?', a: 'Some servers expose game state and actions so an agent can read and interact with a running game or engine. Capabilities vary widely — check each listing for what it exposes.' },
+      { q: 'Do these work with any MCP client?', a: 'Yes. Because MCP is a shared protocol, gaming servers listed here work with Claude Desktop, Cursor, Windsurf, and any other MCP-compatible client.' },
+    ],
+  },
+  {
+    slug: 'location-services',
+    categorySlug: 'location-services',
+    title: 'Maps & Location',
+    lead: 'The best MCP servers for maps and location — let AI agents geocode addresses, get directions, search places, and work with geographic data.',
+    faq: [
+      { q: 'What is the best MCP server for maps?', a: 'Servers wrapping major mapping and geocoding APIs are the most installed. This page ranks location MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'Can an agent get directions or geocode addresses over MCP?', a: 'Yes — location MCP servers expose geocoding, place search, and routing so an agent can turn an address into coordinates or plan a route, using an API key you provide.' },
+      { q: 'Do maps MCP servers cost money to use?', a: 'The servers are free, but the mapping APIs they wrap often bill per request beyond a free tier. Supply your own key and watch usage on high-volume workflows.' },
+    ],
+  },
+  {
+    slug: 'travel',
+    categorySlug: 'travel-and-transportation',
+    title: 'Travel & Transportation',
+    lead: 'The best MCP servers for travel and transportation — give AI agents access to flight, transit, and booking data to plan trips and answer logistics questions.',
+    faq: [
+      { q: 'What are the best MCP servers for travel?', a: 'Servers for flight search, transit data, and booking platforms are the most installed. This page ranks travel MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'Can an AI agent book travel through MCP?', a: 'Some servers support booking flows, but most focus on search and information. For anything that spends money or reserves seats, keep a human confirmation step.' },
+      { q: 'Do travel MCP servers need API keys?', a: 'Usually — flight and booking APIs require provider credentials you set via environment variables. Some public transit servers use open data and need no key.' },
+    ],
+  },
 ];
 
 export function bestTopicBySlug(slug: string): BestTopic | undefined {

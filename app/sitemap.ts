@@ -6,6 +6,7 @@ import serversData from '../data/mcp-servers.json';
 import { getAllPosts } from '../lib/blog';
 import { DIRECTORY_CATEGORIES, categorySlug } from '../lib/categories';
 import { BEST_TOPICS } from '../lib/bestTopics';
+import { MCP_CLIENTS } from '../lib/clients';
 
 /**
  * Safely parses and normalizes any date input into a valid Date object.
@@ -131,6 +132,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${baseUrl}/best`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/clients`,
       lastModified: safeDateISO(new Date()),
       changeFrequency: 'weekly',
       priority: 0.9,
@@ -266,6 +273,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
+  const clientEntries: MetadataRoute.Sitemap = MCP_CLIENTS.map((c) => ({
+    url: `${baseUrl}/clients/${c.slug}`,
+    lastModified: safeDateISO(new Date()),
+    changeFrequency: 'weekly',
+    priority: 0.85,
+  }));
+
   const bestEntries: MetadataRoute.Sitemap = BEST_TOPICS.map((t) => ({
     url: `${baseUrl}/best/${t.slug}`,
     lastModified: safeDateISO(new Date()),
@@ -273,6 +287,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  return [...sitemapEntries, ...categoryEntries, ...bestEntries, ...blogEntries, ...serverEntries];
+  return [...sitemapEntries, ...categoryEntries, ...bestEntries, ...clientEntries, ...blogEntries, ...serverEntries];
 }
 
