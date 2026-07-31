@@ -6,6 +6,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 import { McpConfigGenerator } from '../../../components/McpConfigGenerator';
 import { AgentPromptButton } from '../../../components/ui/AgentPromptButton';
+import { InstallButtons } from '../../../components/ui/InstallButtons';
 import { ViewTracker, InstallsStat } from '../../../components/ui/ViewTracker';
 import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import serversData from '../../../data/mcp-servers.json';
@@ -424,6 +425,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Terminal size={20} /> Quick Install
             </h2>
+            <p style={{ color: 'var(--text-secondary)', margin: '0 0 1rem', fontSize: '0.875rem' }}>
+              One click to install into your editor, or copy the config below.
+            </p>
+            <InstallButtons serverId={server.id} serverName={server.name} url={server.url} />
             <McpConfigGenerator serverId={server.id} serverName={server.name} url={server.url} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.5rem 0' }}>
