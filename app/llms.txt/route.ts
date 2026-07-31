@@ -2,6 +2,7 @@ import { getActiveServers } from '@/lib/servers';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 import { categorySlug } from '@/lib/categories';
 import { BEST_TOPICS } from '@/lib/bestTopics';
+import { MCP_CLIENTS } from '@/lib/clients';
 
 export async function GET(request: Request) {
   const servers = await getActiveServers();
@@ -34,6 +35,12 @@ export async function GET(request: Request) {
   content += `## Best MCP Servers by Use Case (curated, ranked)\n`;
   for (const t of BEST_TOPICS) {
     content += `- [Best MCP Servers for ${t.title}](https://allmcps.com/best/${t.slug})\n`;
+  }
+  content += `\n`;
+
+  content += `## MCP Client Setup Guides (how to install MCP servers)\n`;
+  for (const c of MCP_CLIENTS) {
+    content += `- [How to Install MCP Servers in ${c.name}](https://allmcps.com/clients/${c.slug})\n`;
   }
   content += `\n`;
 
