@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { attemptAutoReload } from '../lib/errorRecovery';
 
 export default function GlobalError({
   error,
@@ -9,9 +10,28 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Recover automatically from transient post-deploy load failures (one guarded
+  // reload per URL) rather than stranding the user on the error screen.
+  const [recovering, setRecovering] = useState(true);
+
   useEffect(() => {
     console.error('Unhandled root layout error:', error);
+    if (attemptAutoReload()) {
+      const t = setTimeout(() => setRecovering(false), 4000);
+      return () => clearTimeout(t);
+    }
+    setRecovering(false);
   }, [error]);
+
+  if (recovering) {
+    // A reload was triggered (or is being decided) — render a minimal shell so
+    // the "Something went wrong" screen never flashes before navigation.
+    return (
+      <html lang="en">
+        <body style={{ margin: 0, background: '#020617' }} />
+      </html>
+    );
+  }
 
   return (
     <html lang="en">
