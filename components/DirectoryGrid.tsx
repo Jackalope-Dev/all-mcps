@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -37,6 +37,7 @@ type Server = {
   views?: number;
   copies?: number;
   upvotes?: number;
+  githubStars?: number | null;
   createdAt?: string | Date;
 };
 
@@ -363,6 +364,11 @@ export default function DirectoryGrid({
       <div title="Upvotes">
         <Heart size={12} aria-hidden="true" /> {(server.upvotes || 0).toLocaleString()}
       </div>
+      {typeof server.githubStars === 'number' && (
+        <div title="GitHub stars">
+          <Star size={12} aria-hidden="true" /> {server.githubStars.toLocaleString()}
+        </div>
+      )}
     </div>
   );
 

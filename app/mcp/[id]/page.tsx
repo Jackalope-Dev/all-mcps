@@ -1,4 +1,5 @@
-import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench } from 'lucide-react';
+import { QualityBadge } from '../../../components/ui/QualityBadge';
 import Link from 'next/link';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import ShareModal from '../../../components/ShareModal';
@@ -6,6 +7,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 import { McpConfigGenerator } from '../../../components/McpConfigGenerator';
 import { AgentPromptButton } from '../../../components/ui/AgentPromptButton';
+import { InstallButtons } from '../../../components/ui/InstallButtons';
 import { ViewTracker, InstallsStat } from '../../../components/ui/ViewTracker';
 import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import serversData from '../../../data/mcp-servers.json';
@@ -424,6 +426,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Terminal size={20} /> Quick Install
             </h2>
+            <p style={{ color: 'var(--text-secondary)', margin: '0 0 1rem', fontSize: '0.875rem' }}>
+              One click to install into your editor, or copy the config below.
+            </p>
+            <InstallButtons serverId={server.id} serverName={server.name} url={server.url} />
             <McpConfigGenerator serverId={server.id} serverName={server.name} url={server.url} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.5rem 0' }}>
@@ -436,6 +442,31 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </p>
             <AgentPromptButton serverId={server.id} serverName={server.name} />
           </div>
+
+          {server.tools && server.tools.length > 0 && (
+            <div style={{ marginBottom: '3rem' }}>
+              <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Wrench size={20} /> Tools ({server.tools.length})
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                Live capabilities reported by this server over MCP.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem' }}>
+                {server.tools.map((tool) => (
+                  <div key={tool.name} className="surface" style={{ padding: '1rem' }}>
+                    <code style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-color)', wordBreak: 'break-word' }}>
+                      {tool.name}
+                    </code>
+                    {tool.description && (
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.4rem 0 0', lineHeight: 1.45 }}>
+                        {tool.description}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Documentation Overview</h2>
@@ -658,6 +689,32 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               >
                 <Sparkles size={16} /> Spotlight Your Server
               </Link>
+            </div>
+          )}
+
+          {/* Quality grade — transparent, from public signals. */}
+          <QualityBadge server={server} />
+
+          {/* Popularity signals (shown when measured). */}
+          {(typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') && (
+            <div className="surface" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Popularity</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {typeof server.githubStars === 'number' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem' }}>
+                    <Star size={18} style={{ color: '#f5c518' }} />
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.githubStars.toLocaleString()}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>GitHub stars</span>
+                  </div>
+                )}
+                {typeof server.npmDownloads === 'number' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem' }}>
+                    <Download size={18} style={{ color: 'var(--accent-color)' }} />
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.npmDownloads.toLocaleString()}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>npm downloads / mo</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

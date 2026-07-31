@@ -1,4 +1,5 @@
 import { getServerById, fetchServerReadme } from '@/lib/servers';
+import { computeQualityScore } from '@/lib/qualityScore';
 
 export async function GET(
   request: Request,
@@ -16,12 +17,15 @@ export async function GET(
 
   const readme = await fetchServerReadme(server.url);
   const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const quality = computeQualityScore(server);
 
   return Response.json(
     {
       server: {
         ...server,
         installName,
+        qualityScore: quality.score,
+        qualityTier: quality.tier,
         claudeConfigSnippet: {
           mcpServers: {
             [installName]: {

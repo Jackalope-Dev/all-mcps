@@ -45,6 +45,14 @@ export const servers = sqliteTable('servers', {
   reciprocalBadgeOk: integer('reciprocal_badge_ok', { mode: 'boolean' }).notNull().default(false),
   /** Last time the reciprocal-badge recheck ran for this listing (set alongside lastCheckedAt by the health cron). */
   badgeLastCheckedAt: integer('badge_last_checked_at', { mode: 'timestamp' }),
+  /** GitHub stargazers, refreshed by the health cron. Null = not measured yet. */
+  githubStars: integer('github_stars'),
+  /** npm last-month downloads for the package, refreshed by the health cron. Null = not an npm package or not measured. */
+  npmDownloads: integer('npm_downloads'),
+  /** JSON array of {name, description} captured when a listing exposes a callable MCP endpoint. Null = tools not introspected. */
+  tools: text('tools'),
+  /** Last time we attempted MCP tool introspection for this listing. */
+  toolsCheckedAt: integer('tools_checked_at', { mode: 'timestamp' }),
   views: integer('views').notNull().default(0),
   copies: integer('copies').notNull().default(0),
   upvotes: integer('upvotes').notNull().default(0),
