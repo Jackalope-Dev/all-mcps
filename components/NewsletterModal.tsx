@@ -6,6 +6,8 @@ import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 
 const DISMISS_KEY = 'allmcps_newsletter_dismissed';
 const SUPPRESSED_PREFIXES = ['/login', '/dashboard', '/admin'];
+/** Delay after the visitor's first interaction before the modal appears. */
+const REVEAL_DELAY_MS = 4000;
 
 function getDismissed(): boolean {
   try {
@@ -33,8 +35,33 @@ export function NewsletterModal() {
     if (document.cookie.includes('allmcps_subscribed=1')) return;
     if (SUPPRESSED_PREFIXES.some((p) => pathname?.startsWith(p))) return;
 
-    const timer = setTimeout(() => setVisible(true), 10000);
-    return () => clearTimeout(timer);
+    // Reveal only after the visitor's first interaction, then after a short
+    // dwell. Waiting for an interaction means the modal can never become the
+    // page's Largest Contentful Paint element (LCP is finalized at first input),
+    // so the auto-popup no longer inflates the homepage's Core Web Vitals — while
+    // engaged visitors (the ones who might subscribe) still see it.
+    const interactionEvents = ['scroll', 'pointerdown', 'keydown'] as const;
+    let revealTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const removeInteractionListeners = () => {
+      for (const evt of interactionEvents) {
+        window.removeEventListener(evt, onFirstInteraction);
+      }
+    };
+
+    const onFirstInteraction = () => {
+      removeInteractionListeners();
+      revealTimer = setTimeout(() => setVisible(true), REVEAL_DELAY_MS);
+    };
+
+    for (const evt of interactionEvents) {
+      window.addEventListener(evt, onFirstInteraction, { passive: true });
+    }
+
+    return () => {
+      removeInteractionListeners();
+      if (revealTimer) clearTimeout(revealTimer);
+    };
   }, [pathname]);
 
   const dismiss = () => {
