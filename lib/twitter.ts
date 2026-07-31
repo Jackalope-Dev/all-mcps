@@ -169,6 +169,10 @@ const FEATURED_HEADERS = [
   '⭐ Top Pick on AllMCPs',
   '🚀 Featured AI Tool',
   '💎 Highlighted MCP Server',
+  '👑 Premium MCP Pick',
+  '🌟 Editor’s Choice MCP',
+  '🏆 Standout MCP Server',
+  '📌 Featured on AllMCPs',
 ];
 
 const COMMUNITY_HEADERS = [
@@ -177,12 +181,19 @@ const COMMUNITY_HEADERS = [
   '🤖 AI Agent Tool Highlight',
   '🔍 Discover on AllMCPs',
   '⚡ Featured MCP Server',
+  '🧩 MCP Server Spotlight',
+  '📡 On the MCP Radar',
+  '🔦 Under the Spotlight',
+  '💬 From the MCP Directory',
 ];
 
 const NEW_HEADERS = [
   '🚀 New MCP Server Listed!',
   '✨ Fresh Listing on AllMCPs',
   '🆕 New MCP Server Added',
+  '🎉 Just Landed on AllMCPs',
+  '📥 New MCP Server Just In',
+  '🌱 Freshly Added MCP Server',
 ];
 
 const CALL_TO_ACTIONS = [
@@ -191,6 +202,10 @@ const CALL_TO_ACTIONS = [
   'Discover installation & setup on @AllMCPs:',
   'Check out details & setup on @AllMCPs:',
   'Browse & install on @AllMCPs:',
+  'Grab the setup guide on @AllMCPs:',
+  'See how to wire it up on @AllMCPs:',
+  'Add it to your AI stack via @AllMCPs:',
+  'Full details on @AllMCPs:',
 ];
 
 function getRandomItem<T>(arr: T[]): T {
@@ -198,21 +213,33 @@ function getRandomItem<T>(arr: T[]): T {
 }
 
 /**
- * Generate relevant discoverability hashtags based on category
+ * Generate relevant discoverability hashtags based on category.
+ *
+ * #MCP always leads; a category-specific tag is included when we can infer one; the
+ * remaining slots are filled from a rotating general pool so consecutive tweets don't
+ * carry the identical hashtag set.
  */
 export function getHashtags(category?: string): string {
-  const baseTags = ['#MCP', '#AI', '#Claude'];
+  const tags = new Set<string>(['#MCP']);
 
   const catLower = (category || '').toLowerCase();
-  if (catLower.includes('database') || catLower.includes('db')) baseTags.push('#Databases');
-  else if (catLower.includes('search') || catLower.includes('extraction')) baseTags.push('#Data');
-  else if (catLower.includes('version') || catLower.includes('git')) baseTags.push('#DevOps');
-  else if (catLower.includes('file')) baseTags.push('#DevTools');
-  else if (catLower.includes('agent')) baseTags.push('#AIAgents');
-  else baseTags.push('#DevTools');
+  if (catLower.includes('database') || catLower.includes('db')) tags.add('#Databases');
+  else if (catLower.includes('search') || catLower.includes('extraction')) tags.add('#Data');
+  else if (catLower.includes('version') || catLower.includes('git')) tags.add('#DevOps');
+  else if (catLower.includes('file')) tags.add('#DevTools');
+  else if (catLower.includes('agent')) tags.add('#AIAgents');
+  else tags.add('#DevTools');
 
-  // Randomize tag order for anti-duplicate variation
-  return baseTags.sort(() => Math.random() - 0.5).join(' ');
+  // Pull a couple of general tags at random so the set varies between posts.
+  const generalPool = ['#AI', '#Claude', '#LLM', '#AITools', '#AIAgents', '#OpenSource', '#Anthropic'];
+  const shuffledGeneral = [...generalPool].sort(() => Math.random() - 0.5);
+  for (const tag of shuffledGeneral) {
+    if (tags.size >= 4) break;
+    tags.add(tag);
+  }
+
+  // Randomize final tag order for extra anti-duplicate variation.
+  return [...tags].sort(() => Math.random() - 0.5).join(' ');
 }
 
 // Install-command clause ("npx -y ...", "Install: pip install ...") that reads as

@@ -14,6 +14,11 @@ const NEW_WINDOW_DAYS = 14;
 // everything else fills the remainder — each tier still rotates internally.
 const FEATURED_SHARE = 0.6;
 const NEW_SHARE = 0.25;
+// Never repost the same listing inside this window. Without it, a small high-priority
+// tier (e.g. a single paid listing that wins the ~60% featured roll) sits at the top
+// of the rotation every run and gets tweeted over and over. Configurable via env so it
+// can be pushed out to effectively "never repeat" if desired.
+const REPOST_COOLDOWN_DAYS = Number(process.env.TWEET_REPOST_COOLDOWN_DAYS) || 365;
 
 export async function POST(req: Request) {
   try {
@@ -41,6 +46,7 @@ export async function POST(req: Request) {
         if (activeServers.length > 0) {
           const now = new Date();
           const newCutoff = new Date(now.getTime() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+          const cooldownCutoff = new Date(now.getTime() - REPOST_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
 
           type Row = (typeof activeServers)[number];
           const isFeatured = (s: Row) =>
@@ -62,15 +68,28 @@ export async function POST(req: Request) {
             return ta - tb;
           };
 
-          const featuredPool = activeServers.filter(isFeatured).sort(leastRecentlyTweeted);
-          const newPool = activeServers.filter(isNewServer).sort(leastRecentlyTweeted);
-          const restPool = activeServers
+          // A listing is eligible only if it has never been tweeted, or was last
+          // tweeted before the cooldown window — this is the guard that stops the
+          // same server (especially a lone paid listing) from being reposted.
+          const isEligible = (s: Row) =>
+            !s.lastTweetedAt || new Date(s.lastTweetedAt) <= cooldownCutoff;
+
+          // Full tiers (for the relaxed fallback below), least-recently-tweeted first.
+          const featuredAll = activeServers.filter(isFeatured).sort(leastRecentlyTweeted);
+          const newAll = activeServers.filter(isNewServer).sort(leastRecentlyTweeted);
+          const restAll = activeServers
             .filter((s) => !isFeatured(s) && !isNewServer(s))
             .sort(leastRecentlyTweeted);
 
-          // Priority with weighted rotation: featured get the spotlight most often,
-          // new servers next, everything else fills in — but each tier still cycles
-          // least-recently-posted first, so nothing repeats until its tier is exhausted.
+          // Same tiers, but only listings outside the repost cooldown.
+          const featuredPool = featuredAll.filter(isEligible);
+          const newPool = newAll.filter(isEligible);
+          const restPool = restAll.filter(isEligible);
+
+          // Priority with weighted rotation over *eligible* listings: featured/paid get
+          // the spotlight most often, new servers next, everything else fills in — each
+          // tier cycles least-recently-posted first, and the cooldown filter guarantees
+          // nothing repeats until it ages out of the window.
           const roll = Math.random();
           let pool: Row[];
           if (featuredPool.length && roll < FEATURED_SHARE) {
@@ -79,10 +98,15 @@ export async function POST(req: Request) {
             pool = newPool;
           } else if (restPool.length) {
             pool = restPool;
+          } else if (featuredPool.length) {
+            pool = featuredPool;
           } else if (newPool.length) {
             pool = newPool;
           } else {
-            pool = featuredPool;
+            // Every listing has been tweeted within the cooldown window. Rather than
+            // stay silent, relax the cooldown and repost the one tweeted longest ago,
+            // still giving featured/paid listings priority.
+            pool = featuredAll.length ? featuredAll : newAll.length ? newAll : restAll;
           }
 
           const item = pool[0];
