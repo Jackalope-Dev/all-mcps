@@ -87,11 +87,15 @@ export async function POST(req: Request) {
           const restPool = restAll.filter(isEligible);
 
           // Priority with weighted rotation over *eligible* listings: featured/paid get
-          // the spotlight most often, new servers next, everything else fills in — each
-          // tier cycles least-recently-posted first, and the cooldown filter guarantees
-          // nothing repeats until it ages out of the window.
+          // the spotlight most often, new servers next, everything else fills in. Within
+          // the chosen tier we pick at random for variety, and the cooldown filter
+          // guarantees nothing repeats until it ages out of the window.
           const roll = Math.random();
           let pool: Row[];
+          // True while we're drawing from the cooldown-filtered eligible pools (pick at
+          // random); false only in the relaxed fallback below (every listing is inside
+          // the cooldown, so take the one tweeted longest ago instead).
+          let eligible = true;
           if (featuredPool.length && roll < FEATURED_SHARE) {
             pool = featuredPool;
           } else if (newPool.length && roll < FEATURED_SHARE + NEW_SHARE) {
@@ -107,9 +111,13 @@ export async function POST(req: Request) {
             // stay silent, relax the cooldown and repost the one tweeted longest ago,
             // still giving featured/paid listings priority.
             pool = featuredAll.length ? featuredAll : newAll.length ? newAll : restAll;
+            eligible = false;
           }
 
-          const item = pool[0];
+          // Random pick among eligible listings gives real variety between posts; the
+          // cooldown filter already guarantees none of them repeat. In the relaxed
+          // fallback we deterministically take the least-recently-tweeted (pool[0]).
+          const item = eligible ? pool[Math.floor(Math.random() * pool.length)] : pool[0];
           const featuredFlag = isFeatured(item);
 
           selectedServer = {
