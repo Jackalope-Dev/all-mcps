@@ -19,10 +19,12 @@ type CronJob = {
   path: string;
   /**
    * Name of the Worker secret whose value authorizes this route as
-   * `Authorization: Bearer <secret>`. These are runtime secrets, not part of
-   * the generated `CloudflareEnv` type, so we read them dynamically.
+   * `Authorization: Bearer <secret>`. This is a runtime secret, not part of
+   * the generated `CloudflareEnv` type, so we read it dynamically. All routes
+   * accept `ADMIN_SECRET` (the highlight route also accepts an optional
+   * `CRON_SECRET`, but ADMIN_SECRET works everywhere, so we only need one).
    */
-  secretVar: "CRON_SECRET" | "ADMIN_SECRET";
+  secretVar: "ADMIN_SECRET";
   /**
    * Optional gate. The cron fires every 4 hours; jobs without a gate run on
    * every tick. Jobs with a gate only run on ticks where it returns true.
@@ -34,7 +36,7 @@ const CRON_JOBS: CronJob[] = [
   // Rechecks listing health, badges, stars and npm downloads. Fine every 4h.
   { path: "/api/cron/health", secretVar: "ADMIN_SECRET" },
   // Rotates the X/Twitter highlight. Fine every 4h (~6 posts/day).
-  { path: "/api/cron/highlight", secretVar: "CRON_SECRET" },
+  { path: "/api/cron/highlight", secretVar: "ADMIN_SECRET" },
   // "This week on AllMCPs" digest — weekly, not every 4h, or it would send a
   // campaign on every tick. Runs on the Monday 12:00 UTC tick only.
   {
