@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { getAllPosts, getPostBySlug } from '../../../lib/blog';
 import { extractToc, withHeadingAnchors } from '../../../lib/blogToc';
@@ -23,7 +24,8 @@ export async function generateMetadata({
   const post = getPostBySlug(slug);
 
   if (!post) {
-    return { title: 'Not Found' };
+    // Missing post → noindex here and a real 404 from the component (avoids a soft 404).
+    return { title: 'Not Found', robots: { index: false, follow: false } };
   }
 
   const url = `https://allmcps.com/blog/${post.slug}`;
@@ -70,23 +72,8 @@ export default async function BlogPostPage({
   const post = getPostBySlug(slug);
 
   if (!post) {
-    return (
-      <main className="page-shell page-shell--status">
-        <div className="page-shell-inner">
-          <div className="surface page-panel">
-            <div className="empty-state">
-              <h1 className="empty-state-title">Post Not Found</h1>
-              <p className="empty-state-body">This blog post may have been moved or the URL is incorrect.</p>
-              <div className="empty-state-actions">
-                <Link href="/blog" className="btn btn-primary">
-                  ← Back to Blog
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
+    // Real HTTP 404 (via app/not-found.tsx) rather than a 200 "not found" body.
+    notFound();
   }
 
   const url = `https://allmcps.com/blog/${post.slug}`;

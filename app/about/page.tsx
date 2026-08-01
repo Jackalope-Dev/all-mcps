@@ -23,9 +23,43 @@ export const metadata: Metadata = {
   },
 };
 
+const SITE = 'https://allmcps.com';
+const aboutJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'AboutPage',
+      name: 'About AllMCPs',
+      description:
+        'AllMCPs is an open directory for discovering, evaluating, and installing Model Context Protocol (MCP) servers for AI agents and LLMs.',
+      url: `${SITE}/about`,
+      isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: SITE },
+      about: {
+        '@type': 'Organization',
+        name: 'AllMCPs',
+        url: SITE,
+        logo: `${SITE}/logo-icon.svg`,
+        parentOrganization: {
+          '@type': 'Organization',
+          name: 'Jackalope Digital',
+          url: 'https://jackalope.digital',
+        },
+      },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
+        { '@type': 'ListItem', position: 2, name: 'About', item: `${SITE}/about` },
+      ],
+    },
+  ],
+};
+
 export default function AboutPage() {
   return (
     <PageShell variant="content" panel className="animate-fade-in">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }} />
       <PageHeader
         title={
           <>

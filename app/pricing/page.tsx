@@ -31,7 +31,53 @@ export default async function PricingPage({
   const serverId = typeof params.serverId === 'string' ? params.serverId : '';
   const canceled = params.canceled === '1';
 
+  const SITE = 'https://allmcps.com';
+  // Offers built from the same source of truth the cards render, so structured data
+  // never drifts from the displayed prices. unitAmount is in cents.
+  const offers = [FREE_TIER, ...Object.values(PAID_PRODUCTS)].map((p) => ({
+    '@type': 'Offer',
+    name: p.name,
+    description: p.tagline,
+    price: (p.unitAmount / 100).toFixed(2),
+    priceCurrency: 'USD',
+    availability: 'https://schema.org/InStock',
+    url: `${SITE}/pricing`,
+    ...(p.interval === 'month'
+      ? {
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: (p.unitAmount / 100).toFixed(2),
+            priceCurrency: 'USD',
+            unitCode: 'MON',
+          },
+        }
+      : {}),
+  }));
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Product',
+        name: 'AllMCPs Directory Listing',
+        description:
+          'List a Model Context Protocol server on AllMCPs for free, or promote it with priority review, a featured boost, or ongoing Premium placement.',
+        brand: { '@type': 'Brand', name: 'AllMCPs' },
+        url: `${SITE}/pricing`,
+        offers,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
+          { '@type': 'ListItem', position: 2, name: 'Pricing', item: `${SITE}/pricing` },
+        ],
+      },
+    ],
+  };
+
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
     <main className="container page-shell" style={{ maxWidth: '960px', paddingTop: 'var(--space-10)', paddingBottom: 'var(--space-16)' }}>
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
         <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>Pricing</h1>
@@ -161,5 +207,6 @@ export default async function PricingPage({
         .
       </p>
     </main>
+    </>
   );
 }
