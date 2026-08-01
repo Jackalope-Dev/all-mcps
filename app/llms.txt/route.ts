@@ -75,6 +75,7 @@ export async function GET(request: Request) {
   content += `- MCP Setup Guide (HowTo): https://allmcps.com/guide\n`;
   content += `- What is MCP: https://allmcps.com/what-is-mcp\n`;
   content += `- How to Build an MCP Server: https://allmcps.com/build-mcp-server\n`;
+  content += `- MCP Security Best Practices: https://allmcps.com/mcp-security\n`;
   content += `- Pricing & Boosting: https://allmcps.com/pricing\n`;
   content += `- Free Tools (OpenAPI-to-MCP, Protocol Inspector, Config Generator, Config Validator, Token Calculator): https://allmcps.com/tools\n`;
   content += `- Structured Catalog Dataset (JSON): https://allmcps.com/data.json\n`;

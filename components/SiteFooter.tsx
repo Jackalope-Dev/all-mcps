@@ -68,6 +68,11 @@ export function SiteFooter() {
                 Build an MCP Server
               </Link>
             </li>
+            <li>
+              <Link href="/mcp-security" className="nav-link">
+                MCP Security
+              </Link>
+            </li>
           </ul>
         </div>
         <div>

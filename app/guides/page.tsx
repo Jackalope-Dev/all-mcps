@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen, Terminal, Cpu, ArrowRight, Sparkles, CheckCircle2, Layers } from 'lucide-react';
+import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 export const metadata: Metadata = {
@@ -77,6 +77,24 @@ const guidesList = [
       'Implementing tools, resources & prompts',
       'Testing with MCP Inspector',
       'Deploying to Cloudflare & publishing',
+    ],
+  },
+  {
+    slug: 'mcp-security',
+    href: '/mcp-security',
+    title: 'MCP Security Best Practices',
+    subtitle: 'Security & Hardening',
+    description:
+      'Use MCP servers safely: the threat model, prompt injection & tool poisoning, vetting servers, least-privilege credentials, sandboxing, and a pre-install checklist.',
+    level: 'Security',
+    readTime: '10 min read',
+    icon: ShieldCheck,
+    badgeVariant: 'verified' as const,
+    highlights: [
+      'The MCP threat model, plainly explained',
+      'Prompt injection & tool poisoning defenses',
+      'Least-privilege credentials & sandboxing',
+      'A pre-install security checklist',
     ],
   },
 ];
