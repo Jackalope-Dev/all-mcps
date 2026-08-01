@@ -174,6 +174,17 @@ export function BadgeEmbedBuilder({
         </div>
       </div>
 
+      {/* Reciprocal Dofollow Callout */}
+      <div className="badge-embed-callout">
+        <ShieldCheck size={16} style={{ color: '#00E5FF', flexShrink: 0, marginTop: '0.125rem' }} />
+        <div className="badge-embed-callout-text">
+          <span style={{ fontWeight: 600 }}>Reciprocal dofollow link</span>: These snippets are a genuine{' '}
+          <strong>dofollow</strong> link back to AllMCPs (no <code>rel=&quot;nofollow&quot;</code>). Keep them
+          dofollow on your site and your listing&apos;s website link becomes dofollow too — we recheck the badge on
+          each health run and only credit links that actually pass ranking signal.
+        </div>
+      </div>
+
       {/* Code Snippet Outputs */}
       <div className="badge-embed-snippets">
         {/* Markdown Snippet */}

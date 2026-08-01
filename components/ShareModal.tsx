@@ -119,7 +119,7 @@ export default function ShareModal({
 
         <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white', paddingRight: '3rem' }}>Share & Embed</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.875rem' }}>
-          Add these to your website or GitHub README to get a high-quality backlink and drive traffic to your tool.
+          Add these to your website or GitHub README to get a high-quality, dofollow backlink and drive traffic to your tool. Keep the badge dofollow on your site and we make your listing&apos;s website link dofollow in return.
         </p>
 
         {/* Badge Section */}
