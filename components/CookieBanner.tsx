@@ -6,6 +6,32 @@ import Link from 'next/link';
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
+    posthog?: {
+      capture?: (event: string, properties?: Record<string, any>) => void;
+      opt_in_capturing?: () => void;
+      opt_out_capturing?: () => void;
+      [key: string]: any;
+    };
+  }
+}
+
+/** Grant analytics consent to both Google Analytics and PostHog. */
+function grantAnalyticsConsent() {
+  if (typeof window.gtag === 'function') {
+    window.gtag('consent', 'update', { analytics_storage: 'granted' });
+  }
+  if (window.posthog && typeof window.posthog.opt_in_capturing === 'function') {
+    window.posthog.opt_in_capturing();
+  }
+}
+
+/** Withdraw analytics consent from both Google Analytics and PostHog. */
+function denyAnalyticsConsent() {
+  if (typeof window.gtag === 'function') {
+    window.gtag('consent', 'update', { analytics_storage: 'denied' });
+  }
+  if (window.posthog && typeof window.posthog.opt_out_capturing === 'function') {
+    window.posthog.opt_out_capturing();
   }
 }
 
@@ -65,16 +91,12 @@ export function CookieBanner({ country }: { country?: string }) {
     const savedConsent = getStoredConsent();
 
     if (savedConsent === 'granted') {
-      if (typeof window.gtag === 'function') {
-        window.gtag('consent', 'update', { analytics_storage: 'granted' });
-      }
+      grantAnalyticsConsent();
       return;
     }
 
     if (savedConsent === 'denied') {
-      if (typeof window.gtag === 'function') {
-        window.gtag('consent', 'update', { analytics_storage: 'denied' });
-      }
+      denyAnalyticsConsent();
       return;
     }
 
@@ -87,25 +109,19 @@ export function CookieBanner({ country }: { country?: string }) {
     } else {
       // Non-EU users default to granted
       setStoredConsent('granted');
-      if (typeof window.gtag === 'function') {
-        window.gtag('consent', 'update', { analytics_storage: 'granted' });
-      }
+      grantAnalyticsConsent();
     }
   }, [country]);
 
   const handleAccept = () => {
     setStoredConsent('granted');
-    if (typeof window.gtag === 'function') {
-      window.gtag('consent', 'update', { analytics_storage: 'granted' });
-    }
+    grantAnalyticsConsent();
     setShowBanner(false);
   };
 
   const handleDecline = () => {
     setStoredConsent('denied');
-    if (typeof window.gtag === 'function') {
-      window.gtag('consent', 'update', { analytics_storage: 'denied' });
-    }
+    denyAnalyticsConsent();
     setShowBanner(false);
   };
 

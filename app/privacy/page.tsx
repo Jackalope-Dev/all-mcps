@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       <div className="page-shell-inner">
       <div className="surface page-panel">
         <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Privacy Policy</h1>
-        <p className="text-meta" style={{ marginBottom: '2rem' }}>Effective date: July 28, 2026</p>
+        <p className="text-meta" style={{ marginBottom: '2rem' }}>Effective date: August 1, 2026</p>
 
         <div className="markdown-body">
           <p>
@@ -66,6 +66,20 @@ export default function PrivacyPage() {
           <p>
             We use Google Analytics to collect aggregate, anonymous statistics about site usage, traffic sources, and performance (such as page views and popular directory listings). This helps us understand how visitors interact with AllMCPs so we can improve the Service. Google Analytics processes data such as truncated IP addresses, browser type, device details, and pages visited.
           </p>
+          <p>
+            We also use PostHog, a product-analytics tool, to understand how visitors move
+            through the Service &mdash; for example, which pages and listings are viewed, how
+            searches are used, and how features such as newsletter signup and listing submission
+            perform. PostHog processes data such as IP address (used to derive approximate,
+            city-level location and then discarded), browser and device details, pages visited,
+            and interaction events. We configure PostHog to create identifiable profiles only for
+            signed-in users. Analytics collection through PostHog is subject to the same consent
+            controls described in the &ldquo;Cookies&rdquo; section below. For more information,
+            see{' '}
+            <a href="https://posthog.com/privacy" target="_blank" rel="noopener noreferrer">
+              PostHog&rsquo;s Privacy Policy
+            </a>.
+          </p>
 
           <h3>Aggregate usage metrics</h3>
           <p>
@@ -96,6 +110,7 @@ export default function PrivacyPage() {
           <ul>
             <li><strong>Cloudflare</strong> &mdash; hosting, content delivery, DDoS and bot protection (Turnstile), and access control for our internal admin tools.</li>
             <li><strong>Google Analytics (Google LLC)</strong> &mdash; site usage analytics and performance measurement. Google Analytics uses cookies to collect aggregate visitor statistics; for more information, see <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google&rsquo;s Privacy Policy</a>.</li>
+            <li><strong>PostHog (PostHog, Inc.)</strong> &mdash; product analytics that help us understand how visitors use the Service so we can improve it. PostHog uses cookies and similar local storage to measure usage and interaction events; for more information, see <a href="https://posthog.com/privacy" target="_blank" rel="noopener noreferrer">PostHog&rsquo;s Privacy Policy</a>.</li>
             <li><strong>Resend</strong> &mdash; delivery of emails sent through our contact form.</li>
             <li><strong>GitHub</strong> &mdash; when a submitted URL points to a GitHub repository, our server queries GitHub&rsquo;s public API to auto-fill listing details (such as the repository&rsquo;s name and description). No personal information about you is sent to GitHub as part of this lookup.</li>
           </ul>
@@ -106,7 +121,7 @@ export default function PrivacyPage() {
 
           <h2>4. Cookies</h2>
           <p>
-            We use analytics cookies (such as Google Analytics cookies) to measure site traffic, page usage, and performance. For visitors located in the European Union (EU), European Economic Area (EEA), and the United Kingdom (UK), we display a consent banner allowing you to accept or decline analytics cookies. Non-essential analytics cookies are only enabled for EU/EEA/UK visitors after explicit consent is granted. You can also control or block cookies at any time through your web browser settings.
+            We use analytics cookies (such as Google Analytics and PostHog cookies) to measure site traffic, page usage, and performance. For visitors located in the European Union (EU), European Economic Area (EEA), and the United Kingdom (UK), we display a consent banner allowing you to accept or decline analytics cookies. Non-essential analytics cookies &mdash; including both Google Analytics and PostHog &mdash; are only enabled for EU/EEA/UK visitors after explicit consent is granted. You can also control or block cookies at any time through your web browser settings.
           </p>
           <p>
             Our internal admin dashboard, which is restricted to Jackalope Digital personnel via Cloudflare Access, uses an authentication cookie to keep that login session active; this cookie is not set for ordinary visitors browsing the directory.

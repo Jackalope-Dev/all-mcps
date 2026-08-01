@@ -3,15 +3,40 @@ import { PAID_PRODUCTS, PaidSku } from './pricing';
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
+    posthog?: {
+      capture?: (event: string, properties?: Record<string, any>) => void;
+      opt_in_capturing?: () => void;
+      opt_out_capturing?: () => void;
+      [key: string]: any;
+    };
   }
 }
 
 /**
- * Generic helper to send a Google Analytics event safely if gtag is loaded.
+ * GA-standard event names that we always fire alongside a more descriptive
+ * custom event (e.g. `generate_lead` + `mcp_submission`). We forward only the
+ * descriptive twin to PostHog to keep its event taxonomy clean and unambiguous.
+ */
+const POSTHOG_SKIP_EVENTS = new Set(['generate_lead', 'select_content', 'click']);
+
+/**
+ * Generic helper to send an analytics event safely to both Google Analytics
+ * and PostHog when they're loaded. PostHog respects its own opt-in/opt-out
+ * consent state, so this is a no-op there until consent is granted.
  */
 export function trackEvent(eventName: string, params?: Record<string, any>) {
-  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+  if (typeof window === 'undefined') return;
+
+  if (typeof window.gtag === 'function') {
     window.gtag('event', eventName, params);
+  }
+
+  if (
+    !POSTHOG_SKIP_EVENTS.has(eventName) &&
+    window.posthog &&
+    typeof window.posthog.capture === 'function'
+  ) {
+    window.posthog.capture(eventName, params);
   }
 }
 
