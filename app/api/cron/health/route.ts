@@ -100,9 +100,10 @@ export async function POST(req: Request) {
                 isVerifiedActive = true;
                 healthStatus = 'healthy';
 
-                // Reciprocal badge recheck (viral loop) — a generic AllMCPs
-                // badge/link in the README earns reciprocal-dofollow eligibility
-                // only. It must NOT toggle `isOfficial`: the badge markdown is
+                // Reciprocal badge recheck (viral loop) — a genuine AllMCPs
+                // badge/link (dofollow, validated by websiteHasReciprocalBadge)
+                // earns reciprocal-dofollow eligibility only. It must NOT toggle
+                // `isOfficial`: the badge markdown is
                 // public (the badge generator, submit form, and embed builder all
                 // hand it out for any listing), so its mere presence proves nothing
                 // about who controls the repo. Ownership is established solely
@@ -157,7 +158,8 @@ export async function POST(req: Request) {
 
       // Reciprocal badge recheck for a separate marketing website (non-premium
       // only — premium is already dofollow — and only a site whose control was
-      // already proven, not an arbitrary stored URL).
+      // already proven, not an arbitrary stored URL). The check requires the
+      // badge to link back to us dofollow; a nofollow'd or unlinked badge fails.
       if (!server.isPremium && server.websiteUrl && server.websiteVerified && isSafeFetchTarget(server.websiteUrl)) {
         try {
           const siteRes = await fetch(server.websiteUrl, {

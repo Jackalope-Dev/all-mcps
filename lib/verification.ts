@@ -15,19 +15,66 @@ export function readmeContainsClaimBadge(readmeText: string, serverId: string, u
   return hasListingLink && hasUserToken;
 }
 
+/** rel tokens that strip a link of ranking value (no PageRank/DR flows through). */
+const NOFOLLOW_REL_TOKENS = ['nofollow', 'ugc', 'sponsored'];
+
 /**
- * True only if the page contains an actual visible AllMCPs badge/link (not just
- * the hidden meta tag) — used for reciprocal-dofollow eligibility, which requires
- * a real backlink, not a hidden verification marker. Not used for claim proof
- * (see verifyWebsiteHtml) since a generic, unpersonalized badge/link can't tell
- * which account should get credited with ownership.
+ * A rel attribute earns dofollow credit only when it carries none of the
+ * link-equity-killing tokens (nofollow / ugc / sponsored). An empty/absent rel
+ * is dofollow by default.
+ */
+export function relIsDofollow(relValue: string): boolean {
+  const tokens = relValue.toLowerCase().split(/\s+/).filter(Boolean);
+  return !tokens.some((t) => NOFOLLOW_REL_TOKENS.includes(t));
+}
+
+/**
+ * True only if the page carries a real, *dofollow* AllMCPs backlink (not just
+ * the hidden meta tag, and not a nofollow'd badge) — used for reciprocal-dofollow
+ * eligibility. The whole point of the reciprocal loop is DR: we only hand a free
+ * dofollow website link back to sites that actually pass ranking signal to us, so
+ * a badge wrapped in rel="nofollow" (or ugc/sponsored), or an unlinked badge
+ * image, earns nothing.
+ *
+ * Rules:
+ * - HTML (any `<a>` tags present): at least one anchor must point at our listing
+ *   or badge AND be dofollow. A linking anchor that's all nofollow, or a bare
+ *   `<img>` badge with no wrapping link, fails.
+ * - Plain Markdown/text (no `<a>` tags — e.g. a raw GitHub README badge): rel
+ *   can't be expressed, so the presence of our listing/badge URL is enough.
+ *
+ * Not used for claim proof (see verifyWebsiteHtml) since a generic,
+ * unpersonalized badge/link can't tell which account should get credited.
  */
 export function websiteHasReciprocalBadge(html: string, serverId: string): boolean {
+  const id = serverId.toLowerCase();
   const lower = html.toLowerCase();
-  return (
-    lower.includes(`allmcps.com/mcp/${serverId.toLowerCase()}`) ||
-    lower.includes(`allmcps.com/api/badge/${serverId.toLowerCase()}`)
-  );
+  const listingPath = `allmcps.com/mcp/${id}`;
+  const badgePath = `allmcps.com/api/badge/${id}`;
+
+  // Must reference our listing or badge somewhere at all.
+  if (!lower.includes(listingPath) && !lower.includes(badgePath)) {
+    return false;
+  }
+
+  const anchors = [...lower.matchAll(/<a\b[^>]*>/gi)];
+
+  // No anchor tags → plain Markdown/text (raw README). rel isn't expressible
+  // there, so a rendered link is dofollow by construction — but a lone badge
+  // *image* URL isn't a link, so require the listing URL itself to be present
+  // (a Markdown badge always wraps the image in a link to the listing).
+  if (anchors.length === 0) {
+    return lower.includes(listingPath);
+  }
+
+  // HTML context → demand a genuine dofollow backlink to our listing/badge.
+  for (const [tag] of anchors) {
+    const href = tag.match(/href\s*=\s*["']([^"']*)["']/)?.[1] ?? '';
+    if (!href.includes(listingPath) && !href.includes(badgePath)) continue;
+    const rel = tag.match(/rel\s*=\s*["']([^"']*)["']/)?.[1] ?? '';
+    if (relIsDofollow(rel)) return true;
+  }
+  return false;
 }
 
 /**

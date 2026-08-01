@@ -704,6 +704,11 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             <button type="button" className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => copyText(badgeHtml, 'HTML badge')}>
               Copy HTML
             </button>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.5 }}>
+              This badge links back to AllMCPs <strong>dofollow</strong> — keep it that way (don&apos;t add{' '}
+              <code>rel=&quot;nofollow&quot;</code>) and your listing&apos;s website link becomes dofollow in return. We
+              re-verify the badge is a live dofollow link on each health check.
+            </p>
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
