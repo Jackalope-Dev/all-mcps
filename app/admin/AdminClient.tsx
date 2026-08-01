@@ -23,16 +23,29 @@ type Server = {
   pendingLogoKey?: string | null;
 };
 
+type RecentServer = {
+  id: string;
+  name: string;
+  category?: string;
+  url: string;
+  websiteUrl?: string | null;
+  isPremium?: boolean;
+  isOfficial?: boolean;
+  createdAt: string;
+};
+
 export default function AdminClient({
   initialPending,
   initialPendingEdits = [],
   initialPendingClaims = [],
   initialPendingLogos = [],
+  recentlyAdded = [],
 }: {
   initialPending: Server[];
   initialPendingEdits?: Server[];
   initialPendingClaims?: Server[];
   initialPendingLogos?: Server[];
+  recentlyAdded?: RecentServer[];
 }) {
   const [pending, setPending] = useState<Server[]>(initialPending);
   const [pendingEdits, setPendingEdits] = useState<Server[]>(initialPendingEdits);
@@ -92,6 +105,15 @@ export default function AdminClient({
           loadingId={loadingId}
           onAction={(id, action) => handleAction(id, action)}
         />
+      </section>
+
+      <section>
+        <h2 className="admin-section-title">Recently added</h2>
+        <p className="admin-section-desc">
+          The most recently added live listings, newest first — a quick way to find something you
+          just approved. Ordered by when each listing went live.
+        </p>
+        <RecentlyAddedTable servers={recentlyAdded} />
       </section>
 
       <section>
@@ -227,6 +249,86 @@ function ServerTable({
                       Reject
                     </button>
                   </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RecentlyAddedTable({ servers }: { servers: RecentServer[] }) {
+  return (
+    <div className="admin-card">
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Links</th>
+            <th>Added</th>
+          </tr>
+        </thead>
+        <tbody>
+          {servers.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="admin-table-empty">
+                No live listings yet.
+              </td>
+            </tr>
+          ) : (
+            servers.map((server) => (
+              <tr key={server.id}>
+                <td data-label="Name">
+                  <strong>{server.name}</strong>
+                  {server.isPremium && (
+                    <span className="admin-badge" style={{ color: '#00E5FF' }}>
+                      PREMIUM
+                    </span>
+                  )}
+                  {server.isOfficial && (
+                    <span className="admin-badge" style={{ color: '#10b981' }}>
+                      OFFICIAL
+                    </span>
+                  )}
+                </td>
+                <td data-label="Category" style={{ color: 'var(--text-secondary)' }}>
+                  {server.category || '—'}
+                </td>
+                <td data-label="Links">
+                  <div className="admin-links-cell">
+                    <a
+                      href={`/mcp/${server.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
+                    >
+                      Listing
+                    </a>
+                    <a
+                      href={server.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
+                    >
+                      Repo
+                    </a>
+                    {server.websiteUrl && (
+                      <a
+                        href={server.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
+                      >
+                        Website
+                      </a>
+                    )}
+                  </div>
+                </td>
+                <td data-label="Added" style={{ color: 'var(--text-secondary)' }}>
+                  {new Date(server.createdAt).toLocaleDateString()}
                 </td>
               </tr>
             ))

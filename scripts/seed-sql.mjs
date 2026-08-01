@@ -15,7 +15,11 @@ for (const server of data) {
   const cat = server.category.replace(/'/g, "''");
   const isOfficial = server.isOfficial ? 1 : 0;
   
-  sql += `INSERT INTO servers (id, name, url, description, category, is_official, status, created_at) VALUES ('${id}', '${name}', '${url}', '${desc}', '${cat}', ${isOfficial}, 'active', strftime('%s', 'now') * 1000) ON CONFLICT(id) DO NOTHING;\n`;
+  // created_at is stored in Unix *seconds* to match the schema's mode:'timestamp'
+  // and the Drizzle submit route (`createdAt: new Date()`). Do NOT multiply by 1000 —
+  // milliseconds here get read back as `new Date(value * 1000)` (year ~58000) and break
+  // date sorting (e.g. the homepage "Newest" filter).
+  sql += `INSERT INTO servers (id, name, url, description, category, is_official, status, created_at) VALUES ('${id}', '${name}', '${url}', '${desc}', '${cat}', ${isOfficial}, 'active', strftime('%s', 'now')) ON CONFLICT(id) DO NOTHING;\n`;
 }
 
 fs.writeFileSync(path.join(process.cwd(), 'drizzle', 'seed.sql'), sql);

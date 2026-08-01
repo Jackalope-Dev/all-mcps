@@ -55,8 +55,28 @@ async function getAdminData() {
         .from(servers)
         .where(isNotNull(servers.pendingLogoKey))
         .orderBy(desc(servers.createdAt));
+      // Most-recently-added live listings, so newly approved MCPs are easy to find again.
+      const recentlyAdded = await db
+        .select({
+          id: servers.id,
+          name: servers.name,
+          category: servers.category,
+          url: servers.url,
+          websiteUrl: servers.websiteUrl,
+          isPremium: servers.isPremium,
+          isOfficial: servers.isOfficial,
+          createdAt: servers.createdAt,
+        })
+        .from(servers)
+        .where(eq(servers.status, 'active'))
+        .orderBy(desc(servers.createdAt))
+        .limit(20);
 
       const map = (s: typeof pendingServers[0]) => ({
+        ...s,
+        createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
+      });
+      const mapRecent = (s: typeof recentlyAdded[0]) => ({
         ...s,
         createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
       });
@@ -66,13 +86,14 @@ async function getAdminData() {
         pendingEdits: pendingEdits.map(map),
         pendingClaims: pendingClaims.map(map),
         pendingLogos: pendingLogos.map(map),
+        recentlyAdded: recentlyAdded.map(mapRecent),
         stats: await getAdminStats(db),
       };
     }
   } catch (e) {
     // Fallback if not in edge context
   }
-  return { pending: [], pendingEdits: [], pendingClaims: [], pendingLogos: [], stats: EMPTY_STATS };
+  return { pending: [], pendingEdits: [], pendingClaims: [], pendingLogos: [], recentlyAdded: [], stats: EMPTY_STATS };
 }
 
 export default async function AdminPage() {
@@ -88,7 +109,7 @@ export default async function AdminPage() {
     );
   }
 
-  const { pending, pendingEdits, pendingClaims, pendingLogos, stats } = await getAdminData();
+  const { pending, pendingEdits, pendingClaims, pendingLogos, recentlyAdded, stats } = await getAdminData();
 
   return (
     <main className="container animate-fade-in" style={{ padding: '4rem 1rem' }}>
@@ -106,6 +127,7 @@ export default async function AdminPage() {
         initialPendingEdits={pendingEdits as any}
         initialPendingClaims={pendingClaims as any}
         initialPendingLogos={pendingLogos as any}
+        recentlyAdded={recentlyAdded as any}
       />
     </main>
   );
