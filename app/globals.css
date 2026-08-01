@@ -2488,7 +2488,10 @@ nav[aria-label="Table of contents"] {
   }
 
   /* Newsletter homepage: stack children */
-  .newsletter-homepage-section {
+  /* Use .container compound selector so this padding wins over the
+     mobile `.container { padding: 0 ... }` rule that appears later in
+     the source and would otherwise zero out top/bottom padding. */
+  .newsletter-homepage-section.container {
     flex-direction: column;
     padding: 1.25rem;
   }
