@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PAID_PRODUCTS, formatUsd } from '@/lib/pricing';
+import { PAID_PRODUCTS, FREE_TIER, formatUsd } from '@/lib/pricing';
 
 export async function GET() {
   const tiers = Object.values(PAID_PRODUCTS).map((p) => ({
@@ -18,6 +18,17 @@ export async function GET() {
       {
         currency: 'USD',
         provider: 'Stripe',
+        free_tier: {
+          sku: FREE_TIER.sku,
+          name: FREE_TIER.name,
+          tagline: FREE_TIER.tagline,
+          price_formatted: formatUsd(FREE_TIER.unitAmount),
+          amount_cents: FREE_TIER.unitAmount,
+          benefits: FREE_TIER.benefits,
+          submit_url: 'https://allmcps.com/submit',
+          submit_api: 'https://allmcps.com/api/submit',
+          note: 'Listing on AllMCPs is always free. Boosts below are optional upgrades.',
+        },
         agent_exclusive_promo: {
           code: 'AGENTREADY',
           discount_percent: 50,
