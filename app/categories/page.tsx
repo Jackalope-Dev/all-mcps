@@ -151,7 +151,8 @@ export default async function CategoriesPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
+      <main className="page-shell page-shell--default" style={{ paddingBottom: '4rem' }}>
+        <div className="page-shell-inner">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb">
           <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
@@ -192,6 +193,7 @@ export default async function CategoriesPage() {
 
         {/* Client-side search + grid */}
         <CategoryGrid categories={categories} />
+        </div>
       </main>
     </>
   );
