@@ -11,6 +11,7 @@ import { InstallButtons } from '../../../components/ui/InstallButtons';
 import { ViewTracker, InstallsStat } from '../../../components/ui/ViewTracker';
 import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import serversData from '../../../data/mcp-servers.json';
+import { notFound } from 'next/navigation';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
@@ -56,9 +57,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const server = await getServer(id);
   
   if (!server) {
-    return { title: 'Not Found' };
+    // A missing listing must not return a 200 "Not Found" body (soft 404) — mark it
+    // noindex here and serve a real 404 from the page component below.
+    return { title: 'Not Found', robots: { index: false, follow: false } };
   }
-  
+
   const desc =
     server.description.length > 155
       ? `${server.description.slice(0, 152)}...`
@@ -133,21 +136,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   const isOwner = session?.user?.id ? await checkIsOwner(id, session.user.id) : false;
 
   if (!server) {
-    return (
-      <main className="page-shell page-shell--status">
-        <div className="page-shell-inner">
-          <div className="surface page-panel">
-            <div className="empty-state">
-              <h1 className="empty-state-title">Server Not Found</h1>
-              <p className="empty-state-body">This MCP listing may have been removed or the URL is incorrect.</p>
-              <div className="empty-state-actions">
-                <Link href="/browse" className="btn btn-primary">← Back to Directory</Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
+    // Serve a genuine HTTP 404 (via app/not-found.tsx) instead of a 200 page with a
+    // "not found" body — the latter is a soft 404 that wastes crawl budget and can get
+    // an empty URL indexed.
+    notFound();
   }
 
   const readme = await fetchReadme(server.url);
@@ -192,6 +184,19 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'mcp-server';
+
+  // Human-readable repo host (e.g. "GitHub", "GitLab") for the no-README fallback copy.
+  const repoHost = (() => {
+    try {
+      const h = new URL(server.url).hostname.replace(/^www\./, '');
+      if (h.includes('github')) return 'GitHub';
+      if (h.includes('gitlab')) return 'GitLab';
+      if (h.includes('bitbucket')) return 'Bitbucket';
+      return h;
+    } catch {
+      return '';
+    }
+  })();
 
   const canonicalUrl = `https://allmcps.com/mcp/${server.id}`;
   // The route-generated OG card always exists for every listing, so it's a safe,
@@ -422,7 +427,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <SafeMarkdown content={server.description} utmContent={server.id} />
           </div>
 
-          <div className="surface" style={{ padding: '2rem', marginBottom: '3rem' }}>
+          <div id="quick-install" className="surface" style={{ padding: '2rem', marginBottom: '3rem', scrollMarginTop: '5rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Terminal size={20} /> Quick Install
             </h2>
@@ -475,7 +480,28 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 {readme ? (
                   <SafeMarkdown content={readme} utmContent={server.id} />
                 ) : (
-                  <p>No README found or this server is not hosted on GitHub.</p>
+                  <>
+                    <p>
+                      {displayName} is a {server.category} MCP server{org ? ` from ${org}` : ''} listed on
+                      AllMCPs. {server.description}
+                    </p>
+                    <p>
+                      We couldn&rsquo;t automatically pull a README for this listing
+                      {repoHost ? ` from ${repoHost}` : ''}, so the summary above comes from its listing
+                      details. To install it, use the one-click buttons or copy the config from the{' '}
+                      <a href="#quick-install">Quick Install</a> section above, then open the{' '}
+                      <OutboundLink
+                        href={server.url}
+                        destinationType="github"
+                        serverId={server.id}
+                        target="_blank"
+                        rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+                      >
+                        source repository
+                      </OutboundLink>{' '}
+                      for full setup instructions, configuration options, and the tools it exposes over MCP.
+                    </p>
+                  </>
                 )}
               </div>
             </div>
