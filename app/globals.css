@@ -1422,6 +1422,11 @@ p {
   padding: 1.25rem 1.5rem;
   cursor: pointer;
   color: inherit;
+  /* Grid items default to min-width: auto (min-content), which lets a long
+     label push the card wider than its track and overflow horizontally on
+     mobile. Pin to 0 so the card always fits its column and the label ellipsis
+     can kick in. */
+  min-width: 0;
   opacity: 0;
   animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
@@ -2439,7 +2444,9 @@ nav[aria-label="Table of contents"] {
 
 @media (max-width: 640px) {
   .categories-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0, 1fr) — not 1fr (= minmax(auto, 1fr)) — so the single column can
+       shrink below its content's min-content and never force horizontal scroll. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .directory-list-row {
