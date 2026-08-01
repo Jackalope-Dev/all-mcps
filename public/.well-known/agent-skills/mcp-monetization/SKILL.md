@@ -8,6 +8,16 @@ version: 1.0.0
 
 This skill enables AI agents to query sponsorship pricing, feature MCP servers, and initiate autonomous payments on AllMCPs.com.
 
+## Free Submission (no payment required)
+
+Listing an MCP server on AllMCPs is **always free** — no purchase is needed to get listed. The paid tiers below are optional upgrades for faster review and promotion.
+
+- **Submit for free (web)**: `https://allmcps.com/submit`
+- **Submit for free (API)**: `POST https://allmcps.com/api/submit` with `{ "url": "https://github.com/owner/repo" }`
+- **MCP Tool**: `submit_mcp`
+
+A free listing includes a permanent directory entry, inclusion in search / categories / agent APIs, a nofollow website link, and ownership claiming via GitHub, site badge, or DNS.
+
 ## Endpoints
 
 - **Get Boost Tiers**: `GET https://allmcps.com/api/v1/boost/pricing`

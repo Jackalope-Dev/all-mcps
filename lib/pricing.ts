@@ -18,6 +18,36 @@ export type PaidProduct = {
   benefits: string[];
 };
 
+/**
+ * The free submission tier. Not a Stripe product — kept separate from
+ * PAID_PRODUCTS so checkout/iteration logic never treats it as payable.
+ * Surfaced on the pricing page and agent guidance for comparison.
+ */
+export type FreeTier = {
+  sku: 'free_listing';
+  name: string;
+  tagline: string;
+  /** Display price in USD cents (always 0) */
+  unitAmount: 0;
+  interval: 'one_time';
+  benefits: string[];
+};
+
+export const FREE_TIER: FreeTier = {
+  sku: 'free_listing',
+  name: 'Free listing',
+  tagline: 'List your MCP at no cost',
+  unitAmount: 0,
+  interval: 'one_time',
+  benefits: [
+    'Permanent directory listing — free forever',
+    'Included in search, categories & agent APIs',
+    'Claim ownership via GitHub, site badge, or DNS',
+    'Nofollow website backlink',
+    'Standard review queue',
+  ],
+};
+
 export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
   priority_review: {
     sku: 'priority_review',

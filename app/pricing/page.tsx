@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { PricingClient } from './PricingClient';
-import { PAID_PRODUCTS, formatUsd } from '../../lib/pricing';
+import { PAID_PRODUCTS, FREE_TIER, formatUsd } from '../../lib/pricing';
 
 export const metadata: Metadata = {
   title: 'Pricing & Featured MCP Listings',
@@ -66,6 +66,41 @@ export default async function PricingPage({
           marginBottom: '2.5rem',
         }}
       >
+        <div
+          className="surface"
+          style={{ padding: '1.75rem', borderRadius: '16px' }}
+        >
+          <p
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'var(--accent-color)',
+              marginBottom: '0.5rem',
+            }}
+          >
+            Free
+          </p>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '0.25rem' }}>{FREE_TIER.name}</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>{FREE_TIER.tagline}</p>
+          <p style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1.25rem' }}>{formatUsd(FREE_TIER.unitAmount)}</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {FREE_TIER.benefits.map((b) => (
+              <li key={b} style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                <span style={{ color: 'var(--accent-color)', marginRight: '0.4rem' }}>✓</span>
+                {b}
+              </li>
+            ))}
+          </ul>
+          <Link
+            href="/submit"
+            className="btn btn-secondary"
+            style={{ display: 'inline-block', width: '100%', textAlign: 'center' }}
+          >
+            Submit for free
+          </Link>
+        </div>
         {(Object.keys(PAID_PRODUCTS) as Array<keyof typeof PAID_PRODUCTS>).map((sku) => {
           const p = PAID_PRODUCTS[sku];
           const price =
