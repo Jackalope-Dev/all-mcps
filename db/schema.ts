@@ -53,6 +53,16 @@ export const servers = sqliteTable('servers', {
   tools: text('tools'),
   /** Last time we attempted MCP tool introspection for this listing. */
   toolsCheckedAt: integer('tools_checked_at', { mode: 'timestamp' }),
+  /** stdio | remote — cached install transport from README/description parse. */
+  installKind: text('install_kind'),
+  /** Runner binary for stdio installs (npx, uvx, bunx, pip). */
+  installCommand: text('install_command'),
+  /** JSON string array of CLI args for stdio installs. */
+  installArgs: text('install_args'),
+  /** Package name or remote URL used in install configs. */
+  installPackage: text('install_package'),
+  /** high | medium | low — how trustworthy the cached install hint is. */
+  installConfidence: text('install_confidence'),
   views: integer('views').notNull().default(0),
   copies: integer('copies').notNull().default(0),
   upvotes: integer('upvotes').notNull().default(0),

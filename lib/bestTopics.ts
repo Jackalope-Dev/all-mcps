@@ -195,6 +195,62 @@ export const BEST_TOPICS: BestTopic[] = [
     ],
   },
   {
+    slug: 'research',
+    categorySlug: 'research',
+    title: 'Research',
+    lead: 'The best MCP servers for research workflows — literature search, paper analysis, citation tools, and knowledge synthesis for AI agents.',
+    faq: [
+      { q: 'What are the best MCP servers for research?', a: 'Research MCP servers cover academic search, paper PDFs, and knowledge graphs. This page ranks them by real usage across AllMCPs.' },
+      { q: 'Can an agent cite sources through MCP?', a: 'Yes — several research servers return structured metadata and links so agents can attribute claims. Always verify critical citations yourself.' },
+      { q: 'Do research MCP servers need API keys?', a: 'Some wrap paid academic APIs; others work against open indexes. Check each listing for required credentials.' },
+    ],
+  },
+  {
+    slug: 'data-platforms',
+    categorySlug: 'data-platforms',
+    title: 'Data Platforms',
+    lead: 'The best MCP servers for data platforms — warehouses, lakes, pipelines, and analytics backends that agents can query and orchestrate safely.',
+    faq: [
+      { q: 'What MCP servers work with data warehouses?', a: 'Servers for BigQuery, Snowflake, Databricks, and similar platforms are among the most installed. Rankings here reflect directory usage.' },
+      { q: 'Is write access common?', a: 'Many default to read-only analytics queries. Prefer least-privilege service accounts and review write modes carefully.' },
+      { q: 'How do I choose between warehouse MCP servers?', a: 'Match your platform first, then prefer verified, actively maintained listings with clear install docs on this ranking.' },
+    ],
+  },
+  {
+    slug: 'customer-data-platforms',
+    categorySlug: 'customer-data-platforms',
+    title: 'Customer Data Platforms',
+    lead: 'The best MCP servers for CDPs and customer data — profiles, segments, and event streams that marketing and product agents can use responsibly.',
+    faq: [
+      { q: 'What is the best MCP server for a CDP?', a: 'It depends on your stack (Segment, mParticle, etc.). This page ranks CDP-related MCP servers by usage on AllMCPs.' },
+      { q: 'Can agents update customer profiles?', a: 'Some servers allow writes — scope API keys tightly and keep PII policies in mind before enabling write tools.' },
+      { q: 'Do these integrate with marketing tools?', a: 'Often yes, via the CDP itself. MCP gives agents a single interface into profiles and events you already store.' },
+    ],
+  },
+  {
+    slug: 'legal',
+    categorySlug: 'legal',
+    title: 'Legal',
+    lead: 'The best MCP servers for legal workflows — document review, contract search, and research tools for AI agents with careful access controls.',
+    faq: [
+      { q: 'What are the best legal MCP servers?', a: 'Legal MCP servers focus on document retrieval, clause search, and matter context. Rankings reflect real directory engagement.' },
+      { q: 'Is it safe to put legal documents in an MCP server?', a: 'Use private, access-controlled deployments and never expose privileged materials to untrusted tools or models.' },
+      { q: 'Can agents draft contracts through MCP?', a: 'They can retrieve templates and context; final legal work still needs human review. Treat agent output as drafts only.' },
+    ],
+  },
+  {
+    slug: 'gaming',
+    categorySlug: 'gaming',
+    title: 'Gaming',
+    lead: 'The best MCP servers for gaming — game APIs, stats, mods, and tooling that agents use to build and automate game-related workflows.',
+    faq: [
+      { q: 'What MCP servers exist for gaming?', a: 'Servers range from game-stats APIs to engine tooling. This page ranks gaming MCP servers by usage on AllMCPs.' },
+      { q: 'Can an agent control a game client via MCP?', a: 'Some automation-oriented servers can, but platform ToS and anti-cheat rules apply — use only where allowed.' },
+      { q: 'Do gaming MCP servers need API keys?', a: 'Public stats APIs often need keys; local tooling may not. Check each listing.' },
+    ],
+  },
+
+  {
     slug: 'data-platforms',
     categorySlug: 'data-platforms',
     title: 'Data Platforms',

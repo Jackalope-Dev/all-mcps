@@ -3,9 +3,9 @@
 import React, { useMemo } from 'react';
 import { toast } from './Toast';
 import { trackCopyConfig } from '../../lib/gtag';
-import { resolveInstallConfig } from '../../lib/installConfig';
+import { resolveInstallConfig, type CachedInstallFields } from '../../lib/installConfig';
 
-interface InstallButtonsProps {
+interface InstallButtonsProps extends CachedInstallFields {
   serverId: string;
   serverName: string;
   url?: string;
@@ -21,6 +21,11 @@ export function InstallButtons({
   serverName,
   url,
   description,
+  installKind,
+  installCommand,
+  installArgs,
+  installPackage,
+  installConfidence,
 }: InstallButtonsProps) {
   const install = useMemo(
     () =>
@@ -29,8 +34,23 @@ export function InstallButtons({
         name: serverName,
         url: url || '',
         description,
+        installKind,
+        installCommand,
+        installArgs,
+        installPackage,
+        installConfidence,
       }),
-    [serverId, serverName, url, description]
+    [
+      serverId,
+      serverName,
+      url,
+      description,
+      installKind,
+      installCommand,
+      installArgs,
+      installPackage,
+      installConfidence,
+    ]
   );
 
   const cleanName = serverId || serverName.toLowerCase().replace(/[^a-z0-9]+/g, '-');

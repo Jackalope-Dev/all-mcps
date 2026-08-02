@@ -2,19 +2,23 @@ import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../../db/schema';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, desc } from 'drizzle-orm';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { isSafeFetchTarget } from '../../../../lib/urlSafety';
 import { websiteHasReciprocalBadge } from '../../../../lib/verification';
 import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
+import {
+  resolveInstallFromText,
+  resolveInstallConfig,
+  toCachedInstallFields,
+} from '../../../../lib/installConfig';
 
 /** Best-effort npm last-month downloads for a package name. Returns null if not on npm. */
 async function fetchNpmDownloads(pkg: string): Promise<number | null> {
   const name = pkg.trim();
-  // Skip obvious non-package names (paths, URLs, names with spaces).
   if (!name || /\s/.test(name) || name.includes('://')) return null;
   try {
-    const res = await fetch(`https://api.npmjs.org/downloads/point/last-month/${name}`, {
+    const res = await fetch(`https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(name)}`, {
       headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
       signal: AbortSignal.timeout(8000),
     });
@@ -26,43 +30,108 @@ async function fetchNpmDownloads(pkg: string): Promise<number | null> {
   }
 }
 
+async function fetchGithubReadme(owner: string, repo: string): Promise<string | null> {
+  for (const branch of ['main', 'master']) {
+    try {
+      const res = await fetch(
+        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`,
+        {
+          headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
+          signal: AbortSignal.timeout(10000),
+        }
+      );
+      if (res.ok) return await res.text();
+    } catch {
+      /* try next branch */
+    }
+  }
+  return null;
+}
+
 // Maximum servers to check per cron run (keeps us under rate limits)
 const BATCH_SIZE = 50;
+/** Prefer rechecking popular listings at least this often. */
+const POPULAR_STALE_MS = 3 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: Request) {
   try {
     if (!(await isAdminAuthorized(req))) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
     let env;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
-    } catch (e) {
-      throw new Error("Could not get Cloudflare context.");
+    } catch {
+      throw new Error('Could not get Cloudflare context.');
     }
 
     if (!env || !env.DB) {
-      throw new Error("Database binding not found");
+      throw new Error('Database binding not found');
     }
-    
+
     const db = drizzle(env.DB as any);
-    
-    // 1. Fetch the 50 oldest checked active servers (NULL lastCheckedAt comes first)
-    const batch = await db.select()
-      .from(servers)
-      .where(eq(servers.status, 'active'))
-      .orderBy(asc(servers.lastCheckedAt))
-      .limit(BATCH_SIZE);
-      
-    if (batch.length === 0) {
-      return NextResponse.json({ success: true, message: "No active servers to check." });
+
+    // Mix oldest-checked (coverage) with popular-stale (user-facing quality).
+    const half = Math.floor(BATCH_SIZE / 2);
+    const [oldest, popular] = await Promise.all([
+      db
+        .select()
+        .from(servers)
+        .where(eq(servers.status, 'active'))
+        .orderBy(asc(servers.lastCheckedAt))
+        .limit(half),
+      db
+        .select()
+        .from(servers)
+        .where(eq(servers.status, 'active'))
+        .orderBy(desc(servers.views), desc(servers.upvotes), desc(servers.copies))
+        .limit(half * 2),
+    ]);
+
+    const staleCutoff = Date.now() - POPULAR_STALE_MS;
+    const seen = new Set<string>();
+    const batch: typeof oldest = [];
+
+    // First: popular listings that are stale or never checked / missing stars
+    for (const s of popular) {
+      if (batch.length >= half) break;
+      const checked = s.lastCheckedAt ? new Date(s.lastCheckedAt as any).getTime() : 0;
+      const needs =
+        !checked ||
+        checked < staleCutoff ||
+        s.githubStars == null ||
+        !s.installKind;
+      if (!needs) continue;
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      batch.push(s);
     }
-    
+
+    // Fill remainder with oldest-checked for full-catalog coverage
+    for (const s of oldest) {
+      if (batch.length >= BATCH_SIZE) break;
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      batch.push(s);
+    }
+
+    // If still short, take more popular regardless of staleness
+    for (const s of popular) {
+      if (batch.length >= BATCH_SIZE) break;
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      batch.push(s);
+    }
+
+    if (batch.length === 0) {
+      return NextResponse.json({ success: true, message: 'No active servers to check.' });
+    }
+
     let processed = 0;
-    
-    // 2. Process sequentially to avoid bursting rate limits
+    let installHintsUpdated = 0;
+
     for (const server of batch) {
       const now = new Date();
       let isVerifiedActive = false;
@@ -72,25 +141,30 @@ export async function POST(req: Request) {
       let toolsJson: string | null = server.tools ?? null;
       let toolsCheckedAt: Date | null = server.toolsCheckedAt ?? null;
 
-      // npm downloads refresh runs regardless of transport (name is the package).
-      const npmDownloads = await fetchNpmDownloads(server.name);
+      // Prefer package name from cached install, else listing name
+      const npmName = server.installPackage || server.name;
+      const npmDownloads = await fetchNpmDownloads(npmName);
+
+      let readmeText: string | null = null;
 
       try {
         if (server.url.includes('github.com')) {
-          // GitHub Check
           const githubMatch = server.url.match(/github\.com\/([^/]+)\/([^/]+)/);
           if (githubMatch) {
             const owner = githubMatch[1];
             let repo = githubMatch[2];
             if (repo.endsWith('.git')) repo = repo.slice(0, -4);
-            
-            // Ping GitHub API
+
             const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-              headers: { 'User-Agent': 'AllMCPs-Health-Checker' }
+              headers: {
+                'User-Agent': 'AllMCPs-Health-Checker',
+                Accept: 'application/vnd.github+json',
+              },
+              signal: AbortSignal.timeout(10000),
             });
-            
+
             if (ghRes.ok) {
-              const ghData = await ghRes.json() as any;
+              const ghData = (await ghRes.json()) as any;
               if (typeof ghData.stargazers_count === 'number') {
                 githubStars = ghData.stargazers_count;
               }
@@ -99,49 +173,39 @@ export async function POST(req: Request) {
               } else {
                 isVerifiedActive = true;
                 healthStatus = 'healthy';
+              }
 
-                // Reciprocal badge recheck (viral loop) — a genuine AllMCPs
-                // badge/link (dofollow, validated by websiteHasReciprocalBadge)
-                // earns reciprocal-dofollow eligibility only. It must NOT toggle
-                // `isOfficial`: the badge markdown is
-                // public (the badge generator, submit form, and embed builder all
-                // hand it out for any listing), so its mere presence proves nothing
-                // about who controls the repo. Ownership is established solely
-                // through the personalized claim flow (/api/claim), which requires
-                // a per-user verification token — so we leave `isOfficial` untouched
-                // here in both directions.
-                const readmeRes = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`);
-                if (readmeRes.ok) {
-                  const text = await readmeRes.text();
-                  reciprocalBadgeOk = websiteHasReciprocalBadge(text, server.id);
-                }
+              readmeText = await fetchGithubReadme(owner, repo);
+              if (readmeText) {
+                reciprocalBadgeOk = websiteHasReciprocalBadge(readmeText, server.id);
               }
             } else if (ghRes.status === 404) {
-              healthStatus = 'offline'; // Repo deleted or made private
+              healthStatus = 'offline';
             }
           }
         } else if (!isSafeFetchTarget(server.url)) {
           healthStatus = 'offline';
         } else {
-          // Hosted Endpoint Check
-          const pingRes = await fetch(server.url, { method: 'HEAD' }).catch(() => null);
+          const pingRes = await fetch(server.url, {
+            method: 'HEAD',
+            signal: AbortSignal.timeout(8000),
+          }).catch(() => null);
           if (pingRes && pingRes.status < 500) {
             isVerifiedActive = true;
             healthStatus = 'healthy';
           } else {
-            // Try GET if HEAD fails
-            const getRes = await fetch(server.url, { method: 'GET' }).catch(() => null);
+            const getRes = await fetch(server.url, {
+              method: 'GET',
+              signal: AbortSignal.timeout(8000),
+            }).catch(() => null);
             if (getRes && getRes.status < 500) {
-               isVerifiedActive = true;
-               healthStatus = 'healthy';
+              isVerifiedActive = true;
+              healthStatus = 'healthy';
             } else {
-               healthStatus = 'offline';
+              healthStatus = 'offline';
             }
           }
 
-          // If the URL is a live MCP endpoint, capture its tool list so the
-          // listing can show real capabilities (best-effort; sparse by design —
-          // most listings are stdio repos with no callable endpoint).
           if (isVerifiedActive) {
             const introspection = await callMcpEndpoint(server.url, { method: 'tools/list' });
             toolsCheckedAt = now;
@@ -152,48 +216,90 @@ export async function POST(req: Request) {
             }
           }
         }
-      } catch (e) {
+      } catch {
         healthStatus = 'offline';
       }
 
-      // Reciprocal badge recheck for a separate marketing website (non-premium
-      // only — premium is already dofollow — and only a site whose control was
-      // already proven, not an arbitrary stored URL). The check requires the
-      // badge to link back to us dofollow; a nofollow'd or unlinked badge fails.
-      if (!server.isPremium && server.websiteUrl && server.websiteVerified && isSafeFetchTarget(server.websiteUrl)) {
+      if (
+        !server.isPremium &&
+        server.websiteUrl &&
+        server.websiteVerified &&
+        isSafeFetchTarget(server.websiteUrl)
+      ) {
         try {
           const siteRes = await fetch(server.websiteUrl, {
             method: 'GET',
             signal: AbortSignal.timeout(10000),
           });
-          reciprocalBadgeOk = siteRes.ok && websiteHasReciprocalBadge(await siteRes.text(), server.id);
+          reciprocalBadgeOk =
+            siteRes.ok && websiteHasReciprocalBadge(await siteRes.text(), server.id);
         } catch {
           reciprocalBadgeOk = false;
         }
       }
 
-      // Update the record in D1
-      // NOTE: `isOfficial` is intentionally not written here — ownership
-      // verification is owned solely by the personalized claim flow
-      // (/api/claim) and admin approval, never by this health/badge recheck.
-      await db.update(servers).set({
-        lastCheckedAt: now,
-        isVerifiedActive,
-        healthStatus,
-        reciprocalBadgeOk,
-        badgeLastCheckedAt: now,
-        githubStars,
-        npmDownloads,
-        tools: toolsJson,
-        toolsCheckedAt,
-      }).where(eq(servers.id, server.id));
-      
+      // Install hint: README first, then description, then deterministic resolve
+      let installFields: ReturnType<typeof toCachedInstallFields> | null = null;
+      const fromReadme = readmeText
+        ? resolveInstallFromText(readmeText, {
+            id: server.id,
+            name: server.name,
+            url: server.url,
+          })
+        : null;
+      if (fromReadme) {
+        installFields = toCachedInstallFields(fromReadme);
+        installHintsUpdated++;
+      } else {
+        const resolved = resolveInstallConfig({
+          id: server.id,
+          name: server.name,
+          url: server.url,
+          description: server.description,
+          // Do not re-use old cache here — recompute so we can refresh
+        });
+        // Only persist non-low confidence so we don't lock in bad guesses forever
+        if (resolved.confidence !== 'low' || resolved.source !== 'heuristic') {
+          installFields = toCachedInstallFields(resolved);
+          installHintsUpdated++;
+        }
+      }
+
+      await db
+        .update(servers)
+        .set({
+          lastCheckedAt: now,
+          isVerifiedActive,
+          healthStatus,
+          reciprocalBadgeOk,
+          badgeLastCheckedAt: now,
+          githubStars,
+          npmDownloads,
+          tools: toolsJson,
+          toolsCheckedAt,
+          ...(installFields
+            ? {
+                installKind: installFields.installKind,
+                installCommand: installFields.installCommand,
+                installArgs: installFields.installArgs,
+                installPackage: installFields.installPackage,
+                installConfidence: installFields.installConfidence,
+              }
+            : {}),
+        })
+        .where(eq(servers.id, server.id));
+
       processed++;
     }
-    
-    return NextResponse.json({ success: true, processed, message: `Successfully verified ${processed} servers.` });
+
+    return NextResponse.json({
+      success: true,
+      processed,
+      installHintsUpdated,
+      message: `Verified ${processed} servers (${installHintsUpdated} install hints updated).`,
+    });
   } catch (error) {
-    console.error("Cron error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error('Cron error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

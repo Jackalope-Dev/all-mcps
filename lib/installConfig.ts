@@ -2,9 +2,10 @@
  * Derive install / IDE config snippets from listing signals.
  *
  * Priority:
- *  1. Explicit install hint in description (npx/uvx/bunx/pip/remote URL)
- *  2. Hosted MCP endpoint URL (non-GitHub primary url)
- *  3. Heuristic fallback — marked low-confidence so UIs can warn users
+ *  1. Cached install hint from DB (health cron README parse)
+ *  2. Explicit install hint in description (npx/uvx/bunx/pip/remote URL)
+ *  3. Hosted MCP endpoint URL (non-GitHub primary url)
+ *  4. Heuristic fallback — marked low-confidence so UIs can warn users
  */
 
 import {
@@ -24,13 +25,13 @@ export type ResolvedInstall =
       args: string[];
       packageName: string;
       confidence: InstallConfidence;
-      source: 'description' | 'heuristic';
+      source: 'description' | 'heuristic' | 'cached';
     }
   | {
       kind: 'remote';
       url: string;
       confidence: InstallConfidence;
-      source: 'description' | 'endpoint';
+      source: 'description' | 'endpoint' | 'cached';
     };
 
 function slugify(name: string): string {
@@ -45,11 +46,8 @@ function slugify(name: string): string {
 /** Prefer scoped npm-style names from listing name (e.g. @org/pkg). */
 function packageCandidateFromName(name: string): string | null {
   const trimmed = name.trim();
-  // @scope/package
   if (/^@[a-z0-9._-]+\/[a-z0-9._-]+$/i.test(trimmed)) return trimmed;
-  // owner/repo that looks like an npm package without scope (rare)
   if (/^[a-z0-9._-]+\/[a-z0-9._-]+$/i.test(trimmed) && !trimmed.includes(' ')) {
-    // github-style owner/repo is NOT a valid npm name for npx -y owner/repo
     return null;
   }
   return null;
@@ -64,15 +62,129 @@ function looksLikeMcpHttpEndpoint(url: string): boolean {
   try {
     const u = new URL(url);
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-    // Common remote MCP path patterns
     if (/\/mcp|\/sse|\/message|api\.|mcp\./i.test(u.href)) return true;
-    // Non-github host with no path is still possible (custom domains)
-    return u.hostname.length > 0 && !['npmjs.com', 'pypi.org', 'glama.ai'].some((h) =>
-      u.hostname.includes(h)
+    return (
+      u.hostname.length > 0 &&
+      !['npmjs.com', 'pypi.org', 'glama.ai'].some((h) => u.hostname.includes(h))
     );
   } catch {
     return false;
   }
+}
+
+function parseArgsJson(raw: unknown): string[] | null {
+  if (Array.isArray(raw)) return raw.map(String);
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(String);
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+export type CachedInstallFields = {
+  installKind?: string | null;
+  installCommand?: string | null;
+  installArgs?: string | null;
+  installPackage?: string | null;
+  installConfidence?: string | null;
+};
+
+function fromCached(cached: CachedInstallFields | undefined | null): ResolvedInstall | null {
+  if (!cached?.installKind) return null;
+  const confidence =
+    cached.installConfidence === 'high' ||
+    cached.installConfidence === 'medium' ||
+    cached.installConfidence === 'low'
+      ? cached.installConfidence
+      : 'medium';
+
+  if (cached.installKind === 'remote' && cached.installPackage) {
+    return {
+      kind: 'remote',
+      url: cached.installPackage,
+      confidence,
+      source: 'cached',
+    };
+  }
+
+  if (cached.installKind === 'stdio' && cached.installCommand) {
+    const args = parseArgsJson(cached.installArgs) || [];
+    const packageName =
+      cached.installPackage || args[args.length - 1] || cached.installCommand;
+    return {
+      kind: 'stdio',
+      command: cached.installCommand,
+      args: args.length ? args : ['-y', packageName],
+      packageName,
+      confidence,
+      source: 'cached',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Persistable snapshot of a resolved install (for health cron → D1).
+ */
+export function toCachedInstallFields(install: ResolvedInstall): {
+  installKind: string;
+  installCommand: string | null;
+  installArgs: string | null;
+  installPackage: string;
+  installConfidence: InstallConfidence;
+} {
+  if (install.kind === 'remote') {
+    return {
+      installKind: 'remote',
+      installCommand: null,
+      installArgs: null,
+      installPackage: install.url,
+      installConfidence: install.confidence,
+    };
+  }
+  return {
+    installKind: 'stdio',
+    installCommand: install.command,
+    installArgs: JSON.stringify(install.args),
+    installPackage: install.packageName,
+    installConfidence: install.confidence,
+  };
+}
+
+/**
+ * Parse install hints from free text (README body or description).
+ * Prefer README-derived results for caching (high confidence when a runner is found).
+ */
+export function resolveInstallFromText(
+  text: string,
+  fallback: { id: string; name: string; url: string }
+): ResolvedInstall | null {
+  const hint = parseInstallHint(text || '');
+  if (!hint) return null;
+
+  if (isRemoteHint(hint)) {
+    return {
+      kind: 'remote',
+      url: (hint as RemoteHint).url,
+      confidence: 'high',
+      source: 'description',
+    };
+  }
+
+  const h = hint as InstallHint;
+  const packageName = h.args[h.args.length - 1] || fallback.id;
+  return {
+    kind: 'stdio',
+    command: h.command,
+    args: h.args,
+    packageName,
+    confidence: 'high',
+    source: 'description',
+  };
 }
 
 export function resolveInstallConfig(input: {
@@ -80,7 +192,10 @@ export function resolveInstallConfig(input: {
   name: string;
   url: string;
   description?: string | null;
-}): ResolvedInstall {
+} & CachedInstallFields): ResolvedInstall {
+  const cached = fromCached(input);
+  if (cached) return cached;
+
   const descHint: ParsedInstallHint = parseInstallHint(input.description || '');
 
   if (descHint && isRemoteHint(descHint)) {
@@ -105,7 +220,6 @@ export function resolveInstallConfig(input: {
     };
   }
 
-  // Hosted endpoint as primary URL (not a GitHub repo)
   if (looksLikeMcpHttpEndpoint(input.url)) {
     return {
       kind: 'remote',
@@ -115,7 +229,6 @@ export function resolveInstallConfig(input: {
     };
   }
 
-  // Heuristic fallback — prefer real package names when we have them
   const fromName = packageCandidateFromName(input.name);
   const packageName = fromName || input.id || slugify(input.name);
   const isPython =
@@ -144,7 +257,10 @@ export function resolveInstallConfig(input: {
 }
 
 /** Claude Desktop / Cursor style mcpServers fragment for API responses. */
-export function toClaudeConfigSnippet(install: ResolvedInstall, key: string): Record<string, unknown> {
+export function toClaudeConfigSnippet(
+  install: ResolvedInstall,
+  key: string
+): Record<string, unknown> {
   if (install.kind === 'remote') {
     return {
       mcpServers: {

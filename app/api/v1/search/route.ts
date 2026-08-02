@@ -28,6 +28,11 @@ export async function GET(request: Request) {
       name: server.name,
       url: server.url,
       description: server.description,
+      installKind: server.installKind,
+      installCommand: server.installCommand,
+      installArgs: server.installArgs,
+      installPackage: server.installPackage,
+      installConfidence: server.installConfidence,
     });
     const installName =
       install.kind === 'stdio' ? install.packageName : server.id;

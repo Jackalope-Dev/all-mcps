@@ -4,11 +4,15 @@ import React, { useMemo, useState } from 'react';
 import { Copy, Check, Code, Cpu, AlertTriangle } from 'lucide-react';
 import { toast } from './ui/Toast';
 import { trackCopyConfig } from '../lib/gtag';
-import { resolveInstallConfig, type ResolvedInstall } from '../lib/installConfig';
+import {
+  resolveInstallConfig,
+  type ResolvedInstall,
+  type CachedInstallFields,
+} from '../lib/installConfig';
 
 export type IdeTarget = 'claude-desktop' | 'cursor' | 'claude-code' | 'windsurf' | 'goose' | 'continue';
 
-interface McpConfigGeneratorProps {
+interface McpConfigGeneratorProps extends CachedInstallFields {
   serverId: string;
   serverName: string;
   url?: string;
@@ -176,6 +180,11 @@ export function McpConfigGenerator({
   serverName,
   url,
   description,
+  installKind,
+  installCommand,
+  installArgs,
+  installPackage,
+  installConfidence,
 }: McpConfigGeneratorProps) {
   const [activeIde, setActiveIde] = useState<IdeTarget>('claude-desktop');
   const [copied, setCopied] = useState(false);
@@ -187,8 +196,23 @@ export function McpConfigGenerator({
         name: serverName,
         url: url || '',
         description,
+        installKind,
+        installCommand,
+        installArgs,
+        installPackage,
+        installConfidence,
       }),
-    [serverId, serverName, url, description]
+    [
+      serverId,
+      serverName,
+      url,
+      description,
+      installKind,
+      installCommand,
+      installArgs,
+      installPackage,
+      installConfidence,
+    ]
   );
 
   const key = serverId || serverName.toLowerCase().replace(/[^a-z0-9]+/g, '-');

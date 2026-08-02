@@ -78,6 +78,48 @@
       "when": 1785263303895,
       "tag": "0010_submitter_email",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1785269000000,
+      "tag": "0011_analytics_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1785272000000,
+      "tag": "0012_listing_logo",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1785275000000,
+      "tag": "0013_last_tweeted_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1785278000000,
+      "tag": "0014_signals_and_tools",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1785281000000,
+      "tag": "0015_normalize_created_at_seconds",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1785700000000,
+      "tag": "0016_install_hint",
+      "breakpoints": true
     }
   ]
 }

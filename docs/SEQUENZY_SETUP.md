@@ -60,6 +60,17 @@ npx wrangler secret put SEQUENZY_TRANSACTIONAL_API_KEY
 `lib/sequenzyTransactional.ts` tries `SEQUENZY_TRANSACTIONAL_API_KEY` first, then
 `SEQUENZY_API_KEY`.
 
+### Follow-up sequence (claim + free dofollow)
+
+Draft sequence **Claim & free dofollow after approval**
+(`c172a4d244834ec2b5f909c2`) is configured to trigger on tag `listing-approved`
+(one_time enrollment), stop when tagged `customer`. Review content in the
+dashboard, then **enable** only when you are happy with the copy:
+
+https://sequenzy.com/dashboard/company/o9o6i6w0za04yal2c8ba7gag/sequences/c172a4d244834ec2b5f909c2
+
+Do not enable from agents unless you explicitly ask — live sequences send real mail.
+
 ## App routes touched
 
 - `lib/sequenzy.ts` — shared subscriber-sync client

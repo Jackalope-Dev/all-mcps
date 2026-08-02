@@ -62,6 +62,11 @@ export const PUBLIC_SERVER_COLUMNS = {
   githubStars: serversTable.githubStars,
   npmDownloads: serversTable.npmDownloads,
   tools: serversTable.tools,
+  installKind: serversTable.installKind,
+  installCommand: serversTable.installCommand,
+  installArgs: serversTable.installArgs,
+  installPackage: serversTable.installPackage,
+  installConfidence: serversTable.installConfidence,
   views: serversTable.views,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
@@ -89,6 +94,11 @@ export type Server = {
   npmDownloads?: number | null;
   /** Parsed by normalizeServer from the `tools` JSON column. */
   tools?: ServerTool[];
+  installKind?: string | null;
+  installCommand?: string | null;
+  installArgs?: string | null;
+  installPackage?: string | null;
+  installConfidence?: string | null;
   views?: number;
   copies?: number;
   upvotes?: number;

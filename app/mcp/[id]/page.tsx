@@ -439,12 +439,22 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               serverName={server.name}
               url={server.url}
               description={server.description}
+              installKind={server.installKind}
+              installCommand={server.installCommand}
+              installArgs={server.installArgs}
+              installPackage={server.installPackage}
+              installConfidence={server.installConfidence}
             />
             <McpConfigGenerator
               serverId={server.id}
               serverName={server.name}
               url={server.url}
               description={server.description}
+              installKind={server.installKind}
+              installCommand={server.installCommand}
+              installArgs={server.installArgs}
+              installPackage={server.installPackage}
+              installConfidence={server.installConfidence}
             />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.5rem 0' }}>

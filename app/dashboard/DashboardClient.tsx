@@ -278,7 +278,24 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                     <p style={{ marginTop: '0.5rem' }}>Loading analytics…</p>
                   </div>
                 ) : detail ? (
-                  <AnalyticsPanel detail={detail} />
+                  detail.summary.totalApiHits === 0 && detail.summary.totalImpressions === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
+                        Premium tracking is on — we just haven&apos;t seen API hits or directory
+                        impressions yet. Share your listing, add the AllMCPs badge to your site, and
+                        check back after agents discover you.
+                      </p>
+                      <Link
+                        href={`/mcp/${server.id}`}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.85rem' }}
+                      >
+                        Open public listing
+                      </Link>
+                    </div>
+                  ) : (
+                    <AnalyticsPanel detail={detail} />
+                  )
                 ) : (
                   <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
                     No analytics data yet. Data will appear as LLMs and users interact with your listing.
@@ -388,20 +405,50 @@ function PremiumTeaser() {
       background: 'linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,123,255,0.04))',
       padding: '2rem', textAlign: 'center',
     }}>
-      {/* Blurred fake chart background */}
       <div style={{
         position: 'absolute', inset: 0, opacity: 0.15, filter: 'blur(6px)',
         background: 'repeating-linear-gradient(90deg, #00E5FF 0px, #00E5FF 2px, transparent 2px, transparent 20px)',
       }} />
 
-      <Lock size={32} style={{ color: '#00E5FF', marginBottom: '0.75rem' }} />
-      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Premium Analytics</h4>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '400px', margin: '0 auto 1.25rem', lineHeight: 1.5 }}>
-        See which LLMs &amp; AI agents use your MCP server, track impressions across every directory surface, and discover what search queries find you.
+      <Lock size={32} style={{ color: '#00E5FF', marginBottom: '0.75rem', position: 'relative' }} />
+      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', position: 'relative' }}>Unlock Premium Analytics</h4>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '440px', margin: '0 auto 1rem', lineHeight: 1.55, position: 'relative' }}>
+        Free dashboards show views, installs, and upvotes. Premium shows{' '}
+        <strong style={{ color: 'var(--text-primary)' }}>which LLMs &amp; agents</strong> hit your
+        listing, <strong style={{ color: 'var(--text-primary)' }}>where</strong> you appear in the
+        directory, and <strong style={{ color: 'var(--text-primary)' }}>what searches</strong> find you —
+        plus a dofollow website backlink.
       </p>
-      <Link href="/pricing" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Zap size={16} /> Upgrade to Premium
-      </Link>
+      <ul
+        style={{
+          listStyle: 'none',
+          padding: 0,
+          margin: '0 auto 1.25rem',
+          maxWidth: 360,
+          textAlign: 'left',
+          fontSize: '0.82rem',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.65,
+          position: 'relative',
+        }}
+      >
+        <li>✓ Caller breakdown (Claude, Cursor, ChatGPT, bots…)</li>
+        <li>✓ Impression surfaces (browse, marquee, related, API)</li>
+        <li>✓ Search queries that surface your MCP</li>
+        <li>✓ Dofollow website link without a reciprocal badge</li>
+      </ul>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', justifyContent: 'center', position: 'relative' }}>
+        <Link href="/pricing" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Zap size={16} /> See Premium plans
+        </Link>
+        <Link
+          href="/pricing#premium"
+          className="btn btn-secondary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}
+        >
+          Compare free vs Premium
+        </Link>
+      </div>
     </div>
   );
 }
