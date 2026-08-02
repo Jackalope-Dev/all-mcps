@@ -20,6 +20,26 @@ export default function BadgeGeneratorPage() {
         title="MCP Badge & Embed Generator"
         description="Customize dynamic SVG badges for your GitHub README, documentation site, or blog. Keep the badge dofollow and verify your site to turn your listing's website link into a reciprocal dofollow backlink."
       />
+      <div
+        style={{
+          marginTop: '1.25rem',
+          padding: '1rem 1.15rem',
+          borderRadius: 12,
+          border: '1px solid rgba(16,185,129,0.3)',
+          background: 'rgba(16,185,129,0.08)',
+          fontSize: '0.9rem',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.55,
+        }}
+      >
+        <strong style={{ color: '#34d399' }}>Free dofollow path:</strong> claim your listing, verify
+        the product website, then embed a badge <em>without</em> <code>nofollow</code>. We recheck
+        periodically. Premium listings get dofollow without a badge — see{' '}
+        <a href="/pricing#premium" style={{ color: 'var(--accent-color)' }}>
+          Premium
+        </a>
+        .
+      </div>
       <div style={{ marginTop: '2rem' }}>
         <BadgeEmbedBuilder />
       </div>

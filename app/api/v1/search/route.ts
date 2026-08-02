@@ -19,7 +19,15 @@ export async function GET(request: Request) {
 
   // Rank by relevance when a query is present (falls back to catalog order otherwise).
   if (query) {
-    servers = rankServers(servers, query);
+    const withTools = servers.map((s) => {
+      const tools = Array.isArray(s.tools) ? s.tools : [];
+      const toolText = tools
+        .map((t: { name?: string }) => t?.name || '')
+        .filter(Boolean)
+        .join(' ');
+      return { ...s, toolText };
+    });
+    servers = rankServers(withTools, query);
   }
 
   const results = servers.slice(0, limit).map((server) => {

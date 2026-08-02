@@ -144,7 +144,9 @@ export async function POST(req: Request) {
               claimUrl,
             });
           }
-          // Tag for segmentation / future sequences (never enrolls paid upsell again)
+          // Tag for claim/dofollow sequence (trigger: listing-approved). one_time
+          // enrollment on that sequence prevents re-runs; Submission Upsell keys off
+          // submitted-listing only, so enabling enroll here is intentional.
           await syncSequenzySubscriber({
             email: submitterEmail,
             tags: ['listing-approved'],
@@ -153,8 +155,12 @@ export async function POST(req: Request) {
               serverId: approvedServer.id,
               serverName: approvedServer.name,
               listingUrl,
+              claimUrl,
+              MCP_NAME: approvedServer.name,
+              LISTING_URL: listingUrl,
+              CLAIM_URL: claimUrl,
             },
-            enrollInSequences: false,
+            enrollInSequences: true,
           });
         } catch (e) {
           console.error('Failed to notify submitter on approval:', e);

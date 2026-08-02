@@ -12,23 +12,35 @@ import { getActiveServers } from '@/lib/servers';
 export async function GET() {
   const servers = await getActiveServers();
 
-  const feed = servers.map((s) => ({
-    id: s.id,
-    name: s.name,
-    url: s.url,
-    description: s.description,
-    category: s.category,
-    logoUrl: s.logoUrl ?? null,
-    isOfficial: !!s.isOfficial,
-    isPremium: !!s.isPremium,
-    featuredUntil: s.featuredUntil ?? null,
-    githubStars: s.githubStars ?? null,
-    npmDownloads: s.npmDownloads ?? null,
-    views: s.views ?? 0,
-    copies: s.copies ?? 0,
-    upvotes: s.upvotes ?? 0,
-    createdAt: s.createdAt ?? null,
-  }));
+  const feed = servers.map((s) => {
+    // Compact tool names for client-side search (not full tool objects).
+    const tools = Array.isArray(s.tools) ? s.tools : [];
+    const toolText =
+      tools
+        .map((t) => (t && typeof t.name === 'string' ? t.name : ''))
+        .filter(Boolean)
+        .join(' ')
+        .slice(0, 400) || null;
+
+    return {
+      id: s.id,
+      name: s.name,
+      url: s.url,
+      description: s.description,
+      category: s.category,
+      logoUrl: s.logoUrl ?? null,
+      isOfficial: !!s.isOfficial,
+      isPremium: !!s.isPremium,
+      featuredUntil: s.featuredUntil ?? null,
+      githubStars: s.githubStars ?? null,
+      npmDownloads: s.npmDownloads ?? null,
+      toolText,
+      views: s.views ?? 0,
+      copies: s.copies ?? 0,
+      upvotes: s.upvotes ?? 0,
+      createdAt: s.createdAt ?? null,
+    };
+  });
 
   return Response.json(
     { servers: feed, total: feed.length },

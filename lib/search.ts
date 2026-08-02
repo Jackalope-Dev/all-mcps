@@ -7,25 +7,60 @@
  * 'use client' components.
  *
  * Model: the query is tokenized into alphanumeric terms and ALL terms must match
- * somewhere (name, category, or description) for a server to be a hit. Each term
- * scores by the best field it lands in — a name hit beats a category hit beats a
- * description hit, and a whole-word hit beats a mid-word substring — plus a bonus
- * when the full query matches the name as a phrase. Higher score = more relevant.
+ * somewhere (name, category, description, or tool names) for a server to be a hit.
+ * Optional synonym expansion helps "postgres" find PostgreSQL listings without
+ * full embedding search.
  */
 
 export type Searchable = {
   name: string;
   description: string;
   category: string;
+  /** Optional space-joined tool names / install package for extra recall. */
+  toolText?: string | null;
 };
 
 export type Engagement = {
   upvotes?: number | null;
   copies?: number | null;
   views?: number | null;
+  githubStars?: number | null;
 };
 
 export type QueryTerm = { term: string; boundary: RegExp };
+
+/**
+ * Lightweight synonym map — expands queries without LLM cost.
+ * Keys and values are lowercase alphanumeric tokens after tokenizeQuery.
+ */
+const SYNONYMS: Record<string, string[]> = {
+  postgres: ['postgresql', 'pg', 'psql'],
+  postgresql: ['postgres', 'pg'],
+  gh: ['github'],
+  github: ['gh'],
+  js: ['javascript', 'typescript', 'node', 'nodejs'],
+  ts: ['typescript', 'javascript'],
+  typescript: ['ts', 'javascript'],
+  javascript: ['js', 'node', 'nodejs'],
+  py: ['python'],
+  python: ['py'],
+  k8s: ['kubernetes'],
+  kubernetes: ['k8s'],
+  s3: ['aws', 'storage', 'bucket'],
+  slack: ['chat', 'messaging'],
+  llm: ['ai', 'openai', 'claude', 'gpt'],
+  ai: ['llm', 'openai', 'claude'],
+  db: ['database', 'sql'],
+  database: ['db', 'sql'],
+  sql: ['database', 'db', 'postgres', 'mysql', 'sqlite'],
+  auth: ['oauth', 'authentication', 'login', 'sso'],
+  oauth: ['auth', 'authentication'],
+  fs: ['filesystem', 'files', 'file'],
+  filesystem: ['fs', 'files'],
+  browser: ['playwright', 'puppeteer', 'chrome', 'selenium'],
+  scrape: ['scraping', 'crawler', 'browser'],
+  search: ['web', 'google', 'brave'],
+};
 
 /** Lowercase alphanumeric terms; separators (-, /, @, ., spaces) split words. */
 export function tokenizeQuery(query: string): string[] {
@@ -44,21 +79,46 @@ export function compileQuery(query: string): QueryTerm[] {
   }));
 }
 
-/** Engagement tie-breaker, matching the grid's "trending" weighting. */
+/** Engagement tie-breaker, matching the grid's "trending" weighting + mild stars. */
 export function engagementScore(s: Engagement): number {
-  return (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
+  return (
+    (s.upvotes || 0) * 5 +
+    (s.copies || 0) +
+    (s.views || 0) * 0.05 +
+    Math.min(Math.log10(1 + (s.githubStars || 0)) * 3, 12)
+  );
+}
+
+function fieldHitScore(
+  field: string,
+  term: string,
+  boundary: RegExp,
+  weights: { exact: number; word: number; substr: number }
+): number {
+  if (!field) return 0;
+  if (field === term) return weights.exact;
+  if (boundary.test(field)) return weights.word;
+  if (field.includes(term)) return weights.substr;
+  return 0;
 }
 
 /**
  * Relevance score for a server against a precompiled query.
- * Returns 0 when any term fails to match (AND semantics) — i.e. not a hit.
+ * Returns 0 when any term fails to match (AND semantics) — not a hit.
+ * Synonyms can satisfy a term if the primary form is absent.
  */
-export function scoreServerMatch(server: Searchable, terms: QueryTerm[], fullQuery: string): number {
+export function scoreServerMatch(
+  server: Searchable,
+  terms: QueryTerm[],
+  fullQuery: string
+): number {
   if (terms.length === 0) return 0;
 
   const name = server.name.toLowerCase();
   const category = server.category.toLowerCase();
   const description = server.description.toLowerCase();
+  const tools = (server.toolText || '').toLowerCase();
+  const blob = `${name} ${category} ${description} ${tools}`;
 
   let score = 0;
 
@@ -69,14 +129,34 @@ export function scoreServerMatch(server: Searchable, terms: QueryTerm[], fullQue
 
   for (const { term, boundary } of terms) {
     let best = 0;
-    if (name === term) best = 130;
-    else if (boundary.test(name)) best = 90;
-    else if (name.includes(term)) best = 60;
 
-    if (category.includes(term)) best = Math.max(best, 40);
+    best = Math.max(
+      best,
+      fieldHitScore(name, term, boundary, { exact: 130, word: 90, substr: 60 })
+    );
+    best = Math.max(
+      best,
+      fieldHitScore(category, term, boundary, { exact: 50, word: 40, substr: 28 })
+    );
+    best = Math.max(
+      best,
+      fieldHitScore(description, term, boundary, { exact: 30, word: 22, substr: 10 })
+    );
+    best = Math.max(
+      best,
+      fieldHitScore(tools, term, boundary, { exact: 45, word: 32, substr: 16 })
+    );
 
-    if (boundary.test(description)) best = Math.max(best, 22);
-    else if (description.includes(term)) best = Math.max(best, 10);
+    // Synonym expansion — slightly weaker than direct hits
+    if (best === 0) {
+      const alts = SYNONYMS[term] || [];
+      for (const alt of alts) {
+        if (blob.includes(alt)) {
+          best = Math.max(best, 14);
+          break;
+        }
+      }
+    }
 
     if (best === 0) return 0; // this term matched nothing -> not a result
     score += best;

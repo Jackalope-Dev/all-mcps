@@ -38,6 +38,8 @@ type Server = {
   copies?: number;
   upvotes?: number;
   githubStars?: number | null;
+  /** Space-joined tool names for search recall (from directory feed). */
+  toolText?: string | null;
   createdAt?: string | Date;
 };
 
@@ -216,7 +218,18 @@ export default function DirectoryGrid({
       if (verifiedOnly && !isVerifiedListing(server)) continue;
       if (!stackMatch(server)) continue;
 
-      const relevance = hasQuery ? scoreServerMatch(server, queryTerms, fullQuery) : 0;
+      const relevance = hasQuery
+        ? scoreServerMatch(
+            {
+              name: server.name,
+              description: server.description,
+              category: server.category,
+              toolText: server.toolText,
+            },
+            queryTerms,
+            fullQuery
+          )
+        : 0;
       if (hasQuery && relevance <= 0) continue;
       scored.push({ server, relevance });
     }
@@ -407,9 +420,39 @@ export default function DirectoryGrid({
           </h1>
           <p className="text-lead">
             Find the best tools to connect your favorite LLMs directly to local files, databases, and external APIs.
+            {typeof totalCount === 'number' && totalCount > 0 ? (
+              <>
+                {' '}
+                <strong style={{ color: 'var(--text-primary)' }}>{totalCount.toLocaleString()}+</strong> MCP servers
+                ready to install.
+              </>
+            ) : null}
           </p>
-          <p className="text-meta" style={{ marginTop: '0.75rem' }}>
-            Building your own? See <Link href="/build-mcp-server">How to Build an MCP Server</Link>.
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              justifyContent: 'center',
+              marginTop: '1.25rem',
+            }}
+          >
+            <Link href="/browse" className="btn btn-primary">
+              Browse directory
+            </Link>
+            <Link href="/submit" className="btn btn-secondary">
+              Submit free
+            </Link>
+            <Link href="/best" className="btn btn-secondary">
+              Best by use case
+            </Link>
+          </div>
+          <p className="text-meta" style={{ marginTop: '1rem' }}>
+            Building your own? See <Link href="/build-mcp-server">How to Build an MCP Server</Link>
+            {' · '}
+            <Link href="/docs/api">Agent API</Link>
+            {' · '}
+            <Link href="/badge-generator">Badges</Link>
           </p>
         </section>
       )}
