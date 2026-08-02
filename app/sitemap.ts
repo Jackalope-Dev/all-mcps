@@ -293,6 +293,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.55,
   }));
 
+  // Compare pages: top engagement listings × top peers in same category.
+  // Cap pairs + use sorted ids for canonical URLs so we don't explode the sitemap.
+  const engagement = (s: any) =>
+    (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
+  const byCategory = new Map<string, any[]>();
+  for (const s of servers) {
+    const cat = s.category || 'other';
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat)!.push(s);
+  }
+  for (const list of byCategory.values()) {
+    list.sort((a, b) => engagement(b) - engagement(a));
+  }
+  const topSeeds = [...servers].sort((a, b) => engagement(b) - engagement(a)).slice(0, 80);
+  const compareSeen = new Set<string>();
+  const compareEntries: MetadataRoute.Sitemap = [];
+  for (const seed of topSeeds) {
+    const peers = (byCategory.get(seed.category) || [])
+      .filter((p) => p.id !== seed.id)
+      .slice(0, 3);
+    for (const peer of peers) {
+      const [a, b] = seed.id < peer.id ? [seed.id, peer.id] : [peer.id, seed.id];
+      const key = `${a}|${b}`;
+      if (compareSeen.has(key)) continue;
+      compareSeen.add(key);
+      compareEntries.push({
+        url: `${baseUrl}/mcp/${a}/vs/${b}`,
+        lastModified: safeDateISO(
+          seed.lastCheckedAt || seed.createdAt || seed.created_at || peer.lastCheckedAt
+        ),
+        changeFrequency: 'weekly',
+        priority: 0.5,
+      });
+      if (compareEntries.length >= 400) break;
+    }
+    if (compareEntries.length >= 400) break;
+  }
+
   const categoryEntries: MetadataRoute.Sitemap = DIRECTORY_CATEGORIES.map((category) => ({
     url: `${baseUrl}/categories/${categorySlug(category)}`,
     lastModified: safeDateISO(new Date()),
@@ -328,6 +366,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...blogEntries,
     ...serverEntries,
     ...alternativesEntries,
+    ...compareEntries,
   ];
 }
 

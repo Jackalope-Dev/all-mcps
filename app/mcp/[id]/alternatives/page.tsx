@@ -144,15 +144,12 @@ export default async function AlternativesPage({
               const altName = parseServerName(alt.name).displayName;
               const featured = isFeaturedListing(alt);
               return (
-                <Link
+                <div
                   key={alt.id}
-                  href={`/mcp/${alt.id}`}
                   className="surface-interactive"
                   style={{
                     padding: '1.25rem',
                     borderRadius: '12px',
-                    textDecoration: 'none',
-                    color: 'inherit',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.75rem',
@@ -162,29 +159,47 @@ export default async function AlternativesPage({
                       : undefined,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-                      <ServerAvatar name={alt.name} logoUrl={alt.logoUrl} size={32} />
-                      <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {altName}
-                      </span>
+                  <Link
+                    href={`/mcp/${alt.id}`}
+                    style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+                        <ServerAvatar name={alt.name} logoUrl={alt.logoUrl} size={32} />
+                        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {altName}
+                        </span>
+                      </div>
+                      {featured ? (
+                        <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '0.65rem', flexShrink: 0 }}>
+                          ★ Featured
+                        </Badge>
+                      ) : isVerifiedListing(alt) ? (
+                        <Badge variant="official" style={{ fontSize: '0.65rem', flexShrink: 0 }}>Verified</Badge>
+                      ) : null}
                     </div>
-                    {featured ? (
-                      <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '0.65rem', flexShrink: 0 }}>
-                        ★ Featured
-                      </Badge>
-                    ) : isVerifiedListing(alt) ? (
-                      <Badge variant="official" style={{ fontSize: '0.65rem', flexShrink: 0 }}>Verified</Badge>
-                    ) : null}
-                  </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
-                    <SafeMarkdown content={alt.description || 'No description provided.'} isInline />
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
-                    <Badge variant="category" style={{ fontSize: '0.7rem' }}>{alt.category}</Badge>
-                    <StatRow s={alt} />
-                  </div>
-                </Link>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
+                      <SafeMarkdown content={alt.description || 'No description provided.'} isInline />
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                      <Badge variant="category" style={{ fontSize: '0.7rem' }}>{alt.category}</Badge>
+                      <StatRow s={alt} />
+                    </div>
+                  </Link>
+                  <Link
+                    href={`/mcp/${server.id}/vs/${alt.id}`}
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: '#00E5FF',
+                      textDecoration: 'none',
+                      paddingTop: '0.35rem',
+                      borderTop: '1px solid var(--border-color)',
+                    }}
+                  >
+                    Compare side-by-side →
+                  </Link>
+                </div>
               );
             })}
           </div>

@@ -547,15 +547,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 {relatedServers.map((rel) => {
                   const relName = parseServerName(rel.name).displayName;
                   return (
-                  <Link
+                  <div
                     key={rel.id}
-                    href={`/mcp/${rel.id}`}
                     className="surface-interactive"
                     style={{
                       padding: '1.25rem',
                       borderRadius: '12px',
-                      textDecoration: 'none',
-                      color: 'inherit',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '0.75rem',
@@ -564,6 +561,17 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       background: isFeaturedListing(rel as any)
                         ? 'linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,123,255,0.04))'
                         : undefined,
+                    }}
+                  >
+                  <Link
+                    href={`/mcp/${rel.id}`}
+                    style={{
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      flex: 1,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
@@ -591,6 +599,20 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       </span>
                     </div>
                   </Link>
+                  <Link
+                    href={`/mcp/${server.id}/vs/${rel.id}`}
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: '#00E5FF',
+                      textDecoration: 'none',
+                      paddingTop: '0.35rem',
+                      borderTop: '1px solid var(--border-color)',
+                    }}
+                  >
+                    Compare vs {relName} →
+                  </Link>
+                  </div>
                   );
                 })}
               </div>
