@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
-import { useImpressionTracker } from './ImpressionTracker';
+import { useImpressionTracker, ImpressionBeacon } from './ImpressionTracker';
 import { parseServerName } from '../lib/displayName';
 
 type Server = {
@@ -21,30 +21,32 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
     <>
       {displayServers.map((server, i) => (
         <React.Fragment key={`${server.id}-${i}`}>
-          <Link 
-            href={`/mcp/${server.id}`}
-            tabIndex={isDuplicate ? -1 : undefined}
-            aria-hidden={isDuplicate ? true : undefined}
-            className="surface"
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.75rem', 
-              padding: '0.5rem 1rem', 
-              borderRadius: '100px',
-              whiteSpace: 'nowrap',
-              transition: 'border-color 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border-strong)';
-              trackImpression(server.id, 'homepage_marquee');
-            }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
-          >
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-color)', boxShadow: '0 0 8px var(--accent-color)' }}></span>
-            <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{parseServerName(server.name).displayName}</span>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{server.category}</span>
-          </Link>
+          <ImpressionBeacon serverId={server.id} surface="homepage_marquee">
+            <Link 
+              href={`/mcp/${server.id}`}
+              tabIndex={isDuplicate ? -1 : undefined}
+              aria-hidden={isDuplicate ? true : undefined}
+              className="surface"
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.75rem', 
+                padding: '0.5rem 1rem', 
+                borderRadius: '100px',
+                whiteSpace: 'nowrap',
+                transition: 'border-color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-strong)';
+                trackImpression(server.id, 'homepage_marquee');
+              }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+            >
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-color)', boxShadow: '0 0 8px var(--accent-color)' }}></span>
+              <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{parseServerName(server.name).displayName}</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{server.category}</span>
+            </Link>
+          </ImpressionBeacon>
 
           {(i + 1) % 6 === 0 && (
             <Link

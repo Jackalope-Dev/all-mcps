@@ -52,9 +52,6 @@ function scheduleFlush() {
 }
 
 function enqueue(serverId: string, surface: ImpressionSurface) {
-  const key = `${serverId}:${surface}`;
-  if (seen.has(key)) return;
-  seen.add(key);
   pending.push({ serverId, surface });
   scheduleFlush();
 }

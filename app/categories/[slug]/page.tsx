@@ -17,6 +17,7 @@ import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatu
 import { parseServerName } from '../../../lib/displayName';
 import { BEST_TOPICS } from '../../../lib/bestTopics';
 import { CategorySponsorBanner } from '../../../components/CategorySponsorBanner';
+import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 
 const SITE = 'https://allmcps.com';
 
@@ -248,85 +249,86 @@ export default async function CategoryLandingPage({
             {cards.map((server) => {
               const { displayName, org } = parseServerName(server.name);
               return (
-                <Card
-                  key={server.id}
-                  href={`/mcp/${server.id}`}
-                  className={`directory-card ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
-                  style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
-                    <div style={{ minWidth: 0 }}>
-                      <h2
-                        style={{
-                          fontSize: '1.1rem',
-                          fontWeight: 600,
-                          margin: 0,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {displayName}
-                      </h2>
-                      {org && (
-                        <div
+                <ImpressionBeacon key={server.id} serverId={server.id} surface="category_page">
+                  <Card
+                    href={`/mcp/${server.id}`}
+                    className={`directory-card ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
+                    style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
+                      <div style={{ minWidth: 0 }}>
+                        <h2
                           style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-secondary)',
+                            fontSize: '1.1rem',
+                            fontWeight: 600,
+                            margin: 0,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {org}
-                        </div>
-                      )}
+                          {displayName}
+                        </h2>
+                        {org && (
+                          <div
+                            style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-secondary)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {org}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.875rem',
-                      marginBottom: '1.25rem',
-                      flexGrow: 1,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    <SafeMarkdown content={server.description || 'No description provided.'} isInline />
-                  </div>
-                  <div className="directory-card-footer">
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0 }}>
-                      {isFeaturedListing(server) && (
-                        <Badge
-                          variant="success"
-                          style={{
-                            background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
-                            color: '#00E5FF',
-                            borderColor: 'rgba(0,229,255,0.35)',
-                          }}
-                        >
-                          ★ Featured
-                        </Badge>
-                      )}
-                      {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
+                    <div
+                      style={{
+                        fontSize: '0.875rem',
+                        marginBottom: '1.25rem',
+                        flexGrow: 1,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      <SafeMarkdown content={server.description || 'No description provided.'} isInline />
                     </div>
-                    <div className="directory-card-stats" style={{ display: 'flex', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Eye size={13} /> {(server.views || 0).toLocaleString()}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Download size={13} /> {(server.copies || 0).toLocaleString()}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Heart size={13} /> {(server.upvotes || 0).toLocaleString()}
-                      </span>
+                    <div className="directory-card-footer">
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0 }}>
+                        {isFeaturedListing(server) && (
+                          <Badge
+                            variant="success"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
+                              color: '#00E5FF',
+                              borderColor: 'rgba(0,229,255,0.35)',
+                            }}
+                          >
+                            ★ Featured
+                          </Badge>
+                        )}
+                        {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
+                      </div>
+                      <div className="directory-card-stats" style={{ display: 'flex', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Eye size={13} /> {(server.views || 0).toLocaleString()}
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Download size={13} /> {(server.copies || 0).toLocaleString()}
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Heart size={13} /> {(server.upvotes || 0).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                </ImpressionBeacon>
               );
             })}
           </div>
