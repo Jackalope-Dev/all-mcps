@@ -30,6 +30,10 @@ function readPostFile(filename) {
   };
 }
 
+function getTodayString() {
+  return new Date().toISOString().split('T')[0];
+}
+
 function buildManifest() {
   if (!fs.existsSync(BLOG_DIR)) {
     fs.writeFileSync(OUTPUT_FILE, '[]\n', 'utf8');
@@ -37,14 +41,18 @@ function buildManifest() {
     return;
   }
 
+  const today = getTodayString();
+  const includeFuture = process.env.INCLUDE_FUTURE_POSTS === 'true';
+
   const filenames = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'));
   const posts = filenames
     .map(readPostFile)
     .filter(Boolean)
+    .filter((post) => includeFuture || post.date <= today)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(posts, null, 2) + '\n', 'utf8');
-  console.log(`Generated blog manifest with ${posts.length} post(s) -> ${OUTPUT_FILE}`);
+  console.log(`Generated blog manifest with ${posts.length} post(s) (filtered for date <= ${today}) -> ${OUTPUT_FILE}`);
 }
 
 buildManifest();

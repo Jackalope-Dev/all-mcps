@@ -50,19 +50,34 @@ function readPostFile(filename: string): BlogPost {
   };
 }
 
+function getTodayString(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
 export function getAllPosts(): BlogPost[] {
+  const today = getTodayString();
+  const includeFuture = process.env.INCLUDE_FUTURE_POSTS === 'true';
+
+  let rawPosts: BlogPost[] = [];
+
   try {
     if (fs.existsSync(BLOG_DIR)) {
       const filenames = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'));
       if (filenames.length > 0) {
-        return filenames.map(readPostFile).sort((a, b) => (a.date < b.date ? 1 : -1));
+        rawPosts = filenames.map(readPostFile);
       }
     }
   } catch {
     // If fs fails (e.g. in Cloudflare Worker environment), fall back to static blogManifest
   }
 
-  return (blogManifest as BlogPost[]).sort((a, b) => (a.date < b.date ? 1 : -1));
+  if (rawPosts.length === 0) {
+    rawPosts = blogManifest as BlogPost[];
+  }
+
+  return rawPosts
+    .filter((post) => includeFuture || post.date <= today)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
