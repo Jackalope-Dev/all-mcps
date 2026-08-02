@@ -1,4 +1,4 @@
-import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink } from 'lucide-react';
 import { QualityBadge } from '../../../components/ui/QualityBadge';
 import Link from 'next/link';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
@@ -419,11 +419,88 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </Badge>
             )}
           </div>
-          <div className="listing-metrics-row" style={{ marginBottom: '1.5rem' }}>
+          <div className="listing-metrics-row" style={{ marginBottom: '1.25rem' }}>
             <ViewTracker serverId={server.id} initialCount={server.views || 0} />
             <InstallsStat count={server.copies || 0} />
             <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
             <ShareModal serverId={server.id} serverName={server.name} variant="mini" />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
+            <OutboundLink
+              href={server.url}
+              destinationType="github"
+              serverId={server.id}
+              target="_blank"
+              rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.55rem',
+                padding: '0.65rem 1.25rem',
+                borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'var(--text-primary)',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                textDecoration: 'none',
+              }}
+            >
+              <FolderGit2 size={18} style={{ color: 'var(--accent-color)' }} />
+              <span>View Repository</span>
+              {typeof server.githubStars === 'number' && server.githubStars > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '6px',
+                    background: 'rgba(250, 204, 21, 0.15)',
+                    color: '#facc15',
+                    border: '1px solid rgba(250, 204, 21, 0.3)',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    marginLeft: '0.2rem',
+                  }}
+                >
+                  <Star size={12} fill="#facc15" color="#facc15" />
+                  {server.githubStars >= 1000 ? `${(server.githubStars / 1000).toFixed(1)}k` : server.githubStars.toLocaleString()}
+                </span>
+              )}
+            </OutboundLink>
+
+            {server.websiteUrl && (
+              <OutboundLink
+                href={server.websiteUrl}
+                destinationType="website"
+                serverId={server.id}
+                target="_blank"
+                rel={websiteLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.55rem',
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 123, 255, 0.12))',
+                  border: '1px solid rgba(0, 229, 255, 0.45)',
+                  color: '#00E5FF',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 12px rgba(0, 229, 255, 0.18)',
+                  textDecoration: 'none',
+                }}
+              >
+                <Globe size={18} color="#00E5FF" />
+                <span>Visit Website</span>
+                <ExternalLink size={14} style={{ opacity: 0.85 }} />
+              </OutboundLink>
+            )}
           </div>
           
           <div style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
@@ -802,18 +879,50 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           )}
 
           <div className="surface" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Links</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <h3 style={{ fontSize: '0.85rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Official Links</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               <OutboundLink
                 href={server.url}
                 destinationType="github"
                 serverId={server.id}
                 target="_blank"
                 rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }}
-                className="nav-link"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  borderRadius: '10px',
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  color: 'var(--text-primary)',
+                  textDecoration: 'none',
+                }}
               >
-                <FolderGit2 size={18} /> View Repository
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                  <FolderGit2 size={18} style={{ color: 'var(--accent-color)' }} />
+                  <span>View Repository</span>
+                </div>
+                {typeof server.githubStars === 'number' && server.githubStars > 0 && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.2rem',
+                      padding: '0.15rem 0.45rem',
+                      borderRadius: '6px',
+                      background: 'rgba(250, 204, 21, 0.12)',
+                      color: '#facc15',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Star size={11} fill="#facc15" color="#facc15" />
+                    {server.githubStars >= 1000 ? `${(server.githubStars / 1000).toFixed(1)}k` : server.githubStars}
+                  </span>
+                )}
               </OutboundLink>
               {server.websiteUrl && (
                 <OutboundLink
@@ -822,10 +931,25 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   serverId={server.id}
                   target="_blank"
                   rel={websiteLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontWeight: 500, transition: 'background 0.2s', border: '1px solid var(--border-color)' }}
-                  className="nav-link"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.12), rgba(0, 123, 255, 0.08))',
+                    borderRadius: '10px',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    border: '1px solid rgba(0, 229, 255, 0.35)',
+                    color: '#00E5FF',
+                    textDecoration: 'none',
+                  }}
                 >
-                  <Globe size={18} /> Website
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                    <Globe size={18} color="#00E5FF" />
+                    <span>Visit Website</span>
+                  </div>
+                  <ExternalLink size={14} style={{ opacity: 0.85 }} />
                 </OutboundLink>
               )}
             </div>

@@ -11,7 +11,9 @@ export type ImpressionSurface =
   | 'browse_grid'
   | 'search_results'
   | 'detail_sidebar'
-  | 'category_page';
+  | 'category_page'
+  | 'outbound_github'
+  | 'outbound_website';
 
 /** Human-readable labels for impression surfaces (for dashboard display). */
 export const SURFACE_LABELS: Record<ImpressionSurface, string> = {
@@ -22,6 +24,8 @@ export const SURFACE_LABELS: Record<ImpressionSurface, string> = {
   search_results: 'Search Results',
   detail_sidebar: 'Detail Sidebar',
   category_page: 'Category Page',
+  outbound_github: 'Repository Clicks',
+  outbound_website: 'Website Clicks',
 };
 
 type ImpressionParams = {

@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (!product) {
       return NextResponse.json(
         {
-          error: `Invalid SKU "${sku}". Valid options: priority_review, featured_7d, premium_monthly`,
+          error: `Invalid SKU "${sku}". Valid options: priority_review, featured_7d, category_sponsor_7d, premium_monthly`,
         },
         { status: 400 }
       );

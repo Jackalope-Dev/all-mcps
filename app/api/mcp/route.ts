@@ -57,7 +57,7 @@ const TOOLS = [
         id: { type: 'string', description: 'The server ID to boost (e.g. "github-mcp")' },
         sku: {
           type: 'string',
-          enum: ['featured_7d', 'premium_monthly', 'priority_review'],
+          enum: ['featured_7d', 'category_sponsor_7d', 'premium_monthly', 'priority_review'],
           description: 'Sponsorship tier (default: featured_7d)',
         },
         email: { type: 'string', description: 'Optional contact/billing email' },

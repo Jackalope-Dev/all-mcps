@@ -6,7 +6,7 @@ import { createStripeCheckoutSession } from '../../../../lib/stripeCheckout';
 
 const bodySchema = z.object({
   serverId: z.string().min(1),
-  sku: z.enum(['priority_review', 'featured_7d', 'premium_monthly']),
+  sku: z.enum(['priority_review', 'featured_7d', 'category_sponsor_7d', 'premium_monthly']),
   email: z.string().email().optional(),
   coupon: z.string().optional(),
 });

@@ -77,7 +77,7 @@ export function WebMCPProvider() {
           type: 'object',
           properties: {
             id: { type: 'string', description: 'The unique server ID' },
-            sku: { type: 'string', description: 'Tier (featured_7d, premium_monthly, priority_review)' },
+            sku: { type: 'string', description: 'Tier (featured_7d, category_sponsor_7d, premium_monthly, priority_review)' },
             email: { type: 'string', description: 'Optional email' },
           },
           required: ['id'],

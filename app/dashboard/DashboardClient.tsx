@@ -10,7 +10,7 @@ import type { AnalyticsSummary, ServerAnalytics } from '@/lib/analytics';
 import {
   Eye, Heart, Download, TrendingUp, TrendingDown, Minus,
   BarChart3, Search, Globe, Lock, ChevronDown, ChevronUp,
-  Activity, Zap, Sparkles, Crown,
+  Activity, Zap, Sparkles, Crown, MousePointerClick,
 } from 'lucide-react';
 import { PremiumUpgrade } from '@/components/PremiumUpgrade';
 
@@ -297,6 +297,12 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                     icon={<Globe size={13} />}
                     label="Impressions"
                     value={summary.totalImpressions}
+                    accent
+                  />
+                  <StatPill
+                    icon={<MousePointerClick size={13} />}
+                    label="Clicks"
+                    value={summary.totalOutboundClicks || 0}
                     accent
                   />
                   <TrendIndicator trend={summary.trend} />

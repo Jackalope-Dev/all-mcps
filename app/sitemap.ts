@@ -7,6 +7,7 @@ import { getAllPosts } from '../lib/blog';
 import { DIRECTORY_CATEGORIES, categorySlug } from '../lib/categories';
 import { BEST_TOPICS } from '../lib/bestTopics';
 import { MCP_CLIENTS } from '../lib/clients';
+import { WORKFLOW_PROMPTS } from '../lib/prompts';
 import { engagementScore } from '../lib/search';
 
 /**
@@ -276,36 +277,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/prompts/fullstack-developer`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/prompts/research-agent`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/prompts/devops-engineer`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/prompts/data-analyst`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/prompts/product-ops`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-    {
       url: `${baseUrl}/badge-generator`,
       lastModified: safeDateISO(new Date()),
       changeFrequency: 'monthly' as const,
@@ -430,11 +401,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
+  const promptEntries: MetadataRoute.Sitemap = WORKFLOW_PROMPTS.map((w) => ({
+    url: `${baseUrl}/prompts/${w.slug}`,
+    lastModified: safeDateISO(new Date()),
+    changeFrequency: 'weekly' as const,
+    priority: 0.85,
+  }));
+
   return [
     ...sitemapEntries,
     ...categoryEntries,
     ...bestEntries,
     ...clientEntries,
+    ...promptEntries,
     ...blogEntries,
     ...serverEntries,
     ...alternativesEntries,

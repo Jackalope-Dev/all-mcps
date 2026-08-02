@@ -10,6 +10,7 @@ import type { ImpressionSurface } from './impressionLog';
 export type AnalyticsSummary = {
   totalApiHits: number;
   totalImpressions: number;
+  totalOutboundClicks: number;
   uniqueCallers: number;
   topCaller: string | null;
   trend: 'up' | 'down' | 'flat';
@@ -144,6 +145,10 @@ export async function getServerAnalytics(
     (sum: number, r: { impressions: number }) => sum + r.impressions,
     0
   );
+  const totalOutboundClicks = surfaceRows
+    .filter((r: { surface: string; impressions: number }) => r.surface === 'outbound_github' || r.surface === 'outbound_website')
+    .reduce((sum: number, r: { impressions: number }) => sum + r.impressions, 0);
+
   const uniqueCallers = callerRows.length;
   const topCaller =
     callerRows.length > 0 ? (callerRows[0] as { caller: string }).caller : null;
@@ -173,7 +178,7 @@ export async function getServerAnalytics(
   }
 
   return {
-    summary: { totalApiHits, totalImpressions, uniqueCallers, topCaller, trend },
+    summary: { totalApiHits, totalImpressions, totalOutboundClicks, uniqueCallers, topCaller, trend },
     byCallerClass,
     byDay: dailyRows as DailyHits[],
     byEndpoint: endpointRows as EndpointBreakdown[],
@@ -216,6 +221,7 @@ export async function getServerAnalyticsBatch(
     db
       .select({
         serverId: impressionLogs.serverId,
+        surface: impressionLogs.surface,
         impressions: count(),
       })
       .from(impressionLogs)
@@ -225,7 +231,7 @@ export async function getServerAnalyticsBatch(
           gte(impressionLogs.createdAt, cutoff)
         )
       )
-      .groupBy(impressionLogs.serverId),
+      .groupBy(impressionLogs.serverId, impressionLogs.surface),
 
     db
       .select({
@@ -249,6 +255,7 @@ export async function getServerAnalyticsBatch(
     result[id] = {
       totalApiHits: 0,
       totalImpressions: 0,
+      totalOutboundClicks: 0,
       uniqueCallers: 0,
       topCaller: null,
       trend: 'flat',
@@ -275,10 +282,13 @@ export async function getServerAnalyticsBatch(
     }
   }
 
-  // Process impression rows
-  for (const row of impressionRows as { serverId: string; impressions: number }[]) {
+  // Process impression & click rows
+  for (const row of impressionRows as { serverId: string; surface: string; impressions: number }[]) {
     if (row.serverId && result[row.serverId]) {
-      result[row.serverId].totalImpressions = row.impressions;
+      result[row.serverId].totalImpressions += row.impressions;
+      if (row.surface === 'outbound_github' || row.surface === 'outbound_website') {
+        result[row.serverId].totalOutboundClicks += row.impressions;
+      }
     }
   }
 
