@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2 } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -38,6 +38,8 @@ type Server = {
   copies?: number;
   upvotes?: number;
   githubStars?: number | null;
+  /** high | medium | low — from health cron / install resolver. */
+  installConfidence?: string | null;
   /** Space-joined tool names for search recall (from directory feed). */
   toolText?: string | null;
   createdAt?: string | Date;
@@ -106,6 +108,9 @@ export default function DirectoryGrid({
   // Working dataset: seeded from the server-rendered slice, then replaced by the
   // full feed once `lazyFeedUrl` resolves (browse only).
   const [servers, setServers] = useState<Server[]>(initialServers);
+  const [feedStatus, setFeedStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(
+    lazyFeedUrl ? 'loading' : 'idle'
+  );
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
   const [selectedStack, setSelectedStack] = useState<TechStack>('all');
@@ -150,17 +155,23 @@ export default function DirectoryGrid({
   useEffect(() => {
     if (!lazyFeedUrl) return;
     let cancelled = false;
+    setFeedStatus('loading');
     fetch(lazyFeedUrl)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const full = (data as { servers?: Server[] } | null)?.servers;
-        if (!cancelled && full && full.length) {
+        if (cancelled) return;
+        if (full && full.length) {
           loadedFullRef.current = true;
           setServers(full);
+          setFeedStatus('ready');
+        } else {
+          setFeedStatus('error');
         }
       })
       .catch(() => {
         // Keep the server-rendered slice if the feed can't load.
+        if (!cancelled) setFeedStatus('error');
       });
     return () => {
       cancelled = true;
@@ -393,6 +404,31 @@ export default function DirectoryGrid({
       )}
     </div>
   );
+
+  /** Compact install-readiness chip — only when we have a real signal. */
+  const InstallReadyBadge = ({ server }: { server: Server }) => {
+    const conf = (server.installConfidence || '').toLowerCase();
+    if (conf !== 'high' && conf !== 'medium') return null;
+    const isHigh = conf === 'high';
+    return (
+      <Badge
+        variant="success"
+        title={
+          isHigh
+            ? 'Install command detected from README or listing signals'
+            : 'Install path inferred — verify in the listing'
+        }
+        style={{
+          background: isHigh ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0, 229, 255, 0.1)',
+          color: isHigh ? '#34d399' : '#00E5FF',
+          borderColor: isHigh ? 'rgba(16, 185, 129, 0.35)' : 'rgba(0, 229, 255, 0.3)',
+          fontSize: '0.7rem',
+        }}
+      >
+        {isHigh ? 'Install ready' : 'Install known'}
+      </Badge>
+    );
+  };
 
   const resultSubtitle = (
     <>
@@ -693,11 +729,51 @@ export default function DirectoryGrid({
 
       {/* Directory */}
       <section className="container animate-fade-in delay-3" style={{ marginBottom: '6rem' }}>
+        {lazyFeedUrl && feedStatus === 'loading' && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.75rem 1rem',
+              marginBottom: '1rem',
+              borderRadius: '10px',
+              border: '1px solid rgba(0, 229, 255, 0.22)',
+              background: 'rgba(0, 229, 255, 0.06)',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <Loader2 size={16} aria-hidden="true" className="directory-feed-spinner" style={{ color: '#00E5FF', flexShrink: 0 }} />
+            Loading full directory so search and filters cover every listing…
+          </div>
+        )}
+        {lazyFeedUrl && feedStatus === 'error' && (
+          <div
+            role="status"
+            style={{
+              padding: '0.75rem 1rem',
+              marginBottom: '1rem',
+              borderRadius: '10px',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              background: 'rgba(245, 158, 11, 0.08)',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            Showing the initial page of results. Full-catalog search is temporarily unavailable — try
+            refreshing.
+          </div>
+        )}
+
         <div className="directory-toolbar">
           <h2 style={{ marginBottom: 0, fontSize: isBrowse || selectedCategory ? '1.5rem' : undefined }}>
             {isBrowse || selectedCategory || isFiltered ? 'Results' : 'Directory'}{' '}
             <span style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', fontWeight: 500 }}>
               ({filteredServers.length.toLocaleString()} {filteredServers.length === 1 ? 'tool' : 'tools'})
+              {lazyFeedUrl && feedStatus === 'loading' ? ' · loading…' : ''}
             </span>
           </h2>
 
@@ -876,6 +952,7 @@ export default function DirectoryGrid({
                       </Badge>
                     )}
                     {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
+                    <InstallReadyBadge server={server} />
                   </div>
                 </div>
                 {(() => {
@@ -971,6 +1048,7 @@ export default function DirectoryGrid({
                       </Badge>
                     )}
                     {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
+                    <InstallReadyBadge server={server} />
                     {!selectedCategory && <Badge variant="category">{server.category}</Badge>}
                   </div>
                   <div className="directory-list-desc">

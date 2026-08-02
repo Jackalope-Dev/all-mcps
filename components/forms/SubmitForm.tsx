@@ -158,10 +158,10 @@ export function SubmitForm() {
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎉</div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Submitted Successfully!</h3>
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem', maxWidth: '500px', margin: '0.5rem auto 1rem' }}>
-          Your MCP server has been added to our queue for review and indexing. You&apos;ll get an email when it&apos;s approved — then claim it for a free dofollow backlink.
+          Your MCP server is in the review queue. When it goes live you&apos;ll get an email with a direct claim link — free dofollow after you verify your site and keep the badge.
         </p>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '500px', margin: '0 auto 1.5rem', lineHeight: 1.55 }}>
-          Meanwhile, add the AllMCPs badge below. After approval: claim ownership → verify your site → keep the badge dofollow for a reciprocal SEO link.
+          Bookmark the claim page below now. Path after approval: open claim → verify domain → badge stays dofollow for a reciprocal SEO link.
         </p>
 
         {submittedId && (
@@ -238,20 +238,37 @@ export function SubmitForm() {
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
           {submittedId && (
-            <a
-              href={`/mcp/${submittedId}/claim`}
-              style={{
-                padding: '0.65rem 1.25rem',
-                background: 'var(--accent-color)',
-                color: 'var(--bg-color)',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                fontSize: '0.9rem',
-                textDecoration: 'none',
-              }}
-            >
-              Verify &amp; Claim Listing →
-            </a>
+            <>
+              <a
+                href={`/mcp/${submittedId}/claim`}
+                style={{
+                  padding: '0.65rem 1.25rem',
+                  background: 'var(--accent-color)',
+                  color: 'var(--bg-color)',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '0.9rem',
+                  textDecoration: 'none',
+                }}
+              >
+                Save claim link (after approval) →
+              </a>
+              <a
+                href={`/mcp/${submittedId}`}
+                style={{
+                  padding: '0.65rem 1.25rem',
+                  border: '1px solid var(--border-color)',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'var(--text-primary)',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  textDecoration: 'none',
+                }}
+              >
+                Preview listing
+              </a>
+            </>
           )}
           <a
             href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}` : '/pricing'}

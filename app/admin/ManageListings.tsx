@@ -99,7 +99,15 @@ export default function ManageListings() {
 
   const runAction = async (
     id: string,
-    action: 'set_premium' | 'unset_premium' | 'edit' | 'unpublish' | 'republish' | 'delete' | 'feature',
+    action:
+      | 'set_premium'
+      | 'unset_premium'
+      | 'edit'
+      | 'unpublish'
+      | 'republish'
+      | 'delete'
+      | 'feature'
+      | 'resend_approval',
     extra?: { fields?: Partial<EditFields>; days?: number }
   ) => {
     setLoadingId(id);
@@ -413,14 +421,25 @@ export default function ManageListings() {
                               Edit
                             </button>
                             {listing.status === 'active' ? (
-                              <button
-                                onClick={() => runAction(listing.id, 'unpublish')}
-                                disabled={rowLoading}
-                                className="admin-btn"
-                                style={{ background: '#f59e0b' }}
-                              >
-                                Unpublish
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => runAction(listing.id, 'resend_approval')}
+                                  disabled={rowLoading}
+                                  className="admin-btn"
+                                  style={{ background: '#007BFF' }}
+                                  title="Re-send listing-approved email with claim + dofollow CTAs"
+                                >
+                                  Resend email
+                                </button>
+                                <button
+                                  onClick={() => runAction(listing.id, 'unpublish')}
+                                  disabled={rowLoading}
+                                  className="admin-btn"
+                                  style={{ background: '#f59e0b' }}
+                                >
+                                  Unpublish
+                                </button>
+                              </>
                             ) : listing.status === 'removed' ? (
                               <button
                                 onClick={() => runAction(listing.id, 'republish')}

@@ -55,7 +55,16 @@ export default function AdminClient({
 
   const handleAction = async (
     id: string,
-    action: 'approve' | 'reject' | 'approve_edit' | 'reject_edit' | 'approve_claim' | 'reject_claim' | 'approve_logo' | 'reject_logo'
+    action:
+      | 'approve'
+      | 'reject'
+      | 'approve_edit'
+      | 'reject_edit'
+      | 'approve_claim'
+      | 'reject_claim'
+      | 'approve_logo'
+      | 'reject_logo'
+      | 'resend_approval'
   ) => {
     setLoadingId(id);
 
@@ -66,7 +75,7 @@ export default function AdminClient({
         body: JSON.stringify({ id, action }),
       });
 
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { error?: string; message?: string };
 
       if (!res.ok) {
         throw new Error(data.error || 'Action failed');
@@ -82,6 +91,8 @@ export default function AdminClient({
       } else if (action === 'approve_claim' || action === 'reject_claim') {
         setPendingClaims((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_claim' ? 'Claim approved' : 'Claim rejected');
+      } else if (action === 'resend_approval') {
+        toast.success(data.message || 'Approval email resent');
       } else {
         setPendingLogos((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_logo' ? 'Logo approved' : 'Logo rejected');
@@ -113,7 +124,11 @@ export default function AdminClient({
           The most recently added live listings, newest first — a quick way to find something you
           just approved. Ordered by when each listing went live.
         </p>
-        <RecentlyAddedTable servers={recentlyAdded} />
+        <RecentlyAddedTable
+          servers={recentlyAdded}
+          loadingId={loadingId}
+          onResendApproval={(id) => handleAction(id, 'resend_approval')}
+        />
       </section>
 
       <section>
@@ -259,7 +274,15 @@ function ServerTable({
   );
 }
 
-function RecentlyAddedTable({ servers }: { servers: RecentServer[] }) {
+function RecentlyAddedTable({
+  servers,
+  loadingId,
+  onResendApproval,
+}: {
+  servers: RecentServer[];
+  loadingId: string | null;
+  onResendApproval: (id: string) => void;
+}) {
   return (
     <div className="admin-card">
       <table className="admin-table">
@@ -269,12 +292,13 @@ function RecentlyAddedTable({ servers }: { servers: RecentServer[] }) {
             <th>Category</th>
             <th>Links</th>
             <th>Added</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {servers.length === 0 ? (
             <tr>
-              <td colSpan={4} className="admin-table-empty">
+              <td colSpan={5} className="admin-table-empty">
                 No live listings yet.
               </td>
             </tr>
@@ -329,6 +353,19 @@ function RecentlyAddedTable({ servers }: { servers: RecentServer[] }) {
                 </td>
                 <td data-label="Added" style={{ color: 'var(--text-secondary)' }}>
                   {new Date(server.createdAt).toLocaleDateString()}
+                </td>
+                <td data-label="Actions">
+                  <div className="admin-actions">
+                    <button
+                      onClick={() => onResendApproval(server.id)}
+                      disabled={loadingId === server.id}
+                      className="admin-btn"
+                      style={{ background: '#007BFF' }}
+                      title="Re-send the listing-approved email (claim + dofollow CTAs)"
+                    >
+                      Resend approval email
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))

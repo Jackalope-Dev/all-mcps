@@ -34,6 +34,7 @@ export async function GET() {
       featuredUntil: s.featuredUntil ?? null,
       githubStars: s.githubStars ?? null,
       npmDownloads: s.npmDownloads ?? null,
+      installConfidence: s.installConfidence ?? null,
       toolText,
       views: s.views ?? 0,
       copies: s.copies ?? 0,

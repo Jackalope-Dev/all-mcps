@@ -4,6 +4,8 @@ import { eq } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
+import { engagementScore } from './search';
+import { resolveInstallConfig } from './installConfig';
 
 export type ServerTool = { name: string; description?: string };
 
@@ -179,12 +181,46 @@ export async function fetchServerReadme(url: string): Promise<string | null> {
   }
 }
 
+/**
+ * Ranking signal for related/similar listings.
+ * Engagement + install readiness + tool overlap with the current page.
+ * Exported so category pages stay consistent.
+ */
+export function relatedRankingScore(candidate: Server, current?: Server | null): number {
+  let score = engagementScore(candidate);
+
+  // Prefer listings with known install paths (higher install conversion).
+  const conf = (candidate.installConfidence || '').toLowerCase();
+  if (conf === 'high') score += 8;
+  else if (conf === 'medium') score += 4;
+  else if (conf === 'low') score += 1;
+
+  if (candidate.isOfficial || candidate.isPremium) score += 5;
+  if (candidate.websiteVerified) score += 2;
+  if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy') score += 3;
+  if (candidate.reciprocalBadgeOk) score += 2;
+
+  if (typeof candidate.npmDownloads === 'number' && candidate.npmDownloads > 0) {
+    score += Math.min(Math.log10(1 + candidate.npmDownloads) * 2, 10);
+  }
+
+  if (current?.tools?.length && candidate.tools?.length) {
+    const currentNames = new Set(
+      current.tools.map((t) => t.name.toLowerCase()).filter(Boolean)
+    );
+    let overlap = 0;
+    for (const t of candidate.tools) {
+      if (currentNames.has(t.name.toLowerCase())) overlap += 1;
+    }
+    score += overlap * 10;
+  }
+
+  return score;
+}
+
 export function formatServerAsMarkdown(server: Server, readme?: string | null): string {
   // The mcpServers object key just needs to be a readable identifier, not a real
-  // package name, so it's safe to slugify. The npx arg below uses server.name
-  // verbatim since that's typically the actual publishable package name
-  // (e.g. "@agentfund/mcp") and slugifying it would silently produce a
-  // nonexistent package (e.g. "-agentfund-mcp").
+  // package name, so it's safe to slugify.
   const slug = (server.name.split('/').pop() || server.name)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -212,16 +248,47 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
     md += `\n`;
   }
 
+  // Prefer resolved install (cached README/description hint) over blind npx + name.
+  const install = resolveInstallConfig({
+    id: server.id,
+    name: server.name,
+    url: server.url,
+    description: server.description,
+    installKind: server.installKind,
+    installCommand: server.installCommand,
+    installArgs: server.installArgs,
+    installPackage: server.installPackage,
+    installConfidence: server.installConfidence,
+  });
+
   md += `## Claude Desktop Quick Installation\n`;
-  md += `This assumes the package is published to npm and installable via \`npx\`. Verify against the README/repository below first — some servers require Python (\`uvx\`), Docker, or other manual setup instead:\n\n`;
-  md += `\`\`\`json\n`;
-  md += `"mcpServers": {\n`;
-  md += `  "${slug}": {\n`;
-  md += `    "command": "npx",\n`;
-  md += `    "args": ["-y", "${server.name}"]\n`;
-  md += `  }\n`;
-  md += `}\n`;
-  md += `\`\`\`\n\n`;
+  if (install.kind === 'remote') {
+    md += `Remote MCP endpoint (confidence: ${install.confidence}). Add as a URL/SSE server in your client:\n\n`;
+    md += `\`\`\`json\n`;
+    md += `"mcpServers": {\n`;
+    md += `  "${slug}": {\n`;
+    md += `    "url": "${install.url}"\n`;
+    md += `  }\n`;
+    md += `}\n`;
+    md += `\`\`\`\n\n`;
+  } else {
+    const confNote =
+      install.confidence === 'high'
+        ? 'Install path detected from listing signals.'
+        : install.confidence === 'medium'
+          ? 'Install path inferred — verify against the README before production use.'
+          : 'Heuristic fallback — verify the package name and runner against the repository README.';
+    const argsJson = JSON.stringify(install.args);
+    md += `${confNote} Uses \`${install.command}\` (confidence: ${install.confidence}):\n\n`;
+    md += `\`\`\`json\n`;
+    md += `"mcpServers": {\n`;
+    md += `  "${slug}": {\n`;
+    md += `    "command": "${install.command}",\n`;
+    md += `    "args": ${argsJson}\n`;
+    md += `  }\n`;
+    md += `}\n`;
+    md += `\`\`\`\n\n`;
+  }
 
   if (readme) {
     md += `## Documentation & README\n\n${readme}\n`;
@@ -238,11 +305,9 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
     (s) => s.id !== currentServer.id && s.category === currentServer.category
   );
 
-  sameCategory.sort((a, b) => {
-    const scoreA = (a.upvotes || 0) * 5 + (a.copies || 0) + (a.views || 0) * 0.05;
-    const scoreB = (b.upvotes || 0) * 5 + (b.copies || 0) + (b.views || 0) * 0.05;
-    return scoreB - scoreA;
-  });
+  sameCategory.sort(
+    (a, b) => relatedRankingScore(b, currentServer) - relatedRankingScore(a, currentServer)
+  );
 
   if (sameCategory.length >= limit) {
     return sameCategory.slice(0, limit);
@@ -251,11 +316,9 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
   const otherServers = allServers.filter(
     (s) => s.id !== currentServer.id && s.category !== currentServer.category
   );
-  otherServers.sort((a, b) => {
-    const scoreA = (a.upvotes || 0) * 5 + (a.copies || 0) + (a.views || 0) * 0.05;
-    const scoreB = (b.upvotes || 0) * 5 + (b.copies || 0) + (b.views || 0) * 0.05;
-    return scoreB - scoreA;
-  });
+  otherServers.sort(
+    (a, b) => relatedRankingScore(b, currentServer) - relatedRankingScore(a, currentServer)
+  );
 
   return [...sameCategory, ...otherServers].slice(0, limit);
 }

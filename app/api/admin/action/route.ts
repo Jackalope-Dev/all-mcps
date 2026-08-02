@@ -10,11 +10,8 @@ import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
 import { parsePendingRevision } from '../../../../lib/pendingRevision';
 import { sendNotificationEmail, sendListingStatusEmail } from '../../../../lib/notify';
 import { getAppUrl } from '../../../../lib/stripe';
-import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../../lib/sequenzy';
-import {
-  sendSequenzyTransactional,
-  SEQUENZY_TX,
-} from '../../../../lib/sequenzyTransactional';
+import { notifyListingApproved } from '../../../../lib/listingApprovalNotify';
+import { notifyListingIndexed } from '../../../../lib/indexnow';
 
 import { tweetMcpServer } from '../../../../lib/twitter';
 
@@ -36,6 +33,7 @@ const actionSchema = z.object({
     'reject_claim',
     'approve_logo',
     'reject_logo',
+    'resend_approval',
   ]),
   fields: z
     .object({
@@ -65,6 +63,7 @@ const MESSAGES: Record<string, string> = {
   reject_claim: 'Claim rejected.',
   approve_logo: 'Logo approved.',
   reject_logo: 'Logo rejected.',
+  resend_approval: 'Approval email resent.',
 };
 
 export async function POST(req: Request) {
@@ -110,62 +109,18 @@ export async function POST(req: Request) {
       }
 
       const approvedServer = updateResult[0];
-      const appUrl = getAppUrl();
-      const listingUrl = `${appUrl}/mcp/${approvedServer.id}`;
-      const claimUrl = `${listingUrl}/claim`;
 
       // Notify submitter: Sequenzy transactional (primary) + Resend fallback.
       // Copy drives claim + free dofollow badge path — key DR growth lever.
-      const submitterEmail =
-        typeof approvedServer.submitterEmail === 'string'
-          ? approvedServer.submitterEmail.trim().toLowerCase()
-          : '';
-      if (submitterEmail) {
-        try {
-          const sequenzyOk = await sendSequenzyTransactional({
-            to: submitterEmail,
-            slug: SEQUENZY_TX.LISTING_APPROVED,
-            variables: {
-              MCP_NAME: approvedServer.name,
-              LISTING_URL: listingUrl,
-              CLAIM_URL: claimUrl,
-              mcpName: approvedServer.name,
-              listingUrl,
-              claimUrl,
-              serverId: approvedServer.id,
-            },
-          });
-          if (!sequenzyOk) {
-            await sendListingStatusEmail({
-              to: submitterEmail,
-              mcpName: approvedServer.name,
-              status: 'approved',
-              listingUrl,
-              claimUrl,
-            });
-          }
-          // Tag for claim/dofollow sequence (trigger: listing-approved). one_time
-          // enrollment on that sequence prevents re-runs; Submission Upsell keys off
-          // submitted-listing only, so enabling enroll here is intentional.
-          await syncSequenzySubscriber({
-            email: submitterEmail,
-            tags: ['listing-approved'],
-            lists: [PRODUCT_SUBSCRIBERS_LIST_ID],
-            customAttributes: {
-              serverId: approvedServer.id,
-              serverName: approvedServer.name,
-              listingUrl,
-              claimUrl,
-              MCP_NAME: approvedServer.name,
-              LISTING_URL: listingUrl,
-              CLAIM_URL: claimUrl,
-            },
-            enrollInSequences: true,
-          });
-        } catch (e) {
-          console.error('Failed to notify submitter on approval:', e);
-        }
-      }
+      await notifyListingApproved({
+        id: approvedServer.id,
+        name: approvedServer.name,
+        submitterEmail: approvedServer.submitterEmail,
+        enrollInSequences: true,
+      });
+
+      // IndexNow — speed up discovery of the new listing page.
+      void notifyListingIndexed(approvedServer.id, ['/browse', '/sitemap.xml']).catch(() => {});
 
       // Auto-tweet newly approved MCP server
       try {
@@ -184,6 +139,39 @@ export async function POST(req: Request) {
       } catch (e) {
         console.error('Failed to tweet on server approval:', e);
       }
+    } else if (action === 'resend_approval') {
+      // Re-send the approval email for an already-live listing (missed inbox, etc.).
+      const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
+      const server = rows[0];
+      if (!server) {
+        return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
+      }
+      if (server.status !== 'active') {
+        return NextResponse.json(
+          { error: 'Can only resend approval for active listings.' },
+          { status: 400 }
+        );
+      }
+
+      const result = await notifyListingApproved({
+        id: server.id,
+        name: server.name,
+        submitterEmail: server.submitterEmail,
+        // Sequence is one_time — re-tagging is fine; enrollment won't re-fire if already enrolled.
+        enrollInSequences: true,
+      });
+
+      if (!result.emailed) {
+        return NextResponse.json(
+          { error: result.reason || 'Could not send approval email.' },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Approval email resent via ${result.channel}.`,
+      });
     } else if (action === 'reject') {
       const deleteResult = await db.delete(servers)
         .where(and(eq(servers.id, id), eq(servers.status, 'pending')))
@@ -272,6 +260,11 @@ export async function POST(req: Request) {
           { error: `Server not found or not currently ${fromStatus}.` },
           { status: 400 }
         );
+      }
+
+      // Republished listing should re-enter search indexes promptly.
+      if (action === 'republish' && updateResult[0]) {
+        void notifyListingIndexed(updateResult[0].id).catch(() => {});
       }
     } else if (action === 'delete') {
       const deleteResult = await db.delete(servers)

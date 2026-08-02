@@ -6,7 +6,7 @@ import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
-import { getActiveServers, type Server } from '../../../lib/servers';
+import { getActiveServers, relatedRankingScore, type Server } from '../../../lib/servers';
 import {
   DIRECTORY_CATEGORIES,
   categoryFromSlug,
@@ -22,9 +22,9 @@ const SITE = 'https://allmcps.com';
 /** Cap the server-rendered card list; larger categories link out to the full filter view. */
 const MAX_CARDS = 60;
 
-/** Engagement score mirrors lib/servers.getRelatedServers so ordering is consistent site-wide. */
+/** Ranking mirrors lib/servers.relatedRankingScore so ordering is consistent site-wide. */
 function score(s: Server): number {
-  return (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
+  return relatedRankingScore(s);
 }
 
 /**
