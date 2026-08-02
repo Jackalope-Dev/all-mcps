@@ -74,7 +74,8 @@ export function BadgeEmbedBuilder({
             Dynamic SVG Verification Badge
           </h3>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Embed on your GitHub README or project site to showcase your listing and automatically claim Verified status.
+            Embed on your GitHub README or project site to showcase your listing. Verify your site and keep the badge
+            dofollow to turn your listing&apos;s website link into a reciprocal dofollow backlink.
           </p>
         </div>
 
@@ -170,7 +171,10 @@ export function BadgeEmbedBuilder({
       <div className="badge-embed-callout">
         <ShieldCheck size={16} style={{ color: '#34d399', flexShrink: 0, marginTop: '0.125rem' }} />
         <div className="badge-embed-callout-text">
-          <span style={{ fontWeight: 600 }}>Automatic Health & Verification Sync</span>: Adding this badge to your GitHub README triggers automated verification on the next health check run!
+          <span style={{ fontWeight: 600 }}>Automatic badge health sync</span>: we re-check your badge on each health
+          run, so once it&apos;s live your reciprocal dofollow link stays credited automatically. (To claim the Verified
+          owner badge, use the personalized badge on your listing&apos;s claim page — a generic badge can&apos;t prove
+          ownership.)
         </div>
       </div>
 
@@ -179,9 +183,9 @@ export function BadgeEmbedBuilder({
         <ShieldCheck size={16} style={{ color: '#00E5FF', flexShrink: 0, marginTop: '0.125rem' }} />
         <div className="badge-embed-callout-text">
           <span style={{ fontWeight: 600 }}>Reciprocal dofollow link</span>: These snippets are a genuine{' '}
-          <strong>dofollow</strong> link back to AllMCPs (no <code>rel=&quot;nofollow&quot;</code>). Keep them
-          dofollow on your site and your listing&apos;s website link becomes dofollow too — we recheck the badge on
-          each health run and only credit links that actually pass ranking signal.
+          <strong>dofollow</strong> link back to AllMCPs (no <code>rel=&quot;nofollow&quot;</code>). Verify your site
+          (badge, meta tag, or DNS) and keep the link dofollow, and your listing&apos;s website link becomes dofollow in
+          return — we recheck the badge on each health run and only credit links that actually pass ranking signal.
         </div>
       </div>
 
