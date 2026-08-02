@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Share2, X, Copy, Check } from 'lucide-react';
+import { Share2, X, Copy, Check, Link2 } from 'lucide-react';
 import { toast } from './ui/Toast';
 import { trackShare } from '../lib/gtag';
 import { BadgeEmbedBuilder } from './ui/BadgeEmbedBuilder';
@@ -23,6 +23,7 @@ export default function ShareModal({
   const [mounted, setMounted] = useState(false);
   const [badgeStyle, setBadgeStyle] = useState<'featured' | 'directory'>('featured');
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -38,7 +39,11 @@ export default function ShareModal({
   }, [isOpen]);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
+  const listingUrl = `${baseUrl}/mcp/${serverId}`;
   const badgeSrc = `${baseUrl}/api/badge/${serverId}?style=${badgeStyle}&theme=${badgeTheme}`;
+  const shareText = `${displayName} MCP server — install in Claude, Cursor & more`;
+  const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(listingUrl)}`;
+  const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(listingUrl)}`;
 
   const snippets = {
     badge: `[![Listed on AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`,
@@ -64,6 +69,28 @@ export default function ShareModal({
     }
   };
 
+  const copyListingLink = async () => {
+    try {
+      await navigator.clipboard.writeText(listingUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+      trackShare({ method: 'copy_url', serverId });
+      toast.success('Listing link copied');
+    } catch {
+      toast.error('Could not copy', { description: 'Your browser blocked clipboard access.' });
+    }
+  };
+
+  const shareNative = async () => {
+    if (typeof navigator === 'undefined' || !navigator.share) return;
+    try {
+      await navigator.share({ title: `${displayName} MCP Server`, text: shareText, url: listingUrl });
+      trackShare({ method: 'native', serverId });
+    } catch {
+      // user cancelled
+    }
+  };
+
   const CopyButton = ({ snippetKey }: { snippetKey: keyof typeof snippets }) => (
     <button 
       onClick={() => handleCopy(snippetKey)}
@@ -84,6 +111,22 @@ export default function ShareModal({
       <CopyButton snippetKey={snippetKey} />
     </div>
   );
+
+  const shareBtnStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+    padding: '0.55rem 0.85rem',
+    borderRadius: 8,
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'rgba(255,255,255,0.06)',
+    color: 'white',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  };
+
+  const canNativeShare = mounted && typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   const modalContent = (
     <div 
@@ -118,9 +161,47 @@ export default function ShareModal({
         </button>
 
         <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white', paddingRight: '3rem' }}>Share & Embed</h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.875rem' }}>
-          Add these to your website or GitHub README to get a high-quality, dofollow backlink and drive traffic to your tool. Keep the badge dofollow on your site and we make your listing&apos;s website link dofollow in return.
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', fontSize: '0.875rem' }}>
+          Share the listing, or add a badge/widget to your site for a reciprocal dofollow path.
         </p>
+
+        {/* Social / link share */}
+        <div className="share-modal-section" style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.75rem' }}>Share this listing</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={copyListingLink}
+              style={shareBtnStyle}
+            >
+              {linkCopied ? <Check size={16} color="#10b981" /> : <Link2 size={16} />}
+              {linkCopied ? 'Copied' : 'Copy link'}
+            </button>
+            <a
+              href={tweetUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackShare({ method: 'twitter', serverId })}
+              style={{ ...shareBtnStyle, textDecoration: 'none' }}
+            >
+              <X size={16} /> Post on X
+            </a>
+            <a
+              href={linkedInUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackShare({ method: 'linkedin', serverId })}
+              style={{ ...shareBtnStyle, textDecoration: 'none' }}
+            >
+              LinkedIn
+            </a>
+            {canNativeShare && (
+              <button type="button" onClick={shareNative} style={shareBtnStyle}>
+                <Share2 size={16} /> More…
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Badge Section */}
         <div className="share-modal-section">

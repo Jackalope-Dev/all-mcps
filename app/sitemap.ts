@@ -255,7 +255,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: safeDateISO(new Date()),
       changeFrequency: 'monthly',
       priority: 0.8,
-    }
+    },
+    {
+      url: `${baseUrl}/badge-generator`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'monthly' as const,
+      priority: 0.75,
+    },
   ];
 
   let blogEntries: MetadataRoute.Sitemap = [];
@@ -278,6 +284,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // Alternatives pages are indexable + linked from listings; without sitemap
+  // entries they stay under-discovered by crawlers despite full SEO markup.
+  const alternativesEntries = servers.map((server) => ({
+    url: `${baseUrl}/mcp/${server.id}/alternatives`,
+    lastModified: safeDateISO(server.lastCheckedAt || server.createdAt || server.created_at),
+    changeFrequency: 'weekly' as const,
+    priority: 0.55,
+  }));
+
   const categoryEntries: MetadataRoute.Sitemap = DIRECTORY_CATEGORIES.map((category) => ({
     url: `${baseUrl}/categories/${categorySlug(category)}`,
     lastModified: safeDateISO(new Date()),
@@ -292,13 +307,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  const bestEntries: MetadataRoute.Sitemap = BEST_TOPICS.map((t) => ({
+  // De-dupe by slug so accidental double entries never emit two /best/* URLs.
+  const seenBest = new Set<string>();
+  const bestEntries: MetadataRoute.Sitemap = BEST_TOPICS.filter((t) => {
+    if (seenBest.has(t.slug)) return false;
+    seenBest.add(t.slug);
+    return true;
+  }).map((t) => ({
     url: `${baseUrl}/best/${t.slug}`,
     lastModified: safeDateISO(new Date()),
     changeFrequency: 'weekly' as const,
     priority: 0.85,
   }));
 
-  return [...sitemapEntries, ...categoryEntries, ...bestEntries, ...clientEntries, ...blogEntries, ...serverEntries];
+  return [
+    ...sitemapEntries,
+    ...categoryEntries,
+    ...bestEntries,
+    ...clientEntries,
+    ...blogEntries,
+    ...serverEntries,
+    ...alternativesEntries,
+  ];
 }
 

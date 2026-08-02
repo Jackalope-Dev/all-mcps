@@ -25,6 +25,8 @@ import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { parseServerName } from '../../../lib/displayName';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
+import { bestTopicForCategory } from '../../../lib/bestTopics';
+import { categorySlug } from '../../../lib/categories';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
@@ -949,6 +951,67 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add our SVG badge (dark/light directory styles) or embeddable widget to your site.</p>
             <ShareModal serverId={server.id} serverName={server.name} />
           </div>
+
+          {/* Internal SEO mesh — category, best-of, install guides, alternatives */}
+          {(() => {
+            const catSlug = categorySlug(server.category);
+            const best = bestTopicForCategory(server.category);
+            return (
+              <div className="surface" style={{ padding: '1.5rem' }}>
+                <h3
+                  style={{
+                    fontSize: '1rem',
+                    marginBottom: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Explore more
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <Link
+                    href={`/categories/${catSlug}`}
+                    style={{ fontSize: '0.85rem', color: 'var(--accent-color)', fontWeight: 600 }}
+                  >
+                    More in {server.category} →
+                  </Link>
+                  {best && (
+                    <Link
+                      href={`/best/${best.slug}`}
+                      style={{ fontSize: '0.85rem', color: 'var(--accent-color)', fontWeight: 600 }}
+                    >
+                      Best MCP servers for {best.title} →
+                    </Link>
+                  )}
+                  <Link
+                    href={`/mcp/${server.id}/alternatives`}
+                    style={{ fontSize: '0.85rem', color: 'var(--accent-color)', fontWeight: 600 }}
+                  >
+                    Alternatives to {displayName} →
+                  </Link>
+                  <Link
+                    href="/clients/claude-desktop"
+                    style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
+                  >
+                    Install in Claude Desktop
+                  </Link>
+                  <Link
+                    href="/clients/cursor"
+                    style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
+                  >
+                    Install in Cursor
+                  </Link>
+                  <Link
+                    href="/clients/vs-code"
+                    style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
+                  >
+                    Install in VS Code
+                  </Link>
+                </div>
+              </div>
+            );
+          })()}
           
         </div>
       </div>
