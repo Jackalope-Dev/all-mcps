@@ -448,7 +448,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               installPackage={server.installPackage}
               installConfidence={server.installConfidence}
             />
-            <ClientConfigTabs server={server as any} />
+            <ClientConfigTabs server={server} />
             <McpConfigGenerator
               serverId={server.id}
               serverName={server.name}
