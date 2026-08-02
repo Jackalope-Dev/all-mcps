@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers } from '../../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { servers, socialPosts } from '../../../../db/schema';
+import { eq, lt } from 'drizzle-orm';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { tweetMcpServer } from '../../../../lib/twitter';
 import serversData from '../../../../data/mcp-servers.json';
@@ -19,6 +19,14 @@ const NEW_SHARE = 0.25;
 // of the rotation every run and gets tweeted over and over. Configurable via env so it
 // can be pushed out to effectively "never repeat" if desired.
 const REPOST_COOLDOWN_DAYS = Number(process.env.TWEET_REPOST_COOLDOWN_DAYS) || 365;
+const HIGHLIGHT_INTERVAL_HOURS = 4;
+const FEED_RETENTION_DAYS = Number(process.env.TWEET_FEED_RETENTION_DAYS) || 180;
+
+function getHighlightSlotKey(now: Date): string {
+  const slotMs = HIGHLIGHT_INTERVAL_HOURS * 60 * 60 * 1000;
+  const slotStart = new Date(Math.floor(now.getTime() / slotMs) * slotMs);
+  return slotStart.toISOString();
+}
 
 export async function POST(req: Request) {
   try {
@@ -153,22 +161,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No active MCP servers found to highlight.' }, { status: 404 });
     }
 
-    const tweetResult = await tweetMcpServer({
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Tweet queue storage is unavailable (DB not accessible).' },
+        { status: 503 },
+      );
+    }
+
+    const now = new Date();
+    const tweetResult = await tweetMcpServer(db, {
       id: selectedServer.id,
       name: selectedServer.name,
       description: selectedServer.description,
       category: selectedServer.category,
       isNew: selectedServer.isNew,
       isFeatured: selectedServer.isFeatured,
+    }, {
+      source: 'highlight_cron',
+      dedupeKey: `highlight:${getHighlightSlotKey(now)}`,
+      now,
     });
 
-    // Record the post so the next run rotates to a different server. Only on a real
-    // send — a failed tweet shouldn't burn the server's turn in the rotation.
-    if (db && tweetResult?.success) {
+    if (!tweetResult.success) {
+      return NextResponse.json(
+        { error: tweetResult.error || 'Failed to enqueue tweet item.', server: selectedServer, tweetResult },
+        { status: 500 },
+      );
+    }
+
+    // Record rotation only when we successfully created a new queue item.
+    if (tweetResult?.success && tweetResult?.queued) {
       try {
         await db.update(servers).set({ lastTweetedAt: new Date() }).where(eq(servers.id, selectedServer.id));
+        const retentionCutoff = new Date(Date.now() - FEED_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+        await db.delete(socialPosts).where(lt(socialPosts.createdAt, retentionCutoff));
       } catch (e) {
-        console.warn('Posted highlight but failed to record lastTweetedAt.', e);
+        console.warn('Queued highlight but failed post-enqueue housekeeping.', e);
       }
     }
 

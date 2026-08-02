@@ -160,3 +160,28 @@ export const impressionLogs = sqliteTable('impression_logs', {
   createdIdx: index('idx_impression_created').on(table.createdAt),
   surfaceIdx: index('idx_impression_surface').on(table.surface),
 }));
+
+/** Outbound social queue items (RSS-backed tweet pipeline). */
+export const socialPosts = sqliteTable('social_posts', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  /** Stable per-item id exposed in RSS <guid>. */
+  guid: text('guid').notNull().unique(),
+  /** Target channel (currently: twitter). */
+  channel: text('channel').notNull().default('twitter'),
+  /** queued | sent | failed */
+  status: text('status').notNull().default('queued'),
+  /** Related listing (when applicable). */
+  serverId: text('server_id'),
+  /** Full tweet body that downstream automation should post. */
+  tweetText: text('tweet_text').notNull(),
+  /** producer source: highlight_cron | approval | ... */
+  source: text('source'),
+  /** Optional idempotency key (e.g. one item per cron slot). */
+  dedupeKey: text('dedupe_key').unique(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  sentAt: integer('sent_at', { mode: 'timestamp' }),
+}, (table) => ({
+  createdIdx: index('idx_social_posts_created').on(table.createdAt),
+  statusCreatedIdx: index('idx_social_posts_status_created').on(table.status, table.createdAt),
+  serverIdx: index('idx_social_posts_server').on(table.serverId),
+}));
