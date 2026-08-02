@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://allmcps.com/badge-generator' },
   openGraph: {
     title: 'MCP Server Badge Generator | AllMCPs',
-    description: 'Create dark & light mode SVG badges for your MCP server. Auto-verifies your listing upon GitHub README inclusion.',
+    description: 'Create dark & light mode SVG badges for your MCP server. Keep the badge dofollow and verify your site to earn a reciprocal dofollow backlink.',
     url: 'https://allmcps.com/badge-generator',
   },
 };
@@ -18,7 +18,7 @@ export default function BadgeGeneratorPage() {
     <PageShell variant="tool" panel>
       <PageHeader
         title="MCP Badge & Embed Generator"
-        description="Customize dynamic SVG badges for your GitHub README, documentation site, or blog. Automatically claims verified badge status when added to your repository."
+        description="Customize dynamic SVG badges for your GitHub README, documentation site, or blog. Keep the badge dofollow and verify your site to turn your listing's website link into a reciprocal dofollow backlink."
       />
       <div style={{ marginTop: '2rem' }}>
         <BadgeEmbedBuilder />
