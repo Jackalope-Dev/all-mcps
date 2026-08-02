@@ -44,6 +44,20 @@ const TOOLS = [
       'Build a ready-to-paste claude_desktop_config.json (or Cursor/VS Code/Windsurf equivalent) from servers in the directory or your own custom setup.',
   },
   {
+    href: '/tools/config-auditor',
+    icon: CheckCircle2,
+    title: 'Config Auditor & Merger',
+    description:
+      'Audit your MCP client JSON configs for unreplaced API key placeholders, syntax issues, and merge directory servers in 1 click.',
+  },
+  {
+    href: '/tools/playground',
+    icon: ShieldCheck,
+    title: 'Interactive MCP Playground',
+    description:
+      'Test remote JSON-RPC 2.0 MCP endpoints in your browser — execute initialize, tools/list, and tools/call requests with live logging.',
+  },
+  {
     href: '/tools/config-validator',
     icon: CheckCircle2,
     title: 'Config Validator',
