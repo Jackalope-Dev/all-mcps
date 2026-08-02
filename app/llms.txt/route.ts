@@ -26,7 +26,9 @@ export async function GET(request: Request) {
   content += `- **Agent Search API:** https://allmcps.com/api/v1/search?q={query}\n`;
   content += `- **Remote MCP Server Tool:** https://allmcps.com/api/mcp\n`;
   content += `- **Per-listing Markdown:** https://allmcps.com/mcp/{id}.md\n`;
-  content += `- **Per-listing Alternatives:** https://allmcps.com/mcp/{id}/alternatives\n\n`;
+  content += `- **Per-listing Alternatives:** https://allmcps.com/mcp/{id}/alternatives\n`;
+  content += `- **Side-by-side Compare:** https://allmcps.com/mcp/{id}/vs/{otherId}\n`;
+  content += `- **Agent auth status:** https://allmcps.com/auth.md (public read APIs need no token; register/claim return 501 until implemented)\n\n`;
 
   content += `## Submit an MCP Server (Free)\n`;
   content += `- **Listing is always free** — no payment required to get listed.\n`;

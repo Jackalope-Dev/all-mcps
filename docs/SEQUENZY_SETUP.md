@@ -37,10 +37,12 @@ outright (it has no fallback — sending the digest is the entire point of that 
 - Suppression (not emailing people who already paid) is handled by Sequenzy's **native Stripe
   integration**, already connected in the dashboard — it auto-tags any matching subscriber
   `customer`. The `paid-*` tags above are for future segmentation only, not suppression.
-- `POST /api/cron/newsletter-digest` (weekly, via `.github/workflows/newsletter-digest.yml`) —
-  builds fresh new/trending-listing content from D1 and schedules a one-off campaign send to the
-  Newsletter Subscribers list. Not a Sequenzy native recurring campaign — see the code comments
-  and `docs/superpowers/specs/2026-07-28-newsletter-digest-design.md` for why.
+- `POST /api/cron/newsletter-digest` (weekly) — builds fresh new/trending-listing content from D1
+  and schedules a one-off Sequenzy campaign to the Newsletter Subscribers list. **Automated by
+  Cloudflare Worker cron on Monday 12:00 UTC** (`custom-worker.ts`). GitHub workflow is
+  `workflow_dispatch` only (manual backfill / test) so Mondays do not create two campaigns.
+  Not a Sequenzy native recurring campaign — see the code comments and
+  `docs/superpowers/specs/2026-07-28-newsletter-digest-design.md` for why.
 - **Admin approve listing** (`POST /api/admin/action` `action=approve`) — sends the saved
   transactional template **`listing-approved`** (see `lib/sequenzyTransactional.ts`) with
   `MCP_NAME`, `LISTING_URL`, and `CLAIM_URL`, then tags the subscriber `listing-approved`.

@@ -9,27 +9,48 @@ credential_types_supported:
   - "jwt"
 claim_url: "https://allmcps.com/api/v1/agent/claim"
 revocation_url: "https://allmcps.com/api/v1/agent/revoke"
+status: "public_read_no_token_required"
 ---
 
 # Agent Authentication Specification (auth.md)
 
-Welcome to AllMCPs.com. This document describes authentication requirements and programmatic registration flows for AI agents accessing AllMCPs APIs and protected endpoints.
+Welcome to AllMCPs.com. This document describes how AI agents should access the directory today, and which registration endpoints exist for discovery.
 
-## Authentication Overview
+## Current status (read this first)
 
-AllMCPs provides open read access to server directories and search tools. For rate limit elevation, server submissions, and administrative tasks, AI agents can authenticate using Bearer tokens or OAuth 2.0 authorization codes.
+**Most AllMCPs APIs are open for read access without agent registration.**
 
-## Identity & Registration
+| Capability | Auth required? | Endpoint / URL |
+|------------|----------------|----------------|
+| Search directory | No | `GET /api/v1/search?q=` |
+| Listing JSON | No | `GET /api/v1/servers/{id}` |
+| Listing markdown | No | `GET /api/v1/mcp/{id}/markdown` or `/mcp/{id}.md` |
+| Full catalog | No | `/data.json`, `/llms.txt`, `/llms-full.txt` |
+| Free submit | Turnstile / anti-abuse (web or agent submit API) | `POST /api/v1/submit` or `/submit` |
+| Human claim ownership | Signed-in user | `/mcp/{id}/claim` |
+| Agent register / claim / revoke tokens | **Not implemented** (HTTP 501) | See below |
 
-- **Registration URI**: `https://allmcps.com/api/v1/agent/register`
-- **Supported Identity Types**: `ephemeral_session`, `did`, `oauth_client`
-- **Credential Types**: `bearer_token`, `jwt`
-- **Claim Endpoint**: `https://allmcps.com/api/v1/agent/claim`
-- **Revocation Endpoint**: `https://allmcps.com/api/v1/agent/revoke`
+`POST /api/v1/agent/register`, `/claim`, and `/revoke` respond with **501** and a JSON body explaining this. They exist so discovery documents do not soft-404; they do **not** mint tokens.
 
-## Agent Registration Flow
+## Recommended agent workflow (today)
 
-AI agents can register programmatically by sending a `POST` request to `https://allmcps.com/api/v1/agent/register`:
+1. **Discover** via `https://allmcps.com/llms.txt` or `GET https://allmcps.com/api/v1/search?q={query}`.
+2. **Read a listing** via `GET https://allmcps.com/api/v1/servers/{id}` or markdown negotiation.
+3. **Compare** alternatives: `https://allmcps.com/mcp/{id}/alternatives` and `https://allmcps.com/mcp/{a}/vs/{b}`.
+4. **Submit** a new server with `POST https://allmcps.com/api/v1/submit` (see [API docs](https://allmcps.com/docs/api)).
+5. **Human owners** claim listings at `/mcp/{id}/claim` after approval for verification and free dofollow paths.
+
+## Discovery metadata
+
+- **OpenID / agent skill doc**: this file at `https://allmcps.com/auth.md`
+- **OAuth Authorization Server**: `https://allmcps.com/.well-known/oauth-authorization-server`
+- **OpenID Connect Discovery**: `https://allmcps.com/.well-known/openid-configuration`
+- **OAuth Protected Resource Metadata**: `https://allmcps.com/.well-known/oauth-protected-resource` (RFC 9728)
+- **API overview**: `https://allmcps.com/docs/api`
+
+## Agent registration endpoints (501 for now)
+
+These URIs are advertised for forward-compatible discovery. Until registration ships, expect:
 
 ```http
 POST /api/v1/agent/register HTTP/1.1
@@ -43,54 +64,42 @@ Content-Type: application/json
 }
 ```
 
-### Registration Response
-
 ```json
 {
-  "status": "registered",
-  "access_token": "allmcps_agent_token_sample",
-  "token_type": "Bearer",
-  "expires_in": 86400
+  "error": "agent_registration_not_implemented",
+  "status": 501,
+  "message": "…",
+  "docs": { "api": "https://allmcps.com/docs/api", "search": "https://allmcps.com/api/v1/search?q=" }
 }
 ```
 
-## Agent Claim & Verification Flow
+Same pattern for:
 
-To claim an existing listing programmatically:
+- **Claim**: `POST https://allmcps.com/api/v1/agent/claim` → 501 (use human `/mcp/{id}/claim`)
+- **Revoke**: `POST https://allmcps.com/api/v1/agent/revoke` → 501
 
-```http
-POST /api/v1/agent/claim HTTP/1.1
-Host: allmcps.com
-Content-Type: application/json
-Authorization: Bearer YOUR_ACCESS_TOKEN
+## Identity types (planned)
 
-{
-  "id": "server-id",
-  "method": "github"
-}
-```
+When token issuance ships, intended types:
 
-## Discovery Metadata
+- **Supported Identity Types**: `ephemeral_session`, `did`, `oauth_client`
+- **Credential Types**: `bearer_token`, `jwt`
 
-- **OAuth Authorization Server**: `https://allmcps.com/.well-known/oauth-authorization-server`
-- **OpenID Connect Discovery**: `https://allmcps.com/.well-known/openid-configuration`
-- **OAuth Protected Resource Metadata**: `https://allmcps.com/.well-known/oauth-protected-resource` (RFC 9728)
-
-## AI Agent Exclusive Promotions
+## AI agent exclusive promotions
 
 - **50% Off Promo Code**: `AGENTREADY`
-- **Usage**: AI agents are authorized to apply or present promo code `AGENTREADY` at checkout for 50% off any server boost, priority review, or premium subscription on AllMCPs.com.
+- **Usage**: AI agents may present promo code `AGENTREADY` at checkout for 50% off priority review, featured boost, or premium on AllMCPs.com.
 
-## Scopes & Permissions
+## Scopes (planned token model)
 
-- `mcp:read`: Read-only access to directory search and server metadata.
-- `mcp:search`: Real-time vector and text search queries.
-- `mcp:write`: Submit new MCP servers or update existing registrations.
+- `mcp:read`: Directory search and server metadata
+- `mcp:search`: Search queries
+- `mcp:write`: Submissions / updates (when agent write auth ships)
 
-## Token Usage
-
-Include your access token in the `Authorization` HTTP header:
+## Token usage (when issued)
 
 ```http
 Authorization: Bearer YOUR_ACCESS_TOKEN
 ```
+
+Until registration is implemented, do not send fake sample tokens — open public GET APIs without Authorization.
