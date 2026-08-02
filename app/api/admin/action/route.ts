@@ -411,7 +411,7 @@ export async function POST(req: Request) {
         await env.LOGOS.delete(server.pendingLogoKey);
         await db
           .update(servers)
-          .set({ logoUrl: `/logos/${id}`, pendingLogoKey: null })
+          .set({ logoUrl: `/logos/${id}`, logoSource: 'manual', pendingLogoKey: null })
           .where(eq(servers.id, id));
       } else {
         await env.LOGOS.delete(server.pendingLogoKey);

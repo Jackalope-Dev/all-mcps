@@ -35,6 +35,8 @@ export const servers = sqliteTable('servers', {
   pendingRevision: text('pending_revision'),
   /** Live, admin-approved logo URL (e.g. `/logos/<id>`). Null = use the generated gradient avatar. */
   logoUrl: text('logo_url'),
+  /** Source of logo: 'readme' | 'website_favicon' | 'github_org' | 'github_user' | 'manual' */
+  logoSource: text('logo_source'),
   /** R2 key of an uploaded logo awaiting admin approval (e.g. `pending/<id>.png`). Null = nothing pending. */
   pendingLogoKey: text('pending_logo_key'),
   status: text('status').notNull().default('pending'),

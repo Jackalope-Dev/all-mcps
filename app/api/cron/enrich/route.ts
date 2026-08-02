@@ -7,9 +7,15 @@ import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { processLogoUpload, LogoValidationError } from '../../../../lib/logoImage';
 import {
   descriptionNeedsClean,
+  extractCandidateImagesFromReadme,
+  extractCandidateWebsitesFromReadme,
+  extractWebsiteFaviconUrl,
   fetchGithubReadme,
   fetchGithubRepo,
+  logoSourcePriority,
+  LogoSource,
   parseGithubUrl,
+  pickBestWebsiteAndLogoWithLlm,
   pickDescription,
   pickWebsiteUrl,
   resolveInstallFromSignals,
@@ -22,9 +28,9 @@ import { getGithubToken } from '../../../../lib/githubAuth';
  *
  * Per batch (default 40):
  *  - Clean Glama/README chrome in descriptions
- *  - Pull GitHub homepage → website_url, stars, archived/disabled
+ *  - Pull GitHub homepage & README → website_url (derived or official), stars, archived/disabled
  *  - Install hints from README
- *  - Owner/org avatar → R2 logo when missing
+ *  - High-quality Logo extraction (README image > Website Favicon > Org Avatar > User Avatar)
  *  - Unpublish offline (404) and archived GitHub repos
  *
  * Auth: ADMIN_SECRET. Optional GITHUB_TOKEN greatly raises rate limits.
@@ -32,6 +38,28 @@ import { getGithubToken } from '../../../../lib/githubAuth';
  */
 
 const BATCH_SIZE = 40;
+
+async function tryUploadLogo(
+  url: string,
+  serverId: string,
+  envLogos: any
+): Promise<Uint8Array | null> {
+  if (!url || !envLogos) return null;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'AllMCPs-Enricher/1.0 (+https://allmcps.com)' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    return await processLogoUpload(buf);
+  } catch (e) {
+    if (!(e instanceof LogoValidationError)) {
+      console.error(`Logo upload processing failed for ${serverId} (${url}):`, e);
+    }
+    return null;
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -51,7 +79,7 @@ export async function POST(req: Request) {
     const db = drizzle(env.DB as any);
     const githubToken = getGithubToken(env);
 
-    // Prefer listings that still look unenriched.
+    // Prefer listings that still look unenriched or have lower-quality avatars (github_user).
     const candidates = await db
       .select()
       .from(servers)
@@ -61,6 +89,8 @@ export async function POST(req: Request) {
           or(
             isNull(servers.websiteUrl),
             isNull(servers.logoUrl),
+            isNull(servers.logoSource),
+            eq(servers.logoSource, 'github_user'),
             isNull(servers.installKind),
             isNull(servers.githubStars),
             sql`${servers.description} LIKE '%glama.ai%'`,
@@ -107,6 +137,7 @@ export async function POST(req: Request) {
       let isVerifiedActive = !!server.isVerifiedActive;
       let githubStars = server.githubStars ?? null;
       let logoUrl = server.logoUrl ?? null;
+      let logoSource = (server.logoSource as LogoSource | null) ?? null;
       let unpublish = false;
 
       // Always persist cleaned description when chrome is present (no GH needed).
@@ -139,6 +170,24 @@ export async function POST(req: Request) {
           });
           stats.installSet++;
         }
+
+        // Try extracting favicon for non-GitHub website URLs if missing logo
+        if (!logoUrl && websiteUrl && env.LOGOS) {
+          const faviconUrl = await extractWebsiteFaviconUrl(websiteUrl);
+          if (faviconUrl) {
+            const png = await tryUploadLogo(faviconUrl, server.id, env.LOGOS);
+            if (png) {
+              const key = `live/${server.id}.png`;
+              await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
+              logoUrl = `/logos/${server.id}`;
+              logoSource = 'website_favicon';
+              updates.logoUrl = logoUrl;
+              updates.logoSource = logoSource;
+              stats.logosSet++;
+            }
+          }
+        }
+
         updates.isVerifiedActive = isVerifiedActive;
         updates.healthStatus = healthStatus;
         await db.update(servers).set(updates).where(eq(servers.id, server.id));
@@ -189,55 +238,138 @@ export async function POST(req: Request) {
           if (nextWebsite && nextWebsite !== websiteUrl) {
             websiteUrl = nextWebsite;
             updates.websiteUrl = websiteUrl;
-            // Imported homepage is not yet proven — do not mark verified.
             updates.websiteVerified = false;
             stats.websitesSet++;
           }
 
-          // README → install hints
+          // README → website, logo, install hints
           const readme = await fetchGithubReadme(gh.owner, gh.repo, githubToken);
-          const install = resolveInstallFromSignals({
-            id: server.id,
-            name: server.name,
-            url: server.url,
-            description,
-            readme,
-          });
-          if (install) {
-            Object.assign(updates, {
-              installKind: install.installKind,
-              installCommand: install.installCommand,
-              installArgs: install.installArgs,
-              installPackage: install.installPackage,
-              installConfidence: install.installConfidence,
+
+          if (readme) {
+            const candidateWebsites = extractCandidateWebsitesFromReadme(readme, gh.owner, gh.repo);
+            const candidateImages = extractCandidateImagesFromReadme(readme, gh.owner, gh.repo);
+
+            let llmChoice: { websiteUrl?: string; logoUrl?: string } | null = null;
+            if (candidateWebsites.length > 0 || candidateImages.length > 0) {
+              llmChoice = await pickBestWebsiteAndLogoWithLlm({
+                readmeSnippet: readme,
+                ghOwner: gh.owner,
+                ghRepo: gh.repo,
+                candidateUrls: candidateWebsites,
+                candidateImages: candidateImages,
+              });
+            }
+
+            // Derive website from README if current is missing or points to github.com
+            const derivedWebsite = llmChoice?.websiteUrl || candidateWebsites[0];
+            if (derivedWebsite && (!websiteUrl || /github\.com/i.test(websiteUrl))) {
+              websiteUrl = derivedWebsite;
+              updates.websiteUrl = websiteUrl;
+              updates.websiteVerified = false;
+              stats.websitesSet++;
+            }
+
+            const install = resolveInstallFromSignals({
+              id: server.id,
+              name: server.name,
+              url: server.url,
+              description,
+              readme,
             });
-            stats.installSet++;
+            if (install) {
+              Object.assign(updates, {
+                installKind: install.installKind,
+                installCommand: install.installCommand,
+                installArgs: install.installArgs,
+                installPackage: install.installPackage,
+                installConfidence: install.installConfidence,
+              });
+              stats.installSet++;
+            }
+
+            // Logo Resolution: Enforce Priority Hierarchy
+            const currentPriority = logoSourcePriority(logoSource);
+
+            if (currentPriority < 5 && env.LOGOS) {
+              // Priority 4: README Logo
+              if (currentPriority < 4) {
+                const readmeLogoCandidates = llmChoice?.logoUrl
+                  ? [llmChoice.logoUrl, ...candidateImages.filter((img) => img !== llmChoice!.logoUrl)]
+                  : candidateImages;
+
+                for (const candidate of readmeLogoCandidates) {
+                  const png = await tryUploadLogo(candidate, server.id, env.LOGOS);
+                  if (png) {
+                    const key = `live/${server.id}.png`;
+                    await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
+                    logoUrl = `/logos/${server.id}`;
+                    logoSource = 'readme';
+                    updates.logoUrl = logoUrl;
+                    updates.logoSource = logoSource;
+                    stats.logosSet++;
+                    break;
+                  }
+                }
+              }
+            }
           }
 
-          // Logo from owner avatar when missing
-          if (!logoUrl && data.owner?.avatar_url && env.LOGOS) {
-            try {
-              const avatarUrl = `${data.owner.avatar_url}${data.owner.avatar_url.includes('?') ? '&' : '?'}s=256`;
-              const imgRes = await fetch(avatarUrl, {
-                headers: { 'User-Agent': 'AllMCPs-Enricher' },
-                signal: AbortSignal.timeout(10000),
-              });
-              if (imgRes.ok) {
-                const buf = await imgRes.arrayBuffer();
-                // GitHub avatars are often PNG/JPEG; processLogoUpload validates + re-encodes.
-                const png = await processLogoUpload(buf);
+          // Priority 3: Website Favicon / Icon
+          const currentPriorityAfterReadme = logoSourcePriority(logoSource);
+          if (currentPriorityAfterReadme < 3 && websiteUrl && env.LOGOS) {
+            const faviconUrl = await extractWebsiteFaviconUrl(websiteUrl);
+            if (faviconUrl) {
+              const png = await tryUploadLogo(faviconUrl, server.id, env.LOGOS);
+              if (png) {
                 const key = `live/${server.id}.png`;
-                await env.LOGOS.put(key, png, {
-                  httpMetadata: { contentType: 'image/png' },
-                });
+                await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
                 logoUrl = `/logos/${server.id}`;
+                logoSource = 'website_favicon';
                 updates.logoUrl = logoUrl;
+                updates.logoSource = logoSource;
                 stats.logosSet++;
               }
-            } catch (e) {
-              if (!(e instanceof LogoValidationError)) {
-                console.error(`Logo enrich failed for ${server.id}:`, e);
-              }
+            }
+          }
+
+          // Priority 2: GitHub Org avatar
+          const currentPriorityAfterWebsite = logoSourcePriority(logoSource);
+          if (
+            currentPriorityAfterWebsite < 2 &&
+            data.owner?.type === 'Organization' &&
+            data.owner?.avatar_url &&
+            env.LOGOS
+          ) {
+            const avatarUrl = `${data.owner.avatar_url}${data.owner.avatar_url.includes('?') ? '&' : '?'}s=256`;
+            const png = await tryUploadLogo(avatarUrl, server.id, env.LOGOS);
+            if (png) {
+              const key = `live/${server.id}.png`;
+              await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
+              logoUrl = `/logos/${server.id}`;
+              logoSource = 'github_org';
+              updates.logoUrl = logoUrl;
+              updates.logoSource = logoSource;
+              stats.logosSet++;
+            }
+          }
+
+          // Priority 1: GitHub User avatar (lowest fallback)
+          if (
+            !logoUrl &&
+            data.owner?.type === 'User' &&
+            data.owner?.avatar_url &&
+            env.LOGOS
+          ) {
+            const avatarUrl = `${data.owner.avatar_url}${data.owner.avatar_url.includes('?') ? '&' : '?'}s=256`;
+            const png = await tryUploadLogo(avatarUrl, server.id, env.LOGOS);
+            if (png) {
+              const key = `live/${server.id}.png`;
+              await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
+              logoUrl = `/logos/${server.id}`;
+              logoSource = 'github_user';
+              updates.logoUrl = logoUrl;
+              updates.logoSource = logoSource;
+              stats.logosSet++;
             }
           }
         }
