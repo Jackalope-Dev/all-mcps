@@ -8,12 +8,13 @@
  */
 
 /** Optional classic/fine-grained PAT for higher GitHub API rate limits. */
-export function getGithubToken(env?: Record<string, unknown> | null): string | null {
+export function getGithubToken(env?: unknown): string | null {
   const fromProcess =
     typeof process !== 'undefined' ? process.env.GITHUB_TOKEN || process.env.GH_TOKEN : undefined;
   if (fromProcess && fromProcess.trim()) return fromProcess.trim();
-  if (env) {
-    const t = env.GITHUB_TOKEN ?? env.GH_TOKEN;
+  if (env && typeof env === 'object') {
+    const e = env as Record<string, unknown>;
+    const t = e.GITHUB_TOKEN ?? e.GH_TOKEN;
     if (typeof t === 'string' && t.trim()) return t.trim();
   }
   return null;

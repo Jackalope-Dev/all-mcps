@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     }
 
     const db = drizzle(env.DB as any);
-    const githubToken = getGithubToken(env as Record<string, unknown>);
+    const githubToken = getGithubToken(env);
 
     // Mix oldest-checked (coverage) with popular-stale (user-facing quality).
     const half = Math.floor(BATCH_SIZE / 2);

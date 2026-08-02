@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     if (!env?.DB) throw new Error('Database binding not found');
 
     const db = drizzle(env.DB as any);
-    const githubToken = getGithubToken(env as Record<string, unknown>);
+    const githubToken = getGithubToken(env);
 
     // Prefer listings that still look unenriched.
     const candidates = await db
