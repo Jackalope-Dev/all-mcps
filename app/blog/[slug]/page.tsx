@@ -33,7 +33,7 @@ export async function generateMetadata({
   return {
     title: post.title,
     description: post.excerpt,
-    keywords: [...post.tags, 'MCP', 'Model Context Protocol'].join(', '),
+    keywords: [...(Array.isArray(post.tags) ? post.tags : []), 'MCP', 'Model Context Protocol'].join(', '),
     alternates: {
       canonical: url,
     },
