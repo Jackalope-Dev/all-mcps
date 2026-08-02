@@ -147,6 +147,8 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     sessionParams.subscription_data = {
       metadata: { serverId, sku },
     };
+  } else if (product.mode === 'payment') {
+    sessionParams.invoice_creation = { enabled: true };
   }
 
   let promoFound = false;

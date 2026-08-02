@@ -11,6 +11,7 @@ type Props = {
   /** pending listings can buy priority; active can buy featured/premium */
   listingStatus?: string;
   isPremium?: boolean;
+  hasStripeCustomer?: boolean;
   compact?: boolean;
   /** Show every SKU (pricing page); API still enforces listing status. */
   showAll?: boolean;
@@ -27,6 +28,7 @@ export function PremiumUpgrade({
   serverId,
   listingStatus = 'active',
   isPremium = false,
+  hasStripeCustomer = false,
   compact = false,
   showAll = false,
 }: Props) {
@@ -39,7 +41,9 @@ export function PremiumUpgrade({
     return listingStatus === 'active';
   });
 
-  if (visible.length === 0 && !isPremium) return null;
+  const canManageBilling = isPremium || hasStripeCustomer;
+
+  if (visible.length === 0 && !canManageBilling) return null;
 
   const startCheckout = async (sku: PaidSku) => {
     setLoadingSku(sku);
@@ -143,7 +147,7 @@ export function PremiumUpgrade({
           );
         })}
 
-        {isPremium && (
+        {canManageBilling && (
           <button
             type="button"
             className="btn btn-secondary"
@@ -151,7 +155,7 @@ export function PremiumUpgrade({
             onClick={openPortal}
             style={{ fontSize: '0.85rem' }}
           >
-            {loadingSku === 'premium_monthly' ? 'Opening…' : 'Manage billing'}
+            {loadingSku === 'premium_monthly' ? 'Opening…' : 'Manage billing & invoices'}
           </button>
         )}
       </div>
