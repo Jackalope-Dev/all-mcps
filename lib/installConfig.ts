@@ -88,7 +88,7 @@ export function parseArgsJson(raw: unknown): string[] | null {
 export type CachedInstallFields = {
   installKind?: string | null;
   installCommand?: string | null;
-  installArgs?: string | null;
+  installArgs?: string | string[] | null;
   installPackage?: string | null;
   installConfidence?: string | null;
 };
