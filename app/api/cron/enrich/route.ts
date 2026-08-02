@@ -228,10 +228,12 @@ export async function POST(req: Request) {
             isVerifiedActive = true;
           }
 
-          description = pickDescription(description, data.description);
-          if (description !== server.description) {
-            updates.description = description;
-            stats.cleanedDesc++;
+          if (!server.isOfficial) {
+            description = pickDescription(description, data.description);
+            if (description !== server.description) {
+              updates.description = description;
+              stats.cleanedDesc++;
+            }
           }
 
           const nextWebsite = pickWebsiteUrl(websiteUrl, data.homepage);
