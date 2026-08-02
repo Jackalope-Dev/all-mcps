@@ -98,6 +98,10 @@ export function middleware(req: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  response.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://www.googletagmanager.com https://*.posthog.com https://p.allmcps.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com;"
+  );
 
   // Prevent stale HTML from referencing outdated hashed CSS/JS bundles after deploys.
   if (!pathname.startsWith('/api/') && acceptHeader.includes('text/html')) {
