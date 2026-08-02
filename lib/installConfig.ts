@@ -72,14 +72,15 @@ function looksLikeMcpHttpEndpoint(url: string): boolean {
   }
 }
 
-function parseArgsJson(raw: unknown): string[] | null {
+export function parseArgsJson(raw: unknown): string[] | null {
   if (Array.isArray(raw)) return raw.map(String);
   if (typeof raw !== 'string' || !raw.trim()) return null;
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) return parsed.map(String);
   } catch {
-    /* ignore */
+    const parts = raw.trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 0) return parts;
   }
   return null;
 }
