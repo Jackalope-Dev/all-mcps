@@ -353,16 +353,35 @@ export default function ManageListings() {
                         )}
                       </div>
                     </td>
-                    <td data-label="Featured">
+                    <td data-label="Featured / Sponsor">
                       <div className="admin-feature-cell">
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          {featuredDaysLeft && featuredDaysLeft > 0 ? `${featuredDaysLeft}d left` : '—'}
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: featuredDaysLeft && featuredDaysLeft > 0 ? '#00E5FF' : 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                          {featuredDaysLeft && featuredDaysLeft > 0 ? `★ ${featuredDaysLeft}d remaining` : 'No active boost'}
                         </div>
-                        <div className="admin-feature-controls">
+                        <div className="admin-feature-controls" style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <button
+                            onClick={() => runAction(listing.id, 'feature', { days: 7 })}
+                            disabled={rowLoading}
+                            className="admin-btn"
+                            style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.3)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            title="Grant 7 days boost"
+                          >
+                            +7d Boost
+                          </button>
+                          <button
+                            onClick={() => runAction(listing.id, 'feature', { days: 30 })}
+                            disabled={rowLoading}
+                            className="admin-btn"
+                            style={{ background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.3)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            title="Grant 30 days boost"
+                          >
+                            +30d
+                          </button>
                           <input
                             type="number"
                             min={1}
                             className="form-input"
+                            style={{ width: '60px', padding: '0.25rem 0.4rem', fontSize: '0.75rem' }}
                             placeholder="Days"
                             value={featureDays[listing.id] || ''}
                             onChange={(e) => setFeatureDays((prev) => ({ ...prev, [listing.id]: e.target.value }))}
@@ -371,7 +390,7 @@ export default function ManageListings() {
                             onClick={() => grantFeatured(listing.id)}
                             disabled={rowLoading}
                             className="admin-btn"
-                            style={{ background: '#007BFF' }}
+                            style={{ background: '#007BFF', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                           >
                             Grant
                           </button>

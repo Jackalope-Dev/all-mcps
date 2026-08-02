@@ -44,24 +44,24 @@ export function CategorySponsorBanner({ categoryName }: CategorySponsorBannerPro
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
             <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#00E5FF' }}>
-              Category Sponsorship Available
+              Category Sponsorship Available · $18 for 7 Days
             </span>
           </div>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, fontWeight: 600 }}>
             Sponsor {categoryName} on AllMCPs
           </p>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
-            Get your MCP server pinned at the top of this category &amp; featured in category searches.
+            Get your MCP server pinned at the top of {categoryName} &amp; featured in category discovery.
           </p>
         </div>
       </div>
 
       <Link
-        href="/pricing#premium"
+        href={`/pricing?sku=category_sponsor_7d&category=${encodeURIComponent(categoryName)}`}
         className="btn btn-sm btn-primary"
         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
       >
-        <Sparkles size={14} /> Sponsor This Category →
+        <Sparkles size={14} /> Sponsor for $18 →
       </Link>
     </div>
   );

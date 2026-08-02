@@ -3,7 +3,7 @@
  * Catalog: one Product per plan (Stripe best practice).
  */
 
-export type PaidSku = 'priority_review' | 'featured_7d' | 'premium_monthly';
+export type PaidSku = 'priority_review' | 'featured_7d' | 'category_sponsor_7d' | 'premium_monthly';
 
 export type PaidProduct = {
   sku: PaidSku;
@@ -16,6 +16,9 @@ export type PaidProduct = {
   /** Env var name holding Stripe Price ID */
   priceEnv: string;
   benefits: string[];
+  badgeText?: string;
+  placementHint?: string;
+  targetAudience?: string;
 };
 
 /**
@@ -31,6 +34,7 @@ export type FreeTier = {
   unitAmount: 0;
   interval: 'one_time';
   benefits: string[];
+  placementHint?: string;
 };
 
 export const FREE_TIER: FreeTier = {
@@ -46,6 +50,7 @@ export const FREE_TIER: FreeTier = {
     'Nofollow website backlink',
     'Standard review queue',
   ],
+  placementHint: 'Standard directory placement across search & categories.',
 };
 
 export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
@@ -57,10 +62,14 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     interval: 'one_time',
     mode: 'payment',
     priceEnv: 'STRIPE_PRICE_PRIORITY_REVIEW',
+    badgeText: '⚡ Fast Track',
+    placementHint: 'Reviewed and published within 24 hours.',
+    targetAudience: 'New submissions launching soon',
     benefits: [
-      'Faster manual review of new submissions',
-      'Same safety checks — not a paid pass',
-      'Ideal when you need to go live soon',
+      'Reviewed within 24 hours (guaranteed turnaround)',
+      'Direct notification when published live',
+      'Ideal for product launches, hackathons & releases',
+      'Same security checks — published safely',
     ],
   },
   featured_7d: {
@@ -71,28 +80,52 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     interval: 'one_time',
     mode: 'payment',
     priceEnv: 'STRIPE_PRICE_FEATURED_7D',
+    badgeText: '★ Popular Boost',
+    placementHint: 'Homepage discovery marquee & directory grid cards.',
+    targetAudience: 'Active MCPs wanting a sudden surge of developer traffic',
     benefits: [
-      '★ Featured badge in browse list & grid',
-      'Higher weight in homepage discovery',
+      '★ Featured badge in browse grid & search results',
+      'Higher ranking weight across homepage discovery',
+      'Glowing card border highlighting your listing',
+      'Expires automatically after 7 days',
+    ],
+  },
+  category_sponsor_7d: {
+    sku: 'category_sponsor_7d',
+    name: 'Category sponsor',
+    tagline: '7 days top-of-category sponsorship',
+    unitAmount: 1800,
+    interval: 'one_time',
+    mode: 'payment',
+    priceEnv: 'STRIPE_PRICE_CATEGORY_SPONSOR_7D',
+    badgeText: '👑 Niche Leader',
+    placementHint: 'Pinned #1 spot on your specific category page.',
+    targetAudience: 'Tools aiming to capture high-intent category visitors',
+    benefits: [
+      '★ Pinned #1 spot in your category for 7 days',
+      'Crown & Category Sponsor banner on category page',
+      'Top exposure to users searching specifically for your niche',
       'Expires automatically after 7 days',
     ],
   },
   premium_monthly: {
     sku: 'premium_monthly',
     name: 'Premium',
-    tagline: 'Ongoing featured placement',
+    tagline: 'Ongoing featured placement & analytics',
     unitAmount: 1900,
     interval: 'month',
     mode: 'subscription',
     priceEnv: 'STRIPE_PRICE_PREMIUM_MONTHLY',
+    badgeText: '💎 Best Value',
+    placementHint: 'Homepage rotation, category highlights & agent API priority.',
+    targetAudience: 'Growth-stage MCPs, SaaS tools & companies seeking continuous reach',
     benefits: [
-      'Guaranteed featured rotation on homepage',
-      'Rich analytics: see which LLMs & agents use your MCP',
-      'Impression tracking across all directory surfaces',
-      'Search discovery insights (what queries find you)',
-      'Dofollow website backlink (SEO boost)',
-      'Verified / Premium badge & glowing card',
-      'Priority support & listing edits',
+      'Guaranteed featured rotation on homepage & browse',
+      'Rich analytics: see which LLMs & agents access your server',
+      'Dofollow website backlink (valuable SEO boost)',
+      'Verified / Premium badge & glowing card design',
+      'Impression tracking & search discovery insights',
+      'Priority support & instant listing edits',
     ],
   },
 };

@@ -200,10 +200,6 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
   if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy') score += 3;
   if (candidate.reciprocalBadgeOk) score += 2;
 
-  if (typeof candidate.npmDownloads === 'number' && candidate.npmDownloads > 0) {
-    score += Math.min(Math.log10(1 + candidate.npmDownloads) * 2, 10);
-  }
-
   if (current?.tools?.length && candidate.tools?.length) {
     const currentNames = new Set(
       current.tools.map((t) => t.name.toLowerCase()).filter(Boolean)

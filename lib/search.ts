@@ -25,6 +25,7 @@ export type Engagement = {
   copies?: number | null;
   views?: number | null;
   githubStars?: number | null;
+  npmDownloads?: number | null;
 };
 
 export type QueryTerm = { term: string; boundary: RegExp };
@@ -79,13 +80,14 @@ export function compileQuery(query: string): QueryTerm[] {
   }));
 }
 
-/** Engagement tie-breaker, matching the grid's "trending" weighting + mild stars. */
+/** Engagement tie-breaker, combining directory interactions (upvotes, installs, views) with external adoption signals (GitHub stars, npm downloads). */
 export function engagementScore(s: Engagement): number {
   return (
     (s.upvotes || 0) * 5 +
     (s.copies || 0) +
     (s.views || 0) * 0.05 +
-    Math.min(Math.log10(1 + (s.githubStars || 0)) * 3, 12)
+    Math.min(Math.log10(1 + (s.githubStars || 0)) * 3, 15) +
+    Math.min(Math.log10(1 + (s.npmDownloads || 0)) * 2, 12)
   );
 }
 

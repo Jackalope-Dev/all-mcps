@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 export default async function PricingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ serverId?: string; canceled?: string }>;
+  searchParams: Promise<{ serverId?: string; category?: string; canceled?: string }>;
 }) {
   const params = await searchParams;
   const serverId = typeof params.serverId === 'string' ? params.serverId : '';
@@ -107,34 +107,38 @@ export default async function PricingPage({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: '1.25rem',
-          marginBottom: '2.5rem',
+          marginBottom: '3rem',
         }}
       >
         <div
           className="surface"
-          style={{ padding: '1.75rem', borderRadius: '16px' }}
+          style={{ padding: '1.75rem', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}
         >
-          <p
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              color: 'var(--accent-color)',
-              marginBottom: '0.5rem',
-            }}
-          >
-            Free
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Free Forever
+            </span>
+          </div>
           <h2 style={{ fontSize: '1.35rem', marginBottom: '0.25rem' }}>{FREE_TIER.name}</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>{FREE_TIER.tagline}</p>
-          <p style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1.25rem' }}>{formatUsd(FREE_TIER.unitAmount)}</p>
-          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>{FREE_TIER.tagline}</p>
+          <p style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>{formatUsd(FREE_TIER.unitAmount)}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', fontStyle: 'italic' }}>
+            {FREE_TIER.placementHint}
+          </p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.55rem', flex: 1 }}>
             {FREE_TIER.benefits.map((b) => (
-              <li key={b} style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                <span style={{ color: 'var(--accent-color)', marginRight: '0.4rem' }}>✓</span>
+              <li key={b} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                <span style={{ color: 'var(--accent-color)', marginRight: '0.4rem', fontWeight: 700 }}>✓</span>
                 {b}
               </li>
             ))}
@@ -142,7 +146,7 @@ export default async function PricingPage({
           <Link
             href="/submit"
             className="btn btn-secondary"
-            style={{ display: 'inline-block', width: '100%', textAlign: 'center' }}
+            style={{ display: 'inline-block', width: '100%', textAlign: 'center', padding: '0.65rem' }}
           >
             Submit for free
           </Link>
@@ -151,41 +155,71 @@ export default async function PricingPage({
           const p = PAID_PRODUCTS[sku];
           const price =
             p.interval === 'month' ? `${formatUsd(p.unitAmount)}/mo` : formatUsd(p.unitAmount);
-          const highlight = sku === 'premium_monthly';
+          const isCategorySponsor = sku === 'category_sponsor_7d';
+          const isPremium = sku === 'premium_monthly';
           return (
             <div
               key={sku}
-              id={highlight ? 'premium' : undefined}
+              id={isPremium ? 'premium' : isCategorySponsor ? 'category_sponsor_7d' : undefined}
               className="surface"
               style={{
                 padding: '1.75rem',
                 borderRadius: '16px',
-                border: highlight ? '1px solid rgba(0,229,255,0.4)' : undefined,
-                background: highlight
-                  ? 'linear-gradient(160deg, rgba(0,229,255,0.1), rgba(0,123,255,0.06), transparent)'
+                display: 'flex',
+                flexDirection: 'column',
+                border: isPremium
+                  ? '1px solid rgba(0,229,255,0.45)'
+                  : isCategorySponsor
+                  ? '1px solid rgba(255,215,0,0.35)'
                   : undefined,
-                scrollMarginTop: highlight ? '5rem' : undefined,
+                background: isPremium
+                  ? 'linear-gradient(160deg, rgba(0,229,255,0.1), rgba(0,123,255,0.06), transparent)'
+                  : isCategorySponsor
+                  ? 'linear-gradient(160deg, rgba(255,215,0,0.08), rgba(255,140,0,0.04), transparent)'
+                  : undefined,
+                scrollMarginTop: '5rem',
               }}
             >
-              <p
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'var(--accent-color)',
-                  marginBottom: '0.5rem',
-                }}
-              >
-                {p.interval === 'month' ? 'Subscription' : 'One-time'}
-              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: isPremium ? '#00E5FF' : isCategorySponsor ? '#ffd700' : 'var(--accent-color)',
+                  }}
+                >
+                  {p.interval === 'month' ? 'Subscription' : 'One-Time Boost'}
+                </span>
+                {p.badgeText && (
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '6px',
+                      background: isPremium ? 'rgba(0,229,255,0.15)' : isCategorySponsor ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.1)',
+                      color: isPremium ? '#00E5FF' : isCategorySponsor ? '#ffd700' : 'var(--text-primary)',
+                      border: `1px solid ${isPremium ? 'rgba(0,229,255,0.3)' : isCategorySponsor ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.2)'}`,
+                    }}
+                  >
+                    {p.badgeText}
+                  </span>
+                )}
+              </div>
               <h2 style={{ fontSize: '1.35rem', marginBottom: '0.25rem' }}>{p.name}</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>{p.tagline}</p>
-              <p style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1.25rem' }}>{price}</p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>{p.tagline}</p>
+              <p style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.35rem' }}>{price}</p>
+              {p.placementHint && (
+                <p style={{ fontSize: '0.75rem', color: isPremium ? '#00E5FF' : isCategorySponsor ? '#ffd700' : 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
+                  📌 {p.placementHint}
+                </p>
+              )}
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.55rem', flex: 1 }}>
                 {p.benefits.map((b) => (
-                  <li key={b} style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                    <span style={{ color: 'var(--accent-color)', marginRight: '0.4rem' }}>✓</span>
+                  <li key={b} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                    <span style={{ color: isPremium ? '#00E5FF' : 'var(--accent-color)', marginRight: '0.4rem', fontWeight: 700 }}>✓</span>
                     {b}
                   </li>
                 ))}
@@ -195,7 +229,7 @@ export default async function PricingPage({
         })}
       </div>
 
-      <PricingClient initialServerId={serverId} />
+      <PricingClient initialServerId={serverId} initialCategory={typeof params.category === 'string' ? params.category : ''} />
 
       <p style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
         Free forever to list and claim.{' '}

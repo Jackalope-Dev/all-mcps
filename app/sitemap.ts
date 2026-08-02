@@ -7,6 +7,7 @@ import { getAllPosts } from '../lib/blog';
 import { DIRECTORY_CATEGORIES, categorySlug } from '../lib/categories';
 import { BEST_TOPICS } from '../lib/bestTopics';
 import { MCP_CLIENTS } from '../lib/clients';
+import { engagementScore } from '../lib/search';
 
 /**
  * Safely parses and normalizes any date input into a valid Date object.
@@ -367,8 +368,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Compare pages: top engagement listings × top peers in same category.
   // Cap pairs + use sorted ids for canonical URLs so we don't explode the sitemap.
-  const engagement = (s: any) =>
-    (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
+  const engagement = (s: any) => engagementScore(s);
   const byCategory = new Map<string, any[]>();
   for (const s of servers) {
     const cat = s.category || 'other';

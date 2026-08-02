@@ -371,7 +371,6 @@ export function McpConfigGenerator({
 
       {/* Code Display */}
       <div
-        className="relative group rounded-lg bg-zinc-950/80 border border-white/10 p-4"
         style={{
           position: 'relative',
           borderRadius: '12px',
@@ -398,6 +397,8 @@ export function McpConfigGenerator({
             display: 'flex',
             alignItems: 'center',
             gap: '0.4rem',
+            outline: 'none',
+            boxShadow: 'none',
             transition: 'all 0.2s ease',
           }}
           title="Copy config"

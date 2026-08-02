@@ -10,8 +10,9 @@ import type { AnalyticsSummary, ServerAnalytics } from '@/lib/analytics';
 import {
   Eye, Heart, Download, TrendingUp, TrendingDown, Minus,
   BarChart3, Search, Globe, Lock, ChevronDown, ChevronUp,
-  Activity, Zap,
+  Activity, Zap, Sparkles, Crown,
 } from 'lucide-react';
+import { PremiumUpgrade } from '@/components/PremiumUpgrade';
 
 type Server = {
   id: string;
@@ -23,6 +24,8 @@ type Server = {
   logoUrl?: string | null;
   pendingLogoKey?: string | null;
   isPremium?: boolean;
+  status?: string;
+  featuredUntil?: string | null;
   websiteVerified?: boolean;
   isOfficial?: boolean;
   reciprocalBadgeOk?: boolean;
@@ -302,6 +305,24 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
             </div>
 
             <BacklinkStatus server={server} />
+
+            {/* Boost & Sponsorship Options */}
+            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Sparkles size={16} color="var(--accent-color)" />
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                    Boost &amp; Sponsorship Options
+                  </span>
+                </div>
+                {server.featuredUntil && new Date(server.featuredUntil).getTime() > Date.now() && (
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.6rem', borderRadius: '6px', background: 'rgba(0,229,255,0.12)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.3)' }}>
+                    ★ Active Boost until {new Date(server.featuredUntil).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              <PremiumUpgrade serverId={server.id} listingStatus={server.status || 'active'} isPremium={server.isPremium} compact showAll />
+            </div>
 
             {/* Expanded analytics panel */}
             {isExpanded && (

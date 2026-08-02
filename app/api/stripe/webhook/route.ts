@@ -46,7 +46,7 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
         ...(customerId ? { stripeCustomerId: customerId } : {}),
       })
       .where(eq(servers.id, serverId));
-  } else if (sku === 'featured_7d') {
+  } else if (sku === 'featured_7d' || sku === 'category_sponsor_7d') {
     const base =
       current?.featuredUntil && new Date(current.featuredUntil).getTime() > Date.now()
         ? new Date(current.featuredUntil)

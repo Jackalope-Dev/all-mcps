@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react';
 import { PremiumUpgrade } from '../../components/PremiumUpgrade';
 import { ServerPicker, type DirectoryServerHit } from '../../components/tools/ServerPicker';
 
-export function PricingClient({ initialServerId = '' }: { initialServerId?: string }) {
+export function PricingClient({
+  initialServerId = '',
+  initialCategory = '',
+}: {
+  initialServerId?: string;
+  initialCategory?: string;
+}) {
   const [serverId, setServerId] = useState(initialServerId);
   const [listingName, setListingName] = useState<string | null>(null);
   const [listingStatus, setListingStatus] = useState<string | null>(null);
@@ -66,10 +72,31 @@ export function PricingClient({ initialServerId = '' }: { initialServerId?: stri
 
   return (
     <div className="surface" style={{ padding: '1.75rem', maxWidth: '520px', margin: '0 auto' }}>
+      {initialCategory && (
+        <div
+          style={{
+            padding: '0.75rem 1rem',
+            borderRadius: '10px',
+            background: 'rgba(0, 229, 255, 0.08)',
+            border: '1px solid rgba(0, 229, 255, 0.3)',
+            marginBottom: '1.25rem',
+          }}
+        >
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#00E5FF', letterSpacing: '0.05em' }}>
+            Category Sponsorship
+          </span>
+          <p style={{ margin: '0.2rem 0 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Sponsoring the {initialCategory} category ($18 for 7 days)
+          </p>
+          <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            Search or select your MCP server below to place it at the top of {initialCategory}.
+          </p>
+        </div>
+      )}
       <h2 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>Checkout for a listing</h2>
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
         Search for your MCP or paste the listing id from <code>/mcp/your-listing-id</code>. Priority review
-        is for pending submissions; Featured and Premium need an active listing.
+        is for pending submissions; Featured, Category Sponsor, and Premium need an active listing.
       </p>
 
       <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>

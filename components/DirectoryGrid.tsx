@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2 } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -38,6 +38,7 @@ type Server = {
   copies?: number;
   upvotes?: number;
   githubStars?: number | null;
+  npmDownloads?: number | null;
   /** high | medium | low — from health cron / install resolver. */
   installConfidence?: string | null;
   installKind?: string | null;
@@ -416,6 +417,11 @@ export default function DirectoryGrid({
       {typeof server.githubStars === 'number' && (
         <div title="GitHub stars">
           <Star size={12} aria-hidden="true" /> {server.githubStars.toLocaleString()}
+        </div>
+      )}
+      {typeof server.npmDownloads === 'number' && (
+        <div title="Monthly npm downloads">
+          <Package size={12} aria-hidden="true" /> {server.npmDownloads.toLocaleString()}
         </div>
       )}
     </div>

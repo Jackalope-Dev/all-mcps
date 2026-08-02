@@ -69,11 +69,14 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     };
   }
 
-  if ((sku === 'featured_7d' || sku === 'premium_monthly') && server.status !== 'active') {
+  if (
+    (sku === 'featured_7d' || sku === 'category_sponsor_7d' || sku === 'premium_monthly') &&
+    server.status !== 'active'
+  ) {
     return {
       success: false,
       status: 400,
-      error: 'Featured and Premium are available after your listing is approved.',
+      error: 'Featured, Category Sponsor, and Premium are available after your listing is approved.',
     };
   }
 
@@ -92,7 +95,7 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     return {
       success: false,
       status: 400,
-      error: `Invalid SKU "${sku}". Valid options: priority_review, featured_7d, premium_monthly`,
+      error: `Invalid SKU "${sku}". Valid options: priority_review, featured_7d, category_sponsor_7d, premium_monthly`,
     };
   }
 

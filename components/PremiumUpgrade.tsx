@@ -19,6 +19,7 @@ type Props = {
 const ICONS: Record<PaidSku, ReactNode> = {
   priority_review: <Zap size={18} />,
   featured_7d: <Sparkles size={18} />,
+  category_sponsor_7d: <Crown size={18} />,
   premium_monthly: <Crown size={18} />,
 };
 

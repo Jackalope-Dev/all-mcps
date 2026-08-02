@@ -2,12 +2,13 @@
 
 ## Products (Dashboard)
 
-Create **three separate Products** (one plan each), with one Price each:
+Create **four separate Products** (one plan each), with one Price each:
 
 | Product | Price | Mode | Env var for Price ID |
 |---------|-------|------|----------------------|
 | Priority review | $5.00 USD one-time | Payment | `STRIPE_PRICE_PRIORITY_REVIEW` |
 | Featured boost (7 days) | $12.00 USD one-time | Payment | `STRIPE_PRICE_FEATURED_7D` |
+| Category sponsor (7 days) | $18.00 USD one-time | Payment | `STRIPE_PRICE_CATEGORY_SPONSOR_7D` |
 | Premium | $19.00 USD / month | Recurring | `STRIPE_PRICE_PREMIUM_MONTHLY` |
 
 ## Secrets (Workers / local)
@@ -17,6 +18,7 @@ STRIPE_SECRET_KEY=sk_test_…          # or sk_live_…
 STRIPE_WEBHOOK_SECRET=whsec_…
 STRIPE_PRICE_PRIORITY_REVIEW=price_…
 STRIPE_PRICE_FEATURED_7D=price_…
+STRIPE_PRICE_CATEGORY_SPONSOR_7D=price_1U02ch4NIZrePgmF9OymjeOk
 STRIPE_PRICE_PREMIUM_MONTHLY=price_…
 NEXT_PUBLIC_APP_URL=https://allmcps.com
 ```
