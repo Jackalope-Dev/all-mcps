@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Copy, Check, Terminal, Laptop, ShieldCheck, Sparkles, Layers } from 'lucide-react';
+import { parseArgsJson } from '../lib/installConfig';
 
 interface ServerConfigProps {
   server: {
@@ -9,7 +10,7 @@ interface ServerConfigProps {
     name: string;
     installCommand?: string | null;
     installPackage?: string | null;
-    installArgs?: string[] | null;
+    installArgs?: string[] | string | null;
     installKind?: string | null;
   };
 }
@@ -20,7 +21,8 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
 
   const command = server.installCommand || 'npx';
   const pkg = server.installPackage || server.id;
-  const args = server.installArgs && server.installArgs.length > 0 ? server.installArgs : ['-y', pkg];
+  const parsedArgs = parseArgsJson(server.installArgs);
+  const args = parsedArgs && parsedArgs.length > 0 ? parsedArgs : ['-y', pkg];
   const serverKey = server.id.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
 
   // Generate configurations per client

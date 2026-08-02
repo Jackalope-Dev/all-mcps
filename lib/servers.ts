@@ -98,7 +98,7 @@ export type Server = {
   tools?: ServerTool[];
   installKind?: string | null;
   installCommand?: string | null;
-  installArgs?: string | null;
+  installArgs?: string | string[] | null;
   installPackage?: string | null;
   installConfidence?: string | null;
   views?: number;
