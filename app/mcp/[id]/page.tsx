@@ -799,9 +799,24 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <BadgeCheck size={18} color="var(--accent-color)" /> Own this project?
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
                 This directory is pre-filled from public sources. Claim via GitHub README, site badge, or DNS TXT to get the verified badge
                 {server.websiteUrl ? '' : ' and attach your website'}.
+              </p>
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '1rem',
+                  lineHeight: 1.5,
+                  padding: '0.65rem 0.75rem',
+                  borderRadius: 8,
+                  background: 'rgba(16,185,129,0.08)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                }}
+              >
+                <strong style={{ color: '#34d399' }}>Free dofollow backlink:</strong> after claiming,
+                verify your product site and place a dofollow AllMCPs badge — we recheck it stays live.
               </p>
               <Link
                 href={`/mcp/${server.id}/claim`}
@@ -818,7 +833,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   fontSize: '0.9rem',
                 }}
               >
-                <Sparkles size={16} /> Claim this listing
+                <Sparkles size={16} /> Claim &amp; get free dofollow
               </Link>
             </div>
           ) : (

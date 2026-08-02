@@ -22,6 +22,8 @@ export async function GET() {
     isOfficial: !!s.isOfficial,
     isPremium: !!s.isPremium,
     featuredUntil: s.featuredUntil ?? null,
+    githubStars: s.githubStars ?? null,
+    npmDownloads: s.npmDownloads ?? null,
     views: s.views ?? 0,
     copies: s.copies ?? 0,
     upvotes: s.upvotes ?? 0,
@@ -29,7 +31,12 @@ export async function GET() {
   }));
 
   return Response.json(
-    { servers: feed },
-    { headers: { 'Cache-Control': 'public, max-age=120, s-maxage=600' } }
+    { servers: feed, total: feed.length },
+    {
+      headers: {
+        'Cache-Control': 'public, max-age=120, s-maxage=600',
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+    }
   );
 }

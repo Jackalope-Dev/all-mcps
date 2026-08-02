@@ -319,6 +319,15 @@ export default function DirectoryGrid({
     updateUrl(selectedCategory, q);
   };
 
+  /** Landing only has a truncated slice — Enter / explicit submit sends users to full browse search. */
+  const goToFullDirectorySearch = (q: string = searchQuery) => {
+    const term = q.trim();
+    const url = new URL(browseBase, window.location.origin);
+    if (term) url.searchParams.set('q', term);
+    if (selectedCategory) url.searchParams.set('category', selectedCategory);
+    window.location.assign(url.pathname + url.search);
+  };
+
   const clearAllFilters = () => {
     setSelectedCategory(null);
     setSearchQuery('');
@@ -516,6 +525,12 @@ export default function DirectoryGrid({
               placeholder="Search for tools (e.g. GitHub, Postgres, File System)..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isBrowse) {
+                  e.preventDefault();
+                  goToFullDirectorySearch(searchQuery);
+                }
+              }}
               aria-label="Search MCP Servers"
               inputClassName="search-input"
               style={{ flexGrow: 1, flexBasis: '280px', margin: 0, minWidth: 0 }}
@@ -605,6 +620,31 @@ export default function DirectoryGrid({
             </p>
           </div>
           <NewsletterSignupForm source="homepage" compact />
+        </section>
+      )}
+
+      {showDiscovery && (
+        <section
+          className="container animate-fade-in delay-2"
+          style={{ margin: '0 auto 2.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem', justifyContent: 'center' }}
+          aria-label="Popular destinations"
+        >
+          {[
+            { href: '/best', label: 'Best by use case' },
+            { href: '/tools', label: 'Free developer tools' },
+            { href: '/clients', label: 'Install by client' },
+            { href: '/submit', label: 'Submit your MCP' },
+            { href: '/docs/api', label: 'API for agents' },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="directory-tag"
+              style={{ textDecoration: 'none' }}
+            >
+              {item.label}
+            </Link>
+          ))}
         </section>
       )}
 
@@ -709,15 +749,31 @@ export default function DirectoryGrid({
           >
             <span>
               {isFiltered
-                ? `Search and sort here only cover the ${initialServers.length} listings shown below — not the full catalog.`
+                ? `Searching only the ${initialServers.length} listings on this page — press Enter or open Browse for the full catalog.`
                 : `Showing the ${initialServers.length} most recently added listings of ${totalCount.toLocaleString()} total.`}
             </span>
-            <Link
-              href={searchQuery ? `/browse?q=${encodeURIComponent(searchQuery)}` : '/browse'}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700, color: '#00E5FF', whiteSpace: 'nowrap' }}
+            <button
+              type="button"
+              onClick={() => goToFullDirectorySearch(searchQuery)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontWeight: 700,
+                color: '#00E5FF',
+                whiteSpace: 'nowrap',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+                padding: 0,
+              }}
             >
-              Browse all {totalCount.toLocaleString()} servers <ChevronRight size={14} />
-            </Link>
+              {searchQuery.trim()
+                ? `Search all ${totalCount.toLocaleString()} for “${searchQuery.trim().slice(0, 32)}${searchQuery.trim().length > 32 ? '…' : ''}”`
+                : `Browse all ${totalCount.toLocaleString()} servers`}{' '}
+              <ChevronRight size={14} />
+            </button>
           </div>
         )}
 
@@ -726,9 +782,18 @@ export default function DirectoryGrid({
             <EmptyState
               icon={<Search size={22} aria-hidden="true" />}
               title="No tools found"
-              description="Nothing matches your current search or filters. Build or own an MCP server for this?"
+              description={
+                !isBrowse && typeof totalCount === 'number' && totalCount > initialServers.length
+                  ? 'Nothing in this homepage preview matches. Try the full directory — or submit the MCP if you build it.'
+                  : 'Nothing matches your current search or filters. Build or own an MCP server for this?'
+              }
               actions={
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {!isBrowse && searchQuery.trim() && (
+                    <Button variant="primary" onClick={() => goToFullDirectorySearch(searchQuery)}>
+                      Search full directory
+                    </Button>
+                  )}
                   <Link href="/submit" className="btn btn-primary">
                     + Add Your MCP Server
                   </Link>

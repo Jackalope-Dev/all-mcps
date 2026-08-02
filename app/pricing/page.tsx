@@ -155,6 +155,7 @@ export default async function PricingPage({
           return (
             <div
               key={sku}
+              id={highlight ? 'premium' : undefined}
               className="surface"
               style={{
                 padding: '1.75rem',
@@ -163,6 +164,7 @@ export default async function PricingPage({
                 background: highlight
                   ? 'linear-gradient(160deg, rgba(0,229,255,0.1), rgba(0,123,255,0.06), transparent)'
                   : undefined,
+                scrollMarginTop: highlight ? '5rem' : undefined,
               }}
             >
               <p

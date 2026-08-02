@@ -157,8 +157,11 @@ export function SubmitForm() {
       <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎉</div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Submitted Successfully!</h3>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem', maxWidth: '500px', margin: '0.5rem auto 1.5rem' }}>
-          Your MCP server has been added to our queue for review and indexing. You can get verified immediately by adding your official AllMCPs badge.
+        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem', maxWidth: '500px', margin: '0.5rem auto 1rem' }}>
+          Your MCP server has been added to our queue for review and indexing. You&apos;ll get an email when it&apos;s approved — then claim it for a free dofollow backlink.
+        </p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '500px', margin: '0 auto 1.5rem', lineHeight: 1.55 }}>
+          Meanwhile, add the AllMCPs badge below. After approval: claim ownership → verify your site → keep the badge dofollow for a reciprocal SEO link.
         </p>
 
         {submittedId && (

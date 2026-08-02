@@ -84,9 +84,14 @@ export function CommandPalette() {
   const items: CommandItem[] = useMemo(() => {
     const staticPages: CommandItem[] = [
       { id: 'nav-browse', title: 'Browse All Servers', subtitle: 'Explore and filter MCP servers', category: 'Page', categoryType: 'page', url: '/browse', icon: <Search size={18} className="text-cyan-400" /> },
+      { id: 'nav-best', title: 'Best MCP Servers', subtitle: 'Curated lists by use case', category: 'Page', categoryType: 'page', url: '/best', icon: <Sparkles size={18} className="text-cyan-400" /> },
       { id: 'nav-categories', title: 'Browse Categories', subtitle: 'Explore 50+ categories of MCP tools', category: 'Page', categoryType: 'page', url: '/categories', icon: <Tag size={18} className="text-cyan-400" /> },
+      { id: 'nav-tools', title: 'Free MCP Tools', subtitle: 'Config generator, OpenAPI→MCP, inspector…', category: 'Page', categoryType: 'page', url: '/tools', icon: <Sparkles size={18} className="text-cyan-400" /> },
       { id: 'nav-build', title: 'Build an MCP Server', subtitle: 'Developer reference and specs', category: 'Page', categoryType: 'page', url: '/build-mcp-server', icon: <FileText size={18} className="text-cyan-400" /> },
       { id: 'nav-security', title: 'MCP Security Best Practices', subtitle: 'Use MCP servers safely', category: 'Page', categoryType: 'page', url: '/mcp-security', icon: <FileText size={18} className="text-cyan-400" /> },
+      { id: 'nav-docs-api', title: 'Directory API Docs', subtitle: 'Search API, OpenAPI, agent discovery', category: 'Page', categoryType: 'page', url: '/docs/api', icon: <FileText size={18} className="text-cyan-400" /> },
+      { id: 'nav-blog', title: 'Blog', subtitle: 'Guides and product updates', category: 'Page', categoryType: 'page', url: '/blog', icon: <FileText size={18} className="text-cyan-400" /> },
+      { id: 'nav-submit', title: 'Submit an MCP Server', subtitle: 'List your server free', category: 'Page', categoryType: 'page', url: '/submit', icon: <Sparkles size={18} className="text-cyan-400" /> },
       { id: 'nav-badge', title: 'Badge Embed Builder', subtitle: 'Dynamic SVG README badges', category: 'Page', categoryType: 'page', url: '/badge-generator', icon: <Sparkles size={18} className="text-cyan-400" /> },
       { id: 'nav-pricing', title: 'Pricing & Featured Listings', subtitle: 'Promote your server', category: 'Page', categoryType: 'page', url: '/pricing', icon: <Sparkles size={18} className="text-cyan-400" /> },
     ];
