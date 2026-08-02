@@ -1,8 +1,8 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq } from 'drizzle-orm';
-import { socialPosts } from '../../../../db/schema';
-import { escapeForXml } from '../../../../lib/twitter';
+import { socialPosts } from '../../../db/schema';
+import { escapeForXml } from '../../../lib/twitter';
 
 export const dynamic = 'force-dynamic';
 
