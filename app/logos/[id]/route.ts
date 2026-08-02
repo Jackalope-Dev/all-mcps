@@ -25,10 +25,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return new NextResponse(null, { status: 404 });
   }
 
-  return new NextResponse(object.body, {
-    headers: {
-      'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=300',
-    },
-  });
+  const etag = object.httpEtag || object.etag;
+  const headers: Record<string, string> = {
+    'Content-Type': 'image/png',
+    'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+  };
+  if (etag) {
+    headers['ETag'] = etag;
+  }
+
+  return new NextResponse(object.body, { headers });
 }

@@ -219,7 +219,12 @@ export default async function CategoryLandingPage({
             {cards.map((server) => {
               const { displayName, org } = parseServerName(server.name);
               return (
-                <Card key={server.id} href={`/mcp/${server.id}`} className="directory-card">
+                <Card
+                  key={server.id}
+                  href={`/mcp/${server.id}`}
+                  className={`directory-card ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
+                  style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
                     <div style={{ minWidth: 0 }}>

@@ -1707,6 +1707,12 @@ nav[aria-label="Table of contents"] {
 }
 
 /* ── Card responsive helpers ── */
+.directory-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
 .directory-card-header {
   display: flex;
   justify-content: space-between;
