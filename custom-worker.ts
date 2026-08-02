@@ -37,6 +37,13 @@ const CRON_JOBS: CronJob[] = [
   { path: "/api/cron/health", secretVar: "ADMIN_SECRET" },
   // Rotates the X/Twitter highlight. Fine every 4h (~6 posts/day).
   { path: "/api/cron/highlight", secretVar: "ADMIN_SECRET" },
+  // IndexNow batch for recently approved listings — daily at 00:00 UTC tick.
+  // Complements the per-approve ping so fire-and-forget misses still get indexed.
+  {
+    path: "/api/cron/indexnow",
+    secretVar: "ADMIN_SECRET",
+    shouldRun: (now) => now.getUTCHours() === 0,
+  },
   // "This week on AllMCPs" digest — weekly, not every 4h, or it would send a
   // campaign on every tick. Runs on the Monday 12:00 UTC tick only.
   {

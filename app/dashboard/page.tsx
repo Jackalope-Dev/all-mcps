@@ -28,6 +28,9 @@ type OwnedServer = {
   logoUrl?: string | null;
   pendingLogoKey?: string | null;
   isPremium: boolean;
+  websiteVerified: boolean;
+  isOfficial: boolean;
+  reciprocalBadgeOk: boolean;
   views: number;
   copies: number;
   upvotes: number;
@@ -54,6 +57,9 @@ async function getOwnedServers(userId: string): Promise<{
           logoUrl: servers.logoUrl,
           pendingLogoKey: servers.pendingLogoKey,
           isPremium: servers.isPremium,
+          websiteVerified: servers.websiteVerified,
+          isOfficial: servers.isOfficial,
+          reciprocalBadgeOk: servers.reciprocalBadgeOk,
           views: servers.views,
           copies: servers.copies,
           upvotes: servers.upvotes,
@@ -100,7 +106,9 @@ export default async function DashboardPage({
       <div className="page-shell-inner">
         <header className="page-header">
           <h1 className="text-page-title">My listings</h1>
-          <p className="text-lead">Edits go live after a quick review.</p>
+          <p className="text-lead">
+            Edits go live after a quick review. Complete free dofollow on each listing with a verified site badge.
+          </p>
         </header>
         <DashboardClient
           initialServers={ownedServers as any}

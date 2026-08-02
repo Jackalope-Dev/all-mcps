@@ -250,23 +250,69 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
       >
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
         <h2 style={{ marginBottom: '1rem', color: '#10b981' }}>Claim Successful!</h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
           This listing is now marked as verified. If you attached a website, it is marked verified too.
-          Premium listings receive a dofollow website backlink; free listings remain nofollow.
         </p>
-        <Link
-          href={`/mcp/${serverId}`}
+        <p
           style={{
-            padding: '0.75rem 1.5rem',
-            background: 'var(--accent-color)',
-            color: 'var(--bg-color)',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontWeight: 'bold',
+            color: 'var(--text-secondary)',
+            marginBottom: '1.5rem',
+            lineHeight: 1.55,
+            fontSize: '0.9rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 8,
+            background: 'rgba(16,185,129,0.08)',
+            border: '1px solid rgba(16,185,129,0.25)',
+            textAlign: 'left',
           }}
         >
-          View Profile
-        </Link>
+          <strong style={{ color: '#34d399' }}>Free dofollow backlink:</strong> keep a dofollow AllMCPs
+          badge on your product site or README. We recheck it on health runs — when it&apos;s live, your
+          website link on AllMCPs becomes dofollow. Premium skips the badge requirement.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+          <Link
+            href={`/mcp/${serverId}`}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'var(--accent-color)',
+              color: 'var(--bg-color)',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+            }}
+          >
+            View listing
+          </Link>
+          <Link
+            href="/badge-generator"
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--border-color)',
+              background: 'rgba(255,255,255,0.05)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Get badge code
+          </Link>
+          <Link
+            href="/dashboard"
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--border-color)',
+              background: 'rgba(255,255,255,0.05)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Open dashboard
+          </Link>
+        </div>
       </div>
     );
   }

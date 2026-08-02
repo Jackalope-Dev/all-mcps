@@ -23,6 +23,9 @@ type Server = {
   logoUrl?: string | null;
   pendingLogoKey?: string | null;
   isPremium?: boolean;
+  websiteVerified?: boolean;
+  isOfficial?: boolean;
+  reciprocalBadgeOk?: boolean;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -153,12 +156,24 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
           You don&apos;t have any claimed listings yet.
         </p>
-        <Link href="/browse" className="btn btn-primary">
-          Browse & Claim Your MCP
-        </Link>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: 420, margin: '0 auto 1.25rem', lineHeight: 1.55 }}>
+          Claim free, then add a dofollow AllMCPs badge on your site for a reciprocal SEO backlink.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+          <Link href="/browse" className="btn btn-primary">
+            Browse &amp; claim your MCP
+          </Link>
+          <Link href="/badge-generator" className="btn btn-secondary">
+            Badge generator
+          </Link>
+        </div>
       </div>
     );
   }
+
+  const needsBacklinkHelp = servers.some(
+    (s) => !s.isPremium && !s.reciprocalBadgeOk
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -170,6 +185,25 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             — Your listings are tracked across all directory surfaces
           </span>
+        </div>
+      )}
+
+      {needsBacklinkHelp && (
+        <div
+          style={{
+            padding: '1rem 1.15rem',
+            borderRadius: 12,
+            border: '1px solid rgba(16,185,129,0.35)',
+            background: 'rgba(16,185,129,0.08)',
+          }}
+        >
+          <p style={{ fontWeight: 700, color: '#34d399', marginBottom: '0.35rem', fontSize: '0.95rem' }}>
+            Free dofollow backlink available
+          </p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+            For each free listing below: attach a website → verify it → place a dofollow AllMCPs badge.
+            We recheck the badge stays live. Premium listings get dofollow without a badge.
+          </p>
         </div>
       )}
 
@@ -267,6 +301,8 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
               )}
             </div>
 
+            <BacklinkStatus server={server} />
+
             {/* Expanded analytics panel */}
             {isExpanded && (
               <div style={{ marginTop: '1rem' }}>
@@ -343,18 +379,91 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                 </div>
               </div>
             ) : (
-              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={() => startEdit(server)}>
                   {pending ? 'Edit pending draft' : 'Edit'}
                 </button>
                 <Link href={`/mcp/${server.id}`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
                   View listing →
                 </Link>
+                <Link href={`/mcp/${server.id}/claim`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
+                  Website &amp; verification
+                </Link>
+                <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
+                  Badge code
+                </Link>
               </div>
             )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Per-listing SEO backlink checklist — drives free dofollow completion. */
+function BacklinkStatus({ server }: { server: Server }) {
+  const hasWebsite = Boolean(server.websiteUrl?.trim());
+  const verified = Boolean(server.websiteVerified);
+  const dofollow = Boolean(server.isPremium || server.reciprocalBadgeOk);
+
+  if (dofollow) {
+    return (
+      <div
+        style={{
+          marginTop: '0.85rem',
+          padding: '0.75rem 0.9rem',
+          borderRadius: 10,
+          border: '1px solid rgba(16,185,129,0.3)',
+          background: 'rgba(16,185,129,0.08)',
+          fontSize: '0.82rem',
+          color: '#34d399',
+          fontWeight: 600,
+        }}
+      >
+        Website backlink is dofollow
+        {server.isPremium ? ' (Premium)' : ' (reciprocal badge live)'}
+      </div>
+    );
+  }
+
+  const steps = [
+    { done: hasWebsite, label: 'Website URL on listing' },
+    { done: verified, label: 'Website verified (badge or DNS)' },
+    { done: Boolean(server.reciprocalBadgeOk), label: 'Dofollow AllMCPs badge live on your site' },
+  ];
+
+  return (
+    <div
+      style={{
+        marginTop: '0.85rem',
+        padding: '0.85rem 0.95rem',
+        borderRadius: 10,
+        border: '1px solid rgba(0,229,255,0.28)',
+        background: 'rgba(0,229,255,0.05)',
+      }}
+    >
+      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#00E5FF', marginBottom: '0.45rem' }}>
+        Free dofollow not active yet
+      </p>
+      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+        {steps.map((s) => (
+          <li key={s.label}>
+            <span style={{ color: s.done ? '#34d399' : 'var(--text-secondary)', marginRight: 6 }}>
+              {s.done ? '✓' : '○'}
+            </span>
+            {s.label}
+          </li>
+        ))}
+      </ul>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <Link href={`/mcp/${server.id}/claim`} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
+          Complete verification
+        </Link>
+        <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
+          Copy badge
+        </Link>
+      </div>
     </div>
   );
 }
