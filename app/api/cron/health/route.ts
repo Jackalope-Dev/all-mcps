@@ -12,6 +12,7 @@ import {
   resolveInstallConfig,
   toCachedInstallFields,
 } from '../../../../lib/installConfig';
+import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
 
 /** Best-effort npm last-month downloads for a package name. Returns null if not on npm. */
 async function fetchNpmDownloads(pkg: string): Promise<number | null> {
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
     }
 
     const db = drizzle(env.DB as any);
+    const githubToken = getGithubToken(env as Record<string, unknown>);
 
     // Mix oldest-checked (coverage) with popular-stale (user-facing quality).
     const half = Math.floor(BATCH_SIZE / 2);
@@ -131,6 +133,7 @@ export async function POST(req: Request) {
 
     let processed = 0;
     let installHintsUpdated = 0;
+    let unpublished = 0;
 
     for (const server of batch) {
       const now = new Date();
@@ -156,10 +159,7 @@ export async function POST(req: Request) {
             if (repo.endsWith('.git')) repo = repo.slice(0, -4);
 
             const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-              headers: {
-                'User-Agent': 'AllMCPs-Health-Checker',
-                Accept: 'application/vnd.github+json',
-              },
+              headers: githubApiHeaders(githubToken, 'application/vnd.github+json', 'AllMCPs-Health-Checker'),
               signal: AbortSignal.timeout(10000),
             });
 
@@ -265,6 +265,10 @@ export async function POST(req: Request) {
         }
       }
 
+      // Dead/archived GitHub projects: unpublish so the public catalog stays fresh.
+      // Soft-remove only — rows stay for admin recovery (status = removed).
+      const shouldUnpublish = healthStatus === 'archived';
+
       await db
         .update(servers)
         .set({
@@ -277,6 +281,7 @@ export async function POST(req: Request) {
           npmDownloads,
           tools: toolsJson,
           toolsCheckedAt,
+          ...(shouldUnpublish ? { status: 'removed' } : {}),
           ...(installFields
             ? {
                 installKind: installFields.installKind,
@@ -289,6 +294,7 @@ export async function POST(req: Request) {
         })
         .where(eq(servers.id, server.id));
 
+      if (shouldUnpublish) unpublished++;
       processed++;
     }
 
@@ -296,7 +302,8 @@ export async function POST(req: Request) {
       success: true,
       processed,
       installHintsUpdated,
-      message: `Verified ${processed} servers (${installHintsUpdated} install hints updated).`,
+      unpublished,
+      message: `Verified ${processed} servers (${installHintsUpdated} install hints, ${unpublished} unpublished).`,
     });
   } catch (error) {
     console.error('Cron error:', error);

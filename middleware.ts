@@ -41,6 +41,8 @@ export function middleware(req: NextRequest) {
     response = NextResponse.rewrite(new URL('/api/well-known/agent-skills/index', req.url));
   } else if (pathname === '/.well-known/acp.json' || pathname === '/.well-known/acp') {
     response = NextResponse.rewrite(new URL('/api/well-known/acp', req.url));
+  } else if (pathname === '/.well-known/mcp.json' || pathname === '/.well-known/mcp') {
+    response = NextResponse.rewrite(new URL('/api/well-known/mcp-json', req.url));
   } else if (pathname === '/auth.md') {
     response = NextResponse.rewrite(new URL('/api/well-known/auth-md', req.url));
   } else if (pathname === '/openapi.json') {

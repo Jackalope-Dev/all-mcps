@@ -236,6 +236,94 @@ export function SubmitForm() {
           </div>
         )}
 
+        {/* High-Converting Boost Up-sell Cards */}
+        <div style={{ maxWidth: '640px', margin: '2rem auto', textAlign: 'left' }}>
+          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: '0.5rem' }}>
+            🚀 Want to Launch Faster & Get More Installs?
+          </h4>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
+            Optional boosts to feature your new MCP server at the top of search and homepage discovery.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div
+              className="surface"
+              style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 229, 255, 0.3)',
+                background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08), rgba(0, 123, 255, 0.04))',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#00E5FF', letterSpacing: '0.05em' }}>⚡ Quick Pass</span>
+                <h5 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>Priority Review</h5>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  Jump the manual queue and get reviewed within 2 hours.
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>$5</span>
+                <a
+                  href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}&sku=priority_review` : '/pricing'}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    background: '#00E5FF',
+                    color: '#090d16',
+                    borderRadius: '6px',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Get Priority →
+                </a>
+              </div>
+            </div>
+
+            <div
+              className="surface"
+              style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(0, 229, 255, 0.04))',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>⭐ Spotlight</span>
+                <h5 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>7-Day Launch Boost</h5>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  7 days featured spotlight in homepage marquee &amp; search.
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>$12</span>
+                <a
+                  href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}&sku=featured_7d` : '/pricing'}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    background: '#10b981',
+                    color: '#090d16',
+                    borderRadius: '6px',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Boost 7 Days →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
           {submittedId && (
             <>
@@ -283,7 +371,7 @@ export function SubmitForm() {
               textDecoration: 'none',
             }}
           >
-            Priority Review ($5) / Promote →
+            All Premium Plans →
           </a>
         </div>
       </div>

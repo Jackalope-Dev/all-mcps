@@ -6,6 +6,7 @@ import ShareModal from '../../../components/ShareModal';
 import { Badge } from '../../../components/ui/Badge';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 import { McpConfigGenerator } from '../../../components/McpConfigGenerator';
+import { ClientConfigTabs } from '../../../components/ClientConfigTabs';
 import { AgentPromptButton } from '../../../components/ui/AgentPromptButton';
 import { InstallButtons } from '../../../components/ui/InstallButtons';
 import { ViewTracker, InstallsStat } from '../../../components/ui/ViewTracker';
@@ -447,6 +448,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               installPackage={server.installPackage}
               installConfidence={server.installConfidence}
             />
+            <ClientConfigTabs server={server as any} />
             <McpConfigGenerator
               serverId={server.id}
               serverName={server.name}

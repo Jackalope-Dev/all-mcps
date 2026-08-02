@@ -11,7 +11,7 @@
 // Next.js handler, so the existing `/api/cron/*` routes keep owning the logic.
 // `wrangler.jsonc` `main` points here instead of at `.open-next/worker.js`.
 
-// @ts-expect-error `.open-next/worker.js` is generated at build time.
+// @ts-ignore `.open-next/worker.js` is generated at build time.
 import { default as handler } from "./.open-next/worker.js";
 
 type CronJob = {
@@ -35,6 +35,9 @@ type CronJob = {
 const CRON_JOBS: CronJob[] = [
   // Rechecks listing health, badges, stars and npm downloads. Fine every 4h.
   { path: "/api/cron/health", secretVar: "ADMIN_SECRET" },
+  // Catalog quality: website/homepage, logos, install hints, clean scrape chrome,
+  // unpublish archived/404 GitHub repos. Every tick until the catalog is enriched.
+  { path: "/api/cron/enrich", secretVar: "ADMIN_SECRET" },
   // Rotates the X/Twitter highlight. Fine every 4h (~6 posts/day).
   { path: "/api/cron/highlight", secretVar: "ADMIN_SECRET" },
   // IndexNow batch for recently approved listings — daily at 00:00 UTC tick.

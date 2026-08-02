@@ -262,6 +262,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly' as const,
       priority: 0.75,
     },
+    {
+      url: `${baseUrl}/mcp-for-cursor`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/mcp-for-claude-desktop`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/mcp-for-windsurf`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/mcp-for-cline`,
+      lastModified: safeDateISO(new Date()),
+      changeFrequency: 'weekly' as const,
+      priority: 0.9,
+    },
   ];
 
   let blogEntries: MetadataRoute.Sitemap = [];

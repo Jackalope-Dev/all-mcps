@@ -40,6 +40,7 @@ type Server = {
   githubStars?: number | null;
   /** high | medium | low — from health cron / install resolver. */
   installConfidence?: string | null;
+  installKind?: string | null;
   /** Space-joined tool names for search recall (from directory feed). */
   toolText?: string | null;
   createdAt?: string | Date;
@@ -58,6 +59,7 @@ function isFeaturedListing(server: Server): boolean {
 type ViewMode = 'grid' | 'list';
 type SortMode = 'relevance' | 'trending' | 'most_upvoted' | 'most_viewed' | 'newest' | 'alpha';
 type TechStack = 'all' | 'typescript' | 'python' | 'go' | 'rust';
+type TransportKind = 'all' | 'stdio' | 'remote';
 
 function parseCategoryLabel(category: string): { emoji: string; label: string } {
   if (typeof Intl !== 'undefined' && Intl.Segmenter) {
@@ -114,6 +116,7 @@ export default function DirectoryGrid({
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
   const [selectedStack, setSelectedStack] = useState<TechStack>('all');
+  const [selectedTransport, setSelectedTransport] = useState<TransportKind>('all');
   // Default to relevance ordering whenever there's a query (incl. deep links).
   const [sortMode, setSortMode] = useState<SortMode>(initialQuery.trim() ? 'relevance' : 'trending');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -222,12 +225,25 @@ export default function DirectoryGrid({
       return true;
     };
 
+    const transportMatch = (server: Server): boolean => {
+      if (selectedTransport === 'all') return true;
+      const kind = (server.installConfidence || server.installKind || '').toLowerCase();
+      if (selectedTransport === 'stdio') {
+        return kind.includes('stdio') || kind.includes('high') || kind.includes('medium') || !kind;
+      }
+      if (selectedTransport === 'remote') {
+        return kind.includes('sse') || kind.includes('remote') || kind.includes('http');
+      }
+      return true;
+    };
+
     // Score once, filter on non-search facets, and drop query non-matches.
     const scored: Array<{ server: Server; relevance: number }> = [];
     for (const server of servers) {
       if (selectedCategory && server.category !== selectedCategory) continue;
       if (verifiedOnly && !isVerifiedListing(server)) continue;
       if (!stackMatch(server)) continue;
+      if (!transportMatch(server)) continue;
 
       const relevance = hasQuery
         ? scoreServerMatch(

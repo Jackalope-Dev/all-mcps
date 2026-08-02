@@ -16,6 +16,7 @@ import {
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
 import { BEST_TOPICS } from '../../../lib/bestTopics';
+import { CategorySponsorBanner } from '../../../components/CategorySponsorBanner';
 
 const SITE = 'https://allmcps.com';
 
@@ -208,6 +209,9 @@ export default async function CategoryLandingPage({
             })()}
           </div>
         </section>
+
+        {/* Category Sponsor Header */}
+        <CategorySponsorBanner categoryName={label} />
 
         {/* Server grid */}
         {cards.length > 0 ? (
