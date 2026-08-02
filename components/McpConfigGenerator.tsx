@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Copy, Check, Code, Cpu } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Copy, Check, Code, Cpu, AlertTriangle } from 'lucide-react';
 import { toast } from './ui/Toast';
 import { trackCopyConfig } from '../lib/gtag';
+import { resolveInstallConfig, type ResolvedInstall } from '../lib/installConfig';
 
 export type IdeTarget = 'claude-desktop' | 'cursor' | 'claude-code' | 'windsurf' | 'goose' | 'continue';
 
@@ -11,87 +12,53 @@ interface McpConfigGeneratorProps {
   serverId: string;
   serverName: string;
   url?: string;
+  description?: string | null;
 }
 
-export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGeneratorProps) {
-  const [activeIde, setActiveIde] = useState<IdeTarget>('claude-desktop');
-  const [copied, setCopied] = useState(false);
-
-  const cleanName = serverId || serverName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-  const isPython = url?.toLowerCase().includes('python') || cleanName.includes('py');
-  const execCmd = isPython ? 'uvx' : 'npx';
-  const execArgs = isPython ? [cleanName] : ['-y', cleanName];
-
-  const getSnippet = (ide: IdeTarget): { label: string; file: string; code: string } => {
+function buildSnippet(
+  ide: IdeTarget,
+  install: ResolvedInstall,
+  key: string
+): { label: string; file: string; code: string } {
+  if (install.kind === 'remote') {
+    const remoteBlock = {
+      mcpServers: {
+        [key]: {
+          url: install.url,
+        },
+      },
+    };
     switch (ide) {
       case 'claude-desktop':
         return {
           label: 'Claude Desktop',
           file: 'claude_desktop_config.json',
-          code: JSON.stringify(
-            {
-              mcpServers: {
-                [cleanName]: {
-                  command: execCmd,
-                  args: execArgs,
-                },
-              },
-            },
-            null,
-            2
-          ),
+          code: JSON.stringify(remoteBlock, null, 2),
         };
-
       case 'cursor':
         return {
           label: 'Cursor IDE',
           file: '.cursor/mcp.json',
-          code: JSON.stringify(
-            {
-              mcpServers: {
-                [cleanName]: {
-                  command: execCmd,
-                  args: execArgs,
-                },
-              },
-            },
-            null,
-            2
-          ),
+          code: JSON.stringify(remoteBlock, null, 2),
         };
-
       case 'claude-code':
         return {
           label: 'Claude Code CLI',
           file: 'Terminal Command',
-          code: `claude mcp add ${cleanName} -- ${execCmd} ${execArgs.join(' ')}`,
+          code: `claude mcp add --transport http ${key} ${install.url}`,
         };
-
       case 'windsurf':
         return {
           label: 'Windsurf IDE',
           file: '~/.codeium/windsurf/mcp_config.json',
-          code: JSON.stringify(
-            {
-              mcpServers: {
-                [cleanName]: {
-                  command: execCmd,
-                  args: execArgs,
-                },
-              },
-            },
-            null,
-            2
-          ),
+          code: JSON.stringify(remoteBlock, null, 2),
         };
-
       case 'goose':
         return {
           label: 'Goose AI Agent',
           file: 'Terminal Command',
-          code: `goose mcp add ${cleanName} -- ${execCmd} ${execArgs.join(' ')}`,
+          code: `goose mcp add ${key} --url ${install.url}`,
         };
-
       case 'continue':
         return {
           label: 'VS Code (Continue)',
@@ -100,9 +67,8 @@ export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGener
             {
               mcpServers: [
                 {
-                  name: cleanName,
-                  command: execCmd,
-                  args: execArgs,
+                  name: key,
+                  url: install.url,
                 },
               ],
             },
@@ -111,18 +77,132 @@ export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGener
           ),
         };
     }
-  };
+  }
 
-  const current = getSnippet(activeIde);
+  const { command: execCmd, args: execArgs } = install;
+
+  switch (ide) {
+    case 'claude-desktop':
+      return {
+        label: 'Claude Desktop',
+        file: 'claude_desktop_config.json',
+        code: JSON.stringify(
+          {
+            mcpServers: {
+              [key]: {
+                command: execCmd,
+                args: execArgs,
+              },
+            },
+          },
+          null,
+          2
+        ),
+      };
+
+    case 'cursor':
+      return {
+        label: 'Cursor IDE',
+        file: '.cursor/mcp.json',
+        code: JSON.stringify(
+          {
+            mcpServers: {
+              [key]: {
+                command: execCmd,
+                args: execArgs,
+              },
+            },
+          },
+          null,
+          2
+        ),
+      };
+
+    case 'claude-code':
+      return {
+        label: 'Claude Code CLI',
+        file: 'Terminal Command',
+        code: `claude mcp add ${key} -- ${execCmd} ${execArgs.join(' ')}`,
+      };
+
+    case 'windsurf':
+      return {
+        label: 'Windsurf IDE',
+        file: '~/.codeium/windsurf/mcp_config.json',
+        code: JSON.stringify(
+          {
+            mcpServers: {
+              [key]: {
+                command: execCmd,
+                args: execArgs,
+              },
+            },
+          },
+          null,
+          2
+        ),
+      };
+
+    case 'goose':
+      return {
+        label: 'Goose AI Agent',
+        file: 'Terminal Command',
+        code: `goose mcp add ${key} -- ${execCmd} ${execArgs.join(' ')}`,
+      };
+
+    case 'continue':
+      return {
+        label: 'VS Code (Continue)',
+        file: '.continue/config.json',
+        code: JSON.stringify(
+          {
+            mcpServers: [
+              {
+                name: key,
+                command: execCmd,
+                args: execArgs,
+              },
+            ],
+          },
+          null,
+          2
+        ),
+      };
+  }
+}
+
+export function McpConfigGenerator({
+  serverId,
+  serverName,
+  url,
+  description,
+}: McpConfigGeneratorProps) {
+  const [activeIde, setActiveIde] = useState<IdeTarget>('claude-desktop');
+  const [copied, setCopied] = useState(false);
+
+  const install = useMemo(
+    () =>
+      resolveInstallConfig({
+        id: serverId,
+        name: serverName,
+        url: url || '',
+        description,
+      }),
+    [serverId, serverName, url, description]
+  );
+
+  const key = serverId || serverName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const current = buildSnippet(activeIde, install, key);
+  const showGuessWarning = install.confidence === 'low' || install.source === 'heuristic';
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(current.code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      trackCopyConfig({ serverId: cleanName, snippetType: activeIde });
+      trackCopyConfig({ serverId: key, snippetType: activeIde });
       toast.success(`Copied ${current.label} config`);
-    } catch (e) {
+    } catch {
       toast.error('Failed to copy');
     }
   };
@@ -137,7 +217,7 @@ export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGener
   ];
 
   return (
-    <div 
+    <div
       className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-md overflow-hidden p-4 my-6"
       style={{
         borderRadius: '16px',
@@ -147,30 +227,95 @@ export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGener
         margin: '1.75rem 0',
       }}
     >
-      <div 
+      <div
         className="flex items-center justify-between gap-3 mb-3 flex-wrap"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+        }}
       >
-        <div 
+        <div
           className="flex items-center gap-2 text-sm font-semibold text-white"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            color: '#fff',
+          }}
         >
           <Cpu className="w-4 h-4 text-cyan-400" size={18} color="#00E5FF" />
           <span>One-Click IDE Configuration</span>
         </div>
-        <div 
+        <div
           className="text-xs text-zinc-400 flex items-center gap-1"
-          style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          style={{
+            fontSize: '0.8rem',
+            color: '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+          }}
         >
           <Code className="w-3.5 h-3.5" size={15} />
           <span>{current.file}</span>
         </div>
       </div>
 
+      {showGuessWarning && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.6rem',
+            alignItems: 'flex-start',
+            padding: '0.75rem 0.9rem',
+            marginBottom: '1rem',
+            borderRadius: '10px',
+            background: 'rgba(250, 204, 21, 0.08)',
+            border: '1px solid rgba(250, 204, 21, 0.28)',
+            color: '#fde68a',
+            fontSize: '0.8rem',
+            lineHeight: 1.5,
+          }}
+        >
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>
+            This config is a best-effort guess from the listing. Confirm the package name
+            and install steps in the project README before restarting your client
+            {install.kind === 'stdio' ? ` (package: ${install.packageName})` : ''}.
+          </span>
+        </div>
+      )}
+
+      {install.kind === 'remote' && install.confidence !== 'low' && (
+        <p
+          style={{
+            fontSize: '0.8rem',
+            color: '#94a3b8',
+            marginBottom: '0.85rem',
+            lineHeight: 1.5,
+          }}
+        >
+          Remote HTTP MCP endpoint detected — using URL transport instead of{' '}
+          <code style={{ color: '#cbd5e1' }}>npx</code>.
+        </p>
+      )}
+
       {/* Tab Selector */}
-      <div 
+      <div
         className="flex gap-2.5 overflow-x-auto pb-3 mb-4 scrollbar-none"
-        style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', marginBottom: '1rem' }}
+        style={{
+          display: 'flex',
+          gap: '0.75rem',
+          overflowX: 'auto',
+          paddingBottom: '0.5rem',
+          marginBottom: '1rem',
+        }}
       >
         {ides.map((ide) => (
           <button
@@ -185,18 +330,15 @@ export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGener
               whiteSpace: 'nowrap',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
-              background: activeIde === ide.id ? 'rgba(0, 229, 255, 0.18)' : 'rgba(255, 255, 255, 0.05)',
-              borderColor: activeIde === ide.id ? 'rgba(0, 229, 255, 0.45)' : 'rgba(255, 255, 255, 0.1)',
+              background:
+                activeIde === ide.id ? 'rgba(0, 229, 255, 0.18)' : 'rgba(255, 255, 255, 0.05)',
+              borderColor:
+                activeIde === ide.id ? 'rgba(0, 229, 255, 0.45)' : 'rgba(255, 255, 255, 0.1)',
               borderStyle: 'solid',
               borderWidth: '1px',
               color: activeIde === ide.id ? '#00E5FF' : '#94a3b8',
               boxShadow: activeIde === ide.id ? '0 0 14px rgba(0, 229, 255, 0.25)' : 'none',
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap border ${
-              activeIde === ide.id
-                ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-md shadow-cyan-500/10'
-                : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10'
-            }`}
           >
             {ide.name}
           </button>
@@ -204,9 +346,15 @@ export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGener
       </div>
 
       {/* Code Display */}
-      <div 
+      <div
         className="relative group rounded-lg bg-zinc-950/80 border border-white/10 p-4"
-        style={{ position: 'relative', borderRadius: '12px', background: 'rgba(2, 6, 23, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '1rem' }}
+        style={{
+          position: 'relative',
+          borderRadius: '12px',
+          background: 'rgba(2, 6, 23, 0.85)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '1rem',
+        }}
       >
         <button
           type="button"
@@ -228,13 +376,12 @@ export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGener
             gap: '0.4rem',
             transition: 'all 0.2s ease',
           }}
-          className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-1.5 text-xs font-semibold"
           title="Copy config"
         >
           {copied ? (
             <>
               <Check className="w-4 h-4 text-emerald-400" size={15} color="#10b981" />
-              <span className="text-emerald-400 text-xs" style={{ color: '#10b981', fontSize: '0.8rem' }}>Copied</span>
+              <span style={{ color: '#10b981', fontSize: '0.8rem' }}>Copied</span>
             </>
           ) : (
             <>
@@ -243,9 +390,18 @@ export function McpConfigGenerator({ serverId, serverName, url }: McpConfigGener
             </>
           )}
         </button>
-        <pre 
-          className="text-xs text-zinc-300 font-mono overflow-x-auto pr-24 pt-1 pb-1"
-          style={{ fontSize: '0.825rem', color: '#e4e4e7', fontFamily: 'monospace', overflowX: 'auto', paddingRight: '6rem', paddingTop: '0.35rem', paddingBottom: '0.35rem', margin: 0, lineHeight: 1.6 }}
+        <pre
+          style={{
+            fontSize: '0.825rem',
+            color: '#e4e4e7',
+            fontFamily: 'monospace',
+            overflowX: 'auto',
+            paddingRight: '6rem',
+            paddingTop: '0.35rem',
+            paddingBottom: '0.35rem',
+            margin: 0,
+            lineHeight: 1.6,
+          }}
         >
           <code>{current.code}</code>
         </pre>

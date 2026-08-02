@@ -21,7 +21,14 @@ async function generatePreviews() {
   const receiptHtml = await render(<ReceiptEmail receiptId="RCPT-001" date="Oct 10, 2026" amount="$49.00" description="Submission Fee" />);
   fs.writeFileSync(path.join(outDir, "receipt.html"), receiptHtml);
 
-  const approvedHtml = await render(<ListingStatusEmail mcpName="Test Server" status="approved" />);
+  const approvedHtml = await render(
+    <ListingStatusEmail
+      mcpName="Test Server"
+      status="approved"
+      listingUrl="https://allmcps.com/mcp/test-server"
+      claimUrl="https://allmcps.com/mcp/test-server/claim"
+    />
+  );
   fs.writeFileSync(path.join(outDir, "listing-approved.html"), approvedHtml);
 
   const rejectedHtml = await render(<ListingStatusEmail mcpName="Test Server" status="rejected" feedback="Missing documentation." />);

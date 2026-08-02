@@ -1,10 +1,63 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
+import { chatJson } from '../../../../lib/openai';
+import { DIRECTORY_CATEGORIES, DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 
 const bodySchema = z.object({
   url: z.string().url(),
 });
+
+/**
+ * Optional LLM polish for name/description/category. Soft-fails on budget/4xx
+ * so prefill never depends on OpenAI availability.
+ */
+async function enrichWithLlm(input: {
+  name: string;
+  description: string;
+  url: string;
+}): Promise<{ name?: string; description?: string; category?: string } | null> {
+  const categories = DIRECTORY_CATEGORIES.slice(0, 40).join('\n');
+  const result = await chatJson<{
+    name?: string;
+    description?: string;
+    category?: string;
+  }>({
+    model: 'gpt-4.1-mini',
+    maxTokens: 400,
+    timeoutMs: 12_000,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You clean MCP server listing fields for a directory. Return JSON only with keys name, description, category. description max 280 chars, plain text, no marketing fluff. category must be copied exactly from the allowed list when possible.',
+      },
+      {
+        role: 'user',
+        content: `URL: ${input.url}\nName: ${input.name}\nDescription: ${input.description}\n\nAllowed categories (prefer exact match):\n${categories}\nDefault if unsure: ${DEFAULT_SUBMIT_CATEGORY}`,
+      },
+    ],
+  });
+
+  if (!result.ok) {
+    // Budget / rate / auth — silent fallthrough; deterministic scrape still wins.
+    return null;
+  }
+
+  const data = result.data;
+  const out: { name?: string; description?: string; category?: string } = {};
+  if (typeof data.name === 'string' && data.name.trim()) out.name = data.name.trim().slice(0, 120);
+  if (typeof data.description === 'string' && data.description.trim()) {
+    out.description = data.description.trim().slice(0, 500);
+  }
+  if (typeof data.category === 'string') {
+    const match = DIRECTORY_CATEGORIES.find(
+      (c) => c.toLowerCase() === data.category!.trim().toLowerCase()
+    );
+    if (match) out.category = match;
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 function decodeHtmlEntities(input: string): string {
   return input
@@ -83,12 +136,22 @@ export async function POST(req: Request) {
         html_url?: string;
       };
 
-      return NextResponse.json({
-        source: 'github',
+      const base = {
+        source: 'github' as const,
         name: gh.name || repo,
         description: gh.description || '',
         url: gh.html_url || url,
         websiteUrl: gh.homepage && isSafeSubmissionUrl(gh.homepage) ? gh.homepage : '',
+      };
+      const enriched = await enrichWithLlm({
+        name: base.name,
+        description: base.description,
+        url: base.url,
+      });
+      return NextResponse.json({
+        ...base,
+        ...(enriched || {}),
+        llmEnriched: Boolean(enriched),
       });
     }
 
@@ -117,12 +180,22 @@ export async function POST(req: Request) {
     // Drop common site suffixes: "Foo — Home", "Foo | MCP Server"
     name = name.split(/\s+[|\-–—]\s+/)[0]?.trim() || name;
 
-    return NextResponse.json({
-      source: 'website',
+    const base = {
+      source: 'website' as const,
       name,
       description: description.slice(0, 500),
       url,
       websiteUrl: url,
+    };
+    const enriched = await enrichWithLlm({
+      name: base.name,
+      description: base.description,
+      url: base.url,
+    });
+    return NextResponse.json({
+      ...base,
+      ...(enriched || {}),
+      llmEnriched: Boolean(enriched),
     });
   } catch (e) {
     console.error('Prefill error:', e);

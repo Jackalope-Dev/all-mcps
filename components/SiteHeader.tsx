@@ -10,10 +10,10 @@ import { Button } from './ui/Button';
 
 const NAV = [
   { href: '/browse', label: 'Browse' },
+  { href: '/best', label: 'Best' },
   { href: '/categories', label: 'Categories' },
-  { href: '/what-is-mcp', label: 'What is an MCP?' },
-  { href: '/guides', label: 'Guides' },
   { href: '/tools', label: 'Tools' },
+  { href: '/guides', label: 'Guides' },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

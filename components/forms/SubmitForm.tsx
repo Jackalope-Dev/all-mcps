@@ -19,6 +19,7 @@ export function SubmitForm() {
   const [url, setUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState(DEFAULT_SUBMIT_CATEGORY);
 
   const agentPromptText = `Read this repository's package.json and README.md to extract the MCP server name, description, category, and repository URL. Then submit this MCP server to AllMCPs.com by sending a POST request to https://allmcps.com/api/v1/submit with JSON: {"name": "<name>", "url": "<repo_url>", "description": "<description>", "category": "<category>", "email": "<your_email>"}`;
 
@@ -51,7 +52,9 @@ export function SubmitForm() {
         description?: string;
         url?: string;
         websiteUrl?: string;
+        category?: string;
         source?: string;
+        llmEnriched?: boolean;
       };
       if (!res.ok) throw new Error(data.error || 'Prefill failed');
 
@@ -61,9 +64,14 @@ export function SubmitForm() {
       if (data.url) setUrl(data.url);
       if (data.websiteUrl) setWebsiteUrl(data.websiteUrl);
       else if (data.source === 'website') setWebsiteUrl(fromUrl.trim());
+      if (data.category) setCategory(data.category);
 
       toast.success('Details prefilled', {
-        description: data.source === 'github' ? 'From GitHub repository metadata.' : 'From the website title and meta tags.',
+        description: data.llmEnriched
+          ? 'Enriched with AI (falls back if the model budget is hit).'
+          : data.source === 'github'
+            ? 'From GitHub repository metadata.'
+            : 'From the website title and meta tags.',
       });
     } catch (e: any) {
       toast.error('Prefill failed', { description: e?.message || 'Enter fields manually.' });
@@ -95,6 +103,7 @@ export function SubmitForm() {
     data.url = url.trim() || websiteUrl.trim();
     data.websiteUrl = websiteUrl;
     data.description = description;
+    data.category = category;
 
     try {
       const res = await fetch('/api/submit', {
@@ -378,7 +387,8 @@ export function SubmitForm() {
             id="submit-category"
             name="category"
             className="form-input"
-            defaultValue={DEFAULT_SUBMIT_CATEGORY}
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
             required
           >
             {DIRECTORY_CATEGORIES.map((cat) => (

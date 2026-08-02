@@ -41,6 +41,24 @@ outright (it has no fallback — sending the digest is the entire point of that 
   builds fresh new/trending-listing content from D1 and schedules a one-off campaign send to the
   Newsletter Subscribers list. Not a Sequenzy native recurring campaign — see the code comments
   and `docs/superpowers/specs/2026-07-28-newsletter-digest-design.md` for why.
+- **Admin approve listing** (`POST /api/admin/action` `action=approve`) — sends the saved
+  transactional template **`listing-approved`** (see `lib/sequenzyTransactional.ts`) with
+  `MCP_NAME`, `LISTING_URL`, and `CLAIM_URL`, then tags the subscriber `listing-approved`.
+  If Sequenzy send fails (missing key/scope), falls back to Resend `ListingStatusEmail`.
+  Copy explicitly asks submitters to claim + verify their website + place a dofollow AllMCPs
+  badge so free listings can earn a reciprocal dofollow backlink (DR growth).
+
+### Transactional API key
+
+`SEQUENZY_API_KEY` is scoped for subscriber write. Sending transactional templates also needs
+`transactional:send` (or equivalent) on the key. Prefer a dedicated secret:
+
+```bash
+npx wrangler secret put SEQUENZY_TRANSACTIONAL_API_KEY
+```
+
+`lib/sequenzyTransactional.ts` tries `SEQUENZY_TRANSACTIONAL_API_KEY` first, then
+`SEQUENZY_API_KEY`.
 
 ## App routes touched
 

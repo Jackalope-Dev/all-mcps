@@ -10,6 +10,7 @@ import { NewsletterModal } from "../components/NewsletterModal";
 import { ToastProvider } from "../components/ui/Toast";
 import { PurchaseTracker } from "../components/PurchaseTracker";
 import { CommandPalette } from "../components/ui/CommandPalette";
+import { PostHogIdentify } from "../components/PostHogIdentify";
 import "./globals.css";
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
@@ -117,6 +118,7 @@ export default function RootLayout({
           <PurchaseTracker />
         </Suspense>
         <WebMCPProvider />
+        <PostHogIdentify />
         <CommandPalette />
         <CookieBanner />
         <NewsletterModal />

@@ -2,6 +2,7 @@ import { getActiveServers } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
 import { rankServers } from '@/lib/search';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
+import { resolveInstallConfig, toClaudeConfigSnippet } from '@/lib/installConfig';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -22,7 +23,16 @@ export async function GET(request: Request) {
   }
 
   const results = servers.slice(0, limit).map((server) => {
-    const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const install = resolveInstallConfig({
+      id: server.id,
+      name: server.name,
+      url: server.url,
+      description: server.description,
+    });
+    const installName =
+      install.kind === 'stdio' ? install.packageName : server.id;
+    const snippetKey = server.id;
+
     return {
       id: server.id,
       name: server.name,
@@ -36,14 +46,9 @@ export async function GET(request: Request) {
       npmDownloads: server.npmDownloads ?? null,
       qualityScore: computeQualityScore(server).score,
       installName,
-      claudeConfigSnippet: {
-        mcpServers: {
-          [installName]: {
-            command: 'npx',
-            args: ['-y', installName],
-          },
-        },
-      },
+      installConfidence: install.confidence,
+      installKind: install.kind,
+      claudeConfigSnippet: toClaudeConfigSnippet(install, snippetKey),
       detailUrl: `https://allmcps.com/mcp/${server.id}`,
       markdownUrl: `https://allmcps.com/mcp/${server.id}.md`,
     };
@@ -77,6 +82,7 @@ export async function GET(request: Request) {
       headers: {
         'Cache-Control': 'public, max-age=300, s-maxage=3600',
         'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json; charset=utf-8',
       },
     }
   );

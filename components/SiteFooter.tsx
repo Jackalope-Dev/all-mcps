@@ -79,6 +79,11 @@ export function SiteFooter() {
           <h4 className="footer-heading">Free Tools</h4>
           <ul className="site-footer-links">
             <li>
+              <Link href="/tools" className="nav-link">
+                All tools
+              </Link>
+            </li>
+            <li>
               <Link href="/tools/config-generator" className="nav-link">
                 Config Generator
               </Link>
@@ -93,11 +98,26 @@ export function SiteFooter() {
                 Token Cost Calculator
               </Link>
             </li>
+            <li>
+              <Link href="/tools/openapi-to-mcp" className="nav-link">
+                OpenAPI → MCP
+              </Link>
+            </li>
+            <li>
+              <Link href="/tools/protocol-inspector" className="nav-link">
+                Protocol Inspector
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
           <h4 className="footer-heading">For AI &amp; Agents</h4>
           <ul className="site-footer-links">
+            <li>
+              <Link href="/docs/api" className="nav-link">
+                API Documentation
+              </Link>
+            </li>
             <li>
               <a href="/llms.txt" className="nav-link" target="_blank" rel="noopener">
                 llms.txt Standard ↗

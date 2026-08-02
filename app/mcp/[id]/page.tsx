@@ -434,8 +434,18 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <p style={{ color: 'var(--text-secondary)', margin: '0 0 1rem', fontSize: '0.875rem' }}>
               One click to install into your editor, or copy the config below.
             </p>
-            <InstallButtons serverId={server.id} serverName={server.name} url={server.url} />
-            <McpConfigGenerator serverId={server.id} serverName={server.name} url={server.url} />
+            <InstallButtons
+              serverId={server.id}
+              serverName={server.name}
+              url={server.url}
+              description={server.description}
+            />
+            <McpConfigGenerator
+              serverId={server.id}
+              serverName={server.name}
+              url={server.url}
+              description={server.description}
+            />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.5rem 0' }}>
               <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />

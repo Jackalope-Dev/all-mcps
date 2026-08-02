@@ -8,8 +8,13 @@ import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
 import { parsePendingRevision } from '../../../../lib/pendingRevision';
-import { sendNotificationEmail } from '../../../../lib/notify';
+import { sendNotificationEmail, sendListingStatusEmail } from '../../../../lib/notify';
 import { getAppUrl } from '../../../../lib/stripe';
+import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../../lib/sequenzy';
+import {
+  sendSequenzyTransactional,
+  SEQUENZY_TX,
+} from '../../../../lib/sequenzyTransactional';
 
 import { tweetMcpServer } from '../../../../lib/twitter';
 
@@ -104,9 +109,60 @@ export async function POST(req: Request) {
          return NextResponse.json({ error: "Server not found or not in pending state." }, { status: 400 });
       }
 
+      const approvedServer = updateResult[0];
+      const appUrl = getAppUrl();
+      const listingUrl = `${appUrl}/mcp/${approvedServer.id}`;
+      const claimUrl = `${listingUrl}/claim`;
+
+      // Notify submitter: Sequenzy transactional (primary) + Resend fallback.
+      // Copy drives claim + free dofollow badge path — key DR growth lever.
+      const submitterEmail =
+        typeof approvedServer.submitterEmail === 'string'
+          ? approvedServer.submitterEmail.trim().toLowerCase()
+          : '';
+      if (submitterEmail) {
+        try {
+          const sequenzyOk = await sendSequenzyTransactional({
+            to: submitterEmail,
+            slug: SEQUENZY_TX.LISTING_APPROVED,
+            variables: {
+              MCP_NAME: approvedServer.name,
+              LISTING_URL: listingUrl,
+              CLAIM_URL: claimUrl,
+              mcpName: approvedServer.name,
+              listingUrl,
+              claimUrl,
+              serverId: approvedServer.id,
+            },
+          });
+          if (!sequenzyOk) {
+            await sendListingStatusEmail({
+              to: submitterEmail,
+              mcpName: approvedServer.name,
+              status: 'approved',
+              listingUrl,
+              claimUrl,
+            });
+          }
+          // Tag for segmentation / future sequences (never enrolls paid upsell again)
+          await syncSequenzySubscriber({
+            email: submitterEmail,
+            tags: ['listing-approved'],
+            lists: [PRODUCT_SUBSCRIBERS_LIST_ID],
+            customAttributes: {
+              serverId: approvedServer.id,
+              serverName: approvedServer.name,
+              listingUrl,
+            },
+            enrollInSequences: false,
+          });
+        } catch (e) {
+          console.error('Failed to notify submitter on approval:', e);
+        }
+      }
+
       // Auto-tweet newly approved MCP server
       try {
-        const approvedServer = updateResult[0];
         const tweetResult = await tweetMcpServer({
           id: approvedServer.id,
           name: approvedServer.name,
@@ -129,6 +185,26 @@ export async function POST(req: Request) {
 
       if (deleteResult.length === 0) {
          return NextResponse.json({ error: "Server not found or not in pending state." }, { status: 400 });
+      }
+
+      const rejected = deleteResult[0];
+      const submitterEmail =
+        typeof rejected.submitterEmail === 'string'
+          ? rejected.submitterEmail.trim().toLowerCase()
+          : '';
+      if (submitterEmail) {
+        try {
+          await sendListingStatusEmail({
+            to: submitterEmail,
+            mcpName: rejected.name,
+            status: 'rejected',
+            listingUrl: `${getAppUrl()}/submit`,
+            feedback:
+              'Your listing was not approved. Common reasons: incomplete description, unsafe URL, spam, or a duplicate of an existing listing. You can submit again with clearer details.',
+          });
+        } catch (e) {
+          console.error('Failed to notify submitter on rejection:', e);
+        }
       }
     } else if (action === 'set_premium' || action === 'unset_premium') {
       const updateResult = await db.update(servers)

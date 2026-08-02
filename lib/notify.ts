@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { NotificationEmail } from '@/components/emails/NotificationEmail';
+import { ListingStatusEmail } from '@/components/emails/ListingStatusEmail';
 
 export async function getEmailEnv() {
   let apiKey = process.env.RESEND_API_KEY;
@@ -60,5 +61,47 @@ export async function sendNotificationEmail(params: {
 
   if (error) {
     console.error('sendNotificationEmail error:', error);
+  }
+}
+
+/**
+ * Listing approved/rejected notice via Resend (fallback when Sequenzy transactional
+ * isn't available). Approval copy drives claim + free dofollow backlink for DR growth.
+ */
+export async function sendListingStatusEmail(params: {
+  to: string;
+  mcpName: string;
+  status: 'approved' | 'rejected';
+  listingUrl: string;
+  claimUrl?: string;
+  feedback?: string;
+}): Promise<void> {
+  const env = await getEmailEnv();
+  if (!env.apiKey) {
+    console.warn('sendListingStatusEmail skipped: RESEND_API_KEY is missing.');
+    return;
+  }
+
+  const resend = new Resend(env.apiKey);
+  const subject =
+    params.status === 'approved'
+      ? `Your MCP is live: ${params.mcpName}`
+      : `Update needed: ${params.mcpName}`;
+
+  const { error } = await resend.emails.send({
+    from: env.fromEmail,
+    to: params.to,
+    subject,
+    react: ListingStatusEmail({
+      mcpName: params.mcpName,
+      status: params.status,
+      listingUrl: params.listingUrl,
+      claimUrl: params.claimUrl || `${params.listingUrl}/claim`,
+      feedback: params.feedback,
+    }) as React.ReactElement,
+  });
+
+  if (error) {
+    console.error('sendListingStatusEmail error:', error);
   }
 }
