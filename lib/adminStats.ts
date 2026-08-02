@@ -6,6 +6,14 @@ export type AdminStats = {
   premiumCount: number;
   featuredCount: number;
   unhealthyCount: number;
+  logoSourceCounts: {
+    manual: number;
+    readme: number;
+    website_favicon: number;
+    github_org: number;
+    github_user: number;
+    none: number;
+  };
   engagement: { totalViews: number; totalUpvotes: number; totalCopies: number };
   topByViews: { id: string; name: string; views: number }[];
 };
@@ -14,7 +22,7 @@ export type AdminStats = {
 export async function getAdminStats(db: any): Promise<AdminStats> {
   const now = new Date();
 
-  const [statusRows, premiumRows, featuredRows, unhealthyRows, engagementRows, topByViewsRows] =
+  const [statusRows, premiumRows, featuredRows, unhealthyRows, logoSourceRows, engagementRows, topByViewsRows] =
     await Promise.all([
       db.select({ status: servers.status, total: count() }).from(servers).groupBy(servers.status),
       db.select({ total: count() }).from(servers).where(eq(servers.isPremium, true)),
@@ -32,6 +40,7 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
         .select({ total: count() })
         .from(servers)
         .where(and(eq(servers.status, 'active'), ne(servers.healthStatus, 'healthy'))),
+      db.select({ source: servers.logoSource, total: count() }).from(servers).groupBy(servers.logoSource),
       db
         .select({
           totalViews: sum(servers.views),
@@ -53,11 +62,29 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     }
   }
 
+  const logoSourceCounts = {
+    manual: 0,
+    readme: 0,
+    website_favicon: 0,
+    github_org: 0,
+    github_user: 0,
+    none: 0,
+  };
+  for (const row of logoSourceRows as { source: string | null; total: number }[]) {
+    if (row.source === 'manual') logoSourceCounts.manual = row.total;
+    else if (row.source === 'readme') logoSourceCounts.readme = row.total;
+    else if (row.source === 'website_favicon') logoSourceCounts.website_favicon = row.total;
+    else if (row.source === 'github_org') logoSourceCounts.github_org = row.total;
+    else if (row.source === 'github_user') logoSourceCounts.github_user = row.total;
+    else logoSourceCounts.none += row.total;
+  }
+
   return {
     statusCounts,
     premiumCount: premiumRows[0]?.total ?? 0,
     featuredCount: featuredRows[0]?.total ?? 0,
     unhealthyCount: unhealthyRows[0]?.total ?? 0,
+    logoSourceCounts,
     engagement: {
       totalViews: Number(engagementRows[0]?.totalViews ?? 0),
       totalUpvotes: Number(engagementRows[0]?.totalUpvotes ?? 0),

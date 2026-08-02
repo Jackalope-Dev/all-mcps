@@ -24,6 +24,7 @@ const EMPTY_STATS: AdminStats = {
   premiumCount: 0,
   featuredCount: 0,
   unhealthyCount: 0,
+  logoSourceCounts: { manual: 0, readme: 0, website_favicon: 0, github_org: 0, github_user: 0, none: 0 },
   engagement: { totalViews: 0, totalUpvotes: 0, totalCopies: 0 },
   topByViews: [],
 };

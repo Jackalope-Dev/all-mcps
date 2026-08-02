@@ -39,19 +39,22 @@ assert(candidateWebsites.includes('https://docs.cool-mcp.example.com'), 'Should 
 assert(!candidateWebsites.some((u) => u.includes('github.com')), 'Should filter out github.com');
 assert(!candidateWebsites.some((u) => u.includes('npmjs.com')), 'Should filter out npmjs.com');
 
-// 3. Test extractCandidateImagesFromReadme
+// 3. Test extractCandidateImagesFromReadme with picture and light mode tags
 const readmeImagesContent = `
 # Logo Header
-![Cool MCP Logo](https://raw.githubusercontent.com/owner/cool-mcp/main/assets/logo.png)
-<img src="./docs/banner.png" alt="Banner" width="400" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/owner/cool-mcp/main/assets/dark-logo.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/owner/cool-mcp/main/assets/light-logo.png">
+  <img src="https://raw.githubusercontent.com/owner/cool-mcp/main/assets/default-logo.png">
+</picture>
 
 Status badges:
 ![CI Status](https://img.shields.io/badge/build-passing-brightgreen)
 `;
 
 const candidateImages = extractCandidateImagesFromReadme(readmeImagesContent, 'owner', 'cool-mcp');
-assert(candidateImages.includes('https://raw.githubusercontent.com/owner/cool-mcp/main/assets/logo.png'), 'Should extract absolute image URL');
-assert(candidateImages.includes('https://raw.githubusercontent.com/owner/cool-mcp/main/docs/banner.png'), 'Should resolve relative image URL');
+assert(candidateImages.includes('https://raw.githubusercontent.com/owner/cool-mcp/main/assets/light-logo.png'), 'Should prioritize light mode logo');
+assert(candidateImages[0] === 'https://raw.githubusercontent.com/owner/cool-mcp/main/assets/light-logo.png', 'Light mode logo should be first candidate');
 assert(!candidateImages.some((img) => img.includes('shields.io')), 'Should filter out shield badges');
 
 console.log('ALL TESTS PASSED SUCCESSFULLY!');

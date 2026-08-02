@@ -12,6 +12,7 @@ import {
   extractWebsiteFaviconUrl,
   fetchGithubReadme,
   fetchGithubRepo,
+  fetchPackageRegistryMetadata,
   logoSourcePriority,
   LogoSource,
   parseGithubUrl,
@@ -52,6 +53,10 @@ async function tryUploadLogo(
     });
     if (!res.ok) return null;
     const buf = await res.arrayBuffer();
+
+    // Reject generic default Google favicons / ultra-tiny placeholder images (< 1000 bytes)
+    if (buf.byteLength < 1000) return null;
+
     return await processLogoUpload(buf);
   } catch (e) {
     if (!(e instanceof LogoValidationError)) {
@@ -169,6 +174,17 @@ export async function POST(req: Request) {
             installConfidence: install.installConfidence,
           });
           stats.installSet++;
+        }
+
+        const pkgName = (updates.installPackage as string | undefined) || server.installPackage;
+        if (!websiteUrl && pkgName) {
+          const pkgMeta = await fetchPackageRegistryMetadata(pkgName);
+          if (pkgMeta?.websiteUrl) {
+            websiteUrl = pkgMeta.websiteUrl;
+            updates.websiteUrl = websiteUrl;
+            updates.websiteVerified = false;
+            stats.websitesSet++;
+          }
         }
 
         // Try extracting favicon for non-GitHub website URLs if missing logo

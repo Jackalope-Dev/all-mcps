@@ -52,7 +52,9 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array>
     throw new LogoValidationError('Logo must be a PNG or JPEG image.');
   }
 
-  const { PhotonImage, SamplingFilter, crop, resize } = await import('@cf-wasm/photon/workerd');
+  const { PhotonImage, SamplingFilter, Rgba, crop, padding_uniform, resize } = await import(
+    '@cf-wasm/photon/workerd'
+  );
 
   let input: PhotonImageType;
   try {
@@ -69,22 +71,66 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array>
       throw new LogoValidationError(`Image must be at least ${MIN_SOURCE_DIMENSION}x${MIN_SOURCE_DIMENSION}px.`);
     }
 
-    // Crop to a centered square, then resize to the fixed output size —
-    // equivalent to a "cover" fit (fills the square, no letterboxing).
-    const side = Math.min(width, height);
-    const x1 = Math.floor((width - side) / 2);
-    const y1 = Math.floor((height - side) / 2);
+    const aspectRatio = width / height;
 
-    const cropped = crop(input, x1, y1, x1 + side, y1 + side);
-    try {
-      const resized = resize(cropped, OUTPUT_SIZE, OUTPUT_SIZE, SamplingFilter.Lanczos3);
+    if (aspectRatio >= 0.8 && aspectRatio <= 1.25) {
+      // Near-square: crop to centered square, then resize to 256x256
+      const side = Math.min(width, height);
+      const x1 = Math.floor((width - side) / 2);
+      const y1 = Math.floor((height - side) / 2);
+
+      const cropped = crop(input, x1, y1, x1 + side, y1 + side);
       try {
-        return resized.get_bytes();
+        const resized = resize(cropped, OUTPUT_SIZE, OUTPUT_SIZE, SamplingFilter.Lanczos3);
+        try {
+          return resized.get_bytes();
+        } finally {
+          resized.free();
+        }
       } finally {
-        resized.free();
+        cropped.free();
       }
-    } finally {
-      cropped.free();
+    } else {
+      // Non-square (wide banner or tall logo): contain fit inside 200px box + pad to 256x256
+      const TARGET_INNER_BOX = 200;
+      let targetW: number;
+      let targetH: number;
+
+      if (width > height) {
+        targetW = TARGET_INNER_BOX;
+        targetH = Math.max(1, Math.round(TARGET_INNER_BOX / aspectRatio));
+      } else {
+        targetH = TARGET_INNER_BOX;
+        targetW = Math.max(1, Math.round(TARGET_INNER_BOX * aspectRatio));
+      }
+
+      const scaled = resize(input, targetW, targetH, SamplingFilter.Lanczos3);
+      try {
+        const padX = Math.max(1, Math.floor((OUTPUT_SIZE - targetW) / 2));
+        const p1 = padding_uniform(scaled, padX, new Rgba(255, 255, 255, 255));
+        try {
+          const currentH = p1.get_height();
+          const padY = Math.max(1, Math.floor((OUTPUT_SIZE - currentH) / 2));
+          const p2 = padding_uniform(p1, padY, new Rgba(255, 255, 255, 255));
+          try {
+            const side = OUTPUT_SIZE;
+            const x1 = Math.max(0, Math.floor((p2.get_width() - side) / 2));
+            const y1 = Math.max(0, Math.floor((p2.get_height() - side) / 2));
+            const finalSquare = crop(p2, x1, y1, x1 + side, y1 + side);
+            try {
+              return finalSquare.get_bytes();
+            } finally {
+              finalSquare.free();
+            }
+          } finally {
+            p2.free();
+          }
+        } finally {
+          p1.free();
+        }
+      } finally {
+        scaled.free();
+      }
     }
   } finally {
     input.free();

@@ -261,7 +261,7 @@ export function extractCandidateWebsitesFromReadme(
   return valid.slice(0, 10);
 }
 
-/** Extract candidate image URLs (logos/banners) from a README. */
+/** Extract candidate image URLs (logos/banners) from a README, prioritizing light/universal modes. */
 export function extractCandidateImagesFromReadme(
   readme: string,
   ghOwner: string,
@@ -269,23 +269,46 @@ export function extractCandidateImagesFromReadme(
   branch = 'main'
 ): string[] {
   if (!readme) return [];
+  const lightImages = new Set<string>();
   const images = new Set<string>();
+
+  // Extract <picture> tags with prefers-color-scheme: light
+  const pictureRegex = /<picture>([\s\S]*?)<\/picture>/gi;
+  let picMatch: RegExpExecArray | null;
+  while ((picMatch = pictureRegex.exec(readme)) !== null) {
+    const picContent = picMatch[1];
+    const lightSource = picContent.match(/<source[^>]+media=["'][^"']*prefers-color-scheme:\s*light[^"']*["'][^>]+srcset=["']([^"'\s]+)["']/i);
+    if (lightSource?.[1]) {
+      lightImages.add(lightSource[1].trim());
+    }
+  }
 
   // Markdown image syntax ![]()
   const mdImgRegex = /!\[[^\]]*\]\((https?:\/\/[^\s\)\"]+|\/[^\s\)\"]+|[^\s\)\"]+)\)/g;
   let m: RegExpExecArray | null;
   while ((m = mdImgRegex.exec(readme)) !== null) {
-    images.add(m[1].trim());
+    const src = m[1].trim();
+    if (src.includes('gh-light-mode-only') || src.includes('theme=light')) {
+      lightImages.add(src);
+    } else if (!src.includes('gh-dark-mode-only')) {
+      images.add(src);
+    }
   }
 
   // HTML img tags <img ... src="..." ...>
   const htmlImgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
   while ((m = htmlImgRegex.exec(readme)) !== null) {
-    images.add(m[1].trim());
+    const src = m[1].trim();
+    if (src.includes('gh-light-mode-only') || src.includes('theme=light')) {
+      lightImages.add(src);
+    } else if (!src.includes('gh-dark-mode-only')) {
+      images.add(src);
+    }
   }
 
+  const allCandidates = [...Array.from(lightImages), ...Array.from(images)];
   const valid: string[] = [];
-  for (let src of images) {
+  for (let src of allCandidates) {
     if (
       /shields\.io|badge|codecov|github-actions|workflow|license|build|downloads|stars|forks|contributors|last-commit/i.test(
         src
@@ -300,10 +323,46 @@ export function extractCandidateImagesFromReadme(
     }
 
     if (!isSafeSubmissionUrl(src)) continue;
-    valid.push(src);
+    if (!valid.includes(src)) valid.push(src);
   }
 
   return valid.slice(0, 5);
+}
+
+/** Fetch metadata for npm packages to discover homepage/repository URLs when missing. */
+export async function fetchPackageRegistryMetadata(
+  packageName: string
+): Promise<{ websiteUrl?: string; repoUrl?: string } | null> {
+  if (!packageName) return null;
+  const cleanName = packageName.trim().replace(/^npx\s+/, '').replace(/^uvx\s+/, '');
+  if (!cleanName || cleanName.includes(' ') || cleanName.startsWith('http')) return null;
+
+  try {
+    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(cleanName)}`, {
+      headers: { 'User-Agent': 'AllMCPs-Enricher/1.0 (+https://allmcps.com)' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      homepage?: string;
+      repository?: { url?: string } | string;
+    };
+
+    const out: { websiteUrl?: string; repoUrl?: string } = {};
+    if (data.homepage && isSafeSubmissionUrl(data.homepage) && !/github\.com/i.test(data.homepage)) {
+      out.websiteUrl = data.homepage;
+    }
+    const repoRaw = typeof data.repository === 'string' ? data.repository : data.repository?.url;
+    if (repoRaw) {
+      const match = repoRaw.match(/github\.com\/([^/]+\/[^/#?.]+)/i);
+      if (match) {
+        out.repoUrl = `https://github.com/${match[1]}`;
+      }
+    }
+    return Object.keys(out).length ? out : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
