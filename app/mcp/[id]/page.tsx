@@ -620,6 +620,39 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </div>
             </div>
           )}
+
+          {/* Query-Forward AEO / FAQ Block */}
+          <div className="surface" style={{ padding: '1.75rem', marginTop: '2rem' }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-primary)' }}>
+              Frequently Asked Questions about {displayName}
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.4rem 0' }}>
+                  What is the {displayName} MCP server used for?
+                </h3>
+                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55 }}>
+                  {server.description}
+                </p>
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.4rem 0' }}>
+                  How do I install {displayName} in Claude Desktop or Cursor?
+                </h3>
+                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55 }}>
+                  Copy the client configuration JSON snippet from the installation section above into your <code>claude_desktop_config.json</code> or <code>.cursor/mcp.json</code> file, then restart your AI application.
+                </p>
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.4rem 0' }}>
+                  Is the {displayName} MCP server free and safe to use?
+                </h3>
+                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55 }}>
+                  Yes, {displayName} is listed as a free Model Context Protocol server. Always review repository source code and permissions before granting local workspace access to AI agents.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Sidebar (Right Column) */}

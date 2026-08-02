@@ -186,13 +186,24 @@ export default async function BestTopicPage({
           </div>
         )}
 
-        {/* FAQ */}
+        {/* Query-Forward Selection Guide */}
         <section style={{ marginTop: '3.5rem', maxWidth: '760px' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.25rem' }}>Frequently asked questions</h2>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>
+            Which {t.title} MCP server should you use?
+          </h2>
+          <div className="surface" style={{ padding: '1.5rem', borderRadius: '12px', marginBottom: '2.5rem' }}>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              When choosing a Model Context Protocol server for <strong>{t.title}</strong>, select verified or official listings if you need strict API security guarantees. For rapid local dev testing with Claude or Cursor, community-maintained tools offer zero-setup configuration blocks ready to copy-paste.
+            </p>
+          </div>
+
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.25rem' }}>
+            Frequently asked questions about {t.title} MCP servers
+          </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {t.faq.map((f) => (
-              <div key={f.q}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.35rem' }}>{f.q}</h3>
+              <div key={f.q} className="surface" style={{ padding: '1.25rem', borderRadius: '12px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: 0, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>{f.q}</h3>
                 <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{f.a}</p>
               </div>
             ))}

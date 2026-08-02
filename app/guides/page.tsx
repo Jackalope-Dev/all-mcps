@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Layers } from 'lucide-react';
+import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Layers, Key } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 export const metadata: Metadata = {
@@ -77,6 +77,24 @@ const guidesList = [
       'Implementing tools, resources & prompts',
       'Testing with MCP Inspector',
       'Deploying to Cloudflare & publishing',
+    ],
+  },
+  {
+    slug: 'securing-remote-mcp-servers-authentication-guide',
+    href: '/blog/securing-remote-mcp-servers-authentication-guide',
+    title: 'Securing & Authenticating Remote MCP Servers',
+    subtitle: 'Enterprise Authentication & Security',
+    description:
+      'Master remote MCP server security over HTTP/SSE: OAuth 2.0 PKCE auth flow, JWT validation, multi-tenant token propagation, and prompt injection defense.',
+    level: 'Enterprise',
+    readTime: '12 min read',
+    icon: Key,
+    badgeVariant: 'official' as const,
+    highlights: [
+      'stdio vs Remote HTTP/SSE security boundary',
+      'OAuth 2.0 PKCE & JWT Bearer authentication',
+      'TypeScript Express multi-tenant server code',
+      'Prompt injection & tool poisoning defenses',
     ],
   },
   {
