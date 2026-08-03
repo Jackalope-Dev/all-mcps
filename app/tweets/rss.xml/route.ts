@@ -2,7 +2,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq } from 'drizzle-orm';
 import { socialPosts } from '../../../db/schema';
-import { escapeForXml } from '../../../lib/twitter';
+import { escapeForXml, truncateToTwitterLimit } from '../../../lib/twitter';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,15 +43,17 @@ export async function GET() {
     .map((item) => {
       const pubDate = (item.createdAt ? new Date(item.createdAt) : new Date()).toUTCString();
       const itemUrl = item.serverId ? `${siteUrl}/mcp/${item.serverId}` : `${siteUrl}/tweets/rss.xml`;
-      const title = item.tweetText.split('\n')[0] || 'Queued tweet';
-      const encodedText = escapeForXml(item.tweetText);
+      // Enforce X.com (280 char) limit for all items, including pre-existing ones in DB
+      const tweetText = truncateToTwitterLimit(item.tweetText, 280);
+      const title = tweetText.split('\n')[0] || 'Queued tweet';
+      const encodedText = escapeForXml(tweetText);
       return `    <item>
       <title>${escapeForXml(title)}</title>
       <link>${itemUrl}</link>
       <guid isPermaLink="false">${escapeForXml(item.guid)}</guid>
       <pubDate>${pubDate}</pubDate>
       <description>${encodedText}</description>
-      <content:encoded><![CDATA[${toCdataSafe(item.tweetText)}]]></content:encoded>
+      <content:encoded><![CDATA[${toCdataSafe(tweetText)}]]></content:encoded>
     </item>`;
     })
     .join('\n');

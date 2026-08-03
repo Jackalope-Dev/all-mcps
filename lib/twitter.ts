@@ -184,8 +184,54 @@ export function stripMarkdown(input: string): string {
 }
 
 /**
+ * Calculates character count according to X.com (Twitter) rules:
+ * - Standard HTTP/HTTPS URLs count as 23 characters regardless of actual length.
+ * - Emojis and extended unicode range count as 2 weighted characters.
+ * - Standard ASCII / Latin characters count as 1 character.
+ */
+export function getTwitterCharCount(text: string): number {
+  if (!text) return 0;
+  const urlRegex = /https?:\/\/[^\s]+/gi;
+  const textWithoutUrls = text.replace(urlRegex, 'x'.repeat(23));
+
+  let count = 0;
+  for (const char of textWithoutUrls) {
+    const codePoint = char.codePointAt(0) || 0;
+    if (codePoint > 0xffff || (codePoint >= 0x2600 && codePoint <= 0x27bf) || (codePoint >= 0x1f000 && codePoint <= 0x1ffff)) {
+      count += 2;
+    } else {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/**
+ * Ensures a given text is strictly under maxLen (default 280 characters for X.com).
+ * Truncates cleanly on word boundaries when possible and appends '…'.
+ */
+export function truncateToTwitterLimit(text: string, maxLen = 280): string {
+  if (getTwitterCharCount(text) <= maxLen) {
+    return text;
+  }
+
+  let truncated = text;
+  while (getTwitterCharCount(truncated + '…') > maxLen && truncated.length > 0) {
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > truncated.length * 0.5) {
+      truncated = truncated.slice(0, lastSpace);
+    } else {
+      truncated = truncated.slice(0, -1);
+    }
+    truncated = truncated.replace(/[\s.,;:!\?]+$/, '');
+  }
+
+  return truncated ? truncated + '…' : text.slice(0, maxLen);
+}
+
+/**
  * Clean a scraped description into tweet-ready plain text: strip markdown, drop a
- * trailing install-command clause, then truncate on a word boundary.
+ * trailing install-command clause, then truncate on a word boundary according to X.com limit.
  */
 export function cleanTweetDescription(description: string | undefined, maxLen = 165): string {
   let text = stripMarkdown(description || '');
@@ -201,22 +247,26 @@ export function cleanTweetDescription(description: string | undefined, maxLen = 
       .trim();
   }
 
-  if (text.length > maxLen) {
-    const slice = text.slice(0, maxLen - 1);
+  if (getTwitterCharCount(text) > maxLen) {
+    let slice = text.slice(0, maxLen - 1);
+    while (getTwitterCharCount(slice + '…') > maxLen && slice.length > 0) {
+      slice = slice.slice(0, -1);
+    }
     const lastSpace = slice.lastIndexOf(' ');
-    text = (lastSpace > maxLen * 0.6 ? slice.slice(0, lastSpace) : slice).replace(/[\s.,;:]+$/, '') + '…';
+    text = (lastSpace > maxLen * 0.5 ? slice.slice(0, lastSpace) : slice).replace(/[\s.,;:]+$/, '') + '…';
   }
 
   return text;
 }
 
 /**
- * Format an open-graph optimized tweet body for an MCP server.
+ * Format an open-graph optimized tweet body for an MCP server that strictly fits X.com 280-char limit.
  */
 export function buildMcpServerTweetText(server: McpServerTweetPayload): string {
   const url = `https://allmcps.com/mcp/${server.id}`;
   const displayTitle = formatDisplayTitle(server.name || server.id);
   const hashtags = getHashtags(server.category);
+  let hashtagList = hashtags.split(' ').filter(Boolean);
   const cta = getRandomItem(CALL_TO_ACTIONS);
 
   let header = getRandomItem(COMMUNITY_HEADERS);
@@ -229,8 +279,40 @@ export function buildMcpServerTweetText(server: McpServerTweetPayload): string {
     badge = ' ⭐';
   }
 
-  const cleanDesc = cleanTweetDescription(server.description);
-  return `${header}\n\n${displayTitle}${badge}\n${cleanDesc}\n\n${cta}\n${url}\n\n${hashtags}`;
+  const titleLine = `${displayTitle}${badge}`;
+  const rawDesc = stripMarkdown(server.description || '');
+
+  // Calculate character budget for description
+  let hashtagsStr = hashtagList.join(' ');
+  const baseTextWithoutDesc = `${header}\n\n${titleLine}\n\n${cta}\n${url}\n\n${hashtagsStr}`;
+  const baseCount = getTwitterCharCount(baseTextWithoutDesc);
+
+  // Available length for cleanDesc (leaving 1 char for extra newline)
+  let availableDescBudget = 280 - baseCount - 1;
+
+  // If budget is low, try reducing hashtags to free up character space
+  if (availableDescBudget < 40 && hashtagList.length > 2) {
+    hashtagList = hashtagList.slice(0, 2);
+    hashtagsStr = hashtagList.join(' ');
+    const newBaseCount = getTwitterCharCount(`${header}\n\n${titleLine}\n\n${cta}\n${url}\n\n${hashtagsStr}`);
+    availableDescBudget = 280 - newBaseCount - 1;
+  }
+
+  let cleanDesc = '';
+  if (availableDescBudget >= 20 && rawDesc) {
+    cleanDesc = cleanTweetDescription(server.description, Math.min(availableDescBudget, 165));
+  }
+
+  let tweetText = cleanDesc
+    ? `${header}\n\n${titleLine}\n${cleanDesc}\n\n${cta}\n${url}\n\n${hashtagsStr}`
+    : `${header}\n\n${titleLine}\n\n${cta}\n${url}\n\n${hashtagsStr}`;
+
+  // Final hard safety check: truncate to 280 chars if anything exceeds limit
+  if (getTwitterCharCount(tweetText) > 280) {
+    tweetText = truncateToTwitterLimit(tweetText, 280);
+  }
+
+  return tweetText;
 }
 
 /**
