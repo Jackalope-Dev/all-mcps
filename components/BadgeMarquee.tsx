@@ -83,6 +83,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://www.scrolllaunch.com/products/allmcps?utm_source=badge&utm_medium=embed&utm_campaign=allmcps&ref=scrolllaunch',
     imageUrl: 'https://www.scrolllaunch.com/api/badge/allmcps',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'dailypings',
+    name: 'Featured on DailyPings',
+    href: 'https://dailypings.com/p/allmcps',
+    imageUrl: 'https://dailypings.com/badge.svg',
+    rel: 'noopener noreferrer'
   }
 ];
 
