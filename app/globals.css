@@ -448,6 +448,12 @@ p {
   text-align: center;
 }
 
+.site-footer-badge {
+  display: inline-flex;
+  justify-content: center;
+  align-self: center;
+}
+
 /* Footer Badge Marquee */
 .badge-marquee-container {
   overflow: hidden;
@@ -3054,5 +3060,4 @@ nav[aria-label="Table of contents"] {
     flex: 1 1 auto;
   }
 }
-
 
