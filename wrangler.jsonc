@@ -14,7 +14,9 @@
   "vars": {
     "ACCESS_TEAM_DOMAIN": "https://jackalope-digital.cloudflareaccess.com",
     "ACCESS_AUD": "1f1d6927fe441199ceac84e46059247f1dfe4caf5defb88e21d178add8fc9187",
-    "ADMIN_EMAIL": "cadenjsumner@gmail.com"
+    "ADMIN_EMAIL": "cadenjsumner@gmail.com",
+    "RESEND_TO_EMAIL": "contact@allmcps.com",
+    "RESEND_FROM_EMAIL": "contact@allmcps.com"
   },
   "routes": [
     { "pattern": "allmcps.com", "custom_domain": true }

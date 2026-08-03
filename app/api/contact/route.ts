@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const resend = new Resend(apiKey);
 
     const fromEmail = env?.RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-    const toEmail = env?.RESEND_TO_EMAIL || process.env.RESEND_TO_EMAIL || 'delivered@resend.dev';
+    const toEmail = env?.RESEND_TO_EMAIL || process.env.RESEND_TO_EMAIL || env?.ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'contact@allmcps.com';
 
     const data = await resend.emails.send({
       from: `Contact Form <${fromEmail}>`,
