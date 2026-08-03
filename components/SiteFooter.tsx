@@ -187,14 +187,6 @@ export function SiteFooter() {
         </div>
       </div>
       <BadgeMarquee />
-      <a
-        href="https://dailypings.com/p/allmcps"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="site-footer-badge"
-      >
-        <img src="https://dailypings.com/badge.svg" alt="DailyPings badge" />
-      </a>
       <div className="site-footer-copy">
         &copy; {new Date().getFullYear()} Jackalope Digital LLC. All rights reserved.
       </div>
