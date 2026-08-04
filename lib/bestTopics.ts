@@ -6,21 +6,30 @@
  * Keep `categorySlug` values in sync with lib/category-manifest.json slugs.
  */
 
-import { categorySlug as slugFromCategory } from './categories';
+import { categorySlug as slugFromCategory, categoryFromSlug } from './categories';
 
 export type BestTopic = {
   /** URL slug: /best/<slug> */
   slug: string;
-  /** Category slug (categorySlug of a stored category) the ranking is drawn from. */
-  categorySlug: string;
-  /** <title> / H1 subject, e.g. "Databases". */
+  /**
+   * Category-hub mode: draw the ranking from every listing in this stored category.
+   * Mutually exclusive with `match` (keyword-hub mode).
+   */
+  categorySlug?: string;
+  /**
+   * Keyword-hub mode: draw the ranking from every listing whose name or description
+   * mentions one of these terms (whole-word match, case-insensitive). Powers the
+   * integration-specific pages that target long-tail "<tool> mcp server" queries.
+   */
+  match?: string[];
+  /** <title> / H1 subject, e.g. "Databases" or "PostgreSQL". */
   title: string;
   /** One-line meta/intro summary. */
   lead: string;
   faq: { q: string; a: string }[];
 };
 
-export const BEST_TOPICS: BestTopic[] = [
+export const CATEGORY_TOPICS: BestTopic[] = [
   {
     slug: 'databases',
     categorySlug: 'databases',
@@ -331,6 +340,228 @@ export const BEST_TOPICS: BestTopic[] = [
   },
 ];
 
+/**
+ * Integration-specific "Best <tool> MCP Servers" hubs. Each targets the long-tail
+ * queries people actually search (e.g. "postgres mcp server", "youtube transcript mcp",
+ * "openapi to mcp") rather than a broad category. The ranking is drawn live from every
+ * listing that mentions one of `match` — so the page is only as good as the catalog is
+ * deep, and every term below was chosen because the directory has a real cluster of
+ * servers for it. Keep terms unambiguous (whole-word matched) to avoid false positives.
+ */
+export const KEYWORD_TOPICS: BestTopic[] = [
+  {
+    slug: 'postgres',
+    match: ['postgres', 'postgresql'],
+    title: 'PostgreSQL',
+    lead: 'The best MCP servers for PostgreSQL — let AI agents run queries, inspect schemas, and read or write records in your Postgres database from Claude, Cursor, and other MCP clients.',
+    faq: [
+      { q: 'What is the best Postgres MCP server?', a: 'The official modelcontextprotocol/server-postgres and crystaldba/postgres-mcp are the most widely installed. This page ranks Postgres MCP servers by real usage across the AllMCPs directory so you can start with a proven one.' },
+      { q: 'Can a Postgres MCP server write to my database?', a: 'Some support writes, but most default to read-only for safety. Connect with a least-privilege role scoped to only the tables the agent needs, and enable write mode explicitly if the server offers it.' },
+      { q: 'How do I connect Claude to Postgres?', a: 'Install a Postgres MCP server in your client config, pass your connection string via an environment variable, and restart the client. Each listing links to its exact setup steps.' },
+    ],
+  },
+  {
+    slug: 'sqlite',
+    match: ['sqlite'],
+    title: 'SQLite',
+    lead: 'The best MCP servers for SQLite — give AI agents direct access to a local SQLite database file to query tables, inspect schemas, and analyze data without a separate database server.',
+    faq: [
+      { q: 'What is the best SQLite MCP server?', a: 'The official modelcontextprotocol/server-sqlite is the most widely installed. This page ranks SQLite MCP servers by real usage so you can pick a maintained option.' },
+      { q: 'Do I need a running database server to use SQLite over MCP?', a: 'No — SQLite is file-based, so the MCP server reads a .db/.sqlite file on disk directly. You just point it at the file path in your client config.' },
+      { q: 'Can an agent modify a SQLite database?', a: 'Yes, if the server exposes write tools. Keep a backup of the file and prefer read-only mode when the agent only needs to analyze data.' },
+    ],
+  },
+  {
+    slug: 'mysql',
+    match: ['mysql', 'mariadb'],
+    title: 'MySQL',
+    lead: 'The best MCP servers for MySQL and MariaDB — connect AI agents to your relational database to run queries, explore schemas, and safely read or update records.',
+    faq: [
+      { q: 'What is the best MySQL MCP server?', a: 'Several community MySQL/MariaDB servers are widely used. This page ranks them by real usage across the AllMCPs directory.' },
+      { q: 'Is it safe to give an agent MySQL access?', a: 'Use a dedicated database user with least-privilege grants, and prefer read-only access until you trust the workflow. MCP servers act with exactly the credentials you provide.' },
+      { q: 'Does the same server work with MariaDB?', a: 'Usually yes — MariaDB is wire-compatible with MySQL, so most MySQL MCP servers connect to it without changes. Check the listing to be sure.' },
+    ],
+  },
+  {
+    slug: 'mongodb',
+    match: ['mongodb', 'mongo'],
+    title: 'MongoDB',
+    lead: 'The best MCP servers for MongoDB — let AI agents query collections, inspect documents, and work with your NoSQL data through the Model Context Protocol.',
+    faq: [
+      { q: 'What is the best MongoDB MCP server?', a: 'This page ranks MongoDB MCP servers by real usage across the AllMCPs directory so you can start with a maintained, popular option.' },
+      { q: 'Can an agent run aggregation pipelines over MCP?', a: 'Many MongoDB servers expose find and aggregate operations, so an agent can run pipelines and return results. Check each listing for the exact operations supported.' },
+      { q: 'How do I limit what the agent can access?', a: 'Connect with a scoped MongoDB user restricted to specific databases or collections, and prefer read-only roles where possible.' },
+    ],
+  },
+  {
+    slug: 'github',
+    match: ['github'],
+    title: 'GitHub',
+    lead: 'The best MCP servers for GitHub — let AI agents read repositories, search code, manage issues and pull requests, and drive GitHub Actions right from your client.',
+    faq: [
+      { q: 'What is the best GitHub MCP server?', a: 'The official GitHub MCP server is the most widely installed — it covers issues, pull requests, code search, and Actions. This page ranks GitHub MCP servers by real usage.' },
+      { q: 'Can a GitHub MCP server open pull requests?', a: 'Yes, when you supply a token with write scope it can create branches, commit files, and open PRs. Use a fine-grained token limited to the specific repositories the agent should touch.' },
+      { q: 'Do I need a personal access token?', a: 'Yes — you provide a GitHub token via an environment variable. Scope it to only the repositories and permissions the agent actually needs.' },
+    ],
+  },
+  {
+    slug: 'gitlab',
+    match: ['gitlab'],
+    title: 'GitLab',
+    lead: 'The best MCP servers for GitLab — connect AI agents to your GitLab projects to browse code, manage issues and merge requests, and inspect pipelines.',
+    faq: [
+      { q: 'What is the best GitLab MCP server?', a: 'This page ranks GitLab MCP servers by real usage across the AllMCPs directory so you can pick a maintained option.' },
+      { q: 'Does it work with self-hosted GitLab?', a: 'Many GitLab MCP servers accept a custom instance URL, so they work with self-hosted and gitlab.com alike. Check the listing for a base-URL setting.' },
+      { q: 'Can an agent open merge requests?', a: 'Yes, with a token that has the right scope. Prefer a project- or group-scoped token over a full-access one.' },
+    ],
+  },
+  {
+    slug: 'docker',
+    match: ['docker'],
+    title: 'Docker',
+    lead: 'The best MCP servers for Docker — let AI agents list containers, inspect logs, run images, and manage your local or remote Docker environment.',
+    faq: [
+      { q: 'What is the best Docker MCP server?', a: 'This page ranks Docker MCP servers by real usage across the AllMCPs directory so you can start with a proven integration.' },
+      { q: 'Can an agent start and stop containers?', a: 'Yes — most Docker MCP servers expose container lifecycle tools. Run them against a non-production Docker host and review what they can do before granting access.' },
+      { q: 'Is it safe to give an agent Docker access?', a: 'Docker access is powerful, so scope it carefully: prefer a dedicated host or socket, avoid production, and review the server’s available tools first.' },
+    ],
+  },
+  {
+    slug: 'kubernetes',
+    match: ['kubernetes', 'k8s'],
+    title: 'Kubernetes',
+    lead: 'The best MCP servers for Kubernetes — let AI agents inspect clusters, query workloads, read logs, and help troubleshoot deployments through the Model Context Protocol.',
+    faq: [
+      { q: 'What is the best Kubernetes MCP server?', a: 'This page ranks Kubernetes MCP servers by real usage across the AllMCPs directory so you can pick a maintained option.' },
+      { q: 'Can an agent make changes to my cluster?', a: 'Some servers support write operations, but prefer a read-only kubeconfig context for investigation. Scope RBAC tightly and never point an agent at production with cluster-admin.' },
+      { q: 'How does it authenticate to the cluster?', a: 'Most use your existing kubeconfig or a service-account token you provide. Point it at a specific context with least-privilege RBAC.' },
+    ],
+  },
+  {
+    slug: 'aws',
+    match: ['aws'],
+    title: 'AWS',
+    lead: 'The best MCP servers for AWS — connect AI agents to Amazon Web Services to inspect resources, query services, and help manage your cloud infrastructure.',
+    faq: [
+      { q: 'What is the best AWS MCP server?', a: 'This page ranks AWS MCP servers by real usage across the AllMCPs directory. Many focus on specific services (S3, EC2, Lambda, CloudWatch), so pick by the service you need.' },
+      { q: 'Is it safe to let an agent manage AWS?', a: 'Grant a scoped IAM role or user with only the permissions the task needs, and prefer read-only policies before allowing changes. MCP servers act with exactly the IAM access you give them.' },
+      { q: 'How do AWS MCP servers authenticate?', a: 'Typically via standard AWS credentials — an access key/secret or a named profile you set through environment variables. Use short-lived, least-privilege credentials where possible.' },
+    ],
+  },
+  {
+    slug: 'openapi',
+    match: ['openapi', 'swagger'],
+    title: 'OpenAPI',
+    lead: 'The best MCP servers for OpenAPI and Swagger — turn any REST API with an OpenAPI spec into MCP tools an AI agent can call, without hand-writing an integration.',
+    faq: [
+      { q: 'How do I turn an OpenAPI spec into an MCP server?', a: 'Several servers on this page take an OpenAPI/Swagger document and expose each operation as an MCP tool automatically. Point one at your spec URL or file and it generates the tools for you.' },
+      { q: 'What is the best OpenAPI-to-MCP server?', a: 'This page ranks OpenAPI/Swagger MCP servers by real usage across the AllMCPs directory so you can start with a maintained generator.' },
+      { q: 'Do these handle authentication to the API?', a: 'Most let you pass API keys or bearer tokens through configuration so the generated tools call your API authenticated. Check each listing for the auth methods it supports.' },
+    ],
+  },
+  {
+    slug: 'notion',
+    match: ['notion'],
+    title: 'Notion',
+    lead: 'The best MCP servers for Notion — let AI agents read, search, create, and update pages and databases in your Notion workspace.',
+    faq: [
+      { q: 'What is the best Notion MCP server?', a: 'This page ranks Notion MCP servers by real usage across the AllMCPs directory so you can pick a maintained option.' },
+      { q: 'Can an agent edit my Notion pages?', a: 'Yes, with a Notion integration token that has edit access to the pages you share with it. Share only the specific pages or databases the agent should touch.' },
+      { q: 'How do I connect an agent to Notion?', a: 'Create a Notion internal integration, share the relevant pages with it, and give the MCP server the integration token via an environment variable.' },
+    ],
+  },
+  {
+    slug: 'jira',
+    match: ['jira'],
+    title: 'Jira',
+    lead: 'The best MCP servers for Jira — connect AI agents to your Jira projects to search issues, create and update tickets, and report on sprint progress.',
+    faq: [
+      { q: 'What is the best Jira MCP server?', a: 'This page ranks Jira MCP servers by real usage across the AllMCPs directory so you can start with a maintained integration.' },
+      { q: 'Can an agent create and update Jira issues?', a: 'Yes, with an API token scoped to your Jira account. Prefer a dedicated service account so the agent’s actions are easy to audit.' },
+      { q: 'Does it work with Jira Cloud and Server?', a: 'Many servers support both, using your instance URL and an API token. Check the listing for Data Center/Server compatibility.' },
+    ],
+  },
+  {
+    slug: 'google-workspace',
+    match: ['google'],
+    title: 'Google Workspace',
+    lead: 'The best MCP servers for Google Workspace — give AI agents access to Google Drive, Sheets, Docs, Calendar, and Gmail to read, search, and manage your Google data.',
+    faq: [
+      { q: 'What is the best Google MCP server?', a: 'It depends which service you need — Drive, Sheets, Calendar, and Gmail all have dedicated servers. This page ranks Google-related MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'How does a Google MCP server authenticate?', a: 'Most use OAuth: you authorize the app once and it stores a token. Grant the narrowest scopes that cover what the agent needs (read-only where possible).' },
+      { q: 'Can an agent edit my Google Sheets or send email?', a: 'Yes, with write or send scopes — but those are powerful, so keep a human approval step for anything that changes documents or reaches real recipients.' },
+    ],
+  },
+  {
+    slug: 'slack',
+    match: ['slack'],
+    title: 'Slack',
+    lead: 'The best MCP servers for Slack — let AI agents read channels, search history, and post messages in your Slack workspace.',
+    faq: [
+      { q: 'What is the best Slack MCP server?', a: 'This page ranks Slack MCP servers by real usage across the AllMCPs directory so you can pick a proven one.' },
+      { q: 'Can an agent post messages to Slack?', a: 'Yes, with a Slack bot token scoped to the channels and actions you allow. Limit the token to specific channels rather than the whole workspace.' },
+      { q: 'How do I set up a Slack MCP server?', a: 'Create a Slack app, add the scopes you need, install it to your workspace, and give the MCP server the bot token via an environment variable.' },
+    ],
+  },
+  {
+    slug: 'discord',
+    match: ['discord'],
+    title: 'Discord',
+    lead: 'The best MCP servers for Discord — let AI agents read channels, post messages, and manage your Discord server through a bot.',
+    faq: [
+      { q: 'What is the best Discord MCP server?', a: 'This page ranks Discord MCP servers by real usage across the AllMCPs directory so you can start with a maintained bot.' },
+      { q: 'Can an agent send messages to Discord?', a: 'Yes, using a Discord bot token with the right permissions in the servers and channels you add it to. Grant only the permissions the agent needs.' },
+      { q: 'Do I need to run a Discord bot?', a: 'Yes — you create a bot application, invite it to your server, and give the MCP server its token. The listing links to setup details.' },
+    ],
+  },
+  {
+    slug: 'youtube',
+    match: ['youtube'],
+    title: 'YouTube',
+    lead: 'The best MCP servers for YouTube — let AI agents fetch video transcripts, pull metadata, and search YouTube so they can summarize and analyze video content.',
+    faq: [
+      { q: 'What is the best YouTube MCP server?', a: 'Many focus on transcript extraction and metadata. This page ranks YouTube MCP servers by real usage across the AllMCPs directory so you can pick a reliable one.' },
+      { q: 'Can an MCP server get a YouTube video transcript?', a: 'Yes — that is the most common use. A YouTube transcript MCP server fetches the captions for a video so an agent can summarize or search the spoken content.' },
+      { q: 'Do YouTube MCP servers need an API key?', a: 'Transcript-only servers often work without one; those that search or pull rich metadata usually need a YouTube Data API key you provide.' },
+    ],
+  },
+  {
+    slug: 'pdf',
+    match: ['pdf'],
+    title: 'PDF',
+    lead: 'The best MCP servers for PDFs — let AI agents extract text and tables, read, and process PDF documents so they can answer questions over your files.',
+    faq: [
+      { q: 'What is the best PDF MCP server?', a: 'This page ranks PDF MCP servers by real usage across the AllMCPs directory. Options range from simple text extraction to full layout and table parsing.' },
+      { q: 'Can an agent read a scanned PDF?', a: 'Some servers include OCR for scanned documents; others handle only text-based PDFs. Check each listing for OCR support if your files are scans.' },
+      { q: 'Can it extract tables, not just text?', a: 'Several PDF servers preserve tables and structure so an agent gets clean, queryable data rather than a flat text dump.' },
+    ],
+  },
+  {
+    slug: 'stripe',
+    match: ['stripe'],
+    title: 'Stripe',
+    lead: 'The best MCP servers for Stripe — let AI agents query payments, customers, and subscriptions and help manage your Stripe account through the Model Context Protocol.',
+    faq: [
+      { q: 'What is the best Stripe MCP server?', a: 'This page ranks Stripe MCP servers by real usage across the AllMCPs directory, including Stripe’s own official integration.' },
+      { q: 'Is it safe to connect an agent to Stripe?', a: 'Use a restricted API key (Stripe supports these) and start in test mode. Never give an agent an unrestricted live key, and keep a human step for refunds or charges.' },
+      { q: 'Can an agent issue refunds or create charges?', a: 'Some servers support write actions with a suitably scoped key, but treat these carefully — prefer read-only reporting unless you explicitly need writes.' },
+    ],
+  },
+  {
+    slug: 'playwright',
+    match: ['playwright'],
+    title: 'Playwright',
+    lead: 'The best Playwright MCP servers — drive a real browser from an AI agent to navigate pages, click, fill forms, and extract content using Microsoft’s Playwright.',
+    faq: [
+      { q: 'What is the best Playwright MCP server?', a: 'Microsoft’s official Playwright MCP is the most widely installed, alongside several community builds. This page ranks Playwright MCP servers by real usage across the AllMCPs directory.' },
+      { q: 'Does a Playwright MCP server run headless?', a: 'Yes — most support both headless and headed modes. Headless is typical for servers and CI; headed helps when debugging or when a site needs a visible session.' },
+      { q: 'How is this different from a Puppeteer MCP server?', a: 'Both automate a browser; Playwright supports Chromium, Firefox, and WebKit and is often preferred for cross-browser work, while Puppeteer targets Chromium. Pick by the browsers you need.' },
+    ],
+  },
+];
+
+export const BEST_TOPICS: BestTopic[] = [...CATEGORY_TOPICS, ...KEYWORD_TOPICS];
+
 export function bestTopicBySlug(slug: string): BestTopic | undefined {
   return BEST_TOPICS.find((t) => t.slug === slug);
 }
@@ -338,7 +569,31 @@ export function bestTopicBySlug(slug: string): BestTopic | undefined {
 /** Match a listing's stored category label to a /best/{slug} topic, if any. */
 export function bestTopicForCategory(category: string): BestTopic | undefined {
   const slug = slugFromCategory(category);
-  const byExact = BEST_TOPICS.find((t) => t.categorySlug === slug);
+  const byExact = CATEGORY_TOPICS.find((t) => t.categorySlug === slug);
   if (byExact) return byExact;
-  return BEST_TOPICS.find((t) => t.slug === slug);
+  return CATEGORY_TOPICS.find((t) => t.slug === slug);
+}
+
+/**
+ * Whole-word, case-insensitive test that a listing mentions one of `terms`. Whole-word
+ * (not substring) so "aws" doesn't match "flaws" and "mongo" doesn't match unrelated text.
+ */
+function mentionsAny(text: string, terms: string[]): boolean {
+  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`\\b(?:${escaped.join('|')})\\b`, 'i').test(text);
+}
+
+/**
+ * The candidate listings for a topic's ranking: a whole category (category hubs) or every
+ * listing mentioning a keyword (integration hubs). Ranking/sorting is left to the caller.
+ */
+export function selectServersForTopic<T extends { name: string; description?: string | null; category: string }>(
+  topic: BestTopic,
+  servers: T[]
+): T[] {
+  if (topic.match && topic.match.length > 0) {
+    return servers.filter((s) => mentionsAny(`${s.name} ${s.description || ''}`, topic.match!));
+  }
+  const category = topic.categorySlug ? categoryFromSlug(topic.categorySlug) : undefined;
+  return category ? servers.filter((s) => s.category === category) : [];
 }

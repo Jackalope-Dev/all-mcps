@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight, ArrowRight } from 'lucide-react';
-import { BEST_TOPICS } from '../../lib/bestTopics';
+import { BEST_TOPICS, CATEGORY_TOPICS, KEYWORD_TOPICS } from '../../lib/bestTopics';
 
 const SITE = 'https://allmcps.com';
 
@@ -74,15 +74,16 @@ export default function BestIndexPage() {
           </p>
         </section>
 
+        <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 1.25rem' }}>By use case</h2>
         <div className="directory-grid">
-          {BEST_TOPICS.map((t) => (
+          {CATEGORY_TOPICS.map((t) => (
             <Link
               key={t.slug}
               href={`/best/${t.slug}`}
               className="surface-interactive"
               style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)' }}
             >
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best for {t.title}</h2>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best for {t.title}</h3>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5, flexGrow: 1 }}>{t.lead}</p>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600 }}>
                 View ranking <ArrowRight size={15} />
@@ -90,6 +91,30 @@ export default function BestIndexPage() {
             </Link>
           ))}
         </div>
+
+        <section style={{ marginTop: '3.5rem' }}>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.5rem' }}>By integration</h2>
+          <p className="text-lead" style={{ margin: '0 0 1.5rem', fontSize: '1rem', maxWidth: '760px' }}>
+            Looking for a specific tool? Jump straight to the best MCP servers for the platforms and
+            databases people connect most.
+          </p>
+          <div className="directory-grid">
+            {KEYWORD_TOPICS.map((t) => (
+              <Link
+                key={t.slug}
+                href={`/best/${t.slug}`}
+                className="surface-interactive"
+                style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)' }}
+              >
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best {t.title} MCP servers</h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5, flexGrow: 1 }}>{t.lead}</p>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600 }}>
+                  View ranking <ArrowRight size={15} />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
       </main>
     </>
   );
