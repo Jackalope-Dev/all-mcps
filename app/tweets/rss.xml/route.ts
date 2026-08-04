@@ -2,7 +2,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq } from 'drizzle-orm';
 import { socialPosts } from '../../../db/schema';
-import { escapeForXml, truncateToTwitterLimit } from '../../../lib/twitter';
+import { escapeForXml, truncateToTwitterLimit, TWITTER_SAFE_CHAR_LIMIT } from '../../../lib/twitter';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,8 +43,12 @@ export async function GET() {
     .map((item) => {
       const pubDate = (item.createdAt ? new Date(item.createdAt) : new Date()).toUTCString();
       const itemUrl = item.serverId ? `${siteUrl}/mcp/${item.serverId}` : `${siteUrl}/tweets/rss.xml`;
-      // Enforce X.com (280 char) limit for all items, including pre-existing ones in DB
-      const tweetText = truncateToTwitterLimit(item.tweetText, 280);
+      // Enforce a safe character limit (below X.com's 280 hard cap) for every
+      // item — including pre-existing rows in the DB — so downstream schedulers
+      // (Buffer via make.com) never reject a post for length. Because this feed
+      // is rebuilt on every request, the ceiling applies to all current and
+      // future entries regardless of what was stored.
+      const tweetText = truncateToTwitterLimit(item.tweetText, TWITTER_SAFE_CHAR_LIMIT);
       const title = tweetText.split('\n')[0] || 'Queued tweet';
       const encodedText = escapeForXml(tweetText);
       return `    <item>
