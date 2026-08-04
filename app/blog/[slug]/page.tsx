@@ -198,7 +198,10 @@ export default async function BlogPostPage({
               </header>
 
               {tocItems.length > 1 && (
-                <div className="lg:hidden mb-6">
+                // Spacing via inline style, not Tailwind mb-*/mt-*: this project's unlayered
+                // CSS reset overrides layered margin utilities (they compute to 0), so the
+                // mobile TOC card would otherwise butt right up against the body text.
+                <div className="lg:hidden" style={{ marginTop: '1rem', marginBottom: '2.5rem' }}>
                   <TableOfContents items={tocItems} />
                 </div>
               )}
