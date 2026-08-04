@@ -55,6 +55,22 @@ export const servers = sqliteTable('servers', {
   tools: text('tools'),
   /** Last time we attempted MCP tool introspection for this listing. */
   toolsCheckedAt: integer('tools_checked_at', { mode: 'timestamp' }),
+  /**
+   * LLM-generated, human-readable content that turns a scraped README-mirror page into a
+   * unique, useful listing (see /api/cron/ai-content). All nullable — absence means the
+   * page falls back to the raw description/README. This is the content layer that makes
+   * each /mcp/[id] page distinct from the upstream repo for both readers and search.
+   */
+  /** One clean sentence — replaces scraped chrome in cards, meta descriptions, and the digest. */
+  aiSummary: text('ai_summary'),
+  /** 2-4 sentence plain-language overview: what it does and when you'd reach for it. */
+  aiOverview: text('ai_overview'),
+  /** JSON string array of concrete use cases ("Let an agent query your Postgres database"). */
+  aiUseCases: text('ai_use_cases'),
+  /** JSON string array of key capabilities/features surfaced from the README. */
+  aiFeatures: text('ai_features'),
+  /** When the AI content was last generated. Null = never enriched. */
+  aiEnrichedAt: integer('ai_enriched_at', { mode: 'timestamp' }),
   /** stdio | remote — cached install transport from README/description parse. */
   installKind: text('install_kind'),
   /** Runner binary for stdio installs (npx, uvx, bunx, pip). */

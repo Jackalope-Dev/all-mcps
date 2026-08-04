@@ -38,6 +38,10 @@ const CRON_JOBS: CronJob[] = [
   // Catalog quality: website/homepage, logos, install hints, clean scrape chrome,
   // unpublish archived/404 GitHub repos. Every tick until the catalog is enriched.
   { path: "/api/cron/enrich", secretVar: "ADMIN_SECRET" },
+  // AI content layer: unique summary/overview/use-cases/features per listing. Every
+  // tick until the catalog is enriched, then no-ops. For the initial backlog, drive
+  // scripts/backfill-ai-content.mjs against this endpoint to drain it faster.
+  { path: "/api/cron/ai-content", secretVar: "ADMIN_SECRET" },
   // Rotates the X/Twitter highlight. Fine every 4h (~6 posts/day).
   { path: "/api/cron/highlight", secretVar: "ADMIN_SECRET" },
   // IndexNow batch for recently approved listings — daily at 00:00 UTC tick.

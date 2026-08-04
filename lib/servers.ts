@@ -6,6 +6,7 @@ import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
 import { engagementScore } from './search';
 import { resolveInstallConfig } from './installConfig';
+import { parseStringArray } from './aiContent';
 
 export type ServerTool = { name: string; description?: string };
 
@@ -30,10 +31,14 @@ export function parseServerTools(raw: unknown): ServerTool[] {
  * must not be mutated in place. Also parses the `tools` JSON column into an array.
  */
 function normalizeServer<T extends { description?: string | null; tools?: unknown }>(server: T): T {
+  const s = server as { aiUseCases?: unknown; aiFeatures?: unknown };
   return {
     ...server,
     description: cleanListingDescription(server.description),
     tools: parseServerTools((server as { tools?: unknown }).tools),
+    // AI content JSON-array columns → typed arrays (absent in the static snapshot → []).
+    aiUseCases: parseStringArray(s.aiUseCases),
+    aiFeatures: parseStringArray(s.aiFeatures),
   };
 }
 
@@ -64,6 +69,11 @@ export const PUBLIC_SERVER_COLUMNS = {
   githubStars: serversTable.githubStars,
   npmDownloads: serversTable.npmDownloads,
   tools: serversTable.tools,
+  aiSummary: serversTable.aiSummary,
+  aiOverview: serversTable.aiOverview,
+  aiUseCases: serversTable.aiUseCases,
+  aiFeatures: serversTable.aiFeatures,
+  aiEnrichedAt: serversTable.aiEnrichedAt,
   installKind: serversTable.installKind,
   installCommand: serversTable.installCommand,
   installArgs: serversTable.installArgs,
@@ -96,6 +106,13 @@ export type Server = {
   npmDownloads?: number | null;
   /** Parsed by normalizeServer from the `tools` JSON column. */
   tools?: ServerTool[];
+  /** LLM-generated content layer (see lib/aiContent + /api/cron/ai-content). */
+  aiSummary?: string | null;
+  aiOverview?: string | null;
+  /** Parsed by normalizeServer from the `ai_use_cases` / `ai_features` JSON columns. */
+  aiUseCases?: string[];
+  aiFeatures?: string[];
+  aiEnrichedAt?: string | Date | null;
   installKind?: string | null;
   installCommand?: string | null;
   installArgs?: string | string[] | null;
