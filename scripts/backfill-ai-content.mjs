@@ -66,7 +66,7 @@ async function main() {
         `${data.failed} failed | ~${data.remaining} remaining | ${totalEnriched} total`
     );
 
-    if (data.stoppedEarly) {
+    if (data.budgetStopped) {
       console.warn('\nEndpoint stopped early (likely LLM budget/outage). Pausing before retry.');
       await sleep(DELAY_MS * 10);
     }

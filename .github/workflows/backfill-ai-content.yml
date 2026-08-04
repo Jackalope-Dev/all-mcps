@@ -45,7 +45,7 @@ jobs:
             thin=$(echo "$resp" | jq -r '.skippedThin // 0')
             failed=$(echo "$resp" | jq -r '.failed // 0')
             remaining=$(echo "$resp" | jq -r '.remaining // "?"')
-            stopped=$(echo "$resp" | jq -r '.stoppedEarly // false')
+            stopped=$(echo "$resp" | jq -r '.budgetStopped // false')
             total=$((total + enriched))
             echo "Call $i: +$enriched enriched, $thin thin-skipped, $failed failed | remaining=$remaining | run total=$total"
 

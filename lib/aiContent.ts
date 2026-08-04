@@ -25,6 +25,18 @@ export type AiListingContent = {
   features: string[];
 };
 
+/**
+ * Discriminated outcome so the caller can react to the spend cap:
+ * - 'ok'     — usable content.
+ * - 'budget' — spend cap / rate limit / auth / no key. The caller should STOP the run
+ *              (every further call would fail the same way) and leave rows for a later retry.
+ * - 'skip'   — transient error or unusable output for this one listing; retry it later.
+ */
+export type ListingContentOutcome =
+  | { status: 'ok'; content: AiListingContent }
+  | { status: 'budget'; reason: string }
+  | { status: 'skip'; reason: string };
+
 /** Parse a stored JSON string-array column tolerantly (bad data → []). */
 export function parseStringArray(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim());
@@ -76,13 +88,17 @@ const SYSTEM_PROMPT =
   '"useCases" (3-5 short concrete strings, each starting with a verb), ' +
   '"features" (3-6 short capability strings). If the material is too thin to support a field, return fewer items rather than guessing.';
 
+/** Chat failure reasons that mean "stop spending" rather than "this one didn't work". */
+const BUDGET_REASONS = new Set(['budget_or_rate_limit', 'auth', 'not_configured']);
+
 /**
- * Generate the content layer for one listing. Returns null on any soft failure or when
- * the model can't produce at least a usable summary.
+ * Generate the content layer for one listing. Never throws. Returns a discriminated
+ * outcome so the caller can distinguish a spend-cap wall ('budget' → stop the run) from
+ * a one-off failure ('skip' → retry this listing later) from success.
  */
 export async function generateListingContent(
   input: ListingContentInput
-): Promise<AiListingContent | null> {
+): Promise<ListingContentOutcome> {
   const cleanedDesc = cleanListingDescription(input.description) || input.description || '';
   const toolLines = (input.tools || [])
     .slice(0, 30)
@@ -116,7 +132,11 @@ export async function generateListingContent(
     ],
   });
 
-  if (!result.ok) return null;
+  if (!result.ok) {
+    return BUDGET_REASONS.has(result.reason)
+      ? { status: 'budget', reason: result.reason }
+      : { status: 'skip', reason: result.reason };
+  }
 
   const summary = clampSentence(result.data.summary, 150);
   const overview = clampSentence(result.data.overview, 600);
@@ -124,7 +144,7 @@ export async function generateListingContent(
   const features = clampList(result.data.features, 6, 100);
 
   // A usable summary is the minimum bar — without it the page gains nothing over the raw scrape.
-  if (!summary || summary.length < 12) return null;
+  if (!summary || summary.length < 12) return { status: 'skip', reason: 'empty' };
 
-  return { summary, overview, useCases, features };
+  return { status: 'ok', content: { summary, overview, useCases, features } };
 }
