@@ -65,10 +65,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return { title: 'Not Found', robots: { index: false, follow: false } };
   }
 
+  // Prefer the LLM-written one-liner for the meta description — it's a clean, unique
+  // sentence, whereas the raw description is often scraped chrome. Better CTR + no
+  // duplicate-snippet penalty against the upstream repo.
+  const metaSource = (server.aiSummary && server.aiSummary.trim()) || server.description;
   const desc =
-    server.description.length > 155
-      ? `${server.description.slice(0, 152)}...`
-      : server.description;
+    metaSource.length > 155 ? `${metaSource.slice(0, 152)}...` : metaSource;
 
   return {
     title: `${server.name} MCP Server - Install & Setup`,
@@ -504,8 +506,54 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           </div>
           
           <div style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
-            <SafeMarkdown content={server.description} utmContent={server.id} />
+            <SafeMarkdown content={(server.aiSummary && server.aiSummary.trim()) || server.description} utmContent={server.id} />
           </div>
+
+          {/* AI-authored content layer — the unique, human-useful copy that makes this page
+              worth ranking (and reading) instead of just mirroring the upstream README.
+              Rendered only when the ai-content cron has enriched this listing. */}
+          {(server.aiOverview ||
+            (server.aiUseCases?.length ?? 0) > 0 ||
+            (server.aiFeatures?.length ?? 0) > 0) && (
+            <div style={{ marginBottom: '3rem' }}>
+              {server.aiOverview && (
+                <>
+                  <h2 style={{ fontSize: '1.5rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Overview
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '1rem', margin: '0 0 2rem' }}>
+                    {server.aiOverview}
+                  </p>
+                </>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
+                {(server.aiUseCases?.length ?? 0) > 0 && (
+                  <div className="surface" style={{ padding: '1.5rem' }}>
+                    <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Sparkles size={16} style={{ color: 'var(--accent-color)' }} /> Use cases
+                    </h3>
+                    <ul style={{ margin: 0, paddingLeft: '1.1rem', color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                      {server.aiUseCases!.map((uc) => (
+                        <li key={uc} style={{ marginBottom: '0.4rem' }}>{uc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(server.aiFeatures?.length ?? 0) > 0 && (
+                  <div className="surface" style={{ padding: '1.5rem' }}>
+                    <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Wrench size={16} style={{ color: 'var(--accent-color)' }} /> Key features
+                    </h3>
+                    <ul style={{ margin: 0, paddingLeft: '1.1rem', color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                      {server.aiFeatures!.map((f) => (
+                        <li key={f} style={{ marginBottom: '0.4rem' }}>{f}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div id="quick-install" className="surface" style={{ padding: '2rem', marginBottom: '3rem', scrollMarginTop: '5rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -5,11 +5,24 @@ import { and, eq, gte, desc, notInArray, sql } from 'drizzle-orm';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { cleanListingDescription } from '../../../../lib/description';
+import { chatJson } from '../../../../lib/openai';
 
 const NEW_WINDOW_DAYS = 7;
 const MAX_PER_SECTION = 6;
 const NEWSLETTER_SUBSCRIBERS_LIST_ID = 'ta0zh9e3l9rcjlfpzpk80tcn';
 const APP_URL = 'https://allmcps.com';
+
+/**
+ * Logos are stored as site-relative paths (e.g. `/logos/<id>`, served from R2 by
+ * app/logos/[id]/route.ts). That works in the browser but breaks in email, where an
+ * `<img src="/logos/…">` resolves against the mail client's own domain and 404s — this
+ * is why claimed listings (which have a logo) showed a broken image while unclaimed ones
+ * fell back cleanly to the letter tile. Absolutize every relative asset URL for email.
+ */
+function absoluteUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${APP_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+}
 
 type ListingSummary = {
   id: string;
@@ -66,8 +79,10 @@ function initialLetter(name: string): string {
 function listingHeaderHtml(listing: ListingSummary): string {
   const name = escapeHtml(listing.name);
   const category = escapeHtml(listing.category);
+  // Absolutize the (site-relative) logo path so it renders in email clients, and use the
+  // listing name as alt text so a missing image degrades to a label rather than a blank box.
   const icon = listing.logoUrl
-    ? `<img src="${escapeHtml(listing.logoUrl)}" width="48" height="48" alt="" style="display:block;border-radius:8px;object-fit:cover" />`
+    ? `<img src="${escapeHtml(absoluteUrl(listing.logoUrl))}" width="48" height="48" alt="${name}" style="display:block;border-radius:8px;object-fit:cover" />`
     : `<table role="presentation" width="48" height="48" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" height="48" align="center" valign="middle" style="width:48px;height:48px;border-radius:8px;background-color:${fallbackColor(
         listing.name
       )};color:#ffffff;font-family:Arial,sans-serif;font-size:20px;font-weight:800">${escapeHtml(
@@ -77,13 +92,17 @@ function listingHeaderHtml(listing: ListingSummary): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" valign="top" style="width:48px;padding-right:12px">${icon}</td><td valign="top"><div style="font-weight:700;font-size:16px;color:#020617;line-height:1.3;margin-bottom:4px">${name}</div><span style="display:inline-block;background-color:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600">${category}</span></td></tr></table>`;
 }
 
-function listingBlocks(listing: ListingSummary): SequenzyBlock[] {
-  const description = truncate(cleanDescription(listing.description), 140);
+function listingBlocks(listing: ListingSummary, blurb?: string): SequenzyBlock[] {
+  // Prefer the LLM-written editorial blurb ("why it's worth a look"); fall back to the
+  // cleaned scrape so the section still reads well when the LLM is unavailable.
+  const copy = blurb && /[\p{L}\p{N}]/u.test(blurb)
+    ? truncate(blurb.trim(), 160)
+    : truncate(cleanDescription(listing.description), 140);
   const blocks: SequenzyBlock[] = [
     { type: 'text', variant: 'paragraph', content: listingHeaderHtml(listing) },
   ];
-  if (/[\p{L}\p{N}]/u.test(description)) {
-    blocks.push({ type: 'text', content: `<p>${escapeHtml(description)}</p>`, variant: 'paragraph' });
+  if (/[\p{L}\p{N}]/u.test(copy)) {
+    blocks.push({ type: 'text', content: `<p>${escapeHtml(copy)}</p>`, variant: 'paragraph' });
   }
   blocks.push({
     type: 'button',
@@ -94,28 +113,147 @@ function listingBlocks(listing: ListingSummary): SequenzyBlock[] {
   return blocks;
 }
 
-function buildDigestBlocks(
+// --- Weekly variety -------------------------------------------------------
+// The digest goes out every Monday. To keep it from feeling like the same
+// template each week, section headings, the intro line, and the subject teaser
+// rotate on an ISO-week cadence — deterministic (stable within a week) but
+// different week to week even if the LLM editorial pass is unavailable.
+
+function isoWeek(d: Date): number {
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+  const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
+  return 1 + Math.round((date.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000));
+}
+
+function rotate<T>(arr: T[], week: number): T {
+  return arr[((week % arr.length) + arr.length) % arr.length];
+}
+
+const NEW_HEADINGS = ['New this week', 'Fresh arrivals', 'Just added', 'New in the directory'];
+const TRENDING_HEADINGS = ['Trending', 'Community favorites', 'Catching on', 'Most loved right now'];
+const FALLBACK_INTROS = [
+  'Fresh MCP servers and community favorites, hand-picked from the directory.',
+  'A few new tools to give your agents this week — plus what the community is loving.',
+  "The latest servers to hit AllMCPs, and the ones everyone's installing.",
+  'New capabilities for your AI agents, straight from this week’s directory activity.',
+];
+const FALLBACK_TEASERS = [
+  'fresh servers to try',
+  "this week’s standouts",
+  'new tools for your agents',
+  'what the community is loving',
+];
+
+type Editorial = {
+  intro: string;
+  subjectTeaser: string;
+  blurbs: Record<string, string>;
+};
+
+/**
+ * Ask the LLM to write an editorial intro and a one-line "why it's worth a look" blurb
+ * per featured listing, so the email reads like a curated newsletter rather than a scrape
+ * dump. Fail-soft: any budget/timeout/parse error returns null and the caller uses the
+ * deterministic weekly-rotation fallbacks instead — the send never depends on the LLM.
+ */
+async function generateEditorial(
+  week: number,
   newListings: ListingSummary[],
   trendingListings: ListingSummary[]
+): Promise<Editorial | null> {
+  const all = [...newListings, ...trendingListings];
+  if (all.length === 0) return null;
+
+  const payload = all.map((l) => ({
+    id: l.id,
+    name: l.name,
+    category: l.category,
+    about: truncate(cleanDescription(l.description) || l.description, 220),
+  }));
+
+  const result = await chatJson<{
+    intro?: string;
+    subjectTeaser?: string;
+    items?: Array<{ id: string; blurb?: string }>;
+  }>({
+    model: 'gpt-4.1-mini',
+    temperature: 0.6,
+    maxTokens: 900,
+    timeoutMs: 20_000,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You are the editor of AllMCPs, a directory of Model Context Protocol (MCP) servers for AI agents. ' +
+          'Write concise, energetic-but-professional copy for a weekly email digest. ' +
+          'No hype clichés ("game-changer", "revolutionary"), no emoji, no marketing filler. ' +
+          'Return JSON with: "intro" (1-2 sentences, under 240 chars, sets up this week\'s picks), ' +
+          '"subjectTeaser" (3-6 words, no trailing punctuation, for the email subject line), and ' +
+          '"items" (array of {id, blurb} for every listing you are given; blurb is ONE sentence under 130 chars ' +
+          'on what the server does and who\'d want it). Keep every id exactly as provided.',
+      },
+      {
+        role: 'user',
+        content:
+          `Write the digest for ISO week ${week}. Featured listings (JSON):\n` +
+          JSON.stringify(payload),
+      },
+    ],
+  });
+
+  if (!result.ok) return null;
+
+  const blurbs: Record<string, string> = {};
+  for (const item of result.data.items || []) {
+    if (item?.id && typeof item.blurb === 'string' && item.blurb.trim()) {
+      blurbs[item.id] = item.blurb.trim();
+    }
+  }
+
+  const intro = typeof result.data.intro === 'string' ? result.data.intro.trim() : '';
+  const subjectTeaser =
+    typeof result.data.subjectTeaser === 'string'
+      ? result.data.subjectTeaser.trim().replace(/[.!?]+$/, '')
+      : '';
+
+  return {
+    intro: intro || rotate(FALLBACK_INTROS, week),
+    subjectTeaser: subjectTeaser || rotate(FALLBACK_TEASERS, week),
+    blurbs,
+  };
+}
+
+function buildDigestBlocks(
+  newListings: ListingSummary[],
+  trendingListings: ListingSummary[],
+  week: number,
+  editorial: Editorial | null
 ): SequenzyBlock[] {
+  const intro = editorial?.intro || rotate(FALLBACK_INTROS, week);
+  const blurbs = editorial?.blurbs || {};
+
   const blocks: SequenzyBlock[] = [
     { type: 'logo', alt: 'AllMCPs Logo', align: 'center', width: 64 },
     { type: 'heading', content: 'This week on AllMCPs', level: 1 },
     {
       type: 'text',
       variant: 'paragraph',
-      content: '<p>Fresh MCP servers and community favorites, hand-picked from the directory.</p>',
+      content: `<p>${escapeHtml(intro)}</p>`,
     },
   ];
 
   if (newListings.length > 0) {
-    blocks.push({ type: 'heading', content: 'New this week', level: 2 });
-    for (const listing of newListings) blocks.push(...listingBlocks(listing));
+    blocks.push({ type: 'heading', content: rotate(NEW_HEADINGS, week), level: 2 });
+    for (const listing of newListings) blocks.push(...listingBlocks(listing, blurbs[listing.id]));
   }
 
   if (trendingListings.length > 0) {
-    blocks.push({ type: 'heading', content: 'Trending', level: 2 });
-    for (const listing of trendingListings) blocks.push(...listingBlocks(listing));
+    blocks.push({ type: 'heading', content: rotate(TRENDING_HEADINGS, week), level: 2 });
+    for (const listing of trendingListings) blocks.push(...listingBlocks(listing, blurbs[listing.id]));
   }
 
   blocks.push({ type: 'button', text: 'Browse the full directory →', url: `${APP_URL}/browse`, variant: 'primary' });
@@ -231,12 +369,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, skipped: true, message: 'No listings to feature this week.' });
     }
 
-    const subjectParts: string[] = [];
-    if (newRows.length > 0) subjectParts.push(`${newRows.length} new server${newRows.length === 1 ? '' : 's'}`);
-    if (trendingRows.length > 0) subjectParts.push(`${trendingRows.length} trending`);
-    const subject = `This week on AllMCPs: ${subjectParts.join(', ')}`;
+    const week = isoWeek(new Date());
 
-    const blocks = buildDigestBlocks(newRows, trendingRows);
+    // Editorial pass (LLM): intro + per-listing blurbs + a subject teaser. Fail-soft —
+    // null here means the deterministic weekly-rotation fallbacks are used instead.
+    const editorial = await generateEditorial(week, newRows, trendingRows);
+
+    // Subject line: prefer the LLM's fresh teaser so it varies week to week; otherwise
+    // fall back to the concrete "N new, M trending" summary.
+    let subject: string;
+    if (editorial?.subjectTeaser) {
+      subject = `This week on AllMCPs: ${editorial.subjectTeaser}`;
+    } else {
+      const subjectParts: string[] = [];
+      if (newRows.length > 0) subjectParts.push(`${newRows.length} new server${newRows.length === 1 ? '' : 's'}`);
+      if (trendingRows.length > 0) subjectParts.push(`${trendingRows.length} trending`);
+      subject = `This week on AllMCPs: ${subjectParts.join(', ')}`;
+    }
+
+    const blocks = buildDigestBlocks(newRows, trendingRows, week, editorial);
     const campaignId = await createSequenzyCampaign({ subject, blocks });
     await scheduleSequenzyCampaign(campaignId);
 
@@ -245,6 +396,8 @@ export async function POST(req: Request) {
       campaignId,
       newCount: newRows.length,
       trendingCount: trendingRows.length,
+      editorial: editorial ? 'llm' : 'fallback',
+      week,
     });
   } catch (error: any) {
     console.error('Newsletter digest cron error:', error);
