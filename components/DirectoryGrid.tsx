@@ -44,6 +44,8 @@ type Server = {
   installKind?: string | null;
   /** Space-joined tool names for search recall (from directory feed). */
   toolText?: string | null;
+  /** Bounded AI search text (summary + use cases + features) for intent-query recall. */
+  aiText?: string | null;
   createdAt?: string | Date;
 };
 
@@ -253,6 +255,7 @@ export default function DirectoryGrid({
               description: server.description,
               category: server.category,
               toolText: server.toolText,
+              extraText: server.aiText,
             },
             queryTerms,
             fullQuery

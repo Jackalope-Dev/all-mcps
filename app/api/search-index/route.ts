@@ -18,6 +18,9 @@ export async function GET() {
     description: s.description,
     category: s.category,
     logoUrl: s.logoUrl ?? null,
+    // Clean one-line AI summary (when enriched) — powers intent matching in the
+    // command palette without shipping the full AI content into the client.
+    aiSummary: s.aiSummary ?? null,
   }));
 
   const counts = new Map<string, number>();

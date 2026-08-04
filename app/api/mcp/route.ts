@@ -1,5 +1,5 @@
 import { getActiveServers, getServerById, formatServerAsMarkdown } from '@/lib/servers';
-import { rankServers } from '@/lib/search';
+import { rankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
 
@@ -228,7 +228,15 @@ export async function POST(request: Request) {
         }
 
         if (query) {
-          servers = rankServers(servers, query);
+          const withText = servers.map((s) => {
+            const tools = Array.isArray(s.tools) ? s.tools : [];
+            const toolText = tools
+              .map((t: { name?: string }) => t?.name || '')
+              .filter(Boolean)
+              .join(' ');
+            return { ...s, toolText, extraText: buildAiSearchText(s) };
+          });
+          servers = rankServers(withText, query);
         }
 
         const results = servers.slice(0, limit);

@@ -1,6 +1,6 @@
 import { getActiveServers } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
-import { rankServers } from '@/lib/search';
+import { rankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 import { resolveInstallConfig, toClaudeConfigSnippet } from '@/lib/installConfig';
 
@@ -25,7 +25,8 @@ export async function GET(request: Request) {
         .map((t: { name?: string }) => t?.name || '')
         .filter(Boolean)
         .join(' ');
-      return { ...s, toolText };
+      const extraText = buildAiSearchText(s);
+      return { ...s, toolText, extraText };
     });
     servers = rankServers(withTools, query);
   }

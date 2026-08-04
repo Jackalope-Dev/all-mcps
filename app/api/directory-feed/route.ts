@@ -1,4 +1,5 @@
 import { getActiveServers } from '@/lib/servers';
+import { buildAiSearchText } from '@/lib/search';
 
 /**
  * Full client-side directory feed for the /browse grid. The browse page server-
@@ -36,6 +37,9 @@ export async function GET() {
       npmDownloads: s.npmDownloads ?? null,
       installConfidence: s.installConfidence ?? null,
       toolText,
+      // Bounded AI search text so client-side browse search matches intent queries
+      // ("read pdfs", "query database") against the enriched use cases/features.
+      aiText: buildAiSearchText(s, 320),
       views: s.views ?? 0,
       copies: s.copies ?? 0,
       upvotes: s.upvotes ?? 0,
