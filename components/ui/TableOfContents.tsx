@@ -117,8 +117,9 @@ export function TableOfContents({
 
   return (
     <nav aria-label="Table of contents" className={`h-full ${className}`}>
-      {/* Mobile Top Accordion (visible on < 1024px) */}
-      <div className="lg:hidden toc-sidebar-card mb-6">
+      {/* Mobile Top Accordion (visible on < 1024px). Outer vertical spacing is owned by
+          the page wrapper so the card sits clear of the header above and body below. */}
+      <div className="lg:hidden toc-sidebar-card">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
