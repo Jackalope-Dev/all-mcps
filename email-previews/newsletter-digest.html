@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AllMCPs — Weekly Digest preview</title>
+<style>
+  body { margin: 0; background: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; color: #0f172a; }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 24px 16px 64px; }
+  .note { background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 16px 20px; font-size: 14px; line-height: 1.55; margin-bottom: 28px; }
+  .note b { color: #00e5ff; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  .col { background: #fff; border-radius: 12px; padding: 16px; border: 1px solid #cbd5e1; }
+  .col h3 { margin: 0 0 12px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: #64748b; }
+  .broken-img { display:block; width:48px; height:48px; border-radius:8px; border:1px dashed #ef4444; }
+  .email { background:#ffffff; border-radius:12px; padding:32px 28px; border:1px solid #cbd5e1; }
+  .brand { text-align:center; margin-bottom:20px; }
+  .brand img { width:64px; height:64px; }
+  h1.title { font-size:24px; text-align:center; color:#020617; margin:0 0 8px; }
+  p.intro { text-align:center; color:#475569; font-size:15px; line-height:1.6; margin:0 auto 28px; max-width:520px; }
+  h2.section { font-size:15px; text-transform:uppercase; letter-spacing:.05em; color:#0f172a; border-bottom:2px solid #00e5ff; padding-bottom:6px; margin:28px 0 16px; }
+  .card { padding:16px 0; border-bottom:1px solid #f1f5f9; }
+  .card p.blurb { color:#334155; font-size:14px; line-height:1.55; margin:10px 0 12px; }
+  .btn-secondary { display:inline-block; font-size:13px; font-weight:600; color:#007bff; text-decoration:none; border:1px solid #007bff; border-radius:8px; padding:7px 14px; }
+  .btn-primary { display:block; text-align:center; background:linear-gradient(135deg,#00e5ff,#007bff); color:#fff; font-weight:700; text-decoration:none; border-radius:10px; padding:13px; margin:28px 0 0; }
+  .foot { text-align:center; color:#94a3b8; font-size:12px; margin-top:24px; line-height:1.6; }
+  @media (max-width:560px){ .cols{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="note">
+    <b>Preview of the reworked Monday digest.</b> This approximates the email body (the live send is rendered by Sequenzy from the same content blocks). Two things changed: the <b>logo bug is fixed</b>, and each listing now carries an <b>LLM-written one-line summary</b> with a weekly-rotating intro, headings, and subject line. The blurbs below are illustrative of the editorial pass.
+  </div>
+
+  <div class="cols">
+    <div class="col">
+      <h3>Before — broken</h3>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="48" valign="top" style="padding-right:12px">
+          <img class="broken-img" src="/logos/moxie-docs" alt="" />
+        </td>
+        <td valign="top">
+          <div style="font-weight:700;font-size:16px;color:#020617">Moxie Docs</div>
+          <span style="display:inline-block;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600;margin-top:4px">📚 Documentation</span>
+        </td>
+      </tr></table>
+      <p style="font-size:12px;color:#64748b;margin:12px 0 0">Relative <code>src="/logos/…"</code> resolves against the mail client's domain → 404 → blank/broken box.</p>
+    </div>
+    <div class="col">
+      <h3>After — fixed</h3>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="48" valign="top" style="padding-right:12px">
+          <img width="48" height="48" src="https://allmcps.com/logo-icon.svg" alt="Moxie Docs" style="display:block;border-radius:8px;object-fit:cover" />
+        </td>
+        <td valign="top">
+          <div style="font-weight:700;font-size:16px;color:#020617">Moxie Docs</div>
+          <span style="display:inline-block;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600;margin-top:4px">📚 Documentation</span>
+        </td>
+      </tr></table>
+      <p style="font-size:12px;color:#64748b;margin:12px 0 0">Absolute <code>src="https://allmcps.com/logos/…"</code> + name as <code>alt</code> so a miss degrades to a label, not a blank box.</p>
+    </div>
+  </div>
+
+  <div class="email">
+    <div class="brand"><img src="https://allmcps.com/logo-icon.svg" alt="AllMCPs" /></div>
+    <h1 class="title">This week on AllMCPs</h1>
+    <p class="intro">A few new tools to give your agents this week — plus the servers the community keeps reaching for.</p>
+
+    <h2 class="section">Fresh arrivals</h2>
+
+    <div class="card">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="48" valign="top" style="padding-right:12px">
+          <img width="48" height="48" src="https://allmcps.com/logo-icon.svg" alt="Moxie Docs" style="display:block;border-radius:8px;object-fit:cover" />
+        </td>
+        <td valign="top">
+          <div style="font-weight:700;font-size:16px;color:#020617">Moxie Docs</div>
+          <span style="display:inline-block;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600;margin-top:4px">📚 Documentation</span>
+        </td>
+      </tr></table>
+      <p class="blurb">Pulls your team's docs into any agent so it can answer from your own knowledge base instead of guessing — handy for support and internal tooling bots.</p>
+      <a class="btn-secondary" href="#">View Moxie Docs →</a>
+    </div>
+
+    <div class="card">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="48" valign="top" style="padding-right:12px">
+          <table role="presentation" width="48" height="48" cellpadding="0" cellspacing="0" border="0"><tr><td width="48" height="48" align="center" valign="middle" style="width:48px;height:48px;border-radius:8px;background:#164e63;color:#fff;font-family:Arial,sans-serif;font-size:20px;font-weight:800">P</td></tr></table>
+        </td>
+        <td valign="top">
+          <div style="font-weight:700;font-size:16px;color:#020617">postgres-mcp</div>
+          <span style="display:inline-block;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600;margin-top:4px">🗄️ Databases</span>
+        </td>
+      </tr></table>
+      <p class="blurb">Gives agents read/write access to a Postgres database with schema introspection — the go-to when you want an assistant that can actually query your data.</p>
+      <a class="btn-secondary" href="#">View postgres-mcp →</a>
+    </div>
+
+    <h2 class="section">Catching on</h2>
+
+    <div class="card">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="48" valign="top" style="padding-right:12px">
+          <table role="presentation" width="48" height="48" cellpadding="0" cellspacing="0" border="0"><tr><td width="48" height="48" align="center" valign="middle" style="width:48px;height:48px;border-radius:8px;background:#1d4ed8;color:#fff;font-family:Arial,sans-serif;font-size:20px;font-weight:800">F</td></tr></table>
+        </td>
+        <td valign="top">
+          <div style="font-weight:700;font-size:16px;color:#020617">fetch</div>
+          <span style="display:inline-block;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600;margin-top:4px">🌐 Web &amp; Search</span>
+        </td>
+      </tr></table>
+      <p class="blurb">Lets an agent fetch a URL and get clean, readable content back — the simplest way to give a model live access to the open web.</p>
+      <a class="btn-secondary" href="#">View fetch →</a>
+    </div>
+
+    <a class="btn-primary" href="#">Browse the full directory →</a>
+    <div class="foot">AllMCPs · Jackalope Digital<br/>1500 N Grant St # 7225, Denver, CO 80203<br/>Privacy Policy</div>
+  </div>
+
+</div>
+</body>
+</html>
