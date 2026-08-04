@@ -24,6 +24,21 @@ export interface TweetQueueResult {
   error?: string;
 }
 
+/**
+ * X.com's hard limit for a single post. This is the absolute ceiling — going
+ * over it guarantees a rejection.
+ */
+export const TWITTER_CHAR_LIMIT = 280;
+
+/**
+ * The ceiling we actually publish against. `getTwitterCharCount` approximates
+ * X.com's t.co/emoji weighting, and downstream schedulers (Buffer via make.com)
+ * count length slightly differently, so a tweet measured right at 280 here can
+ * still be rejected with a 400 for length. Keeping ~20 chars of breathing room
+ * absorbs that discrepancy for every current and future queued/rendered tweet.
+ */
+export const TWITTER_SAFE_CHAR_LIMIT = 260;
+
 export function escapeForXml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -207,10 +222,11 @@ export function getTwitterCharCount(text: string): number {
 }
 
 /**
- * Ensures a given text is strictly under maxLen (default 280 characters for X.com).
+ * Ensures a given text is strictly under maxLen (defaults to the safe limit,
+ * which sits below X.com's 280 hard cap to leave breathing room).
  * Truncates cleanly on word boundaries when possible and appends '…'.
  */
-export function truncateToTwitterLimit(text: string, maxLen = 280): string {
+export function truncateToTwitterLimit(text: string, maxLen: number = TWITTER_SAFE_CHAR_LIMIT): string {
   if (getTwitterCharCount(text) <= maxLen) {
     return text;
   }
@@ -260,7 +276,8 @@ export function cleanTweetDescription(description: string | undefined, maxLen = 
 }
 
 /**
- * Format an open-graph optimized tweet body for an MCP server that strictly fits X.com 280-char limit.
+ * Format an open-graph optimized tweet body for an MCP server that strictly fits
+ * within the safe character limit (below X.com's 280-char hard cap).
  */
 export function buildMcpServerTweetText(server: McpServerTweetPayload): string {
   const url = `https://allmcps.com/mcp/${server.id}`;
@@ -288,14 +305,14 @@ export function buildMcpServerTweetText(server: McpServerTweetPayload): string {
   const baseCount = getTwitterCharCount(baseTextWithoutDesc);
 
   // Available length for cleanDesc (leaving 1 char for extra newline)
-  let availableDescBudget = 280 - baseCount - 1;
+  let availableDescBudget = TWITTER_SAFE_CHAR_LIMIT - baseCount - 1;
 
   // If budget is low, try reducing hashtags to free up character space
   if (availableDescBudget < 40 && hashtagList.length > 2) {
     hashtagList = hashtagList.slice(0, 2);
     hashtagsStr = hashtagList.join(' ');
     const newBaseCount = getTwitterCharCount(`${header}\n\n${titleLine}\n\n${cta}\n${url}\n\n${hashtagsStr}`);
-    availableDescBudget = 280 - newBaseCount - 1;
+    availableDescBudget = TWITTER_SAFE_CHAR_LIMIT - newBaseCount - 1;
   }
 
   let cleanDesc = '';
@@ -307,9 +324,9 @@ export function buildMcpServerTweetText(server: McpServerTweetPayload): string {
     ? `${header}\n\n${titleLine}\n${cleanDesc}\n\n${cta}\n${url}\n\n${hashtagsStr}`
     : `${header}\n\n${titleLine}\n\n${cta}\n${url}\n\n${hashtagsStr}`;
 
-  // Final hard safety check: truncate to 280 chars if anything exceeds limit
-  if (getTwitterCharCount(tweetText) > 280) {
-    tweetText = truncateToTwitterLimit(tweetText, 280);
+  // Final hard safety check: truncate to the safe limit if anything exceeds it
+  if (getTwitterCharCount(tweetText) > TWITTER_SAFE_CHAR_LIMIT) {
+    tweetText = truncateToTwitterLimit(tweetText, TWITTER_SAFE_CHAR_LIMIT);
   }
 
   return tweetText;
