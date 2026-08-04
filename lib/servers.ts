@@ -1,10 +1,10 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
-import { engagementScore } from './search';
+import { engagementScore, buildAiSearchText } from './search';
 import { resolveInstallConfig } from './installConfig';
 import { parseStringArray } from './aiContent';
 
@@ -143,6 +143,197 @@ export async function getActiveServers(): Promise<Server[]> {
     // Fall back to static JSON
   }
   return servers.map(normalizeServer);
+}
+
+/**
+ * Slim listing shape powering the /browse client feed. Only the fields the
+ * directory grid actually reads for search/sort/filter/render — the heavy AI
+ * text is pre-collapsed into a single bounded `aiText` blob so pages stay small.
+ */
+export type DirectoryFeedItem = {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+  category: string;
+  logoUrl: string | null;
+  isOfficial: boolean;
+  isPremium: boolean;
+  featuredUntil: string | Date | null;
+  githubStars: number | null;
+  npmDownloads: number | null;
+  installConfidence: string | null;
+  toolText: string | null;
+  aiText: string | null;
+  views: number;
+  copies: number;
+  upvotes: number;
+  createdAt: string | Date | null;
+};
+
+/** Max length of the client-side AI search blob — matches the old feed bound. */
+const FEED_AI_TEXT_MAX = 320;
+/** Max length of the space-joined tool-name blob for search recall. */
+const FEED_TOOL_TEXT_MAX = 400;
+
+/** Space-joined tool names for client search, bounded. Null when there are none. */
+function feedToolText(rawTools: unknown): string | null {
+  const tools = parseServerTools(rawTools);
+  const joined = tools
+    .map((t) => t.name)
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, FEED_TOOL_TEXT_MAX);
+  return joined || null;
+}
+
+/**
+ * Build the bounded AI search blob from already-length-capped raw column values.
+ * `aiUseCases`/`aiFeatures` arrive as JSON-array *strings* (the columns store JSON);
+ * we strip the structural punctuation so only the human-readable words feed search.
+ */
+function feedAiTextFromRaw(
+  summary?: string | null,
+  overview?: string | null,
+  useCases?: string | null,
+  features?: string | null
+): string | null {
+  const clean = (v?: string | null) => (v || '').replace(/["[\]{}]/g, ' ');
+  const text = [summary || '', overview || '', clean(useCases), clean(features)]
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return null;
+  return text.length > FEED_AI_TEXT_MAX ? text.slice(0, FEED_AI_TEXT_MAX) : text;
+}
+
+/**
+ * One page of the public directory feed for the /browse client grid.
+ *
+ * The full catalog is thousands of listings; pulling every row's full AI-content
+ * columns in a single query loads several MB into the Worker/D1 isolate at once,
+ * which can trip D1's per-query memory/CPU limits and leave the browse grid stuck
+ * on its initial slice. So we *shard*: select only the columns the grid reads,
+ * cap the AI text at the SQL level, and page with LIMIT/OFFSET. The client walks
+ * the pages until `nextOffset` is null, assembling the whole catalog reliably.
+ */
+export async function getDirectoryFeedPage(
+  offset: number,
+  limit: number
+): Promise<{ items: DirectoryFeedItem[]; total: number }> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select({
+          id: serversTable.id,
+          name: serversTable.name,
+          url: serversTable.url,
+          description: serversTable.description,
+          category: serversTable.category,
+          logoUrl: serversTable.logoUrl,
+          isOfficial: serversTable.isOfficial,
+          isPremium: serversTable.isPremium,
+          featuredUntil: serversTable.featuredUntil,
+          githubStars: serversTable.githubStars,
+          npmDownloads: serversTable.npmDownloads,
+          installConfidence: serversTable.installConfidence,
+          tools: serversTable.tools,
+          views: serversTable.views,
+          copies: serversTable.copies,
+          upvotes: serversTable.upvotes,
+          createdAt: serversTable.createdAt,
+          // Cap the heavy AI-content columns in SQL so a page stays small even
+          // when individual overviews/use-case lists are long.
+          aiSummary: sql<string | null>`substr(${serversTable.aiSummary}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiOverview: sql<string | null>`substr(${serversTable.aiOverview}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiUseCases: sql<string | null>`substr(${serversTable.aiUseCases}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiFeatures: sql<string | null>`substr(${serversTable.aiFeatures}, 1, ${FEED_AI_TEXT_MAX})`,
+        })
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'))
+        // Deterministic order (newest first, id tiebreaker) keeps paging stable.
+        .orderBy(desc(serversTable.createdAt), desc(serversTable.id))
+        .limit(limit)
+        .offset(offset);
+
+      const totalRow = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'));
+      const total = Number(totalRow[0]?.c ?? rows.length);
+
+      const items: DirectoryFeedItem[] = rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        url: r.url,
+        description: cleanListingDescription(r.description),
+        category: r.category,
+        logoUrl: r.logoUrl ?? null,
+        isOfficial: !!r.isOfficial,
+        isPremium: !!r.isPremium,
+        featuredUntil: r.featuredUntil ?? null,
+        githubStars: r.githubStars ?? null,
+        npmDownloads: r.npmDownloads ?? null,
+        installConfidence: r.installConfidence ?? null,
+        toolText: feedToolText(r.tools),
+        aiText: feedAiTextFromRaw(r.aiSummary, r.aiOverview, r.aiUseCases, r.aiFeatures),
+        views: r.views ?? 0,
+        copies: r.copies ?? 0,
+        upvotes: r.upvotes ?? 0,
+        createdAt: r.createdAt ?? null,
+      }));
+
+      return { items, total };
+    }
+  } catch (e) {
+    // Fall back to the static JSON snapshot below.
+  }
+
+  // Static fallback (local dev / DB unavailable): page the bundled snapshot with
+  // the same newest-first ordering so behavior matches production.
+  const all = (serversData as unknown as Server[])
+    .map(normalizeServer)
+    .sort((a, b) => toEpoch(b.createdAt) - toEpoch(a.createdAt));
+  const total = all.length;
+  const items: DirectoryFeedItem[] = all.slice(offset, offset + limit).map((s) => {
+    const tools = Array.isArray(s.tools) ? s.tools : [];
+    const toolText =
+      tools
+        .map((t) => (t && typeof t.name === 'string' ? t.name : ''))
+        .filter(Boolean)
+        .join(' ')
+        .slice(0, FEED_TOOL_TEXT_MAX) || null;
+    return {
+      id: s.id,
+      name: s.name,
+      url: s.url,
+      description: s.description,
+      category: s.category,
+      logoUrl: s.logoUrl ?? null,
+      isOfficial: !!s.isOfficial,
+      isPremium: !!s.isPremium,
+      featuredUntil: s.featuredUntil ?? null,
+      githubStars: s.githubStars ?? null,
+      npmDownloads: s.npmDownloads ?? null,
+      installConfidence: s.installConfidence ?? null,
+      toolText,
+      aiText: buildAiSearchText(s, FEED_AI_TEXT_MAX),
+      views: s.views ?? 0,
+      copies: s.copies ?? 0,
+      upvotes: s.upvotes ?? 0,
+      createdAt: s.createdAt ?? null,
+    };
+  });
+  return { items, total };
+}
+
+/** Epoch millis for a listing timestamp, tolerant of strings/Dates/nulls. */
+function toEpoch(v: unknown): number {
+  const t = new Date(v as string | number | Date).getTime();
+  return Number.isNaN(t) ? 0 : t;
 }
 
 export async function getServerById(id: string): Promise<Server | undefined> {

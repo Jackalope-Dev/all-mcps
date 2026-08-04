@@ -156,29 +156,49 @@ export default function DirectoryGrid({
     if (!loadedFullRef.current) setServers(initialServers);
   }, [initialServers]);
 
-  // Lazy-load the full catalog once, replacing the SSR slice, so client-side
-  // search/sort/filter cover everything (browse only). Failures keep the slice.
+  // Lazy-load the full catalog on mount, replacing the SSR slice, so client-side
+  // search/sort/filter cover everything (browse only). The feed is paged so no
+  // single request has to carry the whole catalog (which could hang/time out);
+  // we walk the pages, growing the working set as each arrives. Partial results
+  // are kept — only a completely empty load surfaces the error state.
   useEffect(() => {
     if (!lazyFeedUrl) return;
     let cancelled = false;
     setFeedStatus('loading');
-    fetch(lazyFeedUrl)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        const full = (data as { servers?: Server[] } | null)?.servers;
-        if (cancelled) return;
-        if (full && full.length) {
-          loadedFullRef.current = true;
-          setServers(full);
-          setFeedStatus('ready');
-        } else {
-          setFeedStatus('error');
+
+    (async () => {
+      const accumulated: Server[] = [];
+      let offset = 0;
+      // Guard against a misbehaving `nextOffset` looping forever.
+      for (let page = 0; page < 200; page++) {
+        let data: { servers?: Server[]; nextOffset?: number | null } | null = null;
+        try {
+          const sep = lazyFeedUrl.includes('?') ? '&' : '?';
+          const res = await fetch(`${lazyFeedUrl}${sep}offset=${offset}`);
+          if (!res.ok) throw new Error(`directory feed ${res.status}`);
+          data = await res.json();
+        } catch {
+          break; // Network/HTTP error — keep whatever we've gathered so far.
         }
-      })
-      .catch(() => {
-        // Keep the server-rendered slice if the feed can't load.
-        if (!cancelled) setFeedStatus('error');
-      });
+        if (cancelled) return;
+
+        const batch = data?.servers ?? [];
+        if (batch.length) {
+          accumulated.push(...batch);
+          loadedFullRef.current = true;
+          // Show progress as pages land instead of waiting for the whole catalog.
+          setServers([...accumulated]);
+        }
+
+        const next = data?.nextOffset;
+        if (next == null || batch.length === 0) break;
+        offset = next;
+      }
+
+      if (cancelled) return;
+      setFeedStatus(accumulated.length ? 'ready' : 'error');
+    })();
+
     return () => {
       cancelled = true;
     };
