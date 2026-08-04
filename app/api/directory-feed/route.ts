@@ -1,54 +1,43 @@
-import { getActiveServers } from '@/lib/servers';
-import { buildAiSearchText } from '@/lib/search';
+import { getDirectoryFeedPage } from '@/lib/servers';
 
 /**
- * Full client-side directory feed for the /browse grid. The browse page server-
- * renders only a small slice for initial paint + SEO; DirectoryGrid fetches this
- * once on mount to power full catalog search/sort/filter without shipping the
- * entire catalog in the initial HTML (which was ~1.5 MB+).
+ * Paginated client-side directory feed for the /browse grid. The browse page
+ * server-renders only a small slice for initial paint + SEO; DirectoryGrid walks
+ * this feed page-by-page on mount to power full catalog search/sort/filter
+ * without shipping the whole catalog in the initial HTML (~1.5 MB+).
  *
- * Returns exactly the fields the grid reads — descriptions (search + card body),
- * stats (sort), and the flags isFeaturedListing/isVerifiedListing need.
+ * Paging matters at scale: pulling every active listing's full AI-content columns
+ * in one query loads several MB into the D1/Worker isolate and can trip D1's
+ * per-query memory/CPU limits — which previously left the grid stuck on its
+ * initial 60-item slice. Each page here stays small (lean columns, SQL-capped AI
+ * text), and the response advertises `nextOffset` so the client knows when it has
+ * assembled the entire catalog.
+ *
+ * Query params:
+ *   - `offset` (default 0): row offset into the active catalog.
+ *   - `limit`  (default 1000, max 1000): page size.
  */
-export async function GET() {
-  const servers = await getActiveServers();
+const DEFAULT_LIMIT = 1000;
+const MAX_LIMIT = 1000;
 
-  const feed = servers.map((s) => {
-    // Compact tool names for client-side search (not full tool objects).
-    const tools = Array.isArray(s.tools) ? s.tools : [];
-    const toolText =
-      tools
-        .map((t) => (t && typeof t.name === 'string' ? t.name : ''))
-        .filter(Boolean)
-        .join(' ')
-        .slice(0, 400) || null;
+export async function GET(request: Request) {
+  const url = new URL(request.url);
 
-    return {
-      id: s.id,
-      name: s.name,
-      url: s.url,
-      description: s.description,
-      category: s.category,
-      logoUrl: s.logoUrl ?? null,
-      isOfficial: !!s.isOfficial,
-      isPremium: !!s.isPremium,
-      featuredUntil: s.featuredUntil ?? null,
-      githubStars: s.githubStars ?? null,
-      npmDownloads: s.npmDownloads ?? null,
-      installConfidence: s.installConfidence ?? null,
-      toolText,
-      // Bounded AI search text so client-side browse search matches intent queries
-      // ("read pdfs", "query database") against the enriched use cases/features.
-      aiText: buildAiSearchText(s, 320),
-      views: s.views ?? 0,
-      copies: s.copies ?? 0,
-      upvotes: s.upvotes ?? 0,
-      createdAt: s.createdAt ?? null,
-    };
-  });
+  const parsedOffset = Number.parseInt(url.searchParams.get('offset') ?? '0', 10);
+  const offset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
+
+  const parsedLimit = Number.parseInt(url.searchParams.get('limit') ?? String(DEFAULT_LIMIT), 10);
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), MAX_LIMIT)
+    : DEFAULT_LIMIT;
+
+  const { items, total } = await getDirectoryFeedPage(offset, limit);
+
+  // Null once this page reaches the end of the catalog.
+  const nextOffset = offset + items.length < total ? offset + items.length : null;
 
   return Response.json(
-    { servers: feed, total: feed.length },
+    { servers: items, total, offset, limit, nextOffset },
     {
       headers: {
         'Cache-Control': 'public, max-age=120, s-maxage=600',
