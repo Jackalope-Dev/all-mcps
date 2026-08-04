@@ -7,8 +7,7 @@ import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { getActiveServers, type Server } from '../../../lib/servers';
 import { engagementScore } from '../../../lib/search';
-import { categoryFromSlug } from '../../../lib/categories';
-import { BEST_TOPICS, bestTopicBySlug } from '../../../lib/bestTopics';
+import { BEST_TOPICS, bestTopicBySlug, selectServersForTopic } from '../../../lib/bestTopics';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
 
@@ -60,9 +59,8 @@ export default async function BestTopicPage({
   const t = bestTopicBySlug(topic);
   if (!t) notFound();
 
-  const category = categoryFromSlug(t.categorySlug);
   const all = await getActiveServers();
-  const ranked = (category ? all.filter((s) => s.category === category) : [])
+  const ranked = selectServersForTopic(t, all)
     .sort((a, b) => engagementScore(b) - engagementScore(a))
     .slice(0, TOP_N);
 
@@ -130,8 +128,12 @@ export default async function BestTopicPage({
             {heading} <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>({year})</span>
           </h1>
           <p className="text-lead" style={{ margin: '0 0 1rem' }}>{t.lead}</p>
-          {category && (
+          {t.categorySlug ? (
             <Link href={`/categories/${t.categorySlug}`} className="btn btn-secondary">
+              Browse all {t.title} servers →
+            </Link>
+          ) : (
+            <Link href={`/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`} className="btn btn-secondary">
               Browse all {t.title} servers →
             </Link>
           )}

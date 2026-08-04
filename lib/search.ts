@@ -18,7 +18,40 @@ export type Searchable = {
   category: string;
   /** Optional space-joined tool names / install package for extra recall. */
   toolText?: string | null;
+  /**
+   * Optional AI-authored search text (summary + overview + use cases + features).
+   * Lets intent queries — "read my pdfs", "query a database" — match the use cases
+   * even when the raw name/description don't contain those words.
+   */
+  extraText?: string | null;
 };
+
+/**
+ * Build the AI search-text blob for a listing from its enriched fields. Pure and
+ * loose-typed so it's safe to call server-side and to bundle. Bounded length keeps
+ * the client feed small.
+ */
+export function buildAiSearchText(
+  parts: {
+    aiSummary?: string | null;
+    aiOverview?: string | null;
+    aiUseCases?: string[] | null;
+    aiFeatures?: string[] | null;
+  },
+  maxLen = 600
+): string | null {
+  const text = [
+    parts.aiSummary || '',
+    parts.aiOverview || '',
+    ...(parts.aiUseCases || []),
+    ...(parts.aiFeatures || []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  if (!text) return null;
+  return text.length > maxLen ? text.slice(0, maxLen) : text;
+}
 
 export type Engagement = {
   upvotes?: number | null;
@@ -59,8 +92,62 @@ const SYNONYMS: Record<string, string[]> = {
   fs: ['filesystem', 'files', 'file'],
   filesystem: ['fs', 'files'],
   browser: ['playwright', 'puppeteer', 'chrome', 'selenium'],
+  playwright: ['browser', 'puppeteer'],
+  puppeteer: ['browser', 'playwright', 'chrome'],
   scrape: ['scraping', 'crawler', 'browser'],
+  crawl: ['scrape', 'scraping', 'spider'],
   search: ['web', 'google', 'brave'],
+  // Databases & data
+  mysql: ['mariadb', 'database', 'sql'],
+  mariadb: ['mysql'],
+  mongo: ['mongodb', 'nosql'],
+  mongodb: ['mongo', 'nosql'],
+  redis: ['cache', 'keyvalue'],
+  sqlite: ['database', 'sql'],
+  vector: ['embedding', 'embeddings', 'rag'],
+  rag: ['retrieval', 'embeddings', 'vector'],
+  embedding: ['embeddings', 'vector', 'rag'],
+  // Documents & files
+  pdf: ['document', 'documents'],
+  doc: ['document', 'documents', 'word'],
+  excel: ['spreadsheet', 'xlsx', 'sheets'],
+  spreadsheet: ['excel', 'sheets', 'xlsx'],
+  csv: ['spreadsheet', 'data'],
+  // Integrations & platforms
+  docker: ['container', 'containers'],
+  container: ['docker'],
+  gitlab: ['git'],
+  youtube: ['video', 'transcript', 'captions'],
+  transcript: ['captions', 'subtitles', 'youtube'],
+  notion: ['docs', 'wiki', 'notes'],
+  obsidian: ['notes', 'markdown', 'knowledge'],
+  jira: ['issues', 'tickets', 'atlassian'],
+  linear: ['issues', 'tickets'],
+  stripe: ['payments', 'payment', 'billing'],
+  shopify: ['ecommerce', 'store', 'commerce'],
+  gmail: ['email', 'mail', 'google'],
+  email: ['gmail', 'smtp', 'imap', 'mail'],
+  calendar: ['events', 'scheduling', 'gcal'],
+  sheets: ['spreadsheet', 'excel', 'google'],
+  maps: ['location', 'geocode', 'geocoding'],
+  weather: ['forecast', 'climate'],
+  // Comms & social
+  discord: ['chat', 'messaging'],
+  telegram: ['chat', 'messaging', 'bot'],
+  reddit: ['social'],
+  // Media
+  image: ['images', 'vision', 'photo', 'picture'],
+  voice: ['speech', 'audio', 'tts', 'stt'],
+  audio: ['voice', 'speech', 'sound'],
+  // Infra & ops
+  terminal: ['shell', 'command', 'cli', 'bash'],
+  shell: ['terminal', 'bash', 'command', 'cli'],
+  monitor: ['observability', 'metrics', 'logs'],
+  logs: ['logging', 'observability'],
+  // Finance / crypto
+  finance: ['stock', 'crypto', 'trading', 'market'],
+  crypto: ['blockchain', 'web3', 'ethereum', 'bitcoin', 'solana'],
+  payments: ['stripe', 'payment', 'billing'],
 };
 
 /** Lowercase alphanumeric terms; separators (-, /, @, ., spaces) split words. */
@@ -112,7 +199,8 @@ function fieldHitScore(
 export function scoreServerMatch(
   server: Searchable,
   terms: QueryTerm[],
-  fullQuery: string
+  fullQuery: string,
+  requireAll = true
 ): number {
   if (terms.length === 0) return 0;
 
@@ -120,9 +208,11 @@ export function scoreServerMatch(
   const category = server.category.toLowerCase();
   const description = server.description.toLowerCase();
   const tools = (server.toolText || '').toLowerCase();
-  const blob = `${name} ${category} ${description} ${tools}`;
+  const extra = (server.extraText || '').toLowerCase();
+  const blob = `${name} ${category} ${description} ${tools} ${extra}`;
 
   let score = 0;
+  let matched = 0;
 
   // Whole-query phrase bonus on the name.
   if (name === fullQuery) score += 1000;
@@ -148,6 +238,11 @@ export function scoreServerMatch(
       best,
       fieldHitScore(tools, term, boundary, { exact: 45, word: 32, substr: 16 })
     );
+    // AI-authored search text — between description and tools in weight.
+    best = Math.max(
+      best,
+      fieldHitScore(extra, term, boundary, { exact: 34, word: 24, substr: 12 })
+    );
 
     // Synonym expansion — slightly weaker than direct hits
     if (best === 0) {
@@ -160,10 +255,20 @@ export function scoreServerMatch(
       }
     }
 
-    if (best === 0) return 0; // this term matched nothing -> not a result
+    if (best === 0) {
+      // Strict AND: any unmatched term disqualifies the row. Relaxed (OR) fallback:
+      // skip the missing term and let partial matches through, ranked below.
+      if (requireAll) return 0;
+      continue;
+    }
+    matched += 1;
     score += best;
   }
 
+  if (matched === 0) return 0;
+  // In relaxed mode, reward rows that matched more of the query so the closest
+  // partial matches still rank first.
+  if (!requireAll) score += matched * 8;
   return score;
 }
 
@@ -188,10 +293,20 @@ export function rankServers<T extends Searchable & Engagement>(
   }
   const fullQuery = terms.map((t) => t.term).join(' ');
 
-  const scored: Array<{ server: T; score: number }> = [];
-  for (const server of servers) {
-    const score = scoreServerMatch(server, terms, fullQuery);
-    if (score > 0) scored.push({ server, score });
+  const rank = (requireAll: boolean): Array<{ server: T; score: number }> => {
+    const out: Array<{ server: T; score: number }> = [];
+    for (const server of servers) {
+      const score = scoreServerMatch(server, terms, fullQuery, requireAll);
+      if (score > 0) out.push({ server, score });
+    }
+    return out;
+  };
+
+  // Strict AND first (highest precision). If that dead-ends on a multi-word query,
+  // fall back to a relaxed OR pass so the user gets close matches instead of nothing.
+  let scored = rank(true);
+  if (scored.length === 0 && terms.length >= 2) {
+    scored = rank(false);
   }
 
   scored.sort((a, b) => {

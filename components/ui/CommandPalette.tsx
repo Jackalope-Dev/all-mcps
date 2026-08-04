@@ -19,9 +19,11 @@ interface CommandItem {
   /** Raw server name + logo, only set for categoryType 'server' — used to render ServerAvatar. */
   rawName?: string;
   logoUrl?: string | null;
+  /** Extra searchable text (e.g. AI summary) not shown in the UI but matched by the filter. */
+  searchText?: string;
 }
 
-type IndexedServer = { id: string; name: string; description: string; category: string; logoUrl?: string | null };
+type IndexedServer = { id: string; name: string; description: string; category: string; logoUrl?: string | null; aiSummary?: string | null };
 type IndexedCategory = { name: string; label: string; slug: string; count: number };
 
 export function CommandPalette() {
@@ -126,6 +128,7 @@ export function CommandPalette() {
         url: `/mcp/${s.id}`,
         rawName: s.name,
         logoUrl: s.logoUrl ?? null,
+        searchText: s.aiSummary ?? undefined,
       };
     });
 
@@ -140,7 +143,8 @@ export function CommandPalette() {
         (item) =>
           item.title.toLowerCase().includes(q) ||
           item.subtitle.toLowerCase().includes(q) ||
-          (item.rawName && item.rawName.toLowerCase().includes(q))
+          (item.rawName && item.rawName.toLowerCase().includes(q)) ||
+          (item.searchText && item.searchText.toLowerCase().includes(q))
       )
       .slice(0, 12);
   }, [items, query]);
