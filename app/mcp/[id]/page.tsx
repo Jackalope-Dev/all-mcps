@@ -428,9 +428,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   </span>
                 </IconTooltip>
               )}
-              {server.websiteVerified && (
-                <Badge variant="success">Website verified</Badge>
-              )}
               {isFeaturedListing(server) && (
                 <Badge
                   variant="success"
@@ -536,7 +533,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               >
                 <Globe size={18} color="#00E5FF" />
                 <span>Visit Website</span>
-                <ExternalLink size={14} style={{ opacity: 0.85 }} />
+                {server.websiteVerified ? (
+                  <BadgeCheck size={16} color="#00E5FF" style={{ flexShrink: 0 }} />
+                ) : (
+                  <ExternalLink size={14} style={{ opacity: 0.85 }} />
+                )}
               </OutboundLink>
             )}
           </div>
@@ -562,42 +563,60 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   </p>
                 </>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
                 {(server.aiUseCases?.length ?? 0) > 0 && (
-                  <div className="surface" style={{ padding: '1.5rem' }}>
-                    <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="surface" style={{ padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
                       <Sparkles size={16} style={{ color: 'var(--accent-color)' }} /> Use cases
                     </h3>
-                    <ul style={{ margin: 0, paddingLeft: '1.1rem', color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
                       {server.aiUseCases!.map((uc) => (
-                        <li key={uc} style={{ marginBottom: '0.4rem' }}>{uc}</li>
+                        <div key={uc} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          <span style={{ color: 'var(--accent-color)', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: '1', marginTop: '-1px' }}>•</span>
+                          <span>{uc}</span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
                 {(server.aiFeatures?.length ?? 0) > 0 && (
-                  <div className="surface" style={{ padding: '1.5rem' }}>
-                    <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="surface" style={{ padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
                       <Wrench size={16} style={{ color: 'var(--accent-color)' }} /> Key features
                     </h3>
-                    <ul style={{ margin: 0, paddingLeft: '1.1rem', color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '0.9rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
                       {server.aiFeatures!.map((f) => (
-                        <li key={f} style={{ marginBottom: '0.4rem' }}>{f}</li>
+                        <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          <span style={{ color: 'var(--accent-color)', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: '1', marginTop: '-1px' }}>•</span>
+                          <span>{f}</span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
               </div>
             </section>
           )}
 
-          <section id="quick-install" className="surface" style={{ padding: '2rem', marginBottom: '3rem', scrollMarginTop: '5rem' }}>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Terminal size={20} /> Quick Install
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', margin: '0 0 1rem', fontSize: '0.875rem' }}>
-              One click to install into your editor, or copy the config below.
+          <section id="quick-install" className="surface" style={{ padding: '1.75rem', marginBottom: '2.5rem', scrollMarginTop: '5rem', borderRadius: '16px', border: '1px solid rgba(0, 229, 255, 0.25)', background: 'linear-gradient(180deg, rgba(0, 229, 255, 0.04) 0%, rgba(15, 15, 18, 0.6) 100%)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                <Terminal size={20} style={{ color: 'var(--accent-color)' }} /> Quick Install
+              </h2>
+              <Badge variant="category" style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '0.75rem' }}>
+                Automated &amp; IDE Setup
+              </Badge>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.25rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              Copy the AI prompt to automatically install this server into your coding agent (Claude Code, Cursor, etc.), or use 1-click editor setup below.
             </p>
+
+            {/* Primary Action: Copy AI Install Prompt */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <AgentPromptButton serverId={server.id} serverName={server.name} />
+            </div>
+
+            {/* 1-Click IDE Install Buttons */}
             <InstallButtons
               serverId={server.id}
               serverName={server.name}
@@ -609,28 +628,28 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               installPackage={server.installPackage}
               installConfidence={server.installConfidence}
             />
-            <ClientConfigTabs server={server} />
-            <McpConfigGenerator
-              serverId={server.id}
-              serverName={server.name}
-              url={server.url}
-              description={server.description}
-              installKind={server.installKind}
-              installCommand={server.installCommand}
-              installArgs={server.installArgs}
-              installPackage={server.installPackage}
-              installConfidence={server.installConfidence}
-            />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.5rem 0' }}>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Or</span>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
-            </div>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-              Using an AI coding agent (Claude Code, Cursor, etc.)? Copy a ready-made prompt that tells it to fetch the setup instructions and install this server for you.
-            </p>
-            <AgentPromptButton serverId={server.id} serverName={server.name} />
+            {/* Collapsed Manual Client JSON Config */}
+            <details style={{ marginTop: '1.25rem', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.75rem 1rem' }}>
+              <summary style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer', outline: 'none', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Manual Client &amp; Custom JSON Config</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Expand JSON ▾</span>
+              </summary>
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                <ClientConfigTabs server={server} />
+                <McpConfigGenerator
+                  serverId={server.id}
+                  serverName={server.name}
+                  url={server.url}
+                  description={server.description}
+                  installKind={server.installKind}
+                  installCommand={server.installCommand}
+                  installArgs={server.installArgs}
+                  installPackage={server.installPackage}
+                  installConfidence={server.installConfidence}
+                />
+              </div>
+            </details>
           </section>
 
           <ToolSchemaInspector
@@ -801,20 +820,20 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         {/* Sidebar (Right Column) */}
         <div className="detail-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* At a Glance Technical Summary Card */}
-          <div className="surface" style={{ padding: '1.5rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+          {/* Technical Specs, Popularity & Quality Summary Card */}
+          <div className="surface" style={{ padding: '1.35rem', borderRadius: '14px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
               <Terminal size={18} style={{ color: 'var(--brand-cyan)' }} />
-              <span>At a Glance</span>
+              <span>Technical Specs &amp; Signals</span>
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.6rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Transport</span>
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                   {server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com')) ? 'SSE (Remote)' : 'STDIO'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Runtime</span>
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                   {(() => {
@@ -827,20 +846,41 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   })()}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Health Check</span>
                 <span style={{ fontWeight: 600, color: healthUi.color, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: healthUi.color, display: 'inline-block' }} />
                   {healthKey === 'active' ? 'Active' : healthKey === 'down' ? 'Issues' : 'Unknown'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: (typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') ? '1px solid rgba(255,255,255,0.06)' : 'none', paddingBottom: (typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') ? '0.5rem' : '0' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Category</span>
                 <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: catMeta.color, textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                   <span aria-hidden="true">{catMeta.emoji}</span>
                   <span>{catMeta.label}</span>
                 </Link>
               </div>
+
+              {typeof server.githubStars === 'number' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: typeof server.npmDownloads === 'number' ? '1px solid rgba(255,255,255,0.06)' : 'none', paddingBottom: typeof server.npmDownloads === 'number' ? '0.5rem' : '0' }}>
+                  <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Star size={14} style={{ color: '#f5c518' }} /> GitHub stars
+                  </span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.githubStars.toLocaleString()}</span>
+                </div>
+              )}
+              {typeof server.npmDownloads === 'number' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Download size={14} style={{ color: 'var(--accent-color)' }} /> npm downloads
+                  </span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.npmDownloads.toLocaleString()}/mo</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem' }}>
+              <QualityBadge server={server} />
             </div>
           </div>
 
@@ -957,32 +997,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               >
                 <Sparkles size={16} /> Spotlight Your Server
               </Link>
-            </div>
-          )}
-
-          {/* Quality grade — transparent, from public signals. */}
-          <QualityBadge server={server} />
-
-          {/* Popularity signals (shown when measured). */}
-          {(typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') && (
-            <div className="surface" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Popularity</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {typeof server.githubStars === 'number' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem' }}>
-                    <Star size={18} style={{ color: '#f5c518' }} />
-                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.githubStars.toLocaleString()}</span>
-                    <span style={{ color: 'var(--text-secondary)' }}>GitHub stars</span>
-                  </div>
-                )}
-                {typeof server.npmDownloads === 'number' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.9rem' }}>
-                    <Download size={18} style={{ color: 'var(--accent-color)' }} />
-                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.npmDownloads.toLocaleString()}</span>
-                    <span style={{ color: 'var(--text-secondary)' }}>npm downloads / mo</span>
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
