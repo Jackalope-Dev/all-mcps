@@ -1513,25 +1513,27 @@ p {
 .category-card.surface-interactive:hover,
 .category-card:hover {
   transform: translateY(-2px);
+  border-color: var(--cat-border, rgba(0, 229, 255, 0.3));
+  background: var(--cat-bg, rgba(0, 229, 255, 0.05));
 }
 
 .category-card-emoji {
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--cat-bg, rgba(255, 255, 255, 0.04));
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.6rem;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--cat-border, rgba(255, 255, 255, 0.06));
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .category-card:hover .category-card-emoji {
-  background: rgba(0, 229, 255, 0.1);
-  border-color: rgba(0, 229, 255, 0.28);
+  background: var(--cat-bg, rgba(0, 229, 255, 0.1));
+  border-color: var(--cat-border, rgba(0, 229, 255, 0.28));
 }
 
 .category-card-content {

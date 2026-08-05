@@ -8,6 +8,7 @@ import { SafeMarkdown } from './ui/SafeMarkdown';
 import { ServerAvatar } from './ui/ServerAvatar';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { parseServerName } from '../lib/displayName';
+import { getCategoryMeta } from '../lib/categories';
 
 type Server = {
   id: string;
@@ -36,7 +37,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)' }}></div>
 
             <div className="featured-card-header">
-              <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
+              <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} size={56} />
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {(server.isPremium || server.isOfficial) && (
                   <Badge variant="official">Verified</Badge>
@@ -73,7 +74,25 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               <SafeMarkdown content={server.description || 'No description provided.'} isInline />
             </div>
             <div style={{ display: 'flex', marginTop: 'auto', paddingTop: '0.5rem' }}>
-              <Badge variant="category">{server.category}</Badge>
+              {(() => {
+                const catMeta = getCategoryMeta(server.category);
+                return (
+                  <Badge 
+                    variant="category"
+                    style={{
+                      background: catMeta.bgTint,
+                      color: catMeta.color,
+                      borderColor: catMeta.borderTint,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    }}
+                  >
+                    <span aria-hidden="true">{catMeta.emoji}</span>
+                    {catMeta.label}
+                  </Badge>
+                );
+              })()}
             </div>
           </Card>
           </ImpressionBeacon>

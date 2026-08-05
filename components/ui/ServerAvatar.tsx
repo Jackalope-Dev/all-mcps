@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { parseServerName } from '../../lib/displayName';
+import { getCategoryGradient } from '../../lib/categories';
 
 // Deterministic brand-adjacent avatar gradients (cyan / blue / slate)
 const GRADIENTS = [
@@ -13,7 +14,10 @@ const GRADIENTS = [
   'linear-gradient(135deg, #67e8f9, #1d4ed8)',
 ];
 
-function getGradient(str: string) {
+function getGradient(str: string, category?: string) {
+  if (category) {
+    return getCategoryGradient(category);
+  }
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -21,14 +25,16 @@ function getGradient(str: string) {
   return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
 }
 
-/** Logo image when set, otherwise a deterministic gradient avatar keyed off the display name's initial. */
+/** Logo image when set, otherwise a category-themed or deterministic gradient avatar. */
 export function ServerAvatar({
   name,
   logoUrl,
+  category,
   size = 48,
 }: {
   name: string;
   logoUrl?: string | null;
+  category?: string;
   size?: number;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -56,7 +62,7 @@ export function ServerAvatar({
         width: size,
         height: size,
         borderRadius: radius,
-        background: getGradient(name),
+        background: getGradient(name, category),
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -64,9 +70,12 @@ export function ServerAvatar({
         fontWeight: 800,
         textTransform: 'uppercase',
         flexShrink: 0,
+        color: '#ffffff',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
       }}
     >
       {displayName.charAt(0)}
     </div>
   );
 }
+

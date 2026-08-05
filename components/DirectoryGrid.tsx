@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -22,8 +22,9 @@ import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
-import { DIRECTORY_CATEGORIES } from '../lib/categories';
+import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel } from '../lib/categories';
 import { compileQuery, scoreServerMatch, engagementScore } from '../lib/search';
+
 
 type Server = {
   id: string;
@@ -67,23 +68,7 @@ type SortMode = 'relevance' | 'trending' | 'most_upvoted' | 'most_viewed' | 'new
 type TechStack = 'all' | 'typescript' | 'python' | 'go' | 'rust';
 type TransportKind = 'all' | 'stdio' | 'remote';
 
-function parseCategoryLabel(category: string): { emoji: string; label: string } {
-  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
-    const first = segmenter.segment(category)[Symbol.iterator]().next().value;
-    if (first) {
-      const char = first.segment;
-      if (/\p{Emoji_Presentation}|\p{Extended_Pictographic}/u.test(char)) {
-        return { emoji: char, label: category.slice(char.length).trimStart() };
-      }
-    }
-  }
-  const match = category.match(/^(\p{Extended_Pictographic}(?:\u200D\p{Extended_Pictographic}|\uFE0F)*)\s*/u);
-  if (match) {
-    return { emoji: match[1], label: category.slice(match[0].length) };
-  }
-  return { emoji: '', label: category };
-}
+
 
 export default function DirectoryGrid({
   initialServers,
@@ -192,8 +177,13 @@ export default function DirectoryGrid({
         if (batch.length) {
           accumulated.push(...batch);
           loadedFullRef.current = true;
-          // Show progress as pages land instead of waiting for the whole catalog.
-          setServers([...accumulated]);
+          // Merge with initialServers/prev to prevent active category servers from flashing/dropping
+          setServers((prev) => {
+            const map = new Map<string, Server>();
+            for (const s of prev) map.set(s.id, s);
+            for (const s of accumulated) map.set(s.id, s);
+            return Array.from(map.values());
+          });
         }
 
         const next = data?.nextOffset;
@@ -358,18 +348,6 @@ export default function DirectoryGrid({
   const updateUrl = (cat: string | null, q: string) => {
     if (typeof window === 'undefined') return;
 
-    // Homepage: only category picks jump to the dedicated browse page.
-    // Search on the landing stays client-side so typing doesn't reload every keystroke.
-    if (!isBrowse) {
-      if (cat) {
-        const url = new URL(browseBase, window.location.origin);
-        url.searchParams.set('category', cat);
-        if (q.trim()) url.searchParams.set('q', q.trim());
-        window.location.assign(url.pathname + url.search);
-      }
-      return;
-    }
-
     const base = isBrowse ? browseBase : '/';
     const url = new URL(base, window.location.origin);
     if (cat) {
@@ -378,7 +356,7 @@ export default function DirectoryGrid({
     if (q.trim()) {
       url.searchParams.set('q', q.trim());
     }
-    // Client-side URL sync without full RSC re-fetch
+    // Client-side URL sync without hard reload
     window.history.replaceState({}, '', url.pathname + url.search);
   };
 
@@ -538,11 +516,34 @@ export default function DirectoryGrid({
     </>
   );
 
+  const [activeCategoryGroup, setActiveCategoryGroup] = useState<string>('all');
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of servers) {
+      counts.set(s.category, (counts.get(s.category) || 0) + 1);
+    }
+    return counts;
+  }, [servers]);
+
+  const featuredCategoryCards = useMemo(() => {
+    const all = DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories;
+    if (activeCategoryGroup === 'all') {
+      return [...all]
+        .sort((a, b) => (categoryCounts.get(b) || 0) - (categoryCounts.get(a) || 0))
+        .slice(0, 12);
+    }
+    return all.filter((cat) => {
+      const meta = getCategoryMeta(cat);
+      return meta.group.id === activeCategoryGroup;
+    });
+  }, [activeCategoryGroup, categoryCounts, categories]);
+
   return (
     <>
       {/* Marketing hero — only on the unfiltered homepage landing */}
       {!isBrowse && !selectedCategory && (
-        <section className="container animate-fade-in delay-1 landing-hero">
+        <section className="container animate-fade-in delay-1 landing-hero" style={{ paddingBottom: '1rem' }}>
           <h1 className="text-display">
             Give your AI agents <span className="text-brand-gradient">superpowers</span>.
           </h1>
@@ -601,6 +602,103 @@ export default function DirectoryGrid({
         </section>
       )}
 
+      {/* Featured Marquee near the top of the homepage */}
+      {showDiscovery && <FeaturedMarquee servers={marqueeServers} />}
+
+      {/* Category Showcase Section (mcp.so vibe) — homepage landing only when not filtered */}
+      {!isBrowse && !selectedCategory && !searchQuery && (
+        <section className="container animate-fade-in delay-2" style={{ margin: '0 auto 2.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Grid size={20} style={{ color: 'var(--accent-color)' }} />
+                <span>Explore Categories</span>
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: '0.2rem 0 0' }}>
+                Find specialized Model Context Protocol servers grouped by ecosystem & domain
+              </p>
+            </div>
+            <Link href="/categories" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}>
+              <span>View all 50+ categories</span>
+              <ChevronRight size={14} />
+            </Link>
+          </div>
+
+          {/* Category Group Filter Tabs */}
+          <div className="directory-tags-row" style={{ marginBottom: '1.25rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+            <button
+              type="button"
+              className={`directory-tag ${activeCategoryGroup === 'all' ? 'directory-tag-active' : ''}`}
+              onClick={() => setActiveCategoryGroup('all')}
+            >
+              ✨ All Featured
+            </button>
+            {CATEGORY_GROUPS.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                className={`directory-tag ${activeCategoryGroup === g.id ? 'directory-tag-active' : ''}`}
+                onClick={() => setActiveCategoryGroup(g.id)}
+                style={{
+                  borderColor: activeCategoryGroup === g.id ? g.color : undefined,
+                  color: activeCategoryGroup === g.id ? g.color : undefined,
+                  background: activeCategoryGroup === g.id ? g.bgTint : undefined,
+                }}
+              >
+                <span aria-hidden="true">{g.emoji}</span>
+                <span>{g.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Category Showcase Cards */}
+          <div className="categories-grid">
+            {featuredCategoryCards.map((catName) => {
+              const meta = getCategoryMeta(catName);
+              const count = categoryCounts.get(catName) || 0;
+              const isSelected = selectedCategory === catName;
+              return (
+                <button
+                  key={catName}
+                  type="button"
+                  onClick={() => handleCategorySelect(isSelected ? null : catName)}
+                  className={`category-card surface-interactive ${isSelected ? 'category-card-selected' : ''}`}
+                  style={{
+                    textAlign: 'left',
+                    border: isSelected ? `2px solid ${meta.color}` : `1px solid ${meta.borderTint}`,
+                    background: isSelected ? meta.bgTint : 'var(--surface-color)',
+                    boxShadow: isSelected ? `0 0 16px ${meta.bgTint}` : undefined,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div
+                    className="category-card-emoji"
+                    aria-hidden="true"
+                    style={{
+                      background: meta.bgTint,
+                      borderColor: meta.borderTint,
+                    }}
+                  >
+                    {meta.emoji}
+                  </div>
+                  <div className="category-card-content">
+                    <h3 className="category-card-label" style={{ color: isSelected ? meta.color : 'var(--text-primary)' }}>
+                      {meta.label}
+                    </h3>
+                    <span className="category-card-count" style={{ color: 'var(--text-secondary)' }}>
+                      {count > 0 ? `${count.toLocaleString()} servers` : 'Explore tools'}
+                    </span>
+                  </div>
+                  <span className="category-card-arrow" aria-hidden="true" style={{ color: meta.color }}>
+                    →
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Top-level platform reach & social proof stats */}
       {!isBrowse && !selectedCategory && <StatsBanner stats={siteStats} />}
 
@@ -647,7 +745,6 @@ export default function DirectoryGrid({
                 <Link
                   href={browseBase}
                   onClick={(e) => {
-                    // Stay client-side on the browse page; full nav when leaving homepage category view
                     if (isBrowse) {
                       e.preventDefault();
                       clearAllFilters();
@@ -695,9 +792,6 @@ export default function DirectoryGrid({
           </div>
         </section>
       )}
-
-      {/* Marquee (above search, hidden when filtering) */}
-      {showDiscovery && <FeaturedMarquee servers={marqueeServers} />}
 
       {/* Search Bar & Filters */}
       <section
@@ -1088,7 +1182,7 @@ export default function DirectoryGrid({
                 className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
               >
                 <div className="directory-card-header">
-                  <ServerAvatar name={server.name} logoUrl={server.logoUrl} />
+                  <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} />
                   <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {isFeaturedListing(server) && (
                       <Badge
@@ -1120,7 +1214,25 @@ export default function DirectoryGrid({
                 </div>
                 <div className="directory-card-footer">
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', minWidth: 0, alignItems: 'center' }}>
-                    <Badge variant="category">{server.category}</Badge>
+                    {(() => {
+                      const catMeta = getCategoryMeta(server.category);
+                      return (
+                        <Badge
+                          variant="category"
+                          style={{
+                            background: catMeta.bgTint,
+                            color: catMeta.color,
+                            borderColor: catMeta.borderTint,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                          }}
+                        >
+                          <span aria-hidden="true">{catMeta.emoji}</span>
+                          {catMeta.label}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                   <Stats server={server} />
                 </div>
@@ -1139,7 +1251,7 @@ export default function DirectoryGrid({
                 href={`/mcp/${server.id}`}
                 className={`directory-list-row surface-interactive${isFeaturedListing(server) ? ' directory-list-row-featured' : ''}`}
               >
-                <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
+                <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} size={44} />
                 <div className="directory-list-body">
                   <div className="directory-list-title-row">
                     {(() => {
@@ -1165,7 +1277,27 @@ export default function DirectoryGrid({
                     )}
                     {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
                     <InstallReadyBadge server={server} />
-                    {!selectedCategory && <Badge variant="category">{server.category}</Badge>}
+                    {!selectedCategory && (
+                      (() => {
+                        const catMeta = getCategoryMeta(server.category);
+                        return (
+                          <Badge
+                            variant="category"
+                            style={{
+                              background: catMeta.bgTint,
+                              color: catMeta.color,
+                              borderColor: catMeta.borderTint,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                          >
+                            <span aria-hidden="true">{catMeta.emoji}</span>
+                            {catMeta.label}
+                          </Badge>
+                        );
+                      })()
+                    )}
                   </div>
                   <div className="directory-list-desc">
                     <SafeMarkdown content={server.description || 'No description provided.'} isInline />

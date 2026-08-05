@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { getCategoryMeta } from '../lib/categories';
 
 type CategoryItem = {
   name: string;
@@ -66,27 +67,43 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
 
       {/* Grid */}
       <div className="categories-grid">
-        {filtered.map((cat, i) => (
-          <Link
-            key={cat.name}
-            href={`/categories/${cat.slug}`}
-            id={cat.name}
-            className="category-card surface-interactive"
-            style={{ animationDelay: `${Math.min(i * 0.03, 0.6)}s` }}
-          >
-            <div className="category-card-emoji" aria-hidden="true">
-              {cat.emoji || cat.label.charAt(0)}
-            </div>
-            <div className="category-card-content">
-              <h3 className="category-card-label">{cat.label}</h3>
-              <span className="category-card-count">
-                {cat.count.toLocaleString()} {cat.count === 1 ? 'server' : 'servers'}
-              </span>
-            </div>
-            <span className="category-card-arrow" aria-hidden="true">→</span>
-          </Link>
-        ))}
+        {filtered.map((cat, i) => {
+          const meta = getCategoryMeta(cat.name);
+          return (
+            <Link
+              key={cat.name}
+              href={`/categories/${cat.slug}`}
+              id={cat.name}
+              className="category-card surface-interactive"
+              style={{ 
+                animationDelay: `${Math.min(i * 0.03, 0.6)}s`,
+                '--cat-color': meta.color,
+                '--cat-bg': meta.bgTint,
+                '--cat-border': meta.borderTint,
+              } as React.CSSProperties}
+            >
+              <div 
+                className="category-card-emoji" 
+                aria-hidden="true"
+                style={{
+                  background: meta.bgTint,
+                  borderColor: meta.borderTint,
+                }}
+              >
+                {meta.emoji || cat.emoji || cat.label.charAt(0)}
+              </div>
+              <div className="category-card-content">
+                <h3 className="category-card-label">{cat.label}</h3>
+                <span className="category-card-count">
+                  {cat.count.toLocaleString()} {cat.count === 1 ? 'server' : 'servers'}
+                </span>
+              </div>
+              <span className="category-card-arrow" aria-hidden="true" style={{ color: meta.color }}>→</span>
+            </Link>
+          );
+        })}
       </div>
+
 
       {filtered.length === 0 && (
         <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>
