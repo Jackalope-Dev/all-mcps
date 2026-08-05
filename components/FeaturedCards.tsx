@@ -24,7 +24,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
   const showUpsellCard = true; // Always reserve 1 slot for an open featured slot upsell if room permits up to 3 total slots
 
   return (
-    <section className="container animate-fade-in delay-2" style={{ marginBottom: '4rem' }}>
+    <section className="container animate-fade-in delay-2" style={{ marginBottom: '2.5rem' }}>
       <h2 className="text-section" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <Sparkles size={24} style={{ color: 'var(--accent-color)' }} />
         Featured Servers

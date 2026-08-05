@@ -3,6 +3,7 @@ import DirectoryGrid from '../components/DirectoryGrid';
 import { redirect } from 'next/navigation';
 import { pickDiscoveryServers } from '../lib/featured';
 import { getActiveServers } from '../lib/servers';
+import { getSiteStats } from '../lib/siteStats';
 
 export const metadata: Metadata = {
   title: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
@@ -36,6 +37,7 @@ export default async function Home({
   }
 
   const servers = await getActiveServers();
+  const siteStats = await getSiteStats(undefined, servers.length);
 
   // Newest-first so the landing slice below surfaces the most recent listings.
   const toTime = (v: unknown): number => {
@@ -95,7 +97,9 @@ export default async function Home({
         featuredCards={featuredCards}
         variant="landing"
         totalCount={servers.length}
+        siteStats={siteStats}
       />
     </main>
   );
 }
+

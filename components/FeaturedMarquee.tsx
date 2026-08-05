@@ -80,7 +80,7 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
   );
 
   return (
-    <div className="marquee-container" style={{ margin: '2rem 0 4rem 0', padding: '1rem 0' }}>
+    <div className="marquee-container" style={{ margin: '1.25rem 0 2rem 0', padding: '0.75rem 0' }}>
       <div className="marquee-content">
         <MarqueeItems />
       </div>

@@ -20,6 +20,8 @@ import { parseServerName } from '../lib/displayName';
 import { trackSearch, trackOutboundClick } from '../lib/gtag';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { ImpressionBeacon } from './ImpressionTracker';
+import { StatsBanner } from './StatsBanner';
+import type { SiteStats } from '../lib/siteStats';
 import { DIRECTORY_CATEGORIES } from '../lib/categories';
 import { compileQuery, scoreServerMatch, engagementScore } from '../lib/search';
 
@@ -92,6 +94,7 @@ export default function DirectoryGrid({
   variant = 'landing',
   totalCount,
   lazyFeedUrl,
+  siteStats,
 }: {
   initialServers: Server[];
   marqueeServers?: Server[];
@@ -108,6 +111,8 @@ export default function DirectoryGrid({
    * search/sort/filter cover everything without shipping the whole catalog in HTML.
    */
   lazyFeedUrl?: string;
+  /** Aggregate platform stats (AI system reads, monthly visitors, countries) for hero social proof. */
+  siteStats?: SiteStats;
 }) {
   const isBrowse = variant === 'browse';
   const browseBase = '/browse';
@@ -365,7 +370,8 @@ export default function DirectoryGrid({
       return;
     }
 
-    const url = new URL(browseBase, window.location.origin);
+    const base = isBrowse ? browseBase : '/';
+    const url = new URL(base, window.location.origin);
     if (cat) {
       url.searchParams.set('category', cat);
     }
@@ -377,13 +383,6 @@ export default function DirectoryGrid({
   };
 
   const handleCategorySelect = (cat: string | null) => {
-    if (!isBrowse && cat) {
-      const url = new URL(browseBase, window.location.origin);
-      url.searchParams.set('category', cat);
-      if (searchQuery.trim()) url.searchParams.set('q', searchQuery.trim());
-      window.location.assign(url.pathname + url.search);
-      return;
-    }
     setSelectedCategory(cat);
     updateUrl(cat, searchQuery);
   };
@@ -594,6 +593,9 @@ export default function DirectoryGrid({
         </section>
       )}
 
+      {/* Top-level platform reach & social proof stats */}
+      {!isBrowse && !selectedCategory && <StatsBanner stats={siteStats} />}
+
       {/* Browse page header — list-first view for all (or filtered) servers */}
       {isBrowse && !selectedCategory && (
         <section className="container animate-fade-in delay-1 directory-category-header">
@@ -693,7 +695,7 @@ export default function DirectoryGrid({
       <section
         className="container animate-fade-in delay-2"
         style={{
-          margin: isBrowse || selectedCategory ? '0 auto 2rem' : '0 auto 4rem',
+          margin: '0 auto 2rem',
           display: 'flex',
           justifyContent: 'center',
         }}
@@ -737,7 +739,7 @@ export default function DirectoryGrid({
             </select>
           </div>
 
-          {/* Active filters + quick tags */}
+          {/* Active filters + quick category tags (mcp.so vibe) */}
           <div className="directory-tags-row">
             <button
               type="button"
@@ -794,13 +796,12 @@ export default function DirectoryGrid({
               </button>
             )}
 
-            {isBrowse &&
-              !selectedCategory &&
+            {!selectedCategory &&
               topCategories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
-                  className="directory-tag"
+                  className={`directory-tag ${selectedCategory === cat ? 'directory-tag-active' : ''}`}
                   onClick={() => handleCategorySelect(cat)}
                 >
                   {cat}
