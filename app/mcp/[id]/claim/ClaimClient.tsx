@@ -460,31 +460,36 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
-        {methods.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => selectMethod(m.id)}
-            className={`directory-segmented-btn ${method === m.id ? 'is-active' : ''}`}
-            style={{
-              padding: '0.55rem 0.9rem',
-              borderRadius: '8px',
-              border: method === m.id ? '1px solid rgba(59,130,246,0.5)' : '1px solid var(--border-color)',
-              background: method === m.id ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.04)',
-              color: method === m.id ? 'var(--accent-color)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-            }}
-          >
-            {m.label}
-          </button>
-        ))}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        {methods.map((m) => {
+          const isSelected = method === m.id;
+          return (
+            <div
+              key={m.id}
+              onClick={() => selectMethod(m.id)}
+              style={{
+                padding: '1.15rem',
+                borderRadius: '12px',
+                border: isSelected ? '1px solid #00E5FF' : '1px solid var(--border-color)',
+                background: isSelected ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.02)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>{m.id === 'github' ? '🐙' : m.id === 'website_badge' ? '🌐' : '⚡'}</span>
+                {isSelected && (
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#00E5FF', background: 'rgba(0,229,255,0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                    Selected
+                  </span>
+                )}
+              </div>
+              <h4 style={{ margin: '0 0 0.35rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{m.label}</h4>
+              <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>{m.hint}</p>
+            </div>
+          );
+        })}
       </div>
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-        {methods.find((m) => m.id === method)?.hint}
-      </p>
 
       {(method === 'website_badge' || method === 'dns') && (
         <div style={{ marginBottom: '1.5rem' }}>

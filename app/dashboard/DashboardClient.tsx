@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { toast } from '@/components/ui/Toast';
 import { parsePendingRevision } from '@/lib/pendingRevision';
@@ -10,7 +10,7 @@ import type { AnalyticsSummary, ServerAnalytics } from '@/lib/analytics';
 import {
   Eye, Heart, Download, TrendingUp, TrendingDown, Minus,
   BarChart3, Search, Globe, Lock, ChevronDown, ChevronUp,
-  Activity, Zap, Sparkles, Crown, MousePointerClick,
+  Activity, Zap, Sparkles, Crown, MousePointerClick, CheckCircle2, AlertCircle, Edit3, Image as ImageIcon,
 } from 'lucide-react';
 import { PremiumUpgrade } from '@/components/PremiumUpgrade';
 
@@ -42,16 +42,25 @@ type Props = {
   initialEditId?: string | null;
 };
 
+type TabType = 'overview' | 'seo' | 'boost' | 'edit';
+
 export default function DashboardClient({ initialServers, initialAnalytics = {}, isPremium = false, initialEditId = null }: Props) {
   const [servers, setServers] = useState(initialServers);
   const [analytics, setAnalytics] = useState(initialAnalytics);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [activeTabMap, setActiveTabMap] = useState<Record<string, TabType>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailAnalytics, setDetailAnalytics] = useState<Record<string, ServerAnalytics>>({});
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', description: '', category: '', websiteUrl: '' });
   const [saving, setSaving] = useState(false);
   const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null);
+
+  // Compute aggregate stats across all claimed servers
+  const totalViews = useMemo(() => servers.reduce((acc, s) => acc + (s.views || 0), 0), [servers]);
+  const totalInstalls = useMemo(() => servers.reduce((acc, s) => acc + (s.copies || 0), 0), [servers]);
+  const totalUpvotes = useMemo(() => servers.reduce((acc, s) => acc + (s.upvotes || 0), 0), [servers]);
+  const totalApiHits = useMemo(() => Object.values(analytics).reduce((acc, a) => acc + (a.totalApiHits || 0), 0), [analytics]);
 
   const uploadLogo = async (serverId: string, file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -87,6 +96,7 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
       category: server.category,
       websiteUrl: server.websiteUrl || '',
     });
+    setActiveTabMap((prev) => ({ ...prev, [server.id]: 'edit' }));
   };
 
   const submitEdit = async () => {
@@ -112,6 +122,7 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
       );
       toast.success('Edit submitted', { description: data.message || 'Awaiting review.' });
       setEditingId(null);
+      setActiveTabMap((prev) => ({ ...prev, [editingId]: 'overview' }));
     } catch (err: any) {
       toast.error('Could not submit edit', { description: err?.message });
     } finally {
@@ -125,7 +136,6 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
     if (!target) return;
     startEdit(target);
     document.getElementById(`server-${initialEditId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // Only run once on mount — initialEditId comes from the server-rendered ?edit= param.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -154,66 +164,127 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
     }
   };
 
+  const getActiveTab = (serverId: string): TabType => {
+    if (editingId === serverId) return 'edit';
+    return activeTabMap[serverId] || 'overview';
+  };
+
+  const setTab = (serverId: string, tab: TabType) => {
+    if (tab === 'edit') {
+      const s = servers.find((srv) => srv.id === serverId);
+      if (s) startEdit(s);
+    } else {
+      if (editingId === serverId) {
+        setEditingId(null);
+      }
+    }
+    setActiveTabMap((prev) => ({ ...prev, [serverId]: tab }));
+  };
+
   if (servers.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-          You don&apos;t have any claimed listings yet.
+      <div style={emptyStateCardStyle}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🚀</div>
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+          Welcome to Your Developer Workspace
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: 520, margin: '0 auto 2rem', lineHeight: 1.6 }}>
+          Claim ownership of your Model Context Protocol servers to access detailed LLM usage analytics, earn reciprocal dofollow SEO backlinks, and boost listing discovery.
         </p>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: 420, margin: '0 auto 1.25rem', lineHeight: 1.55 }}>
-          Claim free, then add a dofollow AllMCPs badge on your site for a reciprocal SEO backlink.
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
-          <Link href="/browse" className="btn btn-primary">
-            Browse &amp; claim your MCP
-          </Link>
-          <Link href="/badge-generator" className="btn btn-secondary">
-            Badge generator
-          </Link>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', maxWidth: 840, margin: '0 auto' }}>
+          <div style={onboardingActionCardStyle}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>➕</div>
+            <h4 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Submit a New Server</h4>
+            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
+              List a new MCP server repository or product website in our directory.
+            </p>
+            <Link href="/submit" className="btn btn-primary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
+              + Submit Server
+            </Link>
+          </div>
+
+          <div style={onboardingActionCardStyle}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔎</div>
+            <h4 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Claim Existing Server</h4>
+            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
+              Find your server in the directory and claim ownership via GitHub README or DNS.
+            </p>
+            <Link href="/browse" className="btn btn-secondary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
+              Browse &amp; Claim →
+            </Link>
+          </div>
+
+          <div style={onboardingActionCardStyle}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🛡️</div>
+            <h4 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Embed SVG Badge</h4>
+            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
+              Generate dynamic SVG verification badges for your GitHub README or site.
+            </p>
+            <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
+              Badge Generator →
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
-  const needsBacklinkHelp = servers.some(
-    (s) => !s.isPremium && !s.reciprocalBadgeOk
-  );
+  const needsBacklinkHelp = servers.some((s) => !s.isPremium && !s.reciprocalBadgeOk);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Global stats banner */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+      {/* Aggregate Metrics Overview Header */}
+      <div style={globalSummaryContainerStyle}>
+        <div style={summaryMetricCardStyle}>
+          <span style={summaryLabelStyle}>Claimed Listings</span>
+          <span style={summaryValueStyle}>{servers.length}</span>
+        </div>
+        <div style={summaryMetricCardStyle}>
+          <span style={summaryLabelStyle}>Total Views</span>
+          <span style={summaryValueStyle}>{totalViews.toLocaleString()}</span>
+        </div>
+        <div style={summaryMetricCardStyle}>
+          <span style={summaryLabelStyle}>Total Installs</span>
+          <span style={summaryValueStyle}>{totalInstalls.toLocaleString()}</span>
+        </div>
+        <div style={summaryMetricCardStyle}>
+          <span style={summaryLabelStyle}>Total Upvotes</span>
+          <span style={summaryValueStyle}>{totalUpvotes.toLocaleString()}</span>
+        </div>
+        <div style={summaryMetricCardStyle}>
+          <span style={summaryLabelStyle}>API Hits (30d)</span>
+          <span style={{ ...summaryValueStyle, color: '#00E5FF' }}>{totalApiHits.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Global stats / alerts */}
       {isPremium && (
         <div style={premiumBannerStyle}>
           <Zap size={16} style={{ color: '#00E5FF' }} />
           <span style={{ fontWeight: 600, color: '#00E5FF' }}>Premium Analytics Active</span>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            — Your listings are tracked across all directory surfaces
+            — Your listings are tracked across all directory surfaces &amp; LLM agents
           </span>
         </div>
       )}
 
       {needsBacklinkHelp && (
-        <div
-          style={{
-            padding: '1rem 1.15rem',
-            borderRadius: 12,
-            border: '1px solid rgba(16,185,129,0.35)',
-            background: 'rgba(16,185,129,0.08)',
-          }}
-        >
+        <div style={backlinkAlertBannerStyle}>
           <p style={{ fontWeight: 700, color: '#34d399', marginBottom: '0.35rem', fontSize: '0.95rem' }}>
             Free dofollow backlink available
           </p>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
             For each free listing below: attach a website → verify it → place a dofollow AllMCPs badge.
-            We recheck the badge stays live. Premium listings get dofollow without a badge.
+            We recheck that the badge stays live. Premium listings get dofollow without a badge.
           </p>
         </div>
       )}
 
+      {/* Servers list with tabbed sections */}
       {servers.map((server) => {
         const pending = parsePendingRevision(server.pendingRevision);
-        const isEditing = editingId === server.id;
+        const activeTab = getActiveTab(server.id);
+        const isEditing = activeTab === 'edit';
         const isExpanded = expandedId === server.id;
         const summary = analytics[server.id];
         const detail = detailAnalytics[server.id];
@@ -222,34 +293,48 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
         return (
           <div key={server.id} id={`server-${server.id}`} style={cardStyle}>
             {/* Header row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-              <div>
-                <h3 style={{ marginBottom: '0.25rem', fontSize: '1.2rem' }}>{server.name}</h3>
-                {pending && (
-                  <p style={{ fontSize: '0.8rem', color: '#fbbf24', marginBottom: '0.5rem' }}>
-                    Awaiting review since {new Date(pending.submittedAt).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {server.logoUrl && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                {server.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={server.logoUrl}
                     alt={`${server.name} logo`}
-                    width={40}
-                    height={40}
-                    style={{ borderRadius: 8, flexShrink: 0 }}
+                    width={44}
+                    height={44}
+                    style={{ borderRadius: 10, flexShrink: 0, objectFit: 'cover' }}
                   />
+                ) : (
+                  <div style={logoPlaceholderStyle}>
+                    {server.name.charAt(0).toUpperCase()}
+                  </div>
                 )}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{server.name}</h3>
+                    <span style={categoryBadgeStyle}>{server.category}</span>
+                    {server.isPremium && <span style={premiumBadgeStyle}>★ Premium</span>}
+                    {pending && <span style={pendingBadgeStyle}>Awaiting Review</span>}
+                    {server.featuredUntil && new Date(server.featuredUntil).getTime() > Date.now() && (
+                      <span style={boostBadgeStyle}>⚡ Active Boost</span>
+                    )}
+                  </div>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    ID: <code style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{server.id}</code>
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <label
                   className="btn btn-secondary"
-                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', cursor: 'pointer' }}
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >
+                  <ImageIcon size={14} />
                   {uploadingLogoId === server.id
                     ? 'Uploading…'
                     : server.pendingLogoKey
-                    ? 'Logo pending review'
+                    ? 'Logo pending'
                     : server.logoUrl
                     ? 'Replace logo'
                     : 'Upload logo'}
@@ -265,161 +350,203 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                     }}
                   />
                 </label>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                {server.isPremium && (
-                  <span style={premiumBadgeStyle}>★ Premium</span>
-                )}
-                <button
+                <Link
+                  href={`/mcp/${server.id}`}
                   className="btn btn-secondary"
                   style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
-                  onClick={() => toggleExpand(server.id)}
                 >
-                  {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  {isExpanded ? 'Collapse' : 'Analytics'}
-                </button>
+                  View listing →
+                </Link>
+                <Link
+                  href={`/mcp/${server.id}/claim`}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
+                >
+                  Website &amp; Verification
+                </Link>
               </div>
             </div>
 
-            {/* Quick stats row — always visible */}
-            <div style={quickStatsRowStyle}>
-              <StatPill icon={<Eye size={13} />} label="Views" value={server.views || 0} />
-              <StatPill icon={<Download size={13} />} label="Installs" value={server.copies || 0} />
-              <StatPill icon={<Heart size={13} />} label="Upvotes" value={server.upvotes || 0} />
-              {summary && (
-                <>
-                  <StatPill
-                    icon={<Activity size={13} />}
-                    label="API Hits"
-                    value={summary.totalApiHits}
-                    accent
-                  />
-                  <StatPill
-                    icon={<Globe size={13} />}
-                    label="Impressions"
-                    value={summary.totalImpressions}
-                    accent
-                  />
-                  <StatPill
-                    icon={<MousePointerClick size={13} />}
-                    label="Clicks"
-                    value={summary.totalOutboundClicks || 0}
-                    accent
-                  />
-                  <TrendIndicator trend={summary.trend} />
-                </>
-              )}
-            </div>
-
-            <BacklinkStatus server={server} />
-
-            {/* Boost & Sponsorship Options */}
-            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Sparkles size={16} color="var(--accent-color)" />
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                    Boost &amp; Sponsorship Options
-                  </span>
-                </div>
-                {server.featuredUntil && new Date(server.featuredUntil).getTime() > Date.now() && (
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.6rem', borderRadius: '6px', background: 'rgba(0,229,255,0.12)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.3)' }}>
-                    ★ Active Boost until {new Date(server.featuredUntil).toLocaleDateString()}
-                  </span>
+            {/* Tab Navigation Controls */}
+            <div style={tabContainerStyle}>
+              <button
+                type="button"
+                onClick={() => setTab(server.id, 'overview')}
+                style={getTabButtonStyle(activeTab === 'overview')}
+              >
+                <BarChart3 size={15} />
+                Overview &amp; Analytics
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab(server.id, 'seo')}
+                style={getTabButtonStyle(activeTab === 'seo')}
+              >
+                <Globe size={15} />
+                SEO &amp; Dofollow Status
+                {!server.isPremium && !server.reciprocalBadgeOk && (
+                  <span style={tabBadgeAlertStyle} />
                 )}
-              </div>
-              <PremiumUpgrade serverId={server.id} listingStatus={server.status || 'active'} isPremium={server.isPremium} compact showAll />
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab(server.id, 'boost')}
+                style={getTabButtonStyle(activeTab === 'boost')}
+              >
+                <Sparkles size={15} />
+                Boost &amp; Sponsorship
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab(server.id, 'edit')}
+                style={getTabButtonStyle(activeTab === 'edit')}
+              >
+                <Edit3 size={15} />
+                {pending ? 'Edit pending draft' : 'Edit details'}
+              </button>
             </div>
 
-            {/* Expanded analytics panel */}
-            {isExpanded && (
-              <div style={{ marginTop: '1rem' }}>
-                {!server.isPremium ? (
-                  <PremiumTeaser />
-                ) : isLoadingDetail ? (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                    <Activity size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                    <p style={{ marginTop: '0.5rem' }}>Loading analytics…</p>
-                  </div>
-                ) : detail ? (
-                  detail.summary.totalApiHits === 0 && detail.summary.totalImpressions === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-                      <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
-                        Premium tracking is on — we just haven&apos;t seen API hits or directory
-                        impressions yet. Share your listing, add the AllMCPs badge to your site, and
-                        check back after agents discover you.
+            {/* TAB CONTENT: Overview & Analytics */}
+            {activeTab === 'overview' && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <div style={quickStatsRowStyle}>
+                  <StatPill icon={<Eye size={13} />} label="Views" value={server.views || 0} />
+                  <StatPill icon={<Download size={13} />} label="Installs" value={server.copies || 0} />
+                  <StatPill icon={<Heart size={13} />} label="Upvotes" value={server.upvotes || 0} />
+                  {summary && (
+                    <>
+                      <StatPill icon={<Activity size={13} />} label="API Hits" value={summary.totalApiHits} accent />
+                      <StatPill icon={<Globe size={13} />} label="Impressions" value={summary.totalImpressions} accent />
+                      <StatPill icon={<MousePointerClick size={13} />} label="Clicks" value={summary.totalOutboundClicks || 0} accent />
+                      <TrendIndicator trend={summary.trend} />
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', marginLeft: 'auto' }}
+                    onClick={() => toggleExpand(server.id)}
+                  >
+                    {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    {isExpanded ? 'Hide Deep Analytics' : 'Deep Analytics'}
+                  </button>
+                </div>
+
+                {isExpanded && (
+                  <div style={{ marginTop: '1.25rem' }}>
+                    {!server.isPremium ? (
+                      <PremiumTeaser />
+                    ) : isLoadingDetail ? (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                        <Activity size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                        <p style={{ marginTop: '0.5rem' }}>Loading analytics…</p>
+                      </div>
+                    ) : detail ? (
+                      detail.summary.totalApiHits === 0 && detail.summary.totalImpressions === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+                          <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
+                            Premium tracking is on — we just haven&apos;t seen API hits or directory impressions yet. Share your listing and check back after agents discover you.
+                          </p>
+                          <Link href={`/mcp/${server.id}`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
+                            Open public listing
+                          </Link>
+                        </div>
+                      ) : (
+                        <AnalyticsPanel detail={detail} />
+                      )
+                    ) : (
+                      <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
+                        No analytics data yet. Data will appear as LLMs and users interact with your listing.
                       </p>
-                      <Link
-                        href={`/mcp/${server.id}`}
-                        className="btn btn-secondary"
-                        style={{ fontSize: '0.85rem' }}
-                      >
-                        Open public listing
-                      </Link>
-                    </div>
-                  ) : (
-                    <AnalyticsPanel detail={detail} />
-                  )
-                ) : (
-                  <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
-                    No analytics data yet. Data will appear as LLMs and users interact with your listing.
-                  </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Edit section */}
-            {isEditing ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-                <input
-                  className="form-input"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Name"
-                />
-                <textarea
-                  className="form-input"
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Description"
-                  rows={4}
-                />
-                <input
-                  className="form-input"
-                  value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  placeholder="Category"
-                />
-                <input
-                  className="form-input"
-                  type="url"
-                  value={form.websiteUrl}
-                  onChange={(e) => setForm((f) => ({ ...f, websiteUrl: e.target.value }))}
-                  placeholder="https://yoursite.com"
-                />
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {/* TAB CONTENT: SEO & Dofollow Checklist */}
+            {activeTab === 'seo' && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <BacklinkStatus server={server} />
+              </div>
+            )}
+
+            {/* TAB CONTENT: Boost & Sponsorship */}
+            {activeTab === 'boost' && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Sparkles size={18} color="var(--accent-color)" />
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                      Listing Boost &amp; Spotlight Options
+                    </span>
+                  </div>
+                  {server.featuredUntil && new Date(server.featuredUntil).getTime() > Date.now() && (
+                    <span style={boostBadgeStyle}>
+                      ★ Active Boost until {new Date(server.featuredUntil).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                <PremiumUpgrade serverId={server.id} listingStatus={server.status || 'active'} isPremium={server.isPremium} compact showAll />
+              </div>
+            )}
+
+            {/* TAB CONTENT: Edit Details */}
+            {activeTab === 'edit' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.25rem' }}>
+                <div>
+                  <label style={fieldLabelStyle}>Server Name</label>
+                  <input
+                    className="form-input"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="Name"
+                  />
+                </div>
+                <div>
+                  <label style={fieldLabelStyle}>Description</label>
+                  <textarea
+                    className="form-input"
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Description"
+                    rows={4}
+                  />
+                </div>
+                <div>
+                  <label style={fieldLabelStyle}>Category</label>
+                  <input
+                    className="form-input"
+                    value={form.category}
+                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    placeholder="Category"
+                  />
+                </div>
+                <div>
+                  <label style={fieldLabelStyle}>Website URL</label>
+                  <input
+                    className="form-input"
+                    type="url"
+                    value={form.websiteUrl}
+                    onChange={(e) => setForm((f) => ({ ...f, websiteUrl: e.target.value }))}
+                    placeholder="https://yoursite.com"
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                   <button className="btn btn-primary" disabled={saving} onClick={submitEdit}>
                     {saving ? 'Submitting…' : pending ? 'Update pending edit' : 'Submit for review'}
                   </button>
-                  <button className="btn btn-secondary" disabled={saving} onClick={() => setEditingId(null)}>
+                  <button
+                    className="btn btn-secondary"
+                    disabled={saving}
+                    onClick={() => {
+                      setEditingId(null);
+                      setTab(server.id, 'overview');
+                    }}
+                  >
                     Cancel
                   </button>
                 </div>
-              </div>
-            ) : (
-              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button className="btn btn-secondary" style={{ fontSize: '0.85rem' }} onClick={() => startEdit(server)}>
-                  {pending ? 'Edit pending draft' : 'Edit'}
-                </button>
-                <Link href={`/mcp/${server.id}`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
-                  View listing →
-                </Link>
-                <Link href={`/mcp/${server.id}/claim`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
-                  Website &amp; verification
-                </Link>
-                <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
-                  Badge code
-                </Link>
               </div>
             )}
           </div>
@@ -437,59 +564,71 @@ function BacklinkStatus({ server }: { server: Server }) {
 
   if (dofollow) {
     return (
-      <div
-        style={{
-          marginTop: '0.85rem',
-          padding: '0.75rem 0.9rem',
-          borderRadius: 10,
-          border: '1px solid rgba(16,185,129,0.3)',
-          background: 'rgba(16,185,129,0.08)',
-          fontSize: '0.82rem',
-          color: '#34d399',
-          fontWeight: 600,
-        }}
-      >
-        Website backlink is dofollow
-        {server.isPremium ? ' (Premium)' : ' (reciprocal badge live)'}
+      <div style={backlinkActiveContainerStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+          <CheckCircle2 size={18} style={{ color: '#34d399' }} />
+          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#34d399' }}>
+            Website backlink is active dofollow
+          </span>
+        </div>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+          {server.isPremium
+            ? 'Your website link passes full SEO authority as part of your Premium Plan.'
+            : 'Your reciprocal AllMCPs badge is live and passes full SEO authority.'}
+        </p>
       </div>
     );
   }
 
   const steps = [
-    { done: hasWebsite, label: 'Website URL on listing' },
-    { done: verified, label: 'Website verified (badge or DNS)' },
+    { done: hasWebsite, label: 'Website URL added to listing' },
+    { done: verified, label: 'Website ownership verified (badge, meta tag, or DNS)' },
     { done: Boolean(server.reciprocalBadgeOk), label: 'Dofollow AllMCPs badge live on your site' },
   ];
 
   return (
-    <div
-      style={{
-        marginTop: '0.85rem',
-        padding: '0.85rem 0.95rem',
-        borderRadius: 10,
-        border: '1px solid rgba(0,229,255,0.28)',
-        background: 'rgba(0,229,255,0.05)',
-      }}
-    >
-      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#00E5FF', marginBottom: '0.45rem' }}>
-        Free dofollow not active yet
+    <div style={backlinkPendingContainerStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+        <AlertCircle size={18} style={{ color: '#00E5FF' }} />
+        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#00E5FF' }}>
+          Free dofollow backlink setup checklist
+        </span>
+      </div>
+      <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '0.85rem', lineHeight: 1.5 }}>
+        Complete these 3 steps to convert your listing&apos;s website link into a reciprocal dofollow backlink:
       </p>
-      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-        {steps.map((s) => (
-          <li key={s.label}>
-            <span style={{ color: s.done ? '#34d399' : 'var(--text-secondary)', marginRight: 6 }}>
-              {s.done ? '✓' : '○'}
+      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+        {steps.map((s, idx) => (
+          <li key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                background: s.done ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)',
+                color: s.done ? '#34d399' : 'var(--text-secondary)',
+                border: `1px solid ${s.done ? 'rgba(52,211,153,0.4)' : 'var(--border-color)'}`,
+              }}
+            >
+              {s.done ? '✓' : idx + 1}
             </span>
-            {s.label}
+            <span style={{ color: s.done ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: s.done ? 600 : 400 }}>
+              {s.label}
+            </span>
           </li>
         ))}
       </ul>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <Link href={`/mcp/${server.id}/claim`} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
-          Complete verification
+        <Link href={`/mcp/${server.id}/claim`} className="btn btn-primary" style={{ fontSize: '0.825rem', padding: '0.45rem 0.85rem' }}>
+          Complete verification →
         </Link>
-        <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
-          Copy badge
+        <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.825rem', padding: '0.45rem 0.85rem' }}>
+          Copy badge snippet
         </Link>
       </div>
     </div>
@@ -504,11 +643,11 @@ function StatPill({ icon, label, value, accent }: { icon: React.ReactNode; label
       display: 'flex', alignItems: 'center', gap: '0.35rem',
       fontSize: '0.8rem', color: accent ? '#00E5FF' : 'var(--text-secondary)',
       background: accent ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.03)',
-      padding: '0.3rem 0.6rem', borderRadius: '8px',
+      padding: '0.35rem 0.65rem', borderRadius: '8px',
       border: `1px solid ${accent ? 'rgba(0,229,255,0.2)' : 'var(--border-color)'}`,
     }}>
       {icon}
-      <span style={{ fontWeight: 600, color: accent ? '#00E5FF' : 'var(--text-primary)' }}>
+      <span style={{ fontWeight: 700, color: accent ? '#00E5FF' : 'var(--text-primary)' }}>
         {value.toLocaleString()}
       </span>
       <span>{label}</span>
@@ -542,14 +681,9 @@ function PremiumTeaser() {
       background: 'linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,123,255,0.04))',
       padding: '2rem', textAlign: 'center',
     }}>
-      <div style={{
-        position: 'absolute', inset: 0, opacity: 0.15, filter: 'blur(6px)',
-        background: 'repeating-linear-gradient(90deg, #00E5FF 0px, #00E5FF 2px, transparent 2px, transparent 20px)',
-      }} />
-
       <Lock size={32} style={{ color: '#00E5FF', marginBottom: '0.75rem', position: 'relative' }} />
-      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', position: 'relative' }}>Unlock Premium Analytics</h4>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '440px', margin: '0 auto 1rem', lineHeight: 1.55, position: 'relative' }}>
+      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', position: 'relative', color: 'var(--text-primary)' }}>Unlock Premium Analytics</h4>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '460px', margin: '0 auto 1rem', lineHeight: 1.55, position: 'relative' }}>
         Free dashboards show views, installs, and upvotes. Premium shows{' '}
         <strong style={{ color: 'var(--text-primary)' }}>which LLMs &amp; agents</strong> hit your
         listing, <strong style={{ color: 'var(--text-primary)' }}>where</strong> you appear in the
@@ -681,7 +815,7 @@ function CallerBar({ caller, hits, pct }: { caller: CallerClass; hits: number; p
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.2rem' }}>
-        <span style={{ fontWeight: 600 }}>{label}</span>
+        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
         <span style={{ color: 'var(--text-secondary)' }}>{hits.toLocaleString()} ({pct}%)</span>
       </div>
       <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
@@ -702,7 +836,7 @@ function SurfaceBar({ surface, impressions, total }: { surface: ImpressionSurfac
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.2rem' }}>
-        <span style={{ fontWeight: 600 }}>{label}</span>
+        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
         <span style={{ color: 'var(--text-secondary)' }}>{impressions.toLocaleString()} ({pct}%)</span>
       </div>
       <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
@@ -735,7 +869,6 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
     .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
     .join(' ');
 
-  // Area fill
   const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${height - padding} L ${padding} ${height - padding} Z`;
 
   return (
@@ -752,7 +885,6 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
         </defs>
         <path d={areaD} fill="url(#sparkGrad)" />
         <path d={pathD} fill="none" stroke="#00E5FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Hover dots */}
         {points.map((p, i) => (
           <circle key={i} cx={p.x} cy={p.y} r="3" fill="#00E5FF" opacity="0" style={{ transition: 'opacity 0.2s' }}>
             <title>{labels[i]}: {data[i]} hits</title>
@@ -770,11 +902,146 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
 
 /* ─── Styles ─── */
 
-const cardStyle: CSSProperties = {
+const globalSummaryContainerStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+  gap: '1rem',
+};
+
+const summaryMetricCardStyle: CSSProperties = {
   background: 'var(--card-bg)',
   border: '1px solid var(--border-color)',
   borderRadius: '12px',
+  padding: '1rem 1.25rem',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.35rem',
+};
+
+const summaryLabelStyle: CSSProperties = {
+  fontSize: '0.75rem',
+  color: 'var(--text-secondary)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  fontWeight: 600,
+};
+
+const summaryValueStyle: CSSProperties = {
+  fontSize: '1.5rem',
+  fontWeight: 800,
+  color: 'var(--text-primary)',
+};
+
+const cardStyle: CSSProperties = {
+  background: 'var(--card-bg)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '14px',
   padding: '1.5rem',
+};
+
+const logoPlaceholderStyle: CSSProperties = {
+  width: 44,
+  height: 44,
+  borderRadius: 10,
+  background: 'rgba(0,229,255,0.1)',
+  border: '1px solid rgba(0,229,255,0.25)',
+  color: '#00E5FF',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontWeight: 800,
+  fontSize: '1.2rem',
+  flexShrink: 0,
+};
+
+const categoryBadgeStyle: CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  padding: '0.25rem 0.6rem',
+  borderRadius: '6px',
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid var(--border-color)',
+  color: 'var(--text-secondary)',
+};
+
+const pendingBadgeStyle: CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  padding: '0.25rem 0.6rem',
+  borderRadius: '6px',
+  background: 'rgba(251,191,36,0.12)',
+  border: '1px solid rgba(251,191,36,0.3)',
+  color: '#fbbf24',
+};
+
+const boostBadgeStyle: CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  padding: '0.25rem 0.6rem',
+  borderRadius: '6px',
+  background: 'rgba(0,229,255,0.12)',
+  border: '1px solid rgba(0,229,255,0.3)',
+  color: '#00E5FF',
+};
+
+const premiumBadgeStyle: CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  color: '#00E5FF',
+  background: 'rgba(0,229,255,0.12)',
+  border: '1px solid rgba(0,229,255,0.3)',
+  borderRadius: '6px',
+  padding: '0.25rem 0.6rem',
+  whiteSpace: 'nowrap',
+};
+
+const tabContainerStyle: CSSProperties = {
+  display: 'flex',
+  gap: '0.4rem',
+  borderBottom: '1px solid var(--border-color)',
+  paddingBottom: '0.5rem',
+  overflowX: 'auto',
+};
+
+function getTabButtonStyle(isActive: boolean): CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+    padding: '0.45rem 0.85rem',
+    borderRadius: '8px',
+    border: 'none',
+    background: isActive ? 'rgba(0,229,255,0.12)' : 'transparent',
+    color: isActive ? '#00E5FF' : 'var(--text-secondary)',
+    fontWeight: isActive ? 700 : 500,
+    fontSize: '0.825rem',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
+  };
+}
+
+const tabBadgeAlertStyle: CSSProperties = {
+  width: 6,
+  height: 6,
+  borderRadius: '50%',
+  background: '#34d399',
+  display: 'inline-block',
+};
+
+const quickStatsRowStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.5rem',
+  alignItems: 'center',
+};
+
+const fieldLabelStyle: CSSProperties = {
+  display: 'block',
+  fontSize: '0.85rem',
+  fontWeight: 600,
+  color: 'var(--text-secondary)',
+  marginBottom: '0.4rem',
 };
 
 const premiumBannerStyle: CSSProperties = {
@@ -787,23 +1054,25 @@ const premiumBannerStyle: CSSProperties = {
   border: '1px solid rgba(0,229,255,0.2)',
 };
 
-const premiumBadgeStyle: CSSProperties = {
-  fontSize: '0.7rem',
-  fontWeight: 700,
-  color: '#00E5FF',
-  background: 'rgba(0,229,255,0.12)',
-  border: '1px solid rgba(0,229,255,0.3)',
-  borderRadius: '6px',
-  padding: '0.2rem 0.5rem',
-  whiteSpace: 'nowrap',
+const backlinkAlertBannerStyle: CSSProperties = {
+  padding: '1rem 1.15rem',
+  borderRadius: 12,
+  border: '1px solid rgba(16,185,129,0.35)',
+  background: 'rgba(16,185,129,0.08)',
 };
 
-const quickStatsRowStyle: CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '0.5rem',
-  alignItems: 'center',
-  marginTop: '0.75rem',
+const backlinkActiveContainerStyle: CSSProperties = {
+  padding: '1rem 1.15rem',
+  borderRadius: 12,
+  border: '1px solid rgba(16,185,129,0.35)',
+  background: 'rgba(16,185,129,0.08)',
+};
+
+const backlinkPendingContainerStyle: CSSProperties = {
+  padding: '1.15rem',
+  borderRadius: 12,
+  border: '1px solid rgba(0,229,255,0.28)',
+  background: 'rgba(0,229,255,0.05)',
 };
 
 const panelCardStyle: CSSProperties = {
@@ -820,6 +1089,7 @@ const panelTitleStyle: CSSProperties = {
   fontSize: '0.9rem',
   fontWeight: 700,
   marginBottom: '1rem',
+  color: 'var(--text-primary)',
 };
 
 const queryChipStyle: CSSProperties = {
@@ -830,4 +1100,23 @@ const queryChipStyle: CSSProperties = {
   border: '1px solid rgba(0,229,255,0.15)',
   color: 'var(--text-secondary)',
   whiteSpace: 'nowrap',
+};
+
+const emptyStateCardStyle: CSSProperties = {
+  textAlign: 'center',
+  padding: '3.5rem 1.5rem',
+  background: 'var(--card-bg)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '16px',
+};
+
+const onboardingActionCardStyle: CSSProperties = {
+  background: 'rgba(255,255,255,0.02)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '12px',
+  padding: '1.25rem',
+  textAlign: 'left',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between',
 };

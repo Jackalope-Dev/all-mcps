@@ -8,7 +8,7 @@ import { engagementScore, buildAiSearchText } from './search';
 import { resolveInstallConfig } from './installConfig';
 import { parseStringArray } from './aiContent';
 
-export type ServerTool = { name: string; description?: string };
+export type ServerTool = { name: string; description?: string; parameters?: Record<string, unknown> };
 
 /** Parse the `tools` column (JSON string) into a typed array, tolerating bad data. */
 export function parseServerTools(raw: unknown): ServerTool[] {
@@ -19,7 +19,11 @@ export function parseServerTools(raw: unknown): ServerTool[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((t) => t && typeof t.name === 'string')
-      .map((t) => ({ name: String(t.name), description: t.description ? String(t.description) : undefined }));
+      .map((t) => ({
+        name: String(t.name),
+        description: t.description ? String(t.description) : undefined,
+        parameters: t.parameters || t.inputSchema || undefined,
+      }));
   } catch {
     return [];
   }

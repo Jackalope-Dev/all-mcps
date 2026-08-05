@@ -28,6 +28,7 @@ import { parseServerName } from '../../../lib/displayName';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 import { bestTopicForCategory } from '../../../lib/bestTopics';
 import { categorySlug } from '../../../lib/categories';
+import { ToolSchemaInspector } from '../../../components/ui/ToolSchemaInspector';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
@@ -602,30 +603,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <AgentPromptButton serverId={server.id} serverName={server.name} />
           </div>
 
-          {server.tools && server.tools.length > 0 && (
-            <div style={{ marginBottom: '3rem' }}>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Wrench size={20} /> Tools ({server.tools.length})
-              </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-                Live capabilities reported by this server over MCP.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem' }}>
-                {server.tools.map((tool) => (
-                  <div key={tool.name} className="surface" style={{ padding: '1rem' }}>
-                    <code style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-color)', wordBreak: 'break-word' }}>
-                      {tool.name}
-                    </code>
-                    {tool.description && (
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.4rem 0 0', lineHeight: 1.45 }}>
-                        {tool.description}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <ToolSchemaInspector
+            tools={server.tools}
+            aiFeatures={server.aiFeatures}
+            aiUseCases={server.aiUseCases}
+            serverName={displayName}
+          />
 
           <div>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Documentation Overview</h2>

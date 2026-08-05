@@ -76,10 +76,29 @@ export default async function LoginPage({
 
         {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
 
-        <button type="submit" className="btn btn-primary btn-full">
-          Send Magic Link
+        <button type="submit" className="btn btn-primary btn-full" style={{ padding: '0.65rem 1rem', fontSize: '0.95rem' }}>
+          Send Magic Link →
         </button>
       </form>
+
+      <div
+        style={{
+          marginTop: '2rem',
+          paddingTop: '1.5rem',
+          borderTop: '1px solid var(--border-color)',
+          textAlign: 'left',
+        }}
+      >
+        <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Developer Dashboard Features
+        </h4>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+          <li>✓ <strong>Claim &amp; Edit Listings</strong> — Update metadata and verify ownership.</li>
+          <li>✓ <strong>LLM Usage Analytics</strong> — Monitor API hits, impressions, and caller breakdown.</li>
+          <li>✓ <strong>Reciprocal Dofollow Backlinks</strong> — Pass ranking signals to your product site.</li>
+          <li>✓ <strong>Spotlight Boosts</strong> — Feature your MCP at the top of search and category discovery.</li>
+        </ul>
+      </div>
     </PageShell>
   );
 }

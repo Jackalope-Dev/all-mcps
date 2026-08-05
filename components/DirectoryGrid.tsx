@@ -42,6 +42,7 @@ type Server = {
   /** high | medium | low — from health cron / install resolver. */
   installConfidence?: string | null;
   installKind?: string | null;
+  installCommand?: string | null;
   /** Space-joined tool names for search recall (from directory feed). */
   toolText?: string | null;
   /** Bounded AI search text (summary + use cases + features) for intent-query recall. */
@@ -483,6 +484,51 @@ export default function DirectoryGrid({
     );
   };
 
+  const TransportBadge = ({ server }: { server: Server }) => {
+    const isRemote = server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com'));
+    return (
+      <Badge
+        variant="category"
+        style={{
+          background: isRemote ? 'rgba(0, 229, 255, 0.1)' : 'rgba(255, 255, 255, 0.04)',
+          color: isRemote ? '#00E5FF' : 'var(--text-secondary)',
+          borderColor: isRemote ? 'rgba(0, 229, 255, 0.3)' : 'var(--border-color)',
+          fontSize: '0.68rem',
+        }}
+      >
+        {isRemote ? 'SSE' : 'STDIO'}
+      </Badge>
+    );
+  };
+
+  const RuntimeBadge = ({ server }: { server: Server }) => {
+    const cmd = (server.installCommand || '').toLowerCase();
+    const desc = (server.description || '').toLowerCase();
+    const name = (server.name || '').toLowerCase();
+
+    let label = 'Node';
+    if (cmd.includes('uvx') || cmd.includes('python') || cmd.includes('pip') || desc.includes('python') || name.includes('py')) {
+      label = 'Python';
+    } else if (cmd.includes('docker') || desc.includes('docker')) {
+      label = 'Docker';
+    } else if (cmd.includes('go') || desc.includes('golang')) {
+      label = 'Go';
+    }
+
+    return (
+      <Badge
+        variant="category"
+        style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          color: 'var(--text-secondary)',
+          fontSize: '0.68rem',
+        }}
+      >
+        {label}
+      </Badge>
+    );
+  };
+
   const resultSubtitle = (
     <>
       Showing{' '}
@@ -853,6 +899,26 @@ export default function DirectoryGrid({
               ))}
             </div>
 
+            <div className="directory-segmented" role="group" aria-label="Transport filter">
+              {(
+                [
+                  ['all', 'All Transports'],
+                  ['stdio', 'STDIO'],
+                  ['remote', 'SSE / Remote'],
+                ] as const
+              ).map(([tr, label]) => (
+                <button
+                  key={tr}
+                  type="button"
+                  onClick={() => setSelectedTransport(tr)}
+                  className={`directory-segmented-btn ${selectedTransport === tr ? 'is-active' : ''}`}
+                  aria-pressed={selectedTransport === tr}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <div className="directory-segmented" role="group" aria-label="Sort order">
               {(
                 [
@@ -1056,8 +1122,10 @@ export default function DirectoryGrid({
                   <SafeMarkdown content={server.description || 'No description provided.'} isInline />
                 </div>
                 <div className="directory-card-footer">
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', minWidth: 0, alignItems: 'center' }}>
                     <Badge variant="category">{server.category}</Badge>
+                    <TransportBadge server={server} />
+                    <RuntimeBadge server={server} />
                   </div>
                   <Stats server={server} />
                 </div>

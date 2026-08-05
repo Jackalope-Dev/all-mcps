@@ -1,5 +1,48 @@
 [
   {
+    "id": "allmcps-server",
+    "name": "allmcps-server",
+    "url": "https://github.com/Jackalope-Dev/all-mcps/tree/main/mcp-server",
+    "description": "Official AllMCPs Meta MCP Server — allows AI agents to submit new MCP servers, query directory listings, and check claim verification status directly over MCP.",
+    "category": "🛠️ Development & Coding",
+    "isOfficial": true,
+    "isPremium": true,
+    "websiteVerified": true,
+    "installKind": "stdio",
+    "installCommand": "npx",
+    "installPackage": "allmcps-server",
+    "installConfidence": "high",
+    "tools": [
+      {
+        "name": "submit_mcp",
+        "description": "Submit a new Model Context Protocol (MCP) server to the AllMCPs directory.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string", "description": "The GitHub repository URL or website of the MCP server." },
+            "name": { "type": "string", "description": "The name of the MCP server." },
+            "email": { "type": "string", "description": "Email address for submission confirmation and listing claim link." },
+            "description": { "type": "string", "description": "Optional. Brief description of what the server does." },
+            "category": { "type": "string", "description": "Optional. The category of the server." }
+          },
+          "required": ["url", "name", "email"]
+        }
+      }
+    ],
+    "aiSummary": "Official AllMCPs meta server enabling AI agents to submit, query, and manage directory listings programmatically.",
+    "aiOverview": "The AllMCPs meta server provides tools for AI coding agents to discover, query, and submit MCP server repositories to AllMCPs.com directly over standard MCP transport.",
+    "aiUseCases": [
+      "Submit newly built MCP servers to AllMCPs programmatically from CLI agents",
+      "Check listing claim and verification status",
+      "Retrieve structured directory data for agent context"
+    ],
+    "aiFeatures": [
+      "submit_mcp: Programmatic directory submission tool",
+      "Automatic claim URL & README badge markdown generation",
+      "Compatible with Claude Desktop, Cursor, Windsurf, and Cline"
+    ]
+  },
+  {
     "id": "-agentfund-mcp",
     "name": "@agentfund/mcp",
     "url": "https://github.com/agentIgris/agentfund",

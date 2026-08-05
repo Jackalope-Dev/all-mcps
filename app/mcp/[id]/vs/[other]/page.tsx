@@ -39,11 +39,16 @@ function installSummary(s: Server): string {
 }
 
 function toolNames(s: Server, max = 6): string[] {
-  if (!s.tools?.length) return [];
-  return s.tools
-    .map((t) => t.name)
-    .filter(Boolean)
-    .slice(0, max);
+  if (s.tools?.length) {
+    return s.tools
+      .map((t) => t.name)
+      .filter(Boolean)
+      .slice(0, max);
+  }
+  if (s.aiFeatures?.length) {
+    return s.aiFeatures.slice(0, max);
+  }
+  return [];
 }
 
 export async function generateMetadata({

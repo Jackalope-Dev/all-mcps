@@ -104,11 +104,16 @@ export default async function DashboardPage({
   return (
     <main className="page-shell page-shell--content animate-fade-in">
       <div className="page-shell-inner">
-        <header className="page-header">
-          <h1 className="text-page-title">My listings</h1>
-          <p className="text-lead">
-            Edits go live after a quick review. Complete free dofollow on each listing with a verified site badge.
-          </p>
+        <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 className="text-page-title">Developer Dashboard</h1>
+            <p className="text-lead" style={{ margin: 0 }}>
+              Manage your claimed MCP servers, track LLM usage analytics, and optimize backlink health.
+            </p>
+          </div>
+          <a href="/submit" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+            <span>+</span> Submit New Server
+          </a>
         </header>
         <DashboardClient
           initialServers={ownedServers as any}

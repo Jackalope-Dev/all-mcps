@@ -379,22 +379,23 @@ export function SubmitForm() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+      {/* AI Agent Automated Submission Prompt Banner */}
       <div
         style={{
           background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
           border: '1px solid rgba(0, 229, 255, 0.3)',
-          borderRadius: '12px',
-          padding: '1.25rem',
+          borderRadius: '14px',
+          padding: '1.25rem 1.5rem',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.75rem',
         }}
       >
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.95rem' }}>
-            <span style={{ fontSize: '1.25rem' }}>🤖</span>
-            <span>Let your AI Agent submit this repository automatically!</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.975rem' }}>
+            <span style={{ fontSize: '1.35rem' }}>🤖</span>
+            <span>Automate Submission with AI Agents</span>
           </div>
           <button
             type="button"
@@ -403,116 +404,200 @@ export function SubmitForm() {
               background: '#00E5FF',
               color: '#090d16',
               border: 'none',
-              borderRadius: '6px',
-              padding: '0.45rem 0.85rem',
+              borderRadius: '8px',
+              padding: '0.5rem 0.95rem',
               fontSize: '0.825rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.35rem',
-              boxShadow: '0 2px 8px rgba(0, 229, 255, 0.2)',
+              gap: '0.4rem',
+              boxShadow: '0 2px 8px rgba(0, 229, 255, 0.25)',
+              transition: 'transform 0.15s ease',
             }}
           >
             📋 Copy Agent Prompt
           </button>
         </div>
-        <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          Paste this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your MCP project repository. Your agent will extract metadata and submit to AllMCPs automatically!
+        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+          Paste this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your MCP project repository. Your AI agent will parse your repository metadata and submit automatically!
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      {/* Visual Step Indicator */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.5rem',
+          padding: '0.85rem 1.15rem',
+          borderRadius: '12px',
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid var(--border-color)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={stepNumberStyle}>1</span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>URL &amp; Auto-Prefill</span>
+        </div>
+        <span style={{ color: 'var(--border-color)', fontSize: '0.85rem' }}>→</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={stepNumberStyle}>2</span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Listing Details</span>
+        </div>
+        <span style={{ color: 'var(--border-color)', fontSize: '0.85rem' }}>→</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={stepNumberStyle}>3</span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Security &amp; Submit</span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+        {/* Step 1 Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <span style={sectionBadgeStyle}>Step 1</span>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Primary Repository or Website URL</h3>
+          </div>
           <Input
             name="url"
-            label="Repository or website URL"
-            placeholder="https://github.com/... or https://yoursite.com"
+            label="GitHub Repository or Website URL"
+            placeholder="https://github.com/username/repo or https://yoursite.com"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', marginTop: '-0.25rem' }}>
             <Button
               type="button"
               variant="secondary"
               disabled={prefillLoading}
               onClick={() => runPrefill(url || websiteUrl)}
-              style={{ fontSize: '0.85rem', padding: '0.5rem 0.9rem' }}
+              style={{ fontSize: '0.85rem', padding: '0.45rem 0.95rem' }}
             >
-              {prefillLoading ? 'Fetching…' : 'Prefill from URL'}
+              ⚡ {prefillLoading ? 'Fetching Metadata…' : 'Auto-Prefill Form'}
             </Button>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Works with GitHub repos or any public website (title + meta description).
+            <span style={{ fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
+              Automatically populates title, description, category, and website from GitHub or page metadata.
             </span>
           </div>
         </div>
 
-        <Input name="name" label="Server Name" placeholder="e.g., GitHub MCP" value={name} onChange={(e) => setName(e.target.value)} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <Input
-            name="email"
-            label="Your email"
-            placeholder="you@example.com"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            We&apos;ll email you about your listing status and occasional offers.
-          </p>
-        </div>
-        <Input
-          name="websiteUrl"
-          label="Website (optional if repo is the main link)"
-          placeholder="https://yoursite.com"
-          type="url"
-          value={websiteUrl}
-          onChange={(e) => setWebsiteUrl(e.target.value)}
-        />
-        <p style={{ margin: '-0.75rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          Free listings show website links with <strong>nofollow</strong>. Premium adds a <strong>dofollow</strong>{' '}
-          backlink. GitHub is optional — website-only MCP products are welcome.
-        </p>
+        {/* Step 2 Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <span style={sectionBadgeStyle}>Step 2</span>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Details &amp; Contact</h3>
+          </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Short Description</label>
-          <textarea
-            name="description"
-            className="form-input"
-            rows={3}
-            placeholder="What this server does"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+          <Input name="name" label="Server Name" placeholder="e.g., GitHub MCP" value={name} onChange={(e) => setName(e.target.value)} required />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <Input
+              name="email"
+              label="Contact Email Address"
+              placeholder="you@example.com"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
+              We&apos;ll email you about review status, direct claim link, and status updates.
+            </p>
+          </div>
+
+          <div>
+            <Input
+              name="websiteUrl"
+              label="Website URL (optional if GitHub repository is the main link)"
+              placeholder="https://yoursite.com"
+              type="url"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+            />
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Free listings show website links with <strong>nofollow</strong>. Place a badge or upgrade to Premium for a <strong>dofollow</strong> reciprocal link.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Short Description</label>
+            <textarea
+              name="description"
+              className="form-input"
+              rows={3}
+              placeholder="What tools or capabilities this server exposes to LLMs and agents..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <label htmlFor="submit-category" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              Category
+            </label>
+            <select
+              id="submit-category"
+              name="category"
+              className="form-input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            >
+              {DIRECTORY_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label htmlFor="submit-category" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
-            Category
-          </label>
-          <select
-            id="submit-category"
-            name="category"
-            className="form-input"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
+        {/* Step 3 Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <span style={sectionBadgeStyle}>Step 3</span>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Security Check &amp; Submission</h3>
+          </div>
+
+          <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />
+
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={status === 'loading'}
+            style={{ marginTop: '0.5rem', padding: '0.65rem 1.5rem', fontSize: '0.95rem', alignSelf: 'flex-start' }}
           >
-            {DIRECTORY_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+            {status === 'loading' ? 'Submitting Server...' : 'Submit Server to AllMCPs →'}
+          </Button>
         </div>
-
-        <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />
-
-        <Button variant="primary" type="submit" disabled={status === 'loading'} style={{ marginTop: '1rem', alignSelf: 'flex-start' }}>
-          {status === 'loading' ? 'Submitting...' : 'Submit Server'}
-        </Button>
       </form>
     </div>
   );
 }
+
+const stepNumberStyle: React.CSSProperties = {
+  width: 22,
+  height: 22,
+  borderRadius: '50%',
+  background: 'rgba(0,229,255,0.12)',
+  border: '1px solid rgba(0,229,255,0.3)',
+  color: '#00E5FF',
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const sectionBadgeStyle: React.CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  padding: '0.2rem 0.5rem',
+  borderRadius: '6px',
+  background: 'rgba(0,229,255,0.1)',
+  border: '1px solid rgba(0,229,255,0.25)',
+  color: '#00E5FF',
+};
