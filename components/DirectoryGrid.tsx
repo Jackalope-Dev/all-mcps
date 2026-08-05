@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -568,8 +568,8 @@ export default function DirectoryGrid({
             <Link href="/browse" className="btn btn-primary btn-lg">
               Browse directory
             </Link>
-            <Link href="/submit" className="btn btn-secondary">
-              Submit your MCP
+            <Link href="/submit" className="btn btn-lg btn-submit-noticeable">
+              <Sparkles size={16} /> Submit your MCP
             </Link>
           </div>
           <div

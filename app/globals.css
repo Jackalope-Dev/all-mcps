@@ -1230,6 +1230,22 @@ p {
   border-color: var(--border-color);
 }
 
+.btn-submit-noticeable {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.18), rgba(0, 123, 255, 0.15));
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  color: #00e5ff;
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.2);
+  font-weight: 700;
+}
+
+.btn-submit-noticeable:hover {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(0, 123, 255, 0.25));
+  border-color: #00e5ff;
+  color: #ffffff;
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.4);
+  transform: translateY(-2px);
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
@@ -1265,11 +1281,13 @@ p {
 }
 
 .search-input {
-  padding: 1rem 1.5rem;
+  height: 3.25rem;
+  padding: 0 1.25rem;
   font-size: 1rem;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   background-color: var(--bg-elevated);
+  box-sizing: border-box;
 }
 
 .card-hoverable {
@@ -2034,12 +2052,17 @@ nav[aria-label="Table of contents"] {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
-  align-items: stretch;
+  align-items: center;
+}
+
+.directory-filters-row .form-field {
+  height: 3.25rem;
 }
 
 .directory-category-select {
   flex-grow: 1;
-  padding: 1.25rem 2.75rem 1.25rem 1.5rem !important;
+  height: 3.25rem !important;
+  padding: 0 2.75rem 0 1.25rem !important;
   font-size: 1rem !important;
   border-radius: var(--radius-lg) !important;
   box-shadow: var(--shadow-sm);
@@ -2051,10 +2074,10 @@ nav[aria-label="Table of contents"] {
   background-repeat: no-repeat !important;
   background-position: right 1rem center !important;
   color: var(--text-primary);
-  height: auto;
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
+  box-sizing: border-box !important;
 }
 
 .directory-tags-row {

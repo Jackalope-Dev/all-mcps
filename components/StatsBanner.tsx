@@ -68,42 +68,11 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
           </span>
         )}
 
-        {categoryCount > 0 && (
+        {totalViews > 0 && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{categoryCount}</strong> Categories
-          </span>
-        )}
-
-        {toolsIndexed > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <Wrench size={13} style={{ color: '#38bdf8' }} />
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(toolsIndexed)}</strong> Agent Tools
-          </span>
-        )}
-
-        {totalGithubStars > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <Star size={13} style={{ color: '#fbbf24' }} />
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalGithubStars)}</strong> GitHub Stars
-          </span>
-        )}
-
-        {totalNpmDownloads > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <Download size={13} style={{ color: '#a78bfa' }} />
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalNpmDownloads)}</strong> npm Downloads/mo
-          </span>
-        )}
-
-        {verifiedCount > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <ShieldCheck size={14} style={{ color: '#34d399' }} />
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{verifiedCount}</strong> Verified
+            <Eye size={13} style={{ color: '#38bdf8' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalViews)}</strong> Views
           </span>
         )}
 
@@ -120,30 +89,6 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
             <Globe size={14} style={{ color: '#60a5fa' }} />
             <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{countries}</strong> Countries
-          </span>
-        )}
-
-        {totalViews > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <Eye size={13} style={{ color: '#94a3b8' }} />
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalViews)}</strong> Views
-          </span>
-        )}
-
-        {totalCopies > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <Download size={13} style={{ color: '#34d399' }} />
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalCopies)}</strong> Config Copies
-          </span>
-        )}
-
-        {totalUpvotes > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <ThumbsUp size={13} style={{ color: '#f43f5e' }} />
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalUpvotes)}</strong> Upvotes
           </span>
         )}
       </div>

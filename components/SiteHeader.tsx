@@ -111,7 +111,7 @@ export function SiteHeader() {
               </Link>
             )}
             <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
-              {ctaLabel}
+              <Sparkles size={13} /> {ctaLabel}
             </Button>
           </nav>
 
