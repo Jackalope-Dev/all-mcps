@@ -296,8 +296,9 @@ export default function MCPSecurityPage() {
 
               <p style={{ marginTop: '2rem' }}>
                 <strong>Next steps:</strong> new to the protocol? Read <Link href="/what-is-mcp">What is an MCP?</Link>{' '}
-                Ready to connect one safely? Follow the <Link href="/guide">LLM Agents Setup Guide</Link>. Building your
-                own server? See <Link href="/build-mcp-server">How to Build an MCP Server</Link>, or browse all{' '}
+                Ready to connect one safely? Follow the <Link href="/guide">LLM Agents Setup Guide</Link>. Building or deploying a
+                remote server? See <Link href="/build-mcp-server">How to Build an MCP Server</Link> and{' '}
+                <Link href="/deploy-mcp-server">Deploying Remote MCP Servers</Link>, or browse all{' '}
                 <Link href="/guides">MCP guides</Link>.
               </p>
             </div>

@@ -38,6 +38,14 @@ export const metadata: Metadata = {
     "Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.",
   metadataBase: new URL("https://allmcps.com"),
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/logo-icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/logo-icon.png",
+  },
   openGraph: {
     title: "AllMCPs | Directory for Model Context Protocol Servers",
     description:

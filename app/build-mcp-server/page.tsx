@@ -525,6 +525,9 @@ export default {
                   <Link href="/guide">LLM Agents Guide</Link>.
                 </li>
                 <li>
+                  Ready to take your server to production? Read our <Link href="/deploy-mcp-server">Deploying &amp; Hosting Remote MCP Servers Guide</Link>.
+                </li>
+                <li>
                   Ready to find inspiration? <Link href="/browse">Browse the directory</Link> or explore by{' '}
                   <Link href="/categories">category</Link>.
                 </li>

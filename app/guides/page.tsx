@@ -1,26 +1,26 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Layers, Key } from 'lucide-react';
+import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Layers, Key, Server } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 export const metadata: Metadata = {
   title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
   description:
-    'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, and ecosystem best practices.',
+    'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, cloud deployment, and ecosystem best practices.',
   alternates: {
     canonical: 'https://allmcps.com/guides',
   },
   openGraph: {
     title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
     description:
-      'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, and ecosystem best practices.',
+      'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, cloud deployment, and ecosystem best practices.',
     url: 'https://allmcps.com/guides',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
     description:
-      'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, and ecosystem best practices.',
+      'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, cloud deployment, and ecosystem best practices.',
   },
 };
 
@@ -77,6 +77,24 @@ const guidesList = [
       'Implementing tools, resources & prompts',
       'Testing with MCP Inspector',
       'Deploying to Cloudflare & publishing',
+    ],
+  },
+  {
+    slug: 'deploy-mcp-server',
+    href: '/deploy-mcp-server',
+    title: 'Deploying & Hosting Remote MCP Servers',
+    subtitle: 'Production & Cloud Hosting Guide',
+    description:
+      'Deploy remote MCP servers to production: step-by-step blueprints for Cloudflare Workers, Docker, Fly.io, AWS, SSE transport setup, CORS, SSL, and monitoring.',
+    level: 'DevOps',
+    readTime: '14 min read',
+    icon: Server,
+    badgeVariant: 'premium' as const,
+    highlights: [
+      'Cloudflare Workers, Docker & Fly.io blueprints',
+      'Express & FastMCP SSE transport implementation',
+      'CORS, SSL, & environment secrets management',
+      'Health checks & production logging hygiene',
     ],
   },
   {
