@@ -169,7 +169,7 @@ export default async function CategoriesPage() {
         {/* Hero */}
         <section
           className="animate-fade-in delay-1"
-          style={{ textAlign: 'center', marginBottom: '3rem' }}
+          style={{ textAlign: 'center', marginBottom: '2.5rem' }}
         >
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>Browse by Category</h1>
           <p

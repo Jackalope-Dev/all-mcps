@@ -220,7 +220,7 @@ p {
 
 .surface-interactive:hover {
   border-color: var(--border-strong);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md), var(--shadow-glow);
 }
 
@@ -285,13 +285,29 @@ p {
 
 .site-nav {
   display: flex;
-  gap: 1.5rem;
+  gap: 1.25rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
+.site-nav .nav-link {
+  position: relative;
+  padding-bottom: 0.25rem;
+}
+
 .site-nav .nav-link.is-active {
   color: var(--accent-color);
+}
+
+.site-nav .nav-link.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--brand-gradient);
+  border-radius: 1px;
 }
 
 .header-search-btn {
@@ -437,7 +453,7 @@ p {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .site-footer-copy {
@@ -561,7 +577,7 @@ p {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
-  margin: 0 auto 4rem;
+  margin: 0 auto 2.5rem;
 }
 
 .newsletter-form {
@@ -778,7 +794,7 @@ p {
 /* Landing hero */
 .landing-hero {
   text-align: center;
-  margin: var(--space-8) auto var(--space-6);
+  margin: var(--space-6) auto var(--space-4);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -788,6 +804,25 @@ p {
   margin: 0.5rem auto 0;
   text-align: center;
 }
+
+/* Section utilities */
+.section-gap { margin-bottom: 3rem; }
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.section-header-link {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: opacity 0.2s;
+}
+.section-header-link:hover { opacity: 0.8; }
 
 /* Legacy header (keep for any residual use) */
 .main-header {
@@ -1230,8 +1265,8 @@ p {
 }
 
 .search-input {
-  padding: 1.25rem 2rem;
-  font-size: 1.125rem;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   background-color: var(--bg-elevated);

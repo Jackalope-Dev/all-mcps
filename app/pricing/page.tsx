@@ -188,7 +188,7 @@ export default async function PricingPage({
                       color: '#00E5FF',
                     }}
                   >
-                    Subscription Plan
+                    Most Popular
                   </span>
                   {p.badgeText && (
                     <span

@@ -32,7 +32,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
         {displayServers.map((server) => (
           <ImpressionBeacon key={server.id} serverId={server.id} surface="homepage_featured">
-          <Card href={`/mcp/${server.id}`} hoverable style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', minHeight: '320px', maxHeight: '320px', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
+          <Card href={`/mcp/${server.id}`} hoverable style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', minHeight: '280px', maxHeight: '280px', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)' }}></div>
 
             <div className="featured-card-header">
@@ -87,8 +87,8 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               padding: 'clamp(1.25rem, 4vw, 2rem)',
               display: 'flex',
               flexDirection: 'column',
-              minHeight: '320px',
-              maxHeight: '320px',
+              minHeight: '280px',
+              maxHeight: '280px',
               position: 'relative',
               overflow: 'hidden',
               border: '1px dashed rgba(0, 229, 255, 0.4)',

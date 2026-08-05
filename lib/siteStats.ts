@@ -13,6 +13,10 @@ export type SiteStats = {
   countryCount: number;
   totalViews: number;
   totalCopies: number;
+  totalUpvotes: number;
+  totalGithubStars: number;
+  totalNpmDownloads: number;
+  toolsIndexed: number;
   verifiedCount: number;
 };
 
@@ -27,9 +31,20 @@ export async function getSiteStats(): Promise<SiteStats> {
   const snapshotCategories = new Set(snapshotServers.map((s) => s.category)).size;
   const snapshotViews = snapshotServers.reduce((acc, s) => acc + (Number(s.views) || 0), 0);
   const snapshotCopies = snapshotServers.reduce((acc, s) => acc + (Number(s.copies) || 0), 0);
+  const snapshotUpvotes = snapshotServers.reduce((acc, s) => acc + (Number(s.upvotes) || 0), 0);
+  const snapshotStars = snapshotServers.reduce((acc, s) => acc + (Number(s.githubStars) || 0), 0);
+  const snapshotNpm = snapshotServers.reduce((acc, s) => acc + (Number(s.npmDownloads) || 0), 0);
   const snapshotVerified = snapshotServers.filter(
     (s) => s.isOfficial || s.isPremium || s.websiteVerified
   ).length;
+  const snapshotTools = snapshotServers.reduce((acc, s) => {
+    try {
+      const tools = JSON.parse(s.tools || '[]');
+      return acc + (Array.isArray(tools) ? tools.length : 0);
+    } catch {
+      return acc;
+    }
+  }, 0);
 
   let db: any = null;
   try {
@@ -52,6 +67,10 @@ export async function getSiteStats(): Promise<SiteStats> {
       countryCount: 0,
       totalViews: snapshotViews,
       totalCopies: snapshotCopies,
+      totalUpvotes: snapshotUpvotes,
+      totalGithubStars: snapshotStars,
+      totalNpmDownloads: snapshotNpm,
+      toolsIndexed: snapshotTools,
       verifiedCount: snapshotVerified,
     };
   }
@@ -93,6 +112,9 @@ export async function getSiteStats(): Promise<SiteStats> {
           totalServers: count(),
           totalViews: sum(servers.views),
           totalCopies: sum(servers.copies),
+          totalUpvotes: sum(servers.upvotes),
+          totalGithubStars: sum(servers.githubStars),
+          totalNpmDownloads: sum(servers.npmDownloads),
           categories: countDistinct(servers.category),
         })
         .from(servers)
@@ -112,6 +134,9 @@ export async function getSiteStats(): Promise<SiteStats> {
     const dbTotal = Number(serverStatsRows[0]?.totalServers ?? snapshotTotal);
     const dbViews = Number(serverStatsRows[0]?.totalViews ?? snapshotViews);
     const dbCopies = Number(serverStatsRows[0]?.totalCopies ?? snapshotCopies);
+    const dbUpvotes = Number(serverStatsRows[0]?.totalUpvotes ?? snapshotUpvotes);
+    const dbStars = Number(serverStatsRows[0]?.totalGithubStars ?? snapshotStars);
+    const dbNpm = Number(serverStatsRows[0]?.totalNpmDownloads ?? snapshotNpm);
     const dbCategories = Number(serverStatsRows[0]?.categories ?? snapshotCategories);
 
     return {
@@ -123,6 +148,10 @@ export async function getSiteStats(): Promise<SiteStats> {
       countryCount: countries,
       totalViews: dbViews,
       totalCopies: dbCopies,
+      totalUpvotes: dbUpvotes,
+      totalGithubStars: dbStars,
+      totalNpmDownloads: dbNpm,
+      toolsIndexed: snapshotTools, // Tools are parsed from JSON column — snapshot count is reliable
       verifiedCount: snapshotVerified,
     };
   } catch (err) {
@@ -136,6 +165,10 @@ export async function getSiteStats(): Promise<SiteStats> {
       countryCount: 0,
       totalViews: snapshotViews,
       totalCopies: snapshotCopies,
+      totalUpvotes: snapshotUpvotes,
+      totalGithubStars: snapshotStars,
+      totalNpmDownloads: snapshotNpm,
+      toolsIndexed: snapshotTools,
       verifiedCount: snapshotVerified,
     };
   }

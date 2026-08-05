@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Bot, Globe, Cpu, Sparkles, ShieldCheck } from 'lucide-react';
+import { Bot, Globe, Cpu, ShieldCheck, Star, Download, Wrench, Eye, ThumbsUp } from 'lucide-react';
 import type { SiteStats } from '../lib/siteStats';
 
 function formatCompactNumber(num: number): string {
@@ -10,7 +10,8 @@ function formatCompactNumber(num: number): string {
     return `${formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted}M+`;
   }
   if (num >= 1_000) {
-    return `${Math.floor(num / 1_000)}k+`;
+    const formatted = (num / 1_000).toFixed(1);
+    return `${formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted}k+`;
   }
   return num.toLocaleString();
 }
@@ -23,14 +24,14 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
   const totalServers = stats?.totalServers ?? 0;
   const categoryCount = stats?.categoryCount ?? 0;
   const aiReads = stats?.aiReads30d ?? 0;
-  const aiSystems = stats?.aiSystemCount ?? 0;
-  const activeSystems = stats?.activeAiSystems?.length
-    ? stats.activeAiSystems
-    : [];
   const countries = stats?.countryCount ?? 0;
   const totalViews = stats?.totalViews ?? 0;
   const totalCopies = stats?.totalCopies ?? 0;
   const verifiedCount = stats?.verifiedCount ?? 0;
+  const totalGithubStars = stats?.totalGithubStars ?? 0;
+  const totalNpmDownloads = stats?.totalNpmDownloads ?? 0;
+  const toolsIndexed = stats?.toolsIndexed ?? 0;
+  const totalUpvotes = stats?.totalUpvotes ?? 0;
 
   return (
     <div
@@ -38,295 +39,113 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
       style={{
         width: '100%',
         maxWidth: 'var(--container-max)',
-        margin: '1.25rem auto 1.75rem',
+        margin: '0.5rem auto 1.25rem',
         padding: '0 var(--space-8)',
       }}
     >
       <div
         style={{
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: 'var(--radius-xl)',
-          padding: '1.5rem 1.75rem',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
-          position: 'relative',
-          overflow: 'hidden',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.6rem 1.25rem',
+          padding: '0.6rem 1.25rem',
+          background: 'rgba(15, 23, 42, 0.55)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: 'var(--radius-full)',
+          fontSize: '0.825rem',
+          color: 'var(--text-secondary)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
         }}
       >
-        {/* Top subtle brand gradient bar */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '2px',
-            background: 'linear-gradient(90deg, #00e5ff 0%, #007bff 50%, rgba(0, 229, 255, 0.2) 100%)',
-          }}
-        />
+        {totalServers > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Cpu size={14} style={{ color: '#34d399' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatExactNumber(totalServers)}</strong> MCP Servers
+          </span>
+        )}
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '1.5rem',
-            alignItems: 'center',
-          }}
-        >
-          {/* Stat 1: Catalog Scale */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.25)',
-                color: '#34d399',
-                flexShrink: 0,
-                marginTop: '0.125rem',
-              }}
-            >
-              <Cpu size={20} aria-hidden="true" />
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 800,
-                  color: 'var(--text-primary)',
-                  letterSpacing: '-0.01em',
-                  lineHeight: 1.25,
-                }}
-              >
-                {formatExactNumber(totalServers)} MCP Servers
-              </div>
-              <div
-                style={{
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                  marginTop: '0.25rem',
-                  lineHeight: 1.45,
-                }}
-              >
-                indexed across <strong style={{ color: 'var(--text-primary)' }}>{categoryCount} categories</strong>
-              </div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.725rem',
-                  color: '#34d399',
-                  marginTop: '0.5rem',
-                  fontWeight: 500,
-                }}
-              >
-                <ShieldCheck size={13} /> {verifiedCount} official &amp; verified listings
-              </div>
-            </div>
-          </div>
+        {categoryCount > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{categoryCount}</strong> Categories
+          </span>
+        )}
 
-          {/* Stat 2: AI Systems & Agent Access */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(0, 229, 255, 0.12)',
-                border: '1px solid rgba(0, 229, 255, 0.25)',
-                color: 'var(--brand-cyan)',
-                flexShrink: 0,
-                marginTop: '0.125rem',
-              }}
-            >
-              <Bot size={20} aria-hidden="true" />
-            </div>
-            <div>
-              {aiReads > 0 ? (
-                <>
-                  <div
-                    style={{
-                      fontSize: '1.25rem',
-                      fontWeight: 800,
-                      color: 'var(--text-primary)',
-                      letterSpacing: '-0.01em',
-                      lineHeight: 1.25,
-                    }}
-                  >
-                    Read{' '}
-                    <span
-                      style={{
-                        background: 'var(--brand-gradient)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                      }}
-                    >
-                      {formatCompactNumber(aiReads)}
-                    </span>{' '}
-                    times
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                      marginTop: '0.25rem',
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    by <strong style={{ color: 'var(--text-primary)' }}>{aiSystems} AI systems</strong>{' '}
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>(last 30d)</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div
-                    style={{
-                      fontSize: '1.25rem',
-                      fontWeight: 800,
-                      color: 'var(--text-primary)',
-                      letterSpacing: '-0.01em',
-                      lineHeight: 1.25,
-                    }}
-                  >
-                    AI Agent Directory
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                      marginTop: '0.25rem',
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    Structured feeds for Claude, Cursor, ChatGPT &amp; LLM tools
-                  </div>
-                </>
-              )}
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.35rem',
-                  marginTop: '0.5rem',
-                }}
-              >
-                {activeSystems.map((system) => (
-                  <span
-                    key={system}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      padding: '0.15rem 0.45rem',
-                      borderRadius: 'var(--radius-full)',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    {system}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
+        {toolsIndexed > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <Wrench size={13} style={{ color: '#38bdf8' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(toolsIndexed)}</strong> Agent Tools
+          </span>
+        )}
 
-          {/* Stat 3: Usage & Global Distribution */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(0, 123, 255, 0.15)',
-                border: '1px solid rgba(0, 123, 255, 0.3)',
-                color: '#60a5fa',
-                flexShrink: 0,
-                marginTop: '0.125rem',
-              }}
-            >
-              <Globe size={20} aria-hidden="true" />
-            </div>
-            <div>
-              {countries > 0 ? (
-                <>
-                  <div
-                    style={{
-                      fontSize: '1.25rem',
-                      fontWeight: 800,
-                      color: 'var(--text-primary)',
-                      letterSpacing: '-0.01em',
-                      lineHeight: 1.25,
-                    }}
-                  >
-                    {countries} Countries Reached
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                      marginTop: '0.25rem',
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    Global developer &amp; AI agent traffic (last 30d)
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div
-                    style={{
-                      fontSize: '1.25rem',
-                      fontWeight: 800,
-                      color: 'var(--text-primary)',
-                      letterSpacing: '-0.01em',
-                      lineHeight: 1.25,
-                    }}
-                  >
-                    {totalViews > 0 ? formatExactNumber(totalViews) : 'Global'} Catalog Reach
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                      marginTop: '0.25rem',
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {totalCopies > 0 ? `${formatExactNumber(totalCopies)} config copies & ` : ''}worldwide tool distribution
-                  </div>
-                </>
-              )}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.725rem',
-                  color: 'var(--brand-cyan)',
-                  marginTop: '0.5rem',
-                  fontWeight: 500,
-                }}
-              >
-                <Sparkles size={12} /> Instant one-click install configs &amp; SSE specs
-              </div>
-            </div>
-          </div>
-        </div>
+        {totalGithubStars > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <Star size={13} style={{ color: '#fbbf24' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalGithubStars)}</strong> GitHub Stars
+          </span>
+        )}
+
+        {totalNpmDownloads > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <Download size={13} style={{ color: '#a78bfa' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalNpmDownloads)}</strong> npm Downloads/mo
+          </span>
+        )}
+
+        {verifiedCount > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <ShieldCheck size={14} style={{ color: '#34d399' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{verifiedCount}</strong> Verified
+          </span>
+        )}
+
+        {aiReads > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <Bot size={14} style={{ color: 'var(--brand-cyan)' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(aiReads)}</strong> AI Reads
+          </span>
+        )}
+
+        {countries > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <Globe size={14} style={{ color: '#60a5fa' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{countries}</strong> Countries
+          </span>
+        )}
+
+        {totalViews > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <Eye size={13} style={{ color: '#94a3b8' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalViews)}</strong> Views
+          </span>
+        )}
+
+        {totalCopies > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <Download size={13} style={{ color: '#34d399' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalCopies)}</strong> Config Copies
+          </span>
+        )}
+
+        {totalUpvotes > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+            <ThumbsUp size={13} style={{ color: '#f43f5e' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalUpvotes)}</strong> Upvotes
+          </span>
+        )}
       </div>
     </div>
   );

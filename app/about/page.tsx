@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Search, Zap, Rocket } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { PageShell, PageHeader } from '../../components/PageShell';
 
@@ -81,20 +82,35 @@ export default function AboutPage() {
 
       <div className="feature-grid">
         <div className="surface-muted feature-card">
-          <h3>🔍 Discover Tools</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
+              <Search size={18} style={{ color: '#00E5FF' }} />
+            </div>
+            <h3 style={{ margin: 0 }}>Discover Tools</h3>
+          </div>
           <p>
             Search hundreds of curated MCP servers spanning databases, APIs, dev tools, and desktop
             applications.
           </p>
         </div>
         <div className="surface-muted feature-card">
-          <h3>⚡ 1-Click Install</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
+              <Zap size={18} style={{ color: '#00E5FF' }} />
+            </div>
+            <h3 style={{ margin: 0 }}>1-Click Install</h3>
+          </div>
           <p>
             Copy pre-formatted Claude Desktop and Cursor JSON configs directly into your local setup.
           </p>
         </div>
         <div className="surface-muted feature-card">
-          <h3>🚀 Community Driven</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
+              <Rocket size={18} style={{ color: '#00E5FF' }} />
+            </div>
+            <h3 style={{ margin: 0 }}>Community Driven</h3>
+          </div>
           <p>
             Submit your own open-source MCP servers to reach thousands of AI developers and users.
           </p>

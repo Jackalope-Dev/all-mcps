@@ -438,12 +438,6 @@ export default function DirectoryGrid({
 
   const Stats = ({ server }: { server: Server }) => (
     <div className="directory-stats">
-      <div title="Unique views">
-        <Eye size={12} aria-hidden="true" /> {(server.views || 0).toLocaleString()}
-      </div>
-      <div title="Install / copy actions">
-        <Download size={12} aria-hidden="true" /> {(server.copies || 0).toLocaleString()}
-      </div>
       <div title="Upvotes">
         <Heart size={12} aria-hidden="true" /> {(server.upvotes || 0).toLocaleString()}
       </div>
@@ -452,11 +446,9 @@ export default function DirectoryGrid({
           <Star size={12} aria-hidden="true" /> {server.githubStars.toLocaleString()}
         </div>
       )}
-      {typeof server.npmDownloads === 'number' && (
-        <div title="Monthly npm downloads">
-          <Package size={12} aria-hidden="true" /> {server.npmDownloads.toLocaleString()}
-        </div>
-      )}
+      <div title="Install / copy actions">
+        <Download size={12} aria-hidden="true" /> {(server.copies || 0).toLocaleString()}
+      </div>
     </div>
   );
 
@@ -573,23 +565,39 @@ export default function DirectoryGrid({
               marginTop: '1.25rem',
             }}
           >
-            <Link href="/browse" className="btn btn-primary">
+            <Link href="/browse" className="btn btn-primary btn-lg">
               Browse directory
             </Link>
             <Link href="/submit" className="btn btn-secondary">
-              Submit free
-            </Link>
-            <Link href="/best" className="btn btn-secondary">
-              Best by use case
+              Submit your MCP
             </Link>
           </div>
-          <p className="text-meta" style={{ marginTop: '1rem' }}>
-            Building your own? See <Link href="/build-mcp-server">How to Build an MCP Server</Link>
-            {' · '}
-            <Link href="/docs/api">Agent API</Link>
-            {' · '}
-            <Link href="/badge-generator">Badges</Link>
-          </p>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+              justifyContent: 'center',
+              marginTop: '1.25rem',
+            }}
+          >
+            {[
+              { href: '/best', label: '⭐ Best Servers' },
+              { href: '/categories', label: '📂 Categories' },
+              { href: '/tools', label: '🛠 Free Tools' },
+              { href: '/guides', label: '📖 Guides' },
+              { href: '/docs/api', label: '🤖 Agent API' },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="directory-tag"
+                style={{ textDecoration: 'none', fontSize: '0.8rem' }}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </section>
       )}
 
@@ -815,18 +823,6 @@ export default function DirectoryGrid({
       {showDiscovery && <FeaturedCards servers={featuredCards} />}
 
       {showDiscovery && (
-        <section className="container newsletter-homepage-section">
-          <div>
-            <h3 style={{ margin: '0 0 0.25rem' }}>Get new MCP servers in your inbox</h3>
-            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-              A roundup of new and top submissions — no spam, unsubscribe anytime.
-            </p>
-          </div>
-          <NewsletterSignupForm source="homepage" compact />
-        </section>
-      )}
-
-      {showDiscovery && (
         <section
           className="container animate-fade-in delay-2"
           style={{ margin: '0 auto 2.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem', justifyContent: 'center' }}
@@ -848,6 +844,18 @@ export default function DirectoryGrid({
               {item.label}
             </Link>
           ))}
+        </section>
+      )}
+
+      {showDiscovery && (
+        <section className="container newsletter-homepage-section">
+          <div>
+            <h3 style={{ margin: '0 0 0.25rem' }}>Get new MCP servers in your inbox</h3>
+            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
+              A roundup of new and top submissions — no spam, unsubscribe anytime.
+            </p>
+          </div>
+          <NewsletterSignupForm source="homepage" compact />
         </section>
       )}
 
@@ -894,7 +902,7 @@ export default function DirectoryGrid({
 
         <div className="directory-toolbar">
           <h2 style={{ marginBottom: 0, fontSize: isBrowse || selectedCategory ? '1.5rem' : undefined }}>
-            {isBrowse || selectedCategory || isFiltered ? 'Results' : 'Directory'}{' '}
+            {isBrowse || selectedCategory || isFiltered ? 'Results' : 'Newest Servers'}{' '}
             <span style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', fontWeight: 500 }}>
               ({filteredServers.length.toLocaleString()} {filteredServers.length === 1 ? 'tool' : 'tools'})
               {lazyFeedUrl && feedStatus === 'loading' ? ' · loading…' : ''}
@@ -1113,8 +1121,6 @@ export default function DirectoryGrid({
                 <div className="directory-card-footer">
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', minWidth: 0, alignItems: 'center' }}>
                     <Badge variant="category">{server.category}</Badge>
-                    <TransportBadge server={server} />
-                    <RuntimeBadge server={server} />
                   </div>
                   <Stats server={server} />
                 </div>
