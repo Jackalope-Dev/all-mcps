@@ -48,32 +48,31 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
             {(() => {
               const { displayName, org } = parseServerName(server.name);
               return (
-                <>
+                <div style={{ minHeight: '3.2rem', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <h3
                     style={{
-                      fontSize: '1.5rem',
-                      marginBottom: org ? '0.2rem' : '0.75rem',
+                      fontSize: '1.35rem',
                       fontWeight: 700,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
+                      margin: 0,
                       overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {displayName}
                   </h3>
                   {org && (
-                    <div style={{ fontSize: '0.8rem', marginBottom: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {org}
                     </div>
                   )}
-                </>
+                </div>
               );
             })()}
-            <div style={{ fontSize: '0.875rem', marginBottom: '1.5rem', flexGrow: 1, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: '0.875rem', height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
               <SafeMarkdown content={server.description || 'No description provided.'} isInline />
             </div>
-            <div style={{ display: 'flex' }}>
+            <div style={{ display: 'flex', marginTop: 'auto', paddingTop: '0.5rem' }}>
               <Badge variant="category">{server.category}</Badge>
             </div>
           </Card>
@@ -105,11 +104,13 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               <Badge variant="success" style={{ background: 'rgba(0, 229, 255, 0.15)', color: '#00E5FF', borderColor: 'rgba(0, 229, 255, 0.4)' }}>★ Open Slot</Badge>
             </div>
             
-            <h3 style={{ fontSize: '1.4rem', marginBottom: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>Spotlight Your MCP Server</h3>
-            <p style={{ fontSize: '0.875rem', marginBottom: '1.5rem', flexGrow: 1, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            <div style={{ minHeight: '3.2rem', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>Spotlight Your MCP Server</h3>
+            </div>
+            <p style={{ fontSize: '0.875rem', height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem' }}>
               Reach thousands of developers building AI agents with Claude &amp; Cursor. Submit your server and feature it at the top of the directory.
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.9rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.9rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
               <span>Submit &amp; Feature Your Server</span>
               <ArrowRight size={16} />
             </div>

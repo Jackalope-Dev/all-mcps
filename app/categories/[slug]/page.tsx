@@ -277,51 +277,18 @@ export default async function CategoryLandingPage({
                 <ImpressionBeacon key={server.id} serverId={server.id} surface="category_page">
                   <Card
                     href={`/mcp/${server.id}`}
-                    className={`directory-card ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
-                    style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
+                    className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                       <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
-                      <div style={{ minWidth: 0 }}>
-                        <h2
-                          style={{
-                            fontSize: '1.1rem',
-                            fontWeight: 600,
-                            margin: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
+                      <div className="directory-card-title-block" style={{ marginBottom: 0 }}>
+                        <h2 className="directory-card-title-text" style={{ fontSize: '1.1rem' }}>
                           {displayName}
                         </h2>
-                        {org && (
-                          <div
-                            style={{
-                              fontSize: '0.75rem',
-                              color: 'var(--text-secondary)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {org}
-                          </div>
-                        )}
+                        {org && <div className="directory-card-org-text">{org}</div>}
                       </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: '0.875rem',
-                        marginBottom: '1.25rem',
-                        flexGrow: 1,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
+                    <div className="directory-card-desc-block">
                       <SafeMarkdown content={server.description || 'No description provided.'} isInline />
                     </div>
                     <div className="directory-card-footer">

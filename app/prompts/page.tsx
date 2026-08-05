@@ -72,7 +72,7 @@ export default function PromptsHubPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
           {WORKFLOW_PROMPTS.map((w) => (
-            <Card key={w.slug} href={`/prompts/${w.slug}`} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+            <Card key={w.slug} href={`/prompts/${w.slug}`} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                 <Badge variant="category">{w.category}</Badge>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#00E5FF', fontWeight: 600 }}>
@@ -80,13 +80,16 @@ export default function PromptsHubPage() {
                 </div>
               </div>
 
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
-                {w.title}
-              </h2>
-              <p style={{ fontSize: '0.8rem', color: '#00E5FF', fontWeight: 600, marginBottom: '0.75rem' }}>
-                {w.subtitle}
-              </p>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', flexGrow: 1, lineHeight: 1.5 }}>
+              <div style={{ minHeight: '3.5rem', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  {w.title}
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: '#00E5FF', fontWeight: 600, margin: '0.2rem 0 0' }}>
+                  {w.subtitle}
+                </p>
+              </div>
+
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
                 {w.description}
               </p>
 

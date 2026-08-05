@@ -81,11 +81,13 @@ export default function BestIndexPage() {
               key={t.slug}
               href={`/best/${t.slug}`}
               className="surface-interactive"
-              style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)' }}
+              style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)', height: '100%' }}
             >
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best for {t.title}</h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5, flexGrow: 1 }}>{t.lead}</p>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600 }}>
+              <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best for {t.title}</h3>
+              </div>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.5, height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.lead}</p>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600, marginTop: 'auto', paddingTop: '0.5rem' }}>
                 View ranking <ArrowRight size={15} />
               </span>
             </Link>
@@ -104,11 +106,13 @@ export default function BestIndexPage() {
                 key={t.slug}
                 href={`/best/${t.slug}`}
                 className="surface-interactive"
-                style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)' }}
+                style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)', height: '100%' }}
               >
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best {t.title} MCP servers</h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5, flexGrow: 1 }}>{t.lead}</p>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600 }}>
+                <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best {t.title} MCP servers</h3>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.5, height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.lead}</p>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600, marginTop: 'auto', paddingTop: '0.5rem' }}>
                   View ranking <ArrowRight size={15} />
                 </span>
               </Link>

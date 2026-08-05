@@ -119,10 +119,12 @@ export default function ToolsHubPage() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
             {TOOLS.map(({ href, icon: Icon, title, description }) => (
-              <Card key={href} href={href} hoverable style={{ padding: '1.5rem' }}>
-                <Icon size={28} style={{ color: 'var(--accent-color)', marginBottom: '1rem' }} />
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>{title}</h2>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{description}</p>
+              <Card key={href} href={href} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Icon size={28} style={{ color: 'var(--accent-color)', marginBottom: '1rem', flexShrink: 0 }} />
+                <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{title}</h2>
+                </div>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55, flexGrow: 1 }}>{description}</p>
               </Card>
             ))}
           </div>

@@ -1743,6 +1743,55 @@ nav[aria-label="Table of contents"] {
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+/* ── Uniform Grid Card Helpers ── */
+.directory-card-uniform {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 310px;
+}
+
+.directory-card-title-block {
+  min-height: 2.75rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.directory-card-title-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directory-card-org-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 0.1rem;
+}
+
+.directory-card-desc-block {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  height: 3.9rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
 }
 
 .featured-card-header {

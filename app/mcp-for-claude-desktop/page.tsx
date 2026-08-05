@@ -113,20 +113,20 @@ export default async function ClaudeDesktopMcpPage() {
             {topServers.map((server) => {
               const { displayName, org } = parseServerName(server.name);
               return (
-                <Card key={server.id} href={`/mcp/${server.id}`} hoverable style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+                <Card key={server.id} href={`/mcp/${server.id}`} hoverable className="directory-card-uniform">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={40} />
-                    <div style={{ minWidth: 0 }}>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="directory-card-title-block" style={{ marginBottom: 0 }}>
+                      <h3 className="directory-card-title-text" style={{ fontSize: '1.05rem' }}>
                         {displayName}
                       </h3>
-                      {org && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{org}</div>}
+                      {org && <div className="directory-card-org-text">{org}</div>}
                     </div>
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', flexGrow: 1 }}>
+                  <div className="directory-card-desc-block">
                     <SafeMarkdown content={server.description || ''} isInline />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                  <div className="directory-card-footer">
                     <Badge variant="category">{server.category}</Badge>
                     <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       <span><Eye size={12} /> {(server.views || 0).toLocaleString()}</span>

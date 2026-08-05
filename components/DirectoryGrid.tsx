@@ -233,18 +233,19 @@ export default function DirectoryGrid({
     const stackMatch = (server: Server): boolean => {
       if (selectedStack === 'all') return true;
       const name = server.name.toLowerCase();
-      const desc = server.description.toLowerCase();
+      const desc = (server.description || '').toLowerCase();
+      const cmd = (server.installCommand || '').toLowerCase();
       if (selectedStack === 'typescript') {
-        return name.includes('ts') || name.includes('typescript') || desc.includes('typescript') || desc.includes('npm') || desc.includes('npx');
+        return name.includes('ts') || name.includes('typescript') || desc.includes('typescript') || desc.includes('npm') || desc.includes('npx') || cmd.includes('npx') || cmd.includes('node');
       }
       if (selectedStack === 'python') {
-        return name.includes('py') || name.includes('python') || desc.includes('python') || desc.includes('uvx') || desc.includes('pip');
+        return name.includes('py') || name.includes('python') || desc.includes('python') || desc.includes('uvx') || desc.includes('pip') || cmd.includes('uvx') || cmd.includes('python') || cmd.includes('pip');
       }
       if (selectedStack === 'go') {
-        return name.includes('go-') || name.includes('-go') || desc.includes('golang') || desc.includes(' go ');
+        return name.includes('go-') || name.includes('-go') || desc.includes('golang') || desc.includes(' go ') || cmd.includes('go ');
       }
       if (selectedStack === 'rust') {
-        return name.includes('rust') || desc.includes('rust') || desc.includes('cargo');
+        return name.includes('rust') || desc.includes('rust') || desc.includes('cargo') || cmd.includes('cargo');
       }
       return true;
     };
@@ -324,7 +325,7 @@ export default function DirectoryGrid({
     });
 
     return scored.map((s) => s.server);
-  }, [servers, queryTerms, fullQuery, selectedCategory, selectedStack, sortMode, verifiedOnly]);
+  }, [servers, queryTerms, fullQuery, selectedCategory, selectedStack, selectedTransport, sortMode, verifiedOnly]);
 
   const filteredCount = filteredServers.length;
 
@@ -406,6 +407,7 @@ export default function DirectoryGrid({
     setSearchQuery('');
     setVerifiedOnly(false);
     setSelectedStack('all');
+    setSelectedTransport('all');
     if (isBrowse) {
       updateUrl(null, '');
     }
@@ -421,12 +423,12 @@ export default function DirectoryGrid({
   // Reset pagination when searching, filtering, or sorting
   useEffect(() => {
     setVisibleCount(30);
-  }, [searchQuery, selectedCategory, selectedStack, sortMode, verifiedOnly]);
+  }, [searchQuery, selectedCategory, selectedStack, selectedTransport, sortMode, verifiedOnly]);
 
   const visibleServers = filteredServers.slice(0, visibleCount);
   const hasMore = visibleCount < filteredServers.length;
 
-  const isFiltered = searchQuery.length > 0 || selectedCategory !== null || verifiedOnly || selectedStack !== 'all';
+  const isFiltered = searchQuery.length > 0 || selectedCategory !== null || verifiedOnly || selectedStack !== 'all' || selectedTransport !== 'all';
   // Discovery chrome (marquee / featured) only on the unfiltered marketing landing
   const showDiscovery = !isBrowse && !isFiltered;
   const categoryMeta = selectedCategory ? parseCategoryLabel(selectedCategory) : null;
@@ -759,6 +761,28 @@ export default function DirectoryGrid({
               </button>
             )}
 
+            {selectedStack !== 'all' && (
+              <button
+                type="button"
+                className="directory-tag directory-tag-active"
+                onClick={() => setSelectedStack('all')}
+              >
+                Stack: {selectedStack}
+                <X size={12} />
+              </button>
+            )}
+
+            {selectedTransport !== 'all' && (
+              <button
+                type="button"
+                className="directory-tag directory-tag-active"
+                onClick={() => setSelectedTransport('all')}
+              >
+                Transport: {selectedTransport === 'stdio' ? 'STDIO' : 'SSE / Remote'}
+                <X size={12} />
+              </button>
+            )}
+
             {searchQuery && (
               <button
                 type="button"
@@ -1052,8 +1076,7 @@ export default function DirectoryGrid({
               <ImpressionBeacon key={server.id} serverId={server.id} surface={surface}>
               <Card
                 href={`/mcp/${server.id}`}
-                className={isFeaturedListing(server) ? 'directory-card-featured' : undefined}
-                style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', minHeight: '300px' }}
+                className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
               >
                 <div className="directory-card-header">
                   <ServerAvatar name={server.name} logoUrl={server.logoUrl} />
@@ -1077,48 +1100,13 @@ export default function DirectoryGrid({
                 {(() => {
                   const { displayName, org } = parseServerName(server.name);
                   return (
-                    <>
-                      <h3
-                        style={{
-                          fontSize: '1.25rem',
-                          marginBottom: org ? '0.15rem' : '0.5rem',
-                          fontWeight: 600,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {displayName}
-                      </h3>
-                      {org && (
-                        <div
-                          style={{
-                            fontSize: '0.75rem',
-                            marginBottom: '0.5rem',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {org}
-                        </div>
-                      )}
-                    </>
+                    <div className="directory-card-title-block">
+                      <h3 className="directory-card-title-text">{displayName}</h3>
+                      {org && <div className="directory-card-org-text">{org}</div>}
+                    </div>
                   );
                 })()}
-                <div
-                  style={{
-                    fontSize: '0.875rem',
-                    marginBottom: '1.5rem',
-                    flexGrow: 1,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
+                <div className="directory-card-desc-block">
                   <SafeMarkdown content={server.description || 'No description provided.'} isInline />
                 </div>
                 <div className="directory-card-footer">
