@@ -1547,8 +1547,11 @@ optgroup option {
 }
 
 .breadcrumb-separator {
-  color: var(--border-color);
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
   font-size: 0.75rem;
+  opacity: 0.85;
 }
 
 .breadcrumb-current {

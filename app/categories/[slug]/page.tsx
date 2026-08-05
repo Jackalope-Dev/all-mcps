@@ -229,24 +229,22 @@ export default async function CategoryLandingPage({
         </nav>
 
         {/* Hero */}
-        <section style={{ marginBottom: '2.5rem', maxWidth: '760px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        <section style={{ margin: '0 auto 2.5rem', maxWidth: '780px', textAlign: 'center' }}>
+          <h1 className="text-display" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
             {emoji && (
               <span style={{ fontSize: '2.25rem', lineHeight: 1 }} aria-hidden="true">
                 {emoji}
               </span>
             )}
-            <h1 className="text-display" style={{ margin: 0 }}>
-              {label} MCP Servers
-            </h1>
-          </div>
-          <p className="text-lead" style={{ margin: '0 0 1rem' }}>
+            <span>{label} MCP Servers</span>
+            <span className="text-brand-gradient" style={{ fontSize: '0.85em', fontWeight: 800 }}>
+              ({total.toLocaleString()})
+            </span>
+          </h1>
+          <p className="text-lead" style={{ margin: '0 auto 1.5rem', textAlign: 'center' }}>
             {intro}
           </p>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <Badge variant="category">
-              {total.toLocaleString()} {total === 1 ? 'server' : 'servers'}
-            </Badge>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
             <Link href={`/browse?category=${encodeURIComponent(category)}`} className="btn btn-secondary">
               Open in interactive directory
             </Link>
