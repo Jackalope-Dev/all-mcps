@@ -48,7 +48,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
             {(() => {
               const { displayName, org } = parseServerName(server.name);
               return (
-                <div style={{ minHeight: '3.2rem', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ minHeight: '2.8rem', marginBottom: '0.4rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <h3
                     style={{
                       fontSize: '1.35rem',
@@ -104,7 +104,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               <Badge variant="success" style={{ background: 'rgba(0, 229, 255, 0.15)', color: '#00E5FF', borderColor: 'rgba(0, 229, 255, 0.4)' }}>★ Open Slot</Badge>
             </div>
             
-            <div style={{ minHeight: '3.2rem', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ minHeight: '2.8rem', marginBottom: '0.4rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>Spotlight Your MCP Server</h3>
             </div>
             <p style={{ fontSize: '0.875rem', height: '5.25rem', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem' }}>
