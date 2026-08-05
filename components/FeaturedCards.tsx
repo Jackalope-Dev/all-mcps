@@ -120,17 +120,17 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(0, 123, 255, 0.2))', border: '1px solid rgba(0, 229, 255, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Plus size={28} style={{ color: '#00E5FF' }} />
               </div>
-              <Badge variant="success" style={{ background: 'rgba(0, 229, 255, 0.15)', color: '#00E5FF', borderColor: 'rgba(0, 229, 255, 0.4)' }}>★ Open Slot</Badge>
+              <Badge variant="success" style={{ background: 'rgba(0, 229, 255, 0.15)', color: '#00E5FF', borderColor: 'rgba(0, 229, 255, 0.4)' }}>★ Add Server</Badge>
             </div>
             
             <div style={{ minHeight: '2.8rem', marginBottom: '0.4rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>Spotlight Your MCP Server</h3>
+              <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>Submit Your MCP Server</h3>
             </div>
             <p style={{ fontSize: '0.875rem', height: '5.25rem', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem' }}>
-              Reach thousands of developers building AI agents with Claude &amp; Cursor. Submit your server and feature it at the top of the directory.
+              List your server in the directory so developers building with Claude, Cursor, and AI agents can discover and install your integration.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.9rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
-              <span>Submit &amp; Feature Your Server</span>
+              <span>Submit Server</span>
               <ArrowRight size={16} />
             </div>
           </Card>

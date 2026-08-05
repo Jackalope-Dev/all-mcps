@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ChevronRight, Eye, Heart, Download } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
@@ -80,10 +80,11 @@ export async function generateMetadata({
   const { slug } = await params;
   const category = categoryFromSlug(slug);
   if (!category) return { title: 'Category Not Found' };
+  const canonicalSlug = categorySlug(category);
   const { label } = parseCategoryLabel(category);
   const title = `${label} MCP Servers`;
   const description = `Browse and install the best ${label} Model Context Protocol (MCP) servers for AI agents. Compare tools, view install commands, and connect Claude, Cursor, and more.`;
-  const url = `${SITE}/categories/${slug}`;
+  const url = `${SITE}/categories/${canonicalSlug}`;
   return {
     title,
     description,
@@ -101,6 +102,12 @@ export default async function CategoryLandingPage({
   const { slug } = await params;
   const category = categoryFromSlug(slug);
   if (!category) notFound();
+
+  // Canonical slug redirect (e.g. /categories/end-to-end-rag-platforms -> /categories/search-and-data-extraction)
+  const canonicalSlug = categorySlug(category);
+  if (slug !== canonicalSlug) {
+    redirect(`/categories/${canonicalSlug}`);
+  }
 
   const { emoji, label } = parseCategoryLabel(category);
   const all = await getActiveServers();

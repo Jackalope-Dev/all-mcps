@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../db/schema';
 import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
-import { DEFAULT_SUBMIT_CATEGORY } from '../../../lib/categories';
+import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../../../lib/categories';
 import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';
 import { sendNotificationEmail, getEmailEnv } from '../../../lib/notify';
 import { getAppUrl } from '../../../lib/stripe';
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     let websiteUrl = result.data.websiteUrl || '';
     let name = result.data.name || '';
     let description = result.data.description || '';
-    let category = result.data.category || DEFAULT_SUBMIT_CATEGORY;
+    let category = normalizeCategory(result.data.category);
     let url = (result.data.url || '').trim();
 
     // Website-only: use website as primary url when repo omitted

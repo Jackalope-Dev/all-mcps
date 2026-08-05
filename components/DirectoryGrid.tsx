@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid, ShieldCheck, Terminal, Zap, CheckCircle2, ArrowRight, Copy, Check } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -543,36 +543,50 @@ export default function DirectoryGrid({
     <>
       {/* Marketing hero — only on the unfiltered homepage landing */}
       {!isBrowse && !selectedCategory && (
-        <section className="container animate-fade-in delay-1 landing-hero" style={{ paddingBottom: '1rem' }}>
+        <section className="container animate-fade-in delay-1 landing-hero" style={{ paddingBottom: '1.5rem' }}>
           <h1 className="text-display">
-            Give your AI agents <span className="text-brand-gradient">superpowers</span>.
+            Discover &amp; Install <span className="text-brand-gradient">Model Context Protocol</span> Servers
           </h1>
           <p className="text-lead">
-            Find the best tools to connect your favorite LLMs directly to local files, databases, and external APIs.
+            The open directory for Model Context Protocol (MCP) servers. Connect Claude, Cursor, Windsurf, and AI agents directly to databases, developer tools, local files, and APIs.
             {typeof totalCount === 'number' && totalCount > 0 ? (
               <>
                 {' '}
-                <strong style={{ color: 'var(--text-primary)' }}>{totalCount.toLocaleString()}+</strong> MCP servers
-                ready to install.
+                Explore <strong style={{ color: 'var(--text-primary)' }}>{totalCount.toLocaleString()}+</strong> verified servers.
               </>
             ) : null}
           </p>
+
+          {/* Trust Pill Indicators */}
+          <div className="trust-pill-row">
+            <span className="trust-pill">
+              <BadgeCheck size={14} className="trust-pill-icon" /> Official &amp; Verified Registry
+            </span>
+            <span className="trust-pill">
+              <Zap size={14} className="trust-pill-icon" /> 1-Click Client Configs
+            </span>
+            <span className="trust-pill">
+              <ShieldCheck size={14} className="trust-pill-icon" /> Health &amp; Security Audited
+            </span>
+          </div>
+
           <div
             style={{
               display: 'flex',
               flexWrap: 'wrap',
               gap: '0.75rem',
               justifyContent: 'center',
-              marginTop: '1.25rem',
+              marginTop: '1.5rem',
             }}
           >
             <Link href="/browse" className="btn btn-primary btn-lg">
-              Browse directory
+              Browse All Servers
             </Link>
             <Link href="/submit" className="btn btn-lg btn-submit-noticeable">
-              <Sparkles size={16} /> Submit your MCP
+              <Sparkles size={16} /> Submit a Server
             </Link>
           </div>
+
           <div
             style={{
               display: 'flex',
@@ -583,11 +597,11 @@ export default function DirectoryGrid({
             }}
           >
             {[
-              { href: '/best', label: '⭐ Best Servers' },
+              { href: '/best', label: '⭐ Top Rated' },
               { href: '/categories', label: '📂 Categories' },
-              { href: '/tools', label: '🛠 Free Tools' },
+              { href: '/tools', label: '🛠 MCP Utilities' },
               { href: '/guides', label: '📖 Guides' },
-              { href: '/docs/api', label: '🤖 Agent API' },
+              { href: '/docs/api', label: '🤖 Catalog API' },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -598,6 +612,59 @@ export default function DirectoryGrid({
                 {item.label}
               </Link>
             ))}
+          </div>
+
+          {/* 3-Step Visual Feature Workflow */}
+          <div className="how-it-works-section">
+            <div className="how-it-works-header">
+              <div className="how-it-works-title">
+                <Terminal size={22} style={{ color: 'var(--brand-cyan)' }} />
+                <span>How Model Context Protocol Works</span>
+              </div>
+              <p className="how-it-works-subtitle">
+                Connect your preferred AI client to real-world tools and data sources in 3 simple steps
+              </p>
+            </div>
+            <div className="how-it-works-grid">
+              <div className="how-step-card">
+                <div className="how-step-top">
+                  <div className="how-step-icon-box">
+                    <Search size={20} />
+                  </div>
+                  <span className="how-step-number">Step 1</span>
+                </div>
+                <h3 className="how-step-heading">Discover Your Server</h3>
+                <p className="how-step-desc">
+                  Browse over 1,000+ verified MCP servers for Postgres, GitHub, Slack, Puppeteer, local filesystem, and cloud APIs.
+                </p>
+              </div>
+
+              <div className="how-step-card">
+                <div className="how-step-top">
+                  <div className="how-step-icon-box">
+                    <Copy size={20} />
+                  </div>
+                  <span className="how-step-number">Step 2</span>
+                </div>
+                <h3 className="how-step-heading">Copy 1-Click Config</h3>
+                <p className="how-step-desc">
+                  Instantly copy pre-built JSON configuration blocks tailored for Claude Desktop, Cursor, Cline, Windsurf, or Continue.
+                </p>
+              </div>
+
+              <div className="how-step-card">
+                <div className="how-step-top">
+                  <div className="how-step-icon-box">
+                    <Zap size={20} />
+                  </div>
+                  <span className="how-step-number">Step 3</span>
+                </div>
+                <h3 className="how-step-heading">Supercharge AI Agents</h3>
+                <p className="how-step-desc">
+                  Your AI assistant immediately gains native tool execution, database query capabilities, and context retrieval securely.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
       )}
@@ -612,14 +679,14 @@ export default function DirectoryGrid({
             <div>
               <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Grid size={20} style={{ color: 'var(--accent-color)' }} />
-                <span>Explore Categories</span>
+                <span>Browse by Category &amp; Ecosystem</span>
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: '0.2rem 0 0' }}>
-                Find specialized Model Context Protocol servers grouped by ecosystem & domain
+                Find ready-to-install MCP servers grouped by technology stack and workflow
               </p>
             </div>
             <Link href="/categories" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}>
-              <span>View all 50+ categories</span>
+              <span>All 50+ categories</span>
               <ChevronRight size={14} />
             </Link>
           </div>

@@ -188,8 +188,110 @@ export const CATEGORY_BY_SLUG: Record<string, string> = Object.fromEntries(
   DIRECTORY_CATEGORIES.map((c) => [categorySlug(c), c])
 );
 
+/** Known legacy slug mappings -> canonical category name */
+export const LEGACY_SLUG_MAP: Record<string, string> = {
+  'end-to-end-rag-platforms': '🔎 Search & Data Extraction',
+  'rag-platforms': '🔎 Search & Data Extraction',
+  'development': '💻 Developer Tools',
+  'development-and-coding': '💻 Developer Tools',
+  'dev-tools': '💻 Developer Tools',
+  'biology-medicine-and-bioinformatics': '🧬 Biology & Bioinformatics',
+  'biology': '🧬 Biology & Bioinformatics',
+  'other-tools-and-integrations': '🛠️ Other Tools and Integrations',
+};
+
 /** Resolve a landing-page slug back to its stored category, or undefined if unknown. */
 export function categoryFromSlug(slug: string): string | undefined {
-  return CATEGORY_BY_SLUG[slug];
+  if (!slug) return undefined;
+  const normalizedSlug = slug.toLowerCase().trim();
+  return CATEGORY_BY_SLUG[normalizedSlug] || LEGACY_SLUG_MAP[normalizedSlug];
 }
+
+/**
+ * Known alias map for normalizing incoming submission categories, legacy entries,
+ * or raw strings from AI agents into the exact canonical stored category.
+ */
+export const CATEGORY_ALIASES: Record<string, string> = {
+  // Development variations -> 💻 Developer Tools
+  'development': '💻 Developer Tools',
+  'development & coding': '💻 Developer Tools',
+  'dev tools': '💻 Developer Tools',
+  'developer tool': '💻 Developer Tools',
+  'devtools': '💻 Developer Tools',
+  'coding': '💻 Developer Tools',
+  'software development': '💻 Developer Tools',
+  '🛠️ development & coding': '💻 Developer Tools',
+
+  // Biology variations -> 🧬 Biology & Bioinformatics
+  'biology, medicine and bioinformatics': '🧬 Biology & Bioinformatics',
+  'biology': '🧬 Biology & Bioinformatics',
+  'bioinformatics': '🧬 Biology & Bioinformatics',
+  'medicine': '🧬 Biology & Bioinformatics',
+
+  // RAG platforms -> 🧠 Knowledge & Memory or 🔎 Search & Data Extraction
+  'end to end rag platforms': '🔎 Search & Data Extraction',
+  '🔎 end to end rag platforms': '🔎 Search & Data Extraction',
+  'rag': '🔎 Search & Data Extraction',
+
+  // Database variations -> 🗄️ Databases
+  'database': '🗄️ Databases',
+  'db': '🗄️ Databases',
+  'sql': '🗄️ Databases',
+
+  // AI & ML -> 🗣️ Conversational AI or 🧠 Knowledge & Memory
+  'ai': '🧠 Knowledge & Memory',
+  'llm': '🧠 Knowledge & Memory',
+
+  // API & Web -> 💻 Developer Tools
+  'api': '💻 Developer Tools',
+  'web': '📂 Browser Automation',
+
+  // Security -> 🔒 Security
+  'auth': '🔒 Security',
+  'authentication': '🔒 Security',
+};
+
+/**
+ * Normalizes any raw category string into an exact canonical category from DIRECTORY_CATEGORIES.
+ * Ensures submitters, agents, and crons cannot introduce invalid or duplicate categories.
+ */
+export function normalizeCategory(input?: string | null): string {
+  if (!input || !input.trim()) {
+    return DEFAULT_SUBMIT_CATEGORY;
+  }
+
+  const raw = input.trim();
+  const lower = raw.toLowerCase();
+
+  // 1. Direct match with existing canonical category
+  const exactMatch = DIRECTORY_CATEGORIES.find((c) => c === raw);
+  if (exactMatch) return exactMatch;
+
+  // 2. Direct case-insensitive match with canonical category
+  const caseMatch = DIRECTORY_CATEGORIES.find((c) => c.toLowerCase() === lower);
+  if (caseMatch) return caseMatch;
+
+  // 3. Match without emoji (by label)
+  const labelMatch = DIRECTORY_CATEGORIES.find((c) => parseCategoryLabel(c).label.toLowerCase() === lower);
+  if (labelMatch) return labelMatch;
+
+  // 4. Check explicit alias dictionary
+  const aliasMatch = CATEGORY_ALIASES[lower];
+  if (aliasMatch) {
+    return aliasMatch;
+  }
+
+  // 5. Partial keyword search against canonical labels
+  for (const canonical of DIRECTORY_CATEGORIES) {
+    const { label } = parseCategoryLabel(canonical);
+    const cleanLabel = label.toLowerCase();
+    if (cleanLabel === lower || cleanLabel.includes(lower) || lower.includes(cleanLabel)) {
+      return canonical;
+    }
+  }
+
+  // Default fallback if completely unrecognized
+  return DEFAULT_SUBMIT_CATEGORY;
+}
+
 

@@ -70,7 +70,7 @@ export default async function CursorMcpPage() {
             Best MCP Servers for <span className="text-brand-gradient">Cursor IDE</span>
           </h1>
           <p className="text-lead" style={{ marginBottom: '1.5rem' }}>
-            Supercharge Cursor Composer and AI agent features by connecting local databases, file systems, GitHub repositories, and external APIs using Model Context Protocol (MCP).
+            Connect Cursor Composer and AI agents directly to local databases, file systems, GitHub repositories, and external APIs using Model Context Protocol (MCP).
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <Link href="#top-servers" className="btn btn-primary">Top Cursor MCP Servers</Link>
@@ -119,7 +119,7 @@ export default async function CursorMcpPage() {
               return (
                 <Card key={server.id} href={`/mcp/${server.id}`} hoverable className="directory-card-uniform">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={40} />
+                    <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} size={40} />
                     <div className="directory-card-title-block" style={{ marginBottom: 0 }}>
                       <h3 className="directory-card-title-text" style={{ fontSize: '1.05rem' }}>
                         {displayName}

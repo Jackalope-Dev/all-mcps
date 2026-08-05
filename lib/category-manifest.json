@@ -32,7 +32,6 @@
   "📐 Architecture & Design",
   "📟 Embedded System",
   "🔄 Version Control",
-  "🔎 end to end RAG platforms",
   "🔎 Search & Data Extraction",
   "🔑 Cryptography",
   "🔒 Delivery",
@@ -48,11 +47,10 @@
   "🤖 Coding Agents",
   "🤝 Agreements & Coordination",
   "🧠 Knowledge & Memory",
+  "🧬 Biology & Bioinformatics",
   "🧮 Data Science Tools",
   "🚀 Aerospace & Astrodynamics",
   "🚆 Travel & Transportation",
   "🛒 E-Commerce",
-  "🛠️ Development & Coding",
-  "🛠️ Other Tools and Integrations",
-  "Biology, Medicine and Bioinformatics"
+  "🛠️ Other Tools and Integrations"
 ]
