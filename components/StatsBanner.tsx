@@ -41,6 +41,8 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
         maxWidth: 'var(--container-max)',
         margin: '0.5rem auto 1.25rem',
         padding: '0 var(--space-8)',
+        display: 'flex',
+        justifyContent: 'center',
       }}
     >
       <div
@@ -51,6 +53,8 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
           justifyContent: 'center',
           gap: '0.6rem 1.25rem',
           padding: '0.6rem 1.25rem',
+          width: 'fit-content',
+          maxWidth: '100%',
           background: 'rgba(15, 23, 42, 0.55)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
