@@ -661,7 +661,8 @@ export default function DirectoryGrid({
       <section
         className="container animate-fade-in delay-2"
         style={{
-          margin: '0 auto 2rem',
+          margin: isBrowse ? '2rem auto' : '0 auto',
+          marginBottom: '2rem',
           display: 'flex',
           justifyContent: 'center',
         }}

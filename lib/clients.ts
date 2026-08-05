@@ -15,6 +15,10 @@ export type McpClient = {
   slug: string;
   /** Display / product name, e.g. "Claude Desktop". */
   name: string;
+  /** Primary configuration file basename. */
+  configFilename: string;
+  /** Tag/Badge describing client environment (Desktop, IDE, CLI, etc.). */
+  badgeText: string;
   /** One-line meta/intro summary. */
   lead: string;
   /** The JSON key servers are nested under in this client's config. */
@@ -46,6 +50,8 @@ export const MCP_CLIENTS: McpClient[] = [
   {
     slug: 'claude-desktop',
     name: 'Claude Desktop',
+    configFilename: 'claude_desktop_config.json',
+    badgeText: 'Desktop App',
     lead: 'How to install and configure MCP servers in Claude Desktop on macOS and Windows — the config file location, the exact JSON shape, and how to verify your tools loaded.',
     configKey: 'mcpServers',
     configLocations: [
@@ -66,8 +72,86 @@ export const MCP_CLIENTS: McpClient[] = [
     ],
   },
   {
+    slug: 'cursor',
+    name: 'Cursor',
+    configFilename: 'mcp.json',
+    badgeText: 'AI Editor',
+    lead: 'How to install MCP servers in Cursor — the global and per-project mcp.json files, adding a server from Settings, and enabling tools in the Agent.',
+    configKey: 'mcpServers',
+    configLocations: [
+      { os: 'Global', path: '~/.cursor/mcp.json' },
+      { os: 'Project', path: '.cursor/mcp.json in your project root' },
+    ],
+    configExample: mcpServersExample('mcpServers'),
+    steps: [
+      { title: 'Open MCP settings', body: 'Go to Cursor Settings → MCP → Add new MCP server, or edit the JSON directly: ~/.cursor/mcp.json for every project, or .cursor/mcp.json in a project root to scope it to that repo.' },
+      { title: 'Add the server under mcpServers', body: 'Add a named entry with a "command" and "args" (and "env" for secrets), using the same stdio shape as other MCP clients.' },
+      { title: 'Enable it and use it in the Agent', body: 'Cursor picks up the change automatically; make sure the server is toggled on in the MCP settings. Its tools then become available to the Agent (Composer) — the model calls them when relevant.' },
+    ],
+    faq: [
+      { q: 'Where does Cursor store its MCP config?', a: 'Cursor reads ~/.cursor/mcp.json for a global configuration available in every project, and .cursor/mcp.json in a project root for servers scoped to that repository. Both use the same "mcpServers" JSON shape as Claude Desktop.' },
+      { q: 'Why are my Cursor MCP tools not showing up?', a: 'Confirm the server is toggled on in Cursor Settings → MCP, that the command runs on its own in a terminal, and that you are using the Agent (Composer), since MCP tools are called from agent mode. A red status in the MCP panel usually shows the underlying error.' },
+      { q: 'Can I share MCP servers with my team in Cursor?', a: 'Yes — commit a .cursor/mcp.json to your repository. Anyone who opens the project in Cursor gets the same servers, though each person still supplies their own secrets via env values.' },
+    ],
+  },
+  {
+    slug: 'cline',
+    name: 'Cline / VS Code',
+    configFilename: 'cline_mcp_settings.json',
+    badgeText: 'VS Code Extension',
+    lead: 'How to configure MCP servers for Cline (formerly Claude Dev) in VS Code — settings file location, standard JSON structure, and enabling tool permissions.',
+    configKey: 'mcpServers',
+    configLocations: [
+      { os: 'macOS', path: '~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json' },
+      { os: 'Windows', path: '%APPDATA%\\Code\\User\\globalStorage\\saoudrizwan.claude-dev\\settings\\cline_mcp_settings.json' },
+    ],
+    configExample: `{
+  "mcpServers": {
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite"],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}`,
+    steps: [
+      { title: 'Open Cline MCP Settings', body: 'In VS Code, click the Cline icon in the activity bar, select the gear/MCP settings icon, or edit cline_mcp_settings.json directly.' },
+      { title: 'Add the server configuration', body: 'Paste your server under "mcpServers". You can optionally specify autoApprove tool arrays or set disabled: false.' },
+      { title: 'Test tool execution', body: 'Prompt Cline in VS Code to use the newly added tool. Cline will prompt for permission or automatically run the tool based on your settings.' },
+    ],
+    faq: [
+      { q: 'Where is the Cline MCP settings file located?', a: 'It lives inside VS Code globalStorage under saoudrizwan.claude-dev/settings/cline_mcp_settings.json. The easiest way to open it is clicking the gear icon in the Cline side panel.' },
+      { q: 'Can Cline auto-approve MCP tool calls?', a: 'Yes, inside cline_mcp_settings.json you can add tool names to the "autoApprove": [] array for that server.' },
+    ],
+  },
+  {
+    slug: 'windsurf',
+    name: 'Windsurf',
+    configFilename: 'mcp_config.json',
+    badgeText: 'AI Editor',
+    lead: 'How to configure MCP servers in Windsurf (Codeium) — the mcp_config.json location, the JSON shape, and how to load the servers into Cascade.',
+    configKey: 'mcpServers',
+    configLocations: [
+      { os: 'All platforms', path: '~/.codeium/windsurf/mcp_config.json' },
+    ],
+    configExample: mcpServersExample('mcpServers'),
+    steps: [
+      { title: 'Open the MCP config', body: 'In Windsurf, open Cascade and go to the MCP / plugins settings, then choose to edit the raw config — or open ~/.codeium/windsurf/mcp_config.json directly.' },
+      { title: 'Add the server under mcpServers', body: 'Add a named entry with "command", "args", and an optional "env" object for secrets, using the standard stdio shape.' },
+      { title: 'Refresh and use it in Cascade', body: 'Save the file and refresh the MCP servers from the Windsurf MCP panel (or restart Windsurf). The tools then become available to Cascade.' },
+    ],
+    faq: [
+      { q: 'Where is the Windsurf MCP config file?', a: 'Windsurf reads ~/.codeium/windsurf/mcp_config.json. You can edit it from the MCP settings inside Cascade or open the file directly. It uses the same "mcpServers" shape as other MCP clients.' },
+      { q: 'How do I reload MCP servers in Windsurf?', a: 'After editing mcp_config.json, use the refresh action in the Windsurf MCP panel, or restart Windsurf. New or changed servers are not picked up until you refresh or relaunch.' },
+      { q: 'Does Windsurf support the same MCP servers as Cursor and Claude?', a: 'Yes. MCP is a shared protocol, so any stdio MCP server works across Windsurf, Cursor, Claude Desktop, and Claude Code — only the config file location and, for VS Code, the JSON key differ.' },
+    ],
+  },
+  {
     slug: 'claude-code',
     name: 'Claude Code',
+    configFilename: '.mcp.json / ~/.claude.json',
+    badgeText: 'Terminal CLI',
     lead: 'How to add MCP servers to Claude Code from the terminal — the claude mcp add command, project vs user scope, and how to confirm the server connected.',
     configKey: 'mcpServers',
     configLocations: [
@@ -91,49 +175,10 @@ claude mcp list`,
     ],
   },
   {
-    slug: 'cursor',
-    name: 'Cursor',
-    lead: 'How to install MCP servers in Cursor — the global and per-project mcp.json files, adding a server from Settings, and enabling tools in the Agent.',
-    configKey: 'mcpServers',
-    configLocations: [
-      { os: 'Global', path: '~/.cursor/mcp.json' },
-      { os: 'Project', path: '.cursor/mcp.json in your project root' },
-    ],
-    configExample: mcpServersExample('mcpServers'),
-    steps: [
-      { title: 'Open MCP settings', body: 'Go to Cursor Settings → MCP → Add new MCP server, or edit the JSON directly: ~/.cursor/mcp.json for every project, or .cursor/mcp.json in a project root to scope it to that repo.' },
-      { title: 'Add the server under mcpServers', body: 'Add a named entry with a "command" and "args" (and "env" for secrets), using the same stdio shape as other MCP clients.' },
-      { title: 'Enable it and use it in the Agent', body: 'Cursor picks up the change automatically; make sure the server is toggled on in the MCP settings. Its tools then become available to the Agent (Composer) — the model calls them when relevant.' },
-    ],
-    faq: [
-      { q: 'Where does Cursor store its MCP config?', a: 'Cursor reads ~/.cursor/mcp.json for a global configuration available in every project, and .cursor/mcp.json in a project root for servers scoped to that repository. Both use the same "mcpServers" JSON shape as Claude Desktop.' },
-      { q: 'Why are my Cursor MCP tools not showing up?', a: 'Confirm the server is toggled on in Cursor Settings → MCP, that the command runs on its own in a terminal, and that you are using the Agent (Composer), since MCP tools are called from agent mode. A red status in the MCP panel usually shows the underlying error.' },
-      { q: 'Can I share MCP servers with my team in Cursor?', a: 'Yes — commit a .cursor/mcp.json to your repository. Anyone who opens the project in Cursor gets the same servers, though each person still supplies their own secrets via env values.' },
-    ],
-  },
-  {
-    slug: 'windsurf',
-    name: 'Windsurf',
-    lead: 'How to configure MCP servers in Windsurf (Codeium) — the mcp_config.json location, the JSON shape, and how to load the servers into Cascade.',
-    configKey: 'mcpServers',
-    configLocations: [
-      { os: 'All platforms', path: '~/.codeium/windsurf/mcp_config.json' },
-    ],
-    configExample: mcpServersExample('mcpServers'),
-    steps: [
-      { title: 'Open the MCP config', body: 'In Windsurf, open Cascade and go to the MCP / plugins settings, then choose to edit the raw config — or open ~/.codeium/windsurf/mcp_config.json directly.' },
-      { title: 'Add the server under mcpServers', body: 'Add a named entry with "command", "args", and an optional "env" object for secrets, using the standard stdio shape.' },
-      { title: 'Refresh and use it in Cascade', body: 'Save the file and refresh the MCP servers from the Windsurf MCP panel (or restart Windsurf). The tools then become available to Cascade.' },
-    ],
-    faq: [
-      { q: 'Where is the Windsurf MCP config file?', a: 'Windsurf reads ~/.codeium/windsurf/mcp_config.json. You can edit it from the MCP settings inside Cascade or open the file directly. It uses the same "mcpServers" shape as other MCP clients.' },
-      { q: 'How do I reload MCP servers in Windsurf?', a: 'After editing mcp_config.json, use the refresh action in the Windsurf MCP panel, or restart Windsurf. New or changed servers are not picked up until you refresh or relaunch.' },
-      { q: 'Does Windsurf support the same MCP servers as Cursor and Claude?', a: 'Yes. MCP is a shared protocol, so any stdio MCP server works across Windsurf, Cursor, Claude Desktop, and Claude Code — only the config file location and, for VS Code, the JSON key differ.' },
-    ],
-  },
-  {
     slug: 'vs-code',
     name: 'VS Code (GitHub Copilot)',
+    configFilename: '.vscode/mcp.json',
+    badgeText: 'IDE Extension',
     lead: 'How to add MCP servers to VS Code for GitHub Copilot agent mode — the .vscode/mcp.json file, the servers key, and enabling tools in Copilot Chat.',
     configKey: 'servers',
     configLocations: [
@@ -164,3 +209,58 @@ claude mcp list`,
 export function mcpClientBySlug(slug: string): McpClient | undefined {
   return MCP_CLIENTS.find((c) => c.slug === slug);
 }
+
+/** Formats a valid client-specific JSON block for a server given its details */
+export function formatServerClientConfig(
+  clientSlug: string,
+  serverName: string,
+  command = 'npx',
+  args: string[] = [],
+  env?: Record<string, string>
+): string {
+  const cleanName = serverName
+    .toLowerCase()
+    .replace(/^@modelcontextprotocol\/server-/, '')
+    .replace(/^server-/, '')
+    .replace(/[^a-z0-9_-]/g, '-');
+
+  const defaultArgs = args.length > 0 ? args : ['-y', serverName.startsWith('@') ? serverName : `@modelcontextprotocol/server-${cleanName}`];
+  const envObj = env && Object.keys(env).length > 0 ? env : {};
+
+  if (clientSlug === 'vs-code') {
+    return JSON.stringify(
+      {
+        servers: {
+          [cleanName]: {
+            command,
+            args: defaultArgs,
+            ...(Object.keys(envObj).length > 0 ? { env: envObj } : {}),
+          },
+        },
+      },
+      null,
+      2
+    );
+  }
+
+  if (clientSlug === 'claude-code') {
+    const argsStr = defaultArgs.join(' ');
+    const envStr = Object.entries(envObj).map(([k, v]) => `-e ${k}=${v}`).join(' ');
+    return `claude mcp add ${cleanName} ${envStr ? `${envStr} ` : ''}-- ${command} ${argsStr}`;
+  }
+
+  return JSON.stringify(
+    {
+      mcpServers: {
+        [cleanName]: {
+          command,
+          args: defaultArgs,
+          ...(Object.keys(envObj).length > 0 ? { env: envObj } : {}),
+        },
+      },
+    },
+    null,
+    2
+  );
+}
+

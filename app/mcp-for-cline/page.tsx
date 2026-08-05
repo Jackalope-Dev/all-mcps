@@ -1,17 +1,20 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ChevronRight, Sparkles, Terminal, Eye, Download } from 'lucide-react';
+import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
 import { getActiveServers } from '@/lib/servers';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
 import { SafeMarkdown } from '@/components/ui/SafeMarkdown';
 import { parseServerName } from '@/lib/displayName';
+import { mcpClientBySlug } from '@/lib/clients';
+import { ClientConfigSection } from '@/components/clients/ClientConfigSection';
+import { ServerConfigCopyButton } from '@/components/clients/ServerConfigCopyButton';
 
 export const metadata: Metadata = {
   title: 'Top MCP Servers for Cline & VS Code — Directory & Setup',
   description:
-    'Find Model Context Protocol (MCP) servers for Cline (formerly Claude Dev) in VS Code. Setup guide for cline_mcp_settings.json.',
+    'Find Model Context Protocol (MCP) servers for Cline (formerly Claude Dev) in VS Code. Interactive setup guide for cline_mcp_settings.json.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-cline' },
   openGraph: {
     title: 'Top MCP Servers for Cline & VS Code | AllMCPs',
@@ -23,6 +26,7 @@ export const metadata: Metadata = {
 export default async function ClineMcpPage() {
   const allServers = await getActiveServers();
   const topServers = allServers.slice(0, 12);
+  const client = mcpClientBySlug('cline');
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -72,6 +76,7 @@ export default async function ClineMcpPage() {
         </nav>
 
         <section style={{ maxWidth: '800px', marginBottom: '3rem' }}>
+          <Badge variant="verified" style={{ marginBottom: '1rem' }}>Cline / VS Code Directory & Generator</Badge>
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>
             Top MCP Servers for <span className="text-brand-gradient">Cline / VS Code</span>
           </h1>
@@ -80,45 +85,21 @@ export default async function ClineMcpPage() {
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <Link href="#top-servers" className="btn btn-primary">Browse Cline MCP Servers</Link>
-            <Link href="/clients/vs-code" className="btn btn-secondary">VS Code Setup Guide</Link>
+            <Link href="/clients/cline" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <BookOpen size={16} /> Cline Setup Guide
+            </Link>
           </div>
         </section>
 
-        <section className="surface" style={{ padding: '1.5rem', borderRadius: '16px', marginBottom: '3rem', border: '1px solid rgba(0,229,255,0.3)' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Terminal size={20} style={{ color: 'var(--accent-color)' }} />
-            `cline_mcp_settings.json` Snippet
-          </h2>
-          <pre
-            style={{
-              background: 'rgba(2, 6, 23, 0.95)',
-              padding: '1rem',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              color: '#38bdf8',
-              fontSize: '0.85rem',
-              overflowX: 'auto',
-              margin: 0,
-            }}
-          >
-            <code>{`{
-  "mcpServers": {
-    "sqlite": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sqlite"],
-      "disabled": false,
-      "autoApprove": []
-    }
-  }
-}`}</code>
-          </pre>
-        </section>
+        {/* Interactive Config Generator */}
+        {client && <ClientConfigSection client={client} featuredServers={topServers} />}
 
+        {/* Top Servers List */}
         <section id="top-servers" style={{ marginBottom: '4rem' }}>
           <h2 className="text-section" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Cline Compatible MCP Servers
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {topServers.map((server) => {
               const { displayName, org } = parseServerName(server.name);
               return (
@@ -135,12 +116,9 @@ export default async function ClineMcpPage() {
                   <div className="directory-card-desc-block">
                     <SafeMarkdown content={server.description || ''} isInline />
                   </div>
-                  <div className="directory-card-footer">
+                  <div className="directory-card-footer" style={{ justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.75rem' }}>
                     <Badge variant="category">{server.category}</Badge>
-                    <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      <span><Eye size={12} /> {(server.views || 0).toLocaleString()}</span>
-                      <span><Download size={12} /> {(server.copies || 0).toLocaleString()}</span>
-                    </div>
+                    <ServerConfigCopyButton clientSlug="cline" serverName={server.name} />
                   </div>
                 </Card>
               );

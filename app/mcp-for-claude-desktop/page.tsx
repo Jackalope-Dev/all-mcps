@@ -1,17 +1,20 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ChevronRight, Sparkles, Terminal, Eye, Download } from 'lucide-react';
+import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
 import { getActiveServers } from '@/lib/servers';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
 import { SafeMarkdown } from '@/components/ui/SafeMarkdown';
 import { parseServerName } from '@/lib/displayName';
+import { mcpClientBySlug } from '@/lib/clients';
+import { ClientConfigSection } from '@/components/clients/ClientConfigSection';
+import { ServerConfigCopyButton } from '@/components/clients/ServerConfigCopyButton';
 
 export const metadata: Metadata = {
   title: 'Top MCP Servers for Claude Desktop — Install & Config Guide',
   description:
-    'Discover top Model Context Protocol (MCP) tools for Anthropic Claude Desktop. Setup guide for claude_desktop_config.json on macOS and Windows.',
+    'Discover top Model Context Protocol (MCP) tools for Anthropic Claude Desktop. Interactive setup guide for claude_desktop_config.json on macOS and Windows.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-claude-desktop' },
   openGraph: {
     title: 'Top MCP Servers for Claude Desktop | AllMCPs',
@@ -24,6 +27,7 @@ export const metadata: Metadata = {
 export default async function ClaudeDesktopMcpPage() {
   const allServers = await getActiveServers();
   const topServers = allServers.slice(0, 12);
+  const client = mcpClientBySlug('claude-desktop');
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -73,51 +77,30 @@ export default async function ClaudeDesktopMcpPage() {
         </nav>
 
         <section style={{ maxWidth: '800px', marginBottom: '3rem' }}>
+          <Badge variant="verified" style={{ marginBottom: '1rem' }}>Claude Desktop Directory & Generator</Badge>
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>
             Top MCP Servers for <span className="text-brand-gradient">Claude Desktop</span>
           </h1>
           <p className="text-lead" style={{ marginBottom: '1.5rem' }}>
-            Connect Claude Desktop directly to your desktop files, databases, and development tools. Install verified MCP servers in your client configuration.
+            Connect Claude Desktop directly to your desktop files, databases, and development tools. Generate pre-formatted JSON snippets or browse verified servers.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <Link href="#top-servers" className="btn btn-primary">Browse Claude MCP Servers</Link>
-            <Link href="/clients/claude-desktop" className="btn btn-secondary">Claude Desktop Guide</Link>
+            <Link href="#top-servers" className="btn btn-primary">Browse Compatible Servers</Link>
+            <Link href="/clients/claude-desktop" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <BookOpen size={16} /> Full Setup Guide
+            </Link>
           </div>
         </section>
 
-        <section className="surface" style={{ padding: '1.5rem', borderRadius: '16px', marginBottom: '3rem', border: '1px solid rgba(0,229,255,0.3)' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Terminal size={20} style={{ color: 'var(--accent-color)' }} />
-            `claude_desktop_config.json` Snippet
-          </h2>
-          <pre
-            style={{
-              background: 'rgba(2, 6, 23, 0.95)',
-              padding: '1rem',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              color: '#38bdf8',
-              fontSize: '0.85rem',
-              overflowX: 'auto',
-              margin: 0,
-            }}
-          >
-            <code>{`{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/yourname/Desktop"]
-    }
-  }
-}`}</code>
-          </pre>
-        </section>
+        {/* Interactive Config Generator */}
+        {client && <ClientConfigSection client={client} featuredServers={topServers} />}
 
+        {/* Featured Servers List */}
         <section id="top-servers" style={{ marginBottom: '4rem' }}>
           <h2 className="text-section" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Featured Claude Desktop Servers
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {topServers.map((server) => {
               const { displayName, org } = parseServerName(server.name);
               return (
@@ -134,12 +117,9 @@ export default async function ClaudeDesktopMcpPage() {
                   <div className="directory-card-desc-block">
                     <SafeMarkdown content={server.description || ''} isInline />
                   </div>
-                  <div className="directory-card-footer">
+                  <div className="directory-card-footer" style={{ justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.75rem' }}>
                     <Badge variant="category">{server.category}</Badge>
-                    <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      <span><Eye size={12} /> {(server.views || 0).toLocaleString()}</span>
-                      <span><Download size={12} /> {(server.copies || 0).toLocaleString()}</span>
-                    </div>
+                    <ServerConfigCopyButton clientSlug="claude-desktop" serverName={server.name} />
                   </div>
                 </Card>
               );
