@@ -68,4 +68,19 @@ const rows: Row[] = [
   assert(buildAiSearchText({}) === null, 'buildAiSearchText returns null when empty');
 }
 
+// 7. Conversational intent queries with stopwords (e.g. "find latest btc prices", "check transit times")
+{
+  const intentRows: Row[] = [
+    { name: 'coinbase-mcp', description: 'Fetch cryptocurrency exchange rates and market tickers.', category: 'Finance', extraText: 'Query bitcoin btc prices and market quotes.' },
+    { name: 'gtfs-transit-mcp', description: 'Realtime subway and bus schedule arrival data.', category: 'Transportation', extraText: 'Check transit schedules and train arrival times.' },
+    { name: 'unrelated-tool', description: 'Random developer utility.', category: 'Tools' },
+  ];
+
+  const btcOut = rankServers(intentRows, 'find latest btc prices');
+  assert(btcOut.length >= 1 && btcOut[0].name === 'coinbase-mcp', 'find latest btc prices ranks Coinbase MCP first');
+
+  const transitOut = rankServers(intentRows, 'check transit times');
+  assert(transitOut.length >= 1 && transitOut[0].name === 'gtfs-transit-mcp', 'check transit times ranks GTFS Transit MCP first');
+}
+
 console.log('✓ all search tests passed');

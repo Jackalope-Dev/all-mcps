@@ -42,6 +42,8 @@ const CRON_JOBS: CronJob[] = [
   // tick until the catalog is enriched, then no-ops. For the initial backlog, drive
   // scripts/backfill-ai-content.mjs against this endpoint to drain it faster.
   { path: "/api/cron/ai-content", secretVar: "ADMIN_SECRET" },
+  // Syncs semantic vector embeddings for natural language search into Cloudflare Vectorize.
+  { path: "/api/cron/vector-index", secretVar: "ADMIN_SECRET" },
   // Rotates the X/Twitter highlight. Fine every 4h (~6 posts/day).
   { path: "/api/cron/highlight", secretVar: "ADMIN_SECRET" },
   // IndexNow batch for recently approved listings — daily at 00:00 UTC tick.

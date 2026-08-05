@@ -120,6 +120,29 @@ export default function DirectoryGrid({
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(30);
 
+  const NL_EXAMPLES = useMemo(
+    () => [
+      'find latest btc prices',
+      'check transit times & train schedules',
+      'query postgres database',
+      'convert pdf documents to markdown',
+      'send slack notifications with AI',
+      'fetch github pull requests and issues',
+      'browse web pages using playwright',
+    ],
+    []
+  );
+
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  useEffect(() => {
+    if (searchQuery.trim()) return;
+    const timer = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % NL_EXAMPLES.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [searchQuery, NL_EXAMPLES]);
+
   // Keep client state in sync when the server re-renders with new searchParams (e.g. category links)
   useEffect(() => {
     setSelectedCategory(initialCategory);
@@ -686,11 +709,11 @@ export default function DirectoryGrid({
         <div className="directory-filters">
           <div className="directory-search-bar">
             <div className="directory-search-input-wrap">
-              <Search size={20} className="directory-search-icon" />
+              <Search size={22} className="directory-search-icon" />
               <input
                 type="text"
                 className="directory-search-input"
-                placeholder="Search 1,000+ MCP tools & servers (e.g. GitHub, Postgres, Memory)..."
+                placeholder={`Search 1,000+ tools (e.g., "${NL_EXAMPLES[placeholderIndex]}")...`}
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onKeyDown={(e) => {
@@ -742,9 +765,38 @@ export default function DirectoryGrid({
               }}
               aria-label="Search"
             >
-              <Search size={16} />
+              <Search size={18} />
               <span>Search</span>
             </button>
+          </div>
+
+          {/* Clickable Natural Language Search Prompt Examples */}
+          <div className="nl-examples-container">
+            <span className="nl-examples-label">
+              <Sparkles size={13} /> Try Natural Search:
+            </span>
+            {[
+              { icon: '📈', label: 'find latest btc prices', query: 'find latest btc prices' },
+              { icon: '🚆', label: 'check transit times', query: 'check transit times' },
+              { icon: '📄', label: 'pdf to markdown', query: 'convert pdf to markdown' },
+              { icon: '🐘', label: 'query postgres', query: 'query postgres database' },
+              { icon: '💬', label: 'slack notifications', query: 'send slack notifications' },
+            ].map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                className="nl-chip"
+                onClick={() => {
+                  handleSearchChange(chip.query);
+                  if (!isBrowse) {
+                    goToFullDirectorySearch(chip.query);
+                  }
+                }}
+              >
+                <span>{chip.icon}</span>
+                <span>{chip.label}</span>
+              </button>
+            ))}
           </div>
 
           {/* Active filters */}

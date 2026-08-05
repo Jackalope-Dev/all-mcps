@@ -37,5 +37,14 @@
       "binding": "LOGOS",
       "bucket_name": "all-mcps-logos"
     }
-  ]
+  ],
+  "vectorize": [
+    {
+      "binding": "VECTOR_INDEX",
+      "index_name": "mcp-servers-index"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }

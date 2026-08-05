@@ -1,6 +1,6 @@
 import { getActiveServers } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
-import { rankServers, buildAiSearchText } from '@/lib/search';
+import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 import { resolveInstallConfig, toClaudeConfigSnippet } from '@/lib/installConfig';
 
@@ -19,6 +19,18 @@ export async function GET(request: Request) {
 
   // Rank by relevance when a query is present (falls back to catalog order otherwise).
   if (query) {
+    let vectorMatches: Array<{ id: string; score: number }> = [];
+    try {
+      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+      const cfCtx = await getCloudflareContext();
+      if (cfCtx?.env && (cfCtx.env as any).VECTOR_INDEX && (cfCtx.env as any).AI) {
+        const { queryVectorIndex } = await import('@/lib/vectorSearch');
+        vectorMatches = await queryVectorIndex(query, cfCtx.env as CloudflareEnv, 40);
+      }
+    } catch {
+      /* Vector search is best-effort fallback */
+    }
+
     const withTools = servers.map((s) => {
       const tools = Array.isArray(s.tools) ? s.tools : [];
       const toolText = tools
@@ -28,7 +40,10 @@ export async function GET(request: Request) {
       const extraText = buildAiSearchText(s);
       return { ...s, toolText, extraText };
     });
-    servers = rankServers(withTools, query);
+
+    servers = vectorMatches.length > 0
+      ? hybridRankServers(withTools, query, vectorMatches)
+      : rankServers(withTools, query);
   }
 
   const results = servers.slice(0, limit).map((server) => {

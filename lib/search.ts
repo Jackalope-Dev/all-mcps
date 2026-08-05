@@ -146,16 +146,34 @@ const SYNONYMS: Record<string, string[]> = {
   logs: ['logging', 'observability'],
   // Finance / crypto
   finance: ['stock', 'crypto', 'trading', 'market'],
-  crypto: ['blockchain', 'web3', 'ethereum', 'bitcoin', 'solana'],
+  crypto: ['blockchain', 'web3', 'ethereum', 'bitcoin', 'solana', 'btc', 'coingecko', 'coinbase'],
+  btc: ['bitcoin', 'crypto', 'coingecko', 'coinbase', 'ticker', 'price', 'rates'],
+  prices: ['rates', 'quotes', 'ticker', 'market', 'price', 'cost'],
   payments: ['stripe', 'payment', 'billing'],
+  // Transit & travel
+  transit: ['bus', 'train', 'subway', 'gtfs', 'commute', 'transportation', 'schedule', 'transit'],
+  bus: ['transit', 'transportation', 'schedule', 'gtfs'],
+  train: ['transit', 'subway', 'rail', 'gtfs'],
+  times: ['schedules', 'arrivals', 'timetable', 'realtime', 'status'],
 };
 
-/** Lowercase alphanumeric terms; separators (-, /, @, ., spaces) split words. */
+const STOPWORDS = new Set([
+  'find', 'latest', 'check', 'show', 'me', 'how', 'to', 'where', 'can', 'i', 'get',
+  'for', 'the', 'a', 'an', 'is', 'are', 'with', 'want', 'need', 'search', 'look', 'up'
+]);
+
+/** Lowercase alphanumeric terms; separators (-, /, @, ., spaces) split words. Filter common intent stopwords when multiple words exist. */
 export function tokenizeQuery(query: string): string[] {
-  return query
+  const tokens = query
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter(Boolean);
+
+  if (tokens.length > 1) {
+    const filtered = tokens.filter((t) => !STOPWORDS.has(t));
+    if (filtered.length > 0) return filtered;
+  }
+  return tokens;
 }
 
 /** Precompile a query once (word-boundary regexes) so scoring stays cheap per row. */
@@ -309,6 +327,63 @@ export function rankServers<T extends Searchable & Engagement>(
     scored = rank(false);
   }
 
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return engagementScore(b.server) - engagementScore(a.server);
+  });
+
+  const ranked = scored.map((s) => s.server);
+  return typeof opts.limit === 'number' ? ranked.slice(0, opts.limit) : ranked;
+}
+
+/**
+ * Hybrid ranker combining keyword relevance matching with Cloudflare Vectorize similarity scores.
+ */
+export function hybridRankServers<T extends Searchable & Engagement & { id: string }>(
+  servers: T[],
+  query: string,
+  vectorMatches: Array<{ id: string; score: number }> = [],
+  opts: RankOptions = {}
+): T[] {
+  const terms = compileQuery(query);
+  if (terms.length === 0) {
+    return typeof opts.limit === 'number' ? servers.slice(0, opts.limit) : servers;
+  }
+  const fullQuery = terms.map((t) => t.term).join(' ');
+
+  const vectorScoreMap = new Map<string, number>();
+  for (const vm of vectorMatches) {
+    vectorScoreMap.set(vm.id, vm.score);
+  }
+
+  const scoredMap = new Map<string, { server: T; score: number }>();
+
+  // 1. Keyword search pass with vector score boosting
+  for (const server of servers) {
+    const kwScore = scoreServerMatch(server, terms, fullQuery, false);
+    const vecScore = vectorScoreMap.get(server.id) || 0;
+
+    let totalScore = kwScore;
+    if (vecScore > 0) {
+      totalScore += vecScore * 120;
+    }
+
+    if (totalScore > 0) {
+      scoredMap.set(server.id, { server, score: totalScore });
+    }
+  }
+
+  // 2. Vector-only recall pass for natural language intent matches (> 0.5 similarity)
+  for (const vm of vectorMatches) {
+    if (vm.score >= 0.5 && !scoredMap.has(vm.id)) {
+      const server = servers.find((s) => s.id === vm.id);
+      if (server) {
+        scoredMap.set(server.id, { server, score: vm.score * 100 });
+      }
+    }
+  }
+
+  const scored = Array.from(scoredMap.values());
   scored.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     return engagementScore(b.server) - engagementScore(a.server);

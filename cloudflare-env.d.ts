@@ -4,6 +4,8 @@
 interface __BaseEnv_CloudflareEnv {
 	LOGOS: R2Bucket;
 	DB: D1Database;
+	VECTOR_INDEX?: VectorizeIndex;
+	AI?: Ai;
 	ASSETS: Fetcher;
 	ACCESS_TEAM_DOMAIN: "https://jackalope-digital.cloudflareaccess.com";
 	ACCESS_AUD: "1f1d6927fe441199ceac84e46059247f1dfe4caf5defb88e21d178add8fc9187";

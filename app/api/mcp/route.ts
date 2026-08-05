@@ -1,5 +1,5 @@
 import { getActiveServers, getServerById, formatServerAsMarkdown } from '@/lib/servers';
-import { rankServers, buildAiSearchText } from '@/lib/search';
+import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
 
@@ -228,6 +228,16 @@ export async function POST(request: Request) {
         }
 
         if (query) {
+          let vectorMatches: Array<{ id: string; score: number }> = [];
+          try {
+            const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+            const cfCtx = await getCloudflareContext();
+            if (cfCtx?.env && (cfCtx.env as any).VECTOR_INDEX && (cfCtx.env as any).AI) {
+              const { queryVectorIndex } = await import('@/lib/vectorSearch');
+              vectorMatches = await queryVectorIndex(query, cfCtx.env as CloudflareEnv, 30);
+            }
+          } catch { /* best-effort */ }
+
           const withText = servers.map((s) => {
             const tools = Array.isArray(s.tools) ? s.tools : [];
             const toolText = tools
@@ -236,7 +246,10 @@ export async function POST(request: Request) {
               .join(' ');
             return { ...s, toolText, extraText: buildAiSearchText(s) };
           });
-          servers = rankServers(withText, query);
+
+          servers = vectorMatches.length > 0
+            ? hybridRankServers(withText, query, vectorMatches)
+            : rankServers(withText, query);
         }
 
         const results = servers.slice(0, limit);
