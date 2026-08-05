@@ -138,6 +138,16 @@ export function SiteFooter() {
                 Catalog Dataset (JSON) ↗
               </a>
             </li>
+            <li>
+              <a
+                href="https://www.npmjs.com/package/allmcps-server"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-link"
+              >
+                Submit via npx (allmcps-server) ↗
+              </a>
+            </li>
           </ul>
         </div>
         <div>
@@ -161,6 +171,16 @@ export function SiteFooter() {
                 className="nav-link"
               >
                 X (@AllMCPs) ↗
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://github.com/Jackalope-Dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-link"
+              >
+                GitHub ↗
               </a>
             </li>
             <li>
