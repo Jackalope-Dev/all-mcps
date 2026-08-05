@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   content += `## Submit an MCP Server (Free)\n`;
   content += `- **Listing is always free** — no payment required to get listed.\n`;
   content += `- **Submit (web):** https://allmcps.com/submit\n`;
-  content += `- **Submit (agent API):** POST https://allmcps.com/api/submit with \`{ "url": "https://github.com/owner/repo" }\`\n`;
+  content += `- **Submit (agent API):** POST https://allmcps.com/api/v1/submit with \`{ "url": "https://github.com/owner/repo", "name": "...", "email": "..." }\` (no CAPTCHA — the human /submit form requires one, this endpoint doesn't). Also available as the \`submit_mcp\` tool in the \`allmcps-server\` npm package.\n`;
   content += `- Paid boosts (priority review, featured, premium) are optional upgrades. See https://allmcps.com/pricing\n\n`;
 
   content += `## AI Agent Exclusive Promotions & Discounts\n`;

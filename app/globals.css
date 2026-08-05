@@ -1136,6 +1136,9 @@ p {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   outline: none;
   font-family: inherit;
   line-height: 1.25;

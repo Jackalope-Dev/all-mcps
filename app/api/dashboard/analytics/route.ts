@@ -45,37 +45,43 @@ export async function GET(request: Request) {
     .from(servers)
     .where(eq(servers.ownerUserId, session.user.id));
 
-  const ownedIds = new Set(ownedRows.map((r) => r.id));
-  const isPremiumOwner = ownedRows.some((r) => r.isPremium);
+  const ownedById = new Map(ownedRows.map((r) => [r.id, r]));
 
   if (serverId) {
-    // Detail view for a single server
-    if (!ownedIds.has(serverId)) {
+    // Detail view for a single server — premium is per-listing (Stripe checkout
+    // targets one serverId), so gate on *this* server's status, not whether the
+    // caller owns some other premium listing.
+    const owned = ownedById.get(serverId);
+    if (!owned) {
       return NextResponse.json({ error: 'Not your server' }, { status: 403 });
+    }
+    if (!owned.isPremium) {
+      return NextResponse.json({ error: 'Premium required for detailed analytics' }, { status: 403 });
     }
 
     const analytics = await getServerAnalytics(db, serverId, days);
 
     return NextResponse.json({
       serverId,
-      isPremium: isPremiumOwner,
+      isPremium: true,
       analytics,
     });
   }
 
-  // Batch view for all owned servers
-  const serverIds = Array.from(ownedIds);
+  // Batch view for all owned servers — detailed summaries only for premium listings.
+  const serverIds = Array.from(ownedById.keys());
   if (serverIds.length === 0) {
-    return NextResponse.json({ servers: [], isPremium: isPremiumOwner });
+    return NextResponse.json({ servers: [] });
   }
 
-  const summaries = await getServerAnalyticsBatch(db, serverIds, days);
+  const premiumIds = serverIds.filter((id) => ownedById.get(id)!.isPremium);
+  const summaries = premiumIds.length > 0 ? await getServerAnalyticsBatch(db, premiumIds, days) : {};
 
   return NextResponse.json({
-    isPremium: isPremiumOwner,
     servers: serverIds.map((id) => ({
       id,
-      analytics: summaries[id],
+      isPremium: ownedById.get(id)!.isPremium,
+      analytics: ownedById.get(id)!.isPremium ? summaries[id] : null,
     })),
   });
 }

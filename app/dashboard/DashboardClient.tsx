@@ -136,7 +136,8 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
     }
     setExpandedId(serverId);
 
-    if (!isPremium) return;
+    const server = servers.find((s) => s.id === serverId);
+    if (!server?.isPremium) return;
     if (detailAnalytics[serverId]) return;
 
     setLoadingDetail(serverId);
@@ -333,7 +334,7 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
             {/* Expanded analytics panel */}
             {isExpanded && (
               <div style={{ marginTop: '1rem' }}>
-                {!isPremium ? (
+                {!server.isPremium ? (
                   <PremiumTeaser />
                 ) : isLoadingDetail ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>

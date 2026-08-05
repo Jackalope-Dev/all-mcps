@@ -1,5 +1,6 @@
 import { getServerById, fetchServerReadme } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
+import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
 export async function GET(
   request: Request,
@@ -18,6 +19,26 @@ export async function GET(
   const readme = await fetchServerReadme(server.url);
   const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
   const quality = computeQualityScore(server);
+
+  // Log access (best-effort) so premium owners can see agent/LLM traffic per listing.
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const cfCtx = await getCloudflareContext();
+    if (cfCtx?.env && (cfCtx.env as any).DB) {
+      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const meta = extractRequestMeta(request);
+      cfCtx.ctx.waitUntil(
+        logApiAccess(logDb, {
+          serverId: server.id,
+          endpoint: 'v1_server_detail',
+          userAgent: meta.userAgent,
+          ipCountry: meta.ipCountry,
+        })
+      );
+    }
+  } catch {
+    /* logging is best-effort */
+  }
 
   return Response.json(
     {

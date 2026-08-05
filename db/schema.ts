@@ -25,6 +25,8 @@ export const servers = sqliteTable('servers', {
   pendingClaimWebsiteUrl: text('pending_claim_website_url'),
   /** Timed featured placement (e.g. 7-day boost). */
   featuredUntil: integer('featured_until', { mode: 'timestamp' }),
+  /** Timed #1-in-category pin from a category_sponsor_7d purchase. Distinct from featuredUntil so a category sponsorship doesn't get confused with a plain featured boost — category ranking checks this field specifically. Scoped to `category` as of purchase time. */
+  categorySponsorUntil: integer('category_sponsor_until', { mode: 'timestamp' }),
   /** Paid priority in the admin review queue. */
   reviewPriority: integer('review_priority', { mode: 'boolean' }).notNull().default(false),
   stripeCustomerId: text('stripe_customer_id'),

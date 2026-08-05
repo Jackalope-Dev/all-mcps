@@ -20,6 +20,7 @@ export type CallerClass =
 export type Endpoint =
   | 'mcp_jsonrpc'
   | 'v1_search'
+  | 'v1_server_detail'
   | 'llms_txt'
   | 'llms_full_txt'
   | 'markdown_view';

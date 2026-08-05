@@ -6,9 +6,11 @@ import { Sparkles, Crown } from 'lucide-react';
 
 interface CategorySponsorBannerProps {
   categoryName: string;
+  /** Current #1-pin holder, if any. Null means the slot is open. */
+  sponsor?: { id: string; name: string; until: string } | null;
 }
 
-export function CategorySponsorBanner({ categoryName }: CategorySponsorBannerProps) {
+export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsorBannerProps) {
   return (
     <div
       className="surface"
@@ -41,28 +43,49 @@ export function CategorySponsorBanner({ categoryName }: CategorySponsorBannerPro
         >
           <Crown size={20} />
         </div>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#00E5FF' }}>
-              Category Sponsorship Available · $18 for 7 Days
-            </span>
+        {sponsor ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#00E5FF' }}>
+                Category Sponsor · until {new Date(sponsor.until).toLocaleDateString()}
+              </span>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, fontWeight: 600 }}>
+              <Link href={`/mcp/${sponsor.id}`} style={{ color: 'inherit' }}>
+                {sponsor.name}
+              </Link>{' '}
+              is pinned #1 in {categoryName}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
+              The slot reopens when the sponsorship expires — only one sponsor runs per category at a time.
+            </p>
           </div>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, fontWeight: 600 }}>
-            Sponsor {categoryName} on AllMCPs
-          </p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
-            Get your MCP server pinned at the top of {categoryName} &amp; featured in category discovery.
-          </p>
-        </div>
+        ) : (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#00E5FF' }}>
+                Category Sponsorship Available · $18 for 7 Days
+              </span>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, fontWeight: 600 }}>
+              Sponsor {categoryName} on AllMCPs
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
+              Get your MCP server pinned at the top of {categoryName} &amp; featured in category discovery.
+            </p>
+          </div>
+        )}
       </div>
 
-      <Link
-        href={`/pricing?sku=category_sponsor_7d&category=${encodeURIComponent(categoryName)}`}
-        className="btn btn-sm btn-primary"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
-      >
-        <Sparkles size={14} /> Sponsor for $18 →
-      </Link>
+      {!sponsor && (
+        <Link
+          href={`/pricing?sku=category_sponsor_7d&category=${encodeURIComponent(categoryName)}`}
+          className="btn btn-sm btn-primary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+        >
+          <Sparkles size={14} /> Sponsor for $18 →
+        </Link>
+      )}
     </div>
   );
 }

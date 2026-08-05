@@ -104,7 +104,21 @@ export default async function CategoryLandingPage({
 
   const { emoji, label } = parseCategoryLabel(category);
   const all = await getActiveServers();
-  const inCategory = all.filter((s) => s.category === category).sort((a, b) => score(b) - score(a));
+  const byScore = all.filter((s) => s.category === category).sort((a, b) => score(b) - score(a));
+
+  // A category_sponsor_7d purchase pins its listing to #1 for the life of the
+  // sponsorship — a hard pin ahead of score(), not a score nudge, since the
+  // product promise is "the top spot," and lib/stripeCheckout.ts already
+  // guarantees at most one active sponsor per category at a time.
+  const now = Date.now();
+  const sponsorIdx = byScore.findIndex(
+    (s) => s.categorySponsorUntil && new Date(s.categorySponsorUntil).getTime() > now
+  );
+  const sponsor = sponsorIdx >= 0 ? byScore[sponsorIdx] : null;
+  const inCategory = sponsor
+    ? [sponsor, ...byScore.slice(0, sponsorIdx), ...byScore.slice(sponsorIdx + 1)]
+    : byScore;
+
   const total = inCategory.length;
   const cards = inCategory.slice(0, MAX_CARDS);
   const topNames = inCategory.slice(0, 3).map((s) => parseServerName(s.name).displayName);
@@ -241,7 +255,18 @@ export default async function CategoryLandingPage({
         </section>
 
         {/* Category Sponsor Header */}
-        <CategorySponsorBanner categoryName={label} />
+        <CategorySponsorBanner
+          categoryName={label}
+          sponsor={
+            sponsor
+              ? {
+                  id: sponsor.id,
+                  name: parseServerName(sponsor.name).displayName,
+                  until: new Date(sponsor.categorySponsorUntil as string | Date).toISOString(),
+                }
+              : null
+          }
+        />
 
         {/* Server grid */}
         {cards.length > 0 ? (

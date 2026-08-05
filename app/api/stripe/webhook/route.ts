@@ -51,10 +51,22 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
       current?.featuredUntil && new Date(current.featuredUntil).getTime() > Date.now()
         ? new Date(current.featuredUntil)
         : new Date();
+    // category_sponsor_7d also gets the featured badge/glow (same as featured_7d),
+    // plus its own categorySponsorUntil — the field the category page actually pins
+    // on. Kept separate so a plain featured_7d purchase never accidentally pins.
+    const categorySponsorBase =
+      sku === 'category_sponsor_7d' &&
+      current?.categorySponsorUntil &&
+      new Date(current.categorySponsorUntil).getTime() > Date.now()
+        ? new Date(current.categorySponsorUntil)
+        : new Date();
     await db
       .update(servers)
       .set({
         featuredUntil: addDays(base, 7),
+        ...(sku === 'category_sponsor_7d'
+          ? { categorySponsorUntil: addDays(categorySponsorBase, 7) }
+          : {}),
         ...(customerId ? { stripeCustomerId: customerId } : {}),
       })
       .where(eq(servers.id, serverId));

@@ -61,6 +61,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   websiteVerified: serversTable.websiteVerified,
   isOfficial: serversTable.isOfficial,
   featuredUntil: serversTable.featuredUntil,
+  categorySponsorUntil: serversTable.categorySponsorUntil,
   status: serversTable.status,
   lastCheckedAt: serversTable.lastCheckedAt,
   isVerifiedActive: serversTable.isVerifiedActive,
@@ -97,6 +98,8 @@ export type Server = {
   isPremium?: boolean;
   websiteVerified?: boolean;
   featuredUntil?: string | Date | null;
+  /** Active only when purchased via category_sponsor_7d and not yet expired; scoped to `category` at purchase time. */
+  categorySponsorUntil?: string | Date | null;
   status: string;
   lastCheckedAt?: string | Date | null;
   isVerifiedActive?: boolean;

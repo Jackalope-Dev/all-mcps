@@ -134,6 +134,13 @@
       "when": 1785792000000,
       "tag": "0018_ai_content",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1785880000000,
+      "tag": "0019_category_sponsor",
+      "breakpoints": true
     }
   ]
 }

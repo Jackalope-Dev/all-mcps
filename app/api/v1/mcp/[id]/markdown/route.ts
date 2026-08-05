@@ -1,4 +1,5 @@
 import { getServerById, fetchServerReadme, formatServerAsMarkdown } from '@/lib/servers';
+import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
 export async function GET(
   request: Request,
@@ -22,6 +23,28 @@ export async function GET(
 
   const readme = await fetchServerReadme(server.url);
   const markdown = formatServerAsMarkdown(server, readme);
+
+  // Log access (best-effort) — this is the URL llms.txt itself advertises for
+  // per-listing fetches, so it needs to feed the same "which LLMs access your
+  // server" data as the JSON-RPC tool calls do.
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const cfCtx = await getCloudflareContext();
+    if (cfCtx?.env && (cfCtx.env as any).DB) {
+      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const meta = extractRequestMeta(request);
+      cfCtx.ctx.waitUntil(
+        logApiAccess(logDb, {
+          serverId: server.id,
+          endpoint: 'markdown_view',
+          userAgent: meta.userAgent,
+          ipCountry: meta.ipCountry,
+        })
+      );
+    }
+  } catch {
+    /* logging is best-effort */
+  }
 
   return new Response(markdown, {
     headers: {

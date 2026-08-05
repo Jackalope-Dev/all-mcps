@@ -292,6 +292,14 @@ export default function DirectoryGrid({
     scored.sort((x, y) => {
       const a = x.server;
       const b = y.server;
+      // Featured/premium listings get the "higher ranking weight" the pricing page
+      // promises — but only as a tiebreak ahead of the mode's own score, and only on
+      // the two discovery-oriented modes. Objective modes (alpha, most viewed/upvoted)
+      // stay literal, since buyers of a badge shouldn't distort a metric users trust.
+      if (effectiveSort === 'relevance' || effectiveSort === 'trending') {
+        const featuredBoost = (isFeaturedListing(b) ? 1 : 0) - (isFeaturedListing(a) ? 1 : 0);
+        if (featuredBoost !== 0) return featuredBoost;
+      }
       if (effectiveSort === 'relevance') {
         if (y.relevance !== x.relevance) return y.relevance - x.relevance;
         const ea = engagementScore(a);
