@@ -437,28 +437,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </div>
           )}
 
-          {/* Grouped Engagement Stats (Views, Installs, Upvotes) + Distinct Share Action */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.85rem',
-                padding: '0.4rem 0.85rem',
-                borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid var(--border-color)',
-              }}
-            >
-              <ViewTracker serverId={server.id} initialCount={server.views || 0} />
-              <div style={{ width: '1px', height: '14px', background: 'var(--border-color)' }} />
-              <InstallsStat count={server.copies || 0} />
-              <div style={{ width: '1px', height: '14px', background: 'var(--border-color)' }} />
-              <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
-            </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShareModal serverId={server.id} serverName={server.name} variant="mini" />
-            </div>
+          {/* Engagement Metrics & Action Buttons (Views, Installs, Upvote, Share) */}
+          <div className="listing-metrics-row">
+            <ViewTracker serverId={server.id} initialCount={server.views || 0} />
+            <InstallsStat count={server.copies || 0} />
+            <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
+            <ShareModal serverId={server.id} serverName={server.name} variant="mini" />
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.75rem' }}>

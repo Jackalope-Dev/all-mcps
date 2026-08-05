@@ -80,6 +80,7 @@ export default function DirectoryGrid({
   totalCount,
   lazyFeedUrl,
   siteStats,
+  fullCategoryCounts,
 }: {
   initialServers: Server[];
   marqueeServers?: Server[];
@@ -98,6 +99,8 @@ export default function DirectoryGrid({
   lazyFeedUrl?: string;
   /** Aggregate platform stats (AI system reads, monthly visitors, countries) for hero social proof. */
   siteStats?: SiteStats;
+  /** Full category counts from the backend catalog (landing view). */
+  fullCategoryCounts?: Record<string, number>;
 }) {
   const isBrowse = variant === 'browse';
   const browseBase = '/browse';
@@ -361,6 +364,13 @@ export default function DirectoryGrid({
   };
 
   const handleCategorySelect = (cat: string | null) => {
+    if (!isBrowse && cat) {
+      const url = new URL(browseBase, window.location.origin);
+      url.searchParams.set('category', cat);
+      if (searchQuery) url.searchParams.set('q', searchQuery.trim());
+      window.location.assign(url.pathname + url.search);
+      return;
+    }
     setSelectedCategory(cat);
     updateUrl(cat, searchQuery);
   };
@@ -520,11 +530,19 @@ export default function DirectoryGrid({
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const s of servers) {
-      counts.set(s.category, (counts.get(s.category) || 0) + 1);
+    if (fullCategoryCounts && Object.keys(fullCategoryCounts).length > 0) {
+      for (const [cat, cnt] of Object.entries(fullCategoryCounts)) {
+        counts.set(cat, cnt);
+      }
+    } else {
+      for (const s of servers) {
+        if (s.category) {
+          counts.set(s.category, (counts.get(s.category) || 0) + 1);
+        }
+      }
     }
     return counts;
-  }, [servers]);
+  }, [servers, fullCategoryCounts]);
 
   const featuredCategoryCards = useMemo(() => {
     const all = DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories;
@@ -842,13 +860,13 @@ export default function DirectoryGrid({
               const count = categoryCounts.get(catName) || 0;
               const isSelected = selectedCategory === catName;
               return (
-                <button
+                <Link
                   key={catName}
-                  type="button"
-                  onClick={() => handleCategorySelect(isSelected ? null : catName)}
+                  href={`/browse?category=${encodeURIComponent(catName)}`}
                   className={`category-card surface-interactive ${isSelected ? 'category-card-selected' : ''}`}
                   style={{
                     textAlign: 'left',
+                    textDecoration: 'none',
                     border: isSelected ? `2px solid ${meta.color}` : `1px solid ${meta.borderTint || meta.color + '40'}`,
                     background: isSelected
                       ? `linear-gradient(135deg, ${meta.color}25 0%, rgba(15, 23, 42, 0.95) 100%)`
@@ -879,7 +897,7 @@ export default function DirectoryGrid({
                   <span className="category-card-arrow" aria-hidden="true" style={{ color: meta.color }}>
                     →
                   </span>
-                </button>
+                </Link>
               );
             })}
           </div>

@@ -90,28 +90,22 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
 
   return (
     <button
+      type="button"
       onClick={handleUpvote}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       disabled={hasUpvoted}
-      className="listing-metric-pill"
-      style={{
-        background: hasUpvoted ? 'rgba(236, 72, 153, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-        border: `1px solid ${hasUpvoted ? 'rgba(236, 72, 153, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`,
-        color: hasUpvoted ? '#ec4899' : (isHovered ? 'white' : 'var(--text-secondary)'),
-        fontWeight: hasUpvoted ? 600 : 500,
-        cursor: hasUpvoted ? 'default' : 'pointer',
-        transition: 'all 0.2s ease',
-        boxShadow: hasUpvoted ? '0 0 10px rgba(236, 72, 153, 0.2)' : 'none',
-      }}
+      className={`listing-metric-pill listing-metric-pill--button listing-metric-pill--upvote ${hasUpvoted ? 'listing-metric-pill--upvoted' : ''}`}
+      title={hasUpvoted ? 'Upvoted' : 'Click to upvote'}
+      aria-label={`${hasUpvoted ? 'Upvoted' : 'Upvote'}. Current count: ${upvotes}`}
     >
       <Heart 
         size={16} 
-        fill={hasUpvoted ? '#ec4899' : (isHovered ? 'rgba(255,255,255,0.2)' : 'transparent')} 
-        color={hasUpvoted ? '#ec4899' : 'currentColor'}
+        className="upvote-heart-icon"
+        fill={hasUpvoted ? '#f43f5e' : (isHovered ? 'rgba(244, 63, 94, 0.3)' : 'transparent')} 
         style={{ transition: 'all 0.2s ease' }}
       />
-      {upvotes} {upvotes === 1 ? 'Upvote' : 'Upvotes'}
+      <span>{upvotes} {upvotes === 1 ? 'Upvote' : 'Upvotes'}</span>
     </button>
   );
 }

@@ -268,27 +268,11 @@ export default function ShareModal({
     <>
       {variant === 'mini' ? (
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
-          className="listing-metric-pill"
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: 'var(--text-secondary)',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'white';
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--text-secondary)';
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-          }}
+          className="listing-metric-pill listing-metric-pill--button listing-metric-pill--share"
           title="Share & Embed Badge or Widget"
+          aria-label="Share & Embed Badge or Widget"
         >
           <Share2 size={16} />
           <span>Share &amp; Embed</span>

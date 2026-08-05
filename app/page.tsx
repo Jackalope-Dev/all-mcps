@@ -85,6 +85,14 @@ export default async function Home({
     ],
   };
 
+  // Compute full category counts across the entire catalog for homepage cards & filters
+  const fullCategoryCounts: Record<string, number> = {};
+  for (const s of servers) {
+    if (s.category) {
+      fullCategoryCounts[s.category] = (fullCategoryCounts[s.category] || 0) + 1;
+    }
+  }
+
   return (
     <main>
       <script
@@ -98,6 +106,8 @@ export default async function Home({
         variant="landing"
         totalCount={servers.length}
         siteStats={siteStats}
+        fullCategoryCounts={fullCategoryCounts}
+        lazyFeedUrl="/api/directory-feed"
       />
     </main>
   );
