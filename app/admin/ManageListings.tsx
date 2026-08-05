@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
+import { DIRECTORY_CATEGORIES } from '../../lib/categories';
 import {
   Search,
   ArrowUpDown,
@@ -452,12 +453,20 @@ export default function ManageListings() {
                         onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                         placeholder="Name"
                       />
-                      <input
+                      <select
                         className="form-input"
                         value={editForm.category}
                         onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
-                        placeholder="Category"
-                      />
+                      >
+                        {(!editForm.category || DIRECTORY_CATEGORIES.includes(editForm.category)
+                          ? DIRECTORY_CATEGORIES
+                          : [editForm.category, ...DIRECTORY_CATEGORIES]
+                        ).map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <textarea
                       className="form-input"

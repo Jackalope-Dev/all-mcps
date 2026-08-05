@@ -9,9 +9,10 @@ import { SURFACE_LABELS, type ImpressionSurface } from '@/lib/impressionLog';
 import type { AnalyticsSummary, ServerAnalytics } from '@/lib/analytics';
 import {
   Eye, Heart, Download, TrendingUp, TrendingDown, Minus,
-  BarChart3, Search, Globe, Lock, ChevronDown, ChevronUp,
-  Activity, Zap, Sparkles, Crown, MousePointerClick, CheckCircle2, AlertCircle, Edit3, Image as ImageIcon,
+  BarChart3, Search, Globe, Lock, Activity, Zap, Sparkles,
+  Crown, MousePointerClick, CheckCircle2, AlertCircle, Edit3, Image as ImageIcon,
 } from 'lucide-react';
+import { DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { PremiumUpgrade } from '@/components/PremiumUpgrade';
 
 type Server = {
@@ -49,9 +50,8 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
   const [analytics, setAnalytics] = useState(initialAnalytics);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTabMap, setActiveTabMap] = useState<Record<string, TabType>>({});
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailAnalytics, setDetailAnalytics] = useState<Record<string, ServerAnalytics>>({});
-  const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
+  const [loadingDetailMap, setLoadingDetailMap] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState({ name: '', description: '', category: '', websiteUrl: '' });
   const [saving, setSaving] = useState(false);
   const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null);
@@ -139,30 +139,25 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggleExpand = async (serverId: string) => {
-    if (expandedId === serverId) {
-      setExpandedId(null);
-      return;
-    }
-    setExpandedId(serverId);
-
-    const server = servers.find((s) => s.id === serverId);
-    if (!server?.isPremium) return;
-    if (detailAnalytics[serverId]) return;
-
-    setLoadingDetail(serverId);
-    try {
-      const res = await fetch(`/api/dashboard/analytics?serverId=${serverId}`);
-      if (res.ok) {
-        const data = (await res.json()) as { analytics: ServerAnalytics };
-        setDetailAnalytics((prev) => ({ ...prev, [serverId]: data.analytics }));
+  // Auto-fetch deep analytics for all premium servers
+  useEffect(() => {
+    servers.forEach((server) => {
+      if (server.isPremium && !detailAnalytics[server.id] && !loadingDetailMap[server.id]) {
+        setLoadingDetailMap((prev) => ({ ...prev, [server.id]: true }));
+        fetch(`/api/dashboard/analytics?serverId=${server.id}`)
+          .then((res) => (res.ok ? (res.json() as Promise<{ analytics: ServerAnalytics }>) : null))
+          .then((data) => {
+            if (data?.analytics) {
+              setDetailAnalytics((prev) => ({ ...prev, [server.id]: data.analytics }));
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            setLoadingDetailMap((prev) => ({ ...prev, [server.id]: false }));
+          });
       }
-    } catch {
-      // Silently fail
-    } finally {
-      setLoadingDetail(null);
-    }
-  };
+    });
+  }, [servers, detailAnalytics, loadingDetailMap]);
 
   const getActiveTab = (serverId: string): TabType => {
     if (editingId === serverId) return 'edit';
@@ -286,10 +281,9 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
         const pending = parsePendingRevision(server.pendingRevision);
         const activeTab = getActiveTab(server.id);
         const isEditing = activeTab === 'edit';
-        const isExpanded = expandedId === server.id;
         const summary = analytics[server.id];
         const detail = detailAnalytics[server.id];
-        const isLoadingDetail = loadingDetail === server.id;
+        const isLoadingDetail = Boolean(loadingDetailMap[server.id]);
 
         return (
           <li key={server.id} id={`server-${server.id}`} style={cardStyle}>
@@ -392,10 +386,15 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
               <button
                 type="button"
                 onClick={() => setTab(server.id, 'boost')}
-                style={getTabButtonStyle(activeTab === 'boost')}
+                style={{
+                  ...getTabButtonStyle(activeTab === 'boost'),
+                  color: activeTab === 'boost' ? '#FACC15' : '#F59E0B',
+                  background: activeTab === 'boost' ? 'rgba(250, 204, 21, 0.15)' : 'rgba(245, 158, 11, 0.08)',
+                  fontWeight: 700,
+                }}
               >
-                <Sparkles size={15} />
-                Boost &amp; Sponsorship
+                <Sparkles size={15} style={{ color: activeTab === 'boost' ? '#FACC15' : '#F59E0B' }} />
+                <span style={{ color: activeTab === 'boost' ? '#FACC15' : '#F59E0B' }}>Boost &amp; Sponsorship</span>
               </button>
               <button
                 type="button"
@@ -422,46 +421,35 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                       <TrendIndicator trend={summary.trend} />
                     </>
                   )}
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', marginLeft: 'auto' }}
-                    onClick={() => toggleExpand(server.id)}
-                  >
-                    {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                    {isExpanded ? 'Hide Deep Analytics' : 'Deep Analytics'}
-                  </button>
                 </div>
 
-                {isExpanded && (
-                  <div style={{ marginTop: '1.25rem' }}>
-                    {!server.isPremium ? (
-                      <PremiumTeaser />
-                    ) : isLoadingDetail ? (
-                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                        <Activity size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                        <p style={{ marginTop: '0.5rem' }}>Loading analytics…</p>
+                <div style={{ marginTop: '1.25rem' }}>
+                  {!server.isPremium ? (
+                    <PremiumTeaser />
+                  ) : loadingDetailMap[server.id] ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                      <Activity size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                      <p style={{ marginTop: '0.5rem' }}>Loading analytics…</p>
+                    </div>
+                  ) : detail ? (
+                    detail.summary.totalApiHits === 0 && detail.summary.totalImpressions === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
+                          Premium tracking is on — we just haven&apos;t seen API hits or directory impressions yet. Share your listing and check back after agents discover you.
+                        </p>
+                        <Link href={`/mcp/${server.id}`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
+                          Open public listing
+                        </Link>
                       </div>
-                    ) : detail ? (
-                      detail.summary.totalApiHits === 0 && detail.summary.totalImpressions === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-                          <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
-                            Premium tracking is on — we just haven&apos;t seen API hits or directory impressions yet. Share your listing and check back after agents discover you.
-                          </p>
-                          <Link href={`/mcp/${server.id}`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
-                            Open public listing
-                          </Link>
-                        </div>
-                      ) : (
-                        <AnalyticsPanel detail={detail} />
-                      )
                     ) : (
-                      <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
-                        No analytics data yet. Data will appear as LLMs and users interact with your listing.
-                      </p>
-                    )}
-                  </div>
-                )}
+                      <AnalyticsPanel detail={detail} />
+                    )
+                  ) : (
+                    <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
+                      No analytics data yet. Data will appear as LLMs and users interact with your listing.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -516,12 +504,20 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                 </div>
                 <div>
                   <label style={fieldLabelStyle}>Category</label>
-                  <input
+                  <select
                     className="form-input"
                     value={form.category}
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                    placeholder="Category"
-                  />
+                  >
+                    {(!form.category || DIRECTORY_CATEGORIES.includes(form.category)
+                      ? DIRECTORY_CATEGORIES
+                      : [form.category, ...DIRECTORY_CATEGORIES]
+                    ).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={fieldLabelStyle}>Website URL</label>
