@@ -75,7 +75,8 @@ button,
 input,
 select,
 textarea,
-optgroup {
+optgroup,
+option {
   font-family: var(--font-sans), "Atkinson Hyperlegible Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -1394,6 +1395,29 @@ p {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   font-family: inherit;
 }
+
+select,
+select.form-input {
+  font-family: var(--font-sans), "Atkinson Hyperlegible Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  color: var(--text-primary);
+  background-color: #0f172a;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+select option,
+select optgroup,
+optgroup option {
+  font-family: var(--font-sans), "Atkinson Hyperlegible Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  background-color: #0f172a;
+  color: #ffffff;
+  padding: 0.5rem;
+}
+
 .form-input:focus {
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px var(--accent-glow);
@@ -2186,6 +2210,7 @@ nav[aria-label="Table of contents"] {
 
 .directory-category-select {
   flex-grow: 1;
+  font-family: var(--font-sans), "Atkinson Hyperlegible Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   height: 3.25rem !important;
   padding: 0 2.75rem 0 1.25rem !important;
   font-size: 1rem !important;
