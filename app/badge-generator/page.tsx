@@ -42,9 +42,8 @@ export default function BadgeGeneratorPage() {
   };
 
   return (
-    <>
+    <PageShell variant="tool" panel>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <PageShell variant="tool" panel>
       <PageHeader
         title="MCP Badge & Embed Generator"
         description="Customize dynamic SVG badges for your GitHub README, documentation site, or blog. Keep the badge dofollow and verify your site to turn your listing's website link into a reciprocal dofollow backlink."
@@ -72,7 +71,6 @@ export default function BadgeGeneratorPage() {
       <div style={{ marginTop: '2rem' }}>
         <BadgeEmbedBuilder />
       </div>
-      </PageShell>
-    </>
+    </PageShell>
   );
 }

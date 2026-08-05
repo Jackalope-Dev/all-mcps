@@ -109,8 +109,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         servers = dbServers;
       }
     }
-  } catch (e) {
-    console.error("Failed to fetch D1 for sitemap", e);
+  } catch (e: any) {
+    const msg = e?.message || e?.cause?.message || String(e);
+    if (msg.includes('no such table') || msg.includes('D1_ERROR')) {
+      console.warn('[sitemap] D1 table not available during build time, using static mcp-servers.json fallback.');
+    } else {
+      console.error('[sitemap] Failed to fetch D1 for sitemap:', e);
+    }
   }
 
   const sitemapEntries: MetadataRoute.Sitemap = [

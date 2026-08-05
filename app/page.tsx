@@ -6,14 +6,16 @@ import { getActiveServers } from '../lib/servers';
 import { getSiteStats } from '../lib/siteStats';
 
 export const metadata: Metadata = {
-  title: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
+  title: {
+    absolute: 'AllMCPs — Discover & Install MCP Servers for AI Agents',
+  },
   description:
     'Find, discover, and install the best Model Context Protocol (MCP) servers. Connect Claude, Cursor, and AI agents to files, databases, and APIs.',
   alternates: {
     canonical: 'https://allmcps.com',
   },
   openGraph: {
-    title: 'AllMCPs - Discover & Install MCP Servers for AI Agents',
+    title: 'AllMCPs — Discover & Install MCP Servers for AI Agents',
     description:
       'Find, discover, and install the best Model Context Protocol (MCP) servers. Connect Claude, Cursor, and AI agents to files, databases, and APIs.',
     url: 'https://allmcps.com',

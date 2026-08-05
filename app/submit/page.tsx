@@ -44,21 +44,19 @@ export default function SubmitPage() {
   };
 
   return (
-    <>
+    <PageShell variant="content" panel>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <PageShell variant="content" panel>
-        <PageHeader
-          title="Submit an MCP Server"
-          description={
-            <>
-              Have you built an incredible MCP server? Submit it below to get it listed in our
-              directory. You can add a website (nofollow on free listings; dofollow for premium) and
-              claim ownership after approval via GitHub badge, site badge, or DNS.
-            </>
-          }
-        />
-        <SubmitForm />
-      </PageShell>
-    </>
+      <PageHeader
+        title="Submit an MCP Server"
+        description={
+          <>
+            Have you built an incredible MCP server? Submit it below to get it listed in our
+            directory. You can add a website (nofollow on free listings; dofollow for premium) and
+            claim ownership after approval via GitHub badge, site badge, or DNS.
+          </>
+        }
+      />
+      <SubmitForm />
+    </PageShell>
   );
 }

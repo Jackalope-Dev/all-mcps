@@ -2,14 +2,14 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy for the AllMCPs Directory',
+  title: 'Privacy Policy & Data Rights',
   description:
     'Privacy policy for the AllMCPs directory, explaining how we handle analytics, cookie consent, and data protection on our website.',
   alternates: {
     canonical: 'https://allmcps.com/privacy',
   },
   openGraph: {
-    title: 'Privacy Policy for the AllMCPs Directory | AllMCPs',
+    title: 'Privacy Policy & Data Rights | AllMCPs',
     description:
       'Privacy policy for the AllMCPs directory, explaining how we handle analytics, cookie consent, and data protection on our website.',
     url: 'https://allmcps.com/privacy',

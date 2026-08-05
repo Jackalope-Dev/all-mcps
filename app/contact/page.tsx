@@ -3,21 +3,21 @@ import { ContactForm } from '../../components/forms/ContactForm';
 import { PageShell, PageHeader } from '../../components/PageShell';
 
 export const metadata: Metadata = {
-  title: 'Contact AllMCPs — Support, Listings & Sponsorships',
+  title: 'Contact & Support — Listings & Sponsorships',
   description:
     'Get in touch with the AllMCPs team about listing inquiries, sponsorships, support requests, or general feedback on our MCP directory.',
   alternates: {
     canonical: 'https://allmcps.com/contact',
   },
   openGraph: {
-    title: 'Contact AllMCPs — Support, Listings & Sponsorships | AllMCPs',
+    title: 'Contact & Support — Listings & Sponsorships | AllMCPs',
     description:
       'Get in touch with the AllMCPs team about listing inquiries, sponsorships, support requests, or general feedback on our MCP directory.',
     url: 'https://allmcps.com/contact',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Contact AllMCPs — Support, Listings & Sponsorships | AllMCPs',
+    title: 'Contact & Support — Listings & Sponsorships | AllMCPs',
     description:
       'Get in touch with the AllMCPs team about listing inquiries, sponsorships, support requests, or general feedback on our MCP directory.',
   },

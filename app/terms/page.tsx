@@ -2,14 +2,14 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service for the AllMCPs Directory',
+  title: 'Terms of Service',
   description:
     'Terms of service and usage conditions for the AllMCPs directory, including server submissions and featured listing services.',
   alternates: {
     canonical: 'https://allmcps.com/terms',
   },
   openGraph: {
-    title: 'Terms of Service for the AllMCPs Directory | AllMCPs',
+    title: 'Terms of Service | AllMCPs',
     description:
       'Terms of service and usage conditions for the AllMCPs directory, including server submissions and featured listing services.',
     url: 'https://allmcps.com/terms',

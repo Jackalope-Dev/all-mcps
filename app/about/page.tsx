@@ -4,21 +4,23 @@ import { Button } from '../../components/ui/Button';
 import { PageShell, PageHeader } from '../../components/PageShell';
 
 export const metadata: Metadata = {
-  title: 'About AllMCPs — Our Mission & MCP Directory',
+  title: {
+    absolute: 'About AllMCPs — The MCP Server Directory',
+  },
   description:
     'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
   alternates: {
     canonical: 'https://allmcps.com/about',
   },
   openGraph: {
-    title: 'About AllMCPs — Our Mission & MCP Directory | AllMCPs',
+    title: 'About AllMCPs — The MCP Server Directory',
     description:
       'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
     url: 'https://allmcps.com/about',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'About AllMCPs — Our Mission & MCP Directory | AllMCPs',
+    title: 'About AllMCPs — The MCP Server Directory',
     description:
       'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
   },

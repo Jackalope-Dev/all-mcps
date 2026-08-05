@@ -4,19 +4,19 @@ import { PricingClient } from './PricingClient';
 import { PAID_PRODUCTS, FREE_TIER, formatUsd } from '../../lib/pricing';
 
 export const metadata: Metadata = {
-  title: 'AllMCPs Pricing — Free & Featured MCP Listings',
+  title: 'Pricing — Free & Featured MCP Server Listings',
   description:
     'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, and priority verification for your AI tool.',
   alternates: { canonical: 'https://allmcps.com/pricing' },
   openGraph: {
-    title: 'AllMCPs Pricing — Free & Featured MCP Listings | AllMCPs',
+    title: 'Pricing — Free & Featured MCP Server Listings | AllMCPs',
     description:
       'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, and priority verification.',
     url: 'https://allmcps.com/pricing',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AllMCPs Pricing — Free & Featured MCP Listings | AllMCPs',
+    title: 'Pricing — Free & Featured MCP Server Listings | AllMCPs',
     description:
       'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, and priority verification.',
   },
