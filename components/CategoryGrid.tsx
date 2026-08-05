@@ -114,23 +114,25 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
                 animationDelay: `${Math.min(i * 0.03, 0.6)}s`,
                 '--cat-color': meta.color,
                 '--cat-bg': meta.bgTint,
-                '--cat-border': meta.borderTint,
+                '--cat-border': meta.borderTint || `${meta.color}40`,
+                '--cat-gradient-bg': `linear-gradient(135deg, ${meta.color}15 0%, rgba(15, 23, 42, 0.88) 100%)`,
               } as React.CSSProperties}
             >
               <div 
                 className="category-card-emoji" 
                 aria-hidden="true"
                 style={{
-                  background: meta.bgTint,
-                  borderColor: meta.borderTint,
+                  background: `${meta.color}18`,
+                  borderColor: meta.borderTint || `${meta.color}40`,
+                  boxShadow: `0 2px 10px ${meta.color}20`,
                 }}
               >
                 {meta.emoji || cat.emoji || cat.label.charAt(0)}
               </div>
               <div className="category-card-content">
-                <h3 className="category-card-label">{cat.label}</h3>
+                <h3 className="category-card-label" style={{ color: '#ffffff' }}>{cat.label}</h3>
                 <span className="category-card-count">
-                  {cat.count.toLocaleString()} {cat.count === 1 ? 'server' : 'servers'}
+                  Browse {cat.count.toLocaleString()} {cat.label} MCP {cat.count === 1 ? 'server' : 'servers'}
                 </span>
               </div>
               <span className="category-card-arrow" aria-hidden="true" style={{ color: meta.color }}>→</span>

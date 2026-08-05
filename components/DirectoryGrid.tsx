@@ -639,8 +639,116 @@ export default function DirectoryGrid({
         </section>
       )}
 
-      {/* Featured Marquee near the top of the homepage */}
-      {showDiscovery && <FeaturedMarquee servers={marqueeServers} />}
+      {/* Search Bar & Filters */}
+      <section
+        className="container animate-fade-in delay-2"
+        style={{
+          margin: '0 auto 2rem',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        <div className="directory-filters">
+          <div className="directory-filters-row">
+            <Input
+              type="text"
+              placeholder="Search for tools (e.g. GitHub, Postgres, File System)..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isBrowse) {
+                  e.preventDefault();
+                  goToFullDirectorySearch(searchQuery);
+                }
+              }}
+              aria-label="Search MCP Servers"
+              inputClassName="search-input"
+              style={{ flexGrow: 1, flexBasis: '280px', margin: 0, minWidth: 0 }}
+            />
+
+            <select
+              className="form-input directory-category-select"
+              style={{
+                minWidth: `min(100%, ${selectMinCh}ch)`,
+                width: `min(100%, max(14rem, ${selectMinCh}ch))`,
+                flex: '1 1 auto',
+                maxWidth: '100%',
+              }}
+              value={selectedCategory || ''}
+              onChange={(e) => handleCategorySelect(e.target.value === '' ? null : e.target.value)}
+              aria-label="Filter by Category"
+            >
+              <option value="">All Categories</option>
+              {(DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories).map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Active filters */}
+          <div className="directory-tags-row">
+            <button
+              type="button"
+              className={`directory-tag ${verifiedOnly ? 'directory-tag-active' : ''}`}
+              onClick={() => setVerifiedOnly((v) => !v)}
+              aria-pressed={verifiedOnly}
+              title="Show listings that claimed ownership (badge/DNS) or have a premium listing"
+            >
+              <BadgeCheck size={14} />
+              Verified
+            </button>
+
+            {selectedCategory && (
+              <button
+                type="button"
+                className="directory-tag directory-tag-active"
+                onClick={() => handleCategorySelect(null)}
+              >
+                {selectedCategory}
+                <X size={12} />
+              </button>
+            )}
+
+            {selectedStack !== 'all' && (
+              <button
+                type="button"
+                className="directory-tag directory-tag-active"
+                onClick={() => setSelectedStack('all')}
+              >
+                Stack: {selectedStack}
+                <X size={12} />
+              </button>
+            )}
+
+            {selectedTransport !== 'all' && (
+              <button
+                type="button"
+                className="directory-tag directory-tag-active"
+                onClick={() => setSelectedTransport('all')}
+              >
+                Transport: {selectedTransport === 'stdio' ? 'STDIO' : 'SSE / Remote'}
+                <X size={12} />
+              </button>
+            )}
+
+            {searchQuery && (
+              <button
+                type="button"
+                className="directory-tag directory-tag-active"
+                onClick={() => handleSearchChange('')}
+              >
+                Search: {searchQuery.length > 24 ? `${searchQuery.slice(0, 24)}…` : searchQuery}
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured & Trending Cards (below search, hidden when filtering) */}
+      {showDiscovery && <FeaturedCards servers={featuredCards} />}
 
       {/* Category Showcase Section (mcp.so vibe) — homepage landing only when not filtered */}
       {!isBrowse && !selectedCategory && !searchQuery && (
@@ -702,9 +810,11 @@ export default function DirectoryGrid({
                   className={`category-card surface-interactive ${isSelected ? 'category-card-selected' : ''}`}
                   style={{
                     textAlign: 'left',
-                    border: isSelected ? `2px solid ${meta.color}` : `1px solid ${meta.borderTint}`,
-                    background: isSelected ? meta.bgTint : 'var(--surface-color)',
-                    boxShadow: isSelected ? `0 0 16px ${meta.bgTint}` : undefined,
+                    border: isSelected ? `2px solid ${meta.color}` : `1px solid ${meta.borderTint || meta.color + '40'}`,
+                    background: isSelected
+                      ? `linear-gradient(135deg, ${meta.color}25 0%, rgba(15, 23, 42, 0.95) 100%)`
+                      : `linear-gradient(135deg, ${meta.color}15 0%, rgba(15, 23, 42, 0.88) 100%)`,
+                    boxShadow: isSelected ? `0 0 20px ${meta.color}35` : `0 4px 16px rgba(0, 0, 0, 0.3)`,
                     cursor: 'pointer',
                   }}
                 >
@@ -712,18 +822,19 @@ export default function DirectoryGrid({
                     className="category-card-emoji"
                     aria-hidden="true"
                     style={{
-                      background: meta.bgTint,
-                      borderColor: meta.borderTint,
+                      background: isSelected ? `${meta.color}30` : `${meta.color}18`,
+                      borderColor: isSelected ? meta.color : (meta.borderTint || `${meta.color}40`),
+                      boxShadow: `0 2px 10px ${meta.color}20`,
                     }}
                   >
                     {meta.emoji}
                   </div>
                   <div className="category-card-content">
-                    <h3 className="category-card-label" style={{ color: isSelected ? meta.color : 'var(--text-primary)' }}>
+                    <h3 className="category-card-label" style={{ color: isSelected ? meta.color : '#ffffff' }}>
                       {meta.label}
                     </h3>
                     <span className="category-card-count" style={{ color: 'var(--text-secondary)' }}>
-                      {count > 0 ? `${count.toLocaleString()} servers` : 'Explore tools'}
+                      {count > 0 ? `Browse ${count.toLocaleString()} ${meta.label} MCP ${count === 1 ? 'server' : 'servers'}` : 'Explore MCP servers'}
                     </span>
                   </div>
                   <span className="category-card-arrow" aria-hidden="true" style={{ color: meta.color }}>
@@ -736,222 +847,8 @@ export default function DirectoryGrid({
         </section>
       )}
 
-      {/* Top-level platform reach & social proof stats */}
-      {!isBrowse && !selectedCategory && <StatsBanner stats={siteStats} />}
-
-      {/* Browse page header — list-first view for all (or filtered) servers */}
-      {isBrowse && !selectedCategory && (
-        <section className="container animate-fade-in delay-1 directory-category-header">
-          <nav aria-label="Breadcrumb">
-            <ol className="breadcrumb" style={{ marginBottom: '1.25rem', paddingTop: 0 }}>
-              <li>
-                <Link href="/">Home</Link>
-              </li>
-              <li className="breadcrumb-separator">
-                <ChevronRight size={12} />
-              </li>
-              <li className="breadcrumb-current">Browse</li>
-            </ol>
-          </nav>
-
-          <div className="directory-category-title-row">
-            <div>
-              <p className="directory-category-kicker">Directory</p>
-              <h1 className="directory-category-title">Browse MCP Servers</h1>
-              <p className="directory-category-subtitle">{resultSubtitle}</p>
-            </div>
-            {isFiltered && (
-              <Button
-                variant="secondary"
-                onClick={clearAllFilters}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
-              >
-                <X size={16} /> Clear filters
-              </Button>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Category context header — cleaner focused view when a category is selected */}
-      {selectedCategory && categoryMeta && (
-        <section className="container animate-fade-in delay-1 directory-category-header">
-          <nav aria-label="Breadcrumb">
-            <ol className="breadcrumb" style={{ marginBottom: '1.25rem', paddingTop: 0 }}>
-              <li>
-                <Link
-                  href={browseBase}
-                  onClick={(e) => {
-                    if (isBrowse) {
-                      e.preventDefault();
-                      clearAllFilters();
-                    }
-                  }}
-                >
-                  Browse
-                </Link>
-              </li>
-              <li className="breadcrumb-separator">
-                <ChevronRight size={12} />
-              </li>
-              <li>
-                <Link href="/categories">Categories</Link>
-              </li>
-              <li className="breadcrumb-separator">
-                <ChevronRight size={12} />
-              </li>
-              <li className="breadcrumb-current">{categoryMeta.label}</li>
-            </ol>
-          </nav>
-
-          <div className="directory-category-title-row">
-            <div>
-              <p className="directory-category-kicker">Category</p>
-              <h1 className="directory-category-title">
-                {categoryMeta.emoji ? (
-                  <span className="directory-category-emoji" aria-hidden="true">
-                    {categoryMeta.emoji}
-                  </span>
-                ) : null}
-                {categoryMeta.label}
-              </h1>
-              <p className="directory-category-subtitle">{resultSubtitle}</p>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                handleCategorySelect(null);
-              }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
-            >
-              <X size={16} /> Clear category
-            </Button>
-          </div>
-        </section>
-      )}
-
-      {/* Search Bar & Filters */}
-      <section
-        className="container animate-fade-in delay-2"
-        style={{
-          margin: '0 auto 2rem',
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
-        <div className="directory-filters">
-          <div className="directory-filters-row">
-            <Input
-              type="text"
-              placeholder="Search for tools (e.g. GitHub, Postgres, File System)..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isBrowse) {
-                  e.preventDefault();
-                  goToFullDirectorySearch(searchQuery);
-                }
-              }}
-              aria-label="Search MCP Servers"
-              inputClassName="search-input"
-              style={{ flexGrow: 1, flexBasis: '280px', margin: 0, minWidth: 0 }}
-            />
-
-            <select
-              className="form-input directory-category-select"
-              style={{
-                minWidth: `min(100%, ${selectMinCh}ch)`,
-                width: `min(100%, max(14rem, ${selectMinCh}ch))`,
-                flex: '1 1 auto',
-                maxWidth: '100%',
-              }}
-              value={selectedCategory || ''}
-              onChange={(e) => handleCategorySelect(e.target.value === '' ? null : e.target.value)}
-              aria-label="Filter by Category"
-            >
-              <option value="">All Categories</option>
-              {(DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories).map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Active filters + quick category tags (mcp.so vibe) */}
-          <div className="directory-tags-row">
-            <button
-              type="button"
-              className={`directory-tag ${verifiedOnly ? 'directory-tag-active' : ''}`}
-              onClick={() => setVerifiedOnly((v) => !v)}
-              aria-pressed={verifiedOnly}
-              title="Show listings that claimed ownership (badge/DNS) or have a premium listing"
-            >
-              <BadgeCheck size={14} />
-              Verified
-            </button>
-
-            {selectedCategory && (
-              <button
-                type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => handleCategorySelect(null)}
-              >
-                {selectedCategory}
-                <X size={12} />
-              </button>
-            )}
-
-            {selectedStack !== 'all' && (
-              <button
-                type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => setSelectedStack('all')}
-              >
-                Stack: {selectedStack}
-                <X size={12} />
-              </button>
-            )}
-
-            {selectedTransport !== 'all' && (
-              <button
-                type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => setSelectedTransport('all')}
-              >
-                Transport: {selectedTransport === 'stdio' ? 'STDIO' : 'SSE / Remote'}
-                <X size={12} />
-              </button>
-            )}
-
-            {searchQuery && (
-              <button
-                type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => handleSearchChange('')}
-              >
-                Search: {searchQuery.length > 24 ? `${searchQuery.slice(0, 24)}…` : searchQuery}
-                <X size={12} />
-              </button>
-            )}
-
-            {!selectedCategory &&
-              topCategories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  className={`directory-tag ${selectedCategory === cat ? 'directory-tag-active' : ''}`}
-                  onClick={() => handleCategorySelect(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Cards (below search, hidden when filtering) */}
-      {showDiscovery && <FeaturedCards servers={featuredCards} />}
+      {/* Featured Marquee near top of the discovery section */}
+      {showDiscovery && <FeaturedMarquee servers={marqueeServers} />}
 
 
 

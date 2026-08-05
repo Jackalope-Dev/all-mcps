@@ -1650,40 +1650,48 @@ optgroup option {
   padding: 1.25rem 1.5rem;
   cursor: pointer;
   color: inherit;
-  /* Grid items default to min-width: auto (min-content), which lets a long
-     label push the card wider than its track and overflow horizontally on
-     mobile. Pin to 0 so the card always fits its column and the label ellipsis
-     can kick in. */
   min-width: 0;
+  border-radius: 16px;
+  background: var(--cat-gradient-bg, linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.85) 100%));
+  border: 1px solid var(--cat-border, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  position: relative;
+  overflow: hidden;
   opacity: 0;
   animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Category cards use surface-interactive; keep a slightly subtler lift */
+/* Category cards use surface-interactive; lift and glow on hover */
 .category-card.surface-interactive:hover,
 .category-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--cat-border, rgba(0, 229, 255, 0.3));
-  background: var(--cat-bg, rgba(0, 229, 255, 0.05));
+  transform: translateY(-3px);
+  border-color: var(--cat-color, var(--accent-color));
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 20px var(--cat-bg, rgba(0, 229, 255, 0.15));
 }
 
 .category-card-emoji {
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: var(--cat-bg, rgba(255, 255, 255, 0.04));
+  background: var(--cat-bg, rgba(255, 255, 255, 0.06));
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.6rem;
   flex-shrink: 0;
-  border: 1px solid var(--cat-border, rgba(255, 255, 255, 0.06));
-  transition: background 0.3s ease, border-color 0.3s ease;
+  border: 1px solid var(--cat-border, rgba(255, 255, 255, 0.12));
+  transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  color: initial;
+  -webkit-text-fill-color: initial;
 }
 
 .category-card:hover .category-card-emoji {
-  background: var(--cat-bg, rgba(0, 229, 255, 0.1));
-  border-color: var(--cat-border, rgba(0, 229, 255, 0.28));
+  background: var(--cat-bg, rgba(0, 229, 255, 0.18));
+  border-color: var(--cat-color, var(--accent-color));
+  transform: scale(1.05);
 }
 
 .category-card-content {
@@ -1693,12 +1701,12 @@ optgroup option {
 
 .category-card-label {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.2rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--text-primary);
+  color: #ffffff;
   /* Reset the global h3 gradient text if any */
   background: none;
   -webkit-background-clip: unset;
@@ -1712,9 +1720,13 @@ optgroup option {
 }
 
 .category-card-arrow {
-  color: var(--text-secondary);
+  color: var(--cat-color, var(--text-secondary));
   font-size: 1.1rem;
   transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.category-card:hover .category-card-arrow {
+  transform: translateX(4px);
 }
 
 /* Reusable Table of Contents Component */
