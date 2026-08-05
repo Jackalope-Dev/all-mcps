@@ -72,7 +72,29 @@ async function collectAllUrls() {
     }
   }
 
-  // 3. MCP Servers
+  // 3. Category Pages
+  const catManifestPath = path.join(rootDir, 'lib', 'category-manifest.json');
+  if (fs.existsSync(catManifestPath)) {
+    try {
+      const categories = JSON.parse(fs.readFileSync(catManifestPath, 'utf8'));
+      for (const cat of categories) {
+        // Strip emoji and non-alphanumeric except spaces and &
+        const clean = String(cat)
+          .replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\s]+/u, '')
+          .toLowerCase()
+          .replace(/&/g, ' and ')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        if (clean) {
+          urls.add(`${BASE_URL}/categories/${clean}`);
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing category-manifest.json:', e.message);
+    }
+  }
+
+  // 4. MCP Servers, Alternatives, and Top Comparison Pairs
   const serversPath = path.join(rootDir, 'data', 'mcp-servers.json');
   if (fs.existsSync(serversPath)) {
     try {
@@ -81,7 +103,41 @@ async function collectAllUrls() {
         for (const server of serversData) {
           if (server.id) {
             urls.add(`${BASE_URL}/mcp/${server.id}`);
+            urls.add(`${BASE_URL}/mcp/${server.id}/alternatives`);
           }
+        }
+
+        // Compare pages: top engagement servers x top peers in same category (matching sitemap logic)
+        const engagement = (s) => (s.stars || 0) * 2 + (s.downloads || 0);
+        const byCategory = new Map();
+        for (const s of serversData) {
+          const cat = s.category || 'other';
+          if (!byCategory.has(cat)) byCategory.set(cat, []);
+          byCategory.get(cat).push(s);
+        }
+        for (const list of byCategory.values()) {
+          list.sort((a, b) => engagement(b) - engagement(a));
+        }
+
+        const topSeeds = [...serversData].sort((a, b) => engagement(b) - engagement(a)).slice(0, 80);
+        const compareSeen = new Set();
+        let compareCount = 0;
+
+        for (const seed of topSeeds) {
+          const peers = (byCategory.get(seed.category) || [])
+            .filter((p) => p.id !== seed.id)
+            .slice(0, 3);
+
+          for (const peer of peers) {
+            const [a, b] = seed.id < peer.id ? [seed.id, peer.id] : [peer.id, seed.id];
+            const key = `${a}|${b}`;
+            if (compareSeen.has(key)) continue;
+            compareSeen.add(key);
+            urls.add(`${BASE_URL}/mcp/${a}/vs/${b}`);
+            compareCount++;
+            if (compareCount >= 400) break;
+          }
+          if (compareCount >= 400) break;
         }
       }
     } catch (err) {
