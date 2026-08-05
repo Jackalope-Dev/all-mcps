@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { signIn } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageShell } from '@/components/PageShell';
@@ -40,7 +41,21 @@ export default async function LoginPage({
       <form
         action={async (formData) => {
           'use server';
-          await signIn('resend', formData);
+          const email = String(formData.get('email') || '');
+          const redirectTo = formData.get('redirectTo');
+          // Call with redirect: false and redirect to our own /verify-request
+          // page ourselves, rather than letting next-auth issue its internal
+          // redirect — that one always points at the raw `/api/auth/verify-request`
+          // route (basePath + action name) instead of the custom page set in
+          // pages.verifyRequest, and a POST reaching that route 500s with
+          // "UnknownAction: Cannot handle action: verify-request" since it's
+          // GET-only.
+          await signIn('resend', {
+            email,
+            redirect: false,
+            ...(typeof redirectTo === 'string' && redirectTo ? { redirectTo } : {}),
+          });
+          redirect('/verify-request');
         }}
         className="form-stack"
         style={{ textAlign: 'left' }}

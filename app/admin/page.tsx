@@ -6,13 +6,13 @@ import { eq, desc, isNotNull } from 'drizzle-orm';
 import { getAuthorizedAdminEmail } from '../../lib/accessAuth';
 import { getAdminStats, type AdminStats } from '../../lib/adminStats';
 import AdminClient from './AdminClient';
-import { StatsBar } from './StatsBar';
+import { ShieldCheck, UserCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Admin Dashboard',
-  description: 'Manage submissions and listings on AllMCPs.',
+  title: 'Admin Dashboard | AllMCPs',
+  description: 'Manage submissions, listings, and system automation on AllMCPs.',
   robots: {
     index: false,
     follow: false,
@@ -24,6 +24,11 @@ const EMPTY_STATS: AdminStats = {
   premiumCount: 0,
   featuredCount: 0,
   unhealthyCount: 0,
+  aiEnrichedCount: 0,
+  toolsCount: 0,
+  pendingCounts: { submissions: 0, edits: 0, claims: 0, logos: 0, total: 0 },
+  socialCounts: { queued: 0, sent: 0, failed: 0 },
+  callerCounts: {},
   logoSourceCounts: { manual: 0, readme: 0, website_favicon: 0, github_org: 0, github_user: 0, none: 0 },
   engagement: { totalViews: 0, totalUpvotes: 0, totalCopies: 0 },
   topByViews: [],
@@ -104,7 +109,7 @@ export default async function AdminPage() {
   if (!email) {
     return (
       <main className="container animate-fade-in" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
-        <h1>Unauthorized</h1>
+        <h1 style={{ marginBottom: '1rem' }}>Unauthorized</h1>
         <p style={{ color: 'var(--text-secondary)' }}>This page is only accessible through Cloudflare Access.</p>
       </main>
     );
@@ -113,23 +118,51 @@ export default async function AdminPage() {
   const { pending, pendingEdits, pendingClaims, pendingLogos, recentlyAdded, stats } = await getAdminData();
 
   return (
-    <main className="container animate-fade-in" style={{ padding: '4rem 1rem' }}>
-      <h1 style={{ marginBottom: '0.5rem', textAlign: 'center' }}>Admin Dashboard</h1>
-      <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '3rem' }}>
-        Review submissions and manage listings. Logged in as {email}.
-      </p>
-
+    <main className="container animate-fade-in" style={{ padding: '2.5rem 1rem 4rem' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto 2rem' }}>
-        <StatsBar initialStats={stats} />
-      </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
+              <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800 }}>Admin Console</h1>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: '#10b981',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '9999px',
+                }}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" /> CF Access Verified
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+              Control center for directory moderation, catalog management, social automation, and background crons.
+            </p>
+          </div>
 
-      <AdminClient
-        initialPending={pending as any}
-        initialPendingEdits={pendingEdits as any}
-        initialPendingClaims={pendingClaims as any}
-        initialPendingLogos={pendingLogos as any}
-        recentlyAdded={recentlyAdded as any}
-      />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}>
+            <UserCheck className="w-4 h-4 text-cyan-400" style={{ color: '#00E5FF' }} />
+            <span style={{ color: 'var(--text-secondary)' }}>Admin:</span>
+            <span style={{ fontWeight: 600, color: 'white' }}>{email}</span>
+          </div>
+        </div>
+
+        <AdminClient
+          initialPending={pending as any}
+          initialPendingEdits={pendingEdits as any}
+          initialPendingClaims={pendingClaims as any}
+          initialPendingLogos={pendingLogos as any}
+          recentlyAdded={recentlyAdded as any}
+          stats={stats}
+        />
+      </div>
     </main>
   );
 }
+

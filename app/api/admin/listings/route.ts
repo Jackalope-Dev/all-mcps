@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, count, desc, eq, gt, like, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, isNotNull, isNull, like, or } from 'drizzle-orm';
 import { servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
 
@@ -20,6 +20,12 @@ export async function GET(req: Request) {
     const premium = url.searchParams.get('premium');
     const featured = url.searchParams.get('featured');
     const health = url.searchParams.get('health');
+    const category = url.searchParams.get('category');
+    const aiEnriched = url.searchParams.get('aiEnriched');
+    const hasTools = url.searchParams.get('hasTools');
+    const sortBy = url.searchParams.get('sort') || 'createdAt';
+    const sortOrder = url.searchParams.get('order') || 'desc';
+
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
     const limit = Math.min(
       MAX_LIMIT,
@@ -51,14 +57,34 @@ export async function GET(req: Request) {
       conditions.push(eq(servers.isPremium, premium === 'true'));
     }
     if (featured === 'true') {
-      // Matches lib/featuredStatus.ts's isFeaturedListing (premium counts as featured too).
       conditions.push(or(eq(servers.isPremium, true), gt(servers.featuredUntil, new Date())));
     }
     if (health) {
       conditions.push(eq(servers.healthStatus, health));
     }
+    if (category) {
+      conditions.push(eq(servers.category, category));
+    }
+    if (aiEnriched === 'true') {
+      conditions.push(isNotNull(servers.aiSummary));
+    } else if (aiEnriched === 'false') {
+      conditions.push(isNull(servers.aiSummary));
+    }
+    if (hasTools === 'true') {
+      conditions.push(isNotNull(servers.tools));
+    } else if (hasTools === 'false') {
+      conditions.push(isNull(servers.tools));
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    let orderByClause;
+    const isAsc = sortOrder === 'asc';
+    if (sortBy === 'name') orderByClause = isAsc ? asc(servers.name) : desc(servers.name);
+    else if (sortBy === 'views') orderByClause = isAsc ? asc(servers.views) : desc(servers.views);
+    else if (sortBy === 'upvotes') orderByClause = isAsc ? asc(servers.upvotes) : desc(servers.upvotes);
+    else if (sortBy === 'stars') orderByClause = isAsc ? asc(servers.githubStars) : desc(servers.githubStars);
+    else orderByClause = isAsc ? asc(servers.createdAt) : desc(servers.createdAt);
 
     const [items, totalRows] = await Promise.all([
       db
@@ -67,17 +93,27 @@ export async function GET(req: Request) {
           name: servers.name,
           url: servers.url,
           websiteUrl: servers.websiteUrl,
+          submitterEmail: servers.submitterEmail,
           description: servers.description,
           category: servers.category,
           createdAt: servers.createdAt,
           isPremium: servers.isPremium,
+          isOfficial: servers.isOfficial,
           status: servers.status,
           healthStatus: servers.healthStatus,
           featuredUntil: servers.featuredUntil,
+          aiSummary: servers.aiSummary,
+          tools: servers.tools,
+          githubStars: servers.githubStars,
+          npmDownloads: servers.npmDownloads,
+          views: servers.views,
+          upvotes: servers.upvotes,
+          copies: servers.copies,
+          ownerUserId: servers.ownerUserId,
         })
         .from(servers)
         .where(where)
-        .orderBy(desc(servers.createdAt))
+        .orderBy(orderByClause)
         .limit(limit)
         .offset(offset),
       db.select({ total: count() }).from(servers).where(where),
@@ -96,3 +132,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+

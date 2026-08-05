@@ -1,0 +1,182 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { toast } from '@/components/ui/Toast';
+import { Share2, Send, Clock, AlertCircle, CheckCircle2, RefreshCw, Plus } from 'lucide-react';
+
+type SocialPost = {
+  id: number;
+  guid: string;
+  channel: string;
+  status: 'queued' | 'sent' | 'failed';
+  serverId?: string | null;
+  tweetText: string;
+  source?: string | null;
+  createdAt: string;
+  sentAt?: string | null;
+};
+
+export function AdminSocialQueue() {
+  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [customTweet, setCustomTweet] = useState('');
+  const [queuing, setQueuing] = useState(false);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/social');
+      if (!res.ok) throw new Error('Failed to load social posts');
+      const data: any = await res.json();
+      setPosts(data.posts || []);
+    } catch (err: any) {
+      toast.error('Social Queue Error', { description: err?.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handleQueueCustom = async () => {
+    if (!customTweet.trim()) {
+      toast.error('Enter tweet text to queue.');
+      return;
+    }
+    setQueuing(true);
+    try {
+      const res = await fetch('/api/admin/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'queue_tweet', tweetText: customTweet.trim() }),
+      });
+      const data: any = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to queue tweet');
+
+      toast.success('Custom tweet queued!');
+      setCustomTweet('');
+      fetchPosts();
+    } catch (err: any) {
+      toast.error('Failed to queue tweet', { description: err?.message });
+    } finally {
+      setQueuing(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'queued':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+            <Clock className="w-3.5 h-3.5" /> QUEUED
+          </span>
+        );
+      case 'sent':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+            <CheckCircle2 className="w-3.5 h-3.5" /> SENT
+          </span>
+        );
+      case 'failed':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+            <AlertCircle className="w-3.5 h-3.5" /> FAILED
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Queue Custom Tweet Box */}
+      <div className="admin-card" style={{ padding: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Share2 className="w-5 h-5 text-cyan-400" style={{ color: '#00E5FF' }} />
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Social Tweet Pipeline</h3>
+          </div>
+          <button
+            onClick={fetchPosts}
+            disabled={loading}
+            className="admin-btn"
+            style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </button>
+        </div>
+
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+          Outbound Twitter RSS queue. Newly approved listings and automated highlights are added automatically.
+        </p>
+
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <input
+            className="form-input"
+            style={{ flex: 1, minWidth: '260px' }}
+            placeholder="Compose custom tweet text to enqueue..."
+            value={customTweet}
+            onChange={(e) => setCustomTweet(e.target.value)}
+          />
+          <button
+            onClick={handleQueueCustom}
+            disabled={queuing || !customTweet.trim()}
+            className="admin-btn"
+            style={{ background: '#007BFF', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <Plus className="w-4 h-4" /> Queue Tweet
+          </button>
+        </div>
+      </div>
+
+      {/* Social Posts Table */}
+      <div className="admin-card">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Channel</th>
+              <th>Tweet Preview</th>
+              <th>Source</th>
+              <th>Queued Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="admin-table-empty">Loading social posts...</td>
+              </tr>
+            ) : posts.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="admin-table-empty">No social posts in history.</td>
+              </tr>
+            ) : (
+              posts.map((post) => (
+                <tr key={post.id}>
+                  <td data-label="Status">{getStatusBadge(post.status)}</td>
+                  <td data-label="Channel" style={{ fontSize: '0.85rem', textTransform: 'capitalize', color: 'var(--text-secondary)' }}>
+                    {post.channel}
+                  </td>
+                  <td data-label="Tweet Preview">
+                    <div style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', maxWidth: '480px' }}>
+                      {post.tweetText}
+                    </div>
+                  </td>
+                  <td data-label="Source" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {post.source || 'system'}
+                  </td>
+                  <td data-label="Queued Date" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {new Date(post.createdAt).toLocaleString()}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

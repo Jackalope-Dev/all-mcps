@@ -34,6 +34,20 @@ type ImpressionParams = {
   sessionHash?: string | null;
 };
 
+// D1 caps bound parameters at 100 per query. Each row binds 4 values
+// (serverId, surface, sessionHash, createdAt), so 20 rows per insert (80 params)
+// stays safely clear of D1's 100 parameter ceiling and avoids Drizzle
+// defaulting auto-increment id to null in multi-row column list inference.
+const MAX_ROWS_PER_INSERT = 20;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
 /**
  * Insert a batch of impression log rows.
  * Designed to be called from the /api/impressions endpoint.
@@ -44,16 +58,18 @@ export async function logImpressions(
 ): Promise<void> {
   if (impressions.length === 0) return;
 
-  // Batch insert — D1 supports multi-row inserts
-  try {
-    await db.insert(impressionLogs).values(
-      impressions.map((imp) => ({
-        serverId: imp.serverId,
-        surface: imp.surface,
-        sessionHash: imp.sessionHash || null,
-      }))
-    );
-  } catch (err: any) {
-    console.error('[impressionLog] Failed to insert batch:', err?.message);
+  for (const batch of chunk(impressions, MAX_ROWS_PER_INSERT)) {
+    try {
+      await db.insert(impressionLogs).values(
+        batch.map((imp) => ({
+          serverId: imp.serverId,
+          surface: imp.surface,
+          sessionHash: imp.sessionHash || null,
+          createdAt: new Date(),
+        }))
+      );
+    } catch (err: any) {
+      console.error('[impressionLog] Failed to insert batch:', err?.message);
+    }
   }
 }

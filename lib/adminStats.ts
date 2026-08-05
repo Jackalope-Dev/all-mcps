@@ -1,11 +1,22 @@
-import { and, count, desc, eq, gt, ne, or, sum } from 'drizzle-orm';
-import { servers } from '../db/schema';
+import { and, count, desc, eq, gt, isNotNull, ne, or, sum } from 'drizzle-orm';
+import { servers, socialPosts, apiAccessLogs } from '../db/schema';
 
 export type AdminStats = {
   statusCounts: { pending: number; active: number; removed: number };
   premiumCount: number;
   featuredCount: number;
   unhealthyCount: number;
+  aiEnrichedCount: number;
+  toolsCount: number;
+  pendingCounts: {
+    submissions: number;
+    edits: number;
+    claims: number;
+    logos: number;
+    total: number;
+  };
+  socialCounts: { queued: number; sent: number; failed: number };
+  callerCounts: Record<string, number>;
   logoSourceCounts: {
     manual: number;
     readme: number;
@@ -22,38 +33,74 @@ export type AdminStats = {
 export async function getAdminStats(db: any): Promise<AdminStats> {
   const now = new Date();
 
-  const [statusRows, premiumRows, featuredRows, unhealthyRows, logoSourceRows, engagementRows, topByViewsRows] =
-    await Promise.all([
-      db.select({ status: servers.status, total: count() }).from(servers).groupBy(servers.status),
-      db.select({ total: count() }).from(servers).where(eq(servers.isPremium, true)),
-      // Matches lib/featuredStatus.ts's isFeaturedListing (premium counts as featured too).
-      db
-        .select({ total: count() })
-        .from(servers)
-        .where(
-          and(
-            eq(servers.status, 'active'),
-            or(eq(servers.isPremium, true), gt(servers.featuredUntil, now))
-          )
-        ),
-      db
-        .select({ total: count() })
-        .from(servers)
-        .where(and(eq(servers.status, 'active'), ne(servers.healthStatus, 'healthy'))),
-      db.select({ source: servers.logoSource, total: count() }).from(servers).groupBy(servers.logoSource),
-      db
-        .select({
-          totalViews: sum(servers.views),
-          totalUpvotes: sum(servers.upvotes),
-          totalCopies: sum(servers.copies),
-        })
-        .from(servers),
-      db
-        .select({ id: servers.id, name: servers.name, views: servers.views })
-        .from(servers)
-        .orderBy(desc(servers.views))
-        .limit(5),
-    ]);
+  const [
+    statusRows,
+    premiumRows,
+    featuredRows,
+    unhealthyRows,
+    aiEnrichedRows,
+    toolsRows,
+    pendingEditsRows,
+    pendingClaimsRows,
+    pendingLogosRows,
+    logoSourceRows,
+    engagementRows,
+    topByViewsRows,
+    socialRows,
+    callerRows,
+  ] = await Promise.all([
+    db.select({ status: servers.status, total: count() }).from(servers).groupBy(servers.status),
+    db.select({ total: count() }).from(servers).where(eq(servers.isPremium, true)),
+    // Matches lib/featuredStatus.ts's isFeaturedListing (premium counts as featured too).
+    db
+      .select({ total: count() })
+      .from(servers)
+      .where(
+        and(
+          eq(servers.status, 'active'),
+          or(eq(servers.isPremium, true), gt(servers.featuredUntil, now))
+        )
+      ),
+    db
+      .select({ total: count() })
+      .from(servers)
+      .where(and(eq(servers.status, 'active'), ne(servers.healthStatus, 'healthy'))),
+    db
+      .select({ total: count() })
+      .from(servers)
+      .where(isNotNull(servers.aiSummary)),
+    db
+      .select({ total: count() })
+      .from(servers)
+      .where(isNotNull(servers.tools)),
+    db
+      .select({ total: count() })
+      .from(servers)
+      .where(isNotNull(servers.pendingRevision)),
+    db
+      .select({ total: count() })
+      .from(servers)
+      .where(isNotNull(servers.pendingClaimUserId)),
+    db
+      .select({ total: count() })
+      .from(servers)
+      .where(isNotNull(servers.pendingLogoKey)),
+    db.select({ source: servers.logoSource, total: count() }).from(servers).groupBy(servers.logoSource),
+    db
+      .select({
+        totalViews: sum(servers.views),
+        totalUpvotes: sum(servers.upvotes),
+        totalCopies: sum(servers.copies),
+      })
+      .from(servers),
+    db
+      .select({ id: servers.id, name: servers.name, views: servers.views })
+      .from(servers)
+      .orderBy(desc(servers.views))
+      .limit(5),
+    db.select({ status: socialPosts.status, total: count() }).from(socialPosts).groupBy(socialPosts.status).catch(() => []),
+    db.select({ callerClass: apiAccessLogs.callerClass, total: count() }).from(apiAccessLogs).groupBy(apiAccessLogs.callerClass).catch(() => []),
+  ]);
 
   const statusCounts = { pending: 0, active: 0, removed: 0 };
   for (const row of statusRows as { status: string; total: number }[]) {
@@ -79,11 +126,41 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     else logoSourceCounts.none += row.total;
   }
 
+  const pendingSubmissions = statusCounts.pending;
+  const pendingEdits = pendingEditsRows[0]?.total ?? 0;
+  const pendingClaims = pendingClaimsRows[0]?.total ?? 0;
+  const pendingLogos = pendingLogosRows[0]?.total ?? 0;
+
+  const socialCounts = { queued: 0, sent: 0, failed: 0 };
+  for (const row of (socialRows || []) as { status: string; total: number }[]) {
+    if (row.status === 'queued') socialCounts.queued = row.total;
+    else if (row.status === 'sent') socialCounts.sent = row.total;
+    else if (row.status === 'failed') socialCounts.failed = row.total;
+  }
+
+  const callerCounts: Record<string, number> = {};
+  for (const row of (callerRows || []) as { callerClass: string; total: number }[]) {
+    if (row.callerClass) {
+      callerCounts[row.callerClass] = row.total;
+    }
+  }
+
   return {
     statusCounts,
     premiumCount: premiumRows[0]?.total ?? 0,
     featuredCount: featuredRows[0]?.total ?? 0,
     unhealthyCount: unhealthyRows[0]?.total ?? 0,
+    aiEnrichedCount: aiEnrichedRows[0]?.total ?? 0,
+    toolsCount: toolsRows[0]?.total ?? 0,
+    pendingCounts: {
+      submissions: pendingSubmissions,
+      edits: pendingEdits,
+      claims: pendingClaims,
+      logos: pendingLogos,
+      total: pendingSubmissions + pendingEdits + pendingClaims + pendingLogos,
+    },
+    socialCounts,
+    callerCounts,
     logoSourceCounts,
     engagement: {
       totalViews: Number(engagementRows[0]?.totalViews ?? 0),
@@ -93,3 +170,4 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     topByViews: topByViewsRows,
   };
 }
+

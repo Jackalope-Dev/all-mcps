@@ -4,7 +4,25 @@ import { useState } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { parsePendingRevision } from '../../lib/pendingRevision';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
+import type { AdminStats } from '@/lib/adminStats';
+import { StatsBar } from './StatsBar';
 import ManageListings from './ManageListings';
+import { AdminAnalyticsView } from './AdminAnalyticsView';
+import { AdminSocialQueue } from './AdminSocialQueue';
+import { AdminCronsControl } from './AdminCronsControl';
+import {
+  LayoutDashboard,
+  Clock,
+  List,
+  BarChart3,
+  Share2,
+  Cpu,
+  CheckCircle2,
+  AlertTriangle,
+  Layers,
+  ArrowRight,
+  ShieldCheck,
+} from 'lucide-react';
 
 type Server = {
   id: string;
@@ -40,18 +58,26 @@ export default function AdminClient({
   initialPendingClaims = [],
   initialPendingLogos = [],
   recentlyAdded = [],
+  stats,
 }: {
   initialPending: Server[];
   initialPendingEdits?: Server[];
   initialPendingClaims?: Server[];
   initialPendingLogos?: Server[];
   recentlyAdded?: RecentServer[];
+  stats: AdminStats;
 }) {
   const [pending, setPending] = useState<Server[]>(initialPending);
   const [pendingEdits, setPendingEdits] = useState<Server[]>(initialPendingEdits);
   const [pendingClaims, setPendingClaims] = useState<Server[]>(initialPendingClaims);
   const [pendingLogos, setPendingLogos] = useState<Server[]>(initialPendingLogos);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const totalPending = pending.length + pendingEdits.length + pendingClaims.length + pendingLogos.length;
+  const defaultTab = totalPending > 0 ? 'moderation' : 'overview';
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'crons'>(defaultTab);
+  const [modSubTab, setModSubTab] = useState<'submissions' | 'edits' | 'claims' | 'logos'>('submissions');
 
   const handleAction = async (
     id: string,
@@ -106,80 +132,190 @@ export default function AdminClient({
     }
   };
 
+  const navItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    {
+      id: 'moderation',
+      label: 'Moderation Queue',
+      icon: Clock,
+      badge: totalPending > 0 ? totalPending : undefined,
+      badgeColor: '#fbbf24',
+    },
+    { id: 'listings', label: 'Listings Directory', icon: List },
+    { id: 'analytics', label: 'Analytics & Logs', icon: BarChart3 },
+    { id: 'social', label: 'Social & Twitter', icon: Share2 },
+    { id: 'crons', label: 'Crons & System', icon: Cpu },
+  ];
+
   return (
     <div className="admin-shell">
-      <section>
-        <h2 className="admin-section-title">Pending submissions</h2>
-        <ServerTable
-          servers={pending}
-          empty="No pending submissions!"
-          loadingId={loadingId}
-          onAction={(id, action) => handleAction(id, action)}
-        />
-      </section>
+      {/* KPI Stats Deck */}
+      <StatsBar initialStats={stats} onSelectTab={(tab: any) => setActiveTab(tab)} />
 
-      <section>
-        <h2 className="admin-section-title">Recently added</h2>
-        <p className="admin-section-desc">
-          The most recently added live listings, newest first — a quick way to find something you
-          just approved. Ordered by when each listing went live.
-        </p>
-        <RecentlyAddedTable
-          servers={recentlyAdded}
-          loadingId={loadingId}
-          onResendApproval={(id) => handleAction(id, 'resend_approval')}
-        />
-      </section>
+      {/* Main Responsive Tab Navigation Bar */}
+      <nav className="admin-tabs-nav">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id as any)}
+              className={`admin-tab-btn ${isActive ? 'active' : ''}`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{item.label}</span>
+              {item.badge !== undefined && (
+                <span className="admin-tab-badge" style={{ background: item.badgeColor }}>
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
 
-      <section>
-        <h2 className="admin-section-title">Pending edits</h2>
-        <p className="admin-section-desc">
-          Owner-submitted changes awaiting approval. Approving applies them immediately; a changed
-          website resets its verification.
-        </p>
-        <PendingEditsTable
-          servers={pendingEdits}
-          loadingId={loadingId}
-          onApprove={(id) => handleAction(id, 'approve_edit')}
-          onReject={(id) => handleAction(id, 'reject_edit')}
-        />
-      </section>
+      {/* TAB 1: OVERVIEW */}
+      {activeTab === 'overview' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <section>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div>
+                <h2 className="admin-section-title" style={{ margin: 0 }}>Recently Approved Listings</h2>
+                <p className="admin-section-desc" style={{ margin: 0, marginTop: '0.25rem' }}>
+                  The most recently added live listings — newest first.
+                </p>
+              </div>
+            </div>
+            <RecentlyAddedTable
+              servers={recentlyAdded}
+              loadingId={loadingId}
+              onResendApproval={(id) => handleAction(id, 'resend_approval')}
+            />
+          </section>
 
-      <section>
-        <h2 className="admin-section-title">Pending claims</h2>
-        <p className="admin-section-desc">
-          A claimant proved control of a website that wasn&apos;t already on file for this listing.
-          Check the site actually relates to the project before approving.
-        </p>
-        <PendingClaimsTable
-          servers={pendingClaims}
-          loadingId={loadingId}
-          onApprove={(id) => handleAction(id, 'approve_claim')}
-          onReject={(id) => handleAction(id, 'reject_claim')}
-        />
-      </section>
+          <section>
+            <h2 className="admin-section-title">Site Operations Overview</h2>
+            <AdminAnalyticsView stats={stats} />
+          </section>
+        </div>
+      )}
 
-      <section>
-        <h2 className="admin-section-title">Pending logos</h2>
-        <p className="admin-section-desc">
-          Owner-uploaded logos awaiting approval. Nothing here is public until approved.
-        </p>
-        <PendingLogosTable
-          servers={pendingLogos}
-          loadingId={loadingId}
-          onApprove={(id) => handleAction(id, 'approve_logo')}
-          onReject={(id) => handleAction(id, 'reject_logo')}
-        />
-      </section>
+      {/* TAB 2: MODERATION QUEUE */}
+      {activeTab === 'moderation' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Moderation Sub-Tabs */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+            <button
+              onClick={() => setModSubTab('submissions')}
+              className={`admin-btn ${modSubTab === 'submissions' ? 'admin-btn-primary' : ''}`}
+              style={{ background: modSubTab === 'submissions' ? '#007BFF' : 'rgba(255,255,255,0.05)', color: 'white' }}
+            >
+              Submissions ({pending.length})
+            </button>
+            <button
+              onClick={() => setModSubTab('edits')}
+              className={`admin-btn ${modSubTab === 'edits' ? 'admin-btn-primary' : ''}`}
+              style={{ background: modSubTab === 'edits' ? '#007BFF' : 'rgba(255,255,255,0.05)', color: 'white' }}
+            >
+              Edits ({pendingEdits.length})
+            </button>
+            <button
+              onClick={() => setModSubTab('claims')}
+              className={`admin-btn ${modSubTab === 'claims' ? 'admin-btn-primary' : ''}`}
+              style={{ background: modSubTab === 'claims' ? '#007BFF' : 'rgba(255,255,255,0.05)', color: 'white' }}
+            >
+              Claims ({pendingClaims.length})
+            </button>
+            <button
+              onClick={() => setModSubTab('logos')}
+              className={`admin-btn ${modSubTab === 'logos' ? 'admin-btn-primary' : ''}`}
+              style={{ background: modSubTab === 'logos' ? '#007BFF' : 'rgba(255,255,255,0.05)', color: 'white' }}
+            >
+              Logos ({pendingLogos.length})
+            </button>
+          </div>
 
-      <section>
-        <h2 className="admin-section-title">Manage listings</h2>
-        <p className="admin-section-desc">
-          Search, edit, publish/unpublish, delete, and grant featured placement. Premium listings get
-          a dofollow website backlink; free listings use nofollow.
-        </p>
-        <ManageListings />
-      </section>
+          {modSubTab === 'submissions' && (
+            <section>
+              <h2 className="admin-section-title">Pending Submissions ({pending.length})</h2>
+              <ServerTable
+                servers={pending}
+                empty="No pending submissions in queue!"
+                loadingId={loadingId}
+                onAction={(id, action) => handleAction(id, action)}
+              />
+            </section>
+          )}
+
+          {modSubTab === 'edits' && (
+            <section>
+              <h2 className="admin-section-title">Pending Owner Edits ({pendingEdits.length})</h2>
+              <p className="admin-section-desc">
+                Owner-submitted revisions. Approving applies them immediately.
+              </p>
+              <PendingEditsTable
+                servers={pendingEdits}
+                loadingId={loadingId}
+                onApprove={(id) => handleAction(id, 'approve_edit')}
+                onReject={(id) => handleAction(id, 'reject_edit')}
+              />
+            </section>
+          )}
+
+          {modSubTab === 'claims' && (
+            <section>
+              <h2 className="admin-section-title">Pending Ownership Claims ({pendingClaims.length})</h2>
+              <p className="admin-section-desc">
+                Claimants who verified website ownership via DNS or site badge.
+              </p>
+              <PendingClaimsTable
+                servers={pendingClaims}
+                loadingId={loadingId}
+                onApprove={(id) => handleAction(id, 'approve_claim')}
+                onReject={(id) => handleAction(id, 'reject_claim')}
+              />
+            </section>
+          )}
+
+          {modSubTab === 'logos' && (
+            <section>
+              <h2 className="admin-section-title">Pending Custom Logos ({pendingLogos.length})</h2>
+              <p className="admin-section-desc">
+                Logos uploaded by verified owners awaiting approval before publication.
+              </p>
+              <PendingLogosTable
+                servers={pendingLogos}
+                loadingId={loadingId}
+                onApprove={(id) => handleAction(id, 'approve_logo')}
+                onReject={(id) => handleAction(id, 'reject_logo')}
+              />
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: LISTINGS DIRECTORY */}
+      {activeTab === 'listings' && (
+        <section>
+          <div style={{ marginBottom: '1rem' }}>
+            <h2 className="admin-section-title">Manage Directory Listings</h2>
+            <p className="admin-section-desc">
+              Search, filter, edit metadata, adjust status, grant boost placements, or view deep inspector metadata.
+            </p>
+          </div>
+          <ManageListings />
+        </section>
+      )}
+
+      {/* TAB 4: ANALYTICS & LOGS */}
+      {activeTab === 'analytics' && <AdminAnalyticsView stats={stats} />}
+
+      {/* TAB 5: SOCIAL QUEUE */}
+      {activeTab === 'social' && <AdminSocialQueue />}
+
+      {/* TAB 6: CRONS & SYSTEM */}
+      {activeTab === 'crons' && <AdminCronsControl />}
     </div>
   );
 }
@@ -200,7 +336,7 @@ function ServerTable({
       <table className="admin-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Name & Details</th>
             <th>Links</th>
             <th>Submitted</th>
             <th>Actions</th>
@@ -219,12 +355,12 @@ function ServerTable({
                 <td data-label="Name">
                   <strong>{server.name}</strong>
                   {server.reviewPriority && (
-                    <span className="admin-badge" style={{ color: '#fbbf24' }}>
+                    <span className="admin-badge" style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.1)' }}>
                       PRIORITY
                     </span>
                   )}
                   {server.isPremium && (
-                    <span className="admin-badge" style={{ color: '#00E5FF' }}>
+                    <span className="admin-badge" style={{ color: '#00E5FF', background: 'rgba(0,229,255,0.1)' }}>
                       PREMIUM
                     </span>
                   )}
@@ -308,12 +444,12 @@ function RecentlyAddedTable({
                 <td data-label="Name">
                   <strong>{server.name}</strong>
                   {server.isPremium && (
-                    <span className="admin-badge" style={{ color: '#00E5FF' }}>
+                    <span className="admin-badge" style={{ color: '#00E5FF', background: 'rgba(0,229,255,0.1)' }}>
                       PREMIUM
                     </span>
                   )}
                   {server.isOfficial && (
-                    <span className="admin-badge" style={{ color: '#10b981' }}>
+                    <span className="admin-badge" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)' }}>
                       OFFICIAL
                     </span>
                   )}
@@ -361,7 +497,7 @@ function RecentlyAddedTable({
                       disabled={loadingId === server.id}
                       className="admin-btn"
                       style={{ background: '#007BFF' }}
-                      title="Re-send the listing-approved email (claim + dofollow CTAs)"
+                      title="Re-send the listing-approved email"
                     >
                       Resend approval email
                     </button>

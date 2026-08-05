@@ -3,19 +3,30 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
+import { Search, Filter, ArrowUpDown, Eye, Heart, Download, Star, Info, Edit2, Trash2, Send, Zap, X, Crown, Sparkles } from 'lucide-react';
 
 type Listing = {
   id: string;
   name: string;
   url: string;
   websiteUrl?: string | null;
+  submitterEmail?: string | null;
   description: string;
   category: string;
   createdAt: string;
   isPremium: boolean;
+  isOfficial?: boolean;
   status: string;
   healthStatus: string;
   featuredUntil?: string | null;
+  aiSummary?: string | null;
+  tools?: string | null;
+  githubStars?: number | null;
+  npmDownloads?: number | null;
+  views?: number;
+  upvotes?: number;
+  copies?: number;
+  ownerUserId?: string | null;
 };
 
 type EditFields = {
@@ -40,6 +51,12 @@ export default function ManageListings() {
   const [premiumFilter, setPremiumFilter] = useState('');
   const [featuredFilter, setFeaturedFilter] = useState('');
   const [healthFilter, setHealthFilter] = useState('');
+  const [aiFilter, setAiFilter] = useState('');
+  const [toolsFilter, setToolsFilter] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  const [inspectListing, setInspectListing] = useState<Listing | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFields>({
@@ -63,6 +80,10 @@ export default function ManageListings() {
       if (premiumFilter) params.set('premium', premiumFilter);
       if (featuredFilter) params.set('featured', featuredFilter);
       if (healthFilter) params.set('health', healthFilter);
+      if (aiFilter) params.set('aiEnriched', aiFilter);
+      if (toolsFilter) params.set('hasTools', toolsFilter);
+      params.set('sort', sortBy);
+      params.set('order', sortOrder);
       params.set('offset', String(nextOffset));
       params.set('limit', String(PAGE_SIZE));
 
@@ -70,19 +91,16 @@ export default function ManageListings() {
       const data = (await res.json()) as { items?: Listing[]; total?: number; error?: string };
       if (!res.ok) throw new Error(data.error || 'Could not load listings');
 
-      // Guard: only apply state if this is still the latest request
       if (requestId !== requestIdRef.current) return;
 
       setItems(data.items || []);
       setTotal(data.total || 0);
       setOffset(nextOffset);
     } catch (err: any) {
-      // Only show error toast for genuine failures, not for stale requests
       if (requestId === requestIdRef.current) {
         toast.error('Could not load listings', { description: err?.message });
       }
     } finally {
-      // Only clear loading if this is still the latest request
       if (requestId === requestIdRef.current) {
         setLoading(false);
       }
@@ -95,7 +113,7 @@ export default function ManageListings() {
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter, premiumFilter, featuredFilter, healthFilter]);
+  }, [search, statusFilter, premiumFilter, featuredFilter, healthFilter, aiFilter, toolsFilter, sortBy, sortOrder]);
 
   const runAction = async (
     id: string,
@@ -195,20 +213,52 @@ export default function ManageListings() {
 
   return (
     <div>
-      <div className="admin-filters">
-        <input
-          className="form-input"
-          placeholder="Search name or URL..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="admin-filter-selects">
+      {/* Search & Filter Toolbar */}
+      <div className="admin-filters" style={{ marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+            <Search className="w-4 h-4" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+            <input
+              className="form-input"
+              style={{ paddingLeft: '2.5rem' }}
+              placeholder="Search listing by name or repository URL..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <select
+              className="form-input"
+              style={{ width: 'auto' }}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="createdAt">Sort: Created Date</option>
+              <option value="name">Sort: Name</option>
+              <option value="views">Sort: Views</option>
+              <option value="upvotes">Sort: Upvotes</option>
+              <option value="stars">Sort: GitHub Stars</option>
+            </select>
+
+            <button
+              onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+              className="admin-btn"
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              title="Toggle sort direction"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" /> {sortOrder.toUpperCase()}
+            </button>
+          </div>
+        </div>
+
+        <div className="admin-filter-selects" style={{ marginTop: '0.5rem' }}>
           <select
             className="form-input"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="all">All statuses</option>
+            <option value="all">Status: All</option>
             <option value="active">Active</option>
             <option value="pending">Pending</option>
             <option value="removed">Removed</option>
@@ -218,7 +268,7 @@ export default function ManageListings() {
             value={premiumFilter}
             onChange={(e) => setPremiumFilter(e.target.value)}
           >
-            <option value="">Any premium</option>
+            <option value="">Premium: Any</option>
             <option value="true">Premium only</option>
             <option value="false">Free only</option>
           </select>
@@ -227,31 +277,50 @@ export default function ManageListings() {
             value={featuredFilter}
             onChange={(e) => setFeaturedFilter(e.target.value)}
           >
-            <option value="">Any featured</option>
-            <option value="true">Currently featured</option>
+            <option value="">Featured: Any</option>
+            <option value="true">Currently Featured</option>
           </select>
           <select
             className="form-input"
             value={healthFilter}
             onChange={(e) => setHealthFilter(e.target.value)}
           >
-            <option value="">Any health</option>
+            <option value="">Health: Any</option>
             <option value="healthy">Healthy</option>
             <option value="unknown">Unknown</option>
             <option value="archived">Archived</option>
             <option value="offline">Offline</option>
           </select>
+          <select
+            className="form-input"
+            value={aiFilter}
+            onChange={(e) => setAiFilter(e.target.value)}
+          >
+            <option value="">AI Content: Any</option>
+            <option value="true">Enriched</option>
+            <option value="false">Not Enriched</option>
+          </select>
+          <select
+            className="form-input"
+            value={toolsFilter}
+            onChange={(e) => setToolsFilter(e.target.value)}
+          >
+            <option value="">MCP Tools: Any</option>
+            <option value="true">Has Introspected Tools</option>
+            <option value="false">No Introspected Tools</option>
+          </select>
         </div>
       </div>
 
+      {/* Directory Table */}
       <div className="admin-card">
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Links</th>
-              <th>Featured</th>
-              <th>Submitted</th>
+              <th>Listing Name & Metadata</th>
+              <th>Links & Details</th>
+              <th>Boost / Featured</th>
+              <th>Stats</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -259,13 +328,13 @@ export default function ManageListings() {
             {loading ? (
               <tr>
                 <td colSpan={5} className="admin-table-empty">
-                  Loading...
+                  Loading listings catalog...
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
                 <td colSpan={5} className="admin-table-empty">
-                  No listings match these filters.
+                  No listings match the specified filter criteria.
                 </td>
               </tr>
             ) : (
@@ -316,30 +385,55 @@ export default function ManageListings() {
                         </div>
                       ) : (
                         <>
-                          <strong>{listing.name}</strong>
-                          {listing.status === 'removed' && (
-                            <span className="admin-badge" style={{ color: '#ef4444' }}>
-                              REMOVED
-                            </span>
-                          )}
-                          {listing.isPremium && (
-                            <span className="admin-badge" style={{ color: '#00E5FF' }}>
-                              PREMIUM
-                            </span>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <strong style={{ fontSize: '0.95rem' }}>{listing.name}</strong>
+                            {listing.status === 'removed' && (
+                              <span className="admin-badge" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
+                                REMOVED
+                              </span>
+                            )}
+                            {listing.isPremium && (
+                              <span className="admin-badge" style={{ color: '#00E5FF', background: 'rgba(0, 229, 255, 0.1)' }}>
+                                PREMIUM
+                              </span>
+                            )}
+                            {listing.isOfficial && (
+                              <span className="admin-badge" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
+                                OFFICIAL
+                              </span>
+                            )}
+                            {listing.aiSummary && (
+                              <span className="admin-badge" style={{ color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)' }} title="AI Enriched">
+                                AI
+                              </span>
+                            )}
+                          </div>
+
                           <div className="admin-desc-line">{listing.description}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                            Cat: <span style={{ color: 'white' }}>{listing.category}</span> · Health: <span style={{ color: listing.healthStatus === 'healthy' ? '#10b981' : '#f59e0b' }}>{listing.healthStatus}</span>
+                          </div>
                         </>
                       )}
                     </td>
+
                     <td data-label="Links">
-                      <div className="admin-links-cell">
+                      <div className="admin-links-cell" style={{ gap: '0.35rem' }}>
+                        <a
+                          href={`/mcp/${listing.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
+                        >
+                          Listing Page
+                        </a>
                         <a
                           href={listing.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
                         >
-                          Repo
+                          Repository
                         </a>
                         {listing.websiteUrl && (
                           <a
@@ -351,28 +445,35 @@ export default function ManageListings() {
                             Website
                           </a>
                         )}
+                        <button
+                          onClick={() => setInspectListing(listing)}
+                          style={{ background: 'transparent', border: 'none', padding: 0, color: '#94a3b8', fontSize: '0.75rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem' }}
+                        >
+                          <Info className="w-3.5 h-3.5" /> View Inspector
+                        </button>
                       </div>
                     </td>
-                    <td data-label="Featured / Sponsor">
+
+                    <td data-label="Featured">
                       <div className="admin-feature-cell">
-                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: featuredDaysLeft && featuredDaysLeft > 0 ? '#00E5FF' : 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-                          {featuredDaysLeft && featuredDaysLeft > 0 ? `★ ${featuredDaysLeft}d remaining` : 'No active boost'}
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: featuredDaysLeft && featuredDaysLeft > 0 ? '#ffd700' : 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                          {featuredDaysLeft && featuredDaysLeft > 0 ? `★ ${featuredDaysLeft}d boost left` : 'No active boost'}
                         </div>
                         <div className="admin-feature-controls" style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
                           <button
                             onClick={() => runAction(listing.id, 'feature', { days: 7 })}
                             disabled={rowLoading}
                             className="admin-btn"
-                            style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.3)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            style={{ background: 'rgba(0,229,255,0.12)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.3)', padding: '0.25rem 0.4rem', fontSize: '0.75rem' }}
                             title="Grant 7 days boost"
                           >
-                            +7d Boost
+                            +7d
                           </button>
                           <button
                             onClick={() => runAction(listing.id, 'feature', { days: 30 })}
                             disabled={rowLoading}
                             className="admin-btn"
-                            style={{ background: 'rgba(255,215,0,0.15)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.3)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            style={{ background: 'rgba(255,215,0,0.12)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.3)', padding: '0.25rem 0.4rem', fontSize: '0.75rem' }}
                             title="Grant 30 days boost"
                           >
                             +30d
@@ -381,7 +482,7 @@ export default function ManageListings() {
                             type="number"
                             min={1}
                             className="form-input"
-                            style={{ width: '60px', padding: '0.25rem 0.4rem', fontSize: '0.75rem' }}
+                            style={{ width: '50px', padding: '0.2rem 0.3rem', fontSize: '0.75rem' }}
                             placeholder="Days"
                             value={featureDays[listing.id] || ''}
                             onChange={(e) => setFeatureDays((prev) => ({ ...prev, [listing.id]: e.target.value }))}
@@ -390,16 +491,20 @@ export default function ManageListings() {
                             onClick={() => grantFeatured(listing.id)}
                             disabled={rowLoading}
                             className="admin-btn"
-                            style={{ background: '#007BFF', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            style={{ background: '#007BFF', padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
                           >
-                            Grant
+                            Set
                           </button>
                         </div>
                       </div>
                     </td>
-                    <td data-label="Submitted" style={{ color: 'var(--text-secondary)' }}>
-                      {new Date(listing.createdAt).toLocaleDateString()}
+
+                    <td data-label="Stats" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      <div><Eye className="w-3 h-3 inline mr-1" /> {listing.views || 0} views</div>
+                      <div><Heart className="w-3 h-3 inline mr-1 text-red-400" /> {listing.upvotes || 0} upvotes</div>
+                      <div><Star className="w-3 h-3 inline mr-1 text-amber-400" /> {listing.githubStars ? `${listing.githubStars} stars` : '—'}</div>
                     </td>
+
                     <td data-label="Actions">
                       <div className="admin-actions">
                         {isEditing ? (
@@ -427,15 +532,15 @@ export default function ManageListings() {
                               onClick={() => runAction(listing.id, listing.isPremium ? 'unset_premium' : 'set_premium')}
                               disabled={rowLoading}
                               className="admin-btn"
-                              style={{ background: listing.isPremium ? '#64748b' : '#007BFF' }}
+                              style={{ background: listing.isPremium ? '#64748b' : '#007BFF', padding: '0.35rem 0.65rem' }}
                             >
-                              {listing.isPremium ? 'Remove premium' : 'Make premium'}
+                              {listing.isPremium ? 'Unset Premium' : 'Make Premium'}
                             </button>
                             <button
                               onClick={() => startEdit(listing)}
                               disabled={rowLoading}
                               className="admin-btn"
-                              style={{ background: '#64748b' }}
+                              style={{ background: '#64748b', padding: '0.35rem 0.65rem' }}
                             >
                               Edit
                             </button>
@@ -445,16 +550,16 @@ export default function ManageListings() {
                                   onClick={() => runAction(listing.id, 'resend_approval')}
                                   disabled={rowLoading}
                                   className="admin-btn"
-                                  style={{ background: '#007BFF' }}
-                                  title="Re-send listing-approved email with claim + dofollow CTAs"
+                                  style={{ background: '#0284c7', padding: '0.35rem 0.65rem' }}
+                                  title="Resend approval email"
                                 >
-                                  Resend email
+                                  Resend Email
                                 </button>
                                 <button
                                   onClick={() => runAction(listing.id, 'unpublish')}
                                   disabled={rowLoading}
                                   className="admin-btn"
-                                  style={{ background: '#f59e0b' }}
+                                  style={{ background: '#f59e0b', padding: '0.35rem 0.65rem' }}
                                 >
                                   Unpublish
                                 </button>
@@ -464,7 +569,7 @@ export default function ManageListings() {
                                 onClick={() => runAction(listing.id, 'republish')}
                                 disabled={rowLoading}
                                 className="admin-btn"
-                                style={{ background: '#10b981' }}
+                                style={{ background: '#10b981', padding: '0.35rem 0.65rem' }}
                               >
                                 Republish
                               </button>
@@ -473,7 +578,7 @@ export default function ManageListings() {
                               onClick={() => deleteListing(listing)}
                               disabled={rowLoading}
                               className="admin-btn"
-                              style={{ background: '#ef4444' }}
+                              style={{ background: '#ef4444', padding: '0.35rem 0.65rem' }}
                             >
                               Delete
                             </button>
@@ -489,6 +594,7 @@ export default function ManageListings() {
         </table>
       </div>
 
+      {/* Pagination Controls */}
       <div className="admin-pagination">
         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
           {total === 0
@@ -514,6 +620,64 @@ export default function ManageListings() {
           </button>
         </div>
       </div>
+
+      {/* Inspector Modal */}
+      {inspectListing && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+          onClick={() => setInspectListing(null)}
+        >
+          <div
+            style={{
+              background: '#0f172a',
+              border: '1px solid var(--border-color)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '640px',
+              width: '100%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Listing Inspector: {inspectListing.name}</h3>
+              <button onClick={() => setInspectListing(null)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
+              <div><strong>ID:</strong> <code style={{ color: '#00E5FF' }}>{inspectListing.id}</code></div>
+              <div><strong>Submitter Email:</strong> {inspectListing.submitterEmail || 'Not recorded'}</div>
+              <div><strong>Owner User ID:</strong> {inspectListing.ownerUserId || 'Unclaimed'}</div>
+              <div><strong>Created At:</strong> {new Date(inspectListing.createdAt).toLocaleString()}</div>
+              <div><strong>AI Summary:</strong> {inspectListing.aiSummary || 'Not generated yet'}</div>
+
+              <div>
+                <strong>Introspected MCP Tools:</strong>
+                {inspectListing.tools ? (
+                  <pre style={{ background: 'rgba(0,0,0,0.4)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.75rem', overflowX: 'auto', marginTop: '0.25rem' }}>
+                    {JSON.stringify(JSON.parse(inspectListing.tools), null, 2)}
+                  </pre>
+                ) : (
+                  <span style={{ color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>None introspected</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
