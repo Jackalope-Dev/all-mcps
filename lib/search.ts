@@ -196,6 +196,34 @@ export function engagementScore(s: Engagement): number {
   );
 }
 
+export type TrendingItem = Engagement & { createdAt?: string | Date | null };
+
+/**
+ * Velocity & momentum score for Trending sorting mode.
+ * Applies time-decay (HackerNews / Reddit gravity algorithm) so newer servers with active
+ * engagement (upvotes, copies, views, stars) rank higher than static old listings.
+ */
+export function trendingScore(s: TrendingItem): number {
+  const upvotes = s.upvotes || 0;
+  const copies = s.copies || 0;
+  const views = s.views || 0;
+  const stars = s.githubStars || 0;
+  const downloads = s.npmDownloads || 0;
+
+  const rawEngagement =
+    upvotes * 10 +
+    copies * 4 +
+    views * 0.1 +
+    Math.min(stars * 0.1, 40) +
+    Math.min(downloads * 0.05, 25);
+
+  const createdAtMs = s.createdAt ? new Date(s.createdAt).getTime() : Date.now();
+  const ageInDays = Math.max(0.5, (Date.now() - createdAtMs) / (1000 * 60 * 60 * 24));
+
+  // Time decay factor: newer listings with recent engagement get boosted to top of Trending
+  return rawEngagement / Math.pow(ageInDays + 2, 1.25);
+}
+
 function fieldHitScore(
   field: string,
   term: string,

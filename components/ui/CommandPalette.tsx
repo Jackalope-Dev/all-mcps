@@ -7,6 +7,7 @@ import { SafeMarkdown } from './SafeMarkdown';
 import { Badge } from './Badge';
 import { ServerAvatar } from './ServerAvatar';
 import { parseServerName } from '../../lib/displayName';
+import { compileQuery, scoreServerMatch } from '../../lib/search';
 
 interface CommandItem {
   id: string;
@@ -141,16 +142,30 @@ export function CommandPalette() {
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items.slice(0, 10);
-    const q = query.toLowerCase();
-    return items
-      .filter(
-        (item) =>
-          item.title.toLowerCase().includes(q) ||
-          item.subtitle.toLowerCase().includes(q) ||
-          (item.rawName && item.rawName.toLowerCase().includes(q)) ||
-          (item.searchText && item.searchText.toLowerCase().includes(q))
-      )
-      .slice(0, 12);
+    const terms = compileQuery(query);
+    if (terms.length === 0) return items.slice(0, 10);
+    const fullQuery = terms.map((t) => t.term).join(' ');
+
+    const scored: Array<{ item: CommandItem; score: number }> = [];
+    for (const item of items) {
+      const score = scoreServerMatch(
+        {
+          name: item.title,
+          description: item.subtitle,
+          category: item.category,
+          extraText: item.searchText,
+        },
+        terms,
+        fullQuery,
+        false
+      );
+      if (score > 0) {
+        scored.push({ item, score });
+      }
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map((s) => s.item).slice(0, 12);
   }, [items, query]);
 
   useEffect(() => {

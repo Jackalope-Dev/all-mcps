@@ -2340,6 +2340,35 @@ nav[aria-label="Table of contents"] {
   color: #ffffff;
 }
 
+.directory-search-verified-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.75rem;
+  padding: 0 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-secondary, #94a3b8);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.directory-search-verified-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #ffffff);
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+.directory-search-verified-toggle.verified-active {
+  background: rgba(0, 229, 255, 0.14);
+  border-color: rgba(0, 229, 255, 0.5);
+  color: var(--brand-cyan, #00E5FF);
+}
+
 .directory-search-submit-btn {
   display: inline-flex;
   align-items: center;

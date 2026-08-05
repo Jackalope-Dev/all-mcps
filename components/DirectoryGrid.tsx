@@ -23,7 +23,7 @@ import { ImpressionBeacon } from './ImpressionTracker';
 import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
 import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel } from '../lib/categories';
-import { compileQuery, scoreServerMatch, engagementScore } from '../lib/search';
+import { compileQuery, scoreServerMatch, engagementScore, trendingScore } from '../lib/search';
 
 
 type Server = {
@@ -120,15 +120,15 @@ export default function DirectoryGrid({
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(30);
 
-  const NL_EXAMPLES = useMemo(
+  const SEARCH_PLACEHOLDERS = useMemo(
     () => [
-      'find latest btc prices',
-      'check transit times & train schedules',
-      'query postgres database',
-      'convert pdf documents to markdown',
-      'send slack notifications with AI',
-      'fetch github pull requests and issues',
-      'browse web pages using playwright',
+      'Search 1,000+ MCP tools (e.g. GitHub, Postgres, Slack)...',
+      'Try searching: "find latest btc prices"...',
+      'Try searching: "check transit times & train schedules"...',
+      'Try searching: "query postgres database"...',
+      'Try searching: "convert pdf documents to markdown"...',
+      'Try searching: "send slack notifications with AI"...',
+      'Try searching: "fetch github pull requests & issues"...',
     ],
     []
   );
@@ -138,10 +138,10 @@ export default function DirectoryGrid({
   useEffect(() => {
     if (searchQuery.trim()) return;
     const timer = setInterval(() => {
-      setPlaceholderIndex((prev) => (prev + 1) % NL_EXAMPLES.length);
-    }, 3000);
+      setPlaceholderIndex((prev) => (prev + 1) % SEARCH_PLACEHOLDERS.length);
+    }, 3200);
     return () => clearInterval(timer);
-  }, [searchQuery, NL_EXAMPLES]);
+  }, [searchQuery, SEARCH_PLACEHOLDERS]);
 
   // Keep client state in sync when the server re-renders with new searchParams (e.g. category links)
   useEffect(() => {
@@ -329,13 +329,20 @@ export default function DirectoryGrid({
         const eb = engagementScore(b);
         if (eb !== ea) return eb - ea;
       } else if (effectiveSort === 'trending') {
-        const scoreA = (a.upvotes || 0) * 5 + (a.copies || 0);
-        const scoreB = (b.upvotes || 0) * 5 + (b.copies || 0);
+        const scoreA = trendingScore(a);
+        const scoreB = trendingScore(b);
         if (scoreB !== scoreA) return scoreB - scoreA;
       } else if (effectiveSort === 'most_upvoted') {
-        if ((b.upvotes || 0) !== (a.upvotes || 0)) return (b.upvotes || 0) - (a.upvotes || 0);
+        const upvotesA = a.upvotes || 0;
+        const upvotesB = b.upvotes || 0;
+        if (upvotesB !== upvotesA) return upvotesB - upvotesA;
+        const starsA = a.githubStars || 0;
+        const starsB = b.githubStars || 0;
+        if (starsB !== starsA) return starsB - starsA;
       } else if (effectiveSort === 'most_viewed') {
-        if ((b.views || 0) !== (a.views || 0)) return (b.views || 0) - (a.views || 0);
+        const viewsA = a.views || 0;
+        const viewsB = b.views || 0;
+        if (viewsB !== viewsA) return viewsB - viewsA;
       } else if (effectiveSort === 'alpha') {
         return a.name.localeCompare(b.name);
       }
@@ -683,16 +690,17 @@ export default function DirectoryGrid({
       {/* Browse page title — the marketing hero (with its own <h1>) only renders on the
           unfiltered homepage landing above, so the dedicated /browse route needs its own
           single, page-specific <h1> here instead of relying on the "Results" <h2> below. */}
+      {/* Browse page title — centered with proper header spacing */}
       {isBrowse && (
-        <section className="container animate-fade-in delay-1" style={{ paddingBottom: '0.5rem' }}>
-          <h1 className="text-page-title" style={{ marginBottom: categoryMeta ? '0.35rem' : 0 }}>
+        <section className="container animate-fade-in delay-1" style={{ paddingTop: '2.5rem', paddingBottom: '1.25rem', textAlign: 'center' }}>
+          <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
             {categoryMeta ? `${categoryMeta.label} MCP Servers` : 'Browse MCP Servers'}
           </h1>
-          {categoryMeta && (
-            <p className="text-lead" style={{ margin: 0 }}>
-              Model Context Protocol servers in the {categoryMeta.label} category.
-            </p>
-          )}
+          <p className="text-lead" style={{ margin: '0 auto', maxWidth: '640px' }}>
+            {categoryMeta
+              ? `Model Context Protocol servers in the ${categoryMeta.label} category.`
+              : 'Discover, filter, and connect verified Model Context Protocol tools to your AI agents.'}
+          </p>
         </section>
       )}
 
@@ -700,7 +708,7 @@ export default function DirectoryGrid({
       <section
         className="container animate-fade-in delay-2"
         style={{
-          margin: isBrowse ? '2rem auto' : '0 auto',
+          margin: isBrowse ? '1.5rem auto' : '0 auto',
           marginBottom: '2rem',
           display: 'flex',
           justifyContent: 'center',
@@ -713,7 +721,7 @@ export default function DirectoryGrid({
               <input
                 type="text"
                 className="directory-search-input"
-                placeholder={`Search 1,000+ tools (e.g., "${NL_EXAMPLES[placeholderIndex]}")...`}
+                placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onKeyDown={(e) => {
@@ -757,6 +765,17 @@ export default function DirectoryGrid({
 
             <button
               type="button"
+              className={`directory-search-verified-toggle ${verifiedOnly ? 'verified-active' : ''}`}
+              onClick={() => setVerifiedOnly((v) => !v)}
+              aria-pressed={verifiedOnly}
+              title="Show listings that claimed ownership (badge/DNS) or have a premium listing"
+            >
+              <BadgeCheck size={16} />
+              <span>Verified</span>
+            </button>
+
+            <button
+              type="button"
               className="directory-search-submit-btn"
               onClick={() => {
                 if (!isBrowse) {
@@ -770,106 +789,64 @@ export default function DirectoryGrid({
             </button>
           </div>
 
-          {/* Clickable Natural Language Search Prompt Examples */}
-          <div className="nl-examples-container">
-            <span className="nl-examples-label">
-              <Sparkles size={13} /> Try Natural Search:
-            </span>
-            {[
-              { icon: '📈', label: 'find latest btc prices', query: 'find latest btc prices' },
-              { icon: '🚆', label: 'check transit times', query: 'check transit times' },
-              { icon: '📄', label: 'pdf to markdown', query: 'convert pdf to markdown' },
-              { icon: '🐘', label: 'query postgres', query: 'query postgres database' },
-              { icon: '💬', label: 'slack notifications', query: 'send slack notifications' },
-            ].map((chip) => (
-              <button
-                key={chip.label}
-                type="button"
-                className="nl-chip"
-                onClick={() => {
-                  handleSearchChange(chip.query);
-                  if (!isBrowse) {
-                    goToFullDirectorySearch(chip.query);
-                  }
-                }}
-              >
-                <span>{chip.icon}</span>
-                <span>{chip.label}</span>
-              </button>
-            ))}
-          </div>
+          {/* Active filter pills (only shown when active filters exist) */}
+          {isFiltered && (
+            <div className="directory-tags-row">
+              {verifiedOnly && (
+                <button
+                  type="button"
+                  className="directory-tag directory-tag-active"
+                  onClick={() => setVerifiedOnly(false)}
+                >
+                  <BadgeCheck size={14} />
+                  Verified
+                  <X size={12} />
+                </button>
+              )}
 
-          {/* Active filters */}
-          <div className="directory-tags-row">
-            {isBrowse && (
-              <button
-                type="button"
-                className={`directory-tag ${verifiedOnly ? 'directory-tag-active' : ''}`}
-                onClick={() => setVerifiedOnly((v) => !v)}
-                aria-pressed={verifiedOnly}
-                title="Show listings that claimed ownership (badge/DNS) or have a premium listing"
-              >
-                <BadgeCheck size={14} />
-                Verified
-              </button>
-            )}
+              {selectedCategory && (
+                <button
+                  type="button"
+                  className="directory-tag directory-tag-active"
+                  onClick={() => handleCategorySelect(null)}
+                >
+                  {selectedCategory}
+                  <X size={12} />
+                </button>
+              )}
 
-            {!isBrowse && verifiedOnly && (
-              <button
-                type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => setVerifiedOnly(false)}
-              >
-                <BadgeCheck size={14} />
-                Verified
-                <X size={12} />
-              </button>
-            )}
+              {selectedStack !== 'all' && (
+                <button
+                  type="button"
+                  className="directory-tag directory-tag-active"
+                  onClick={() => setSelectedStack('all')}
+                >
+                  Stack: {selectedStack}
+                  <X size={12} />
+                </button>
+              )}
 
-            {selectedCategory && (
-              <button
-                type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => handleCategorySelect(null)}
-              >
-                {selectedCategory}
-                <X size={12} />
-              </button>
-            )}
+              {selectedTransport !== 'all' && (
+                <button
+                  type="button"
+                  className="directory-tag directory-tag-active"
+                  onClick={() => setSelectedTransport('all')}
+                >
+                  Transport: {selectedTransport}
+                  <X size={12} />
+                </button>
+              )}
 
-            {selectedStack !== 'all' && (
               <button
                 type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => setSelectedStack('all')}
+                className="directory-tag"
+                onClick={clearAllFilters}
+                style={{ opacity: 0.8 }}
               >
-                Stack: {selectedStack}
-                <X size={12} />
+                Clear all filters
               </button>
-            )}
-
-            {selectedTransport !== 'all' && (
-              <button
-                type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => setSelectedTransport('all')}
-              >
-                Transport: {selectedTransport === 'stdio' ? 'STDIO' : 'SSE / Remote'}
-                <X size={12} />
-              </button>
-            )}
-
-            {searchQuery && (
-              <button
-                type="button"
-                className="directory-tag directory-tag-active"
-                onClick={() => handleSearchChange('')}
-              >
-                Search: {searchQuery.length > 24 ? `${searchQuery.slice(0, 24)}…` : searchQuery}
-                <X size={12} />
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
