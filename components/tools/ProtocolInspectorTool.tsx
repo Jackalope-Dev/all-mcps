@@ -346,10 +346,11 @@ export function ProtocolInspectorTool() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1.5rem' }}>
         {/* Left Column: JSON Editor */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem' }}>
+          <label htmlFor="protocol-inspector-input" style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem' }}>
             Paste MCP JSON-RPC Payload / Tool Response
           </label>
           <textarea
+            id="protocol-inspector-input"
             value={jsonInput}
             onChange={(e) => setJsonInput(e.target.value)}
             placeholder="Paste raw JSON-RPC response or request object..."

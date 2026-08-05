@@ -4,23 +4,23 @@ import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, Sparkles, CheckCircle
 import { Badge } from '@/components/ui/Badge';
 
 export const metadata: Metadata = {
-  title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
+  title: 'Model Context Protocol Guides & Tutorials',
   description:
-    'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, cloud deployment, and ecosystem best practices.',
+    'Comprehensive guides and tutorials for Model Context Protocol (MCP): a conceptual overview, LLM agent setup, building servers, and cloud deployment.',
   alternates: {
     canonical: 'https://allmcps.com/guides',
   },
   openGraph: {
     title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
     description:
-      'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, cloud deployment, and ecosystem best practices.',
+      'Comprehensive guides and tutorials for Model Context Protocol (MCP): a conceptual overview, LLM agent setup, building servers, and cloud deployment.',
     url: 'https://allmcps.com/guides',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
     description:
-      'Comprehensive guides and step-by-step tutorials for Model Context Protocol (MCP): conceptual overview, LLM agent setup, server creation in TypeScript & Python, cloud deployment, and ecosystem best practices.',
+      'Comprehensive guides and tutorials for Model Context Protocol (MCP): a conceptual overview, LLM agent setup, building servers, and cloud deployment.',
   },
 };
 
@@ -225,7 +225,7 @@ export default function GuidesLandingPage() {
             {guidesList.map((guide) => {
               const Icon = guide.icon;
               return (
-                <div key={guide.slug} className="guide-card group">
+                <article key={guide.slug} className="guide-card group">
                   <div>
                     <div className="guide-card-header">
                       <div className="guide-card-icon">
@@ -248,12 +248,14 @@ export default function GuidesLandingPage() {
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>
                         What you&rsquo;ll learn:
                       </span>
-                      {guide.highlights.map((highlight) => (
-                        <div key={highlight} className="guide-card-highlight-item">
-                          <CheckCircle2 size={15} style={{ color: '#00E5FF', flexShrink: 0, marginTop: '2px' }} />
-                          <span>{highlight}</span>
-                        </div>
-                      ))}
+                      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {guide.highlights.map((highlight) => (
+                          <li key={highlight} className="guide-card-highlight-item">
+                            <CheckCircle2 size={15} style={{ color: '#00E5FF', flexShrink: 0, marginTop: '2px' }} />
+                            <span>{highlight}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
 
@@ -265,7 +267,7 @@ export default function GuidesLandingPage() {
                     <span>Read Guide</span>
                     <ArrowRight size={16} />
                   </Link>
-                </div>
+                </article>
               );
             })}
           </div>

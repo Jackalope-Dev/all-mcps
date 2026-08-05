@@ -10,18 +10,29 @@ export function generateStaticParams() {
   return WORKFLOW_PROMPTS.map((w) => ({ slug: w.slug }));
 }
 
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max - 1);
+  const lastSpace = slice.lastIndexOf(' ');
+  const cut = lastSpace > max * 0.6 ? slice.slice(0, lastSpace) : slice;
+  return `${cut.trimEnd()}…`;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const workflow = getWorkflowBySlug(slug);
-  if (!workflow) return { title: 'Workflow Not Found' };
+  if (!workflow) return { title: 'Workflow Not Found', robots: { index: false, follow: false } };
+
+  const title = `${workflow.title} MCP Setup`;
+  const description = truncate(workflow.description, 157);
 
   return {
-    title: `${workflow.title} — Multi-MCP System Prompt & Setup`,
-    description: workflow.description,
+    title,
+    description,
     alternates: { canonical: `https://allmcps.com/prompts/${workflow.slug}` },
     openGraph: {
-      title: `${workflow.title} | AllMCPs Prompt Library`,
-      description: workflow.description,
+      title: `${title} | AllMCPs`,
+      description,
       url: `https://allmcps.com/prompts/${workflow.slug}`,
     },
   };
@@ -106,9 +117,9 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Layers size={20} style={{ color: 'var(--accent-color)' }} /> Included MCP Servers ({workflow.requiredMcps.length})
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+          <ul style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', listStyle: 'none', margin: 0, padding: 0 }}>
             {workflow.requiredMcps.map((mcp) => (
-              <div key={mcp.id} className="surface" style={{ padding: '1.25rem', borderRadius: '12px' }}>
+              <li key={mcp.id} className="surface" style={{ listStyle: 'none', padding: '1.25rem', borderRadius: '12px' }}>
                 <Link href={`/mcp/${mcp.id}`} style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', textDecoration: 'none' }}>
                   {mcp.name} →
                 </Link>
@@ -118,9 +129,9 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
                 <code style={{ fontSize: '0.75rem', color: '#38bdf8', background: 'rgba(0,0,0,0.4)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
                   {mcp.command} {mcp.args.join(' ')}
                 </code>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
 
         {/* System Prompt Block */}
@@ -151,14 +162,14 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
         {workflow.faq.length > 0 && (
           <section style={{ maxWidth: '760px' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Frequently Asked Questions</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <ul style={{ display: 'flex', flexDirection: 'column', gap: '1rem', listStyle: 'none', margin: 0, padding: 0 }}>
               {workflow.faq.map((f) => (
-                <div key={f.q} className="surface" style={{ padding: '1.25rem', borderRadius: '12px' }}>
+                <li key={f.q} className="surface" style={{ listStyle: 'none', padding: '1.25rem', borderRadius: '12px' }}>
                   <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.35rem' }}>{f.q}</h3>
                   <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{f.a}</p>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         )}
       </main>

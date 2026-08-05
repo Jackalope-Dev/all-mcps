@@ -12,9 +12,9 @@ import { ClientConfigSection } from '@/components/clients/ClientConfigSection';
 import { ServerConfigCopyButton } from '@/components/clients/ServerConfigCopyButton';
 
 export const metadata: Metadata = {
-  title: 'Best MCP Servers for Windsurf Cascade — Setup & Directory',
+  title: 'Best MCP Servers for Windsurf Cascade Setup',
   description:
-    'Find Model Context Protocol (MCP) servers compatible with Codeium Windsurf Cascade editor. Interactive setup instructions for ~/.codeium/windsurf/mcp_config.json.',
+    'Find Model Context Protocol (MCP) servers compatible with Codeium Windsurf Cascade. Setup instructions for ~/.codeium/windsurf/mcp_config.json.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-windsurf' },
   openGraph: {
     title: 'Best MCP Servers for Windsurf Cascade | AllMCPs',
@@ -99,31 +99,33 @@ export default async function WindsurfMcpPage() {
           <h2 className="text-section" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Windsurf Compatible MCP Servers
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {topServers.map((server) => {
               const { displayName, org } = parseServerName(server.name);
               return (
-                <Card key={server.id} href={`/mcp/${server.id}`} hoverable className="directory-card-uniform">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} size={40} />
-                    <div className="directory-card-title-block" style={{ marginBottom: 0 }}>
-                      <h3 className="directory-card-title-text" style={{ fontSize: '1.05rem' }}>
-                        {displayName}
-                      </h3>
-                      {org && <div className="directory-card-org-text">{org}</div>}
+                <li key={server.id}>
+                  <Card href={`/mcp/${server.id}`} hoverable className="directory-card-uniform">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} size={40} />
+                      <div className="directory-card-title-block" style={{ marginBottom: 0 }}>
+                        <h3 className="directory-card-title-text" style={{ fontSize: '1.05rem' }}>
+                          {displayName}
+                        </h3>
+                        {org && <div className="directory-card-org-text">{org}</div>}
+                      </div>
                     </div>
-                  </div>
-                  <div className="directory-card-desc-block">
-                    <SafeMarkdown content={server.description || ''} isInline />
-                  </div>
-                  <div className="directory-card-footer" style={{ justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.75rem' }}>
-                    <Badge variant="category">{server.category}</Badge>
-                    <ServerConfigCopyButton clientSlug="windsurf" serverName={server.name} />
-                  </div>
-                </Card>
+                    <div className="directory-card-desc-block">
+                      <SafeMarkdown content={server.description || ''} isInline />
+                    </div>
+                    <div className="directory-card-footer" style={{ justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.75rem' }}>
+                      <Badge variant="category">{server.category}</Badge>
+                      <ServerConfigCopyButton clientSlug="windsurf" serverName={server.name} />
+                    </div>
+                  </Card>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </section>
       </main>
     </>

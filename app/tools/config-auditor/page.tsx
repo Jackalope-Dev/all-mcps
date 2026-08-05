@@ -4,9 +4,9 @@ import { ChevronRight } from 'lucide-react';
 import { ConfigAuditor } from '@/components/tools/ConfigAuditor';
 
 export const metadata: Metadata = {
-  title: 'MCP Config Auditor & Merger Tool — Audit & Combine Client JSONs',
+  title: 'MCP Config Auditor & Merger — Combine Configs',
   description:
-    'Free online tool to audit claude_desktop_config.json, Cursor, Windsurf, and Cline MCP configurations for syntax errors, missing API key placeholders, and duplicate keys.',
+    'Audit claude_desktop_config.json, Cursor, Windsurf, and Cline MCP configs for syntax errors, missing API key placeholders, and duplicate server keys.',
   alternates: { canonical: 'https://allmcps.com/tools/config-auditor' },
   openGraph: {
     title: 'MCP Config Auditor & Merger Tool | AllMCPs',

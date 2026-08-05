@@ -4,9 +4,9 @@ import { ChevronRight } from 'lucide-react';
 import { McpPlayground } from '@/components/tools/McpPlayground';
 
 export const metadata: Metadata = {
-  title: 'Interactive MCP Server Playground & Sandbox Console',
+  title: 'Interactive MCP Server Playground & Console',
   description:
-    'Test Model Context Protocol (MCP) remote JSON-RPC 2.0 endpoints online. Send initialize, tools/list, and tools/call requests in real-time with live response logging.',
+    'Test Model Context Protocol (MCP) remote JSON-RPC 2.0 endpoints online. Send initialize, tools/list, and tools/call requests with live response logging.',
   alternates: { canonical: 'https://allmcps.com/tools/playground' },
   openGraph: {
     title: 'Interactive MCP Server Playground & Console | AllMCPs',

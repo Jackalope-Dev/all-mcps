@@ -118,14 +118,14 @@ export function AdminCronsControl() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+      <ul role="list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', listStyle: 'none', margin: 0, padding: 0 }}>
         {CRON_JOBS.map((job) => {
           const Icon = job.icon;
           const isRunning = runningJob === job.id;
           const result = lastResults[job.id];
 
           return (
-            <div
+            <li
               key={job.id}
               className="admin-card"
               style={{
@@ -193,10 +193,10 @@ export function AdminCronsControl() {
                 <Play className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`} />
                 {isRunning ? 'Executing job...' : 'Run Job Now'}
               </button>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 }

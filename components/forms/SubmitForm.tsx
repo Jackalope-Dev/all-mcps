@@ -156,7 +156,7 @@ export function SubmitForm() {
     return (
       <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎉</div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Submitted Successfully!</h3>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Submitted Successfully!</h2>
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem', maxWidth: '500px', margin: '0.5rem auto 1rem' }}>
           Your MCP server is in the review queue. When it goes live you&apos;ll get an email with a direct claim link — free dofollow after you verify your site and keep the badge.
         </p>
@@ -238,9 +238,9 @@ export function SubmitForm() {
 
         {/* High-Converting Boost Up-sell Cards */}
         <div style={{ maxWidth: '640px', margin: '2rem auto', textAlign: 'left' }}>
-          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: '0.5rem' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: '0.5rem' }}>
             🚀 Want to Launch Faster & Get More Installs?
-          </h4>
+          </h3>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
             Optional boosts to feature your new MCP server at the top of search and homepage discovery.
           </p>
@@ -260,7 +260,7 @@ export function SubmitForm() {
             >
               <div>
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#00E5FF', letterSpacing: '0.05em' }}>⚡ Quick Pass</span>
-                <h5 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>Priority Review</h5>
+                <h4 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>Priority Review</h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                   Jump the manual queue and get reviewed within 2 hours.
                 </p>
@@ -298,7 +298,7 @@ export function SubmitForm() {
             >
               <div>
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>⭐ Spotlight</span>
-                <h5 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>7-Day Launch Boost</h5>
+                <h4 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>7-Day Launch Boost</h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                   7 days featured spotlight in homepage marquee &amp; search.
                 </p>
@@ -458,7 +458,7 @@ export function SubmitForm() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span style={sectionBadgeStyle}>Step 1</span>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Primary Repository or Website URL</h3>
+            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Primary Repository or Website URL</h2>
           </div>
           <Input
             name="url"
@@ -487,7 +487,7 @@ export function SubmitForm() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span style={sectionBadgeStyle}>Step 2</span>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Details &amp; Contact</h3>
+            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Details &amp; Contact</h2>
           </div>
 
           <Input name="name" label="Server Name" placeholder="e.g., GitHub MCP" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -559,7 +559,7 @@ export function SubmitForm() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span style={sectionBadgeStyle}>Step 3</span>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Security Check &amp; Submission</h3>
+            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Security Check &amp; Submission</h2>
           </div>
 
           <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />

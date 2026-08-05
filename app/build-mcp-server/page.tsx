@@ -4,23 +4,23 @@ import { CopyBlock } from '@/components/ui/CopyBlock';
 import { TableOfContents, TocItem } from '@/components/ui/TableOfContents';
 
 export const metadata: Metadata = {
-  title: 'How to Build an MCP Server (Complete Developer Guide)',
+  title: 'How to Build an MCP Server (Developer Guide)',
   description:
-    'Build a Model Context Protocol (MCP) server from scratch: full TypeScript and Python code for tools, resources, and prompts, local testing, remote deployment, and publishing.',
+    'Build a Model Context Protocol server from scratch: TypeScript and Python code for tools, resources, and prompts, plus testing, deployment, and publishing.',
   alternates: {
     canonical: 'https://allmcps.com/build-mcp-server',
   },
   openGraph: {
-    title: 'How to Build an MCP Server (Complete Developer Guide) | AllMCPs',
+    title: 'How to Build an MCP Server (Developer Guide) | AllMCPs',
     description:
-      'Build a Model Context Protocol (MCP) server from scratch: full TypeScript and Python code for tools, resources, and prompts, local testing, remote deployment, and publishing.',
+      'Build a Model Context Protocol server from scratch: TypeScript and Python code for tools, resources, and prompts, plus testing, deployment, and publishing.',
     url: 'https://allmcps.com/build-mcp-server',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'How to Build an MCP Server (Complete Developer Guide) | AllMCPs',
+    title: 'How to Build an MCP Server (Developer Guide) | AllMCPs',
     description:
-      'Build a Model Context Protocol (MCP) server from scratch: full TypeScript and Python code for tools, resources, and prompts, local testing, remote deployment, and publishing.',
+      'Build a Model Context Protocol server from scratch: TypeScript and Python code for tools, resources, and prompts, plus testing, deployment, and publishing.',
   },
 };
 

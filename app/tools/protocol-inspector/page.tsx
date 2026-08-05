@@ -5,9 +5,9 @@ import { ProtocolInspectorTool } from '../../../components/tools/ProtocolInspect
 import { LiveMcpInspector } from '../../../components/tools/LiveMcpInspector';
 
 export const metadata: Metadata = {
-  title: 'Free MCP Protocol Inspector & Response Debugger — Validate JSON-RPC Payloads',
+  title: 'Free MCP Protocol Inspector & Response Debugger',
   description:
-    'Test, validate, and debug Model Context Protocol (MCP) JSON-RPC messages, tool outputs, resources, and image base64 blobs. Includes a live AI client visual renderer.',
+    'Test, validate, and debug Model Context Protocol (MCP) JSON-RPC messages, tool outputs, resources, and image base64 blobs with a live client renderer.',
   alternates: { canonical: 'https://allmcps.com/tools/protocol-inspector' },
   openGraph: {
     title: 'Free MCP Protocol Inspector & Response Debugger | AllMCPs',

@@ -84,7 +84,9 @@ export async function generateMetadata({
   const canonicalSlug = categorySlug(category);
   const { label } = parseCategoryLabel(category);
   const title = `${label} MCP Servers`;
-  const description = `Browse and install the best ${label} Model Context Protocol (MCP) servers for AI agents. Compare tools, view install commands, and connect Claude, Cursor, and more.`;
+  const rawDescription = `Browse and install the best ${label} Model Context Protocol (MCP) servers for AI agents. Compare tools, view install commands, and connect Claude, Cursor, and more.`;
+  const description =
+    rawDescription.length > 157 ? `${rawDescription.slice(0, 154)}...` : rawDescription;
   const url = `${SITE}/categories/${canonicalSlug}`;
   return {
     title,
@@ -290,11 +292,12 @@ export default async function CategoryLandingPage({
 
         {/* Server grid */}
         {cards.length > 0 ? (
-          <div className="directory-grid">
+          <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {cards.map((server) => {
               const { displayName, org } = parseServerName(server.name);
               return (
-                <ImpressionBeacon key={server.id} serverId={server.id} surface="category_page">
+                <li key={server.id}>
+                <ImpressionBeacon serverId={server.id} surface="category_page">
                   <Card
                     href={`/mcp/${server.id}`}
                     className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
@@ -341,9 +344,10 @@ export default async function CategoryLandingPage({
                     </div>
                   </Card>
                 </ImpressionBeacon>
+                </li>
               );
             })}
-          </div>
+          </ul>
         ) : (
           <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>
             <p className="empty-state-body" style={{ margin: 0 }}>
@@ -367,10 +371,10 @@ export default async function CategoryLandingPage({
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>
               Explore related categories
             </h2>
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
               {related.map((r) => (
+                <li key={r.slug}>
                 <Link
-                  key={r.slug}
                   href={`/categories/${r.slug}`}
                   className="badge badge-link badge-category"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
@@ -379,8 +383,9 @@ export default async function CategoryLandingPage({
                   <span>{r.label}</span>
                   <span style={{ opacity: 0.6 }}>({r.count.toLocaleString()})</span>
                 </Link>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         )}
 

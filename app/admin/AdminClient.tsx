@@ -309,13 +309,28 @@ export default function AdminClient({
       )}
 
       {/* TAB 4: ANALYTICS & LOGS */}
-      {activeTab === 'analytics' && <AdminAnalyticsView stats={stats} />}
+      {activeTab === 'analytics' && (
+        <section>
+          <h2 className="admin-section-title">Analytics & Logs</h2>
+          <AdminAnalyticsView stats={stats} />
+        </section>
+      )}
 
       {/* TAB 5: SOCIAL QUEUE */}
-      {activeTab === 'social' && <AdminSocialQueue />}
+      {activeTab === 'social' && (
+        <section>
+          <h2 className="admin-section-title">Social & Twitter</h2>
+          <AdminSocialQueue />
+        </section>
+      )}
 
       {/* TAB 6: CRONS & SYSTEM */}
-      {activeTab === 'crons' && <AdminCronsControl />}
+      {activeTab === 'crons' && (
+        <section>
+          <h2 className="admin-section-title">Crons & System</h2>
+          <AdminCronsControl />
+        </section>
+      )}
     </div>
   );
 }

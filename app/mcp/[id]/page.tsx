@@ -56,10 +56,21 @@ async function checkIsOwner(id: string, userId: string): Promise<boolean> {
   return false;
 }
 
+// Keeps the rendered <title> (this string + the root layout's " | AllMCPs" suffix)
+// within ~60 chars even for the longest real listing names, which can run 40+
+// chars once the org/scope prefix is stripped off by parseServerName.
+function buildDetailTitle(displayName: string): string {
+  const suffix = /mcp\s*server$/i.test(displayName) ? '' : ' MCP Server';
+  const budget = 50 - suffix.length;
+  if (displayName.length <= budget) return `${displayName}${suffix}`;
+  const truncated = displayName.slice(0, Math.max(10, budget - 1)).trimEnd();
+  return `${truncated}…${suffix}`;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const server = await getServer(id);
-  
+
   if (!server) {
     // A missing listing must not return a 200 "Not Found" body (soft 404) — mark it
     // noindex here and serve a real 404 from the page component below.
@@ -73,8 +84,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const desc =
     metaSource.length > 155 ? `${metaSource.slice(0, 152)}...` : metaSource;
 
+  const { displayName } = parseServerName(server.name);
+  const title = buildDetailTitle(displayName);
+
   return {
-    title: `${server.name} MCP Server - Install & Setup`,
+    title,
     description: desc,
     keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
     alternates: {
@@ -87,13 +101,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     },
     openGraph: {
       type: 'article',
-      title: `${server.name} MCP Server - Install & Setup | AllMCPs`,
+      title: `${title} | AllMCPs`,
       description: desc,
       url: `https://allmcps.com/mcp/${server.id}`,
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${server.name} MCP Server - Install & Setup | AllMCPs`,
+      title: `${title} | AllMCPs`,
       description: desc,
     },
   };
@@ -537,7 +551,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           {(server.aiOverview ||
             (server.aiUseCases?.length ?? 0) > 0 ||
             (server.aiFeatures?.length ?? 0) > 0) && (
-            <div style={{ marginBottom: '3rem' }}>
+            <section style={{ marginBottom: '3rem' }}>
               {server.aiOverview && (
                 <>
                   <h2 style={{ fontSize: '1.5rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -574,10 +588,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   </div>
                 )}
               </div>
-            </div>
+            </section>
           )}
 
-          <div id="quick-install" className="surface" style={{ padding: '2rem', marginBottom: '3rem', scrollMarginTop: '5rem' }}>
+          <section id="quick-install" className="surface" style={{ padding: '2rem', marginBottom: '3rem', scrollMarginTop: '5rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Terminal size={20} /> Quick Install
             </h2>
@@ -617,7 +631,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               Using an AI coding agent (Claude Code, Cursor, etc.)? Copy a ready-made prompt that tells it to fetch the setup instructions and install this server for you.
             </p>
             <AgentPromptButton serverId={server.id} serverName={server.name} />
-          </div>
+          </section>
 
           <ToolSchemaInspector
             tools={server.tools}
@@ -626,7 +640,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             serverName={displayName}
           />
 
-          <div>
+          <section>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Documentation Overview</h2>
             <div className="detail-readme-scroll">
               <div className="markdown-body">
@@ -658,11 +672,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 )}
               </div>
             </div>
-          </div>
+          </section>
 
           {/* Related MCP Servers */}
           {relatedServers && relatedServers.length > 0 && (
-            <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border-color)' }}>
+            <section style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border-color)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.5rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Related MCP Servers
@@ -674,11 +688,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   View all alternatives <ChevronRight size={14} />
                 </Link>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.25rem' }}>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.25rem' }}>
                 {relatedServers.map((rel) => {
                   const relName = parseServerName(rel.name).displayName;
                   return (
-                  <div
+                  <li
                     key={rel.id}
                     className="surface-interactive"
                     style={{
@@ -743,15 +757,15 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   >
                     Compare vs {relName} →
                   </Link>
-                  </div>
+                  </li>
                   );
                 })}
-              </div>
-            </div>
+              </ul>
+            </section>
           )}
 
           {/* Query-Forward AEO / FAQ Block */}
-          <div className="surface" style={{ padding: '1.75rem', marginTop: '2rem' }}>
+          <section className="surface" style={{ padding: '1.75rem', marginTop: '2rem' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-primary)' }}>
               Frequently Asked Questions about {displayName}
             </h2>
@@ -781,7 +795,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 </p>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
         {/* Sidebar (Right Column) */}

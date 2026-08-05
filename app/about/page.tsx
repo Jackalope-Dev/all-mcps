@@ -4,21 +4,21 @@ import { Button } from '../../components/ui/Button';
 import { PageShell, PageHeader } from '../../components/PageShell';
 
 export const metadata: Metadata = {
-  title: 'About AllMCPs - The MCP Directory',
+  title: 'About AllMCPs — Our Mission & MCP Directory',
   description:
     'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
   alternates: {
     canonical: 'https://allmcps.com/about',
   },
   openGraph: {
-    title: 'About AllMCPs - The MCP Directory | AllMCPs',
+    title: 'About AllMCPs — Our Mission & MCP Directory | AllMCPs',
     description:
       'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
     url: 'https://allmcps.com/about',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'About AllMCPs - The MCP Directory | AllMCPs',
+    title: 'About AllMCPs — Our Mission & MCP Directory | AllMCPs',
     description:
       'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',
   },
@@ -86,7 +86,7 @@ export default function AboutPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
               <Search size={18} style={{ color: '#00E5FF' }} />
             </div>
-            <h3 style={{ margin: 0 }}>Discover Tools</h3>
+            <h2 style={{ margin: 0 }}>Discover Tools</h2>
           </div>
           <p>
             Search hundreds of curated MCP servers spanning databases, APIs, dev tools, and desktop
@@ -98,7 +98,7 @@ export default function AboutPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
               <Zap size={18} style={{ color: '#00E5FF' }} />
             </div>
-            <h3 style={{ margin: 0 }}>1-Click Install</h3>
+            <h2 style={{ margin: 0 }}>1-Click Install</h2>
           </div>
           <p>
             Copy pre-formatted Claude Desktop and Cursor JSON configs directly into your local setup.
@@ -109,7 +109,7 @@ export default function AboutPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
               <Rocket size={18} style={{ color: '#00E5FF' }} />
             </div>
-            <h3 style={{ margin: 0 }}>Community Driven</h3>
+            <h2 style={{ margin: 0 }}>Community Driven</h2>
           </div>
           <p>
             Submit your own open-source MCP servers to reach thousands of AI developers and users.

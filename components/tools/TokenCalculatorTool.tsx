@@ -76,9 +76,9 @@ export function TokenCalculatorTool() {
           )}
           {pasteResult && 'total' in pasteResult && (
             <div>
-              <h3 className="text-section" style={{ marginBottom: '0.5rem' }}>
+              <h2 className="text-section" style={{ marginBottom: '0.5rem' }}>
                 Total: {pasteResult.total.toLocaleString()} tokens
-              </h3>
+              </h2>
               <ul style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', paddingLeft: '1.25rem' }}>
                 {CONTEXT_WINDOWS.map((w) => (
                   <li key={w.label}>
@@ -140,9 +140,9 @@ export function TokenCalculatorTool() {
                   </button>
                 </Card>
               ))}
-              <h3 className="text-section" style={{ marginTop: '0.5rem' }}>
+              <h2 className="text-section" style={{ marginTop: '0.5rem' }}>
                 ~{directoryTotal.toLocaleString()} tokens (estimate)
-              </h3>
+              </h2>
             </div>
           )}
         </div>

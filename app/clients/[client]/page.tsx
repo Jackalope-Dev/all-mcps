@@ -27,14 +27,29 @@ export async function generateMetadata({
   const { client } = await params;
   const c = mcpClientBySlug(client);
   if (!c) return { title: 'Not Found' };
-  const title = `How to Install MCP Servers in ${c.name}`;
+
+  // c.name / c.lead come from lib/clients.ts and aren't all sized for a search
+  // snippet — override per-slug where the default would blow past the SEO
+  // title/description budget, otherwise fall back to the generated defaults.
+  const metaTitleOverrides: Record<string, string> = {
+    cursor: 'How to Install MCP Servers in Cursor IDE',
+    windsurf: 'How to Install MCP Servers in Windsurf IDE',
+    'vs-code': 'MCP Servers for VS Code (GitHub Copilot)',
+  };
+  const metaDescriptionOverrides: Record<string, string> = {
+    'claude-desktop':
+      'How to install and configure MCP servers in Claude Desktop on macOS and Windows, including the config file location and JSON shape.',
+  };
+
+  const title = metaTitleOverrides[c.slug] ?? `How to Install MCP Servers in ${c.name}`;
+  const description = metaDescriptionOverrides[c.slug] ?? c.lead;
   const url = `${SITE}/clients/${c.slug}`;
   return {
     title,
-    description: c.lead,
+    description,
     alternates: { canonical: url },
-    openGraph: { type: 'article', title: `${title} | AllMCPs`, description: c.lead, url },
-    twitter: { card: 'summary_large_image', title: `${title} | AllMCPs`, description: c.lead },
+    openGraph: { type: 'article', title: `${title} | AllMCPs`, description, url },
+    twitter: { card: 'summary_large_image', title: `${title} | AllMCPs`, description },
   };
 }
 
@@ -185,11 +200,11 @@ export default async function ClientPage({
           </div>
 
           {popular.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
               {popular.map((server) => {
                 const { displayName, org } = parseServerName(server.name);
                 return (
-                  <div
+                  <li
                     key={server.id}
                     className="surface"
                     style={{
@@ -225,10 +240,10 @@ export default async function ClientPage({
                       </div>
                       <ServerConfigCopyButton clientSlug={c.slug} serverName={server.name} />
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           ) : (
             <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>
               <p className="empty-state-body" style={{ margin: 0 }}>No servers to show yet.</p>
@@ -245,13 +260,15 @@ export default async function ClientPage({
         {/* Other clients navigation */}
         <section style={{ maxWidth: '800px' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Install MCP servers in other clients</h2>
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             {MCP_CLIENTS.filter((o) => o.slug !== c.slug).map((o) => (
-              <Link key={o.slug} href={`/clients/${o.slug}`} className="badge badge-link badge-category">
-                {o.name}
-              </Link>
+              <li key={o.slug}>
+                <Link href={`/clients/${o.slug}`} className="badge badge-link badge-category">
+                  {o.name}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       </main>
     </>

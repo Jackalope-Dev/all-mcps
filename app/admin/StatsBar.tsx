@@ -87,17 +87,21 @@ export function StatsBar({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-      <div
+      <ul
+        role="list"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '0.85rem',
+          listStyle: 'none',
+          margin: 0,
+          padding: 0,
         }}
       >
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <div
+            <li
               key={card.label}
               onClick={() => onSelectTab && onSelectTab(card.tab)}
               style={{
@@ -128,10 +132,10 @@ export function StatsBar({
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {card.subtext}
               </div>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 }

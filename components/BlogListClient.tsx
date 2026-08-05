@@ -67,34 +67,35 @@ export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: strin
           No posts match your search or filters.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <ul style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', listStyle: 'none', margin: 0, padding: 0 }}>
           {filtered.map((post) => (
-            <Link
-              key={post.slug}
-              href={`/blog/${post.slug}`}
-              className="surface surface-interactive"
-              style={{ padding: '1.75rem', display: 'block' }}
-            >
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <time dateTime={post.date} className="text-meta" style={{ fontWeight: 600 }}>
-                  {formatDate(post.date)}
-                </time>
-                <span className="text-meta">· {post.readingTime} min read</span>
-              </div>
-              <h2 className="text-section" style={{ margin: '0.5rem 0 0.75rem' }}>
-                {post.title}
-              </h2>
-              <p style={{ margin: '0 0 1rem', lineHeight: 1.65, color: 'var(--text-secondary)' }}>{post.excerpt}</p>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {post.tags.map((tag) => (
-                  <Badge key={tag} variant="category">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </Link>
+            <li key={post.slug} style={{ listStyle: 'none' }}>
+              <Link
+                href={`/blog/${post.slug}`}
+                className="surface surface-interactive"
+                style={{ padding: '1.75rem', display: 'block' }}
+              >
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <time dateTime={post.date} className="text-meta" style={{ fontWeight: 600 }}>
+                    {formatDate(post.date)}
+                  </time>
+                  <span className="text-meta">· {post.readingTime} min read</span>
+                </div>
+                <h2 className="text-section" style={{ margin: '0.5rem 0 0.75rem' }}>
+                  {post.title}
+                </h2>
+                <p style={{ margin: '0 0 1rem', lineHeight: 1.65, color: 'var(--text-secondary)' }}>{post.excerpt}</p>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {post.tags.map((tag) => (
+                    <Badge key={tag} variant="category">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </>
   );

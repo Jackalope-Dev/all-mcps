@@ -24,12 +24,12 @@ export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
               No API caller logs recorded yet.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <ul role="list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', listStyle: 'none', margin: 0, padding: 0 }}>
               {callerEntries.map(([caller, count]) => {
                 const total = callerEntries.reduce((acc, curr) => acc + curr[1], 0);
                 const percent = Math.round((count / (total || 1)) * 100);
                 return (
-                  <div key={caller}>
+                  <li key={caller}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
                       <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{caller.replace('_', ' ')}</span>
                       <span style={{ color: 'var(--text-secondary)' }}>{count.toLocaleString()} ({percent}%)</span>
@@ -44,10 +44,10 @@ export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
                         }}
                       />
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </div>
 
@@ -61,9 +61,9 @@ export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
             Where listing logos originate across active and submitted items.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+          <ul role="list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', listStyle: 'none', margin: 0, padding: 0 }}>
             {Object.entries(stats.logoSourceCounts).map(([src, count]) => (
-              <div
+              <li
                 key={src}
                 style={{
                   background: 'rgba(255, 255, 255, 0.02)',
@@ -76,9 +76,9 @@ export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
                   {src.replace('_', ' ')}
                 </div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{count.toLocaleString()}</div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </div>
 
@@ -96,9 +96,9 @@ export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <ol style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', listStyle: 'none', margin: 0, padding: 0 }}>
           {stats.topByViews.map((item, idx) => (
-            <div
+            <li
               key={item.id}
               style={{
                 display: 'flex',
@@ -124,9 +124,9 @@ export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
               <span style={{ fontSize: '0.85rem', color: '#00E5FF', fontWeight: 600 }}>
                 {item.views.toLocaleString()} views
               </span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </div>
   );

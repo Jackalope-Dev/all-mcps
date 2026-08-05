@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 export const metadata: Metadata = {
   title: 'Agent Multi-MCP Workflow & System Prompt Library',
   description:
-    'Curated multi-MCP agent system prompts and workflow configurations. One-click system prompts and combined claude_desktop_config.json for Full-Stack, Research, DevOps, and Data Science agents.',
+    'Curated multi-MCP agent workflows with copyable system prompts and combined claude_desktop_config.json for Full-Stack, Research, DevOps, and Data Science.',
   alternates: { canonical: 'https://allmcps.com/prompts' },
   openGraph: {
     title: 'Agent Multi-MCP Workflow & System Prompt Library | AllMCPs',
@@ -70,37 +70,39 @@ export default function PromptsHubPage() {
           </p>
         </section>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <ul style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', listStyle: 'none', margin: 0, padding: 0 }}>
           {WORKFLOW_PROMPTS.map((w) => (
-            <Card key={w.slug} href={`/prompts/${w.slug}`} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <Badge variant="category">{w.category}</Badge>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#00E5FF', fontWeight: 600 }}>
-                  <Layers size={14} /> {w.requiredMcps.length} MCPs Combined
+            <li key={w.slug} style={{ listStyle: 'none' }}>
+              <Card href={`/prompts/${w.slug}`} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <Badge variant="category">{w.category}</Badge>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#00E5FF', fontWeight: 600 }}>
+                    <Layers size={14} /> {w.requiredMcps.length} MCPs Combined
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ minHeight: '3.5rem', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                  {w.title}
-                </h2>
-                <p style={{ fontSize: '0.8rem', color: '#00E5FF', fontWeight: 600, margin: '0.2rem 0 0' }}>
-                  {w.subtitle}
+                <div style={{ minHeight: '3.5rem', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                    {w.title}
+                  </h2>
+                  <p style={{ fontSize: '0.8rem', color: '#00E5FF', fontWeight: 600, margin: '0.2rem 0 0' }}>
+                    {w.subtitle}
+                  </p>
+                </div>
+
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+                  {w.description}
                 </p>
-              </div>
 
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
-                {w.description}
-              </p>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-color)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                  View Workflow &amp; Prompts <ArrowRight size={14} />
-                </span>
-              </div>
-            </Card>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-color)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                    View Workflow &amp; Prompts <ArrowRight size={14} />
+                  </span>
+                </div>
+              </Card>
+            </li>
           ))}
-        </div>
+        </ul>
       </main>
     </>
   );

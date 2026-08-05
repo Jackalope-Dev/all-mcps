@@ -137,11 +137,13 @@ export function ConfigGeneratorTool() {
                   </button>
                 </div>
                 <Input
+                  id={`${row.id}-name`}
                   label="Server name (config key)"
                   value={row.name}
                   onChange={(e) => updateRow(row.id, { name: e.target.value })}
                 />
                 <Input
+                  id={`${row.id}-command`}
                   label="Command"
                   placeholder="npx"
                   value={row.command || ''}
@@ -149,6 +151,7 @@ export function ConfigGeneratorTool() {
                   disabled={!!row.url}
                 />
                 <Input
+                  id={`${row.id}-args`}
                   label="Args (space-separated)"
                   placeholder="-y @scope/package"
                   value={(row.args || []).join(' ')}
@@ -156,12 +159,14 @@ export function ConfigGeneratorTool() {
                   disabled={!!row.url}
                 />
                 <Input
+                  id={`${row.id}-url`}
                   label="Remote URL (leave blank for a local/stdio server)"
                   placeholder="https://example.com/mcp"
                   value={row.url || ''}
                   onChange={(e) => updateRow(row.id, { url: e.target.value })}
                 />
                 <Input
+                  id={`${row.id}-env`}
                   label="Env vars (KEY=value, comma-separated)"
                   placeholder="API_KEY=xxx, OTHER=yyy"
                   value={Object.entries(row.env || {}).map(([k, v]) => `${k}=${v}`).join(', ')}

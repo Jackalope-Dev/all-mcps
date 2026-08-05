@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { ConfigValidatorTool } from '../../../components/tools/ConfigValidatorTool';
 
 export const metadata: Metadata = {
-  title: 'Free MCP Config Validator — Check Your mcpServers JSON',
+  title: 'Free MCP Config Validator — Check mcpServers JSON',
   description:
     'Paste your Claude Desktop, Cursor, VS Code, or Windsurf MCP config and catch JSON syntax errors and missing fields before you restart your client.',
   alternates: { canonical: 'https://allmcps.com/tools/config-validator' },

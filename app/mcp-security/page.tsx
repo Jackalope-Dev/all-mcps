@@ -5,21 +5,21 @@ import { TableOfContents, TocItem } from '@/components/ui/TableOfContents';
 export const metadata: Metadata = {
   title: 'MCP Security Best Practices: A Complete Guide',
   description:
-    'A comprehensive guide to Model Context Protocol (MCP) security: the threat model, prompt injection and tool poisoning, vetting servers, least-privilege credentials, sandboxing, and a pre-install checklist.',
+    'A comprehensive guide to MCP security: the threat model, prompt injection, tool poisoning, vetting servers, credentials, and a pre-install checklist.',
   alternates: {
     canonical: 'https://allmcps.com/mcp-security',
   },
   openGraph: {
     title: 'MCP Security Best Practices: A Complete Guide | AllMCPs',
     description:
-      'A comprehensive guide to Model Context Protocol (MCP) security: the threat model, prompt injection and tool poisoning, vetting servers, least-privilege credentials, sandboxing, and a pre-install checklist.',
+      'A comprehensive guide to MCP security: the threat model, prompt injection, tool poisoning, vetting servers, credentials, and a pre-install checklist.',
     url: 'https://allmcps.com/mcp-security',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'MCP Security Best Practices: A Complete Guide | AllMCPs',
     description:
-      'A comprehensive guide to Model Context Protocol (MCP) security: the threat model, prompt injection and tool poisoning, vetting servers, least-privilege credentials, sandboxing, and a pre-install checklist.',
+      'A comprehensive guide to MCP security: the threat model, prompt injection, tool poisoning, vetting servers, credentials, and a pre-install checklist.',
   },
 };
 

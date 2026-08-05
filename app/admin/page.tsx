@@ -11,7 +11,7 @@ import { ShieldCheck, UserCheck } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Admin Dashboard | AllMCPs',
+  title: 'Admin Dashboard',
   description: 'Manage submissions, listings, and system automation on AllMCPs.',
   robots: {
     index: false,

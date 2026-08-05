@@ -657,6 +657,22 @@ export default function DirectoryGrid({
         </section>
       )}
 
+      {/* Browse page title — the marketing hero (with its own <h1>) only renders on the
+          unfiltered homepage landing above, so the dedicated /browse route needs its own
+          single, page-specific <h1> here instead of relying on the "Results" <h2> below. */}
+      {isBrowse && (
+        <section className="container animate-fade-in delay-1" style={{ paddingBottom: '0.5rem' }}>
+          <h1 className="text-page-title" style={{ marginBottom: categoryMeta ? '0.35rem' : 0 }}>
+            {categoryMeta ? `${categoryMeta.label} MCP Servers` : 'Browse MCP Servers'}
+          </h1>
+          {categoryMeta && (
+            <p className="text-lead" style={{ margin: 0 }}>
+              Model Context Protocol servers in the {categoryMeta.label} category.
+            </p>
+          )}
+        </section>
+      )}
+
       {/* Search Bar & Filters */}
       <section
         className="container animate-fade-in delay-2"

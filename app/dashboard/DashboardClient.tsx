@@ -191,40 +191,40 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: 520, margin: '0 auto 2rem', lineHeight: 1.6 }}>
           Claim ownership of your Model Context Protocol servers to access detailed LLM usage analytics, earn reciprocal dofollow SEO backlinks, and boost listing discovery.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', maxWidth: 840, margin: '0 auto' }}>
-          <div style={onboardingActionCardStyle}>
+        <ul role="list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', maxWidth: 840, margin: '0 auto', listStyle: 'none', padding: 0 }}>
+          <li style={onboardingActionCardStyle}>
             <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>➕</div>
-            <h4 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Submit a New Server</h4>
+            <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Submit a New Server</h3>
             <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
               List a new MCP server repository or product website in our directory.
             </p>
             <Link href="/submit" className="btn btn-primary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
               + Submit Server
             </Link>
-          </div>
+          </li>
 
-          <div style={onboardingActionCardStyle}>
+          <li style={onboardingActionCardStyle}>
             <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔎</div>
-            <h4 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Claim Existing Server</h4>
+            <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Claim Existing Server</h3>
             <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
               Find your server in the directory and claim ownership via GitHub README or DNS.
             </p>
             <Link href="/browse" className="btn btn-secondary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
               Browse &amp; Claim →
             </Link>
-          </div>
+          </li>
 
-          <div style={onboardingActionCardStyle}>
+          <li style={onboardingActionCardStyle}>
             <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🛡️</div>
-            <h4 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Embed SVG Badge</h4>
+            <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Embed SVG Badge</h3>
             <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
               Generate dynamic SVG verification badges for your GitHub README or site.
             </p>
             <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
               Badge Generator →
             </Link>
-          </div>
-        </div>
+          </li>
+        </ul>
       </div>
     );
   }
@@ -234,28 +234,28 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* Aggregate Metrics Overview Header */}
-      <div style={globalSummaryContainerStyle}>
-        <div style={summaryMetricCardStyle}>
+      <ul role="list" style={{ ...globalSummaryContainerStyle, listStyle: 'none', margin: 0, padding: 0 }}>
+        <li style={summaryMetricCardStyle}>
           <span style={summaryLabelStyle}>Claimed Listings</span>
           <span style={summaryValueStyle}>{servers.length}</span>
-        </div>
-        <div style={summaryMetricCardStyle}>
+        </li>
+        <li style={summaryMetricCardStyle}>
           <span style={summaryLabelStyle}>Total Views</span>
           <span style={summaryValueStyle}>{totalViews.toLocaleString()}</span>
-        </div>
-        <div style={summaryMetricCardStyle}>
+        </li>
+        <li style={summaryMetricCardStyle}>
           <span style={summaryLabelStyle}>Total Installs</span>
           <span style={summaryValueStyle}>{totalInstalls.toLocaleString()}</span>
-        </div>
-        <div style={summaryMetricCardStyle}>
+        </li>
+        <li style={summaryMetricCardStyle}>
           <span style={summaryLabelStyle}>Total Upvotes</span>
           <span style={summaryValueStyle}>{totalUpvotes.toLocaleString()}</span>
-        </div>
-        <div style={summaryMetricCardStyle}>
+        </li>
+        <li style={summaryMetricCardStyle}>
           <span style={summaryLabelStyle}>API Hits (30d)</span>
           <span style={{ ...summaryValueStyle, color: '#00E5FF' }}>{totalApiHits.toLocaleString()}</span>
-        </div>
-      </div>
+        </li>
+      </ul>
 
       {/* Global stats / alerts */}
       {isPremium && (
@@ -281,6 +281,7 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
       )}
 
       {/* Servers list with tabbed sections */}
+      <ul role="list" style={{ display: 'contents', listStyle: 'none', margin: 0, padding: 0 }}>
       {servers.map((server) => {
         const pending = parsePendingRevision(server.pendingRevision);
         const activeTab = getActiveTab(server.id);
@@ -291,7 +292,7 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
         const isLoadingDetail = loadingDetail === server.id;
 
         return (
-          <div key={server.id} id={`server-${server.id}`} style={cardStyle}>
+          <li key={server.id} id={`server-${server.id}`} style={cardStyle}>
             {/* Header row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
@@ -311,7 +312,7 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                 )}
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{server.name}</h3>
+                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{server.name}</h2>
                     <span style={categoryBadgeStyle}>{server.category}</span>
                     {server.isPremium && <span style={premiumBadgeStyle}>★ Premium</span>}
                     {pending && <span style={pendingBadgeStyle}>Awaiting Review</span>}
@@ -549,9 +550,10 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                 </div>
               </div>
             )}
-          </div>
+          </li>
         );
       })}
+      </ul>
     </div>
   );
 }
@@ -682,7 +684,7 @@ function PremiumTeaser() {
       padding: '2rem', textAlign: 'center',
     }}>
       <Lock size={32} style={{ color: '#00E5FF', marginBottom: '0.75rem', position: 'relative' }} />
-      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', position: 'relative', color: 'var(--text-primary)' }}>Unlock Premium Analytics</h4>
+      <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', position: 'relative', color: 'var(--text-primary)' }}>Unlock Premium Analytics</h3>
       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '460px', margin: '0 auto 1rem', lineHeight: 1.55, position: 'relative' }}>
         Free dashboards show views, installs, and upvotes. Premium shows{' '}
         <strong style={{ color: 'var(--text-primary)' }}>which LLMs &amp; agents</strong> hit your
@@ -732,10 +734,10 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
     }}>
       {/* LLM Caller Breakdown */}
       <div style={panelCardStyle}>
-        <h4 style={panelTitleStyle}>
+        <h3 style={panelTitleStyle}>
           <BarChart3 size={16} style={{ color: '#00E5FF' }} />
           Which LLMs Use Your MCP
-        </h4>
+        </h3>
         {detail.byCallerClass.length === 0 ? (
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No API access data yet.</p>
         ) : (
@@ -754,10 +756,10 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
 
       {/* Impression Surface Breakdown */}
       <div style={panelCardStyle}>
-        <h4 style={panelTitleStyle}>
+        <h3 style={panelTitleStyle}>
           <Eye size={16} style={{ color: '#00E5FF' }} />
           Where Users See You
-        </h4>
+        </h3>
         {detail.bySurface.length === 0 ? (
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No impression data yet.</p>
         ) : (
@@ -776,10 +778,10 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
 
       {/* Daily Activity Sparkline */}
       <div style={panelCardStyle}>
-        <h4 style={panelTitleStyle}>
+        <h3 style={panelTitleStyle}>
           <Activity size={16} style={{ color: '#00E5FF' }} />
           Daily API Activity (30 days)
-        </h4>
+        </h3>
         {detail.byDay.length === 0 ? (
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No daily data yet.</p>
         ) : (
@@ -789,10 +791,10 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
 
       {/* Search Discovery */}
       <div style={panelCardStyle}>
-        <h4 style={panelTitleStyle}>
+        <h3 style={panelTitleStyle}>
           <Search size={16} style={{ color: '#00E5FF' }} />
           Search Queries That Find You
-        </h4>
+        </h3>
         {detail.recentSearchQueries.length === 0 ? (
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No search data yet.</p>
         ) : (

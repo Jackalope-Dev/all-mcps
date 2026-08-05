@@ -3,19 +3,19 @@ import { Card } from '../../components/ui/Card';
 import { FileJson, CheckCircle2, Calculator, Code2, ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Free MCP Tools — OpenAPI Generator, Protocol Inspector, Config Validator & Calculator',
+  title: 'Free MCP Developer Tools — Generators & Validators',
   description:
-    'Free browser-based tools for Model Context Protocol (MCP): convert OpenAPI specs to MCP code, inspect JSON-RPC payloads, generate & validate client configs, and calculate token overhead.',
+    'Free browser-based MCP tools: convert OpenAPI specs to server code, inspect JSON-RPC payloads, validate client configs, and calculate token overhead.',
   alternates: { canonical: 'https://allmcps.com/tools' },
   openGraph: {
-    title: 'Free MCP Tools Suite | AllMCPs',
+    title: 'Free MCP Developer Tools — Generators & Validators | AllMCPs',
     description:
       'Free browser-based tools for Model Context Protocol: OpenAPI code generator, JSON-RPC protocol inspector, config validator, and token cost calculator.',
     url: 'https://allmcps.com/tools',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free MCP Tools Suite | AllMCPs',
+    title: 'Free MCP Developer Tools — Generators & Validators | AllMCPs',
     description:
       'Free browser-based tools for Model Context Protocol: OpenAPI code generator, JSON-RPC protocol inspector, config validator, and token cost calculator.',
   },
@@ -117,17 +117,28 @@ export default function ToolsHubPage() {
           <p className="text-lead" style={{ marginBottom: '2rem' }}>
             Browser-based utilities for building, inspecting, validating, and optimizing Model Context Protocol (MCP) servers and client configurations. 100% private &mdash; nothing leaves your browser.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+          <ul
+            style={{
+              listStyle: 'none',
+              margin: 0,
+              padding: 0,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1.5rem',
+            }}
+          >
             {TOOLS.map(({ href, icon: Icon, title, description }) => (
-              <Card key={href} href={href} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Icon size={28} style={{ color: 'var(--accent-color)', marginBottom: '1rem', flexShrink: 0 }} />
-                <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{title}</h2>
-                </div>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55, flexGrow: 1 }}>{description}</p>
-              </Card>
+              <li key={href}>
+                <Card href={href} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <Icon size={28} style={{ color: 'var(--accent-color)', marginBottom: '1rem', flexShrink: 0 }} />
+                  <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{title}</h2>
+                  </div>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55, flexGrow: 1 }}>{description}</p>
+                </Card>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </div>
     </main>

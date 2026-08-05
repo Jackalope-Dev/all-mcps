@@ -5,8 +5,9 @@ import { BlogListClient } from '../../components/BlogListClient';
 export const dynamic = 'force-static';
 
 export const metadata: Metadata = {
-  title: 'Blog',
-  description: 'News, guides, and updates from the AllMCPs team — MCP directory, agent tooling, and launch notes.',
+  title: 'Blog: MCP News, Guides & Directory Updates',
+  description:
+    'News, guides, and troubleshooting for the Model Context Protocol — server directory updates, agent tooling, and installation how-tos.',
   alternates: {
     canonical: 'https://allmcps.com/blog',
     types: {
@@ -14,8 +15,9 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Blog | AllMCPs',
-    description: 'News, guides, and updates from the AllMCPs team — MCP directory, agent tooling, and launch notes.',
+    title: 'Blog: MCP News, Guides & Directory Updates | AllMCPs',
+    description:
+      'News, guides, and troubleshooting for the Model Context Protocol — server directory updates, agent tooling, and installation how-tos.',
     url: 'https://allmcps.com/blog',
   },
 };

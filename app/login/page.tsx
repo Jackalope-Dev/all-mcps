@@ -5,8 +5,9 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { PageShell } from '@/components/PageShell';
 
 export const metadata: Metadata = {
-  title: 'Sign In',
-  description: 'Sign in to manage your AllMCPs server listings.',
+  title: 'Sign In to Manage Your MCP Server Listings',
+  description:
+    'Sign in with a secure magic link to manage, claim, and update your MCP server listings on AllMCPs — no password required.',
   robots: {
     index: false,
     follow: true,
@@ -89,9 +90,9 @@ export default async function LoginPage({
           textAlign: 'left',
         }}
       >
-        <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <h2 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Developer Dashboard Features
-        </h4>
+        </h2>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           <li>✓ <strong>Claim &amp; Edit Listings</strong> — Update metadata and verify ownership.</li>
           <li>✓ <strong>LLM Usage Analytics</strong> — Monitor API hits, impressions, and caller breakdown.</li>

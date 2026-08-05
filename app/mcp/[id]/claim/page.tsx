@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import ClaimClient from './ClaimClient';
 import serversData from '../../../../data/mcp-servers.json';
 import { auth } from '../../../../lib/auth';
+import { parseServerName } from '../../../../lib/displayName';
 import type { Metadata } from 'next';
 
 async function getServer(id: string) {
@@ -37,9 +38,11 @@ export async function generateMetadata({
   const { id } = await params;
   const server = await getServer(id);
   if (!server) return { title: 'Claim listing', robots: { index: false } };
+  const { displayName } = parseServerName(server.name);
+  const name = displayName.length > 40 ? `${displayName.slice(0, 39).trimEnd()}…` : displayName;
   return {
-    title: `Claim ${server.name}`,
-    description: `Verify ownership of ${server.name} on AllMCPs via GitHub README, site badge, or DNS.`,
+    title: `Claim ${name}`,
+    description: `Verify ownership of ${name} on AllMCPs via GitHub README, site badge, or DNS.`,
     robots: {
       index: false,
       follow: true,
@@ -56,12 +59,13 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
   }
 
   const session = await auth();
+  const { displayName } = parseServerName(server.name);
 
   return (
     <main className="page-shell page-shell--content animate-fade-in">
       <div className="page-shell-inner">
         <header className="page-header" style={{ textAlign: 'center' }}>
-          <h1 className="text-page-title">Claim this listing</h1>
+          <h1 className="text-page-title">Claim {displayName}</h1>
           <p className="text-lead" style={{ margin: '0 auto', textAlign: 'center' }}>
             Prove you own this MCP to unlock the verified badge, attach your website, and qualify for premium dofollow
             backlinks.

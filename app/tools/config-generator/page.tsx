@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { ConfigGeneratorTool } from '../../../components/tools/ConfigGeneratorTool';
 
 export const metadata: Metadata = {
-  title: 'Free MCP Config Generator for Claude Desktop, Cursor & VS Code',
+  title: 'MCP Config Generator for Claude, Cursor & VS Code',
   description:
     'Generate a ready-to-paste claude_desktop_config.json, .cursor/mcp.json, or VS Code MCP config from any server in the AllMCPs directory or your own custom setup.',
   alternates: { canonical: 'https://allmcps.com/tools/config-generator' },

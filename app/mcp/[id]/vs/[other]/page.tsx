@@ -51,6 +51,21 @@ function toolNames(s: Server, max = 6): string[] {
   return [];
 }
 
+/** Keeps a display name short enough that the compare title stays inside the SEO budget. */
+function truncateName(name: string, max: number): string {
+  if (name.length <= max) return name;
+  return `${name.slice(0, Math.max(6, max - 1)).trimEnd()}…`;
+}
+
+/** Builds "A vs B — MCP Server Comparison", dropping the suffix if the pair of names is long. */
+function buildCompareTitle(nameA: string, nameB: string): string {
+  const a = truncateName(nameA, 22);
+  const b = truncateName(nameB, 22);
+  const base = `${a} vs ${b}`;
+  const withSuffix = `${base} — MCP Server Comparison`;
+  return withSuffix.length <= 50 ? withSuffix : base;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -67,8 +82,10 @@ export async function generateMetadata({
   const nameA = parseServerName(a.name).displayName;
   const nameB = parseServerName(b.name).displayName;
   const [c0, c1] = canonicalPair(id, other);
-  const title = `${nameA} vs ${nameB} — MCP Server Comparison`;
-  const description = `Compare ${nameA} and ${nameB} MCP servers: install paths, tools, usage, quality signals, and which fits your AI agent stack.`;
+  const shortA = truncateName(nameA, 22);
+  const shortB = truncateName(nameB, 22);
+  const title = buildCompareTitle(nameA, nameB);
+  const description = `Compare ${shortA} and ${shortB} MCP servers: install paths, tools, usage, quality signals, and which fits your AI agent stack.`;
   const url = `${SITE}/mcp/${c0}/vs/${c1}`;
 
   return {

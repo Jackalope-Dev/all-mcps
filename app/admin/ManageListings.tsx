@@ -344,7 +344,7 @@ export default function ManageListings() {
           No listings match the specified filter criteria.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <ul role="list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', listStyle: 'none', margin: 0, padding: 0 }}>
           {items.map((listing) => {
             const featuredUntilDate = listing.featuredUntil ? new Date(listing.featuredUntil) : null;
             const featuredDaysLeft = featuredUntilDate
@@ -354,7 +354,7 @@ export default function ManageListings() {
             const rowLoading = loadingId === listing.id;
 
             return (
-              <div
+              <li
                 key={listing.id}
                 className="admin-card"
                 style={{
@@ -675,10 +675,10 @@ export default function ManageListings() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
 
       {/* Pagination Controls */}

@@ -101,10 +101,11 @@ export function ConfigAuditor() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
         {/* Editor Pane */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+          <label htmlFor="config-auditor-input" style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
             Paste Config JSON (`claude_desktop_config.json`, `.cursor/mcp.json`, etc.)
           </label>
           <textarea
+            id="config-auditor-input"
             className="form-input"
             rows={18}
             value={jsonText}
@@ -123,10 +124,10 @@ export function ConfigAuditor() {
 
         {/* Audit Report Pane */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={18} style={{ color: 'var(--accent-color)' }} />
             Live Audit Report
-          </h3>
+          </h2>
 
           <div
             className="surface"
@@ -216,9 +217,9 @@ export function ConfigAuditor() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                 Merge Directory Server into Config
-              </h4>
+              </h3>
               <button type="button" onClick={() => setShowModal(false)} className="btn btn-sm btn-secondary" style={{ padding: '0.3rem' }}>
                 <X size={16} />
               </button>
@@ -230,6 +231,7 @@ export function ConfigAuditor() {
                 type="text"
                 className="form-input"
                 placeholder="Search server..."
+                aria-label="Search directory servers"
                 value={pickerSearch}
                 onChange={(e) => setPickerSearch(e.target.value)}
                 style={{ paddingLeft: '2.5rem' }}

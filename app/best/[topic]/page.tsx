@@ -19,6 +19,20 @@ const TOP_N = 10;
 // valid topic set is small and fixed; invalid slugs 404 via notFound below.
 export const dynamic = 'force-dynamic';
 
+/** Builds "Best {topic} MCP Servers (year)", trimming the year first and the topic
+ * name second so the rendered title (this + " | AllMCPs") stays within budget even
+ * for the longest curated topic titles (e.g. "Multimedia & Media Processing"). */
+function buildBestTitle(topicTitle: string, year: number): string {
+  const base = `Best ${topicTitle} MCP Servers`;
+  const withYear = `${base} (${year})`;
+  if (withYear.length <= 50) return withYear;
+  if (base.length <= 50) return base;
+  const fixedLen = 'Best  MCP Servers'.length;
+  const maxTopicLen = Math.max(6, 50 - fixedLen - 1);
+  const shortTopic = `${topicTitle.slice(0, maxTopicLen).trimEnd()}…`;
+  return `Best ${shortTopic} MCP Servers`;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -28,14 +42,15 @@ export async function generateMetadata({
   const t = bestTopicBySlug(topic);
   if (!t) return { title: 'Not Found' };
   const year = new Date().getFullYear();
-  const title = `Best MCP Servers for ${t.title} (${year})`;
+  const title = buildBestTitle(t.title, year);
+  const description = t.lead.length > 157 ? `${t.lead.slice(0, 154).trimEnd()}...` : t.lead;
   const url = `${SITE}/best/${t.slug}`;
   return {
     title,
-    description: t.lead,
+    description,
     alternates: { canonical: url },
-    openGraph: { type: 'article', title: `${title} | AllMCPs`, description: t.lead, url },
-    twitter: { card: 'summary_large_image', title: `${title} | AllMCPs`, description: t.lead },
+    openGraph: { type: 'article', title: `${title} | AllMCPs`, description, url },
+    twitter: { card: 'summary_large_image', title: `${title} | AllMCPs`, description },
   };
 }
 
@@ -215,13 +230,15 @@ export default async function BestTopicPage({
         {/* Related best-of pages */}
         <section style={{ marginTop: '3.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>More best-of guides</h2>
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             {BEST_TOPICS.filter((o) => o.slug !== t.slug).slice(0, 8).map((o) => (
-              <Link key={o.slug} href={`/best/${o.slug}`} className="badge badge-link badge-category">
-                Best for {o.title}
-              </Link>
+              <li key={o.slug}>
+                <Link href={`/best/${o.slug}`} className="badge badge-link badge-category">
+                  Best for {o.title}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       </main>
     </>

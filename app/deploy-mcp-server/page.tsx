@@ -4,23 +4,23 @@ import { CopyBlock } from '@/components/ui/CopyBlock';
 import { TableOfContents, TocItem } from '@/components/ui/TableOfContents';
 
 export const metadata: Metadata = {
-  title: 'Deploying & Hosting Remote MCP Servers: Production Cloud Guide',
+  title: 'Deploying & Hosting Remote MCP Servers Guide',
   description:
-    'Comprehensive guide to deploying and hosting remote Model Context Protocol (MCP) servers: Cloudflare Workers, Docker, Fly.io, AWS, SSE transport setup, CORS, SSL, and monitoring.',
+    'Deploy and host remote MCP servers on Cloudflare Workers, Docker, Fly.io, and AWS with SSE transport, CORS, SSL, and monitoring best practices.',
   alternates: {
     canonical: 'https://allmcps.com/deploy-mcp-server',
   },
   openGraph: {
-    title: 'Deploying & Hosting Remote MCP Servers: Production Cloud Guide | AllMCPs',
+    title: 'Deploying & Hosting Remote MCP Servers Guide | AllMCPs',
     description:
-      'Comprehensive guide to deploying and hosting remote Model Context Protocol (MCP) servers: Cloudflare Workers, Docker, Fly.io, AWS, SSE transport setup, CORS, SSL, and monitoring.',
+      'Deploy and host remote MCP servers on Cloudflare Workers, Docker, Fly.io, and AWS with SSE transport, CORS, SSL, and monitoring best practices.',
     url: 'https://allmcps.com/deploy-mcp-server',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Deploying & Hosting Remote MCP Servers: Production Cloud Guide | AllMCPs',
+    title: 'Deploying & Hosting Remote MCP Servers Guide | AllMCPs',
     description:
-      'Comprehensive guide to deploying and hosting remote Model Context Protocol (MCP) servers: Cloudflare Workers, Docker, Fly.io, AWS, SSE transport setup, CORS, SSL, and monitoring.',
+      'Deploy and host remote MCP servers on Cloudflare Workers, Docker, Fly.io, and AWS with SSE transport, CORS, SSL, and monitoring best practices.',
   },
 };
 
@@ -152,7 +152,7 @@ export default function DeployMCPServerPage() {
                   marginBottom: '2.5rem',
                 }}
               >
-                <h3
+                <h2
                   style={{
                     fontSize: '1.1rem',
                     fontWeight: 700,
@@ -163,7 +163,7 @@ export default function DeployMCPServerPage() {
                   }}
                 >
                   TL;DR &mdash; Production Deployment Quickstart
-                </h3>
+                </h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0, lineHeight: 1.65 }}>
                   Running a local <code>stdio</code> MCP server is ideal for personal dev tools. To share tools across your team or AI agent fleet, wrap your MCP logic in an <strong>HTTP/SSE transport</strong>, package it as a Docker image or Cloudflare Worker, enforce TLS &amp; Bearer token auth, and route requests to dedicated <code>/sse</code> and <code>/message</code> endpoints.
                 </p>
@@ -519,9 +519,9 @@ app.listen(PORT, () => {
                   margin: '1.75rem 0',
                 }}
               >
-                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem' }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem' }}>
                   ⚠️ Critical Logging Rule for Stdio vs SSE Transports
-                </h4>
+                </h3>
                 <p style={{ margin: 0, fontSize: '0.925rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   In <code>stdio</code> mode, writing raw <code>console.log()</code> text to standard output corrupts the JSON-RPC transport stream and crashes the client. In <strong>remote HTTP/SSE mode</strong>, standard output is safe for application logs, but server metrics should still route to structured log aggregators (Datadog, CloudWatch, Axiom).
                 </p>

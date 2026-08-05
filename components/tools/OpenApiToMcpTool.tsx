@@ -488,10 +488,11 @@ export function OpenApiToMcpTool() {
         {/* Left Column: Spec & Configuration */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+            <label htmlFor="openapi-spec-input" style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.5rem' }}>
               OpenAPI 3.0 / 3.1 JSON Specification
             </label>
             <textarea
+              id="openapi-spec-input"
               value={specInput}
               onChange={(e) => {
                 setSpecInput(e.target.value);
@@ -571,10 +572,10 @@ export function OpenApiToMcpTool() {
         <div>
           <Card style={{ padding: '1.25rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Code2 size={18} style={{ color: 'var(--accent-color)' }} />
                 Parsed MCP Tools ({tools.length})
-              </h3>
+              </h2>
               {tools.length > 0 && (
                 <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 600 }}>
                   Ready to compile

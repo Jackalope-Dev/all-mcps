@@ -75,24 +75,25 @@ export default function BestIndexPage() {
         </section>
 
         <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 1.25rem' }}>By use case</h2>
-        <div className="directory-grid">
+        <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {CATEGORY_TOPICS.map((t) => (
-            <Link
-              key={t.slug}
-              href={`/best/${t.slug}`}
-              className="surface-interactive"
-              style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)', height: '100%' }}
-            >
-              <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best for {t.title}</h3>
-              </div>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.5, height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.lead}</p>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600, marginTop: 'auto', paddingTop: '0.5rem' }}>
-                View ranking <ArrowRight size={15} />
-              </span>
-            </Link>
+            <li key={t.slug}>
+              <Link
+                href={`/best/${t.slug}`}
+                className="surface-interactive"
+                style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)', height: '100%' }}
+              >
+                <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best for {t.title}</h3>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.5, height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.lead}</p>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600, marginTop: 'auto', paddingTop: '0.5rem' }}>
+                  View ranking <ArrowRight size={15} />
+                </span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
 
         <section style={{ marginTop: '3.5rem' }}>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.5rem' }}>By integration</h2>
@@ -100,24 +101,25 @@ export default function BestIndexPage() {
             Looking for a specific tool? Jump straight to the best MCP servers for the platforms and
             databases people connect most.
           </p>
-          <div className="directory-grid">
+          <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {KEYWORD_TOPICS.map((t) => (
-              <Link
-                key={t.slug}
-                href={`/best/${t.slug}`}
-                className="surface-interactive"
-                style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)', height: '100%' }}
-              >
-                <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best {t.title} MCP servers</h3>
-                </div>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.5, height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.lead}</p>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600, marginTop: 'auto', paddingTop: '0.5rem' }}>
-                  View ranking <ArrowRight size={15} />
-                </span>
-              </Link>
+              <li key={t.slug}>
+                <Link
+                  href={`/best/${t.slug}`}
+                  className="surface-interactive"
+                  style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)', height: '100%' }}
+                >
+                  <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Best {t.title} MCP servers</h3>
+                  </div>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.5, height: '3.9rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.lead}</p>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600, marginTop: 'auto', paddingTop: '0.5rem' }}>
+                    View ranking <ArrowRight size={15} />
+                  </span>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       </main>
     </>

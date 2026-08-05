@@ -213,14 +213,16 @@ export default async function BlogPostPage({
               {post.faq.length > 0 && (
                 <div style={{ marginTop: '2.5rem' }}>
                   <h2 className="text-section">Frequently asked questions</h2>
-                  {post.faq.map((item) => (
-                    <div key={item.q} style={{ marginBottom: '1.5rem' }}>
-                      <h3 style={{ color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.4rem' }}>
-                        {item.q}
-                      </h3>
-                      <p style={{ color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{item.a}</p>
-                    </div>
-                  ))}
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                    {post.faq.map((item) => (
+                      <li key={item.q} style={{ listStyle: 'none', marginBottom: '1.5rem' }}>
+                        <h3 style={{ color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.4rem' }}>
+                          {item.q}
+                        </h3>
+                        <p style={{ color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{item.a}</p>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </article>

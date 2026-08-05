@@ -3,12 +3,12 @@ import Link from 'next/link';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 
 export const metadata: Metadata = {
-  title: 'Directory API Documentation',
+  title: 'Directory API Documentation for MCP Servers',
   description:
-    'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, badges, and agent discovery. Designed for AI agents and developer integrations.',
+    'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations.',
   alternates: { canonical: 'https://allmcps.com/docs/api' },
   openGraph: {
-    title: 'AllMCPs Directory API Documentation',
+    title: 'Directory API Documentation for MCP Servers | AllMCPs',
     description:
       'Search MCP servers, fetch markdown docs, and integrate the AllMCPs directory into agents and tools.',
     url: 'https://allmcps.com/docs/api',
@@ -142,66 +142,76 @@ export default function ApiDocsPage() {
             <CopyBlock code={`curl "https://allmcps.com/api/v1/search?q=postgres&limit=5"`} />
 
             <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 1rem' }}>Endpoints</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <ul
+              style={{
+                listStyle: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                margin: 0,
+                padding: 0,
+              }}
+            >
               {ENDPOINTS.map((ep) => (
-                <article
-                  key={ep.path + ep.method}
-                  style={{
-                    padding: '1.1rem 1.25rem',
-                    borderRadius: 12,
-                    border: '1px solid var(--border-color)',
-                    background: 'rgba(255,255,255,0.02)',
-                  }}
-                >
-                  <div
+                <li key={ep.path + ep.method}>
+                  <article
                     style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      marginBottom: '0.45rem',
+                      padding: '1.1rem 1.25rem',
+                      borderRadius: 12,
+                      border: '1px solid var(--border-color)',
+                      background: 'rgba(255,255,255,0.02)',
                     }}
                   >
-                    <span
+                    <div
                       style={{
-                        fontSize: '0.7rem',
-                        fontWeight: 800,
-                        letterSpacing: '0.04em',
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: 6,
-                        background:
-                          ep.method === 'GET'
-                            ? 'rgba(16,185,129,0.15)'
-                            : 'rgba(59,130,246,0.15)',
-                        color: ep.method === 'GET' ? '#34d399' : '#93c5fd',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        marginBottom: '0.45rem',
                       }}
                     >
-                      {ep.method}
-                    </span>
-                    <code style={{ fontSize: '0.9rem', color: '#e2e8f0' }}>{ep.path}</code>
-                  </div>
-                  <h3 style={{ fontSize: '1rem', margin: '0 0 0.35rem' }}>{ep.title}</h3>
-                  <p
-                    style={{
-                      fontSize: '0.875rem',
-                      color: 'var(--text-secondary)',
-                      margin: '0 0 0.65rem',
-                      lineHeight: 1.55,
-                    }}
-                  >
-                    {ep.desc}
-                  </p>
-                  <a
-                    href={ep.example.startsWith('http') ? ep.example : undefined}
-                    style={{ fontSize: '0.8rem', color: 'var(--accent-color)', wordBreak: 'break-all' }}
-                    target={ep.example.startsWith('http') ? '_blank' : undefined}
-                    rel="noopener noreferrer"
-                  >
-                    {ep.example}
-                  </a>
-                </article>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.04em',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: 6,
+                          background:
+                            ep.method === 'GET'
+                              ? 'rgba(16,185,129,0.15)'
+                              : 'rgba(59,130,246,0.15)',
+                          color: ep.method === 'GET' ? '#34d399' : '#93c5fd',
+                        }}
+                      >
+                        {ep.method}
+                      </span>
+                      <code style={{ fontSize: '0.9rem', color: '#e2e8f0' }}>{ep.path}</code>
+                    </div>
+                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.35rem' }}>{ep.title}</h3>
+                    <p
+                      style={{
+                        fontSize: '0.875rem',
+                        color: 'var(--text-secondary)',
+                        margin: '0 0 0.65rem',
+                        lineHeight: 1.55,
+                      }}
+                    >
+                      {ep.desc}
+                    </p>
+                    <a
+                      href={ep.example.startsWith('http') ? ep.example : undefined}
+                      style={{ fontSize: '0.8rem', color: 'var(--accent-color)', wordBreak: 'break-all' }}
+                      target={ep.example.startsWith('http') ? '_blank' : undefined}
+                      rel="noopener noreferrer"
+                    >
+                      {ep.example}
+                    </a>
+                  </article>
+                </li>
               ))}
-            </div>
+            </ul>
 
             <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Agent discovery</h2>
             <ul

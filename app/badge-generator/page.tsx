@@ -3,7 +3,7 @@ import { PageShell, PageHeader } from '../../components/PageShell';
 import { BadgeEmbedBuilder } from '../../components/ui/BadgeEmbedBuilder';
 
 export const metadata: Metadata = {
-  title: 'MCP Server Badge Generator & Embed Builder | AllMCPs',
+  title: 'MCP Server Badge Generator & Embed Builder',
   description: 'Generate dynamic SVG verification badges and embeddable widgets for your Model Context Protocol (MCP) server GitHub README or website.',
   alternates: { canonical: 'https://allmcps.com/badge-generator' },
   openGraph: {

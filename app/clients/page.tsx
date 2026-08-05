@@ -9,7 +9,7 @@ const SITE = 'https://allmcps.com';
 export const metadata: Metadata = {
   title: 'How to Install MCP Servers in Every Client',
   description:
-    'Step-by-step setup guides for installing Model Context Protocol (MCP) servers in Claude Desktop, Claude Code, Cursor, Windsurf, VS Code, and Cline — config locations, JSON shape, and troubleshooting.',
+    'Step-by-step setup guides for installing MCP servers in Claude Desktop, Claude Code, Cursor, Windsurf, VS Code, and Cline, with config paths and JSON shape.',
   alternates: { canonical: `${SITE}/clients` },
   openGraph: {
     title: 'How to Install MCP Servers in Every Client | AllMCPs',
@@ -77,10 +77,10 @@ export default function ClientsIndexPage() {
           </p>
         </section>
 
-        <div className="directory-grid">
+        <ul className="directory-grid" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {MCP_CLIENTS.map((c) => (
+            <li key={c.slug}>
             <Link
-              key={c.slug}
               href={`/clients/${c.slug}`}
               className="surface-interactive"
               style={{
@@ -118,8 +118,9 @@ export default function ClientsIndexPage() {
                 <ArrowRight size={15} />
               </span>
             </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </main>
     </>
   );

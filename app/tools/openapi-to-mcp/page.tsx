@@ -4,9 +4,9 @@ import { ChevronRight } from 'lucide-react';
 import { OpenApiToMcpTool } from '../../../components/tools/OpenApiToMcpTool';
 
 export const metadata: Metadata = {
-  title: 'Free OpenAPI to MCP Server Code Generator — TypeScript & Python',
+  title: 'Free OpenAPI to MCP Code Generator — TS & Python',
   description:
-    'Convert OpenAPI 3.0/3.1 or Swagger specs into runnable Model Context Protocol (MCP) servers. Generates TypeScript SDK and Python FastMCP tool handlers automatically.',
+    'Convert OpenAPI 3.0/3.1 or Swagger specs into runnable Model Context Protocol (MCP) servers. Generates TypeScript SDK or Python FastMCP tool handlers.',
   alternates: { canonical: 'https://allmcps.com/tools/openapi-to-mcp' },
   openGraph: {
     title: 'Free OpenAPI to MCP Server Code Generator | AllMCPs',

@@ -3280,7 +3280,7 @@ nav[aria-label="Table of contents"] {
   padding: var(--space-6);
 }
 
-.feature-card h3 {
+.feature-card h2 {
   font-size: 1.05rem;
   font-weight: 700;
   margin-bottom: 0.5rem;

@@ -110,10 +110,11 @@ export function McpPlayground() {
       <div className="surface" style={{ padding: '1.25rem', borderRadius: '16px', border: '1px solid rgba(0, 229, 255, 0.25)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
           <div>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
+            <label htmlFor="playground-endpoint-url" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
               MCP Endpoint URL
             </label>
             <input
+              id="playground-endpoint-url"
               type="text"
               className="form-input"
               value={endpointUrl}
@@ -123,10 +124,11 @@ export function McpPlayground() {
           </div>
 
           <div>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
+            <label htmlFor="playground-method" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
               JSON-RPC Method / Action
             </label>
             <select
+              id="playground-method"
               className="form-input"
               value={selectedMethod}
               onChange={(e: any) => setSelectedMethod(e.target.value)}
@@ -141,10 +143,11 @@ export function McpPlayground() {
 
           {selectedMethod === 'search_mcp_servers' && (
             <div>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
+              <label htmlFor="playground-search-query" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
                 Search Query (`query`)
               </label>
               <input
+                id="playground-search-query"
                 type="text"
                 className="form-input"
                 value={searchQuery}
@@ -171,9 +174,9 @@ export function McpPlayground() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
         {/* Request Pane */}
         <div>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Terminal size={16} style={{ color: 'var(--accent-color)' }} /> Outgoing Request (JSON-RPC 2.0)
-          </h3>
+          </h2>
           <pre
             style={{
               background: 'rgba(2, 6, 23, 0.95)',
@@ -194,9 +197,9 @@ export function McpPlayground() {
         {/* Response Inspector Pane */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Sparkles size={16} style={{ color: 'var(--accent-color)' }} /> Server Response Inspector
-            </h3>
+            </h2>
             {responseOutput && (
               <button
                 type="button"

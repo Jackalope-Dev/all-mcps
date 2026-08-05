@@ -13,6 +13,20 @@ import { categorySlug, parseCategoryLabel } from '../../../../lib/categories';
 const SITE = 'https://allmcps.com';
 const MAX = 12;
 
+/** Keeps a display name/label short enough that the title or description stays inside the SEO budget. */
+function truncateName(name: string, max: number): string {
+  if (name.length <= max) return name;
+  return `${name.slice(0, Math.max(6, max - 1)).trimEnd()}…`;
+}
+
+/** Builds "Alternatives to X — MCP Servers", dropping the suffix once the name runs long. */
+function buildAltTitle(displayName: string): string {
+  const name = truncateName(displayName, 30);
+  const base = `Alternatives to ${name}`;
+  const withSuffix = `${base} — MCP Servers`;
+  return withSuffix.length <= 50 ? withSuffix : base;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -22,8 +36,10 @@ export async function generateMetadata({
   const server = await getServerById(id);
   if (!server) return { title: 'Not Found', robots: { index: false } };
   const { displayName } = parseServerName(server.name);
-  const title = `Top Alternatives to ${displayName} — MCP Servers`;
-  const description = `Compare the best alternatives to the ${displayName} MCP server. Similar Model Context Protocol tools in ${parseCategoryLabel(server.category).label}, ranked by usage, with install commands.`;
+  const title = buildAltTitle(displayName);
+  const rawDescription = `Compare the best alternatives to the ${displayName} MCP server. Similar Model Context Protocol tools in ${parseCategoryLabel(server.category).label}, ranked by usage, with install commands.`;
+  const description =
+    rawDescription.length > 157 ? `${rawDescription.slice(0, 154)}...` : rawDescription;
   const url = `${SITE}/mcp/${server.id}/alternatives`;
   return {
     title,
@@ -139,12 +155,12 @@ export default async function AlternativesPage({
 
         {/* Alternatives grid */}
         {alternatives.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
             {alternatives.map((alt) => {
               const altName = parseServerName(alt.name).displayName;
               const featured = isFeaturedListing(alt);
               return (
-                <div
+                <li
                   key={alt.id}
                   className="surface-interactive"
                   style={{
@@ -199,10 +215,10 @@ export default async function AlternativesPage({
                   >
                     Compare side-by-side →
                   </Link>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </main>
     </>
