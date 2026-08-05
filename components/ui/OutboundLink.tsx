@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { trackOutboundClick } from '../../lib/gtag';
+import { withAllMcpsUtm } from '../../lib/outboundLinks';
 
 interface OutboundLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
@@ -18,8 +19,16 @@ export function OutboundLink({
   onClick,
   ...props
 }: OutboundLinkProps) {
+  const targetHref = React.useMemo(() => {
+    if (destinationType === 'website' || destinationType === 'github') {
+      const campaign = destinationType === 'website' ? 'website_button' : 'github_button';
+      return withAllMcpsUtm(href, { campaign, content: serverId });
+    }
+    return href;
+  }, [href, destinationType, serverId]);
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    trackOutboundClick({ url: href, destinationType, serverId });
+    trackOutboundClick({ url: targetHref, destinationType, serverId });
 
     if (serverId && (destinationType === 'github' || destinationType === 'website')) {
       const surface = destinationType === 'github' ? 'outbound_github' : 'outbound_website';
@@ -44,7 +53,7 @@ export function OutboundLink({
   };
 
   return (
-    <a href={href} onClick={handleClick} {...props}>
+    <a href={targetHref} onClick={handleClick} {...props}>
       {children}
     </a>
   );

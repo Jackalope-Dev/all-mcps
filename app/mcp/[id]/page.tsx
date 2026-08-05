@@ -439,7 +439,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.55rem',
-                padding: '0.65rem 1.25rem',
+                padding: '0.5rem 1.25rem',
+                minHeight: '42px',
+                boxSizing: 'border-box',
                 borderRadius: '10px',
                 background: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -467,6 +469,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     fontSize: '0.78rem',
                     fontWeight: 700,
                     marginLeft: '0.2rem',
+                    lineHeight: 1,
                   }}
                 >
                   <Star size={12} fill="#facc15" color="#facc15" />
@@ -486,7 +489,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.55rem',
-                  padding: '0.65rem 1.25rem',
+                  padding: '0.5rem 1.25rem',
+                  minHeight: '42px',
+                  boxSizing: 'border-box',
                   borderRadius: '10px',
                   background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 123, 255, 0.12))',
                   border: '1px solid rgba(0, 229, 255, 0.45)',
@@ -939,7 +944,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '0.75rem 1rem',
+                  padding: '0.5rem 1rem',
+                  minHeight: '42px',
+                  boxSizing: 'border-box',
                   backgroundColor: 'rgba(255,255,255,0.06)',
                   borderRadius: '10px',
                   fontWeight: 600,
@@ -965,6 +972,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       color: '#facc15',
                       fontSize: '0.75rem',
                       fontWeight: 700,
+                      lineHeight: 1,
                     }}
                   >
                     <Star size={11} fill="#facc15" color="#facc15" />
@@ -983,7 +991,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0.75rem 1rem',
+                    padding: '0.5rem 1rem',
+                    minHeight: '42px',
+                    boxSizing: 'border-box',
                     background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.12), rgba(0, 123, 255, 0.08))',
                     borderRadius: '10px',
                     fontWeight: 600,
