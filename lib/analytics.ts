@@ -2,7 +2,7 @@
  * Analytics query functions for the Premium owner dashboard.
  * Aggregates api_access_logs and impression_logs data per server.
  */
-import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import { apiAccessLogs, impressionLogs } from '@/db/schema';
 import type { CallerClass } from './accessLog';
 import type { ImpressionSurface } from './impressionLog';
@@ -118,7 +118,7 @@ export async function getServerAnalytics(
           eq(apiAccessLogs.serverId, serverId),
           eq(apiAccessLogs.endpoint, 'v1_search'),
           gte(apiAccessLogs.createdAt, cutoff),
-          sql`${apiAccessLogs.methodOrTool} IS NOT NULL`
+          isNotNull(apiAccessLogs.methodOrTool)
         )
       )
       .orderBy(desc(apiAccessLogs.createdAt))
@@ -132,7 +132,7 @@ export async function getServerAnalytics(
         and(
           eq(apiAccessLogs.serverId, serverId),
           gte(apiAccessLogs.createdAt, new Date(cutoff.getTime() - days * 24 * 60 * 60 * 1000)),
-          sql`${apiAccessLogs.createdAt} < ${cutoff}`
+          lt(apiAccessLogs.createdAt, cutoff)
         )
       ),
   ]);
@@ -212,7 +212,7 @@ export async function getServerAnalyticsBatch(
       .from(apiAccessLogs)
       .where(
         and(
-          sql`${apiAccessLogs.serverId} IN (${sql.join(serverIds.map((id) => sql`${id}`), sql`, `)})`,
+          inArray(apiAccessLogs.serverId, serverIds),
           gte(apiAccessLogs.createdAt, cutoff)
         )
       )
@@ -227,7 +227,7 @@ export async function getServerAnalyticsBatch(
       .from(impressionLogs)
       .where(
         and(
-          sql`${impressionLogs.serverId} IN (${sql.join(serverIds.map((id) => sql`${id}`), sql`, `)})`,
+          inArray(impressionLogs.serverId, serverIds),
           gte(impressionLogs.createdAt, cutoff)
         )
       )
@@ -241,9 +241,9 @@ export async function getServerAnalyticsBatch(
       .from(apiAccessLogs)
       .where(
         and(
-          sql`${apiAccessLogs.serverId} IN (${sql.join(serverIds.map((id) => sql`${id}`), sql`, `)})`,
+          inArray(apiAccessLogs.serverId, serverIds),
           gte(apiAccessLogs.createdAt, prevCutoff),
-          sql`${apiAccessLogs.createdAt} < ${cutoff}`
+          lt(apiAccessLogs.createdAt, cutoff)
         )
       )
       .groupBy(apiAccessLogs.serverId),
