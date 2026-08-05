@@ -81,13 +81,21 @@ export default function WhatIsMCPPage() {
         />
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">
+            <nav aria-label="Breadcrumb" style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+              <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>
+                Guides
+              </Link>
+              <span style={{ color: 'var(--text-secondary)', margin: '0 0.4rem' }}>/</span>
+              <span style={{ color: 'var(--text-primary)' }}>What is MCP</span>
+            </nav>
+
             <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>What is an MCP?</h1>
             <p className="text-lead" style={{ marginBottom: '2rem' }}>
               A plain-language guide to the Model Context Protocol &mdash; what it is, how it works, and why it matters.
             </p>
 
             {/* Mobile Table of Contents */}
-            <div className="lg:hidden">
+            <div className="lg:hidden" style={{ marginBottom: '2rem' }}>
               <TableOfContents items={tocItems} />
             </div>
 
@@ -207,13 +215,37 @@ export default function WhatIsMCPPage() {
                 <Link href="/deploy-mcp-server">Deploying Remote MCP Servers</Link>.
               </p>
 
-              <h2 id="faq">Frequently asked questions</h2>
-              {faqs.map((f) => (
-                <div key={f.q}>
-                  <h3>{f.q}</h3>
-                  <p>{f.a}</p>
-                </div>
-              ))}
+              <h2 id="faq">Frequently Asked Questions</h2>
+              <div style={{ display: 'grid', gap: '1.25rem', marginTop: '1.5rem', marginBottom: '2.5rem' }}>
+                {faqs.map((f) => (
+                  <div
+                    key={f.q}
+                    style={{
+                      padding: '1.25rem 1.5rem',
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.025)',
+                      border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: '1.05rem',
+                        fontWeight: 600,
+                        marginTop: 0,
+                        marginBottom: '0.5rem',
+                        color: 'var(--text-primary)',
+                        borderBottom: 'none',
+                        paddingBottom: 0,
+                      }}
+                    >
+                      {f.q}
+                    </h3>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                      {f.a}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

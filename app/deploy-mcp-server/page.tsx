@@ -31,7 +31,7 @@ const faqs = [
   },
   {
     q: 'How does remote MCP communication work over HTTP/SSE?',
-    a: 'The client establishes a persistent HTTP GET connection to an Server-Sent Events (/sse) endpoint on the server to listen for server-to-client JSON-RPC messages and notifications. The server returns a session URI. Subsequent client-to-server requests (like calling a tool or reading a resource) are delivered as HTTP POST requests to /message?sessionId=<session_id>.',
+    a: 'The client establishes a persistent HTTP GET connection to a Server-Sent Events (/sse) endpoint on the server to listen for server-to-client JSON-RPC messages and notifications. The server returns a session URI. Subsequent client-to-server requests (like calling a tool or reading a resource) are delivered as HTTP POST requests to /message?sessionId=<session_id>.',
   },
   {
     q: 'Can I deploy an MCP server on serverless platforms like Cloudflare Workers or AWS Lambda?',
@@ -85,7 +85,7 @@ const breadcrumbJsonLd = {
 };
 
 const tocItems: TocItem[] = [
-  { id: 'short-answer', text: 'Stdio vs Remote HTTP/SSE: When to deploy' },
+  { id: 'short-answer', text: 'Stdio vs Remote HTTP/SSE: When to Deploy' },
   { id: 'architecture', text: 'Remote MCP Architecture & Transport Flow' },
   { id: 'cloudflare', text: 'Deploying on Cloudflare Workers (Edge)' },
   { id: 'docker', text: 'Containerizing MCP Servers with Docker' },
@@ -116,98 +116,116 @@ export default function DeployMCPServerPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
 
-        <div className="guide-header">
-          <div className="guide-breadcrumbs">
-            <Link href="/guides">Guides</Link>
-            <span className="guide-breadcrumbs-sep">/</span>
-            <span>Deploy MCP Server</span>
-          </div>
+        <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
+          <div className="surface page-panel min-w-0">
+            {/* Breadcrumb Navigation */}
+            <nav aria-label="Breadcrumb" style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+              <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>
+                Guides
+              </Link>
+              <span style={{ color: 'var(--text-secondary)', margin: '0 0.4rem' }}>/</span>
+              <span style={{ color: 'var(--text-primary)' }}>Deploy MCP Server</span>
+            </nav>
 
-          <h1 className="text-page-title">Deploying &amp; Hosting Remote MCP Servers</h1>
-          <p className="text-lead">
-            Learn how to transition custom Model Context Protocol (MCP) servers from local stdio processes into
-            production remote services deployed on Cloudflare Workers, Docker containers, Fly.io, or AWS.
-          </p>
+            <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
+              Deploying &amp; Hosting Remote MCP Servers
+            </h1>
 
-          <div className="guide-meta-pills">
-            <span className="guide-meta-pill">DevOps &amp; Cloud</span>
-            <span className="guide-meta-pill">&middot;</span>
-            <span className="guide-meta-pill">14 min read</span>
-            <span className="guide-meta-pill">&middot;</span>
-            <span className="guide-meta-pill">Updated for Production MCP 1.x</span>
-          </div>
-        </div>
+            <p className="text-lead" style={{ marginBottom: '2rem' }}>
+              A complete, hands-on production guide to hosting remote Model Context Protocol servers on Cloudflare Workers, Docker containers, Fly.io, and AWS with SSE transports, reverse proxies, and enterprise security.
+            </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8 items-start">
-          <div className="prose prose-invert max-w-none">
-            <div className="guide-card-banner mb-8">
-              <div style={{ maxWidth: '600px' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            {/* Mobile Table of Contents */}
+            <div className="lg:hidden" style={{ marginBottom: '2rem' }}>
+              <TableOfContents items={tocItems} />
+            </div>
+
+            {/* Main Content inside standard markdown-body */}
+            <div className="markdown-body">
+              {/* TL;DR Quickstart Box */}
+              <div
+                style={{
+                  background: 'rgba(0, 229, 255, 0.05)',
+                  borderLeft: '4px solid #00E5FF',
+                  borderRadius: '12px',
+                  padding: '1.25rem 1.5rem',
+                  marginBottom: '2.5rem',
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    margin: '0 0 0.5rem 0',
+                    borderBottom: 'none',
+                    paddingBottom: 0,
+                  }}
+                >
                   TL;DR &mdash; Production Deployment Quickstart
                 </h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', margin: 0, lineHeight: 1.6 }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0, lineHeight: 1.65 }}>
                   Running a local <code>stdio</code> MCP server is ideal for personal dev tools. To share tools across your team or AI agent fleet, wrap your MCP logic in an <strong>HTTP/SSE transport</strong>, package it as a Docker image or Cloudflare Worker, enforce TLS &amp; Bearer token auth, and route requests to dedicated <code>/sse</code> and <code>/message</code> endpoints.
                 </p>
               </div>
-            </div>
 
-            <h2 id="short-answer">Stdio vs Remote HTTP/SSE: When to Deploy</h2>
-            <p>
-              The Model Context Protocol supports two primary transport mechanisms for communicating between host AI applications (Claude Desktop, Claude Code, Cursor, Windsurf) and MCP servers:
-            </p>
-            <ul>
-              <li>
-                <strong>Standard Input/Output (stdio):</strong> The client launches the server as a local child process. Messages stream over OS IPC pipes (<code>stdin</code> and <code>stdout</code>). This requires zero network setup and is perfect for desktop tools touching local files.
-              </li>
-              <li>
-                <strong>Server-Sent Events (SSE) &amp; Streamable HTTP:</strong> The server runs as an independent web service listening on an HTTP port. The client connects over network endpoints (<code>/sse</code> for streaming server-to-client events and <code>/message</code> for client-to-server POST requests).
-              </li>
-            </ul>
-            <p>
-              Deploying a <strong>remote MCP server</strong> is necessary when:
-            </p>
-            <ul>
-              <li>Multiple team members or autonomous AI agents need to query a shared centralized database or private microservice without replicating database credentials locally.</li>
-              <li>Your MCP server requires high-throughput compute, GPU acceleration, or persistent background tasks that cannot run on end-user laptops.</li>
-              <li>You are building a SaaS product or commercial tool that exposes MCP capabilities to subscribers over API authentication.</li>
-            </ul>
+              <h2 id="short-answer">Stdio vs Remote HTTP/SSE: When to Deploy</h2>
+              <p>
+                The <strong>Model Context Protocol (MCP)</strong> supports two primary transport mechanisms for communicating between host AI applications (Claude Desktop, Claude Code, Cursor, Windsurf) and MCP servers:
+              </p>
+              <ul>
+                <li>
+                  <strong>Standard Input/Output (stdio):</strong> The client launches the server as a local child process. Messages stream over OS IPC pipes (<code>stdin</code> and <code>stdout</code>). This requires zero network setup and is perfect for desktop tools touching local files.
+                </li>
+                <li>
+                  <strong>Server-Sent Events (SSE) &amp; Streamable HTTP:</strong> The server operates as an independent web service listening on an HTTP port. The client connects over network endpoints (<code>/sse</code> for streaming server-to-client events and <code>/message</code> for client-to-server POST requests).
+                </li>
+              </ul>
+              <p>
+                Deploying a <strong>remote MCP server</strong> is necessary when:
+              </p>
+              <ul>
+                <li>Multiple team members or autonomous AI agents need to query a shared centralized database or private microservice without replicating database credentials locally.</li>
+                <li>Your MCP server requires high-throughput compute, GPU acceleration, or persistent background tasks that cannot run on end-user laptops.</li>
+                <li>You are building a SaaS product or commercial tool that exposes MCP capabilities to subscribers over API authentication.</li>
+              </ul>
 
-            <h2 id="architecture">Remote MCP Architecture &amp; Transport Flow</h2>
-            <p>
-              Understanding the lifecycle of a remote SSE MCP session helps avoid common network disconnects and connection leaks:
-            </p>
-            <ol>
-              <li>
-                <strong>Session Initialization (HTTP GET /sse):</strong> The AI client opens an HTTP GET request to the server&rsquo;s <code>/sse</code> endpoint. The server responds with <code>Content-Type: text/event-stream</code> and sends an initial event payload containing an <code>endpoint</code> URL with a unique session ID:
-                <CopyBlock code={`event: endpoint\ndata: /message?sessionId=sess_987654321_abc`} />
-              </li>
-              <li>
-                <strong>Client Request Dispatch (HTTP POST /message):</strong> Whenever the host model calls an MCP tool or requests a resource, the client sends an HTTP POST to <code>/message?sessionId=sess_987654321_abc</code> containing standard JSON-RPC 2.0 requests:
-                <CopyBlock
-                  code={`{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "tools/call",\n  "params": {\n    "name": "query_database",\n    "arguments": { "query": "SELECT count(*) FROM users;" }\n  }\n}`}
-                />
-              </li>
-              <li>
-                <strong>Server Execution &amp; SSE Stream Response:</strong> The server receives the POST request, processes the handler asynchronously, and pushes the JSON-RPC response back down the persistent SSE connection.
-              </li>
-            </ol>
+              <h2 id="architecture">Remote MCP Architecture &amp; Transport Flow</h2>
+              <p>
+                Understanding the lifecycle of a remote SSE MCP session helps avoid common network disconnects and connection leaks:
+              </p>
+              <ol>
+                <li>
+                  <strong>Session Initialization (HTTP GET /sse):</strong> The AI client opens an HTTP GET request to the server&rsquo;s <code>/sse</code> endpoint. The server responds with <code>Content-Type: text/event-stream</code> and sends an initial event payload containing an <code>endpoint</code> URL with a unique session ID:
+                  <CopyBlock code={`event: endpoint\ndata: /message?sessionId=sess_987654321_abc`} />
+                </li>
+                <li>
+                  <strong>Client Request Dispatch (HTTP POST /message):</strong> Whenever the host model calls an MCP tool or requests a resource, the client sends an HTTP POST to <code>/message?sessionId=sess_987654321_abc</code> containing standard JSON-RPC 2.0 requests:
+                  <CopyBlock
+                    code={`{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "tools/call",\n  "params": {\n    "name": "query_database",\n    "arguments": { "query": "SELECT count(*) FROM users;" }\n  }\n}`}
+                  />
+                </li>
+                <li>
+                  <strong>Server Execution &amp; SSE Stream Response:</strong> The server receives the POST request, processes the handler asynchronously, and pushes the JSON-RPC response back down the persistent SSE connection.
+                </li>
+              </ol>
 
-            <h2 id="cloudflare">Deploying on Cloudflare Workers (Edge Serverless)</h2>
-            <p>
-              Cloudflare Workers provide an ultra-low latency, globally distributed edge environment for hosting stateless or durable MCP tools. Using Cloudflare&rsquo;s official <code>agents</code> framework, you can deploy a remote MCP server in minutes:
-            </p>
-            <CopyBlock
-              code={`// wrangler.json
+              <h2 id="cloudflare">Deploying on Cloudflare Workers (Edge Serverless)</h2>
+              <p>
+                Cloudflare Workers provide an ultra-low latency, globally distributed edge environment for hosting stateless or durable MCP tools. Using Cloudflare&rsquo;s official <code>agents</code> framework, you can deploy a remote MCP server in minutes:
+              </p>
+              <CopyBlock
+                code={`// wrangler.json
 {
   "name": "production-mcp-agent",
   "main": "src/index.ts",
   "compatibility_date": "2026-01-01",
   "observability": { "enabled": true }
 }`}
-            />
-            <p>Write your server logic inside <code>src/index.ts</code>:</p>
-            <CopyBlock
-              code={`import { McpAgent } from "agents/mcp";
+              />
+              <p>Write your server logic inside <code>src/index.ts</code>:</p>
+              <CopyBlock
+                code={`import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -226,7 +244,6 @@ export class CloudflareMCPServer extends McpAgent {
         units: z.enum(["celsius", "fahrenheit"]).default("celsius"),
       },
       async ({ city, units }) => {
-        // Perform external API call or database lookup
         return {
           content: [
             {
@@ -264,17 +281,17 @@ export default {
     return new Response("MCP Server operational.", { status: 200 });
   },
 };`}
-            />
-            <p>Deploy to Cloudflare Workers with a single command:</p>
-            <CopyBlock code={`npx wrangler deploy`} />
+              />
+              <p>Deploy to Cloudflare Workers with a single command:</p>
+              <CopyBlock code={`npx wrangler deploy`} />
 
-            <h2 id="docker">Containerizing MCP Servers with Docker</h2>
-            <p>
-              For microservices, enterprise Linux servers, or Kubernetes deployments, containerizing your MCP server guarantees consistent runtimes and isolates host system dependencies.
-            </p>
-            <p>Below is an optimized, multi-stage <code>Dockerfile</code> for a TypeScript MCP server:</p>
-            <CopyBlock
-              code={`# Stage 1: Build TypeScript binaries
+              <h2 id="docker">Containerizing MCP Servers with Docker</h2>
+              <p>
+                For microservices, enterprise Linux servers, or Kubernetes deployments, containerizing your MCP server guarantees consistent runtimes and isolates host system dependencies.
+              </p>
+              <p>Below is an optimized, multi-stage <code>Dockerfile</code> for a TypeScript MCP server:</p>
+              <CopyBlock
+                code={`# Stage 1: Build TypeScript binaries
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json tsconfig.json ./
@@ -296,10 +313,10 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 3001
 CMD ["node", "dist/server.js"]`}
-            />
-            <p>Combine your server container with Docker Compose for local testing or production deployment:</p>
-            <CopyBlock
-              code={`# docker-compose.yml
+              />
+              <p>Combine your server container with Docker Compose for local testing or production deployment:</p>
+              <CopyBlock
+                code={`# docker-compose.yml
 version: '3.8'
 services:
   mcp-server:
@@ -316,29 +333,29 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3`}
-            />
+              />
 
-            <h2 id="cloud-hosts">Deploying to Fly.io &amp; Cloud Platforms</h2>
-            <p>
-              Platforms like <strong>Fly.io</strong>, <strong>Railway</strong>, and <strong>Render</strong> excel at hosting containerized SSE services because they support persistent, long-lived TCP/HTTP connections without strict gateway timeouts.
-            </p>
-            <p>To deploy to Fly.io using their CLI:</p>
-            <CopyBlock
-              code={`# Generate fly.toml configuration
+              <h2 id="cloud-hosts">Deploying to Fly.io &amp; Cloud Platforms</h2>
+              <p>
+                Platforms like <strong>Fly.io</strong>, <strong>Railway</strong>, and <strong>Render</strong> excel at hosting containerized SSE services because they support persistent, long-lived TCP/HTTP connections without strict gateway timeouts.
+              </p>
+              <p>To deploy to Fly.io using their CLI:</p>
+              <CopyBlock
+                code={`# Generate fly.toml configuration
 fly launch --name my-remote-mcp-server --no-deploy
 
 # Deploy container image to Fly.io global region
 fly deploy`}
-            />
-            <p>Configure secrets securely using Fly CLI instead of committing credentials to source code:</p>
-            <CopyBlock code={`fly secrets set DATABASE_URL="postgresql://user:pass@host:5432/db" MCP_AUTH_TOKEN="sec_key_12345"`} />
+              />
+              <p>Configure secrets securely using Fly CLI instead of committing credentials to source code:</p>
+              <CopyBlock code={`fly secrets set DATABASE_URL="postgresql://user:pass@host:5432/db" MCP_AUTH_TOKEN="sec_key_12345"`} />
 
-            <h2 id="express-sse">Express SSE Remote Server Code (TypeScript)</h2>
-            <p>
-              Below is a complete, production-ready Express.js server written in TypeScript that configures the official <code>SSEServerTransport</code> from <code>@modelcontextprotocol/sdk</code> with session tracking:
-            </p>
-            <CopyBlock
-              code={`import express from 'express';
+              <h2 id="express-sse">Express SSE Remote Server Code (TypeScript)</h2>
+              <p>
+                Below is a complete, production-ready Express.js server written in TypeScript that configures the official <code>SSEServerTransport</code> from <code>@modelcontextprotocol/sdk</code> with session tracking:
+              </p>
+              <CopyBlock
+                code={`import express from 'express';
 import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
@@ -422,25 +439,29 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(\`Remote MCP Express server listening on http://localhost:\${PORT}\`);
 });`}
-            />
+              />
 
-            <h2 id="reverse-proxy">Reverse Proxies (Nginx &amp; Caddy) &amp; SSL Setup</h2>
-            <p>
-              Never expose Node.js or Python application processes directly to the public internet. Always place a reverse proxy like <strong>Nginx</strong> or <strong>Caddy</strong> in front to handle HTTPS TLS termination, HTTP/1.1 response streaming, and client request buffering.
-            </p>
-            <h3>Caddyfile Configuration (Automatic Let&rsquo;s Encrypt SSL)</h3>
-            <CopyBlock
-              code={`mcp.yourdomain.com {
+              <h2 id="reverse-proxy">Reverse Proxies (Nginx &amp; Caddy) &amp; SSL Setup</h2>
+              <p>
+                Never expose Node.js or Python application processes directly to the public internet. Always place a reverse proxy like <strong>Nginx</strong> or <strong>Caddy</strong> in front to handle HTTPS TLS termination, HTTP/1.1 response streaming, and client request buffering.
+              </p>
+              <h3 style={{ borderBottom: 'none', paddingBottom: 0, marginTop: '1.5rem', marginBottom: '0.5rem' }}>
+                Caddyfile Configuration (Automatic Let&rsquo;s Encrypt SSL)
+              </h3>
+              <CopyBlock
+                code={`mcp.yourdomain.com {
     # Automatic TLS certificate provisioned by Caddy
     reverse_proxy localhost:3001 {
         # Flush SSE data immediately to prevent response buffering delay
         flush_interval -1
     }
 }`}
-            />
-            <h3>Nginx Configuration (For Long-Lived SSE Connections)</h3>
-            <CopyBlock
-              code={`server {
+              />
+              <h3 style={{ borderBottom: 'none', paddingBottom: 0, marginTop: '1.5rem', marginBottom: '0.5rem' }}>
+                Nginx Configuration (For Long-Lived SSE Connections)
+              </h3>
+              <CopyBlock
+                code={`server {
     listen 443 ssl http2;
     server_name mcp.yourdomain.com;
 
@@ -464,44 +485,50 @@ app.listen(PORT, () => {
         proxy_send_timeout 86400s;
     }
 }`}
-            />
+              />
 
-            <h2 id="secrets-security">Secrets Management &amp; CORS Hardening</h2>
-            <p>
-              When hosting an MCP server in the cloud, security is a paramount concern. Review our comprehensive{' '}
-              <Link href="/mcp-security">MCP Security Guide</Link> and{' '}
-              <Link href="/blog/securing-remote-mcp-servers-authentication-guide">Remote Authentication Guide</Link>{' '}
-              for enterprise threat models. Always follow these infrastructure rules:
-            </p>
-            <ul>
-              <li>
-                <strong>Never hardcode API Keys:</strong> Inject credentials using environment variables (<code>process.env.API_KEY</code>) or platform secret vaults (AWS Secrets Manager, Cloudflare Environment Secrets, Vault).
-              </li>
-              <li>
-                <strong>Restrict CORS Origins:</strong> If your remote server will be accessed from browser-based web clients or extensions, restrict <code>Access-Control-Allow-Origin</code> to known explicit domain origins rather than wildcard (<code>*</code>).
-              </li>
-              <li>
-                <strong>Rate Limiting:</strong> Use Nginx <code>limit_req_zone</code> or Redis rate-limiting middleware to cap incoming tool calls per token, protecting downstream APIs from runaway agent loops.
-              </li>
-            </ul>
+              <h2 id="secrets-security">Secrets Management &amp; CORS Hardening</h2>
+              <p>
+                When hosting an MCP server in the cloud, security is a paramount concern. Review our comprehensive{' '}
+                <Link href="/mcp-security">MCP Security Guide</Link> and{' '}
+                <Link href="/blog/securing-remote-mcp-servers-authentication-guide">Remote Authentication Guide</Link>{' '}
+                for enterprise threat models. Always follow these infrastructure rules:
+              </p>
+              <ul>
+                <li>
+                  <strong>Never hardcode API Keys:</strong> Inject credentials using environment variables (<code>process.env.API_KEY</code>) or platform secret vaults (AWS Secrets Manager, Cloudflare Environment Secrets, Vault).
+                </li>
+                <li>
+                  <strong>Restrict CORS Origins:</strong> If your remote server will be accessed from browser-based web clients or extensions, restrict <code>Access-Control-Allow-Origin</code> to known explicit domain origins rather than wildcard (<code>*</code>).
+                </li>
+                <li>
+                  <strong>Rate Limiting:</strong> Use Nginx <code>limit_req_zone</code> or Redis rate-limiting middleware to cap incoming tool calls per token, protecting downstream APIs from runaway agent loops.
+                </li>
+              </ul>
 
-            <h2 id="monitoring">Health Monitoring &amp; Log Hygiene</h2>
-            <p>
-              Maintaining operational observability for remote MCP servers requires separating stdout, stderr, and HTTP response channels cleanly:
-            </p>
-            <div className="guide-card-banner mb-6" style={{ borderLeft: '4px solid #f59e0b' }}>
-              <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>
+              <h2 id="monitoring">Health Monitoring &amp; Log Hygiene</h2>
+              <p>
+                Maintaining operational observability for remote MCP servers requires separating stdout, stderr, and HTTP response channels cleanly:
+              </p>
+              <div
+                style={{
+                  background: 'rgba(245, 158, 11, 0.06)',
+                  borderLeft: '4px solid #f59e0b',
+                  borderRadius: '12px',
+                  padding: '1.25rem 1.5rem',
+                  margin: '1.75rem 0',
+                }}
+              >
+                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem' }}>
                   ⚠️ Critical Logging Rule for Stdio vs SSE Transports
                 </h4>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                <p style={{ margin: 0, fontSize: '0.925rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   In <code>stdio</code> mode, writing raw <code>console.log()</code> text to standard output corrupts the JSON-RPC transport stream and crashes the client. In <strong>remote HTTP/SSE mode</strong>, standard output is safe for application logs, but server metrics should still route to structured log aggregators (Datadog, CloudWatch, Axiom).
                 </p>
               </div>
-            </div>
-            <p>Expose a lightweight <code>/health</code> endpoint for load balancer health probes:</p>
-            <CopyBlock
-              code={`app.get('/health', async (req, res) => {
+              <p>Expose a lightweight <code>/health</code> endpoint for load balancer health probes:</p>
+              <CopyBlock
+                code={`app.get('/health', async (req, res) => {
   try {
     // Optionally ping database or internal cache
     await db.raw('SELECT 1');
@@ -510,57 +537,82 @@ app.listen(PORT, () => {
     res.status(503).json({ status: 'unhealthy', error: err instanceof Error ? err.message : 'DB error' });
   }
 });`}
-            />
+              />
 
-            <h2 id="client-config">Connecting Clients to Remote Servers</h2>
-            <p>
-              Once your remote MCP server is deployed over HTTPS, users and developers can connect their AI clients by updating their JSON configuration snippets.
-            </p>
-            <p>Example <code>claude_desktop_config.json</code> configuration for a remote SSE server:</p>
-            <CopyBlock
-              code={`{\n  "mcpServers": {\n    "remote-analytics-mcp": {\n      "url": "https://mcp.yourdomain.com/sse",\n      "headers": {\n        "Authorization": "Bearer sec_prod_token_998877"\n      }\n    }\n  }\n}`}
-            />
-            <p>
-              For step-by-step instructions across Claude Code, Cursor, Windsurf, and VS Code, consult our detailed{' '}
-              <Link href="/guide">LLM Agents Integration Guide</Link>.
-            </p>
+              <h2 id="client-config">Connecting Clients to Remote Servers</h2>
+              <p>
+                Once your remote MCP server is deployed over HTTPS, users and developers can connect their AI clients by updating their JSON configuration snippets.
+              </p>
+              <p>Example <code>claude_desktop_config.json</code> configuration for a remote SSE server:</p>
+              <CopyBlock
+                code={`{\n  "mcpServers": {\n    "remote-analytics-mcp": {\n      "url": "https://mcp.yourdomain.com/sse",\n      "headers": {\n        "Authorization": "Bearer sec_prod_token_998877"\n      }\n    }\n  }\n}`}
+              />
+              <p>
+                For step-by-step instructions across Claude Code, Cursor, Windsurf, and VS Code, consult our detailed{' '}
+                <Link href="/guide">LLM Agents Integration Guide</Link>.
+              </p>
 
-            <h2 id="faq">Frequently Asked Questions</h2>
-            <div className="space-y-6 my-8">
-              {faqs.map((faq, idx) => (
-                <div key={idx} className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-5">
-                  <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2 mt-0">{faq.q}</h3>
-                  <p className="text-[var(--text-secondary)] text-sm leading-relaxed mb-0">{faq.a}</p>
-                </div>
-              ))}
+              {/* Redesigned, Premium FAQ Section */}
+              <h2 id="faq">Frequently Asked Questions</h2>
+              <div style={{ display: 'grid', gap: '1.25rem', marginTop: '1.5rem', marginBottom: '2.5rem' }}>
+                {faqs.map((f) => (
+                  <div
+                    key={f.q}
+                    style={{
+                      padding: '1.25rem 1.5rem',
+                      borderRadius: '12px',
+                      background: 'rgba(255, 255, 255, 0.025)',
+                      border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: '1.05rem',
+                        fontWeight: 600,
+                        marginTop: 0,
+                        marginBottom: '0.5rem',
+                        color: 'var(--text-primary)',
+                        borderBottom: 'none',
+                        paddingBottom: 0,
+                      }}
+                    >
+                      {f.q}
+                    </h3>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                      {f.a}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <h2 id="next-steps">Next Steps &amp; Ecosystem Resources</h2>
+              <p>Now that your remote MCP server is live in production, explore the rest of the AllMCPs documentation hub:</p>
+              <ul>
+                <li>
+                  Need to build a custom server first? Follow our step-by-step{' '}
+                  <Link href="/build-mcp-server">How to Build an MCP Server Guide</Link>.
+                </li>
+                <li>
+                  Deep dive into OAuth 2.0 PKCE and JWT auth with our guide to{' '}
+                  <Link href="/blog/securing-remote-mcp-servers-authentication-guide">
+                    Securing Remote MCP Servers
+                  </Link>.
+                </li>
+                <li>
+                  Review complete threat models and prompt injection safety in our{' '}
+                  <Link href="/mcp-security">MCP Security Best Practices</Link>.
+                </li>
+                <li>
+                  Ready to publish your server to thousands of AI developers?{' '}
+                  <Link href="/submit">Submit your MCP server to AllMCPs</Link> or check out our{' '}
+                  <Link href="/tools">Free Developer Tools</Link>.
+                </li>
+              </ul>
             </div>
-
-            <h2 id="next-steps">Next Steps &amp; Ecosystem Resources</h2>
-            <p>Now that your remote MCP server is live in production, explore the rest of the AllMCPs documentation hub:</p>
-            <ul>
-              <li>
-                Need to build a custom server first? Follow our step-by-step{' '}
-                <Link href="/build-mcp-server">How to Build an MCP Server Guide</Link>.
-              </li>
-              <li>
-                Deep dive into OAuth 2.0 PKCE and JWT auth with our guide to{' '}
-                <Link href="/blog/securing-remote-mcp-servers-authentication-guide">
-                  Securing Remote MCP Servers
-                </Link>.
-              </li>
-              <li>
-                Review complete threat models and prompt injection safety in our{' '}
-                <Link href="/mcp-security">MCP Security Best Practices</Link>.
-              </li>
-              <li>
-                Ready to publish your server to thousands of AI developers?{' '}
-                <Link href="/submit">Submit your MCP server to AllMCPs</Link> or check out our{' '}
-                <Link href="/tools">Free Developer Tools</Link>.
-              </li>
-            </ul>
           </div>
 
-          <div className="hidden lg:block sticky top-24">
+          {/* Desktop Right Sidebar Table of Contents */}
+          <div className="hidden lg:block h-full">
             <TableOfContents items={tocItems} />
           </div>
         </div>

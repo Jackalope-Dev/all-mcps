@@ -116,6 +116,14 @@ export default function BuildMCPServerPage() {
         />
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">
+            <nav aria-label="Breadcrumb" style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+              <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>
+                Guides
+              </Link>
+              <span style={{ color: 'var(--text-secondary)', margin: '0 0.4rem' }}>/</span>
+              <span style={{ color: 'var(--text-primary)' }}>Build an MCP Server</span>
+            </nav>
+
             <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
               How to Build an MCP Server
             </h1>
@@ -126,7 +134,7 @@ export default function BuildMCPServerPage() {
             </p>
 
             {/* Mobile Table of Contents */}
-            <div className="lg:hidden">
+            <div className="lg:hidden" style={{ marginBottom: '2rem' }}>
               <TableOfContents items={tocItems} />
             </div>
 
@@ -453,44 +461,57 @@ export default {
                 </li>
               </ol>
 
-              <h2 id="faq">FAQ</h2>
-              <h3>Which language should I use to build an MCP server?</h3>
-              <p>
-                TypeScript and Python have the most mature official SDKs and the most existing example servers to
-                learn from, so most developers start there. Go, Java/Kotlin, and C# SDKs are also officially
-                maintained if they better match your existing stack.
-              </p>
-              <h3>Do I need to host my MCP server, or can it run locally?</h3>
-              <p>
-                Most MCP servers start as local processes that your AI client launches for you (the stdio
-                transport) and never need hosting at all. You only need a remote, hosted server (over HTTP/SSE) if
-                multiple people need to share one instance, or if it must run somewhere other than the
-                user&rsquo;s machine.
-              </p>
-              <h3>Is MCP the same as OpenAI-style function calling?</h3>
-              <p>
-                No. Function calling is a model feature for invoking a single function schema you define inline in
-                your prompt. MCP is a standardized client-server protocol: one MCP server can expose many tools,
-                resources, and prompts, and any MCP-compatible client can connect to it without custom integration
-                code.
-              </p>
-              <h3>How do I test my server without restarting Claude Desktop every time?</h3>
-              <p>
-                Use the official MCP Inspector (<code>npx @modelcontextprotocol/inspector</code>) to run your
-                server and call its tools, resources, and prompts directly in a browser UI, with live JSON-RPC
-                logs, before wiring it into a full AI client.
-              </p>
-              <h3>Does my MCP server need authentication?</h3>
-              <p>
-                A local stdio server inherits the permissions of the user running it, so it typically doesn&rsquo;t
-                need its own auth layer. A remote HTTP server should require a bearer token or similar credential,
-                since anyone who can reach the URL can otherwise call its tools.
-              </p>
-              <h3>How do I get my MCP server listed on AllMCPs?</h3>
-              <p>
-                Publish it to npm, PyPI, or GitHub with a clear README and setup instructions, then submit it
-                through the <Link href="/submit">AllMCPs submission form</Link> for review.
-              </p>
+              <h2 id="faq">Frequently Asked Questions</h2>
+              <div style={{ display: 'grid', gap: '1.25rem', marginTop: '1.5rem', marginBottom: '2.5rem' }}>
+                <div style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.025)', border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)', borderBottom: 'none', paddingBottom: 0 }}>
+                    Which language should I use to build an MCP server?
+                  </h3>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                    TypeScript and Python have the most mature official SDKs and the most existing example servers to learn from, so most developers start there. Go, Java/Kotlin, and C# SDKs are also officially maintained if they better match your existing stack.
+                  </p>
+                </div>
+                <div style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.025)', border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)', borderBottom: 'none', paddingBottom: 0 }}>
+                    Do I need to host my MCP server, or can it run locally?
+                  </h3>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                    Most MCP servers start as local processes that your AI client launches for you (the stdio transport) and never need hosting at all. You only need a remote, hosted server (over HTTP/SSE) if multiple people need to share one instance, or if it must run somewhere other than the user&rsquo;s machine.
+                  </p>
+                </div>
+                <div style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.025)', border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)', borderBottom: 'none', paddingBottom: 0 }}>
+                    Is MCP the same as OpenAI-style function calling?
+                  </h3>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                    No. Function calling is a model feature for invoking a single function schema you define inline in your prompt. MCP is a standardized client-server protocol: one MCP server can expose many tools, resources, and prompts, and any MCP-compatible client can connect to it without custom integration code.
+                  </p>
+                </div>
+                <div style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.025)', border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)', borderBottom: 'none', paddingBottom: 0 }}>
+                    How do I test my server without restarting Claude Desktop every time?
+                  </h3>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                    Use the official MCP Inspector (<code>npx @modelcontextprotocol/inspector</code>) to run your server and call its tools, resources, and prompts directly in a browser UI, with live JSON-RPC logs, before wiring it into a full AI client.
+                  </p>
+                </div>
+                <div style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.025)', border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)', borderBottom: 'none', paddingBottom: 0 }}>
+                    Does my MCP server need authentication?
+                  </h3>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                    A local stdio server inherits the permissions of the user running it, so it typically doesn&rsquo;t need its own auth layer. A remote HTTP server should require a bearer token or similar credential, since anyone who can reach the URL can otherwise call its tools.
+                  </p>
+                </div>
+                <div style={{ padding: '1.25rem 1.5rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.025)', border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)', borderBottom: 'none', paddingBottom: 0 }}>
+                    How do I get my MCP server listed on AllMCPs?
+                  </h3>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
+                    Publish it to npm, PyPI, or GitHub with a clear README and setup instructions, then submit it through the <Link href="/submit">AllMCPs submission form</Link> for review.
+                  </p>
+                </div>
+              </div>
 
               <h2 id="further-reading">Further Reading</h2>
               <ul>
