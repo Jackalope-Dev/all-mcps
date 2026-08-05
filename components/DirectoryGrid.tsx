@@ -557,18 +557,7 @@ export default function DirectoryGrid({
             ) : null}
           </p>
 
-          {/* Trust Pill Indicators */}
-          <div className="trust-pill-row">
-            <span className="trust-pill">
-              <BadgeCheck size={14} className="trust-pill-icon" /> Official &amp; Verified Registry
-            </span>
-            <span className="trust-pill">
-              <Zap size={14} className="trust-pill-icon" /> 1-Click Client Configs
-            </span>
-            <span className="trust-pill">
-              <ShieldCheck size={14} className="trust-pill-icon" /> Health &amp; Security Audited
-            </span>
-          </div>
+
 
           <div
             style={{
@@ -587,13 +576,45 @@ export default function DirectoryGrid({
             </Link>
           </div>
 
+          {/* Supported Clients Quick Access */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              flexWrap: 'wrap',
+              marginTop: '1.25rem',
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Integrates with:</span>
+            {[
+              { href: '/mcp-for-claude-desktop', label: 'Claude Desktop' },
+              { href: '/mcp-for-cursor', label: 'Cursor' },
+              { href: '/mcp-for-windsurf', label: 'Windsurf' },
+              { href: '/mcp-for-cline', label: 'Cline' },
+              { href: '/clients', label: 'All Clients →' },
+            ].map((client) => (
+              <Link
+                key={client.href}
+                href={client.href}
+                className="directory-tag"
+                style={{ textDecoration: 'none', fontSize: '0.78rem', padding: '0.2rem 0.6rem' }}
+              >
+                {client.label}
+              </Link>
+            ))}
+          </div>
+
           <div
             style={{
               display: 'flex',
               flexWrap: 'wrap',
               gap: '0.5rem',
               justifyContent: 'center',
-              marginTop: '1.25rem',
+              marginTop: '0.75rem',
             }}
           >
             {[
@@ -607,7 +628,7 @@ export default function DirectoryGrid({
                 key={item.href}
                 href={item.href}
                 className="directory-tag"
-                style={{ textDecoration: 'none', fontSize: '0.8rem' }}
+                style={{ textDecoration: 'none', fontSize: '0.78rem' }}
               >
                 {item.label}
               </Link>
@@ -983,30 +1004,7 @@ export default function DirectoryGrid({
       {/* Featured Cards (below search, hidden when filtering) */}
       {showDiscovery && <FeaturedCards servers={featuredCards} />}
 
-      {showDiscovery && (
-        <section
-          className="container animate-fade-in delay-2"
-          style={{ margin: '0 auto 2.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem', justifyContent: 'center' }}
-          aria-label="Popular destinations"
-        >
-          {[
-            { href: '/best', label: 'Best by use case' },
-            { href: '/tools', label: 'Free developer tools' },
-            { href: '/clients', label: 'Install by client' },
-            { href: '/submit', label: 'Submit your MCP' },
-            { href: '/docs/api', label: 'API for agents' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="directory-tag"
-              style={{ textDecoration: 'none' }}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </section>
-      )}
+
 
       {showDiscovery && (
         <section className="container newsletter-homepage-section">
