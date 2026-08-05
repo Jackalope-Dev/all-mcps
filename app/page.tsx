@@ -37,7 +37,7 @@ export default async function Home({
   }
 
   const servers = await getActiveServers();
-  const siteStats = await getSiteStats(undefined, servers.length);
+  const siteStats = await getSiteStats();
 
   // Newest-first so the landing slice below surfaces the most recent listings.
   const toTime = (v: unknown): number => {

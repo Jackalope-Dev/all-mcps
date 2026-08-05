@@ -215,7 +215,7 @@ export function CommandPalette() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search 150+ MCP servers, docs, or pages... (e.g. SQLite, GitHub, Cursor)"
+            placeholder="Search MCP servers, docs, or pages... (e.g. SQLite, GitHub, Cursor)"
             style={{
               width: '100%',
               backgroundColor: 'transparent',
