@@ -649,56 +649,95 @@ export default function DirectoryGrid({
         }}
       >
         <div className="directory-filters">
-          <div className="directory-filters-row">
-            <Input
-              type="text"
-              placeholder="Search for tools (e.g. GitHub, Postgres, File System)..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isBrowse) {
-                  e.preventDefault();
+          <div className="directory-search-bar">
+            <div className="directory-search-input-wrap">
+              <Search size={20} className="directory-search-icon" />
+              <input
+                type="text"
+                className="directory-search-input"
+                placeholder="Search 1,000+ MCP tools & servers (e.g. GitHub, Postgres, Memory)..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isBrowse) {
+                    e.preventDefault();
+                    goToFullDirectorySearch(searchQuery);
+                  }
+                }}
+                aria-label="Search MCP Servers"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  className="directory-search-clear"
+                  onClick={() => handleSearchChange('')}
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <X size={16} />
+                </button>
+              ) : null}
+            </div>
+
+            <div className="directory-search-divider" aria-hidden="true" />
+
+            <div className="directory-search-category-wrap">
+              <select
+                className="directory-search-category-select"
+                value={selectedCategory || ''}
+                onChange={(e) => handleCategorySelect(e.target.value === '' ? null : e.target.value)}
+                aria-label="Filter by Category"
+              >
+                <option value="">All Categories</option>
+                {(DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories).map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              className="directory-search-submit-btn"
+              onClick={() => {
+                if (!isBrowse) {
                   goToFullDirectorySearch(searchQuery);
                 }
               }}
-              aria-label="Search MCP Servers"
-              inputClassName="search-input"
-              style={{ flexGrow: 1, flexBasis: '280px', margin: 0, minWidth: 0 }}
-            />
-
-            <select
-              className="form-input directory-category-select"
-              style={{
-                minWidth: `min(100%, ${selectMinCh}ch)`,
-                width: `min(100%, max(14rem, ${selectMinCh}ch))`,
-                flex: '1 1 auto',
-                maxWidth: '100%',
-              }}
-              value={selectedCategory || ''}
-              onChange={(e) => handleCategorySelect(e.target.value === '' ? null : e.target.value)}
-              aria-label="Filter by Category"
+              aria-label="Search"
             >
-              <option value="">All Categories</option>
-              {(DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories).map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+              <Search size={16} />
+              <span>Search</span>
+            </button>
           </div>
 
           {/* Active filters */}
           <div className="directory-tags-row">
-            <button
-              type="button"
-              className={`directory-tag ${verifiedOnly ? 'directory-tag-active' : ''}`}
-              onClick={() => setVerifiedOnly((v) => !v)}
-              aria-pressed={verifiedOnly}
-              title="Show listings that claimed ownership (badge/DNS) or have a premium listing"
-            >
-              <BadgeCheck size={14} />
-              Verified
-            </button>
+            {isBrowse && (
+              <button
+                type="button"
+                className={`directory-tag ${verifiedOnly ? 'directory-tag-active' : ''}`}
+                onClick={() => setVerifiedOnly((v) => !v)}
+                aria-pressed={verifiedOnly}
+                title="Show listings that claimed ownership (badge/DNS) or have a premium listing"
+              >
+                <BadgeCheck size={14} />
+                Verified
+              </button>
+            )}
+
+            {!isBrowse && verifiedOnly && (
+              <button
+                type="button"
+                className="directory-tag directory-tag-active"
+                onClick={() => setVerifiedOnly(false)}
+              >
+                <BadgeCheck size={14} />
+                Verified
+                <X size={12} />
+              </button>
+            )}
 
             {selectedCategory && (
               <button

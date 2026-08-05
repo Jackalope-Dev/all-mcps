@@ -2212,6 +2212,188 @@ nav[aria-label="Table of contents"] {
   gap: 0.875rem;
 }
 
+/* ── Integrated Hero Search Bar ── */
+.directory-search-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: var(--bg-elevated, #0f172a);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-xl, 16px);
+  padding: 0.35rem 0.35rem 0.35rem 1.25rem;
+  gap: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 229, 255, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.directory-search-bar:hover {
+  border-color: rgba(0, 229, 255, 0.35);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.4), 0 0 16px rgba(0, 229, 255, 0.15);
+}
+
+.directory-search-bar:focus-within {
+  border-color: var(--brand-cyan, #00E5FF);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 24px rgba(0, 229, 255, 0.25), 0 0 0 2px rgba(0, 229, 255, 0.3);
+}
+
+.directory-search-input-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.directory-search-icon {
+  color: var(--brand-cyan, #00E5FF);
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.directory-search-bar:focus-within .directory-search-icon {
+  transform: scale(1.08);
+  color: #00E5FF;
+}
+
+.directory-search-input {
+  flex: 1;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: var(--text-primary, #ffffff);
+  font-size: 1.05rem;
+  font-family: var(--font-sans), sans-serif;
+  height: 3rem;
+  min-width: 0;
+  padding: 0;
+}
+
+.directory-search-input::placeholder {
+  color: var(--text-tertiary, #64748b);
+  font-size: 0.98rem;
+}
+
+.directory-search-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary, #64748b);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.directory-search-clear:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.directory-search-divider {
+  width: 1px;
+  height: 2rem;
+  background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.directory-search-category-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.directory-search-category-select {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-md, 8px) !important;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.9rem !important;
+  font-weight: 500;
+  height: 2.5rem !important;
+  padding: 0 2.25rem 0 0.85rem !important;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  transition: all 0.2s ease;
+}
+
+.directory-search-category-select:hover,
+.directory-search-category-select:focus {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary, #ffffff);
+  border-color: rgba(0, 229, 255, 0.3) !important;
+  outline: none !important;
+}
+
+.directory-search-category-select option {
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+.directory-search-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.65rem;
+  padding: 0 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #000000;
+  background: var(--brand-gradient, linear-gradient(135deg, #00E5FF, #007BFF));
+  border: none;
+  border-radius: var(--radius-lg, 10px);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+
+.directory-search-submit-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: 0 4px 14px rgba(0, 229, 255, 0.35);
+}
+
+.directory-search-submit-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 680px) {
+  .directory-search-bar {
+    flex-wrap: wrap;
+    padding: 0.75rem;
+    gap: 0.65rem;
+    border-radius: 14px;
+  }
+
+  .directory-search-input-wrap {
+    width: 100%;
+  }
+
+  .directory-search-divider {
+    display: none;
+  }
+
+  .directory-search-category-wrap {
+    flex: 1;
+  }
+
+  .directory-search-category-select {
+    width: 100%;
+  }
+
+  .directory-search-submit-btn {
+    padding: 0 1rem;
+  }
+}
+
 .directory-filters-row {
   display: flex;
   gap: 1rem;
