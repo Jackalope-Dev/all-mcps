@@ -108,14 +108,25 @@ export function computeQualityScore(server: Server): QualityScore {
   {
     const max = 20;
     let earned = 0;
-    if (server.isOfficial) earned = max;
-    else if (server.websiteVerified || server.isPremium) earned = max * 0.6;
+    let hint = 'Ownership proven via GitHub, DNS, or site badge. Claim your listing to earn full credit.';
+    if (server.isOfficial) {
+      earned = max;
+    } else if (server.websiteVerified || server.isPremium) {
+      earned = max * 0.6;
+    } else if (repoHosted) {
+      const isHealthyActive = server.isVerifiedActive || server.healthStatus === 'healthy';
+      const hasBaselineAdoption = (server.githubStars || 0) >= 10 || (server.npmDownloads || 0) >= 100;
+      if (isHealthyActive || hasBaselineAdoption) {
+        earned = max * 0.4;
+        hint = 'Active community repository. Claim your listing to earn full verification credit.';
+      }
+    }
     components.push({
       key: 'trust',
       label: 'Verified ownership',
       earned: Math.round(earned),
       max,
-      hint: 'Ownership proven via GitHub, DNS, or site badge. Claim your listing to earn this.',
+      hint,
     });
   }
 
@@ -126,24 +137,27 @@ export function computeQualityScore(server: Server): QualityScore {
     const max = 30;
     const descLen = (server.description || '').trim().length;
     const descScore = ramp(descLen, 400) * 0.6; // ~400 chars ≈ full
-    const toolsScore = server.tools && server.tools.length > 0 ? 0.4 : 0;
+    const hasTools = server.tools && server.tools.length > 0;
+    const toolsScore = hasTools ? 0.4 : descLen >= 120 ? 0.2 : 0;
     components.push({
       key: 'docs',
       label: 'Documentation & tools',
       earned: Math.round(max * (descScore + toolsScore)),
       max,
-      hint: 'A rich description and a documented tool list. The clearest way to raise this signal.',
+      hint: hasTools
+        ? 'Rich description and introspected tool schemas.'
+        : 'Detailed description provided. Documenting structured tool schemas unlocks full credit.',
     });
   }
 
   // 4. Popularity (15) — stars, downloads, and installs, log-scaled. A bonus that
-  // reflects adoption; new servers simply haven't earned it yet.
+  // reflects adoption; calibrated for ecosystem scales (1k stars, 5k npm downloads).
   {
     const max = 15;
     const stars = server.githubStars || 0;
     const downloads = server.npmDownloads || 0;
     const installs = server.copies || 0;
-    const magnitude = ramp(stars, 5000) * 0.5 + ramp(downloads, 50000) * 0.3 + ramp(installs, 1000) * 0.2;
+    const magnitude = ramp(stars, 1000) * 0.5 + ramp(downloads, 5000) * 0.35 + ramp(installs, 250) * 0.15;
     components.push({
       key: 'popularity',
       label: 'Adoption',
