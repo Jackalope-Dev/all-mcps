@@ -34,6 +34,9 @@ const actionSchema = z.object({
     'approve_logo',
     'reject_logo',
     'resend_approval',
+    'toggle_official',
+    'toggle_website_verified',
+    'check_health',
   ]),
   fields: z
     .object({
@@ -64,6 +67,9 @@ const MESSAGES: Record<string, string> = {
   approve_logo: 'Logo approved.',
   reject_logo: 'Logo rejected.',
   resend_approval: 'Approval email resent.',
+  toggle_official: 'Official status updated.',
+  toggle_website_verified: 'Website verification status updated.',
+  check_health: 'Health check completed.',
 };
 
 export async function POST(req: Request) {
@@ -436,6 +442,53 @@ export async function POST(req: Request) {
           });
         }
       }
+    } else if (action === 'toggle_official') {
+      const rows = await db.select({ isOfficial: servers.isOfficial }).from(servers).where(eq(servers.id, id)).limit(1);
+      if (rows.length === 0) return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
+      const nextOfficial = !rows[0].isOfficial;
+      await db.update(servers).set({ isOfficial: nextOfficial, claimedAt: nextOfficial ? new Date() : null }).where(eq(servers.id, id));
+      return NextResponse.json({ success: true, message: `Official badge ${nextOfficial ? 'granted' : 'removed'}.`, isOfficial: nextOfficial });
+    } else if (action === 'toggle_website_verified') {
+      const rows = await db.select({ websiteVerified: servers.websiteVerified }).from(servers).where(eq(servers.id, id)).limit(1);
+      if (rows.length === 0) return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
+      const nextVerified = !rows[0].websiteVerified;
+      await db.update(servers).set({ websiteVerified: nextVerified }).where(eq(servers.id, id));
+      return NextResponse.json({ success: true, message: `Website verification ${nextVerified ? 'verified' : 'unverified'}.`, websiteVerified: nextVerified });
+    } else if (action === 'check_health') {
+      const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
+      const server = rows[0];
+      if (!server) return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
+
+      let healthy = true;
+      let repoStatus = 200;
+      let websiteStatus: number | null = null;
+
+      try {
+        const repoRes = await fetch(server.url, { method: 'HEAD', signal: AbortSignal.timeout(6000) }).catch(() => null);
+        repoStatus = repoRes?.status || 0;
+        if (!repoRes || repoRes.status >= 400) healthy = false;
+      } catch {
+        healthy = false;
+      }
+
+      if (server.websiteUrl) {
+        try {
+          const webRes = await fetch(server.websiteUrl, { method: 'HEAD', signal: AbortSignal.timeout(6000) }).catch(() => null);
+          websiteStatus = webRes?.status || 0;
+          if (!webRes || webRes.status >= 400) healthy = false;
+        } catch {
+          websiteStatus = 0;
+        }
+      }
+
+      const nextHealth = healthy ? 'healthy' : 'offline';
+      await db.update(servers).set({ healthStatus: nextHealth, lastCheckedAt: new Date() }).where(eq(servers.id, id));
+
+      return NextResponse.json({
+        success: true,
+        message: `Health check done. Status: ${nextHealth} (Repo HTTP ${repoStatus}${websiteStatus !== null ? `, Site HTTP ${websiteStatus}` : ''})`,
+        healthStatus: nextHealth,
+      });
     }
 
     return NextResponse.json({ success: true, message: MESSAGES[action] });

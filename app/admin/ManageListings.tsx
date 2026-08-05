@@ -3,7 +3,29 @@
 import { useEffect, useState, useRef } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
-import { Search, Filter, ArrowUpDown, Eye, Heart, Download, Star, Info, Edit2, Trash2, Send, Zap, X, Crown, Sparkles } from 'lucide-react';
+import {
+  Search,
+  ArrowUpDown,
+  Eye,
+  Heart,
+  Download,
+  Star,
+  Info,
+  Edit2,
+  Trash2,
+  ShieldCheck,
+  Globe,
+  Activity,
+  Sparkles,
+  Crown,
+  CheckCircle2,
+  X,
+  ExternalLink,
+  Mail,
+  User,
+  Plus,
+  RefreshCw,
+} from 'lucide-react';
 
 type Listing = {
   id: string;
@@ -16,6 +38,7 @@ type Listing = {
   createdAt: string;
   isPremium: boolean;
   isOfficial?: boolean;
+  websiteVerified?: boolean;
   status: string;
   healthStatus: string;
   featuredUntil?: string | null;
@@ -57,6 +80,8 @@ export default function ManageListings() {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   const [inspectListing, setInspectListing] = useState<Listing | null>(null);
+  const [boostModalListing, setBoostModalListing] = useState<Listing | null>(null);
+  const [customBoostDays, setCustomBoostDays] = useState('14');
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFields>({
@@ -66,7 +91,6 @@ export default function ManageListings() {
     url: '',
     websiteUrl: '',
   });
-  const [featureDays, setFeatureDays] = useState<Record<string, string>>({});
 
   const requestIdRef = useRef<number>(0);
 
@@ -125,7 +149,10 @@ export default function ManageListings() {
       | 'republish'
       | 'delete'
       | 'feature'
-      | 'resend_approval',
+      | 'resend_approval'
+      | 'toggle_official'
+      | 'toggle_website_verified'
+      | 'check_health',
     extra?: { fields?: Partial<EditFields>; days?: number }
   ) => {
     setLoadingId(id);
@@ -135,7 +162,14 @@ export default function ManageListings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, action, ...extra }),
       });
-      const data = (await res.json()) as { error?: string; message?: string; featuredUntil?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        message?: string;
+        featuredUntil?: string;
+        isOfficial?: boolean;
+        websiteVerified?: boolean;
+        healthStatus?: string;
+      };
       if (!res.ok) throw new Error(data.error || 'Action failed');
 
       if (action === 'delete') {
@@ -144,6 +178,18 @@ export default function ManageListings() {
       } else if (action === 'set_premium' || action === 'unset_premium') {
         setItems((prev) =>
           prev.map((s) => (s.id === id ? { ...s, isPremium: action === 'set_premium' } : s))
+        );
+      } else if (action === 'toggle_official') {
+        setItems((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, isOfficial: data.isOfficial ?? !s.isOfficial } : s))
+        );
+      } else if (action === 'toggle_website_verified') {
+        setItems((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, websiteVerified: data.websiteVerified ?? !s.websiteVerified } : s))
+        );
+      } else if (action === 'check_health') {
+        setItems((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, healthStatus: data.healthStatus ?? s.healthStatus } : s))
         );
       } else if (action === 'unpublish' || action === 'republish') {
         setItems((prev) =>
@@ -156,7 +202,7 @@ export default function ManageListings() {
         setItems((prev) =>
           prev.map((s) => (s.id === id ? { ...s, featuredUntil: data.featuredUntil ?? s.featuredUntil } : s))
         );
-        setFeatureDays((prev) => ({ ...prev, [id]: '' }));
+        setBoostModalListing(null);
       }
 
       toast.success(data.message || 'Done');
@@ -191,10 +237,10 @@ export default function ManageListings() {
     });
   };
 
-  const grantFeatured = (id: string) => {
-    const days = Number(featureDays[id]);
+  const grantFeaturedModal = (id: string) => {
+    const days = Number(customBoostDays);
     if (!days || days < 1) {
-      toast.error('Enter a number of days to grant.');
+      toast.error('Enter a valid number of days.');
       return;
     }
     runAction(id, 'feature', { days });
@@ -202,7 +248,7 @@ export default function ManageListings() {
 
   const deleteListing = (listing: Listing) => {
     const warning = listing.isPremium
-      ? `"${listing.name}" is a premium listing. Deleting it here does NOT cancel its Stripe subscription — cancel that separately in Stripe. Permanently delete anyway? This cannot be undone.`
+      ? `"${listing.name}" is a premium listing. Deleting it here does NOT cancel its Stripe subscription — cancel that separately in Stripe. Permanently delete anyway?`
       : `Permanently delete "${listing.name}"? This cannot be undone.`;
     if (!window.confirm(warning)) return;
     runAction(listing.id, 'delete');
@@ -212,16 +258,16 @@ export default function ManageListings() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Search & Filter Toolbar */}
-      <div className="admin-filters" style={{ marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+      <div className="admin-card" style={{ padding: '1.25rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', width: '100%', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
             <Search className="w-4 h-4" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
             <input
               className="form-input"
               style={{ paddingLeft: '2.5rem' }}
-              placeholder="Search listing by name or repository URL..."
+              placeholder="Search catalog by listing name or repository URL..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -230,7 +276,7 @@ export default function ManageListings() {
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <select
               className="form-input"
-              style={{ width: 'auto' }}
+              style={{ width: 'auto', minWidth: '160px' }}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
@@ -252,347 +298,388 @@ export default function ManageListings() {
           </div>
         </div>
 
-        <div className="admin-filter-selects" style={{ marginTop: '0.5rem' }}>
-          <select
-            className="form-input"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
+        <div className="admin-filter-selects">
+          <select className="form-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="all">Status: All</option>
             <option value="active">Active</option>
             <option value="pending">Pending</option>
             <option value="removed">Removed</option>
           </select>
-          <select
-            className="form-input"
-            value={premiumFilter}
-            onChange={(e) => setPremiumFilter(e.target.value)}
-          >
+          <select className="form-input" value={premiumFilter} onChange={(e) => setPremiumFilter(e.target.value)}>
             <option value="">Premium: Any</option>
             <option value="true">Premium only</option>
             <option value="false">Free only</option>
           </select>
-          <select
-            className="form-input"
-            value={featuredFilter}
-            onChange={(e) => setFeaturedFilter(e.target.value)}
-          >
+          <select className="form-input" value={featuredFilter} onChange={(e) => setFeaturedFilter(e.target.value)}>
             <option value="">Featured: Any</option>
             <option value="true">Currently Featured</option>
           </select>
-          <select
-            className="form-input"
-            value={healthFilter}
-            onChange={(e) => setHealthFilter(e.target.value)}
-          >
+          <select className="form-input" value={healthFilter} onChange={(e) => setHealthFilter(e.target.value)}>
             <option value="">Health: Any</option>
             <option value="healthy">Healthy</option>
             <option value="unknown">Unknown</option>
             <option value="archived">Archived</option>
             <option value="offline">Offline</option>
           </select>
-          <select
-            className="form-input"
-            value={aiFilter}
-            onChange={(e) => setAiFilter(e.target.value)}
-          >
+          <select className="form-input" value={aiFilter} onChange={(e) => setAiFilter(e.target.value)}>
             <option value="">AI Content: Any</option>
             <option value="true">Enriched</option>
             <option value="false">Not Enriched</option>
           </select>
-          <select
-            className="form-input"
-            value={toolsFilter}
-            onChange={(e) => setToolsFilter(e.target.value)}
-          >
+          <select className="form-input" value={toolsFilter} onChange={(e) => setToolsFilter(e.target.value)}>
             <option value="">MCP Tools: Any</option>
-            <option value="true">Has Introspected Tools</option>
-            <option value="false">No Introspected Tools</option>
+            <option value="true">Has Tools</option>
+            <option value="false">No Tools</option>
           </select>
         </div>
       </div>
 
-      {/* Directory Table */}
-      <div className="admin-card">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Listing Name & Metadata</th>
-              <th>Links & Details</th>
-              <th>Boost / Featured</th>
-              <th>Stats</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="admin-table-empty">
-                  Loading listings catalog...
-                </td>
-              </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="admin-table-empty">
-                  No listings match the specified filter criteria.
-                </td>
-              </tr>
-            ) : (
-              items.map((listing) => {
-                const featuredUntilDate = listing.featuredUntil ? new Date(listing.featuredUntil) : null;
-                const featuredDaysLeft = featuredUntilDate
-                  ? Math.ceil((featuredUntilDate.getTime() - Date.now()) / 86400000)
-                  : null;
-                const isEditing = editingId === listing.id;
-                const rowLoading = loadingId === listing.id;
+      {/* Directory Listing Cards Layout */}
+      {loading ? (
+        <div className="admin-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Loading MCP listings catalog...
+        </div>
+      ) : items.length === 0 ? (
+        <div className="admin-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          No listings match the specified filter criteria.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {items.map((listing) => {
+            const featuredUntilDate = listing.featuredUntil ? new Date(listing.featuredUntil) : null;
+            const featuredDaysLeft = featuredUntilDate
+              ? Math.ceil((featuredUntilDate.getTime() - Date.now()) / 86400000)
+              : null;
+            const isEditing = editingId === listing.id;
+            const rowLoading = loadingId === listing.id;
 
-                return (
-                  <tr key={listing.id}>
-                    <td data-label="Name">
-                      {isEditing ? (
-                        <div className="admin-edit-form">
-                          <input
-                            className="form-input"
-                            value={editForm.name}
-                            onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                            placeholder="Name"
-                          />
-                          <textarea
-                            className="form-input"
-                            rows={3}
-                            value={editForm.description}
-                            onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                            placeholder="Description"
-                          />
-                          <input
-                            className="form-input"
-                            value={editForm.category}
-                            onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
-                            placeholder="Category"
-                          />
-                          <input
-                            className="form-input"
-                            value={editForm.url}
-                            onChange={(e) => setEditForm((f) => ({ ...f, url: e.target.value }))}
-                            placeholder="Repo URL"
-                          />
-                          <input
-                            className="form-input"
-                            value={editForm.websiteUrl}
-                            onChange={(e) => setEditForm((f) => ({ ...f, websiteUrl: e.target.value }))}
-                            placeholder="Website URL"
-                          />
-                        </div>
-                      ) : (
-                        <>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                            <strong style={{ fontSize: '0.95rem' }}>{listing.name}</strong>
-                            {listing.status === 'removed' && (
-                              <span className="admin-badge" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
-                                REMOVED
-                              </span>
-                            )}
-                            {listing.isPremium && (
-                              <span className="admin-badge" style={{ color: '#00E5FF', background: 'rgba(0, 229, 255, 0.1)' }}>
-                                PREMIUM
-                              </span>
-                            )}
-                            {listing.isOfficial && (
-                              <span className="admin-badge" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
-                                OFFICIAL
-                              </span>
-                            )}
-                            {listing.aiSummary && (
-                              <span className="admin-badge" style={{ color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)' }} title="AI Enriched">
-                                AI
-                              </span>
-                            )}
-                          </div>
+            return (
+              <div
+                key={listing.id}
+                className="admin-card"
+                style={{
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  borderLeft: listing.isPremium ? '4px solid #00E5FF' : '1px solid var(--border-color)',
+                }}
+              >
+                {/* Header Row: Title, Badges & Links */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{listing.name}</h3>
 
-                          <div className="admin-desc-line">{listing.description}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                            Cat: <span style={{ color: 'white' }}>{listing.category}</span> · Health: <span style={{ color: listing.healthStatus === 'healthy' ? '#10b981' : '#f59e0b' }}>{listing.healthStatus}</span>
-                          </div>
-                        </>
+                      {listing.status === 'removed' && (
+                        <span className="admin-badge" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.12)' }}>
+                          REMOVED
+                        </span>
                       )}
-                    </td>
+                      {listing.isPremium && (
+                        <span className="admin-badge" style={{ color: '#00E5FF', background: 'rgba(0, 229, 255, 0.12)' }}>
+                          PREMIUM
+                        </span>
+                      )}
+                      {listing.isOfficial && (
+                        <span className="admin-badge" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' }}>
+                          ★ OFFICIAL
+                        </span>
+                      )}
+                      {listing.websiteVerified && (
+                        <span className="admin-badge" style={{ color: '#007BFF', background: 'rgba(0, 123, 255, 0.12)' }}>
+                          SITE VERIFIED
+                        </span>
+                      )}
+                      {listing.aiSummary && (
+                        <span className="admin-badge" style={{ color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.12)' }}>
+                          AI ENRICHED
+                        </span>
+                      )}
+                      <span
+                        className="admin-badge"
+                        style={{
+                          color: listing.healthStatus === 'healthy' ? '#10b981' : listing.healthStatus === 'unknown' ? '#94a3b8' : '#ef4444',
+                          background: 'rgba(255,255,255,0.05)',
+                        }}
+                      >
+                        HEALTH: {listing.healthStatus.toUpperCase()}
+                      </span>
+                    </div>
 
-                    <td data-label="Links">
-                      <div className="admin-links-cell" style={{ gap: '0.35rem' }}>
-                        <a
-                          href={`/mcp/${listing.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
-                        >
-                          Listing Page
+                    {/* External Links Bar */}
+                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.825rem', marginTop: '0.15rem' }}>
+                      <a href={`/mcp/${listing.id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#00E5FF', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                        <ExternalLink className="w-3.5 h-3.5" /> Listing Page
+                      </a>
+                      <a href={listing.url} target="_blank" rel="noopener noreferrer" style={{ color: '#007BFF', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                        GitHub Repo
+                      </a>
+                      {listing.websiteUrl && (
+                        <a href={listing.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#007BFF', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                          Product Website
                         </a>
-                        <a
-                          href={listing.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
-                        >
-                          Repository
-                        </a>
-                        {listing.websiteUrl && (
-                          <a
-                            href={listing.websiteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
-                          >
-                            Website
-                          </a>
-                        )}
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Boost Status Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div
+                      style={{
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '6px',
+                        background: featuredDaysLeft && featuredDaysLeft > 0 ? 'rgba(255, 215, 0, 0.1)' : 'rgba(255,255,255,0.03)',
+                        border: featuredDaysLeft && featuredDaysLeft > 0 ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid var(--border-color)',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: featuredDaysLeft && featuredDaysLeft > 0 ? '#ffd700' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {featuredDaysLeft && featuredDaysLeft > 0 ? `★ ${featuredDaysLeft}d boost active` : 'No placement boost'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inline Edit Form OR Overview details */}
+                {isEditing ? (
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>Edit Listing Metadata</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                      <input
+                        className="form-input"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="Name"
+                      />
+                      <input
+                        className="form-input"
+                        value={editForm.category}
+                        onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                        placeholder="Category"
+                      />
+                    </div>
+                    <textarea
+                      className="form-input"
+                      rows={2}
+                      value={editForm.description}
+                      onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="Description"
+                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                      <input
+                        className="form-input"
+                        value={editForm.url}
+                        onChange={(e) => setEditForm((f) => ({ ...f, url: e.target.value }))}
+                        placeholder="GitHub Repo URL"
+                      />
+                      <input
+                        className="form-input"
+                        value={editForm.websiteUrl}
+                        onChange={(e) => setEditForm((f) => ({ ...f, websiteUrl: e.target.value }))}
+                        placeholder="Website URL"
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <button onClick={() => saveEdit(listing.id)} disabled={rowLoading} className="admin-btn" style={{ background: '#10b981' }}>
+                        Save Changes
+                      </button>
+                      <button onClick={() => setEditingId(null)} disabled={rowLoading} className="admin-btn" style={{ background: '#64748b' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, marginBottom: '0.5rem', lineHeight: 1.4 }}>
+                      {listing.description}
+                    </p>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                      <span>Category: <strong style={{ color: 'white' }}>{listing.category}</strong></span>
+                      {listing.submitterEmail && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Mail className="w-3.5 h-3.5" /> Submitter: <strong style={{ color: 'white' }}>{listing.submitterEmail}</strong>
+                        </span>
+                      )}
+                      {listing.ownerUserId && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <User className="w-3.5 h-3.5" /> Owner: <strong style={{ color: 'white' }}>{listing.ownerUserId.slice(0, 8)}...</strong>
+                        </span>
+                      )}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Eye className="w-3.5 h-3.5" /> {listing.views || 0} views</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Heart className="w-3.5 h-3.5 text-red-400" /> {listing.upvotes || 0} upvotes</span>
+                      {listing.githubStars !== null && listing.githubStars !== undefined && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Star className="w-3.5 h-3.5 text-amber-400" /> {listing.githubStars} stars</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Verification & Placement Control Toolbars */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+                  {/* Manual Verification Action Pills */}
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => runAction(listing.id, 'toggle_official')}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{
+                        background: listing.isOfficial ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.04)',
+                        color: listing.isOfficial ? '#10b981' : 'var(--text-secondary)',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.3rem 0.6rem',
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                      }}
+                      title="Manually toggle Official Project badge"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" /> {listing.isOfficial ? 'Official Badge: ON' : 'Make Official'}
+                    </button>
+
+                    <button
+                      onClick={() => runAction(listing.id, 'toggle_website_verified')}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{
+                        background: listing.websiteVerified ? 'rgba(0, 123, 255, 0.15)' : 'rgba(255,255,255,0.04)',
+                        color: listing.websiteVerified ? '#007BFF' : 'var(--text-secondary)',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.3rem 0.6rem',
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                      }}
+                      title="Manually toggle Website Verified status"
+                    >
+                      <Globe className="w-3.5 h-3.5" /> {listing.websiteVerified ? 'Site Verified: YES' : 'Verify Site'}
+                    </button>
+
+                    <button
+                      onClick={() => runAction(listing.id, 'check_health')}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        color: '#94a3b8',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.3rem 0.6rem',
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                      }}
+                      title="Perform instant live HTTP health check"
+                    >
+                      <Activity className="w-3.5 h-3.5" /> Re-check Links Health
+                    </button>
+                  </div>
+
+                  {/* Primary Action Buttons Bar */}
+                  <div className="admin-actions" style={{ gap: '0.4rem' }}>
+                    <button
+                      onClick={() => runAction(listing.id, 'feature', { days: 7 })}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{ background: 'rgba(0,229,255,0.12)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.3)', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                    >
+                      +7d Boost
+                    </button>
+
+                    <button
+                      onClick={() => runAction(listing.id, 'feature', { days: 30 })}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{ background: 'rgba(255,215,0,0.12)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.3)', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                    >
+                      +30d Boost
+                    </button>
+
+                    <button
+                      onClick={() => setBoostModalListing(listing)}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                    >
+                      Custom Boost...
+                    </button>
+
+                    <button
+                      onClick={() => runAction(listing.id, listing.isPremium ? 'unset_premium' : 'set_premium')}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{ background: listing.isPremium ? '#64748b' : '#007BFF', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                    >
+                      {listing.isPremium ? 'Unset Premium' : 'Make Premium'}
+                    </button>
+
+                    <button
+                      onClick={() => startEdit(listing)}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{ background: '#64748b', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => setInspectListing(listing)}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                    >
+                      Inspector
+                    </button>
+
+                    {listing.status === 'active' ? (
+                      <>
                         <button
-                          onClick={() => setInspectListing(listing)}
-                          style={{ background: 'transparent', border: 'none', padding: 0, color: '#94a3b8', fontSize: '0.75rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem' }}
+                          onClick={() => runAction(listing.id, 'resend_approval')}
+                          disabled={rowLoading}
+                          className="admin-btn"
+                          style={{ background: '#0284c7', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                          title="Resend approval email"
                         >
-                          <Info className="w-3.5 h-3.5" /> View Inspector
+                          Resend Email
                         </button>
-                      </div>
-                    </td>
+                        <button
+                          onClick={() => runAction(listing.id, 'unpublish')}
+                          disabled={rowLoading}
+                          className="admin-btn"
+                          style={{ background: '#f59e0b', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                        >
+                          Unpublish
+                        </button>
+                      </>
+                    ) : listing.status === 'removed' ? (
+                      <button
+                        onClick={() => runAction(listing.id, 'republish')}
+                        disabled={rowLoading}
+                        className="admin-btn"
+                        style={{ background: '#10b981', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      >
+                        Republish
+                      </button>
+                    ) : null}
 
-                    <td data-label="Featured">
-                      <div className="admin-feature-cell">
-                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: featuredDaysLeft && featuredDaysLeft > 0 ? '#ffd700' : 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-                          {featuredDaysLeft && featuredDaysLeft > 0 ? `★ ${featuredDaysLeft}d boost left` : 'No active boost'}
-                        </div>
-                        <div className="admin-feature-controls" style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                          <button
-                            onClick={() => runAction(listing.id, 'feature', { days: 7 })}
-                            disabled={rowLoading}
-                            className="admin-btn"
-                            style={{ background: 'rgba(0,229,255,0.12)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.3)', padding: '0.25rem 0.4rem', fontSize: '0.75rem' }}
-                            title="Grant 7 days boost"
-                          >
-                            +7d
-                          </button>
-                          <button
-                            onClick={() => runAction(listing.id, 'feature', { days: 30 })}
-                            disabled={rowLoading}
-                            className="admin-btn"
-                            style={{ background: 'rgba(255,215,0,0.12)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.3)', padding: '0.25rem 0.4rem', fontSize: '0.75rem' }}
-                            title="Grant 30 days boost"
-                          >
-                            +30d
-                          </button>
-                          <input
-                            type="number"
-                            min={1}
-                            className="form-input"
-                            style={{ width: '50px', padding: '0.2rem 0.3rem', fontSize: '0.75rem' }}
-                            placeholder="Days"
-                            value={featureDays[listing.id] || ''}
-                            onChange={(e) => setFeatureDays((prev) => ({ ...prev, [listing.id]: e.target.value }))}
-                          />
-                          <button
-                            onClick={() => grantFeatured(listing.id)}
-                            disabled={rowLoading}
-                            className="admin-btn"
-                            style={{ background: '#007BFF', padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
-                          >
-                            Set
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td data-label="Stats" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      <div><Eye className="w-3 h-3 inline mr-1" /> {listing.views || 0} views</div>
-                      <div><Heart className="w-3 h-3 inline mr-1 text-red-400" /> {listing.upvotes || 0} upvotes</div>
-                      <div><Star className="w-3 h-3 inline mr-1 text-amber-400" /> {listing.githubStars ? `${listing.githubStars} stars` : '—'}</div>
-                    </td>
-
-                    <td data-label="Actions">
-                      <div className="admin-actions">
-                        {isEditing ? (
-                          <>
-                            <button
-                              onClick={() => saveEdit(listing.id)}
-                              disabled={rowLoading}
-                              className="admin-btn"
-                              style={{ background: '#10b981' }}
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              disabled={rowLoading}
-                              className="admin-btn"
-                              style={{ background: '#64748b' }}
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => runAction(listing.id, listing.isPremium ? 'unset_premium' : 'set_premium')}
-                              disabled={rowLoading}
-                              className="admin-btn"
-                              style={{ background: listing.isPremium ? '#64748b' : '#007BFF', padding: '0.35rem 0.65rem' }}
-                            >
-                              {listing.isPremium ? 'Unset Premium' : 'Make Premium'}
-                            </button>
-                            <button
-                              onClick={() => startEdit(listing)}
-                              disabled={rowLoading}
-                              className="admin-btn"
-                              style={{ background: '#64748b', padding: '0.35rem 0.65rem' }}
-                            >
-                              Edit
-                            </button>
-                            {listing.status === 'active' ? (
-                              <>
-                                <button
-                                  onClick={() => runAction(listing.id, 'resend_approval')}
-                                  disabled={rowLoading}
-                                  className="admin-btn"
-                                  style={{ background: '#0284c7', padding: '0.35rem 0.65rem' }}
-                                  title="Resend approval email"
-                                >
-                                  Resend Email
-                                </button>
-                                <button
-                                  onClick={() => runAction(listing.id, 'unpublish')}
-                                  disabled={rowLoading}
-                                  className="admin-btn"
-                                  style={{ background: '#f59e0b', padding: '0.35rem 0.65rem' }}
-                                >
-                                  Unpublish
-                                </button>
-                              </>
-                            ) : listing.status === 'removed' ? (
-                              <button
-                                onClick={() => runAction(listing.id, 'republish')}
-                                disabled={rowLoading}
-                                className="admin-btn"
-                                style={{ background: '#10b981', padding: '0.35rem 0.65rem' }}
-                              >
-                                Republish
-                              </button>
-                            ) : null}
-                            <button
-                              onClick={() => deleteListing(listing)}
-                              disabled={rowLoading}
-                              className="admin-btn"
-                              style={{ background: '#ef4444', padding: '0.35rem 0.65rem' }}
-                            >
-                              Delete
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <button
+                      onClick={() => deleteListing(listing)}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{ background: '#ef4444', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Pagination Controls */}
       <div className="admin-pagination">
@@ -620,6 +707,89 @@ export default function ManageListings() {
           </button>
         </div>
       </div>
+
+      {/* Boost Modal (Fixes Firefox squished spinner issue) */}
+      {boostModalListing && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+          onClick={() => setBoostModalListing(null)}
+        >
+          <div
+            style={{
+              background: '#0f172a',
+              border: '1px solid var(--border-color)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '440px',
+              width: '100%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                Grant Placement Boost: {boostModalListing.name}
+              </h3>
+              <button onClick={() => setBoostModalListing(null)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              Grant featured placement duration for this listing on the homepage and search listings.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                  Number of Days to Add
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  className="form-input"
+                  style={{ width: '100%', padding: '0.6rem 0.85rem', fontSize: '0.95rem' }}
+                  value={customBoostDays}
+                  onChange={(e) => setCustomBoostDays(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {[7, 14, 30, 60, 90].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setCustomBoostDays(String(d))}
+                    className="admin-btn"
+                    style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                  >
+                    {d} days
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button onClick={() => setBoostModalListing(null)} className="admin-btn" style={{ background: '#64748b' }}>
+                  Cancel
+                </button>
+                <button onClick={() => grantFeaturedModal(boostModalListing.id)} className="admin-btn" style={{ background: '#007BFF' }}>
+                  Grant {customBoostDays} Days Boost
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Inspector Modal */}
       {inspectListing && (
@@ -661,6 +831,9 @@ export default function ManageListings() {
               <div><strong>ID:</strong> <code style={{ color: '#00E5FF' }}>{inspectListing.id}</code></div>
               <div><strong>Submitter Email:</strong> {inspectListing.submitterEmail || 'Not recorded'}</div>
               <div><strong>Owner User ID:</strong> {inspectListing.ownerUserId || 'Unclaimed'}</div>
+              <div><strong>Official Project Badge:</strong> {inspectListing.isOfficial ? 'Yes (Verified)' : 'No'}</div>
+              <div><strong>Website Verified:</strong> {inspectListing.websiteVerified ? 'Yes (Verified)' : 'No'}</div>
+              <div><strong>Health Status:</strong> {inspectListing.healthStatus}</div>
               <div><strong>Created At:</strong> {new Date(inspectListing.createdAt).toLocaleString()}</div>
               <div><strong>AI Summary:</strong> {inspectListing.aiSummary || 'Not generated yet'}</div>
 

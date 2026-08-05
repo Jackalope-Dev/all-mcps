@@ -99,6 +99,7 @@ export async function GET(req: Request) {
           createdAt: servers.createdAt,
           isPremium: servers.isPremium,
           isOfficial: servers.isOfficial,
+          websiteVerified: servers.websiteVerified,
           status: servers.status,
           healthStatus: servers.healthStatus,
           featuredUntil: servers.featuredUntil,
