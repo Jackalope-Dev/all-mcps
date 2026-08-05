@@ -8,6 +8,18 @@ import { getClaimVerificationToken } from '../../../../lib/verificationTokens';
 import { getApexDomain, getDnsProviderLinks } from '../../../../lib/dnsProviders';
 
 type ClaimMethod = 'github' | 'website_badge' | 'dns';
+type BadgeStyle = 'shield' | 'flat-square' | 'featured' | 'directory';
+
+// Repo READMEs read best with compact GitHub-style badges; a website has room
+// for the larger card styles. Scope the picker to what actually fits each.
+const REPO_BADGE_STYLES: { id: BadgeStyle; label: string }[] = [
+  { id: 'shield', label: 'Standard (20px)' },
+  { id: 'flat-square', label: 'Square (20px)' },
+];
+const SITE_BADGE_STYLES: { id: BadgeStyle; label: string }[] = [
+  { id: 'featured', label: 'Featured Banner (32px)' },
+  { id: 'directory', label: 'Directory Card (40px)' },
+];
 
 export default function ClaimClient({
   serverId,
@@ -41,7 +53,9 @@ export default function ClaimClient({
   const [claimed, setClaimed] = useState(!!isOfficial);
   const [siteVerified, setSiteVerified] = useState(!!websiteVerified);
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
-  const [badgeStyle, setBadgeStyle] = useState<'shield' | 'flat-square' | 'featured' | 'directory'>('shield');
+  const [badgeStyle, setBadgeStyle] = useState<BadgeStyle>(
+    repoUrl.includes('github.com') ? 'shield' : 'directory'
+  );
   const [badgeMetric, setBadgeMetric] = useState<'status' | 'upvotes' | 'views' | 'installs'>('status');
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
@@ -72,6 +86,23 @@ export default function ClaimClient({
     ? `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${serverId}?verify=${userId})`
     : null;
   const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}/claim`)}`;
+
+  const selectMethod = (next: ClaimMethod) => {
+    setMethod(next);
+    // Keep the badge style sane for the target — a repo doesn't want a
+    // 40px directory card, and a website doesn't want a tiny GitHub shield.
+    if (next === 'github' && !REPO_BADGE_STYLES.some((s) => s.id === badgeStyle)) {
+      setBadgeStyle('shield');
+    } else if (next === 'website_badge' && !SITE_BADGE_STYLES.some((s) => s.id === badgeStyle)) {
+      setBadgeStyle('directory');
+    }
+  };
+
+  // The claim button's label should reflect whether *this* target (repo vs.
+  // website) has already been proven — not the listing's overall claimed
+  // state. Otherwise verifying a website for the first time on an
+  // already-claimed (via repo) listing misleadingly reads "Re-verify".
+  const alreadyVerifiedForMethod = method === 'github' ? claimed : siteVerified;
 
   const copyText = async (text: string, label: string) => {
     try {
@@ -434,7 +465,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           <button
             key={m.id}
             type="button"
-            onClick={() => setMethod(m.id)}
+            onClick={() => selectMethod(m.id)}
             className={`directory-segmented-btn ${method === m.id ? 'is-active' : ''}`}
             style={{
               padding: '0.55rem 0.9rem',
@@ -457,17 +488,27 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
       {(method === 'website_badge' || method === 'dns') && (
         <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            Website URL
-          </label>
-          <input
-            type="url"
-            className="form-input"
-            placeholder="https://yoursite.com"
-            value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
-            required
-          />
+          {claimed ? (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+              Proving ownership of{' '}
+              <strong style={{ color: 'var(--text-primary)' }}>{websiteUrl || 'the website above'}</strong>.
+              Change the URL in the &quot;Website on this listing&quot; box above if needed.
+            </p>
+          ) : (
+            <>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                Website URL
+              </label>
+              <input
+                type="url"
+                className="form-input"
+                placeholder="https://yoursite.com"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                required
+              />
+            </>
+          )}
         </div>
       )}
 
@@ -480,18 +521,13 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
             {/* Badge controls for GitHub */}
             <div style={{ marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Style:</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Style (sized for a README):</span>
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {[
-                  { id: 'shield', label: 'Standard (20px)' },
-                  { id: 'flat-square', label: 'Square (20px)' },
-                  { id: 'featured', label: 'Featured Banner (32px)' },
-                  { id: 'directory', label: 'Directory Card (40px)' },
-                ].map((s) => (
+                {REPO_BADGE_STYLES.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => setBadgeStyle(s.id as any)}
+                    onClick={() => setBadgeStyle(s.id)}
                     style={{
                       padding: '0.3rem 0.65rem',
                       borderRadius: '999px',
@@ -632,18 +668,13 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             
             {/* Style buttons */}
             <div style={{ marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Style:</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Style (sized for a website):</span>
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {[
-                  { id: 'shield', label: 'Standard (20px)' },
-                  { id: 'flat-square', label: 'Square (20px)' },
-                  { id: 'featured', label: 'Featured Banner (32px)' },
-                  { id: 'directory', label: 'Directory Card (40px)' },
-                ].map((s) => (
+                {SITE_BADGE_STYLES.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => setBadgeStyle(s.id as any)}
+                    onClick={() => setBadgeStyle(s.id)}
                     style={{
                       padding: '0.35rem 0.75rem',
                       borderRadius: '999px',
@@ -961,7 +992,17 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             cursor: loading ? 'not-allowed' : 'pointer',
           }}
         >
-          {loading ? 'Verifying...' : claimed ? 'Re-verify ownership' : 'Verify & claim listing'}
+          {loading
+            ? 'Verifying...'
+            : alreadyVerifiedForMethod
+              ? method === 'github'
+                ? 'Re-verify repo ownership'
+                : 'Re-verify website'
+              : claimed
+                ? method === 'github'
+                  ? 'Verify repo'
+                  : 'Verify website'
+                : 'Verify & claim listing'}
         </button>
         {error && (
           <div

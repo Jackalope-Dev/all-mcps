@@ -15,6 +15,13 @@ export interface DirectoryBadge {
  */
 const BADGES: DirectoryBadge[] = [
   {
+    id: 'allmcps-self',
+    name: 'AllMCPs Verified',
+    href: 'https://allmcps.com/mcp/allmcps-server',
+    imageUrl: 'https://allmcps.com/api/badge/allmcps-server?style=directory',
+    rel: 'noopener noreferrer'
+  },
+  {
     id: 'nicklaunches',
     name: 'Featured on Nick Launches',
     href: 'https://nicklaunches.com/products/allmcps/?utm_source=allmcps.com&utm_medium=badge&utm_campaign=featured',
