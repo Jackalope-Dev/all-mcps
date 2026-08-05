@@ -12,6 +12,7 @@ import {
   categoryFromSlug,
   categorySlug,
   parseCategoryLabel,
+  getCategoryMeta,
 } from '../../../lib/categories';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
@@ -110,6 +111,7 @@ export default async function CategoryLandingPage({
   }
 
   const { emoji, label } = parseCategoryLabel(category);
+  const meta = getCategoryMeta(category);
   const all = await getActiveServers();
   const byScore = all.filter((s) => s.category === category).sort((a, b) => score(b) - score(a));
 
@@ -230,16 +232,29 @@ export default async function CategoryLandingPage({
 
         {/* Hero */}
         <section style={{ margin: '0 auto 2.5rem', maxWidth: '780px', textAlign: 'center' }}>
-          <h1 className="text-display" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {emoji && (
-              <span style={{ fontSize: '2.25rem', lineHeight: 1 }} aria-hidden="true">
-                {emoji}
-              </span>
-            )}
-            <span>{label} MCP Servers</span>
-            <span className="text-brand-gradient" style={{ fontSize: '0.85em', fontWeight: 800 }}>
-              ({total.toLocaleString()})
-            </span>
+          {(meta.emoji || emoji) && (
+            <div
+              className="category-card-emoji"
+              aria-hidden="true"
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '16px',
+                fontSize: '2.25rem',
+                background: `${meta.color}18`,
+                borderColor: meta.borderTint || `${meta.color}40`,
+                boxShadow: `0 4px 20px ${meta.color}25`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.25rem',
+              }}
+            >
+              {meta.emoji || emoji}
+            </div>
+          )}
+          <h1 className="text-display" style={{ marginBottom: '1rem' }}>
+            <span className="text-brand-gradient">{total.toLocaleString()}</span> {label} MCP Servers
           </h1>
           <p className="text-lead" style={{ margin: '0 auto 1.5rem', textAlign: 'center' }}>
             {intro}
