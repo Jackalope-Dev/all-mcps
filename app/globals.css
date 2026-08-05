@@ -574,6 +574,7 @@ p {
 
 .newsletter-form-compact {
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   max-width: 420px;
 }
@@ -581,6 +582,19 @@ p {
 .newsletter-form-compact .form-field {
   flex: 1;
   margin: 0;
+  order: 0;
+}
+
+.newsletter-form-compact button {
+  order: 1;
+}
+
+.newsletter-form-compact .turnstile-widget-compact {
+  order: 2;
+  flex-basis: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .newsletter-modal-overlay {

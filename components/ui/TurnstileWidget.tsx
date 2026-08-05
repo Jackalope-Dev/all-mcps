@@ -23,7 +23,10 @@ export function TurnstileWidget({
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAD_iUPDcKGNCmYcX';
 
   return (
-    <div className={compact ? undefined : 'my-4'} style={compact ? undefined : { marginTop: '1rem', marginBottom: '1rem' }}>
+    <div
+      className={compact ? 'turnstile-widget-compact' : 'my-4'}
+      style={compact ? undefined : { marginTop: '1rem', marginBottom: '1rem' }}
+    >
       <Turnstile
         siteKey={siteKey}
         onSuccess={onSuccess}
