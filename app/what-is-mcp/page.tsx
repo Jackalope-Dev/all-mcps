@@ -46,17 +46,41 @@ const faqs = [
   },
 ];
 
-const faqJsonLd = {
+const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs.map((f) => ({
-    '@type': 'Question',
-    name: f.q,
-    acceptedAnswer: {
-      '@type': 'Answer',
-      text: f.a,
+  '@graph': [
+    {
+      '@type': 'TechArticle',
+      name: 'What is Model Context Protocol? (MCP Guide)',
+      description:
+        'Learn what Model Context Protocol (MCP) is, how it works, local vs remote servers, real-world examples, and how to connect AI agents.',
+      url: 'https://allmcps.com/what-is-mcp',
+      publisher: {
+        '@type': 'Organization',
+        name: 'AllMCPs',
+        url: 'https://allmcps.com',
+      },
     },
-  })),
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: f.a,
+        },
+      })),
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+        { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://allmcps.com/guides' },
+        { '@type': 'ListItem', position: 3, name: 'What is MCP', item: 'https://allmcps.com/what-is-mcp' },
+      ],
+    },
+  ],
 };
 
 const tocItems: TocItem[] = [
@@ -77,7 +101,7 @@ export default function WhatIsMCPPage() {
       <div className="page-shell-inner">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">

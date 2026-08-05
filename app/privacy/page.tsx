@@ -17,8 +17,28 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        name: 'Privacy Policy',
+        description: 'Privacy policy for AllMCPs. Learn how we handle analytics, cookie consent, and data protection on our website.',
+        url: 'https://allmcps.com/privacy',
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+          { '@type': 'ListItem', position: 2, name: 'Privacy Policy', item: 'https://allmcps.com/privacy' },
+        ],
+      },
+    ],
+  };
+
   return (
     <main className="page-shell page-shell--content">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="page-shell-inner">
       <div className="surface page-panel">
         <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Privacy Policy</h1>

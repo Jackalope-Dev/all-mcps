@@ -14,8 +14,37 @@ export const metadata: Metadata = {
 };
 
 export default function BadgeGeneratorPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebApplication',
+        name: 'MCP Server Badge Generator & Embed Builder',
+        description: 'Generate dynamic SVG verification badges and embeddable widgets for your Model Context Protocol (MCP) server GitHub README or website.',
+        url: 'https://allmcps.com/badge-generator',
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'All',
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+          { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://allmcps.com/tools' },
+          { '@type': 'ListItem', position: 3, name: 'Badge Generator', item: 'https://allmcps.com/badge-generator' },
+        ],
+      },
+    ],
+  };
+
   return (
-    <PageShell variant="tool" panel>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <PageShell variant="tool" panel>
       <PageHeader
         title="MCP Badge & Embed Generator"
         description="Customize dynamic SVG badges for your GitHub README, documentation site, or blog. Keep the badge dofollow and verify your site to turn your listing's website link into a reciprocal dofollow backlink."
@@ -43,6 +72,7 @@ export default function BadgeGeneratorPage() {
       <div style={{ marginTop: '2rem' }}>
         <BadgeEmbedBuilder />
       </div>
-    </PageShell>
+      </PageShell>
+    </>
   );
 }

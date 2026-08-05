@@ -227,8 +227,11 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
 
       {showEnvVars && (
         <div style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(0, 0, 0, 0.25)', borderRadius: '10px', border: '1px dashed rgba(0, 229, 255, 0.3)' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
             Configure Environment Variables (API Keys, Tokens, Options):
+          </div>
+          <div style={{ fontSize: '0.78rem', color: '#00E5FF', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            💡 Tip: Replace placeholder values with your actual API keys or tokens before pasting into your client config.
           </div>
           {envVars.map((env, idx) => (
             <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>

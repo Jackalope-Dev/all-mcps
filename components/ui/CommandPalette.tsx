@@ -85,6 +85,10 @@ export function CommandPalette() {
 
   const items: CommandItem[] = useMemo(() => {
     const staticPages: CommandItem[] = [
+      { id: 'client-claude', title: 'Claude Desktop MCP Setup', subtitle: 'How to install MCP servers into Claude Desktop', category: 'Guide', categoryType: 'page', url: '/mcp-for-claude-desktop', icon: <FileText size={18} className="text-cyan-400" /> },
+      { id: 'client-cursor', title: 'Cursor MCP Setup', subtitle: 'How to install MCP servers into Cursor IDE', category: 'Guide', categoryType: 'page', url: '/mcp-for-cursor', icon: <FileText size={18} className="text-cyan-400" /> },
+      { id: 'client-windsurf', title: 'Windsurf MCP Setup', subtitle: 'How to install MCP servers into Windsurf IDE', category: 'Guide', categoryType: 'page', url: '/mcp-for-windsurf', icon: <FileText size={18} className="text-cyan-400" /> },
+      { id: 'client-cline', title: 'Cline MCP Setup', subtitle: 'How to install MCP servers into Cline extension', category: 'Guide', categoryType: 'page', url: '/mcp-for-cline', icon: <FileText size={18} className="text-cyan-400" /> },
       { id: 'nav-browse', title: 'Browse All Servers', subtitle: 'Explore and filter MCP servers', category: 'Page', categoryType: 'page', url: '/browse', icon: <Search size={18} className="text-cyan-400" /> },
       { id: 'nav-best', title: 'Best MCP Servers', subtitle: 'Curated lists by use case', category: 'Page', categoryType: 'page', url: '/best', icon: <Sparkles size={18} className="text-cyan-400" /> },
       { id: 'nav-categories', title: 'Browse Categories', subtitle: 'Explore 50+ categories of MCP tools', category: 'Page', categoryType: 'page', url: '/categories', icon: <Tag size={18} className="text-cyan-400" /> },

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { getCategoryMeta } from '../lib/categories';
+import { getCategoryMeta, CATEGORY_GROUPS } from '../lib/categories';
 
 type CategoryItem = {
   name: string;
@@ -14,13 +14,22 @@ type CategoryItem = {
 
 export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeGroup, setActiveGroup] = useState<string>('all');
   const [hasScrolled, setHasScrolled] = useState(false);
 
   const filtered = useMemo(() => {
-    if (!searchQuery) return categories;
-    const q = searchQuery.toLowerCase();
-    return categories.filter(c => c.label.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
-  }, [categories, searchQuery]);
+    return categories.filter((c) => {
+      if (activeGroup !== 'all') {
+        const meta = getCategoryMeta(c.name);
+        if (meta.group.id !== activeGroup) return false;
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!c.label.toLowerCase().includes(q) && !c.name.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [categories, searchQuery, activeGroup]);
 
   // Handle hash-based scrolling from breadcrumb links (e.g. /categories#💻 Developer Tools)
   useEffect(() => {
@@ -44,8 +53,8 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
 
   return (
     <>
-      {/* Search */}
-      <div className="animate-fade-in delay-2" style={{ display: 'flex', justifyContent: 'center', marginBottom: '3rem' }}>
+      {/* Search & Group Tabs */}
+      <div className="animate-fade-in delay-2" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', marginBottom: '2.5rem' }}>
         <input
           type="text"
           placeholder="Search categories..."
@@ -56,6 +65,32 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
           aria-label="Search categories"
           id="search-categories"
         />
+
+        <div className="directory-tags-row" style={{ overflowX: 'auto', paddingBottom: '0.25rem', maxWidth: '100%', justifyContent: 'center' }}>
+          <button
+            type="button"
+            className={`directory-tag ${activeGroup === 'all' ? 'directory-tag-active' : ''}`}
+            onClick={() => setActiveGroup('all')}
+          >
+            ✨ All Categories
+          </button>
+          {CATEGORY_GROUPS.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              className={`directory-tag ${activeGroup === g.id ? 'directory-tag-active' : ''}`}
+              onClick={() => setActiveGroup(g.id)}
+              style={{
+                borderColor: activeGroup === g.id ? g.color : undefined,
+                color: activeGroup === g.id ? g.color : undefined,
+                background: activeGroup === g.id ? g.bgTint : undefined,
+              }}
+            >
+              <span aria-hidden="true">{g.emoji}</span>
+              <span>{g.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Results count when filtering */}

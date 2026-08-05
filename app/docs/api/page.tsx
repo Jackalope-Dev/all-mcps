@@ -77,11 +77,23 @@ const ENDPOINTS = [
 export default function ApiDocsPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'TechArticle',
-    headline: 'AllMCPs Directory API Documentation',
-    description: metadata.description,
-    url: 'https://allmcps.com/docs/api',
-    author: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
+    '@graph': [
+      {
+        '@type': 'TechArticle',
+        headline: 'AllMCPs Directory API Documentation',
+        description: metadata.description,
+        url: 'https://allmcps.com/docs/api',
+        author: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+          { '@type': 'ListItem', position: 2, name: 'Documentation', item: 'https://allmcps.com/docs/api' },
+          { '@type': 'ListItem', position: 3, name: 'API Reference', item: 'https://allmcps.com/docs/api' },
+        ],
+      },
+    ],
   };
 
   return (

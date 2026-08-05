@@ -24,8 +24,42 @@ export default async function WindsurfMcpPage() {
   const allServers = await getActiveServers();
   const topServers = allServers.slice(0, 12);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'TechArticle',
+        name: 'Best MCP Servers for Windsurf Cascade',
+        description: 'Guide to configuring Model Context Protocol (MCP) servers in Codeium Windsurf Cascade editor.',
+        url: 'https://allmcps.com/mcp-for-windsurf',
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'Where is the Windsurf mcp_config.json file located?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'The configuration file is located at ~/.codeium/windsurf/mcp_config.json.',
+            },
+          },
+        ],
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+          { '@type': 'ListItem', position: 2, name: 'Clients', item: 'https://allmcps.com/clients' },
+          { '@type': 'ListItem', position: 3, name: 'Windsurf', item: 'https://allmcps.com/mcp-for-windsurf' },
+        ],
+      },
+    ],
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <main className="container page-shell" style={{ paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-16)' }}>
         <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
           <ol className="breadcrumb">

@@ -47,6 +47,14 @@ export default async function ClaudeDesktopMcpPage() {
           },
         ],
       },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+          { '@type': 'ListItem', position: 2, name: 'Clients', item: 'https://allmcps.com/clients' },
+          { '@type': 'ListItem', position: 3, name: 'Claude Desktop', item: 'https://allmcps.com/mcp-for-claude-desktop' },
+        ],
+      },
     ],
   };
 

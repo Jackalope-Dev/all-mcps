@@ -635,58 +635,7 @@ export default function DirectoryGrid({
             ))}
           </div>
 
-          {/* 3-Step Visual Feature Workflow */}
-          <div className="how-it-works-section">
-            <div className="how-it-works-header">
-              <div className="how-it-works-title">
-                <Terminal size={22} style={{ color: 'var(--brand-cyan)' }} />
-                <span>How Model Context Protocol Works</span>
-              </div>
-              <p className="how-it-works-subtitle">
-                Connect your preferred AI client to real-world tools and data sources in 3 simple steps
-              </p>
-            </div>
-            <div className="how-it-works-grid">
-              <div className="how-step-card">
-                <div className="how-step-top">
-                  <div className="how-step-icon-box">
-                    <Search size={20} />
-                  </div>
-                  <span className="how-step-number">Step 1</span>
-                </div>
-                <h3 className="how-step-heading">Discover Your Server</h3>
-                <p className="how-step-desc">
-                  Browse over 1,000+ verified MCP servers for Postgres, GitHub, Slack, Puppeteer, local filesystem, and cloud APIs.
-                </p>
-              </div>
 
-              <div className="how-step-card">
-                <div className="how-step-top">
-                  <div className="how-step-icon-box">
-                    <Copy size={20} />
-                  </div>
-                  <span className="how-step-number">Step 2</span>
-                </div>
-                <h3 className="how-step-heading">Copy 1-Click Config</h3>
-                <p className="how-step-desc">
-                  Instantly copy pre-built JSON configuration blocks tailored for Claude Desktop, Cursor, Cline, Windsurf, or Continue.
-                </p>
-              </div>
-
-              <div className="how-step-card">
-                <div className="how-step-top">
-                  <div className="how-step-icon-box">
-                    <Zap size={20} />
-                  </div>
-                  <span className="how-step-number">Step 3</span>
-                </div>
-                <h3 className="how-step-heading">Supercharge AI Agents</h3>
-                <p className="how-step-desc">
-                  Your AI assistant immediately gains native tool execution, database query capabilities, and context retrieval securely.
-                </p>
-              </div>
-            </div>
-          </div>
         </section>
       )}
 

@@ -102,6 +102,16 @@ const tocItems: TocItem[] = [
   { id: 'further-reading', text: 'Further Reading' },
 ];
 
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+    { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://allmcps.com/guides' },
+    { '@type': 'ListItem', position: 3, name: 'Build an MCP Server', item: 'https://allmcps.com/build-mcp-server' },
+  ],
+};
+
 export default function BuildMCPServerPage() {
   return (
     <main className="page-shell page-shell--default">
@@ -113,6 +123,10 @@ export default function BuildMCPServerPage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">

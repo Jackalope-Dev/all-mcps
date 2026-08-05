@@ -27,7 +27,7 @@ import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { parseServerName } from '../../../lib/displayName';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 import { bestTopicForCategory } from '../../../lib/bestTopics';
-import { categorySlug } from '../../../lib/categories';
+import { categorySlug, getCategoryMeta } from '../../../lib/categories';
 import { ToolSchemaInspector } from '../../../components/ui/ToolSchemaInspector';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
@@ -151,6 +151,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   const readme = await fetchReadme(server.url);
   const relatedServers = await getRelatedServers(server as any, 4);
   const { displayName, org } = parseServerName(server.name);
+  const catMeta = getCategoryMeta(server.category);
 
   // Drives the health dot by the display name — replaces both the old "Verified Active"
   // row badge and the big sidebar Status card with one tooltip-bearing indicator.
@@ -364,8 +365,26 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   : 'No health check has run yet.'}
               </span>
             </IconTooltip>
-            <h1 className="text-page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.45rem' }}>
-              {displayName}
+            <h1 className="text-page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <span>{displayName}</span>
+              <Badge
+                variant="category"
+                href={`/browse?category=${encodeURIComponent(server.category)}`}
+                style={{
+                  background: catMeta.bgTint,
+                  color: catMeta.color,
+                  borderColor: catMeta.borderTint,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  verticalAlign: 'middle',
+                }}
+              >
+                <span aria-hidden="true">{catMeta.emoji}</span>
+                <span>{catMeta.label}</span>
+              </Badge>
               {server.isPremium && (
                 <IconTooltip
                   label="Premium listing"
@@ -395,38 +414,51 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   </span>
                 </IconTooltip>
               )}
+              {server.websiteVerified && (
+                <Badge variant="success">Website verified</Badge>
+              )}
+              {isFeaturedListing(server) && (
+                <Badge
+                  variant="success"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
+                    color: '#00E5FF',
+                    borderColor: 'rgba(0,229,255,0.35)',
+                  }}
+                >
+                  ★ Featured
+                </Badge>
+              )}
             </h1>
           </div>
           {org && (
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
               {org}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-            <Badge variant="category" href={`/browse?category=${encodeURIComponent(server.category)}`}>
-              {server.category}
-            </Badge>
-            {server.websiteVerified && (
-              <Badge variant="success">Website verified</Badge>
-            )}
-            {isFeaturedListing(server) && (
-              <Badge
-                variant="success"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
-                  color: '#00E5FF',
-                  borderColor: 'rgba(0,229,255,0.35)',
-                }}
-              >
-                ★ Featured
-              </Badge>
-            )}
-          </div>
-          <div className="listing-metrics-row" style={{ marginBottom: '1.25rem' }}>
-            <ViewTracker serverId={server.id} initialCount={server.views || 0} />
-            <InstallsStat count={server.copies || 0} />
-            <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
-            <ShareModal serverId={server.id} serverName={server.name} variant="mini" />
+
+          {/* Grouped Engagement Stats (Views, Installs, Upvotes) + Distinct Share Action */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                padding: '0.4rem 0.85rem',
+                borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-color)',
+              }}
+            >
+              <ViewTracker serverId={server.id} initialCount={server.views || 0} />
+              <div style={{ width: '1px', height: '14px', background: 'var(--border-color)' }} />
+              <InstallsStat count={server.copies || 0} />
+              <div style={{ width: '1px', height: '14px', background: 'var(--border-color)' }} />
+              <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ShareModal serverId={server.id} serverName={server.name} variant="mini" />
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
@@ -771,6 +803,48 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         {/* Sidebar (Right Column) */}
         <div className="detail-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
+          {/* At a Glance Technical Summary Card */}
+          <div className="surface" style={{ padding: '1.5rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+              <Terminal size={18} style={{ color: 'var(--brand-cyan)' }} />
+              <span>At a Glance</span>
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.6rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Transport</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com')) ? 'SSE (Remote)' : 'STDIO'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.6rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Runtime</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {(() => {
+                    const cmd = (server.installCommand || '').toLowerCase();
+                    const desc = (server.description || '').toLowerCase();
+                    if (cmd.includes('uvx') || cmd.includes('python') || cmd.includes('pip') || desc.includes('python')) return 'Python';
+                    if (cmd.includes('docker') || desc.includes('docker')) return 'Docker';
+                    if (cmd.includes('go') || desc.includes('golang')) return 'Go';
+                    return 'Node.js';
+                  })()}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.6rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Health Check</span>
+                <span style={{ fontWeight: 600, color: healthUi.color, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: healthUi.color, display: 'inline-block' }} />
+                  {healthKey === 'active' ? 'Active' : healthKey === 'down' ? 'Issues' : 'Unknown'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Category</span>
+                <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: catMeta.color, textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span aria-hidden="true">{catMeta.emoji}</span>
+                  <span>{catMeta.label}</span>
+                </Link>
+              </div>
+            </div>
+          </div>
 
           {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) — rotates between paid
               featured listings and the self-serve upsell */}
@@ -913,88 +987,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </div>
             </div>
           )}
-
-          <div className="surface" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '0.85rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Official Links</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <OutboundLink
-                href={server.url}
-                destinationType="github"
-                serverId={server.id}
-                target="_blank"
-                rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.5rem 1rem',
-                  minHeight: '42px',
-                  boxSizing: 'border-box',
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                  borderRadius: '10px',
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  border: '1px solid rgba(255,255,255,0.14)',
-                  color: 'var(--text-primary)',
-                  textDecoration: 'none',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                  <FolderGit2 size={18} style={{ color: 'var(--accent-color)' }} />
-                  <span>View Repository</span>
-                </div>
-                {typeof server.githubStars === 'number' && server.githubStars > 0 && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.2rem',
-                      padding: '0.15rem 0.45rem',
-                      borderRadius: '6px',
-                      background: 'rgba(250, 204, 21, 0.12)',
-                      color: '#facc15',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      lineHeight: 1,
-                    }}
-                  >
-                    <Star size={11} fill="#facc15" color="#facc15" />
-                    {server.githubStars >= 1000 ? `${(server.githubStars / 1000).toFixed(1)}k` : server.githubStars}
-                  </span>
-                )}
-              </OutboundLink>
-              {server.websiteUrl && (
-                <OutboundLink
-                  href={server.websiteUrl}
-                  destinationType="website"
-                  serverId={server.id}
-                  target="_blank"
-                  rel={websiteLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.5rem 1rem',
-                    minHeight: '42px',
-                    boxSizing: 'border-box',
-                    background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.12), rgba(0, 123, 255, 0.08))',
-                    borderRadius: '10px',
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    border: '1px solid rgba(0, 229, 255, 0.35)',
-                    color: '#00E5FF',
-                    textDecoration: 'none',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                    <Globe size={18} color="#00E5FF" />
-                    <span>Visit Website</span>
-                  </div>
-                  <ExternalLink size={14} style={{ opacity: 0.85 }} />
-                </OutboundLink>
-              )}
-            </div>
-          </div>
 
           {!server.isOfficial ? (
             <div className="surface" style={{ padding: '1.5rem', borderColor: 'rgba(0,229,255,0.35)' }}>
