@@ -3682,6 +3682,32 @@ nav[aria-label="Table of contents"] {
     padding: 0.4rem 0.85rem;
   }
 
+  /* Trust-signal stats strip: scroll horizontally on mobile instead of
+     wrapping into a tall multi-line blob. */
+  .stats-banner {
+    padding: 0 var(--space-4);
+    justify-content: flex-start;
+  }
+
+  .stats-banner-pill {
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  .stats-banner-pill::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stats-banner-pill > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   .breadcrumb {
     flex-wrap: wrap;
     row-gap: 0.35rem;
