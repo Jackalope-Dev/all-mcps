@@ -1,0 +1,11 @@
+# Always revalidate the service worker script so the recovery worker in sw.js
+# (which clears stale caches and unregisters old, aggressive service workers)
+# propagates to affected browsers immediately instead of being pinned by an
+# HTTP cache. Without this, a browser stuck on an old cached app shell can keep
+# serving HTML that references deleted hashed JS chunks — the chunks 404, React
+# never hydrates, and every interactive control (mobile menu, theme switcher,
+# share modal, browse feed) silently stops working while static HTML still renders.
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
