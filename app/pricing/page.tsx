@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { PricingClient } from './PricingClient';
-import { PAID_PRODUCTS, FREE_TIER, formatUsd, type PaidSku } from '../../lib/pricing';
+import { PAID_PRODUCTS, FREE_TIER, formatUsd, tieredSavingsPct, type PaidSku } from '../../lib/pricing';
 
 export const metadata: Metadata = {
   title: 'Pricing — Free & Featured MCP Server Listings',
@@ -331,7 +331,18 @@ export default async function PricingPage({
                 </div>
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', fontWeight: 700 }}>{p.name}</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>{p.tagline}</p>
-                <p style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.35rem' }}>{formatUsd(p.unitAmount)}</p>
+                <p style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.35rem' }}>
+                  {formatUsd(p.unitAmount)}
+                  {p.weeklyTiers && (
+                    <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>/wk</span>
+                  )}
+                </p>
+                {p.weeklyTiers && (
+                  <p style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, marginBottom: '0.75rem' }}>
+                    Buy {p.maxWeeks || 8} weeks, pick your duration at checkout — save up to{' '}
+                    {tieredSavingsPct(p, p.maxWeeks || 8)}%
+                  </p>
+                )}
                 {p.placementHint && (
                   <p style={{ fontSize: '0.75rem', color: isCategorySponsor ? 'var(--gold-color)' : 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
                     📌 {p.placementHint}

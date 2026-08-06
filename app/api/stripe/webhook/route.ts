@@ -19,7 +19,7 @@ function addDays(from: Date, days: number): Date {
   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
-async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
+async function applyCheckoutCompleted(session: Stripe.Checkout.Session, stripe: Stripe) {
   const serverId = session.metadata?.serverId || session.client_reference_id;
   const sku = (session.metadata?.sku || '') as PaidSku;
   if (!serverId || !sku) {
@@ -47,6 +47,19 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
       })
       .where(eq(servers.id, serverId));
   } else if (sku === 'featured_7d' || sku === 'category_sponsor_7d') {
+    // Both SKUs are sold in weekly blocks against a volume-tiered Stripe Price — quantity IS
+    // weeks. adjustable_quantity lets the customer change it on Stripe's own Checkout page, so
+    // the metadata set at session-creation time can be stale; re-read the actual purchased
+    // quantity from the line item rather than assuming 1 week.
+    let weeks = 1;
+    try {
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
+      weeks = lineItems.data[0]?.quantity || 1;
+    } catch (err) {
+      console.error(`Failed to read line item quantity for session ${session.id}, defaulting to 1 week:`, err);
+    }
+    const durationDays = 7 * weeks;
+
     const base =
       current?.featuredUntil && new Date(current.featuredUntil).getTime() > Date.now()
         ? new Date(current.featuredUntil)
@@ -63,9 +76,9 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
     await db
       .update(servers)
       .set({
-        featuredUntil: addDays(base, 7),
+        featuredUntil: addDays(base, durationDays),
         ...(sku === 'category_sponsor_7d'
-          ? { categorySponsorUntil: addDays(categorySponsorBase, 7) }
+          ? { categorySponsorUntil: addDays(categorySponsorBase, durationDays) }
           : {}),
         ...(customerId ? { stripeCustomerId: customerId } : {}),
       })
@@ -193,7 +206,7 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
       case 'checkout.session.completed':
-        await applyCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        await applyCheckoutCompleted(event.data.object as Stripe.Checkout.Session, stripe);
         break;
       case 'customer.subscription.updated':
         await applySubscriptionUpdated(event.data.object as Stripe.Subscription);

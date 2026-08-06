@@ -48,8 +48,10 @@ export function middleware(req: NextRequest) {
   } else if (pathname === '/openapi.json') {
     response = NextResponse.rewrite(new URL('/api/v1/openapi.json', req.url));
   }
-  // 2. Existing MCP Markdown rewrite
-  else if (pathname.startsWith('/mcp/')) {
+  // 2. Existing MCP Markdown rewrite — single-segment /mcp/{id} only (with or without
+  // .md), so deeper sub-paths like /mcp/{id}/alternatives and /mcp/{id}/vs/{other}
+  // fall through to branch 3 instead of being misparsed as a bogus server id.
+  else if (pathname.startsWith('/mcp/') && !pathname.slice('/mcp/'.length).includes('/')) {
     const isMarkdownAccept = acceptHeader.includes('text/markdown');
     const isMarkdownFormat = searchParams.get('format') === 'md';
     const isDotMdPath = pathname.endsWith('.md');

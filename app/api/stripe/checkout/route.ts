@@ -9,6 +9,8 @@ const bodySchema = z.object({
   sku: z.enum(['priority_review', 'featured_7d', 'category_sponsor_7d', 'premium_monthly']),
   email: z.string().email().optional(),
   coupon: z.string().optional(),
+  /** Weeks to purchase — only meaningful for featured_7d / category_sponsor_7d (volume-tiered). */
+  weeks: z.number().int().min(1).max(8).optional(),
 });
 
 export async function POST(req: Request) {
@@ -31,13 +33,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid request payload', details: parsed.error.issues }, { status: 400 });
     }
 
-    const { serverId, sku, email, coupon } = parsed.data;
+    const { serverId, sku, email, coupon, weeks } = parsed.data;
 
     const result = await createStripeCheckoutSession({
       serverId,
       sku: sku as PaidSku,
       email,
       coupon,
+      weeks,
       env,
     });
 

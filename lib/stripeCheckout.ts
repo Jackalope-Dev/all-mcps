@@ -9,6 +9,8 @@ export type CreateCheckoutParams = {
   sku: PaidSku;
   email?: string;
   coupon?: string;
+  /** Weeks to purchase — only applied for volume-tiered SKUs (featured_7d, category_sponsor_7d). */
+  weeks?: number;
   env?: any;
 };
 
@@ -36,7 +38,7 @@ function appendPrefilledPromoCode(url: string, code: string): string {
 }
 
 export async function createStripeCheckoutSession(params: CreateCheckoutParams): Promise<CreateCheckoutResult> {
-  let { serverId, sku, email, coupon, env } = params;
+  let { serverId, sku, email, coupon, weeks, env } = params;
 
   if (!env || !env.DB || !env.STRIPE_SECRET_KEY) {
     try {
@@ -150,9 +152,26 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
       ? `/submit?paid=priority&id=${encodeURIComponent(serverId)}`
       : `/mcp/${encodeURIComponent(serverId)}?paid=${encodeURIComponent(sku)}`;
 
+  // Weekly-tiered products (featured_7d, category_sponsor_7d) are sold in blocks of weeks against
+  // a Stripe `tiered`/`volume` Price — quantity IS weeks. adjustable_quantity lets the customer
+  // change it on Stripe's own Checkout page too, so the webhook re-reads the final line item
+  // quantity rather than trusting this initial value.
+  const isWeeklyTiered = !!product.weeklyTiers;
+  const initialWeeks = isWeeklyTiered
+    ? Math.min(product.maxWeeks || 8, Math.max(1, Math.round(weeks || 1)))
+    : 1;
+
   const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     mode: product.mode,
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [
+      isWeeklyTiered
+        ? {
+            price: priceId,
+            quantity: initialWeeks,
+            adjustable_quantity: { enabled: true, minimum: 1, maximum: product.maxWeeks || 8 },
+          }
+        : { price: priceId, quantity: 1 },
+    ],
     success_url: `${appUrl}${successPath}`,
     cancel_url: `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&canceled=1`,
     metadata: {

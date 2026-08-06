@@ -5,14 +5,22 @@ import {
   renderBlogIndexMarkdown,
   renderCategoryMarkdown,
   renderCategoryIndexMarkdown,
+  renderBestTopicMarkdown,
+  renderBestIndexMarkdown,
+  renderClientMarkdown,
+  renderClientIndexMarkdown,
+  renderPromptMarkdown,
+  renderPromptIndexMarkdown,
+  renderAlternativesMarkdown,
+  renderCompareMarkdown,
 } from '@/lib/agentMarkdown';
 
 // This route is always reached via middleware.ts rewriting many different client
 // paths (e.g. /blog, /pricing, /categories/{slug}) onto this SAME destination
-// pathname, distinguished only by the `path` query param. Route Handlers are
-// cached by Next by default, and that cache is keyed by pathname — without this,
-// every rewrite target collapses onto whichever response was cached first,
-// regardless of `path`. Force fully dynamic, uncached execution per request.
+// pathname, distinguished by the x-agent-markdown-path request header middleware
+// sets on the rewrite (see middleware.ts for why — a query param on the rewrite
+// target doesn't reach this handler). Force fully dynamic, uncached execution so
+// Next never serves a cached response for one path in place of another.
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -25,6 +33,11 @@ export async function GET(req: NextRequest) {
 
   const blogPostMatch = path.match(/^\/blog\/([^/]+)\/?$/);
   const categoryMatch = path.match(/^\/categories\/([^/]+)\/?$/);
+  const bestTopicMatch = path.match(/^\/best\/([^/]+)\/?$/);
+  const clientMatch = path.match(/^\/clients\/([^/]+)\/?$/);
+  const promptMatch = path.match(/^\/prompts\/([^/]+)\/?$/);
+  const compareMatch = path.match(/^\/mcp\/([^/]+)\/vs\/([^/]+)\/?$/);
+  const alternativesMatch = path.match(/^\/mcp\/([^/]+)\/alternatives\/?$/);
 
   let markdown: string | null;
 
@@ -61,6 +74,22 @@ Perform programmatic queries against our directory:
     markdown = await renderCategoryIndexMarkdown();
   } else if (categoryMatch) {
     markdown = await renderCategoryMarkdown(categoryMatch[1]);
+  } else if (path === '/best' || path === '/best/') {
+    markdown = await renderBestIndexMarkdown();
+  } else if (bestTopicMatch) {
+    markdown = await renderBestTopicMarkdown(bestTopicMatch[1]);
+  } else if (path === '/clients' || path === '/clients/') {
+    markdown = await renderClientIndexMarkdown();
+  } else if (clientMatch) {
+    markdown = await renderClientMarkdown(clientMatch[1]);
+  } else if (path === '/prompts' || path === '/prompts/') {
+    markdown = await renderPromptIndexMarkdown();
+  } else if (promptMatch) {
+    markdown = await renderPromptMarkdown(promptMatch[1]);
+  } else if (compareMatch) {
+    markdown = await renderCompareMarkdown(compareMatch[1], compareMatch[2]);
+  } else if (alternativesMatch) {
+    markdown = await renderAlternativesMarkdown(alternativesMatch[1]);
   } else {
     markdown = `# AllMCPs - Path: ${path}
 

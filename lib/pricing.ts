@@ -5,11 +5,14 @@
 
 export type PaidSku = 'priority_review' | 'featured_7d' | 'category_sponsor_7d' | 'premium_monthly';
 
+/** One volume-pricing tier: weeks <= upToWeeks (or unbounded if null) are billed at unitAmount/week. */
+export type WeeklyTier = { upToWeeks: number | null; unitAmount: number };
+
 export type PaidProduct = {
   sku: PaidSku;
   name: string;
   tagline: string;
-  /** Display price in USD cents */
+  /** Display price in USD cents (1-week rate for weekly-tiered products) */
   unitAmount: number;
   interval: 'one_time' | 'month';
   mode: 'payment' | 'subscription';
@@ -19,7 +22,38 @@ export type PaidProduct = {
   badgeText?: string;
   placementHint?: string;
   targetAudience?: string;
+  /**
+   * Present only for products sold in multi-week blocks (featured_7d, category_sponsor_7d).
+   * The Stripe Price behind priceEnv must be a `billing_scheme: 'tiered'`, `tiers_mode: 'volume'`
+   * price whose tiers match this table exactly — this is the client-side mirror used to preview
+   * totals before checkout. maxWeeks is enforced both here and as Checkout's adjustable_quantity cap.
+   */
+  weeklyTiers?: WeeklyTier[];
+  maxWeeks?: number;
 };
+
+/** Per-week unit price at a given quantity, per the product's volume tiers (flat unitAmount if untiered). */
+export function tieredUnitPrice(product: PaidProduct, weeks: number): number {
+  if (!product.weeklyTiers || product.weeklyTiers.length === 0) return product.unitAmount;
+  const tier =
+    product.weeklyTiers.find((t) => t.upToWeeks !== null && weeks <= t.upToWeeks) ??
+    product.weeklyTiers[product.weeklyTiers.length - 1];
+  return tier.unitAmount;
+}
+
+/** Total cents for buying `weeks` of a tiered product (Stripe volume tiering: all units at the reached tier's rate). */
+export function tieredTotal(product: PaidProduct, weeks: number): number {
+  return tieredUnitPrice(product, weeks) * weeks;
+}
+
+/** % saved per week at this quantity vs. the 1-week rate, rounded to the nearest whole percent (0 if no discount). */
+export function tieredSavingsPct(product: PaidProduct, weeks: number): number {
+  if (!product.weeklyTiers) return 0;
+  const base = product.weeklyTiers[0]?.unitAmount ?? product.unitAmount;
+  const current = tieredUnitPrice(product, weeks);
+  if (base <= 0) return 0;
+  return Math.round((1 - current / base) * 100);
+}
 
 /**
  * The free submission tier. Not a Stripe product — kept separate from
@@ -87,13 +121,19 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
       '★ Featured badge in browse grid & search results',
       'Higher ranking weight across homepage discovery',
       'Glowing card border highlighting your listing',
-      'Expires automatically after 7 days',
+      'Runs for as many weeks as you buy',
     ],
+    weeklyTiers: [
+      { upToWeeks: 1, unitAmount: 1200 },
+      { upToWeeks: 3, unitAmount: 1080 },
+      { upToWeeks: null, unitAmount: 900 },
+    ],
+    maxWeeks: 8,
   },
   category_sponsor_7d: {
     sku: 'category_sponsor_7d',
     name: 'Category sponsor',
-    tagline: '7 days top-of-category sponsorship',
+    tagline: 'Top-of-category sponsorship',
     unitAmount: 1800,
     interval: 'one_time',
     mode: 'payment',
@@ -102,11 +142,16 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     placementHint: 'Pinned #1 spot on your specific category page.',
     targetAudience: 'Tools aiming to capture high-intent category visitors',
     benefits: [
-      '★ Pinned #1 spot in your category for 7 days',
+      '★ Pinned #1 spot in your category, for as many weeks as you buy',
       'Crown & Category Sponsor banner on category page',
       'Top exposure to users searching specifically for your niche',
-      'Expires automatically after 7 days',
     ],
+    weeklyTiers: [
+      { upToWeeks: 1, unitAmount: 1800 },
+      { upToWeeks: 3, unitAmount: 1620 },
+      { upToWeeks: null, unitAmount: 1350 },
+    ],
+    maxWeeks: 8,
   },
   premium_monthly: {
     sku: 'premium_monthly',
