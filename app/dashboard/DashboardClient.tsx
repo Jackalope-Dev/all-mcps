@@ -27,6 +27,7 @@ type Server = {
   isPremium?: boolean;
   status?: string;
   featuredUntil?: string | null;
+  categorySponsorUntil?: string | null;
   websiteVerified?: boolean;
   isOfficial?: boolean;
   reciprocalBadgeOk?: boolean;
@@ -311,7 +312,9 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                     {server.isPremium && <span style={premiumBadgeStyle}>★ Premium</span>}
                     {pending && <span style={pendingBadgeStyle}>Awaiting Review</span>}
                     {server.featuredUntil && new Date(server.featuredUntil).getTime() > Date.now() && (
-                      <span style={boostBadgeStyle}>⚡ Active Boost</span>
+                      <span style={boostBadgeStyle}>
+                        ⚡ Boosted until {new Date(server.featuredUntil).toLocaleDateString()}
+                      </span>
                     )}
                   </div>
                   <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -345,6 +348,22 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                     }}
                   />
                 </label>
+                <button
+                  type="button"
+                  onClick={() => setTab(server.id, 'boost')}
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    fontSize: '0.8rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    color: '#F59E0B',
+                    borderColor: 'rgba(245, 158, 11, 0.3)',
+                  }}
+                >
+                  <Sparkles size={14} /> Boost
+                </button>
                 <Link
                   href={`/mcp/${server.id}`}
                   className="btn btn-secondary"
@@ -475,7 +494,15 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                     </span>
                   )}
                 </div>
-                <PremiumUpgrade serverId={server.id} listingStatus={server.status || 'active'} isPremium={server.isPremium} compact showAll />
+                <PremiumUpgrade
+                  serverId={server.id}
+                  listingStatus={server.status || 'active'}
+                  isPremium={server.isPremium}
+                  featuredUntil={server.featuredUntil}
+                  categorySponsorUntil={server.categorySponsorUntil}
+                  compact
+                  showAll
+                />
               </div>
             )}
 
@@ -639,17 +666,22 @@ function StatPill({ icon, label, value, accent, trend }: { icon: React.ReactNode
     <div style={{
       display: 'flex', flexDirection: 'column', gap: '0.4rem',
       background: accent ? 'rgba(var(--accent-rgb), 0.08)' : 'rgba(255,255,255,0.03)',
-      padding: '0.6rem 0.75rem', borderRadius: '10px', minWidth: '104px',
+      padding: '0.6rem 0.75rem', borderRadius: '10px', minWidth: 0,
       border: `1px solid ${accent ? 'rgba(var(--accent-rgb), 0.2)' : 'var(--border-color)'}`,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+      {/* Fixed height so the value below always sits at the same offset,
+          whether or not this pill has a trend badge and regardless of
+          label length (which is kept to one line — see minWidth:0 + nowrap
+          + ellipsis on the label span below). */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', height: '1rem' }}>
         <span style={{
-          display: 'flex', alignItems: 'center', gap: '0.3rem',
+          display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0,
           fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
           color: accent ? 'var(--accent-color)' : 'var(--text-secondary)',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {icon}
-          {label}
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
         </span>
         {trend && <TrendIndicator trend={trend} compact />}
       </div>
@@ -912,7 +944,7 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
 
 const globalSummaryContainerStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(172px, 1fr))',
   gap: '1rem',
 };
 
@@ -926,18 +958,28 @@ const summaryMetricCardStyle: CSSProperties = {
   gap: '0.35rem',
 };
 
+// Fixed height + nowrap/ellipsis so every card's label occupies identical
+// vertical space regardless of text length — otherwise a longer label (e.g.
+// "Claimed Listings") wraps to two lines on narrow cards and pushes that
+// card's number down relative to its neighbors.
 const summaryLabelStyle: CSSProperties = {
   fontSize: '0.75rem',
   color: 'var(--text-secondary)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
   fontWeight: 600,
+  height: '1rem',
+  lineHeight: '1rem',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
 };
 
 const summaryValueStyle: CSSProperties = {
   fontSize: '1.5rem',
   fontWeight: 800,
   color: 'var(--text-primary)',
+  lineHeight: 1.2,
 };
 
 const cardStyle: CSSProperties = {
@@ -1039,7 +1081,7 @@ const tabBadgeAlertStyle: CSSProperties = {
 
 const quickStatsRowStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(104px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
   gap: '0.6rem',
 };
 

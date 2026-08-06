@@ -2574,6 +2574,12 @@ nav[aria-label="Table of contents"] {
   }
 
   .directory-search-input-wrap {
+    /* The base rule sets `flex: 1` (flex-basis: 0%), and flex-basis wins
+       over `width` for sizing a flex item's main axis — so `width: 100%`
+       alone never forced this onto its own row; it just squeezed in next to
+       the category select and button. `flex-basis: 100%` is what actually
+       makes it claim the full row and wrap the rest below it. */
+    flex: 1 1 100%;
     width: 100%;
   }
 

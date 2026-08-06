@@ -28,6 +28,9 @@ type OwnedServer = {
   logoUrl?: string | null;
   pendingLogoKey?: string | null;
   isPremium: boolean;
+  status: string;
+  featuredUntil: Date | null;
+  categorySponsorUntil: Date | null;
   websiteVerified: boolean;
   isOfficial: boolean;
   reciprocalBadgeOk: boolean;
@@ -57,6 +60,9 @@ async function getOwnedServers(userId: string): Promise<{
           logoUrl: servers.logoUrl,
           pendingLogoKey: servers.pendingLogoKey,
           isPremium: servers.isPremium,
+          status: servers.status,
+          featuredUntil: servers.featuredUntil,
+          categorySponsorUntil: servers.categorySponsorUntil,
           websiteVerified: servers.websiteVerified,
           isOfficial: servers.isOfficial,
           reciprocalBadgeOk: servers.reciprocalBadgeOk,

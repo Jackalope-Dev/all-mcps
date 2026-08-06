@@ -17,7 +17,12 @@ type Props = {
   showAll?: boolean;
   /** SKU the user picked before finding their listing (e.g. from a pricing card CTA) — sorted first and visually emphasized. */
   highlightSku?: PaidSku | null;
+  /** Current featured/category-sponsor expiry, if any — lets the weeks stepper preview the resulting end date (purchases stack onto remaining time rather than replacing it). */
+  featuredUntil?: string | Date | null;
+  categorySponsorUntil?: string | Date | null;
 };
+
+const DATE_FORMAT: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
 
 const ICONS: Record<PaidSku, ReactNode> = {
   priority_review: <Zap size={18} />,
@@ -34,6 +39,8 @@ export function PremiumUpgrade({
   compact = false,
   showAll = false,
   highlightSku = null,
+  featuredUntil = null,
+  categorySponsorUntil = null,
 }: Props) {
   const [loadingSku, setLoadingSku] = useState<PaidSku | null>(null);
   const [weeksBySku, setWeeksBySku] = useState<Partial<Record<PaidSku, number>>>({});
@@ -41,6 +48,15 @@ export function PremiumUpgrade({
   const getWeeks = (sku: PaidSku) => weeksBySku[sku] ?? 1;
   const setWeeks = (sku: PaidSku, weeks: number, maxWeeks: number) =>
     setWeeksBySku((prev) => ({ ...prev, [sku]: Math.min(maxWeeks, Math.max(1, weeks)) }));
+
+  // Purchases stack onto remaining active time rather than replacing it (see the webhook),
+  // so "buy N weeks" only tells half the story — show what date it actually runs until.
+  const resultDateFor = (sku: PaidSku, weeks: number): Date => {
+    const current = sku === 'category_sponsor_7d' ? categorySponsorUntil : featuredUntil;
+    const currentMs = current ? new Date(current).getTime() : 0;
+    const base = currentMs > Date.now() ? new Date(currentMs) : new Date();
+    return new Date(base.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+  };
 
   const visible = (Object.keys(PAID_PRODUCTS) as PaidSku[])
     .filter((sku) => {
@@ -251,6 +267,17 @@ export function PremiumUpgrade({
                     {loadingSku === sku ? '…' : `Get ${weeks}wk — ${formatUsd(total)}`}
                   </button>
                 </div>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  → Runs until{' '}
+                  <strong style={{ color: 'var(--text-primary)' }}>
+                    {resultDateFor(sku, weeks).toLocaleDateString('en-US', DATE_FORMAT)}
+                  </strong>
+                  {(() => {
+                    const current = sku === 'category_sponsor_7d' ? categorySponsorUntil : featuredUntil;
+                    const currentMs = current ? new Date(current).getTime() : 0;
+                    return currentMs > Date.now() ? ' (stacks onto your remaining time)' : '';
+                  })()}
+                </p>
               </div>
             );
           }
@@ -258,33 +285,40 @@ export function PremiumUpgrade({
           const priceLabel =
             p.interval === 'month' ? `${formatUsd(p.unitAmount)}/mo` : formatUsd(p.unitAmount);
           return (
-            <button
-              key={sku}
-              type="button"
-              disabled={loadingSku !== null}
-              onClick={() => startCheckout(sku)}
-              style={{
-                ...rowStyle,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                textAlign: 'left',
-                padding: '0.85rem 1rem',
-                cursor: loadingSku ? 'wait' : 'pointer',
-                opacity: loadingSku && loadingSku !== sku ? 0.6 : 1,
-              }}
-            >
-              <span style={{ color: 'var(--accent-color)', display: 'flex' }}>{ICONS[sku]}</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                {nameRow}
-                <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  {p.tagline}
+            <div key={sku}>
+              <button
+                type="button"
+                disabled={loadingSku !== null}
+                onClick={() => startCheckout(sku)}
+                style={{
+                  ...rowStyle,
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  textAlign: 'left',
+                  padding: '0.85rem 1rem',
+                  cursor: loadingSku ? 'wait' : 'pointer',
+                  opacity: loadingSku && loadingSku !== sku ? 0.6 : 1,
+                }}
+              >
+                <span style={{ color: 'var(--accent-color)', display: 'flex' }}>{ICONS[sku]}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  {nameRow}
+                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    {p.tagline}
+                  </span>
                 </span>
-              </span>
-              <span style={{ fontWeight: 800, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                {loadingSku === sku ? '…' : priceLabel}
-              </span>
-            </button>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                  {loadingSku === sku ? '…' : priceLabel}
+                </span>
+              </button>
+              {sku === 'premium_monthly' && (
+                <p style={{ margin: '0.4rem 0 0', fontSize: '0.7rem', color: 'var(--text-secondary)', paddingLeft: '0.25rem' }}>
+                  Cancel anytime — no long-term lock-in.
+                </p>
+              )}
+            </div>
           );
         })}
 

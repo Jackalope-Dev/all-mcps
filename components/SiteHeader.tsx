@@ -65,16 +65,31 @@ export function SiteHeader() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Lock scroll when mobile menu is open
+  // Lock scroll when mobile menu is open. `overflow: hidden` on <body> looks
+  // like the obvious approach, but it silently breaks .site-header's
+  // `position: sticky` — toggling body's overflow makes it a new scroll
+  // container, so the sticky header's containing block switches away from
+  // the viewport and it stops tracking scroll, jumping off-screen by
+  // exactly the current scrollY (visible as the header "scrolling away" and
+  // leaving a gap above the menu). Freezing body at its current scroll
+  // offset via `position: fixed` locks scroll without touching overflow, so
+  // sticky positioning keeps working normally.
   useEffect(() => {
     if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+      const scrollY = window.scrollY;
+      const { style } = document.body;
+      style.position = 'fixed';
+      style.top = `-${scrollY}px`;
+      style.left = '0';
+      style.right = '0';
+      return () => {
+        style.position = '';
+        style.top = '';
+        style.left = '';
+        style.right = '';
+        window.scrollTo(0, scrollY);
+      };
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [mobileMenuOpen]);
 
   return (

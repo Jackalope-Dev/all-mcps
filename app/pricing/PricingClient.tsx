@@ -21,7 +21,10 @@ export function PricingClient({
   const [listingName, setListingName] = useState<string | null>(null);
   const [listingStatus, setListingStatus] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
+  const [featuredUntil, setFeaturedUntil] = useState<string | null>(null);
+  const [categorySponsorUntil, setCategorySponsorUntil] = useState<string | null>(null);
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'ok' | 'missing'>('idle');
+  const [myListings, setMyListings] = useState<DirectoryServerHit[] | null>(null);
 
   useEffect(() => {
     const id = serverId.trim();
@@ -29,6 +32,8 @@ export function PricingClient({
       setListingName(null);
       setListingStatus(null);
       setIsPremium(false);
+      setFeaturedUntil(null);
+      setCategorySponsorUntil(null);
       setLookupState('idle');
       return;
     }
@@ -45,16 +50,26 @@ export function PricingClient({
           setListingName(null);
           setListingStatus(null);
           setIsPremium(false);
+          setFeaturedUntil(null);
+          setCategorySponsorUntil(null);
           setLookupState('missing');
           return;
         }
         const data = (await res.json()) as {
-          server?: { name?: string; status?: string; isPremium?: boolean };
+          server?: {
+            name?: string;
+            status?: string;
+            isPremium?: boolean;
+            featuredUntil?: string | null;
+            categorySponsorUntil?: string | null;
+          };
         };
         const s = data.server;
         setListingName(s?.name || id);
         setListingStatus(s?.status || 'active');
         setIsPremium(!!s?.isPremium);
+        setFeaturedUntil(s?.featuredUntil || null);
+        setCategorySponsorUntil(s?.categorySponsorUntil || null);
         setLookupState('ok');
       })
       .catch(() => {
@@ -62,6 +77,8 @@ export function PricingClient({
           setListingName(null);
           setListingStatus(null);
           setIsPremium(false);
+          setFeaturedUntil(null);
+          setCategorySponsorUntil(null);
           setLookupState('missing');
         }
       });
@@ -70,6 +87,32 @@ export function PricingClient({
       cancelled = true;
     };
   }, [serverId]);
+
+  // Signed-in users almost always want to boost one of their own listings — skip the
+  // public directory search entirely and offer a one-click pick when we have any.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const sessionRes = await fetch('/api/auth/session');
+        const session = sessionRes.ok ? ((await sessionRes.json()) as { user?: unknown }) : null;
+        if (cancelled || !session?.user) return;
+
+        const listingsRes = await fetch('/api/dashboard/my-listings');
+        const data = listingsRes.ok
+          ? ((await listingsRes.json()) as { listings?: { id: string; name: string; category: string }[] })
+          : null;
+        if (cancelled) return;
+        const listings = data?.listings || [];
+        setMyListings(listings.map((l) => ({ id: l.id, name: l.name, category: l.category, description: '' })));
+      } catch {
+        /* not signed in / session check failed — quick-pick just stays hidden */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const pickServer = (hit: DirectoryServerHit) => {
     setServerId(hit.id);
@@ -139,8 +182,40 @@ export function PricingClient({
         </p>
       )}
 
+      {myListings && myListings.length > 0 && (
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+            Your listings
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {myListings.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => pickServer(l)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: '999px',
+                  border: serverId === l.id ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+                  background: serverId === l.id ? 'rgba(var(--accent-rgb),0.1)' : 'var(--bg-muted)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.825rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {l.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-        Find your listing
+        {myListings && myListings.length > 0 ? 'Or search another listing' : 'Find your listing'}
       </label>
       <div style={{ marginBottom: '0.85rem' }}>
         <ServerPicker onSelect={pickServer} placeholder="Search by name…" />
@@ -194,6 +269,8 @@ export function PricingClient({
           serverId={serverId}
           listingStatus={listingStatus || 'active'}
           isPremium={isPremium}
+          featuredUntil={featuredUntil}
+          categorySponsorUntil={categorySponsorUntil}
           highlightSku={selectedSku}
           compact
           showAll

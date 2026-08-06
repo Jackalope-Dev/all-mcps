@@ -1104,6 +1104,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               serverId={server.id}
               listingStatus={server.status}
               isPremium={!!server.isPremium}
+              featuredUntil={server.featuredUntil}
+              categorySponsorUntil={server.categorySponsorUntil}
             />
           )}
 
