@@ -63,7 +63,6 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                   style={{
                     '--cat-chip-color': catMeta.color,
                     '--cat-chip-light-color': catMeta.lightColor,
-                    color: catMeta.color,
                     fontSize: '0.725rem',
                     fontWeight: 500,
                     opacity: 0.9,

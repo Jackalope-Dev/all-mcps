@@ -669,11 +669,13 @@ function StatPill({ icon, label, value, accent, trend }: { icon: React.ReactNode
       padding: '0.6rem 0.75rem', borderRadius: '10px', minWidth: 0,
       border: `1px solid ${accent ? 'rgba(var(--accent-rgb), 0.2)' : 'var(--border-color)'}`,
     }}>
-      {/* Fixed height so the value below always sits at the same offset,
-          whether or not this pill has a trend badge and regardless of
-          label length (which is kept to one line — see minWidth:0 + nowrap
-          + ellipsis on the label span below). */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', height: '1rem' }}>
+      {/* Fixed height so the value row below always sits at the same
+          offset, regardless of label length (kept to one line — see
+          minWidth:0 + nowrap + ellipsis below). The label row no longer
+          has to share space with the trend badge, which sits next to the
+          number instead — a long label like "Impressions" was getting
+          truncated tighter than it needed to just to make room for it. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0, height: '1rem' }}>
         <span style={{
           display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0,
           fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -683,11 +685,13 @@ function StatPill({ icon, label, value, accent, trend }: { icon: React.ReactNode
           {icon}
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
         </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <span style={{ fontSize: '1.4rem', fontWeight: 800, lineHeight: 1, color: accent ? 'var(--accent-color)' : 'var(--text-primary)' }}>
+          {value.toLocaleString()}
+        </span>
         {trend && <TrendIndicator trend={trend} compact />}
       </div>
-      <span style={{ fontSize: '1.4rem', fontWeight: 800, lineHeight: 1, color: accent ? 'var(--accent-color)' : 'var(--text-primary)' }}>
-        {value.toLocaleString()}
-      </span>
     </div>
   );
 }

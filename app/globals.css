@@ -3989,6 +3989,10 @@ nav[aria-label="Table of contents"] {
   color: var(--accent-secondary);
 }
 
+.marquee-chip-category {
+  color: var(--cat-chip-color, var(--accent-color));
+}
+
 [data-theme="light"] .marquee-chip-category {
   color: var(--cat-chip-light-color, var(--cat-chip-color, var(--accent-color)));
 }
