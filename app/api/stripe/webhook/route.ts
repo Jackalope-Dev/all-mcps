@@ -47,10 +47,10 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session, stripe: 
       })
       .where(eq(servers.id, serverId));
   } else if (sku === 'featured_7d' || sku === 'category_sponsor_7d') {
-    // Both SKUs are sold in weekly blocks against a volume-tiered Stripe Price — quantity IS
-    // weeks. adjustable_quantity lets the customer change it on Stripe's own Checkout page, so
-    // the metadata set at session-creation time can be stale; re-read the actual purchased
-    // quantity from the line item rather than assuming 1 week.
+    // Both SKUs are sold in weekly blocks priced dynamically via price_data (see
+    // createStripeCheckoutSession) — quantity IS weeks. Re-reading it from the line item
+    // (rather than trusting session.metadata) keeps this correct even if Stripe's own line
+    // item representation ever changes; it's the same value either way today.
     let weeks = 1;
     try {
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });

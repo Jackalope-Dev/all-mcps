@@ -295,6 +295,7 @@ p {
 }
 
 .site-header-inner {
+  min-height: var(--header-height);
   padding: 0.625rem 0;
   display: flex;
   justify-content: space-between;
@@ -399,11 +400,19 @@ p {
 }
 
 .mobile-menu-overlay {
+  /* Full-viewport, not offset below the header: the header renders on top
+     (z-index 100 > 99) and is position: sticky, so on mobile browsers where
+     the address bar collapses/expands during scroll a fixed `top` offset
+     tuned to the header's height can drift out of sync and expose a strip
+     of page background between the header and the drawer. Padding the
+     content down instead means any drift just shows more of this overlay's
+     own backdrop, never the page behind it. */
   position: fixed;
-  top: 4rem;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  padding-top: var(--header-height);
   background: rgba(2, 6, 23, 0.9);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
