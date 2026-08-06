@@ -125,6 +125,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://drchecker.net/item/allmcps.com',
     imageUrl: 'https://drchecker.net/api/badge?domain=allmcps.com',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'turbo0',
+    name: 'Listed on Turbo0',
+    href: 'https://turbo0.com/item/allmcps',
+    imageUrl: 'https://img.turbo0.com/badge-listed-light.svg',
+    rel: 'noopener noreferrer'
   }
 ];
 
