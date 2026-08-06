@@ -3625,14 +3625,14 @@ nav[aria-label="Table of contents"] {
 }
 
 .admin-tab-btn:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  background: rgba(128, 128, 128, 0.08);
 }
 
 .admin-tab-btn.active {
-  color: #00E5FF;
-  background: rgba(0, 229, 255, 0.08);
-  border-color: rgba(0, 229, 255, 0.3);
+  color: var(--accent-color);
+  background: rgba(var(--accent-rgb), 0.1);
+  border-color: rgba(var(--accent-rgb), 0.35);
 }
 
 .admin-tab-badge {

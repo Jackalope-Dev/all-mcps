@@ -209,28 +209,44 @@ export default function AdminClient({
             <button
               onClick={() => setModSubTab('submissions')}
               className={`admin-btn ${modSubTab === 'submissions' ? 'admin-btn-primary' : ''}`}
-              style={{ background: modSubTab === 'submissions' ? '#007BFF' : 'rgba(255,255,255,0.05)', color: 'white' }}
+              style={{
+                background: modSubTab === 'submissions' ? 'var(--accent-color)' : 'rgba(128, 128, 128, 0.08)',
+                color: modSubTab === 'submissions' ? '#ffffff' : 'var(--text-secondary)',
+                border: modSubTab === 'submissions' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+              }}
             >
               Submissions ({pending.length})
             </button>
             <button
               onClick={() => setModSubTab('edits')}
               className={`admin-btn ${modSubTab === 'edits' ? 'admin-btn-primary' : ''}`}
-              style={{ background: modSubTab === 'edits' ? '#007BFF' : 'rgba(255,255,255,0.05)', color: 'white' }}
+              style={{
+                background: modSubTab === 'edits' ? 'var(--accent-color)' : 'rgba(128, 128, 128, 0.08)',
+                color: modSubTab === 'edits' ? '#ffffff' : 'var(--text-secondary)',
+                border: modSubTab === 'edits' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+              }}
             >
               Edits ({pendingEdits.length})
             </button>
             <button
               onClick={() => setModSubTab('claims')}
               className={`admin-btn ${modSubTab === 'claims' ? 'admin-btn-primary' : ''}`}
-              style={{ background: modSubTab === 'claims' ? '#007BFF' : 'rgba(255,255,255,0.05)', color: 'white' }}
+              style={{
+                background: modSubTab === 'claims' ? 'var(--accent-color)' : 'rgba(128, 128, 128, 0.08)',
+                color: modSubTab === 'claims' ? '#ffffff' : 'var(--text-secondary)',
+                border: modSubTab === 'claims' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+              }}
             >
               Claims ({pendingClaims.length})
             </button>
             <button
               onClick={() => setModSubTab('logos')}
               className={`admin-btn ${modSubTab === 'logos' ? 'admin-btn-primary' : ''}`}
-              style={{ background: modSubTab === 'logos' ? '#007BFF' : 'rgba(255,255,255,0.05)', color: 'white' }}
+              style={{
+                background: modSubTab === 'logos' ? 'var(--accent-color)' : 'rgba(128, 128, 128, 0.08)',
+                color: modSubTab === 'logos' ? '#ffffff' : 'var(--text-secondary)',
+                border: modSubTab === 'logos' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+              }}
             >
               Logos ({pendingLogos.length})
             </button>
@@ -370,12 +386,12 @@ function ServerTable({
                 <td data-label="Name">
                   <strong>{server.name}</strong>
                   {server.reviewPriority && (
-                    <span className="admin-badge" style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.1)' }}>
+                    <span className="admin-badge" style={{ color: '#d97706', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)' }}>
                       PRIORITY
                     </span>
                   )}
                   {server.isPremium && (
-                    <span className="admin-badge" style={{ color: '#00E5FF', background: 'rgba(0,229,255,0.1)' }}>
+                    <span className="admin-badge" style={{ color: '#0284c7', background: 'rgba(2,132,199,0.15)', border: '1px solid rgba(2,132,199,0.4)' }}>
                       PREMIUM
                     </span>
                   )}

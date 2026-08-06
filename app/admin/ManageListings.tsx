@@ -291,7 +291,14 @@ export default function ManageListings() {
             <button
               onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
               className="admin-btn"
-              style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              style={{
+                background: 'rgba(128, 128, 128, 0.08)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
               title="Toggle sort direction"
             >
               <ArrowUpDown className="w-3.5 h-3.5" /> {sortOrder.toUpperCase()}
@@ -363,14 +370,14 @@ export default function ManageListings() {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '1rem',
-                  borderLeft: listing.isPremium ? '4px solid #00E5FF' : '1px solid var(--border-color)',
+                  borderLeft: listing.isPremium ? '4px solid var(--accent-color)' : '1px solid var(--border-color)',
                 }}
               >
                 {/* Header Row: Title, Badges & Links */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{listing.name}</h3>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>{listing.name}</h3>
 
                       {listing.status === 'removed' && (
                         <span className="admin-badge" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.12)' }}>
@@ -378,7 +385,7 @@ export default function ManageListings() {
                         </span>
                       )}
                       {listing.isPremium && (
-                        <span className="admin-badge" style={{ color: '#00E5FF', background: 'rgba(0, 229, 255, 0.12)' }}>
+                        <span className="admin-badge" style={{ color: '#0284c7', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.3)' }}>
                           PREMIUM
                         </span>
                       )}
@@ -388,20 +395,21 @@ export default function ManageListings() {
                         </span>
                       )}
                       {listing.websiteVerified && (
-                        <span className="admin-badge" style={{ color: '#007BFF', background: 'rgba(0, 123, 255, 0.12)' }}>
+                        <span className="admin-badge" style={{ color: '#2563eb', background: 'rgba(37, 99, 235, 0.12)' }}>
                           SITE VERIFIED
                         </span>
                       )}
                       {listing.aiSummary && (
-                        <span className="admin-badge" style={{ color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.12)' }}>
+                        <span className="admin-badge" style={{ color: '#7c3aed', background: 'rgba(124, 58, 237, 0.12)' }}>
                           AI ENRICHED
                         </span>
                       )}
                       <span
                         className="admin-badge"
                         style={{
-                          color: listing.healthStatus === 'healthy' ? '#10b981' : listing.healthStatus === 'unknown' ? '#94a3b8' : '#ef4444',
-                          background: 'rgba(255,255,255,0.05)',
+                          color: listing.healthStatus === 'healthy' ? '#10b981' : listing.healthStatus === 'unknown' ? 'var(--text-secondary)' : '#ef4444',
+                          background: 'rgba(128, 128, 128, 0.1)',
+                          border: '1px solid var(--border-color)',
                         }}
                       >
                         HEALTH: {listing.healthStatus.toUpperCase()}
@@ -410,14 +418,14 @@ export default function ManageListings() {
 
                     {/* External Links Bar */}
                     <div style={{ display: 'flex', gap: '1rem', fontSize: '0.825rem', marginTop: '0.15rem' }}>
-                      <a href={`/mcp/${listing.id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#00E5FF', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                      <a href={`/mcp/${listing.id}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
                         <ExternalLink className="w-3.5 h-3.5" /> Listing Page
                       </a>
-                      <a href={listing.url} target="_blank" rel="noopener noreferrer" style={{ color: '#007BFF', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                      <a href={listing.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
                         GitHub Repo
                       </a>
                       {listing.websiteUrl && (
-                        <a href={listing.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#007BFF', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                        <a href={listing.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
                           Product Website
                         </a>
                       )}
@@ -430,11 +438,11 @@ export default function ManageListings() {
                       style={{
                         padding: '0.35rem 0.75rem',
                         borderRadius: '6px',
-                        background: featuredDaysLeft && featuredDaysLeft > 0 ? 'rgba(255, 215, 0, 0.1)' : 'rgba(255,255,255,0.03)',
-                        border: featuredDaysLeft && featuredDaysLeft > 0 ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid var(--border-color)',
+                        background: featuredDaysLeft && featuredDaysLeft > 0 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(128, 128, 128, 0.08)',
+                        border: featuredDaysLeft && featuredDaysLeft > 0 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-color)',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: featuredDaysLeft && featuredDaysLeft > 0 ? '#ffd700' : 'var(--text-secondary)',
+                        color: featuredDaysLeft && featuredDaysLeft > 0 ? '#d97706' : 'var(--text-secondary)',
                       }}
                     >
                       {featuredDaysLeft && featuredDaysLeft > 0 ? `★ ${featuredDaysLeft}d boost active` : 'No placement boost'}

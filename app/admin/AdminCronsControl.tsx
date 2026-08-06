@@ -28,7 +28,7 @@ const CRON_JOBS: CronJobInfo[] = [
     schedule: 'Daily at 00:00 UTC',
     description: 'Enriches raw scraped MCP listings with AI summaries, plain-language overviews, key features, and install commands.',
     icon: Sparkles,
-    color: '#00E5FF',
+    color: '#0284c7',
   },
   {
     id: 'enrich',
@@ -110,8 +110,8 @@ export function AdminCronsControl() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div className="admin-card" style={{ padding: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <Cpu className="w-5 h-5 text-cyan-400" style={{ color: '#00E5FF' }} />
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>System Crons & Background Workers</h3>
+          <Cpu className="w-5 h-5 text-cyan-400" style={{ color: 'var(--accent-color)' }} />
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>System Crons & Background Workers</h3>
         </div>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
           Manually trigger background tasks or check execution outputs. Crons execute asynchronously on the edge context.

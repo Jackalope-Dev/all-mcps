@@ -331,7 +331,7 @@ export default function DashboardClient({
                     <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{server.name}</h2>
                     <span style={categoryBadgeStyle}>{server.category}</span>
                     {rankInfo && (
-                      <span style={{ ...categoryBadgeStyle, color: '#FACC15', borderColor: 'rgba(250, 204, 21, 0.3)', background: 'rgba(250, 204, 21, 0.08)' }}>
+                      <span style={rankBadgeStyle}>
                         🏆 Rank #{rankInfo.rank} of {rankInfo.totalInCategory}
                       </span>
                     )}
@@ -506,7 +506,7 @@ export default function DashboardClient({
                           </Link>
                         </div>
                       ) : (
-                        <AnalyticsPanel detail={detail} />
+                        <AnalyticsPanel detail={detail} lastTweetedAt={server.lastTweetedAt} />
                       )}
                     </>
                   ) : (
@@ -818,7 +818,7 @@ function PremiumTeaser() {
   );
 }
 
-function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
+function AnalyticsPanel({ detail, lastTweetedAt }: { detail: ServerAnalytics; lastTweetedAt?: string | Date | null }) {
   return (
     <div style={{
       display: 'grid', gap: '1.25rem',
@@ -850,22 +850,62 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
       <div style={panelCardStyle}>
         <h3 style={panelTitleStyle}>
           <Eye size={16} style={{ color: 'var(--accent-color)' }} />
-          Where Users See You
+          Where Users Discover You
         </h3>
-        {detail.bySurface.length === 0 ? (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No impression data yet.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {detail.bySurface.map((row) => (
-              <SurfaceBar
-                key={row.surface}
-                surface={row.surface as ImpressionSurface}
-                impressions={row.impressions}
-                total={detail.bySurface.reduce((s, r) => s + r.impressions, 0)}
-              />
-            ))}
-          </div>
-        )}
+        {(() => {
+          const directorySurfaces = detail.bySurface.filter(
+            (s) => s.surface !== 'outbound_github' && s.surface !== 'outbound_website'
+          );
+          const totalDir = directorySurfaces.reduce((s, r) => s + r.impressions, 0);
+          if (directorySurfaces.length === 0) {
+            return <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No impression data yet.</p>;
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {directorySurfaces.map((row) => (
+                <SurfaceBar
+                  key={row.surface}
+                  surface={row.surface as ImpressionSurface}
+                  impressions={row.impressions}
+                  total={totalDir}
+                />
+              ))}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* External Outbound Clicks */}
+      <div style={panelCardStyle}>
+        <h3 style={panelTitleStyle}>
+          <MousePointerClick size={16} style={{ color: 'var(--accent-color)' }} />
+          External Link Clicks
+        </h3>
+        {(() => {
+          const externalSurfaces = detail.bySurface.filter(
+            (s) => s.surface === 'outbound_github' || s.surface === 'outbound_website'
+          );
+          const totalClicks = externalSurfaces.reduce((s, r) => s + r.impressions, 0);
+          if (externalSurfaces.length === 0) {
+            return (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                Tracks outbound clicks when visitors on your listing detail page click out to your GitHub repository or product website.
+              </p>
+            );
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {externalSurfaces.map((row) => (
+                <SurfaceBar
+                  key={row.surface}
+                  surface={row.surface as ImpressionSurface}
+                  impressions={row.impressions}
+                  total={totalClicks}
+                />
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Geographic Traffic Distribution */}
@@ -897,16 +937,29 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
               &ldquo;{detail.recentTweet.tweetText}&rdquo;
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              <span>Highlighted on {new Date(detail.recentTweet.sentAt).toLocaleDateString()}</span>
+              <span>
+                {detail.recentTweet.status === 'sent'
+                  ? `Highlighted on ${new Date(detail.recentTweet.sentAt || Date.now()).toLocaleDateString()}`
+                  : 'Queued for @AllMCPs spotlight rotation'}
+              </span>
               <a href="https://x.com/AllMCPs" target="_blank" rel="noopener noreferrer" style={{ color: '#1DA1F2', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
                 View on @AllMCPs <ExternalLink size={12} />
               </a>
             </div>
           </div>
+        ) : lastTweetedAt ? (
+          <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+            <p style={{ margin: '0 0 0.5rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+              ✓ Highlighted on @AllMCPs on {new Date(lastTweetedAt).toLocaleDateString()}
+            </p>
+            <a href="https://x.com/AllMCPs" target="_blank" rel="noopener noreferrer" style={{ color: '#1DA1F2', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: 600 }}>
+              View on @AllMCPs X feed → <ExternalLink size={12} />
+            </a>
+          </div>
         ) : (
           <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
             <p style={{ margin: '0 0 0.5rem' }}>
-              No custom tweet logged yet. Highlighting occurs periodically via our RSS feed and spotlight rotation.
+              Queued for upcoming spotlight rotation. Periodic highlights run via our RSS feed and automated spotlight queue.
             </p>
             <a href="https://x.com/AllMCPs" target="_blank" rel="noopener noreferrer" style={{ color: '#1DA1F2', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: 600 }}>
               Follow @AllMCPs on X → <ExternalLink size={12} />
@@ -957,7 +1010,7 @@ function CountryBar({ country, hits, pct }: { country: string; hits: number; pct
         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>📍 {country}</span>
         <span style={{ color: 'var(--text-secondary)' }}>{hits.toLocaleString()} ({pct}%)</span>
       </div>
-      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.18)', overflow: 'hidden' }}>
         <div style={{
           height: '100%', borderRadius: '3px',
           width: `${Math.max(pct, 2)}%`,
@@ -1003,12 +1056,15 @@ function QualityScoreCard({ server }: { server: Server }) {
             Listing Quality Score
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color }}>{quality.score}/100</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+            {quality.score}
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>/100</span>
+          </span>
           <span style={{
             fontSize: '0.75rem', fontWeight: 700, color,
-            background: `${color}18`, border: `1px solid ${color}40`,
-            borderRadius: '999px', padding: '0.2rem 0.6rem',
+            background: `${color}22`, border: `1px solid ${color}55`,
+            borderRadius: '999px', padding: '0.2rem 0.65rem',
           }}>
             {quality.tier}
           </span>
@@ -1016,9 +1072,9 @@ function QualityScoreCard({ server }: { server: Server }) {
       </div>
 
       {/* Progress Bar */}
-      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: tips.length > 0 ? '0.85rem' : '0' }}>
+      <div style={{ height: '8px', borderRadius: '4px', background: 'rgba(128, 128, 128, 0.18)', border: '1px solid var(--border-color)', overflow: 'hidden', marginBottom: tips.length > 0 ? '0.85rem' : '0' }}>
         <div style={{
-          height: '100%', borderRadius: '3px',
+          height: '100%', borderRadius: '4px',
           width: `${quality.score}%`,
           background: color,
           transition: 'width 0.5s ease',
@@ -1051,7 +1107,7 @@ function CallerBar({ caller, hits, pct }: { caller: CallerClass; hits: number; p
         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
         <span style={{ color: 'var(--text-secondary)' }}>{hits.toLocaleString()} ({pct}%)</span>
       </div>
-      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.18)', overflow: 'hidden' }}>
         <div style={{
           height: '100%', borderRadius: '3px',
           width: `${Math.max(pct, 2)}%`,
@@ -1072,7 +1128,7 @@ function SurfaceBar({ surface, impressions, total }: { surface: ImpressionSurfac
         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
         <span style={{ color: 'var(--text-secondary)' }}>{impressions.toLocaleString()} ({pct}%)</span>
       </div>
-      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.18)', overflow: 'hidden' }}>
         <div style={{
           height: '100%', borderRadius: '3px',
           width: `${Math.max(pct, 2)}%`,
@@ -1202,19 +1258,29 @@ const categoryBadgeStyle: CSSProperties = {
   fontWeight: 600,
   padding: '0.25rem 0.6rem',
   borderRadius: '6px',
-  background: 'rgba(255,255,255,0.06)',
+  background: 'rgba(128, 128, 128, 0.12)',
   border: '1px solid var(--border-color)',
   color: 'var(--text-secondary)',
 };
 
-const pendingBadgeStyle: CSSProperties = {
+const rankBadgeStyle: CSSProperties = {
   fontSize: '0.75rem',
-  fontWeight: 600,
+  fontWeight: 700,
   padding: '0.25rem 0.6rem',
   borderRadius: '6px',
-  background: 'rgba(251,191,36,0.12)',
-  border: '1px solid rgba(251,191,36,0.3)',
-  color: '#fbbf24',
+  background: 'rgba(245, 158, 11, 0.15)',
+  border: '1px solid rgba(245, 158, 11, 0.4)',
+  color: '#d97706',
+};
+
+const pendingBadgeStyle: CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  padding: '0.25rem 0.6rem',
+  borderRadius: '6px',
+  background: 'rgba(245, 158, 11, 0.15)',
+  border: '1px solid rgba(245, 158, 11, 0.4)',
+  color: '#d97706',
 };
 
 const boostBadgeStyle: CSSProperties = {

@@ -96,14 +96,14 @@ export function AdminSocialQueue() {
       <div className="admin-card" style={{ padding: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Share2 className="w-5 h-5 text-cyan-400" style={{ color: '#00E5FF' }} />
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Social Tweet Pipeline</h3>
+            <Share2 className="w-5 h-5" style={{ color: 'var(--accent-color)' }} />
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>Social Tweet Pipeline</h3>
           </div>
           <button
             onClick={fetchPosts}
             disabled={loading}
             className="admin-btn"
-            style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            style={{ background: 'rgba(128, 128, 128, 0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>

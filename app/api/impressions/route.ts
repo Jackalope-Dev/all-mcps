@@ -11,6 +11,8 @@ const VALID_SURFACES: Set<string> = new Set([
   'search_results',
   'detail_sidebar',
   'category_page',
+  'outbound_github',
+  'outbound_website',
 ]);
 
 export async function OPTIONS() {

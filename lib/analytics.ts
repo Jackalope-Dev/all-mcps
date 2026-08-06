@@ -46,7 +46,8 @@ export type CountryBreakdown = {
 
 export type RecentTweet = {
   tweetText: string;
-  sentAt: string;
+  sentAt: string | null;
+  status: 'sent' | 'queued';
 } | null;
 
 export type ServerAnalytics = {
@@ -158,12 +159,17 @@ export async function getServerAnalytics(
       .orderBy(desc(apiAccessLogs.createdAt))
       .limit(20),
 
-    // Recent sent tweet for this server
+    // Recent tweet (sent or queued) for this server
     db
-      .select({ tweetText: socialPosts.tweetText, sentAt: socialPosts.sentAt })
+      .select({
+        tweetText: socialPosts.tweetText,
+        sentAt: socialPosts.sentAt,
+        createdAt: socialPosts.createdAt,
+        status: socialPosts.status,
+      })
       .from(socialPosts)
-      .where(and(eq(socialPosts.serverId, serverId), eq(socialPosts.status, 'sent')))
-      .orderBy(desc(socialPosts.sentAt))
+      .where(eq(socialPosts.serverId, serverId))
+      .orderBy(desc(socialPosts.createdAt))
       .limit(1)
       .catch(() => []),
 
@@ -234,7 +240,14 @@ export async function getServerAnalytics(
   const recentTweet: RecentTweet = rawTweet
     ? {
         tweetText: rawTweet.tweetText,
-        sentAt: rawTweet.sentAt instanceof Date ? rawTweet.sentAt.toISOString() : String(rawTweet.sentAt),
+        sentAt: rawTweet.sentAt
+          ? rawTweet.sentAt instanceof Date
+            ? rawTweet.sentAt.toISOString()
+            : String(rawTweet.sentAt)
+          : rawTweet.createdAt instanceof Date
+          ? rawTweet.createdAt.toISOString()
+          : String(rawTweet.createdAt),
+        status: (rawTweet.status as 'sent' | 'queued') || 'queued',
       }
     : null;
 
