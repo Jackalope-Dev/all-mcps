@@ -1010,7 +1010,7 @@ function CountryBar({ country, hits, pct }: { country: string; hits: number; pct
         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>📍 {country}</span>
         <span style={{ color: 'var(--text-secondary)' }}>{hits.toLocaleString()} ({pct}%)</span>
       </div>
-      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.18)', overflow: 'hidden' }}>
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.25)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
         <div style={{
           height: '100%', borderRadius: '3px',
           width: `${Math.max(pct, 2)}%`,
@@ -1072,7 +1072,7 @@ function QualityScoreCard({ server }: { server: Server }) {
       </div>
 
       {/* Progress Bar */}
-      <div style={{ height: '8px', borderRadius: '4px', background: 'rgba(128, 128, 128, 0.18)', border: '1px solid var(--border-color)', overflow: 'hidden', marginBottom: tips.length > 0 ? '0.85rem' : '0' }}>
+      <div style={{ height: '8px', borderRadius: '4px', background: 'rgba(128, 128, 128, 0.25)', border: '1px solid var(--border-color)', overflow: 'hidden', marginBottom: tips.length > 0 ? '0.85rem' : '0' }}>
         <div style={{
           height: '100%', borderRadius: '4px',
           width: `${quality.score}%`,
@@ -1107,7 +1107,7 @@ function CallerBar({ caller, hits, pct }: { caller: CallerClass; hits: number; p
         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
         <span style={{ color: 'var(--text-secondary)' }}>{hits.toLocaleString()} ({pct}%)</span>
       </div>
-      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.18)', overflow: 'hidden' }}>
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.25)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
         <div style={{
           height: '100%', borderRadius: '3px',
           width: `${Math.max(pct, 2)}%`,
@@ -1128,7 +1128,7 @@ function SurfaceBar({ surface, impressions, total }: { surface: ImpressionSurfac
         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
         <span style={{ color: 'var(--text-secondary)' }}>{impressions.toLocaleString()} ({pct}%)</span>
       </div>
-      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.18)', overflow: 'hidden' }}>
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.25)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
         <div style={{
           height: '100%', borderRadius: '3px',
           width: `${Math.max(pct, 2)}%`,

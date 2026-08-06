@@ -99,7 +99,7 @@ export function QualityBadge({ server, compact = false }: { server: Server; comp
                   {notApplicable ? 'Not measured' : `${c.earned}/${c.max}`}
                 </span>
               </div>
-              <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.08)' }}>
+              <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.25)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
                 {!notApplicable && (
                   <div
                     style={{
