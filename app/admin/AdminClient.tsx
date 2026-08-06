@@ -75,6 +75,7 @@ export default function AdminClient({
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const totalPending = pending.length + pendingEdits.length + pendingClaims.length + pendingLogos.length;
+  const defaultTab = totalPending > 0 ? 'moderation' : 'overview';
   const [activeTab, setActiveTab] = useState<
     'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'crons' | 'tools'
   >(defaultTab);
