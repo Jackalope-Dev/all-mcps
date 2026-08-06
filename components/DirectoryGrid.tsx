@@ -477,18 +477,12 @@ export default function DirectoryGrid({
     const isHigh = conf === 'high';
     return (
       <Badge
-        variant="success"
+        variant={isHigh ? 'official' : 'success'}
         title={
           isHigh
             ? 'Install command detected from README or listing signals'
             : 'Install path inferred — verify in the listing'
         }
-        style={{
-          background: isHigh ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0, 229, 255, 0.1)',
-          color: isHigh ? '#34d399' : '#00E5FF',
-          borderColor: isHigh ? 'rgba(16, 185, 129, 0.35)' : 'rgba(0, 229, 255, 0.3)',
-          fontSize: '0.7rem',
-        }}
       >
         {isHigh ? 'Install ready' : 'Install known'}
       </Badge>
