@@ -4518,8 +4518,12 @@ nav[aria-label="Table of contents"] {
 /* ── Theme Switcher Floating Controls ── */
 .theme-switcher-container {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  /* Add the safe-area inset so the control clears the iPhone home indicator and
+     mobile-browser bottom chrome (Arc's toolbar, Safari's bottom bar). Without
+     this, `bottom: 1.5rem` places the 44px button right where those overlays sit,
+     making it invisible/untappable on mobile even though it's fine on desktop. */
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  right: calc(1.5rem + env(safe-area-inset-right, 0px));
   z-index: 90;
 }
 
