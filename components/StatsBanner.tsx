@@ -31,6 +31,7 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
 
   return (
     <div
+      className="stats-banner"
       aria-label="Platform statistics"
       style={{
         width: '100%',
@@ -42,6 +43,7 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
       }}
     >
       <div
+        className="stats-banner-pill"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
