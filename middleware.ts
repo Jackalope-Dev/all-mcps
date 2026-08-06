@@ -73,10 +73,15 @@ export function middleware(req: NextRequest) {
     !pathname.startsWith('/_next/') &&
     !pathname.startsWith('/.well-known/')
   ) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/api/v1/markdown-renderer';
-    url.searchParams.set('path', pathname);
-    response = NextResponse.rewrite(url);
+    // Query params set on the rewrite target URL don't reach the destination Route
+    // Handler's `request.url` (confirmed empirically — the rewritten pathname is
+    // honored for routing, but req.nextUrl.searchParams there still reflects the
+    // ORIGINAL request). Pass the target path via a request header instead, which
+    // does propagate through NextResponse.rewrite()'s `request.headers` option.
+    const url = new URL('/api/v1/markdown-renderer', req.url);
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-agent-markdown-path', pathname);
+    response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   } else {
     response = NextResponse.next();
   }

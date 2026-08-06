@@ -322,7 +322,7 @@ export function ProtocolInspectorTool() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Preset Banner */}
-      <Card style={{ padding: '1.25rem', background: 'rgba(0, 229, 255, 0.03)', borderColor: 'rgba(0, 229, 255, 0.2)' }}>
+      <Card style={{ padding: '1.25rem', background: 'var(--bg-muted)', borderColor: 'var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <Sparkles size={18} style={{ color: 'var(--brand-cyan)' }} />
           <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Load Sample Protocol Payloads</span>
@@ -359,7 +359,7 @@ export function ProtocolInspectorTool() {
               width: '100%',
               padding: '0.875rem',
               borderRadius: '8px',
-              background: 'rgba(0,0,0,0.4)',
+              background: 'var(--bg-muted)',
               border: '1px solid var(--border-color)',
               color: 'var(--text-primary)',
               fontFamily: 'monospace',
@@ -403,7 +403,7 @@ export function ProtocolInspectorTool() {
                   style={{
                     padding: '0.75rem',
                     borderRadius: '6px',
-                    background: 'rgba(0,0,0,0.25)',
+                    background: 'var(--bg-muted)',
                     border: '1px solid var(--border-color)',
                     fontSize: '0.85rem',
                     display: 'flex',
@@ -439,9 +439,9 @@ export function ProtocolInspectorTool() {
           Simulates how Claude Desktop, Cursor, and Windsurf render this tool output in their chat stream.
         </p>
 
-        <Card style={{ padding: '1.5rem', background: '#090d16', border: '1px solid rgba(255,255,255,0.12)' }}>
+        <Card style={{ padding: '1.5rem', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
           {/* Client Header Mock */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: result.isErrorState ? '#ef4444' : '#10b981' }} />
               <span>AI Client Tool Execution Window</span>
@@ -466,7 +466,7 @@ export function ProtocolInspectorTool() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {result.extractedContent.map((item, idx) => (
-                <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div key={idx} style={{ background: 'var(--bg-muted)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
                   <div style={{ fontSize: '0.7rem', color: 'var(--brand-cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: '0.5rem' }}>
                     Content Block #{idx + 1} — [{item.type}]
                   </div>

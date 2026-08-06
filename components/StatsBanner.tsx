@@ -55,14 +55,14 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
           padding: '0.6rem 1.25rem',
           width: 'fit-content',
           maxWidth: '100%',
-          background: 'rgba(15, 23, 42, 0.55)',
+          background: 'var(--bg-elevated)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid var(--border-color)',
           borderRadius: 'var(--radius-full)',
           fontSize: '0.825rem',
           color: 'var(--text-secondary)',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+          boxShadow: 'var(--shadow-sm)',
         }}
       >
         {totalServers > 0 && (

@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { TokenCalculatorTool } from '../../../components/tools/TokenCalculatorTool';
+import { FaqSection } from '../../../components/ui/FaqSection';
 
 export const metadata: Metadata = {
   title: 'MCP Token Cost Calculator — Estimate Context Usage',
@@ -127,38 +128,26 @@ export default function TokenCalculatorPage() {
               can burn a meaningful slice of your context window before you&apos;ve typed a single message.
             </p>
 
-            <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '1rem', fontWeight: 700 }}>
-              Frequently Asked Questions (FAQ)
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  How many tokens does an MCP server tool schema use?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  A typical MCP tool schema consumes between 150 and 500 tokens per tool. A server exposing 10 tools with detailed parameter descriptions can use 2,000 to 5,000 tokens on every prompt turn.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  Why do MCP servers reduce context window space?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  When an MCP client connects to a server, it prepends all registered tool definitions into the system context on every conversation message so the AI model knows available tools.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  How can I reduce MCP tool schema token cost?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  To reduce token cost: disable unused MCP servers when not in active use, shorten overly verbose tool descriptions, and consolidate similar parameter objects.
-                </p>
-              </div>
-            </div>
+            <FaqSection
+              title="Frequently Asked Questions (FAQ)"
+              items={[
+                {
+                  question: 'How many tokens does an MCP server tool schema use?',
+                  answer:
+                    'A typical MCP tool schema consumes between 150 and 500 tokens per tool. A server exposing 10 tools with detailed parameter descriptions can use 2,000 to 5,000 tokens on every prompt turn.',
+                },
+                {
+                  question: 'Why do MCP servers reduce context window space?',
+                  answer:
+                    'When an MCP client connects to a server, it prepends all registered tool definitions into the system context on every conversation message so the AI model knows available tools.',
+                },
+                {
+                  question: 'How can I reduce MCP tool schema token cost?',
+                  answer:
+                    'To reduce token cost: disable unused MCP servers when not in active use, shorten overly verbose tool descriptions, and consolidate similar parameter objects.',
+                },
+              ]}
+            />
           </div>
         </div>
       </div>

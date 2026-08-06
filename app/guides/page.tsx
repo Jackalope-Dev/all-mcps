@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Layers, Key, Server } from 'lucide-react';
+import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, CheckCircle2, Layers, Key, Server } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 export const metadata: Metadata = {
@@ -169,29 +169,6 @@ export default function GuidesLandingPage() {
               padding: '0 1rem',
             }}
           >
-            {/* Top Pill Tag with Proper Padding */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1.15rem',
-                borderRadius: '9999px',
-                background: 'rgba(0, 229, 255, 0.12)',
-                border: '1px solid rgba(0, 229, 255, 0.3)',
-                color: '#00E5FF',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: '1.25rem',
-                boxShadow: '0 0 16px rgba(0, 229, 255, 0.15)',
-              }}
-            >
-              <Sparkles size={15} style={{ color: '#00E5FF' }} />
-              <span>Documentation &amp; Learning Hub</span>
-            </div>
-
             <h1
               className="text-page-title"
               style={{
@@ -251,7 +228,7 @@ export default function GuidesLandingPage() {
                       <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {guide.highlights.map((highlight) => (
                           <li key={highlight} className="guide-card-highlight-item">
-                            <CheckCircle2 size={15} style={{ color: '#00E5FF', flexShrink: 0, marginTop: '2px' }} />
+                            <CheckCircle2 size={15} style={{ color: 'var(--accent-color)', flexShrink: 0, marginTop: '2px' }} />
                             <span>{highlight}</span>
                           </li>
                         ))}
@@ -275,7 +252,7 @@ export default function GuidesLandingPage() {
           {/* Directory Callout Banner */}
           <div className="guide-card-banner">
             <div style={{ maxWidth: '600px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#00E5FF', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-color)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                 <Layers size={18} /> Directory &amp; Tools
               </div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>

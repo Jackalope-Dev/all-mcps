@@ -39,22 +39,24 @@ export function ServerAvatar({
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const radius = size > 40 ? 12 : 10;
+  const { displayName, org } = parseServerName(name);
 
-  if (logoUrl && !imgFailed) {
+  // Auto-resolve GitHub org avatar if explicit logoUrl is missing
+  const activeLogoUrl = logoUrl || (org ? `https://github.com/${org}.png` : null);
+
+  if (activeLogoUrl && !imgFailed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={logoUrl}
-        alt=""
+        src={activeLogoUrl}
+        alt={`${displayName} logo`}
         width={size}
         height={size}
-        style={{ borderRadius: radius, flexShrink: 0, objectFit: 'cover' }}
+        style={{ borderRadius: radius, flexShrink: 0, objectFit: 'cover', background: 'var(--bg-muted)' }}
         onError={() => setImgFailed(true)}
       />
     );
   }
-
-  const { displayName } = parseServerName(name);
 
   return (
     <div
@@ -66,12 +68,12 @@ export function ServerAvatar({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: size > 40 ? '1.5rem' : '1.1rem',
+        fontSize: size > 40 ? '1.25rem' : '0.9rem',
         fontWeight: 800,
         textTransform: 'uppercase',
         flexShrink: 0,
         color: '#ffffff',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
       {displayName.charAt(0)}

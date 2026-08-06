@@ -118,7 +118,7 @@ export function LiveMcpInspector() {
     padding: '0.7rem 0.85rem',
     borderRadius: '10px',
     border: '1px solid var(--border-color)',
-    background: 'rgba(2, 6, 23, 0.6)',
+    background: 'var(--bg-muted)',
     color: 'var(--text-primary)',
     fontSize: '0.9rem',
   } as const;
@@ -173,7 +173,7 @@ export function LiveMcpInspector() {
             borderRadius: '10px',
             border: '1px solid rgba(239, 68, 68, 0.4)',
             background: 'rgba(239, 68, 68, 0.08)',
-            color: '#fca5a5',
+            color: '#ef4444',
             fontSize: '0.85rem',
             display: 'flex',
             alignItems: 'center',
@@ -208,7 +208,7 @@ export function LiveMcpInspector() {
                     borderRadius: '10px',
                     cursor: 'pointer',
                     border: `1px solid ${selected?.name === tool.name ? 'var(--accent-color)' : 'var(--border-color)'}`,
-                    background: selected?.name === tool.name ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.03)',
+                    background: selected?.name === tool.name ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
                     color: 'inherit',
                   }}
                 >
@@ -249,7 +249,7 @@ export function LiveMcpInspector() {
           </div>
 
           {callError && (
-            <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.08)', color: '#fca5a5', fontSize: '0.85rem' }}>
+            <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', fontSize: '0.85rem' }}>
               {callError}
             </div>
           )}
@@ -257,7 +257,7 @@ export function LiveMcpInspector() {
           {callResult !== null && (
             <div style={{ marginTop: '1rem' }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>Response</div>
-              <pre style={{ margin: 0, padding: '1rem', borderRadius: '10px', background: 'rgba(2, 6, 23, 0.85)', border: '1px solid var(--border-color)', fontSize: '0.78rem', color: '#e4e4e7', overflowX: 'auto', maxHeight: '360px' }}>
+              <pre style={{ margin: 0, padding: '1rem', borderRadius: '10px', background: 'var(--bg-muted)', border: '1px solid var(--border-color)', fontSize: '0.78rem', color: 'var(--text-primary)', overflowX: 'auto', maxHeight: '360px' }}>
                 <code>{callResult}</code>
               </pre>
             </div>

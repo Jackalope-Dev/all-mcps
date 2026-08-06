@@ -11,6 +11,7 @@ import { ToastProvider } from "../components/ui/Toast";
 import { PurchaseTracker } from "../components/PurchaseTracker";
 import { CommandPalette } from "../components/ui/CommandPalette";
 import { PostHogIdentify } from "../components/PostHogIdentify";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import "./globals.css";
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
@@ -71,8 +72,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={sans.variable}>
+    <html lang="en" className={sans.variable} suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var mode = localStorage.getItem('allmcps-theme') || 'system';
+                  var effectiveTheme = mode;
+                  if (mode === 'system') {
+                    effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  }
+                  document.documentElement.setAttribute('data-theme', effectiveTheme);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         <Script id="google-consent-mode" strategy="beforeInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
@@ -163,6 +180,7 @@ export default function RootLayout({
         <SiteHeader />
         {children}
         <SiteFooter />
+        <ThemeSwitcher />
       </body>
     </html>
   );

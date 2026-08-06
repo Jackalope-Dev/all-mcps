@@ -169,9 +169,9 @@ export default async function AlternativesPage({
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.75rem',
-                    border: featured ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid var(--border-color)',
+                    border: featured ? '1px solid rgba(var(--accent-rgb), 0.4)' : '1px solid var(--border-color)',
                     background: featured
-                      ? 'linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,123,255,0.04))'
+                      ? 'linear-gradient(135deg, rgba(var(--accent-rgb),0.06), rgba(var(--accent-secondary-rgb),0.04))'
                       : undefined,
                   }}
                 >
@@ -187,7 +187,7 @@ export default async function AlternativesPage({
                         </span>
                       </div>
                       {featured ? (
-                        <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '0.65rem', flexShrink: 0 }}>
+                        <Badge variant="success" className="badge-featured" style={{ fontSize: '0.65rem', flexShrink: 0 }}>
                           ★ Featured
                         </Badge>
                       ) : isVerifiedListing(alt) ? (
@@ -207,7 +207,7 @@ export default async function AlternativesPage({
                     style={{
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      color: '#00E5FF',
+                      color: 'var(--accent-color)',
                       textDecoration: 'none',
                       paddingTop: '0.35rem',
                       borderTop: '1px solid var(--border-color)',

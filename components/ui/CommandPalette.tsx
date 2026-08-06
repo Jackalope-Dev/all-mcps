@@ -194,11 +194,11 @@ export function CommandPalette() {
 
   return (
     <div
+      className="command-palette-overlay"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        backgroundColor: 'rgba(2, 6, 23, 0.85)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         display: 'flex',
@@ -216,9 +216,9 @@ export function CommandPalette() {
           width: '100%',
           maxWidth: '42rem',
           borderRadius: '20px',
-          backgroundColor: '#090d16',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 229, 255, 0.15)',
+          backgroundColor: 'var(--bg-elevated)',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-md)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -227,8 +227,8 @@ export function CommandPalette() {
         onKeyDown={handleKeyDown}
       >
         {/* Search Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.6)' }}>
-          <Search size={20} style={{ color: '#00E5FF', flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-muted)' }}>
+          <Search size={20} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
           <input
             ref={inputRef}
             type="text"
@@ -239,7 +239,7 @@ export function CommandPalette() {
               width: '100%',
               backgroundColor: 'transparent',
               fontSize: '0.95rem',
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               border: 'none',
               outline: 'none',
             }}
@@ -250,8 +250,8 @@ export function CommandPalette() {
             style={{
               padding: '0.4rem',
               borderRadius: '8px',
-              color: '#94a3b8',
-              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+              color: 'var(--text-secondary)',
+              backgroundColor: 'var(--bg-muted)',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
@@ -268,7 +268,7 @@ export function CommandPalette() {
         {/* Results List */}
         <div style={{ maxHeight: '400px', overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: '3rem 1rem', textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8' }}>
+            <div style={{ padding: '3rem 1rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
               No matching servers or pages found for &ldquo;{query}&rdquo;
             </div>
           ) : (
@@ -288,8 +288,8 @@ export function CommandPalette() {
                   borderRadius: '12px',
                   textAlign: 'left',
                   transition: 'all 0.2s ease',
-                  backgroundColor: selectedIndex === idx ? 'rgba(0, 229, 255, 0.12)' : 'transparent',
-                  border: `1px solid ${selectedIndex === idx ? 'rgba(0, 229, 255, 0.3)' : 'transparent'}`,
+                  backgroundColor: selectedIndex === idx ? 'var(--brand-gradient-soft)' : 'transparent',
+                  border: `1px solid ${selectedIndex === idx ? 'var(--accent-color)' : 'transparent'}`,
                   cursor: 'pointer',
                 }}
               >
@@ -297,13 +297,13 @@ export function CommandPalette() {
                   {item.categoryType === 'server' && item.rawName ? (
                     <ServerAvatar name={item.rawName} logoUrl={item.logoUrl} size={40} />
                   ) : (
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-muted)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {item.icon}
                     </div>
                   )}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
-                    <div style={{ fontSize: '0.775rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                    <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '0.2rem' }}>
                       <SafeMarkdown content={item.subtitle} isInline />
                     </div>
                   </div>
@@ -312,7 +312,7 @@ export function CommandPalette() {
                   <Badge variant={item.categoryType === 'server' ? 'category' : 'default'}>
                     {item.category}
                   </Badge>
-                  <ArrowRight size={16} style={{ color: '#00E5FF', opacity: selectedIndex === idx ? 1 : 0, transition: 'opacity 0.2s ease' }} />
+                  <ArrowRight size={16} style={{ color: 'var(--accent-color)', opacity: selectedIndex === idx ? 1 : 0, transition: 'opacity 0.2s ease' }} />
                 </div>
               </button>
             ))
@@ -320,13 +320,13 @@ export function CommandPalette() {
         </div>
 
         {/* Footer shortcuts */}
-        <div style={{ padding: '0.85rem 1.25rem', backgroundColor: 'rgba(15, 23, 42, 0.9)', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.775rem', color: '#94a3b8' }}>
+        <div style={{ padding: '0.85rem 1.25rem', backgroundColor: 'var(--bg-muted)', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', fontFamily: 'monospace' }}>↑↓</span> navigate
-            <span style={{ marginLeft: '0.75rem', padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', fontFamily: 'monospace' }}>↵</span> select
+            <span style={{ padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontFamily: 'monospace' }}>↑↓</span> navigate
+            <span style={{ marginLeft: '0.75rem', padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontFamily: 'monospace' }}>↵</span> select
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', fontFamily: 'monospace' }}>ESC</span> close
+            <span style={{ padding: '0.2rem 0.45rem', borderRadius: '6px', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontFamily: 'monospace' }}>ESC</span> close
           </div>
         </div>
       </div>

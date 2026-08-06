@@ -138,14 +138,14 @@ export function CookieBanner({ country }: { country?: string }) {
         maxWidth: '420px',
         width: 'calc(100vw - 2.5rem)',
         zIndex: 9999,
-        background: 'rgba(15, 23, 42, 0.95)',
+        background: 'var(--bg-elevated)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
+        border: '1px solid var(--border-strong)',
         borderRadius: '12px',
         padding: '1.25rem',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-        color: '#f8fafc',
+        boxShadow: 'var(--shadow-md)',
+        color: 'var(--text-primary)',
         fontFamily: 'var(--font-sans, system-ui, sans-serif)',
         fontSize: '0.875rem',
         lineHeight: '1.4',
@@ -155,9 +155,9 @@ export function CookieBanner({ country }: { country?: string }) {
       <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <span>🍪 Cookie Preferences</span>
       </div>
-      <p style={{ color: '#94a3b8', margin: '0 0 1rem 0', fontSize: '0.825rem' }}>
+      <p style={{ color: 'var(--text-secondary)', margin: '0 0 1rem 0', fontSize: '0.825rem' }}>
         We use analytics cookies to measure site traffic and improve AllMCPs. Learn more in our{' '}
-        <Link href="/privacy" style={{ color: '#38bdf8', textDecoration: 'underline' }}>
+        <Link href="/privacy" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>
           Privacy Policy
         </Link>.
       </p>
@@ -166,9 +166,9 @@ export function CookieBanner({ country }: { country?: string }) {
           type="button"
           onClick={handleDecline}
           style={{
-            background: 'rgba(255, 255, 255, 0.08)',
-            color: '#cbd5e1',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--bg-muted)',
+            color: 'var(--text-secondary)',
+            border: '1px solid var(--border-color)',
             borderRadius: '8px',
             padding: '0.6rem 1.1rem',
             minHeight: '44px',
@@ -177,8 +177,8 @@ export function CookieBanner({ country }: { country?: string }) {
             cursor: 'pointer',
             transition: 'background 0.2s ease',
           }}
-          onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)')}
-          onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)')}
+          onMouseOver={(e) => (e.currentTarget.style.background = 'var(--border-color)')}
+          onMouseOut={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
         >
           Decline
         </button>
@@ -186,7 +186,7 @@ export function CookieBanner({ country }: { country?: string }) {
           type="button"
           onClick={handleAccept}
           style={{
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            background: 'var(--brand-gradient)',
             color: '#ffffff',
             border: 'none',
             borderRadius: '8px',

@@ -510,6 +510,19 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
   return md;
 }
 
+/**
+ * One-line markdown summary for a server, with no network I/O — safe to call for every
+ * listing on a category page. Contrast with formatServerAsMarkdown, which fetches the
+ * README and is only used for single-listing pages.
+ */
+export function formatServerSummaryLine(server: Server): string {
+  const bits: string[] = [];
+  if (typeof server.githubStars === 'number') bits.push(`⭐ ${server.githubStars.toLocaleString()}`);
+  if (server.copies) bits.push(`${server.copies.toLocaleString()} installs`);
+  const meta = bits.length ? ` (${bits.join(' · ')})` : '';
+  return `- [${server.name}](https://allmcps.com/mcp/${server.id})${meta} — ${server.description}`;
+}
+
 export async function getRelatedServers(currentServer: Server, limit = 4): Promise<Server[]> {
   const allServers = await getActiveServers();
   const sameCategory = allServers.filter(

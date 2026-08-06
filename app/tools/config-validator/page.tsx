@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { ConfigValidatorTool } from '../../../components/tools/ConfigValidatorTool';
+import { FaqSection } from '../../../components/ui/FaqSection';
 
 export const metadata: Metadata = {
   title: 'Free MCP Config Validator — Check mcpServers JSON',
@@ -136,48 +137,38 @@ export default function ConfigValidatorPage() {
               worked &mdash; is slow.
             </p>
 
-            <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '1rem', fontWeight: 700 }}>
-              Frequently Asked Questions (FAQ)
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  What causes JSON syntax errors in MCP configs?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  The most common syntax errors are trailing commas after the last server entry, unescaped backslashes in Windows file paths, and unquoted property keys or strings.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  How do I format environment variables in mcpServers?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  Environment variables are specified under the <code>env</code> object as key-value string pairs, for example:{' '}
-                  <code>&quot;env&quot;: &#123; &quot;API_KEY&quot;: &quot;secret_123&quot; &#125;</code>.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  Why is my command path invalid on Windows?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  In JSON, backslashes must be escaped with double backslashes (e.g., <code>&quot;C:\\\\Program Files\\\\node\\\\node.exe&quot;</code>) or replaced with forward slashes (<code>&quot;C:/Program Files/node/node.exe&quot;</code>).
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  Is my configuration data stored or sent anywhere?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  No. Validation runs 100% locally inside your web browser. API keys, secrets, and path details pasted into this tool never leave your device.
-                </p>
-              </div>
-            </div>
+            <FaqSection
+              title="Frequently Asked Questions (FAQ)"
+              items={[
+                {
+                  question: 'What causes JSON syntax errors in MCP configs?',
+                  answer:
+                    'The most common syntax errors are trailing commas after the last server entry, unescaped backslashes in Windows file paths, and unquoted property keys or strings.',
+                },
+                {
+                  question: 'How do I format environment variables in mcpServers?',
+                  answer: (
+                    <>
+                      Environment variables are specified under the <code>env</code> object as key-value string pairs, for example:{' '}
+                      <code>&quot;env&quot;: &#123; &quot;API_KEY&quot;: &quot;secret_123&quot; &#125;</code>.
+                    </>
+                  ),
+                },
+                {
+                  question: 'Why is my command path invalid on Windows?',
+                  answer: (
+                    <>
+                      In JSON, backslashes must be escaped with double backslashes (e.g., <code>&quot;C:\\\\Program Files\\\\node\\\\node.exe&quot;</code>) or replaced with forward slashes (<code>&quot;C:/Program Files/node/node.exe&quot;</code>).
+                    </>
+                  ),
+                },
+                {
+                  question: 'Is my configuration data stored or sent anywhere?',
+                  answer:
+                    'No. Validation runs 100% locally inside your web browser. API keys, secrets, and path details pasted into this tool never leave your device.',
+                },
+              ]}
+            />
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
   categorySlug,
   parseCategoryLabel,
   getCategoryMeta,
+  categoryIntroCopy,
 } from '../../../lib/categories';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
@@ -28,45 +29,6 @@ const MAX_CARDS = 60;
 /** Ranking mirrors lib/servers.relatedRankingScore so ordering is consistent site-wide. */
 function score(s: Server): number {
   return relatedRankingScore(s);
-}
-
-/**
- * Hand-written intros for the highest-traffic categories; every other category gets a
- * templated-but-unique paragraph (label + count + named examples) so no page is thin
- * or duplicated.
- */
-const CURATED_INTRO: Record<string, string> = {
-  'developer-tools':
-    'MCP servers that plug AI agents straight into the developer workflow — running code, managing repositories, querying build systems, and automating the everyday tasks engineers repeat all day.',
-  'databases':
-    'Connect Claude, Cursor, and other AI agents to your data. These MCP servers expose SQL and NoSQL databases, warehouses, and query engines so an agent can read, analyze, and (carefully) write real records.',
-  'security':
-    'Security-focused MCP servers for scanning, auditing, secrets management, and threat analysis — giving AI agents safe, scoped access to the tools security teams already rely on.',
-  'search-and-data-extraction':
-    'MCP servers that let agents search the web, scrape pages, and pull structured data out of unstructured sources — turning the open internet into a queryable tool.',
-  'finance-and-fintech':
-    'From market data to payments and on-chain activity, these MCP servers give AI agents access to financial APIs and fintech infrastructure with the guardrails that domain demands.',
-  'knowledge-and-memory':
-    'Persistent memory, note stores, and knowledge bases exposed over MCP, so agents can remember context across sessions and reason over your accumulated knowledge.',
-  'browser-automation':
-    'Drive a real browser from an AI agent: navigate, click, fill forms, and extract content. These MCP servers wrap headless browsers and automation frameworks behind the protocol.',
-  'social-media':
-    'MCP servers for posting, reading, and analyzing across social platforms — letting agents draft, schedule, and monitor content programmatically.',
-  'data-platforms':
-    'Analytics warehouses, data pipelines, and BI platforms exposed over MCP, so agents can pull metrics and run analysis against your production data stack.',
-  'cloud-platforms':
-    'Provision, inspect, and manage cloud infrastructure through MCP — giving agents scoped access to the APIs behind your deployments.',
-};
-
-function introCopy(category: string, count: number, topNames: string[]): string {
-  const slug = categorySlug(category);
-  if (CURATED_INTRO[slug]) return CURATED_INTRO[slug];
-  const { label } = parseCategoryLabel(category);
-  const examples =
-    topNames.length >= 2
-      ? ` Popular picks include ${topNames.slice(0, 3).join(', ')}.`
-      : '';
-  return `Discover ${count.toLocaleString()} ${label} MCP server${count === 1 ? '' : 's'} for AI agents. Browse, compare, and install Model Context Protocol tools that connect Claude, Cursor, and other clients to ${label.toLowerCase()} capabilities.${examples}`;
 }
 
 export function generateStaticParams() {
@@ -134,7 +96,7 @@ export default async function CategoryLandingPage({
   const cards = inCategory.slice(0, MAX_CARDS);
   const topNames = inCategory.slice(0, 3).map((s) => parseServerName(s.name).displayName);
 
-  const intro = introCopy(category, total, topNames);
+  const intro = categoryIntroCopy(category, total, topNames);
   const url = `${SITE}/categories/${slug}`;
 
   // Sibling categories for cross-linking, most-populated first.
@@ -317,14 +279,7 @@ export default async function CategoryLandingPage({
                     <div className="directory-card-footer">
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0 }}>
                         {isFeaturedListing(server) && (
-                          <Badge
-                            variant="success"
-                            style={{
-                              background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
-                              color: '#00E5FF',
-                              borderColor: 'rgba(0,229,255,0.35)',
-                            }}
-                          >
+                          <Badge variant="success" className="badge-featured">
                             ★ Featured
                           </Badge>
                         )}

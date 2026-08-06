@@ -104,6 +104,7 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
       <div className="categories-grid">
         {filtered.map((cat, i) => {
           const meta = getCategoryMeta(cat.name);
+          const lightColor = meta.lightColor || meta.color;
           return (
             <Link
               key={cat.name}
@@ -113,9 +114,13 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
               style={{ 
                 animationDelay: `${Math.min(i * 0.03, 0.6)}s`,
                 '--cat-color': meta.color,
+                '--cat-light-color': lightColor,
                 '--cat-bg': meta.bgTint,
+                '--cat-bg-light': `${lightColor}15`,
                 '--cat-border': meta.borderTint || `${meta.color}40`,
-                '--cat-gradient-bg': `linear-gradient(135deg, ${meta.color}15 0%, rgba(15, 23, 42, 0.88) 100%)`,
+                '--cat-border-light': `${lightColor}35`,
+                '--cat-gradient-bg': `linear-gradient(135deg, ${meta.color}15 0%, var(--bg-elevated) 100%)`,
+                '--cat-gradient-light': meta.lightGradient || `linear-gradient(135deg, ${lightColor}12 0%, #ffffff 100%)`,
               } as React.CSSProperties}
             >
               <div 
@@ -130,7 +135,7 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
                 {meta.emoji || cat.emoji || cat.label.charAt(0)}
               </div>
               <div className="category-card-content">
-                <h3 className="category-card-label" style={{ color: '#ffffff' }}>{cat.label}</h3>
+                <h3 className="category-card-label">{cat.label}</h3>
                 <span className="category-card-count">
                   Browse {cat.count.toLocaleString()} {cat.label} MCP {cat.count === 1 ? 'server' : 'servers'}
                 </span>

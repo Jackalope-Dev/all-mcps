@@ -104,7 +104,7 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
           <h1 className="text-display" style={{ marginBottom: '0.75rem' }}>
             {workflow.title}
           </h1>
-          <p style={{ fontSize: '1.1rem', color: '#00E5FF', fontWeight: 600, marginBottom: '1rem' }}>
+          <p style={{ fontSize: '1.1rem', color: 'var(--accent-color)', fontWeight: 600, marginBottom: '1rem' }}>
             {workflow.subtitle}
           </p>
           <p className="text-lead" style={{ margin: 0 }}>
@@ -135,7 +135,7 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
         </section>
 
         {/* System Prompt Block */}
-        <section className="surface" style={{ padding: '1.75rem', borderRadius: '16px', marginBottom: '3rem', border: '1px solid rgba(0,229,255,0.3)' }}>
+        <section className="surface" style={{ padding: '1.75rem', borderRadius: '16px', marginBottom: '3rem', border: '1px solid rgba(var(--accent-rgb),0.3)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Sparkles size={18} style={{ color: 'var(--accent-color)' }} /> Optimized Agent System Prompt

@@ -10,6 +10,10 @@ interface CopyBlockProps {
   serverId?: string;
   title?: string;
   language?: string;
+  /** trackCopyConfig snippetType tag; defaults to 'install_command'. */
+  snippetType?: string;
+  /** Toast message shown after a successful copy. */
+  toastMessage?: string;
 }
 
 /**
@@ -129,7 +133,7 @@ function renderHighlightedLine(line: string, index: number) {
   );
 }
 
-export function CopyBlock({ code, serverId, title, language }: CopyBlockProps) {
+export function CopyBlock({ code, serverId, title, language, snippetType = 'install_command', toastMessage = 'Copied to clipboard' }: CopyBlockProps) {
   const [copied, setCopied] = useState(false);
 
   const meta = useMemo(() => inferLanguageAndTitle(code, title, language), [code, title, language]);
@@ -139,9 +143,9 @@ export function CopyBlock({ code, serverId, title, language }: CopyBlockProps) {
       await navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success('Copied to clipboard');
+      toast.success(toastMessage);
 
-      trackCopyConfig({ serverId, snippetType: 'install_command' });
+      trackCopyConfig({ serverId, snippetType });
 
       if (serverId) {
         fetch(`/api/mcp/${serverId}/metric`, {
@@ -191,7 +195,7 @@ export function CopyBlock({ code, serverId, title, language }: CopyBlockProps) {
               marginLeft: '0.5rem',
               fontSize: '0.75rem',
               fontWeight: 600,
-              color: 'var(--text-secondary)',
+              color: '#8b949e',
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
               letterSpacing: '0.02em',
             }}
@@ -209,7 +213,7 @@ export function CopyBlock({ code, serverId, title, language }: CopyBlockProps) {
             borderRadius: '6px',
             padding: '0.35rem 0.65rem',
             cursor: 'pointer',
-            color: copied ? '#10b981' : 'var(--text-secondary)',
+            color: copied ? '#10b981' : '#c9d1d9',
             display: 'flex',
             alignItems: 'center',
             gap: '0.35rem',
@@ -219,10 +223,10 @@ export function CopyBlock({ code, serverId, title, language }: CopyBlockProps) {
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
-            if (!copied) e.currentTarget.style.color = 'var(--text-primary)';
+            if (!copied) e.currentTarget.style.color = '#ffffff';
           }}
           onMouseLeave={(e) => {
-            if (!copied) e.currentTarget.style.color = 'var(--text-secondary)';
+            if (!copied) e.currentTarget.style.color = '#c9d1d9';
           }}
         >
           {copied ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
@@ -245,7 +249,7 @@ export function CopyBlock({ code, serverId, title, language }: CopyBlockProps) {
           color: '#e6edf3',
         }}
       >
-        <code>{lines.map((line, idx) => renderHighlightedLine(line, idx))}</code>
+        <code style={{ color: '#e6edf3' }}>{lines.map((line, idx) => renderHighlightedLine(line, idx))}</code>
       </pre>
     </div>
   );

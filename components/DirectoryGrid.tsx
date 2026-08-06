@@ -530,7 +530,7 @@ export default function DirectoryGrid({
       <Badge
         variant="category"
         style={{
-          background: 'rgba(255, 255, 255, 0.03)',
+          background: 'var(--bg-muted)',
           color: 'var(--text-secondary)',
           fontSize: '0.68rem',
         }}
@@ -765,17 +765,6 @@ export default function DirectoryGrid({
 
             <button
               type="button"
-              className={`directory-search-verified-toggle ${verifiedOnly ? 'verified-active' : ''}`}
-              onClick={() => setVerifiedOnly((v) => !v)}
-              aria-pressed={verifiedOnly}
-              title="Show listings that claimed ownership (badge/DNS) or have a premium listing"
-            >
-              <BadgeCheck size={16} />
-              <span>Verified</span>
-            </button>
-
-            <button
-              type="button"
               className="directory-search-submit-btn"
               onClick={() => {
                 if (!isBrowse) {
@@ -915,9 +904,9 @@ export default function DirectoryGrid({
                     textDecoration: 'none',
                     border: isSelected ? `2px solid ${meta.color}` : `1px solid ${meta.borderTint || meta.color + '40'}`,
                     background: isSelected
-                      ? `linear-gradient(135deg, ${meta.color}25 0%, rgba(15, 23, 42, 0.95) 100%)`
-                      : `linear-gradient(135deg, ${meta.color}15 0%, rgba(15, 23, 42, 0.88) 100%)`,
-                    boxShadow: isSelected ? `0 0 20px ${meta.color}35` : `0 4px 16px rgba(0, 0, 0, 0.3)`,
+                      ? `linear-gradient(135deg, ${meta.color}25 0%, var(--bg-elevated) 100%)`
+                      : `linear-gradient(135deg, ${meta.color}15 0%, var(--bg-elevated) 100%)`,
+                    boxShadow: isSelected ? `0 0 20px ${meta.color}35` : `var(--shadow-sm)`,
                     cursor: 'pointer',
                   }}
                 >
@@ -933,7 +922,7 @@ export default function DirectoryGrid({
                     {meta.emoji}
                   </div>
                   <div className="category-card-content">
-                    <h3 className="category-card-label" style={{ color: isSelected ? meta.color : '#ffffff' }}>
+                    <h3 className="category-card-label" style={{ color: isSelected ? meta.color : 'var(--text-primary)' }}>
                       {meta.label}
                     </h3>
                     <span className="category-card-count" style={{ color: 'var(--text-secondary)' }}>
@@ -1139,7 +1128,7 @@ export default function DirectoryGrid({
                 alignItems: 'center',
                 gap: '0.3rem',
                 fontWeight: 700,
-                color: '#00E5FF',
+                color: 'var(--accent-color)',
                 whiteSpace: 'nowrap',
                 background: 'none',
                 border: 'none',
@@ -1234,9 +1223,6 @@ export default function DirectoryGrid({
                         <Badge
                           variant="category"
                           style={{
-                            background: catMeta.bgTint,
-                            color: catMeta.color,
-                            borderColor: catMeta.borderTint,
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '0.25rem',
@@ -1278,14 +1264,7 @@ export default function DirectoryGrid({
                       );
                     })()}
                     {isFeaturedListing(server) && (
-                      <Badge
-                        variant="success"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
-                          color: '#00E5FF',
-                          borderColor: 'rgba(0,229,255,0.35)',
-                        }}
-                      >
+                      <Badge variant="success" className="badge-featured">
                         ★ Featured
                       </Badge>
                     )}
@@ -1298,9 +1277,6 @@ export default function DirectoryGrid({
                           <Badge
                             variant="category"
                             style={{
-                              background: catMeta.bgTint,
-                              color: catMeta.color,
-                              borderColor: catMeta.borderTint,
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.25rem',

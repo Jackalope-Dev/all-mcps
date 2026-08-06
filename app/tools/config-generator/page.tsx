@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { ConfigGeneratorTool } from '../../../components/tools/ConfigGeneratorTool';
+import { FaqSection } from '../../../components/ui/FaqSection';
 
 export const metadata: Metadata = {
   title: 'MCP Config Generator for Claude, Cursor & VS Code',
@@ -137,51 +138,44 @@ export default function ConfigGeneratorPage() {
               of as a local subprocess.
             </p>
 
-            <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '1rem', fontWeight: 700 }}>
-              Frequently Asked Questions (FAQ)
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  Where is the claude_desktop_config.json file located?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  On <strong>macOS</strong>: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>.<br />
-                  On <strong>Windows</strong>: <code>%APPDATA%\Claude\claude_desktop_config.json</code>.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  How do I add an MCP server to Cursor or Windsurf?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  Cursor reads <code>.cursor/mcp.json</code> in your project directory or global settings under Features &gt; MCP Servers.
-                  Windsurf reads <code>~/.codeium/windsurf/mcp_config.json</code>. Use this generator to format entries specifically for each client.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  What is the difference between stdio commands and remote SSE URLs?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  A stdio server runs locally on your machine as a child process launched by your AI client. A remote server runs as a web service over HTTP/SSE and requires a URL endpoint.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  Why does my MCP client fail to load a server after editing the config?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  Common causes include JSON syntax errors (missing quotes, trailing commas), incorrect file paths, or failing to fully restart (quit and reopen) your AI client. Use our{' '}
-                  <Link href="/tools/config-validator" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>Config Validator</Link>{' '}
-                  tool to test your JSON syntax before restarting.
-                </p>
-              </div>
-            </div>
+            <FaqSection
+              title="Frequently Asked Questions (FAQ)"
+              items={[
+                {
+                  question: 'Where is the claude_desktop_config.json file located?',
+                  answer: (
+                    <>
+                      On <strong>macOS</strong>: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>.<br />
+                      On <strong>Windows</strong>: <code>%APPDATA%\Claude\claude_desktop_config.json</code>.
+                    </>
+                  ),
+                },
+                {
+                  question: 'How do I add an MCP server to Cursor or Windsurf?',
+                  answer: (
+                    <>
+                      Cursor reads <code>.cursor/mcp.json</code> in your project directory or global settings under Features &gt; MCP Servers.
+                      Windsurf reads <code>~/.codeium/windsurf/mcp_config.json</code>. Use this generator to format entries specifically for each client.
+                    </>
+                  ),
+                },
+                {
+                  question: 'What is the difference between stdio commands and remote SSE URLs?',
+                  answer:
+                    'A stdio server runs locally on your machine as a child process launched by your AI client. A remote server runs as a web service over HTTP/SSE and requires a URL endpoint.',
+                },
+                {
+                  question: 'Why does my MCP client fail to load a server after editing the config?',
+                  answer: (
+                    <>
+                      Common causes include JSON syntax errors (missing quotes, trailing commas), incorrect file paths, or failing to fully restart (quit and reopen) your AI client. Use our{' '}
+                      <Link href="/tools/config-validator" style={{ color: 'var(--accent-color)', textDecoration: 'none' }}>Config Validator</Link>{' '}
+                      tool to test your JSON syntax before restarting.
+                    </>
+                  ),
+                },
+              ]}
+            />
           </div>
         </div>
       </div>

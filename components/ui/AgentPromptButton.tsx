@@ -53,7 +53,7 @@ export function AgentPromptButton({ serverId, serverName }: { serverId: string; 
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 28px rgba(0, 229, 255, 0.35)';
+        e.currentTarget.style.boxShadow = '0 8px 28px rgba(var(--accent-rgb), 0.35)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';

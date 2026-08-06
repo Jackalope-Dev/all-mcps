@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, BookOpen, Sparkles, Layers, Search } from 'lucide-react';
+import { Menu, X, BookOpen, Sparkles, Layers, Search, LogIn } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { Button } from './ui/Button';
 
@@ -106,9 +106,9 @@ export function SiteHeader() {
               <kbd className="header-search-kbd">⌘K</kbd>
             </button>
             {!isSignedIn && (
-              <Link href={loginHref} className="nav-link">
-                Log in
-              </Link>
+              <Button href={loginHref} variant="secondary" size="sm" className="site-nav-login">
+                <LogIn size={13} /> Log in
+              </Button>
             )}
             <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
               <Sparkles size={13} /> {ctaLabel}
@@ -168,14 +168,15 @@ export function SiteHeader() {
               </Link>
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 {!isSignedIn && (
-                  <Link
+                  <Button
                     href={loginHref}
-                    className="mobile-nav-link"
-                    style={{ marginBottom: '0.5rem' }}
+                    variant="secondary"
+                    size="md"
+                    style={{ width: '100%', justifyContent: 'center', marginBottom: '0.6rem' }}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Log in
-                  </Link>
+                    <LogIn size={16} /> Log in
+                  </Button>
                 )}
                 <Button
                   href={ctaHref}

@@ -44,9 +44,9 @@ export function ClientConfigSection({ client, featuredServers = [] }: ClientConf
         padding: '1.75rem',
         borderRadius: '16px',
         marginBottom: '3rem',
-        border: '1px solid rgba(0, 229, 255, 0.25)',
-        background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(2, 6, 23, 0.95) 100%)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+        border: '1px solid rgba(var(--accent-rgb), 0.25)',
+        background: 'linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-color) 100%)',
+        boxShadow: 'var(--shadow-md)',
       }}
     >
       <div

@@ -29,7 +29,7 @@ export function ClientFaqAccordion({ faqList }: ClientFaqAccordionProps) {
             style={{
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
-              background: isOpen ? 'rgba(15, 23, 42, 0.9)' : 'rgba(15, 23, 42, 0.4)',
+              background: isOpen ? 'var(--bg-elevated)' : 'var(--bg-muted)',
               transition: 'all 0.2s ease',
               overflow: 'hidden',
             }}

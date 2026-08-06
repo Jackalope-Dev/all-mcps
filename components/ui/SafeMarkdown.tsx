@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import { isOutboundHttpUrl, withAllMcpsUtm } from '../../lib/outboundLinks';
+import { CopyBlock } from './CopyBlock';
 
 interface SafeMarkdownProps {
   content: string;
@@ -81,6 +82,20 @@ export function SafeMarkdown({ content, isInline, utmContent }: SafeMarkdownProp
             {children}
           </MarkdownLink>
         ),
+        // Fenced code blocks (```lang ... ```) always render as <pre><code>; inline
+        // `code` spans never do. Intercepting <pre> lets fenced blocks get the full
+        // CopyBlock treatment while inline code keeps the plain markdown-body pill style.
+        pre: ({ children }) => {
+          const codeEl = React.isValidElement(children)
+            ? (children as React.ReactElement<{ className?: string; children?: React.ReactNode }>)
+            : null;
+          if (!codeEl) return <pre>{children}</pre>;
+
+          const className = codeEl.props.className || '';
+          const match = /language-(\w+)/.exec(className);
+          const codeString = String(codeEl.props.children ?? '').replace(/\n$/, '');
+          return <CopyBlock code={codeString} language={match?.[1]} />;
+        },
       }}
     >
       {content}

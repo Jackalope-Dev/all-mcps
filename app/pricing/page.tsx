@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { PricingClient } from './PricingClient';
-import { PAID_PRODUCTS, FREE_TIER, formatUsd } from '../../lib/pricing';
+import { PAID_PRODUCTS, FREE_TIER, formatUsd, type PaidSku } from '../../lib/pricing';
 
 export const metadata: Metadata = {
   title: 'Pricing — Free & Featured MCP Server Listings',
@@ -25,11 +25,18 @@ export const metadata: Metadata = {
 export default async function PricingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ serverId?: string; category?: string; canceled?: string }>;
+  searchParams: Promise<{ serverId?: string; category?: string; canceled?: string; sku?: string }>;
 }) {
   const params = await searchParams;
   const serverId = typeof params.serverId === 'string' ? params.serverId : '';
   const canceled = params.canceled === '1';
+  const sku: PaidSku | null =
+    typeof params.sku === 'string' && params.sku in PAID_PRODUCTS ? (params.sku as PaidSku) : null;
+
+  // Every paid card CTA points here so the pick carries through to checkout
+  // (Step 2) without losing whatever listing id was already in the URL.
+  const checkoutHref = (targetSku: PaidSku) =>
+    `/pricing?sku=${targetSku}${serverId ? `&serverId=${encodeURIComponent(serverId)}` : ''}#checkout`;
 
   const SITE = 'https://allmcps.com';
   // Offers built from the same source of truth the cards render, so structured data
@@ -105,6 +112,27 @@ export default async function PricingPage({
 
       {/* Main Listing Tiers */}
       <div style={{ marginBottom: '3rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          <span
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              background: 'rgba(var(--accent-rgb), 0.12)',
+              border: '1px solid rgba(var(--accent-rgb), 0.3)',
+              color: 'var(--accent-color)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            1
+          </span>
+          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Choose a plan</h2>
+        </div>
         <div
           style={{
             display: 'grid',
@@ -172,10 +200,10 @@ export default async function PricingPage({
                   borderRadius: '16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  border: '1px solid rgba(0,229,255,0.5)',
-                  background: 'linear-gradient(160deg, rgba(0,229,255,0.12), rgba(0,123,255,0.08), transparent)',
+                  border: '1px solid rgba(var(--accent-rgb),0.5)',
+                  background: 'linear-gradient(160deg, rgba(var(--accent-rgb),0.12), rgba(var(--accent-secondary-rgb),0.08), transparent)',
                   scrollMarginTop: '5rem',
-                  boxShadow: '0 8px 32px rgba(0, 229, 255, 0.12)',
+                  boxShadow: '0 8px 32px rgba(var(--accent-rgb), 0.12)',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -185,7 +213,7 @@ export default async function PricingPage({
                       fontWeight: 700,
                       letterSpacing: '0.06em',
                       textTransform: 'uppercase',
-                      color: '#00E5FF',
+                      color: 'var(--accent-color)',
                     }}
                   >
                     Most Popular
@@ -197,9 +225,9 @@ export default async function PricingPage({
                         fontWeight: 800,
                         padding: '0.25rem 0.6rem',
                         borderRadius: '6px',
-                        background: 'rgba(0,229,255,0.2)',
-                        color: '#00E5FF',
-                        border: '1px solid rgba(0,229,255,0.4)',
+                        background: 'rgba(var(--accent-rgb),0.2)',
+                        color: 'var(--accent-color)',
+                        border: '1px solid rgba(var(--accent-rgb),0.4)',
                       }}
                     >
                       {p.badgeText}
@@ -212,18 +240,25 @@ export default async function PricingPage({
                   {formatUsd(p.unitAmount)}<span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>/mo</span>
                 </p>
                 {p.placementHint && (
-                  <p style={{ fontSize: '0.8rem', color: '#00E5FF', marginBottom: '1.5rem', fontWeight: 500 }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--accent-color)', marginBottom: '1.5rem', fontWeight: 500 }}>
                     📌 {p.placementHint}
                   </p>
                 )}
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', flex: 1 }}>
                   {p.benefits.map((b) => (
                     <li key={b} style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
-                      <span style={{ color: '#00E5FF', marginRight: '0.5rem', fontWeight: 700 }}>✓</span>
+                      <span style={{ color: 'var(--accent-color)', marginRight: '0.5rem', fontWeight: 700 }}>✓</span>
                       {b}
                     </li>
                   ))}
                 </ul>
+                <a
+                  href={checkoutHref(p.sku)}
+                  className="btn btn-primary"
+                  style={{ width: '100%', justifyContent: 'center' }}
+                >
+                  Get Premium →
+                </a>
               </div>
             );
           })()}
@@ -259,9 +294,9 @@ export default async function PricingPage({
                   borderRadius: '16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  border: isCategorySponsor ? '1px solid rgba(255,215,0,0.35)' : '1px solid var(--border-color)',
+                  border: isCategorySponsor ? '1px solid rgba(var(--gold-rgb),0.35)' : '1px solid var(--border-color)',
                   background: isCategorySponsor
-                    ? 'linear-gradient(160deg, rgba(255,215,0,0.08), rgba(255,140,0,0.04), transparent)'
+                    ? 'linear-gradient(160deg, rgba(var(--gold-rgb),0.08), rgba(255,140,0,0.04), transparent)'
                     : undefined,
                   scrollMarginTop: '5rem',
                 }}
@@ -273,7 +308,7 @@ export default async function PricingPage({
                       fontWeight: 700,
                       letterSpacing: '0.06em',
                       textTransform: 'uppercase',
-                      color: isCategorySponsor ? '#ffd700' : 'var(--accent-color)',
+                      color: isCategorySponsor ? 'var(--gold-color)' : 'var(--accent-color)',
                     }}
                   >
                     One-Time Boost
@@ -285,9 +320,9 @@ export default async function PricingPage({
                         fontWeight: 800,
                         padding: '0.2rem 0.5rem',
                         borderRadius: '6px',
-                        background: isCategorySponsor ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.08)',
-                        color: isCategorySponsor ? '#ffd700' : 'var(--text-primary)',
-                        border: `1px solid ${isCategorySponsor ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.15)'}`,
+                        background: isCategorySponsor ? 'rgba(var(--gold-rgb),0.15)' : 'var(--bg-muted)',
+                        color: isCategorySponsor ? 'var(--gold-color)' : 'var(--text-primary)',
+                        border: `1px solid ${isCategorySponsor ? 'rgba(var(--gold-rgb),0.3)' : 'var(--border-color)'}`,
                       }}
                     >
                       {p.badgeText}
@@ -298,25 +333,36 @@ export default async function PricingPage({
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>{p.tagline}</p>
                 <p style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.35rem' }}>{formatUsd(p.unitAmount)}</p>
                 {p.placementHint && (
-                  <p style={{ fontSize: '0.75rem', color: isCategorySponsor ? '#ffd700' : 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
+                  <p style={{ fontSize: '0.75rem', color: isCategorySponsor ? 'var(--gold-color)' : 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
                     📌 {p.placementHint}
                   </p>
                 )}
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.55rem', flex: 1 }}>
                   {p.benefits.map((b) => (
                     <li key={b} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                      <span style={{ color: isCategorySponsor ? '#ffd700' : 'var(--accent-color)', marginRight: '0.4rem', fontWeight: 700 }}>✓</span>
+                      <span style={{ color: isCategorySponsor ? 'var(--gold-color)' : 'var(--accent-color)', marginRight: '0.4rem', fontWeight: 700 }}>✓</span>
                       {b}
                     </li>
                   ))}
                 </ul>
+                <a
+                  href={checkoutHref(p.sku)}
+                  className="btn btn-secondary"
+                  style={{ width: '100%', justifyContent: 'center' }}
+                >
+                  Get this boost →
+                </a>
               </div>
             );
           })}
         </div>
       </div>
 
-      <PricingClient initialServerId={serverId} initialCategory={typeof params.category === 'string' ? params.category : ''} />
+      <PricingClient
+        initialServerId={serverId}
+        initialCategory={typeof params.category === 'string' ? params.category : ''}
+        initialSku={sku}
+      />
 
       <p style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
         Free forever to list and claim.{' '}

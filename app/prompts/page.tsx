@@ -76,7 +76,7 @@ export default function PromptsHubPage() {
               <Card href={`/prompts/${w.slug}`} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                   <Badge variant="category">{w.category}</Badge>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#00E5FF', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 600 }}>
                     <Layers size={14} /> {w.requiredMcps.length} MCPs Combined
                   </div>
                 </div>
@@ -85,7 +85,7 @@ export default function PromptsHubPage() {
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                     {w.title}
                   </h2>
-                  <p style={{ fontSize: '0.8rem', color: '#00E5FF', fontWeight: 600, margin: '0.2rem 0 0' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--accent-color)', fontWeight: 600, margin: '0.2rem 0 0' }}>
                     {w.subtitle}
                   </p>
                 </div>

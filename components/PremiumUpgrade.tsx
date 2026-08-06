@@ -15,6 +15,8 @@ type Props = {
   compact?: boolean;
   /** Show every SKU (pricing page); API still enforces listing status. */
   showAll?: boolean;
+  /** SKU the user picked before finding their listing (e.g. from a pricing card CTA) — sorted first and visually emphasized. */
+  highlightSku?: PaidSku | null;
 };
 
 const ICONS: Record<PaidSku, ReactNode> = {
@@ -31,19 +33,34 @@ export function PremiumUpgrade({
   hasStripeCustomer = false,
   compact = false,
   showAll = false,
+  highlightSku = null,
 }: Props) {
   const [loadingSku, setLoadingSku] = useState<PaidSku | null>(null);
 
-  const visible = (Object.keys(PAID_PRODUCTS) as PaidSku[]).filter((sku) => {
-    if (showAll) return !(sku === 'premium_monthly' && isPremium);
-    if (sku === 'priority_review') return listingStatus === 'pending';
-    if (sku === 'premium_monthly' && isPremium) return false;
-    return listingStatus === 'active';
-  });
+  const visible = (Object.keys(PAID_PRODUCTS) as PaidSku[])
+    .filter((sku) => {
+      if (showAll) return !(sku === 'premium_monthly' && isPremium);
+      if (sku === 'priority_review') return listingStatus === 'pending';
+      if (sku === 'premium_monthly' && isPremium) return false;
+      return listingStatus === 'active';
+    })
+    .sort((a, b) => (a === highlightSku ? -1 : b === highlightSku ? 1 : 0));
 
   const canManageBilling = isPremium || hasStripeCustomer;
 
-  if (visible.length === 0 && !canManageBilling) return null;
+  // The SKU the user picked from a pricing card CTA may not be purchasable yet
+  // (e.g. Featured needs an active listing, this one is still pending review) —
+  // surface why instead of silently dropping their choice from the list.
+  const highlightUnavailableReason =
+    highlightSku && !visible.includes(highlightSku)
+      ? highlightSku === 'premium_monthly' && isPremium
+        ? 'This listing is already Premium.'
+        : highlightSku === 'priority_review'
+          ? 'Priority Review is only for listings still in the review queue — this one is already published.'
+          : 'This upgrade needs an active, published listing — finish the free review first, or buy Priority Review to speed that up.'
+      : null;
+
+  if (visible.length === 0 && !canManageBilling && !highlightUnavailableReason) return null;
 
   const startCheckout = async (sku: PaidSku) => {
     setLoadingSku(sku);
@@ -105,11 +122,29 @@ export function PremiumUpgrade({
         </>
       )}
 
+      {highlightUnavailableReason && (
+        <p
+          style={{
+            fontSize: '0.8rem',
+            color: '#d97706',
+            background: 'rgba(217,119,6,0.1)',
+            border: '1px solid rgba(217,119,6,0.3)',
+            borderRadius: '10px',
+            padding: '0.65rem 0.85rem',
+            marginBottom: '0.85rem',
+            lineHeight: 1.5,
+          }}
+        >
+          {PAID_PRODUCTS[highlightSku!].name} isn&rsquo;t available for this listing yet — {highlightUnavailableReason}
+        </p>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
         {visible.map((sku) => {
           const p = PAID_PRODUCTS[sku];
           const priceLabel =
             p.interval === 'month' ? `${formatUsd(p.unitAmount)}/mo` : formatUsd(p.unitAmount);
+          const isHighlighted = sku === highlightSku;
           return (
             <button
               key={sku}
@@ -123,11 +158,14 @@ export function PremiumUpgrade({
                 textAlign: 'left',
                 padding: '0.85rem 1rem',
                 borderRadius: '12px',
-                border: '1px solid rgba(0,229,255,0.25)',
+                border: isHighlighted
+                  ? '1px solid var(--accent-color)'
+                  : '1px solid rgba(var(--accent-rgb),0.25)',
+                boxShadow: isHighlighted ? '0 0 0 3px rgba(var(--accent-rgb),0.15)' : 'none',
                 background:
-                  sku === 'premium_monthly'
-                    ? 'linear-gradient(135deg, rgba(0,229,255,0.1), rgba(0,123,255,0.08))'
-                    : 'rgba(255,255,255,0.04)',
+                  sku === 'premium_monthly' || isHighlighted
+                    ? 'linear-gradient(135deg, rgba(var(--accent-rgb),0.1), rgba(var(--accent-secondary-rgb),0.08))'
+                    : 'var(--bg-muted)',
                 color: 'var(--text-primary)',
                 cursor: loadingSku ? 'wait' : 'pointer',
                 opacity: loadingSku && loadingSku !== sku ? 0.6 : 1,
@@ -135,7 +173,25 @@ export function PremiumUpgrade({
             >
               <span style={{ color: 'var(--accent-color)', display: 'flex' }}>{ICONS[sku]}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.9rem' }}>
+                  {p.name}
+                  {isHighlighted && (
+                    <span
+                      style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        color: 'var(--accent-color)',
+                        background: 'rgba(var(--accent-rgb),0.15)',
+                        borderRadius: '4px',
+                        padding: '0.1rem 0.4rem',
+                      }}
+                    >
+                      Selected
+                    </span>
+                  )}
+                </span>
                 <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                   {p.tagline}
                 </span>

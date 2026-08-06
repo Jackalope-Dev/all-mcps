@@ -159,7 +159,7 @@ export default function ApiDocsPage() {
                       padding: '1.1rem 1.25rem',
                       borderRadius: 12,
                       border: '1px solid var(--border-color)',
-                      background: 'rgba(255,255,255,0.02)',
+                      background: 'var(--bg-muted)',
                     }}
                   >
                     <div
@@ -172,22 +172,18 @@ export default function ApiDocsPage() {
                       }}
                     >
                       <span
+                        className={ep.method === 'GET' ? 'api-method-badge api-method-badge--get' : 'api-method-badge api-method-badge--post'}
                         style={{
                           fontSize: '0.7rem',
                           fontWeight: 800,
                           letterSpacing: '0.04em',
                           padding: '0.2rem 0.5rem',
                           borderRadius: 6,
-                          background:
-                            ep.method === 'GET'
-                              ? 'rgba(16,185,129,0.15)'
-                              : 'rgba(59,130,246,0.15)',
-                          color: ep.method === 'GET' ? '#34d399' : '#93c5fd',
                         }}
                       >
                         {ep.method}
                       </span>
-                      <code style={{ fontSize: '0.9rem', color: '#e2e8f0' }}>{ep.path}</code>
+                      <code style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{ep.path}</code>
                     </div>
                     <h3 style={{ fontSize: '1rem', margin: '0 0 0.35rem' }}>{ep.title}</h3>
                     <p
@@ -228,7 +224,7 @@ export default function ApiDocsPage() {
               </li>
               <li>
                 Markdown negotiation: send <code>Accept: text/markdown</code> or append{' '}
-                <code>?format=md</code> / <code>.md</code> to listing URLs.
+                <code>?format=md</code> / <code>.md</code> to listing, blog, or category URLs.
               </li>
               <li>
                 Machine catalog: <Link href="/data.json">/data.json</Link> and{' '}

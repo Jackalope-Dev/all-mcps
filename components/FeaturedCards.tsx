@@ -33,16 +33,14 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
         {displayServers.map((server) => (
           <ImpressionBeacon key={server.id} serverId={server.id} surface="homepage_featured">
-          <Card href={`/mcp/${server.id}`} hoverable style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', minHeight: '310px', maxHeight: '310px', position: 'relative', overflow: 'hidden', border: '1px solid rgba(0, 229, 255, 0.2)', background: 'linear-gradient(to bottom right, rgba(0, 229, 255, 0.05), transparent)' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #007BFF)' }}></div>
-
+          <Card href={`/mcp/${server.id}`} hoverable className="directory-card-featured" style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', minHeight: '310px', maxHeight: '310px', position: 'relative', overflow: 'hidden' }}>
             <div className="featured-card-header">
               <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} size={56} />
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {(server.isPremium || server.isOfficial) && (
                   <Badge variant="official">Verified</Badge>
                 )}
-                <Badge variant="success" style={{ background: 'linear-gradient(135deg, rgba(0,229,255,0.1), rgba(0,123,255,0.1))', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.2)' }}>★ Featured</Badge>
+                <Badge variant="success" className="badge-featured">★ Featured</Badge>
               </div>
             </div>
 
@@ -80,9 +78,6 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
                   <Badge 
                     variant="category"
                     style={{
-                      background: catMeta.bgTint,
-                      color: catMeta.color,
-                      borderColor: catMeta.borderTint,
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.25rem',
@@ -110,17 +105,16 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               maxHeight: '310px',
               position: 'relative',
               overflow: 'hidden',
-              border: '1px dashed rgba(0, 229, 255, 0.4)',
-              background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
+              border: '1px dashed var(--accent-color)',
+              background: 'var(--brand-gradient-soft)',
+              borderRadius: 'var(--radius-lg)',
             }}
           >
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #00E5FF, #38bdf8)' }}></div>
-            
             <div className="featured-card-header">
-              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(0, 123, 255, 0.2))', border: '1px solid rgba(0, 229, 255, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Plus size={28} style={{ color: '#00E5FF' }} />
+              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Plus size={28} style={{ color: 'var(--accent-color)' }} />
               </div>
-              <Badge variant="success" style={{ background: 'rgba(0, 229, 255, 0.15)', color: '#00E5FF', borderColor: 'rgba(0, 229, 255, 0.4)' }}>★ Add Server</Badge>
+              <Badge variant="success" className="badge-featured">★ Add Server</Badge>
             </div>
             
             <div style={{ minHeight: '2.8rem', marginBottom: '0.4rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -129,7 +123,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
             <p style={{ fontSize: '0.875rem', height: '5.25rem', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem' }}>
               List your server in the directory so developers building with Claude, Cursor, and AI agents can discover and install your integration.
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.9rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.9rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
               <span>Submit Server</span>
               <ArrowRight size={16} />
             </div>

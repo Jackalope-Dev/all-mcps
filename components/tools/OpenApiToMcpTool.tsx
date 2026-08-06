@@ -463,7 +463,7 @@ export function OpenApiToMcpTool() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Quick Presets Banner */}
-      <Card style={{ padding: '1.25rem', background: 'rgba(0, 229, 255, 0.03)', borderColor: 'rgba(0, 229, 255, 0.2)' }}>
+      <Card style={{ padding: '1.25rem', background: 'var(--bg-muted)', borderColor: 'var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <Sparkles size={18} style={{ color: 'var(--brand-cyan)' }} />
           <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Load Sample OpenAPI Specifications</span>
@@ -504,7 +504,7 @@ export function OpenApiToMcpTool() {
                 width: '100%',
                 padding: '0.875rem',
                 borderRadius: '8px',
-                background: 'rgba(0,0,0,0.4)',
+                background: 'var(--bg-muted)',
                 border: parseError ? '1px solid #ef4444' : '1px solid var(--border-color)',
                 color: 'var(--text-primary)',
                 fontFamily: 'monospace',
@@ -595,7 +595,7 @@ export function OpenApiToMcpTool() {
                     style={{
                       padding: '0.875rem',
                       borderRadius: '6px',
-                      background: 'rgba(0,0,0,0.25)',
+                      background: 'var(--bg-muted)',
                       border: '1px solid var(--border-color)',
                       fontSize: '0.85rem',
                     }}
@@ -604,7 +604,7 @@ export function OpenApiToMcpTool() {
                       <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-color)', wordBreak: 'break-all' }}>
                         {t.name}
                       </span>
-                      <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', borderRadius: '3px', background: 'rgba(255,255,255,0.1)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                      <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', borderRadius: '3px', background: 'var(--bg-muted)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
                         {t.method} {t.path}
                       </span>
                     </div>
@@ -657,7 +657,7 @@ export function OpenApiToMcpTool() {
         </div>
 
         {/* Required dependencies notice */}
-        <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid var(--border-color)', wordBreak: 'break-word', overflowX: 'auto' }}>
+        <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', background: 'var(--bg-muted)', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid var(--border-color)', wordBreak: 'break-word', overflowX: 'auto' }}>
           <strong>Install dependencies:</strong>{' '}
           <code style={{ color: 'var(--accent-color)' }}>
             {targetLang === 'typescript' ? 'npm install @modelcontextprotocol/sdk zod' : 'pip install "mcp[cli]" httpx'}

@@ -18,8 +18,9 @@ export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsor
         borderRadius: '16px',
         padding: '1.25rem 1.5rem',
         marginBottom: '2rem',
-        border: '1px solid rgba(0, 229, 255, 0.3)',
-        background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
+        border: '1px solid var(--border-color)',
+        background: 'var(--brand-gradient-soft)',
+        boxShadow: 'var(--shadow-sm)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -33,11 +34,12 @@ export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsor
             width: '40px',
             height: '40px',
             borderRadius: '10px',
-            background: 'rgba(0, 229, 255, 0.15)',
+            background: 'var(--brand-gradient-soft)',
+            border: '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#00E5FF',
+            color: 'var(--accent-color)',
             flexShrink: 0,
           }}
         >
@@ -46,7 +48,7 @@ export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsor
         {sponsor ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#00E5FF' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--accent-color)' }}>
                 Category Sponsor · until {new Date(sponsor.until).toLocaleDateString()}
               </span>
             </div>
@@ -63,7 +65,7 @@ export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsor
         ) : (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#00E5FF' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--accent-color)' }}>
                 Category Sponsorship Available · $18 for 7 Days
               </span>
             </div>

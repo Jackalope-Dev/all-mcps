@@ -107,7 +107,7 @@ export function McpPlayground() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* Controls Bar */}
-      <div className="surface" style={{ padding: '1.25rem', borderRadius: '16px', border: '1px solid rgba(0, 229, 255, 0.25)' }}>
+      <div className="surface" style={{ padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
           <div>
             <label htmlFor="playground-endpoint-url" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
@@ -179,11 +179,11 @@ export function McpPlayground() {
           </h2>
           <pre
             style={{
-              background: 'rgba(2, 6, 23, 0.95)',
+              background: 'var(--bg-muted)',
               padding: '1rem',
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
-              color: '#38bdf8',
+              color: 'var(--text-primary)',
               fontSize: '0.85rem',
               overflowX: 'auto',
               margin: 0,
@@ -214,11 +214,11 @@ export function McpPlayground() {
           </div>
           <pre
             style={{
-              background: 'rgba(2, 6, 23, 0.95)',
+              background: 'var(--bg-muted)',
               padding: '1rem',
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
-              color: responseOutput?.includes('"error"') ? '#fca5a5' : '#34d399',
+              color: responseOutput?.includes('"error"') ? '#ef4444' : '#059669',
               fontSize: '0.85rem',
               overflowX: 'auto',
               margin: 0,

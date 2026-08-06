@@ -85,8 +85,8 @@ export default function AboutPage() {
       <div className="feature-grid">
         <div className="surface-muted feature-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
-              <Search size={18} style={{ color: '#00E5FF' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.2)' }}>
+              <Search size={18} style={{ color: 'var(--accent-color)' }} />
             </div>
             <h2 style={{ margin: 0 }}>Discover Tools</h2>
           </div>
@@ -97,8 +97,8 @@ export default function AboutPage() {
         </div>
         <div className="surface-muted feature-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
-              <Zap size={18} style={{ color: '#00E5FF' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.2)' }}>
+              <Zap size={18} style={{ color: 'var(--accent-color)' }} />
             </div>
             <h2 style={{ margin: 0 }}>1-Click Install</h2>
           </div>
@@ -108,8 +108,8 @@ export default function AboutPage() {
         </div>
         <div className="surface-muted feature-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
-              <Rocket size={18} style={{ color: '#00E5FF' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.2)' }}>
+              <Rocket size={18} style={{ color: 'var(--accent-color)' }} />
             </div>
             <h2 style={{ margin: 0 }}>Community Driven</h2>
           </div>

@@ -24,9 +24,11 @@ export type CategoryGroup = {
   label: string;
   emoji: string;
   color: string;
+  lightColor: string;
   bgTint: string;
   borderTint: string;
   gradient: string;
+  lightGradient: string;
   keywords: string[];
 };
 
@@ -36,9 +38,11 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Dev & Coding',
     emoji: '💻',
     color: '#00E5FF',
+    lightColor: '#0284c7',
     bgTint: 'rgba(0, 229, 255, 0.1)',
     borderTint: 'rgba(0, 229, 255, 0.3)',
     gradient: 'linear-gradient(135deg, #00E5FF, #007BFF)',
+    lightGradient: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
     keywords: ['developer', 'coding', 'code', 'version', 'command', 'embedded', 'agents', 'development'],
   },
   {
@@ -46,9 +50,11 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Databases & Data',
     emoji: '🗄️',
     color: '#A855F7',
+    lightColor: '#7e22ce',
     bgTint: 'rgba(168, 85, 247, 0.1)',
     borderTint: 'rgba(168, 85, 247, 0.3)',
     gradient: 'linear-gradient(135deg, #A855F7, #6366F1)',
+    lightGradient: 'linear-gradient(135deg, rgba(126, 34, 206, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
     keywords: ['database', 'data', 'visualization', 'science'],
   },
   {
@@ -56,9 +62,11 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'AI & Knowledge',
     emoji: '🧠',
     color: '#F59E0B',
+    lightColor: '#b45309',
     bgTint: 'rgba(245, 158, 11, 0.1)',
     borderTint: 'rgba(245, 158, 11, 0.3)',
     gradient: 'linear-gradient(135deg, #F59E0B, #D97706)',
+    lightGradient: 'linear-gradient(135deg, rgba(180, 83, 9, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
     keywords: ['rag', 'search', 'conversational', 'knowledge', 'memory', 'research', 'ai'],
   },
   {
@@ -66,9 +74,11 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Cloud & Systems',
     emoji: '☁️',
     color: '#0EA5E9',
+    lightColor: '#0369a1',
     bgTint: 'rgba(14, 165, 233, 0.1)',
     borderTint: 'rgba(14, 165, 233, 0.3)',
     gradient: 'linear-gradient(135deg, #0EA5E9, #2563EB)',
+    lightGradient: 'linear-gradient(135deg, rgba(3, 105, 161, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
     keywords: ['cloud', 'architecture', 'industrial', 'iot', 'aerospace', 'environment'],
   },
   {
@@ -76,9 +86,11 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Productivity & Work',
     emoji: '🏢',
     color: '#10B981',
+    lightColor: '#047857',
     bgTint: 'rgba(16, 185, 129, 0.1)',
     borderTint: 'rgba(16, 185, 129, 0.3)',
     gradient: 'linear-gradient(135deg, #10B981, #059669)',
+    lightGradient: 'linear-gradient(135deg, rgba(4, 120, 87, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
     keywords: ['workplace', 'productivity', 'communication', 'product', 'support', 'agreements'],
   },
   {
@@ -86,9 +98,11 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Security & Auth',
     emoji: '🔒',
     color: '#F43F5E',
+    lightColor: '#be123c',
     bgTint: 'rgba(244, 63, 94, 0.1)',
     borderTint: 'rgba(244, 63, 94, 0.3)',
     gradient: 'linear-gradient(135deg, #F43F5E, #E11D48)',
+    lightGradient: 'linear-gradient(135deg, rgba(190, 18, 60, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
     keywords: ['security', 'cryptography', 'delivery', 'aggregators'],
   },
   {
@@ -96,9 +110,11 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Finance & Commerce',
     emoji: '💰',
     color: '#22C55E',
+    lightColor: '#15803d',
     bgTint: 'rgba(34, 197, 94, 0.1)',
     borderTint: 'rgba(34, 197, 94, 0.3)',
     gradient: 'linear-gradient(135deg, #22C55E, #15803D)',
+    lightGradient: 'linear-gradient(135deg, rgba(21, 128, 61, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
     keywords: ['finance', 'fintech', 'e-commerce', 'legal', 'real estate', 'customer'],
   },
   {
@@ -106,9 +122,11 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Media, Web & Bio',
     emoji: '🌐',
     color: '#EC4899',
+    lightColor: '#be185d',
     bgTint: 'rgba(236, 72, 153, 0.1)',
     borderTint: 'rgba(236, 72, 153, 0.3)',
     gradient: 'linear-gradient(135deg, #EC4899, #8B5CF6)',
+    lightGradient: 'linear-gradient(135deg, rgba(190, 24, 93, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)',
     keywords: ['browser', 'multimedia', 'social', 'gaming', 'art', 'podcasts', 'speech', 'text', 'translation', 'education', 'sports', 'home', 'travel', 'spirituality', 'biology'],
   },
 ];
@@ -155,9 +173,11 @@ export function getCategoryMeta(category: string) {
     emoji: emoji || matchedGroup.emoji,
     label: label || category,
     color: matchedGroup.color,
+    lightColor: matchedGroup.lightColor || matchedGroup.color,
     bgTint: matchedGroup.bgTint,
     borderTint: matchedGroup.borderTint,
     gradient: matchedGroup.gradient,
+    lightGradient: matchedGroup.lightGradient,
     group: matchedGroup,
   };
 }
@@ -255,6 +275,46 @@ export const CATEGORY_ALIASES: Record<string, string> = {
  * Normalizes any raw category string into an exact canonical category from DIRECTORY_CATEGORIES.
  * Ensures submitters, agents, and crons cannot introduce invalid or duplicate categories.
  */
+/**
+ * Hand-written intros for the highest-traffic categories; every other category gets a
+ * templated-but-unique paragraph (label + count + named examples) so no page is thin
+ * or duplicated. Shared by the category HTML page and the agent markdown renderer.
+ */
+const CURATED_CATEGORY_INTRO: Record<string, string> = {
+  'developer-tools':
+    'MCP servers that plug AI agents straight into the developer workflow — running code, managing repositories, querying build systems, and automating the everyday tasks engineers repeat all day.',
+  'databases':
+    'Connect Claude, Cursor, and other AI agents to your data. These MCP servers expose SQL and NoSQL databases, warehouses, and query engines so an agent can read, analyze, and (carefully) write real records.',
+  'security':
+    'Security-focused MCP servers for scanning, auditing, secrets management, and threat analysis — giving AI agents safe, scoped access to the tools security teams already rely on.',
+  'search-and-data-extraction':
+    'MCP servers that let agents search the web, scrape pages, and pull structured data out of unstructured sources — turning the open internet into a queryable tool.',
+  'finance-and-fintech':
+    'From market data to payments and on-chain activity, these MCP servers give AI agents access to financial APIs and fintech infrastructure with the guardrails that domain demands.',
+  'knowledge-and-memory':
+    'Persistent memory, note stores, and knowledge bases exposed over MCP, so agents can remember context across sessions and reason over your accumulated knowledge.',
+  'browser-automation':
+    'Drive a real browser from an AI agent: navigate, click, fill forms, and extract content. These MCP servers wrap headless browsers and automation frameworks behind the protocol.',
+  'social-media':
+    'MCP servers for posting, reading, and analyzing across social platforms — letting agents draft, schedule, and monitor content programmatically.',
+  'data-platforms':
+    'Analytics warehouses, data pipelines, and BI platforms exposed over MCP, so agents can pull metrics and run analysis against your production data stack.',
+  'cloud-platforms':
+    'Provision, inspect, and manage cloud infrastructure through MCP — giving agents scoped access to the APIs behind your deployments.',
+};
+
+/** Builds the one-paragraph intro for a category landing page / markdown export. */
+export function categoryIntroCopy(category: string, count: number, topNames: string[]): string {
+  const slug = categorySlug(category);
+  if (CURATED_CATEGORY_INTRO[slug]) return CURATED_CATEGORY_INTRO[slug];
+  const { label } = parseCategoryLabel(category);
+  const examples =
+    topNames.length >= 2
+      ? ` Popular picks include ${topNames.slice(0, 3).join(', ')}.`
+      : '';
+  return `Discover ${count.toLocaleString()} ${label} MCP server${count === 1 ? '' : 's'} for AI agents. Browse, compare, and install Model Context Protocol tools that connect Claude, Cursor, and other clients to ${label.toLowerCase()} capabilities.${examples}`;
+}
+
 export function normalizeCategory(input?: string | null): string {
   if (!input || !input.trim()) {
     return DEFAULT_SUBMIT_CATEGORY;

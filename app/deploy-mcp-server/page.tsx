@@ -145,8 +145,8 @@ export default function DeployMCPServerPage() {
               {/* TL;DR Quickstart Box */}
               <div
                 style={{
-                  background: 'rgba(0, 229, 255, 0.05)',
-                  borderLeft: '4px solid #00E5FF',
+                  background: 'rgba(var(--accent-rgb), 0.05)',
+                  borderLeft: '4px solid var(--accent-color)',
                   borderRadius: '12px',
                   padding: '1.25rem 1.5rem',
                   marginBottom: '2.5rem',

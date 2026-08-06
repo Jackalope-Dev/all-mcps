@@ -383,8 +383,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
-          border: '1px solid rgba(0, 229, 255, 0.3)',
+          background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
+          border: '1px solid rgba(var(--accent-rgb), 0.3)',
           borderRadius: '12px',
           padding: '1.25rem',
           marginBottom: '1.75rem',
@@ -394,7 +394,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         }}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.95rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.95rem' }}>
             <span style={{ fontSize: '1.25rem' }}>🤖</span>
             <span>Have an AI Agent claim &amp; verify this server for you!</span>
           </div>
@@ -402,8 +402,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             type="button"
             onClick={copyAgentClaimPrompt}
             style={{
-              background: '#00E5FF',
-              color: '#090d16',
+              background: 'var(--accent-color)',
+              color: 'var(--bg-color)',
               border: 'none',
               borderRadius: '6px',
               padding: '0.45rem 0.85rem',
@@ -413,7 +413,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.35rem',
-              boxShadow: '0 2px 8px rgba(0, 229, 255, 0.2)',
+              boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.2)',
             }}
           >
             📋 Copy Agent Claim Prompt
@@ -430,8 +430,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             marginBottom: '1.75rem',
             padding: '1.1rem',
             borderRadius: '12px',
-            border: '1px solid rgba(0,229,255,0.25)',
-            background: 'rgba(0,229,255,0.05)',
+            border: '1px solid rgba(var(--accent-rgb),0.25)',
+            background: 'rgba(var(--accent-rgb),0.05)',
           }}
         >
           <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Website on this listing</h3>
@@ -470,8 +470,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               style={{
                 padding: '1.15rem',
                 borderRadius: '12px',
-                border: isSelected ? '1px solid #00E5FF' : '1px solid var(--border-color)',
-                background: isSelected ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.02)',
+                border: isSelected ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+                background: isSelected ? 'rgba(var(--accent-rgb),0.08)' : 'rgba(255,255,255,0.02)',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
@@ -479,7 +479,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '1.25rem' }}>{m.id === 'github' ? '🐙' : m.id === 'website_badge' ? '🌐' : '⚡'}</span>
                 {isSelected && (
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#00E5FF', background: 'rgba(0,229,255,0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color)', background: 'rgba(var(--accent-rgb),0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
                     Selected
                   </span>
                 )}

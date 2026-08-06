@@ -190,11 +190,11 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
   ] as const;
 
   return (
-    <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', marginBottom: '2rem', border: '1px solid rgba(0, 229, 255, 0.2)' }}>
+    <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--border-color)', background: 'var(--bg-elevated)', boxShadow: 'var(--shadow-sm)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Sparkles size={18} style={{ color: 'var(--accent-color)' }} />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Install Config Generator</h3>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Install Config Generator</h3>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button
@@ -205,9 +205,9 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.4rem',
-              background: showEnvVars ? 'rgba(0, 229, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-              border: showEnvVars ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid var(--border-color)',
-              color: showEnvVars ? '#00E5FF' : 'var(--text-secondary)',
+              background: showEnvVars ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
+              border: showEnvVars ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+              color: showEnvVars ? 'var(--accent-color)' : 'var(--text-secondary)',
               fontSize: '0.8rem',
             }}
           >
@@ -226,11 +226,11 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
       </div>
 
       {showEnvVars && (
-        <div style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(0, 0, 0, 0.25)', borderRadius: '10px', border: '1px dashed rgba(0, 229, 255, 0.3)' }}>
+        <div style={{ marginBottom: '1.25rem', padding: '1rem', background: 'var(--bg-muted)', borderRadius: '10px', border: '1px dashed var(--accent-color)' }}>
           <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
             Configure Environment Variables (API Keys, Tokens, Options):
           </div>
-          <div style={{ fontSize: '0.78rem', color: '#00E5FF', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div style={{ fontSize: '0.78rem', color: 'var(--accent-color)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             💡 Tip: Replace placeholder values with your actual API keys or tokens before pasting into your client config.
           </div>
           {envVars.map((env, idx) => (
@@ -245,7 +245,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                   padding: '0.35rem 0.65rem',
                   borderRadius: '6px',
                   border: '1px solid var(--border-color)',
-                  background: 'var(--bg-card, #0f172a)',
+                  background: 'var(--bg-muted)',
                   color: 'var(--text-primary)',
                   fontSize: '0.8rem',
                   fontFamily: 'monospace',
@@ -261,7 +261,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                   padding: '0.35rem 0.65rem',
                   borderRadius: '6px',
                   border: '1px solid var(--border-color)',
-                  background: 'var(--bg-card, #0f172a)',
+                  background: 'var(--bg-muted)',
                   color: 'var(--text-primary)',
                   fontSize: '0.8rem',
                   fontFamily: 'monospace',
@@ -316,8 +316,8 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
               padding: '0.4rem 0.85rem',
               borderRadius: '8px',
               border: activeTab === t.id ? '1px solid var(--accent-color)' : '1px solid transparent',
-              background: activeTab === t.id ? 'rgba(0, 229, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)',
-              color: activeTab === t.id ? '#00E5FF' : 'var(--text-secondary)',
+              background: activeTab === t.id ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
+              color: activeTab === t.id ? 'var(--accent-color)' : 'var(--text-secondary)',
               fontWeight: activeTab === t.id ? 700 : 500,
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -333,13 +333,13 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
       <div style={{ position: 'relative' }}>
         <pre
           style={{
-            background: 'rgba(2, 6, 23, 0.85)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--bg-muted)',
+            border: '1px solid var(--border-color)',
             borderRadius: '10px',
             padding: '1rem 1.25rem',
             fontFamily: 'monospace',
             fontSize: '0.875rem',
-            color: '#38bdf8',
+            color: 'var(--text-primary)',
             overflowX: 'auto',
             margin: 0,
             lineHeight: 1.5,

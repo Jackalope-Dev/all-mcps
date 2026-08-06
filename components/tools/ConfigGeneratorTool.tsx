@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { CopyBlock } from '../ui/CopyBlock';
 import { ServerPicker, DirectoryServerHit } from './ServerPicker';
 import { parseInstallHint, isRemoteHint } from '../../lib/tools/parseInstallHint';
 import {
@@ -27,7 +28,6 @@ function slugify(name: string): string {
 export function ConfigGeneratorTool() {
   const [rows, setRows] = useState<ServerRow[]>([]);
   const [format, setFormat] = useState<ClientFormat>('claude');
-  const [copied, setCopied] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -79,16 +79,6 @@ export function ConfigGeneratorTool() {
   }
 
   const configJson = serializeConfig(rows, format);
-
-  async function copyConfig() {
-    try {
-      await navigator.clipboard.writeText(configJson);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API unavailable/blocked — the <pre> text below is still selectable manually.
-    }
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -194,24 +184,7 @@ export function ConfigGeneratorTool() {
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
           Paste into: {CLIENT_CONFIG_PATHS[format].join(' · ')}
         </p>
-        <div style={{ position: 'relative' }}>
-          <pre
-            style={{
-              background: 'rgba(0,0,0,0.4)',
-              padding: '1.25rem 4rem 1.25rem 1.25rem',
-              borderRadius: '8px',
-              overflowX: 'auto',
-              border: '1px solid var(--border-color)',
-              fontSize: '0.85rem',
-              margin: 0,
-            }}
-          >
-            {configJson}
-          </pre>
-          <Button size="sm" onClick={copyConfig} style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}>
-            {copied ? 'Copied!' : 'Copy'}
-          </Button>
-        </div>
+        <CopyBlock code={configJson} title={CLIENT_CONFIG_PATHS[format][0]} language="json" />
       </section>
     </div>
   );

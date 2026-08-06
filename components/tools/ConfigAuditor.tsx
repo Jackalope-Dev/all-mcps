@@ -115,8 +115,8 @@ export function ConfigAuditor() {
               fontFamily: 'monospace',
               fontSize: '0.85rem',
               lineHeight: 1.5,
-              background: 'rgba(2, 6, 23, 0.95)',
-              color: '#38bdf8',
+              background: 'var(--bg-muted)',
+              color: 'var(--text-primary)',
               resize: 'vertical',
             }}
           />
@@ -134,8 +134,8 @@ export function ConfigAuditor() {
             style={{
               padding: '1.25rem',
               borderRadius: '12px',
-              border: audit.isValidJson ? '1px solid rgba(0, 229, 255, 0.25)' : '1px solid rgba(248, 113, 113, 0.4)',
-              background: 'rgba(2, 6, 23, 0.6)',
+              border: audit.isValidJson ? '1px solid var(--border-color)' : '1px solid rgba(248, 113, 113, 0.4)',
+              background: 'var(--bg-muted)',
               display: 'flex',
               flexDirection: 'column',
               gap: '1rem',
@@ -144,7 +144,7 @@ export function ConfigAuditor() {
             {/* Status Summary Pill */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Detected format: <strong style={{ color: '#00E5FF', textTransform: 'uppercase' }}>{audit.formatDetected}</strong>
+                Detected format: <strong style={{ color: 'var(--accent-color)', textTransform: 'uppercase' }}>{audit.formatDetected}</strong>
               </span>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 Servers: <strong style={{ color: 'var(--text-primary)' }}>{audit.serverCount}</strong>
@@ -155,9 +155,9 @@ export function ConfigAuditor() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {audit.issues.map((issue, idx) => {
                 const Icon = issue.type === 'error' ? AlertCircle : issue.type === 'warning' ? AlertTriangle : Info;
-                const borderClr = issue.type === 'error' ? 'rgba(248, 113, 113, 0.4)' : issue.type === 'warning' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(0, 229, 255, 0.3)';
-                const bgClr = issue.type === 'error' ? 'rgba(248, 113, 113, 0.08)' : issue.type === 'warning' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(0, 229, 255, 0.08)';
-                const textClr = issue.type === 'error' ? '#fca5a5' : issue.type === 'warning' ? '#fcd34d' : '#38bdf8';
+                const borderClr = issue.type === 'error' ? 'rgba(248, 113, 113, 0.4)' : issue.type === 'warning' ? 'rgba(245, 158, 11, 0.4)' : 'var(--border-color)';
+                const bgClr = issue.type === 'error' ? 'rgba(248, 113, 113, 0.08)' : issue.type === 'warning' ? 'rgba(245, 158, 11, 0.08)' : 'var(--brand-gradient-soft)';
+                const textClr = issue.type === 'error' ? '#ef4444' : issue.type === 'warning' ? '#d97706' : 'var(--accent-color)';
 
                 return (
                   <div
@@ -195,7 +195,7 @@ export function ConfigAuditor() {
             position: 'fixed',
             inset: 0,
             zIndex: 9999,
-            backgroundColor: 'rgba(2, 6, 23, 0.85)',
+            backgroundColor: 'var(--bg-overlay, rgba(2, 6, 23, 0.85))',
             backdropFilter: 'blur(12px)',
             display: 'flex',
             alignItems: 'center',
@@ -211,8 +211,8 @@ export function ConfigAuditor() {
               maxWidth: '500px',
               borderRadius: '16px',
               padding: '1.5rem',
-              border: '1px solid rgba(0, 229, 255, 0.3)',
-              background: '#090d16',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-elevated)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -251,7 +251,7 @@ export function ConfigAuditor() {
                     padding: '0.75rem 1rem',
                     borderRadius: '8px',
                     border: '1px solid var(--border-color)',
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    background: 'var(--bg-muted)',
                     color: 'var(--text-primary)',
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -261,7 +261,7 @@ export function ConfigAuditor() {
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{s.name}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{s.command} {s.args.join(' ')}</div>
                   </div>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#00E5FF' }}>+ Merge</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-color)' }}>+ Merge</span>
                 </button>
               ))}
             </div>

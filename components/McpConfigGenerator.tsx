@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Copy, Check, Code, Cpu, AlertTriangle } from 'lucide-react';
-import { toast } from './ui/Toast';
-import { trackCopyConfig } from '../lib/gtag';
+import { Code, Cpu, AlertTriangle } from 'lucide-react';
+import { CopyBlock } from './ui/CopyBlock';
 import {
   resolveInstallConfig,
   type ResolvedInstall,
@@ -187,7 +186,6 @@ export function McpConfigGenerator({
   installConfidence,
 }: McpConfigGeneratorProps) {
   const [activeIde, setActiveIde] = useState<IdeTarget>('claude-desktop');
-  const [copied, setCopied] = useState(false);
 
   const install = useMemo(
     () =>
@@ -219,18 +217,6 @@ export function McpConfigGenerator({
   const current = buildSnippet(activeIde, install, key);
   const showGuessWarning = install.confidence === 'low' || install.source === 'heuristic';
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(current.code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      trackCopyConfig({ serverId: key, snippetType: activeIde });
-      toast.success(`Copied ${current.label} config`);
-    } catch {
-      toast.error('Failed to copy');
-    }
-  };
-
   const ides: { id: IdeTarget; name: string }[] = [
     { id: 'claude-desktop', name: 'Claude Desktop' },
     { id: 'cursor', name: 'Cursor' },
@@ -242,17 +228,17 @@ export function McpConfigGenerator({
 
   return (
     <div
-      className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-md overflow-hidden p-4 my-6"
+      className="surface"
       style={{
         borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        background: 'rgba(15, 23, 42, 0.65)',
-        padding: '1.25rem',
+        border: '1px solid var(--border-color)',
+        background: 'var(--bg-elevated)',
+        padding: '1.5rem',
         margin: '1.75rem 0',
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
       <div
-        className="flex items-center justify-between gap-3 mb-3 flex-wrap"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -263,30 +249,28 @@ export function McpConfigGenerator({
         }}
       >
         <div
-          className="flex items-center gap-2 text-sm font-semibold text-white"
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.6rem',
-            fontSize: '0.9rem',
+            fontSize: '0.95rem',
             fontWeight: 700,
-            color: '#fff',
+            color: 'var(--text-primary)',
           }}
         >
-          <Cpu className="w-4 h-4 text-cyan-400" size={18} color="#00E5FF" />
+          <Cpu size={18} style={{ color: 'var(--accent-color)' }} />
           <span>One-Click IDE Configuration</span>
         </div>
         <div
-          className="text-xs text-zinc-400 flex items-center gap-1"
           style={{
             fontSize: '0.8rem',
-            color: '#94a3b8',
+            color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.35rem',
           }}
         >
-          <Code className="w-3.5 h-3.5" size={15} />
+          <Code size={15} style={{ color: 'var(--accent-color)' }} />
           <span>{current.file}</span>
         </div>
       </div>
@@ -300,9 +284,9 @@ export function McpConfigGenerator({
             padding: '0.75rem 0.9rem',
             marginBottom: '1rem',
             borderRadius: '10px',
-            background: 'rgba(250, 204, 21, 0.08)',
-            border: '1px solid rgba(250, 204, 21, 0.28)',
-            color: '#fde68a',
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            color: '#d97706',
             fontSize: '0.8rem',
             lineHeight: 1.5,
           }}
@@ -320,19 +304,18 @@ export function McpConfigGenerator({
         <p
           style={{
             fontSize: '0.8rem',
-            color: '#94a3b8',
+            color: 'var(--text-secondary)',
             marginBottom: '0.85rem',
             lineHeight: 1.5,
           }}
         >
           Remote HTTP MCP endpoint detected — using URL transport instead of{' '}
-          <code style={{ color: '#cbd5e1' }}>npx</code>.
+          <code style={{ color: 'var(--text-primary)' }}>npx</code>.
         </p>
       )}
 
       {/* Tab Selector */}
       <div
-        className="flex gap-2.5 overflow-x-auto pb-3 mb-4 scrollbar-none"
         style={{
           display: 'flex',
           gap: '0.75rem',
@@ -341,96 +324,43 @@ export function McpConfigGenerator({
           marginBottom: '1rem',
         }}
       >
-        {ides.map((ide) => (
-          <button
-            key={ide.id}
-            type="button"
-            onClick={() => setActiveIde(ide.id)}
-            style={{
-              padding: '0.55rem 1.1rem',
-              borderRadius: '10px',
-              fontSize: '0.825rem',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              background:
-                activeIde === ide.id ? 'rgba(0, 229, 255, 0.18)' : 'rgba(255, 255, 255, 0.05)',
-              borderColor:
-                activeIde === ide.id ? 'rgba(0, 229, 255, 0.45)' : 'rgba(255, 255, 255, 0.1)',
-              borderStyle: 'solid',
-              borderWidth: '1px',
-              color: activeIde === ide.id ? '#00E5FF' : '#94a3b8',
-              boxShadow: activeIde === ide.id ? '0 0 14px rgba(0, 229, 255, 0.25)' : 'none',
-            }}
-          >
-            {ide.name}
-          </button>
-        ))}
+        {ides.map((ide) => {
+          const isActive = activeIde === ide.id;
+          return (
+            <button
+              key={ide.id}
+              type="button"
+              onClick={() => setActiveIde(ide.id)}
+              style={{
+                padding: '0.55rem 1.1rem',
+                borderRadius: '10px',
+                fontSize: '0.825rem',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                background: isActive ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
+                borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
+                borderStyle: 'solid',
+                borderWidth: '1px',
+                color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
+                boxShadow: isActive ? '0 0 14px var(--accent-glow)' : 'none',
+              }}
+            >
+              {ide.name}
+            </button>
+          );
+        })}
       </div>
 
       {/* Code Display */}
-      <div
-        style={{
-          position: 'relative',
-          borderRadius: '12px',
-          background: 'rgba(2, 6, 23, 0.85)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          padding: '1rem',
-        }}
-      >
-        <button
-          type="button"
-          onClick={handleCopy}
-          style={{
-            position: 'absolute',
-            top: '0.75rem',
-            right: '0.75rem',
-            padding: '0.45rem 0.85rem',
-            borderRadius: '8px',
-            background: 'rgba(255, 255, 255, 0.12)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            color: '#ffffff',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            outline: 'none',
-            boxShadow: 'none',
-            transition: 'all 0.2s ease',
-          }}
-          title="Copy config"
-        >
-          {copied ? (
-            <>
-              <Check className="w-4 h-4 text-emerald-400" size={15} color="#10b981" />
-              <span style={{ color: '#10b981', fontSize: '0.8rem' }}>Copied</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" size={15} />
-              <span>Copy</span>
-            </>
-          )}
-        </button>
-        <pre
-          style={{
-            fontSize: '0.825rem',
-            color: '#e4e4e7',
-            fontFamily: 'monospace',
-            overflowX: 'auto',
-            paddingRight: '6rem',
-            paddingTop: '0.35rem',
-            paddingBottom: '0.35rem',
-            margin: 0,
-            lineHeight: 1.6,
-          }}
-        >
-          <code>{current.code}</code>
-        </pre>
-      </div>
+      <CopyBlock
+        code={current.code}
+        title={current.file}
+        serverId={key}
+        snippetType={activeIde}
+        toastMessage={`Copied ${current.label} config`}
+      />
     </div>
   );
 }

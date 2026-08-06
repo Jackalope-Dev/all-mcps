@@ -88,53 +88,19 @@ export function InstallButtons({
     );
   };
 
-  const btnStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.5rem',
-    flex: '1 1 180px',
-    padding: '0.7rem 1.1rem',
-    borderRadius: '10px',
-    fontSize: '0.85rem',
-    fontWeight: 700,
-    textDecoration: 'none',
-    cursor: 'pointer',
-    border: '1px solid rgba(255, 255, 255, 0.14)',
-    background: 'rgba(255, 255, 255, 0.05)',
-    color: 'var(--text-primary)',
-    transition: 'transform 0.15s ease, border-color 0.15s ease, background 0.15s ease',
-  };
-
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
       <a
         href={cursorHref}
         onClick={() => handleInstall('cursor')}
-        style={btnStyle}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(0, 229, 255, 0.5)';
-          e.currentTarget.style.background = 'rgba(0, 229, 255, 0.1)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-        }}
+        className="install-deeplink-btn"
       >
         Add to Cursor
       </a>
       <a
         href={vscodeHref}
         onClick={() => handleInstall('vscode')}
-        style={btnStyle}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(0, 229, 255, 0.5)';
-          e.currentTarget.style.background = 'rgba(0, 229, 255, 0.1)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-        }}
+        className="install-deeplink-btn"
       >
         Add to VS Code
       </a>

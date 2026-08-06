@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { TableOfContents, TocItem } from '@/components/ui/TableOfContents';
+import { CopyBlock } from '@/components/ui/CopyBlock';
 
 export const metadata: Metadata = {
   title: 'LLM Agents Setup & Configuration Guide',
@@ -147,8 +148,12 @@ export default function GuidePage() {
                 Most desktop clients configure MCP servers through a JSON file. In Claude Desktop, it&rsquo;s usually
                 reachable from <strong>Settings &rarr; Developer &rarr; Edit Config</strong>, and lives on disk at:
               </p>
-              <pre><code>{`macOS:    ~/Library/Application Support/Claude/claude_desktop_config.json
-Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
+              <CopyBlock
+                title="Config file location"
+                language="text"
+                code={`macOS:    ~/Library/Application Support/Claude/claude_desktop_config.json
+Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}
+              />
               <p>
                 Claude Code and several other clients also support MCP servers, typically through a command-line
                 interface or a project-level config file, in addition to (or instead of) a global JSON file. The
@@ -161,7 +166,10 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
                 Local servers run as a subprocess on your machine. Here&rsquo;s a filesystem server, one of the most
                 common starting points, added to a client&rsquo;s config:
               </p>
-              <pre><code>{`{
+              <CopyBlock
+                title="config.json"
+                language="json"
+                code={`{
   "mcpServers": {
     "filesystem": {
       "command": "npx",
@@ -172,7 +180,8 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
       ]
     }
   }
-}`}</code></pre>
+}`}
+              />
               <p>
                 <code>command</code> is the executable to run, and <code>args</code> is the list of arguments passed to
                 it &mdash; here, the path the server is allowed to read and write. Save the file, then{' '}
@@ -182,7 +191,10 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
 
               <h2 id="remote-server">Step 3: Add a remote (hosted) server</h2>
               <p>Remote servers are reached over HTTP instead of being run locally:</p>
-              <pre><code>{`{
+              <CopyBlock
+                title="config.json"
+                language="json"
+                code={`{
   "mcpServers": {
     "example-remote": {
       "url": "https://example.com/mcp",
@@ -191,7 +203,8 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}</code></pre>
       }
     }
   }
-}`}</code></pre>
+}`}
+              />
               <p>
                 The exact field names for remote servers vary slightly between clients as this part of the protocol
                 has evolved, so always follow the specific instructions on the server&rsquo;s own listing &mdash;

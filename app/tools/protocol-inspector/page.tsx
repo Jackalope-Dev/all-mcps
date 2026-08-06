@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { ProtocolInspectorTool } from '../../../components/tools/ProtocolInspectorTool';
 import { LiveMcpInspector } from '../../../components/tools/LiveMcpInspector';
+import { FaqSection } from '../../../components/ui/FaqSection';
 
 export const metadata: Metadata = {
   title: 'Free MCP Protocol Inspector & Response Debugger',
@@ -156,57 +157,48 @@ export default function ProtocolInspectorPage() {
               turns. Use this diagnostic inspector during development to verify payload compliance instantly.
             </p>
 
-            <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '1rem', fontWeight: 700 }}>
-              Frequently Asked Questions (FAQ)
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  How do I debug MCP JSON-RPC protocol messages?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  Paste any JSON-RPC request or tool execution response payload into the inspector above. The diagnostic engine
-                  checks specification compliance (<code>jsonrpc: &quot;2.0&quot;</code>, content array structures, MIME types,
-                  isError flags) and renders a live visual preview of how AI clients display the result.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  What makes an MCP tool call response valid?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  A valid MCP tool call response must contain a <code>content</code> array of objects. Each content object
-                  requires a <code>type</code> property (<code>&quot;text&quot;</code>, <code>&quot;image&quot;</code>, or{' '}
-                  <code>&quot;resource&quot;</code>). Text objects must have a string <code>text</code> property, and image
-                  objects must specify a valid <code>mimeType</code> (e.g. <code>&quot;image/png&quot;</code>) and base64-encoded{' '}
-                  <code>data</code> string.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  How do images and resources render in Claude Desktop MCP?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  When a tool returns an image content block with <code>mimeType</code> and base64 data, Claude Desktop and Cursor
-                  render the image inline within the conversation turn. Resource content blocks with URIs allow clients to read text
-                  or binary files directly.
-                </p>
-              </div>
-
-              <div style={{ padding: '1.25rem', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 600 }}>
-                  What does isError: true mean in an MCP response?
-                </h3>
-                <p style={{ margin: 0 }}>
-                  Setting <code>isError: true</code> inside a tool call result tells the AI model that the tool execution failed
-                  (e.g. network error, invalid SQL query, or missing file), allowing the model to analyze the error output and
-                  adjust its strategy.
-                </p>
-              </div>
-            </div>
+            <FaqSection
+              title="Frequently Asked Questions (FAQ)"
+              items={[
+                {
+                  question: 'How do I debug MCP JSON-RPC protocol messages?',
+                  answer: (
+                    <>
+                      Paste any JSON-RPC request or tool execution response payload into the inspector above. The diagnostic engine
+                      checks specification compliance (<code>jsonrpc: &quot;2.0&quot;</code>, content array structures, MIME types,
+                      isError flags) and renders a live visual preview of how AI clients display the result.
+                    </>
+                  ),
+                },
+                {
+                  question: 'What makes an MCP tool call response valid?',
+                  answer: (
+                    <>
+                      A valid MCP tool call response must contain a <code>content</code> array of objects. Each content object
+                      requires a <code>type</code> property (<code>&quot;text&quot;</code>, <code>&quot;image&quot;</code>, or{' '}
+                      <code>&quot;resource&quot;</code>). Text objects must have a string <code>text</code> property, and image
+                      objects must specify a valid <code>mimeType</code> (e.g. <code>&quot;image/png&quot;</code>) and base64-encoded{' '}
+                      <code>data</code> string.
+                    </>
+                  ),
+                },
+                {
+                  question: 'How do images and resources render in Claude Desktop MCP?',
+                  answer:
+                    'When a tool returns an image content block with mimeType and base64 data, Claude Desktop and Cursor render the image inline within the conversation turn. Resource content blocks with URIs allow clients to read text or binary files directly.',
+                },
+                {
+                  question: 'What does isError: true mean in an MCP response?',
+                  answer: (
+                    <>
+                      Setting <code>isError: true</code> inside a tool call result tells the AI model that the tool execution failed
+                      (e.g. network error, invalid SQL query, or missing file), allowing the model to analyze the error output and
+                      adjust its strategy.
+                    </>
+                  ),
+                },
+              ]}
+            />
 
             <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               <Link href="/build-mcp-server" style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600 }}>

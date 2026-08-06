@@ -385,9 +385,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 variant="category"
                 href={`/browse?category=${encodeURIComponent(server.category)}`}
                 style={{
-                  background: catMeta.bgTint,
-                  color: catMeta.color,
-                  borderColor: catMeta.borderTint,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.3rem',
@@ -429,14 +426,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 </IconTooltip>
               )}
               {isFeaturedListing(server) && (
-                <Badge
-                  variant="success"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
-                    color: '#00E5FF',
-                    borderColor: 'rgba(0,229,255,0.35)',
-                  }}
-                >
+                <Badge variant="success" className="badge-featured">
                   ★ Featured
                 </Badge>
               )}
@@ -471,13 +461,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 minHeight: '42px',
                 boxSizing: 'border-box',
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'var(--bg-muted)',
+                border: '1px solid var(--border-strong)',
                 color: 'var(--text-primary)',
                 fontWeight: 600,
                 fontSize: '0.9rem',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                boxShadow: 'var(--shadow-sm)',
                 textDecoration: 'none',
               }}
             >
@@ -491,16 +481,16 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     gap: '0.25rem',
                     padding: '0.15rem 0.5rem',
                     borderRadius: '6px',
-                    background: 'rgba(250, 204, 21, 0.15)',
-                    color: '#facc15',
-                    border: '1px solid rgba(250, 204, 21, 0.3)',
+                    background: 'rgba(234, 179, 8, 0.12)',
+                    color: '#d97706',
+                    border: '1px solid rgba(234, 179, 8, 0.3)',
                     fontSize: '0.78rem',
                     fontWeight: 700,
                     marginLeft: '0.2rem',
                     lineHeight: 1,
                   }}
                 >
-                  <Star size={12} fill="#facc15" color="#facc15" />
+                  <Star size={12} fill="#d97706" color="#d97706" />
                   {server.githubStars >= 1000 ? `${(server.githubStars / 1000).toFixed(1)}k` : server.githubStars.toLocaleString()}
                 </span>
               )}
@@ -521,20 +511,20 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   minHeight: '42px',
                   boxSizing: 'border-box',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 123, 255, 0.12))',
-                  border: '1px solid rgba(0, 229, 255, 0.45)',
-                  color: '#00E5FF',
+                  background: 'var(--brand-gradient-soft)',
+                  border: '1px solid var(--accent-color)',
+                  color: 'var(--accent-color)',
                   fontWeight: 600,
                   fontSize: '0.9rem',
                   transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 12px rgba(0, 229, 255, 0.18)',
+                  boxShadow: 'var(--shadow-sm)',
                   textDecoration: 'none',
                 }}
               >
-                <Globe size={18} color="#00E5FF" />
+                <Globe size={18} style={{ color: 'var(--accent-color)' }} />
                 <span>Visit Website</span>
                 {server.websiteVerified ? (
-                  <BadgeCheck size={16} color="#00E5FF" style={{ flexShrink: 0 }} />
+                  <BadgeCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
                 ) : (
                   <ExternalLink size={14} style={{ opacity: 0.85 }} />
                 )}
@@ -598,12 +588,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </section>
           )}
 
-          <section id="quick-install" className="surface" style={{ padding: '1.75rem', marginBottom: '2.5rem', scrollMarginTop: '5rem', borderRadius: '16px', border: '1px solid rgba(0, 229, 255, 0.25)', background: 'linear-gradient(180deg, rgba(0, 229, 255, 0.04) 0%, rgba(15, 15, 18, 0.6) 100%)' }}>
+          <section id="quick-install" className="surface" style={{ padding: '1.75rem', marginBottom: '2.5rem', scrollMarginTop: '5rem', borderRadius: '16px', border: '1px solid var(--border-color)', background: 'var(--brand-gradient-soft)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
                 <Terminal size={20} style={{ color: 'var(--accent-color)' }} /> Quick Install
               </h2>
-              <Badge variant="category" style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '0.75rem' }}>
+              <Badge variant="success" style={{ fontSize: '0.75rem' }}>
                 Automated &amp; IDE Setup
               </Badge>
             </div>
@@ -630,24 +620,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             />
 
             {/* Collapsed Manual Client JSON Config */}
-            <details style={{ marginTop: '1.25rem', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.75rem 1rem' }}>
+            <details style={{ marginTop: '1.25rem', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', padding: '0.75rem 1rem' }}>
               <summary style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer', outline: 'none', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span>Manual Client &amp; Custom JSON Config</span>
                 <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Expand JSON ▾</span>
               </summary>
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                 <ClientConfigTabs server={server} />
-                <McpConfigGenerator
-                  serverId={server.id}
-                  serverName={server.name}
-                  url={server.url}
-                  description={server.description}
-                  installKind={server.installKind}
-                  installCommand={server.installCommand}
-                  installArgs={server.installArgs}
-                  installPackage={server.installPackage}
-                  installConfidence={server.installConfidence}
-                />
               </div>
             </details>
           </section>
@@ -740,13 +719,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-                        <ServerAvatar name={rel.name} logoUrl={rel.logoUrl} size={32} />
+                        <ServerAvatar name={rel.name} logoUrl={rel.logoUrl} category={rel.category} size={32} />
                         <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {relName}
                         </span>
                       </div>
                       {isFeaturedListing(rel as any) ? (
-                        <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '0.65rem', flexShrink: 0 }}>
+                        <Badge variant="success" className="badge-featured" style={{ fontSize: '0.65rem', flexShrink: 0 }}>
                           ★ Featured
                         </Badge>
                       ) : rel.isOfficial ? (
@@ -768,7 +747,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     style={{
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      color: '#00E5FF',
+                      color: 'var(--accent-color)',
                       textDecoration: 'none',
                       paddingTop: '0.35rem',
                       borderTop: '1px solid var(--border-color)',
@@ -827,13 +806,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <span>Technical Specs &amp; Signals</span>
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Transport</span>
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                   {server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com')) ? 'SSE (Remote)' : 'STDIO'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Runtime</span>
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                   {(() => {
@@ -846,23 +825,23 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   })()}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Health Check</span>
                 <span style={{ fontWeight: 600, color: healthUi.color, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: healthUi.color, display: 'inline-block' }} />
                   {healthKey === 'active' ? 'Active' : healthKey === 'down' ? 'Issues' : 'Unknown'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: (typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') ? '1px solid rgba(255,255,255,0.06)' : 'none', paddingBottom: (typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') ? '0.5rem' : '0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: (typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') ? '1px solid var(--border-color)' : 'none', paddingBottom: (typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') ? '0.5rem' : '0' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Category</span>
-                <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: catMeta.color, textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                   <span aria-hidden="true">{catMeta.emoji}</span>
                   <span>{catMeta.label}</span>
                 </Link>
               </div>
 
               {typeof server.githubStars === 'number' && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: typeof server.npmDownloads === 'number' ? '1px solid rgba(255,255,255,0.06)' : 'none', paddingBottom: typeof server.npmDownloads === 'number' ? '0.5rem' : '0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: typeof server.npmDownloads === 'number' ? '1px solid var(--border-color)' : 'none', paddingBottom: typeof server.npmDownloads === 'number' ? '0.5rem' : '0' }}>
                   <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                     <Star size={14} style={{ color: '#f5c518' }} /> GitHub stars
                   </span>
@@ -895,13 +874,14 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     className="surface"
                     style={{
                       padding: '1.5rem',
-                      borderColor: 'rgba(0, 229, 255, 0.35)',
-                      background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
-                      boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
+                      borderRadius: '16px',
+                      border: '1px solid var(--accent-color)',
+                      background: 'var(--surface-highlight)',
+                      boxShadow: 'var(--shadow-md)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                      <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)', fontSize: '0.7rem' }}>
+                      <Badge variant="success" className="badge-featured" style={{ fontSize: '0.7rem' }}>
                         ★ Featured
                       </Badge>
                       <ServerAvatar name={spotlightPick.name} logoUrl={spotlightPick.logoUrl} size={32} />
@@ -916,43 +896,19 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                         marginBottom: '1rem',
                         lineHeight: 1.5,
                         display: '-webkit-box',
-                        WebkitLineClamp: 2,
+                        WebkitLineClamp: 3,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
                       }}
                     >
-                      {spotlightPick.description}
+                      <SafeMarkdown content={spotlightPick.description || 'No description provided.'} isInline />
                     </p>
                     <Link
                       href={`/mcp/${spotlightPick.id}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.4rem',
-                        padding: '0.75rem 1rem',
-                        background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
-                        color: '#090d16',
-                        borderRadius: '8px',
-                        fontWeight: 700,
-                        fontSize: '0.875rem',
-                        textDecoration: 'none',
-                      }}
+                      className="btn btn-primary"
+                      style={{ width: '100%', justifyContent: 'center' }}
                     >
-                      <Sparkles size={16} /> View Server
-                    </Link>
-                    <Link
-                      href="/submit"
-                      style={{
-                        display: 'block',
-                        textAlign: 'center',
-                        marginTop: '0.65rem',
-                        fontSize: '0.7rem',
-                        color: 'var(--text-secondary)',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Feature your own server →
+                      Explore Server →
                     </Link>
                   </div>
                 </ImpressionBeacon>
@@ -963,13 +919,14 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               className="surface"
               style={{
                 padding: '1.5rem',
-                borderColor: 'rgba(0, 229, 255, 0.35)',
-                background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 123, 255, 0.04) 100%)',
-                boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--brand-gradient-soft)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <Badge variant="success" style={{ background: 'rgba(0,229,255,0.15)', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)', fontSize: '0.7rem' }}>
+                <Badge variant="success" className="badge-featured" style={{ fontSize: '0.7rem' }}>
                   ★ Spotlight Slot
                 </Badge>
               </div>
@@ -987,8 +944,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   justifyContent: 'center',
                   gap: '0.4rem',
                   padding: '0.75rem 1rem',
-                  background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
-                  color: '#090d16',
+                  background: 'var(--brand-gradient)',
+                  color: '#ffffff',
                   borderRadius: '8px',
                   fontWeight: 700,
                   fontSize: '0.875rem',

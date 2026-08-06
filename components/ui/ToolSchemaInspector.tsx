@@ -99,7 +99,7 @@ export function ToolSchemaInspector({
                 padding: '0.4rem 0.75rem 0.4rem 2.2rem',
                 borderRadius: '8px',
                 border: '1px solid var(--border-color)',
-                background: 'rgba(255, 255, 255, 0.04)',
+                background: 'var(--bg-muted)',
                 color: 'var(--text-primary)',
                 fontSize: '0.8rem',
               }}
@@ -122,7 +122,7 @@ export function ToolSchemaInspector({
                   padding: '1.1rem',
                   borderRadius: '12px',
                   border: '1px solid var(--border-color)',
-                  background: 'rgba(15, 23, 42, 0.6)',
+                  background: 'var(--bg-elevated)',
                   transition: 'all 0.15s ease',
                   display: 'flex',
                   flexDirection: 'column',
@@ -136,7 +136,7 @@ export function ToolSchemaInspector({
                       style={{
                         fontSize: '0.875rem',
                         fontWeight: 700,
-                        color: '#00E5FF',
+                        color: 'var(--accent-color)',
                         wordBreak: 'break-word',
                         fontFamily: 'monospace',
                       }}
@@ -182,18 +182,18 @@ export function ToolSchemaInspector({
                     style={{
                       marginTop: '0.5rem',
                       padding: '0.65rem 0.85rem',
-                      background: 'rgba(2, 6, 23, 0.9)',
+                      background: 'var(--bg-muted)',
                       borderRadius: '8px',
-                      border: '1px solid rgba(0, 229, 255, 0.2)',
+                      border: '1px solid var(--border-color)',
                       fontSize: '0.75rem',
                       fontFamily: 'monospace',
-                      color: '#a5f3fc',
+                      color: 'var(--text-primary)',
                     }}
                   >
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', marginBottom: '0.3rem', fontWeight: 600 }}>
                       INPUT SCHEMA / PARAMETERS
                     </div>
-                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--text-primary)' }}>
                       {JSON.stringify(tool.parameters, null, 2)}
                     </pre>
                   </div>
@@ -211,7 +211,7 @@ export function ToolSchemaInspector({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
             {aiFeatures.map((f, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                <Terminal size={14} style={{ color: '#00E5FF', flexShrink: 0, marginTop: '0.2rem' }} />
+                <Terminal size={14} style={{ color: 'var(--accent-color)', flexShrink: 0, marginTop: '0.2rem' }} />
                 <span>{f}</span>
               </div>
             ))}

@@ -172,11 +172,11 @@ export function SubmitForm() {
               margin: '0 auto 1.75rem',
               padding: '1.25rem',
               borderRadius: '12px',
-              border: '1px solid rgba(0,229,255,0.25)',
-              background: 'rgba(0,229,255,0.04)',
+              border: '1px solid rgba(var(--accent-rgb), 0.25)',
+              background: 'rgba(var(--accent-rgb), 0.04)',
             }}
           >
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#00E5FF', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-color)', marginBottom: '0.5rem' }}>
               Step 1: Add your AllMCPs Badge
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
@@ -251,15 +251,15 @@ export function SubmitForm() {
               style={{
                 padding: '1.25rem',
                 borderRadius: '12px',
-                border: '1px solid rgba(0, 229, 255, 0.3)',
-                background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08), rgba(0, 123, 255, 0.04))',
+                border: '1px solid rgba(var(--accent-rgb), 0.3)',
+                background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(var(--accent-secondary-rgb), 0.04))',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
               }}
             >
               <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#00E5FF', letterSpacing: '0.05em' }}>⚡ Quick Pass</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-color)', letterSpacing: '0.05em' }}>⚡ Quick Pass</span>
                 <h4 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>Priority Review</h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                   Jump the manual queue and get reviewed within 2 hours.
@@ -271,8 +271,8 @@ export function SubmitForm() {
                   href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}&sku=priority_review` : '/pricing'}
                   style={{
                     padding: '0.4rem 0.85rem',
-                    background: '#00E5FF',
-                    color: '#090d16',
+                    background: 'var(--accent-color)',
+                    color: 'var(--bg-color)',
                     borderRadius: '6px',
                     fontWeight: 700,
                     fontSize: '0.8rem',
@@ -290,7 +290,7 @@ export function SubmitForm() {
                 padding: '1.25rem',
                 borderRadius: '12px',
                 border: '1px solid rgba(16, 185, 129, 0.4)',
-                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(0, 229, 255, 0.04))',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(var(--accent-rgb), 0.04))',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -383,8 +383,8 @@ export function SubmitForm() {
       {/* AI Agent Automated Submission Prompt Banner */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
-          border: '1px solid rgba(0, 229, 255, 0.3)',
+          background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
+          border: '1px solid rgba(var(--accent-rgb), 0.35)',
           borderRadius: '14px',
           padding: '1.25rem 1.5rem',
           display: 'flex',
@@ -393,7 +393,7 @@ export function SubmitForm() {
         }}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 700, color: '#00E5FF', fontSize: '0.975rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.975rem' }}>
             <span style={{ fontSize: '1.35rem' }}>🤖</span>
             <span>Automate Submission with AI Agents</span>
           </div>
@@ -401,8 +401,8 @@ export function SubmitForm() {
             type="button"
             onClick={copyAgentPrompt}
             style={{
-              background: '#00E5FF',
-              color: '#090d16',
+              background: 'var(--accent-color)',
+              color: 'var(--bg-color)',
               border: 'none',
               borderRadius: '8px',
               padding: '0.5rem 0.95rem',
@@ -412,7 +412,7 @@ export function SubmitForm() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.4rem',
-              boxShadow: '0 2px 8px rgba(0, 229, 255, 0.25)',
+              boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.25)',
               transition: 'transform 0.15s ease',
             }}
           >
@@ -582,9 +582,9 @@ const stepNumberStyle: React.CSSProperties = {
   width: 22,
   height: 22,
   borderRadius: '50%',
-  background: 'rgba(0,229,255,0.12)',
-  border: '1px solid rgba(0,229,255,0.3)',
-  color: '#00E5FF',
+  background: 'rgba(var(--accent-rgb), 0.12)',
+  border: '1px solid rgba(var(--accent-rgb), 0.3)',
+  color: 'var(--accent-color)',
   fontSize: '0.75rem',
   fontWeight: 700,
   display: 'inline-flex',
@@ -597,7 +597,7 @@ const sectionBadgeStyle: React.CSSProperties = {
   fontWeight: 700,
   padding: '0.2rem 0.5rem',
   borderRadius: '6px',
-  background: 'rgba(0,229,255,0.1)',
-  border: '1px solid rgba(0,229,255,0.25)',
-  color: '#00E5FF',
+  background: 'rgba(var(--accent-rgb), 0.1)',
+  border: '1px solid rgba(var(--accent-rgb), 0.25)',
+  color: 'var(--accent-color)',
 };

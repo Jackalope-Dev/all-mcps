@@ -170,7 +170,7 @@ function SideHeader({ s }: { s: Server }) {
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
         {isFeaturedListing(s) && (
-          <Badge variant="success" style={{ fontSize: '0.65rem', color: '#00E5FF', borderColor: 'rgba(0,229,255,0.35)' }}>
+          <Badge variant="success" style={{ fontSize: '0.65rem', color: 'var(--accent-color)', borderColor: 'rgba(var(--accent-rgb),0.35)' }}>
             Featured
           </Badge>
         )}

@@ -174,7 +174,7 @@ export default async function ClientPage({
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(0, 229, 255, 0.2)',
+                    boxShadow: '0 4px 12px rgba(var(--accent-rgb), 0.2)',
                   }}
                 >
                   {i + 1}

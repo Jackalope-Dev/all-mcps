@@ -39,8 +39,8 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                   padding: '0.45rem 1rem', 
                   borderRadius: '100px',
                   whiteSpace: 'nowrap',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderColor: 'rgba(255, 255, 255, 0.08)',
+                  background: 'var(--bg-muted)',
+                  borderColor: 'var(--border-color)',
                   transition: 'transform 0.2s ease, border-color 0.2s ease, background 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
@@ -50,34 +50,27 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                   trackImpression(server.id, 'homepage_marquee');
                 }}
                 onMouseLeave={(e) => { 
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'; 
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.borderColor = 'var(--border-color)'; 
+                  e.currentTarget.style.background = 'var(--bg-muted)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <span 
-                  style={{ 
-                    width: '8px', 
-                    height: '8px', 
-                    borderRadius: '50%', 
-                    background: catMeta.color, 
-                    boxShadow: `0 0 8px ${catMeta.color}`,
-                    flexShrink: 0,
-                  }}
-                />
                 <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
                   {parseServerName(server.name).displayName}
                 </span>
-                <span 
-                  style={{ 
-                    color: catMeta.color, 
+                <span
+                  className="marquee-chip-category"
+                  style={{
+                    '--cat-chip-color': catMeta.color,
+                    '--cat-chip-light-color': catMeta.lightColor,
+                    color: catMeta.color,
                     fontSize: '0.725rem',
                     fontWeight: 500,
                     opacity: 0.9,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.25rem',
-                  }}
+                  } as React.CSSProperties}
                 >
                   <span aria-hidden="true">{catMeta.emoji}</span>
                   {catMeta.label}
@@ -98,16 +91,16 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                   padding: '0.45rem 1rem',
                   borderRadius: '100px',
                   whiteSpace: 'nowrap',
-                  background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 123, 255, 0.15))',
-                  borderColor: 'rgba(0, 229, 255, 0.4)',
-                  color: '#00E5FF',
+                  background: 'var(--brand-gradient-soft)',
+                  borderColor: 'var(--accent-color)',
+                  color: 'var(--accent-color)',
                   fontWeight: 700,
                   fontSize: '0.825rem',
                   boxShadow: '0 0 12px rgba(0, 229, 255, 0.15)',
                   transition: 'transform 0.2s, border-color 0.2s',
                 }}
               >
-                <Sparkles size={13} style={{ color: '#00E5FF' }} />
+                <Sparkles size={13} style={{ color: 'var(--accent-color)' }} />
                 <span>+ Submit MCP</span>
               </Link>
             )}

@@ -94,9 +94,21 @@ export default function ShareModal({
   const CopyButton = ({ snippetKey }: { snippetKey: keyof typeof snippets }) => (
     <button 
       onClick={() => handleCopy(snippetKey)}
-      style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer', display: 'flex', transition: 'background 0.2s' }}
-      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-      onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+      style={{
+        position: 'absolute',
+        top: '0.5rem',
+        right: '0.5rem',
+        background: 'var(--bg-muted)',
+        border: '1px solid var(--border-color)',
+        color: 'var(--text-primary)',
+        padding: '0.4rem',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        display: 'flex',
+        transition: 'background 0.2s',
+      }}
+      onMouseOver={(e) => (e.currentTarget.style.background = 'var(--border-strong)')}
+      onMouseOut={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
     >
       {copiedStates[snippetKey] ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
     </button>
@@ -105,7 +117,7 @@ export default function ShareModal({
   const CodeBlock = ({ snippetKey }: { snippetKey: keyof typeof snippets }) => (
     <div style={{ position: 'relative' }}>
       <div className="share-modal-label">Code</div>
-      <pre style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.75rem', overflowX: 'auto', color: '#a1a1aa', margin: 0 }}>
+      <pre style={{ background: 'var(--bg-muted)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.75rem', overflowX: 'auto', color: 'var(--text-primary)', margin: 0 }}>
         {snippets[snippetKey]}
       </pre>
       <CopyButton snippetKey={snippetKey} />
@@ -118,9 +130,9 @@ export default function ShareModal({
     gap: '0.4rem',
     padding: '0.55rem 0.85rem',
     borderRadius: 8,
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'rgba(255,255,255,0.06)',
-    color: 'white',
+    border: '1px solid var(--border-strong)',
+    background: 'var(--bg-muted)',
+    color: 'var(--text-primary)',
     fontSize: '0.85rem',
     fontWeight: 600,
     cursor: 'pointer',
@@ -154,20 +166,20 @@ export default function ShareModal({
             borderRadius: '50%',
             transition: 'background 0.2s'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-muted)')}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
         >
           <X size={20} />
         </button>
 
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'white', paddingRight: '3rem' }}>Share & Embed</h2>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)', paddingRight: '3rem' }}>Share &amp; Embed</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', fontSize: '0.875rem' }}>
           Share the listing, or add a badge/widget to your site for a reciprocal dofollow path.
         </p>
 
         {/* Social / link share */}
         <div className="share-modal-section" style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.75rem' }}>Share this listing</h3>
+          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Share this listing</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             <button
               type="button"
@@ -210,7 +222,7 @@ export default function ShareModal({
 
         {/* Widget Section */}
         <div className="share-modal-section">
-          <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.25rem' }}>Embeddable Widget</h3>
+          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Embeddable Widget</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your blog or landing page. Paste the HTML snippet below.</p>
           
           <div className="share-modal-label">Preview</div>
@@ -229,7 +241,7 @@ export default function ShareModal({
 
         {/* Install Link Section */}
         <div className="share-modal-section">
-          <h3 style={{ fontSize: '1rem', color: 'white', marginBottom: '0.25rem' }}>Install Button</h3>
+          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Install Button</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Standard link to route users to the installation instructions.</p>
           
           <div className="share-modal-label">Preview</div>
@@ -243,8 +255,8 @@ export default function ShareModal({
                 alignItems: 'center',
                 gap: '8px',
                 padding: '10px 20px',
-                background: 'linear-gradient(135deg, #00E5FF, #007BFF)',
-                color: '#020617',
+                background: 'var(--brand-gradient)',
+                color: '#ffffff',
                 fontSize: '14px',
                 fontWeight: 600,
                 borderRadius: '8px',
