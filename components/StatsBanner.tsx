@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Bot, Globe, Cpu, ShieldCheck, Star, Download, Wrench, Eye, ThumbsUp } from 'lucide-react';
+import Link from 'next/link';
+import { Bot, Globe, Cpu, Eye, Copy, Search } from 'lucide-react';
 import type { SiteStats } from '../lib/siteStats';
 
 function formatCompactNumber(num: number): string {
@@ -22,16 +23,11 @@ function formatExactNumber(num: number): string {
 
 export function StatsBanner({ stats }: { stats?: SiteStats }) {
   const totalServers = stats?.totalServers ?? 0;
-  const categoryCount = stats?.categoryCount ?? 0;
   const aiReads = stats?.aiReads30d ?? 0;
+  const botCrawlerReads = stats?.botCrawlerReads30d ?? 0;
   const countries = stats?.countryCount ?? 0;
   const totalViews = stats?.totalViews ?? 0;
   const totalCopies = stats?.totalCopies ?? 0;
-  const verifiedCount = stats?.verifiedCount ?? 0;
-  const totalGithubStars = stats?.totalGithubStars ?? 0;
-  const totalNpmDownloads = stats?.totalNpmDownloads ?? 0;
-  const toolsIndexed = stats?.toolsIndexed ?? 0;
-  const totalUpvotes = stats?.totalUpvotes ?? 0;
 
   return (
     <div
@@ -80,12 +76,35 @@ export function StatsBanner({ stats }: { stats?: SiteStats }) {
           </span>
         )}
 
-        {aiReads > 0 && (
+        {totalCopies > 0 && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
-            <Bot size={14} style={{ color: 'var(--brand-cyan)' }} />
-            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(aiReads)}</strong> AI Reads
+            <Copy size={13} style={{ color: '#f472b6' }} />
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(totalCopies)}</strong> Installs
           </span>
+        )}
+
+        {(aiReads > 0 || botCrawlerReads > 0) && (
+          <Link
+            href="/trust"
+            title="See the live AI & crawler traffic breakdown"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', color: 'inherit', textDecoration: 'none' }}
+          >
+            {aiReads > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+                <Bot size={14} style={{ color: 'var(--brand-cyan)' }} />
+                <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(aiReads)}</strong> AI Reads
+              </span>
+            )}
+            {botCrawlerReads > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+                <Search size={13} style={{ color: '#94a3b8' }} />
+                <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCompactNumber(botCrawlerReads)}</strong> Crawler Hits
+              </span>
+            )}
+          </Link>
         )}
 
         {countries > 0 && (

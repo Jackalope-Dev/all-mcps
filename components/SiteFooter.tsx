@@ -117,6 +117,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/trust" className="nav-link">
+                Trust &amp; Traffic Transparency
+              </Link>
+            </li>
+            <li>
               <a href="/llms.txt" className="nav-link" target="_blank" rel="noopener">
                 llms.txt Standard ↗
               </a>

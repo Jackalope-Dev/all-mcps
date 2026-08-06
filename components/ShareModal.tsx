@@ -9,13 +9,13 @@ import { BadgeEmbedBuilder } from './ui/BadgeEmbedBuilder';
 import { parseServerName } from '../lib/displayName';
 
 export default function ShareModal({
-  serverId, 
+  serverId,
   serverName,
   variant = 'full',
-}: { 
-  serverId: string; 
+}: {
+  serverId: string;
   serverName: string;
-  variant?: 'full' | 'mini';
+  variant?: 'full' | 'mini' | 'action';
 }) {
   const { displayName } = parseServerName(serverName);
   const [isOpen, setIsOpen] = useState(false);
@@ -172,105 +172,107 @@ export default function ShareModal({
           <X size={20} />
         </button>
 
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)', paddingRight: '3rem' }}>Share &amp; Embed</h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', fontSize: '0.875rem' }}>
-          Share the listing, or add a badge/widget to your site for a reciprocal dofollow path.
-        </p>
+        <div className="share-modal-scroll">
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)', paddingRight: '3rem' }}>Share &amp; Embed</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', fontSize: '0.875rem' }}>
+            Share the listing, or add a badge/widget to your site for a reciprocal dofollow path.
+          </p>
 
-        {/* Social / link share */}
-        <div className="share-modal-section" style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Share this listing</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <button
-              type="button"
-              onClick={copyListingLink}
-              style={shareBtnStyle}
-            >
-              {linkCopied ? <Check size={16} color="#10b981" /> : <Link2 size={16} />}
-              {linkCopied ? 'Copied' : 'Copy link'}
-            </button>
-            <a
-              href={tweetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackShare({ method: 'twitter', serverId })}
-              style={{ ...shareBtnStyle, textDecoration: 'none' }}
-            >
-              <X size={16} /> Post on X
-            </a>
-            <a
-              href={linkedInUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackShare({ method: 'linkedin', serverId })}
-              style={{ ...shareBtnStyle, textDecoration: 'none' }}
-            >
-              LinkedIn
-            </a>
-            {canNativeShare && (
-              <button type="button" onClick={shareNative} style={shareBtnStyle}>
-                <Share2 size={16} /> More…
+          {/* Social / link share */}
+          <div className="share-modal-section" style={{ marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Share this listing</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={copyListingLink}
+                style={shareBtnStyle}
+              >
+                {linkCopied ? <Check size={16} color="#10b981" /> : <Link2 size={16} />}
+                {linkCopied ? 'Copied' : 'Copy link'}
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* Badge Section */}
-        <div className="share-modal-section">
-          <BadgeEmbedBuilder serverId={serverId} serverName={serverName} />
-        </div>
-
-        {/* Widget Section */}
-        <div className="share-modal-section">
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Embeddable Widget</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your blog or landing page. Paste the HTML snippet below.</p>
-          
-          <div className="share-modal-label">Preview</div>
-          <div className="share-modal-preview" style={{ minHeight: '260px' }}>
-            <iframe
-              src={`/mcp/${serverId}/embed`}
-              height="260"
-              frameBorder="0"
-              style={{ width: '100%', maxWidth: '350px', borderRadius: '12px', overflow: 'hidden', background: 'transparent', border: 'none' }}
-              title={`${serverName} embed widget preview`}
-            />
-          </div>
-
-          <CodeBlock snippetKey="widget" />
-        </div>
-
-        {/* Install Link Section */}
-        <div className="share-modal-section">
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Install Button</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Standard link to route users to the installation instructions.</p>
-          
-          <div className="share-modal-label">Preview</div>
-          <div className="share-modal-preview">
-            <a 
-              href={`/mcp/${serverId}`}
-              target="_blank" 
-              rel="noopener"
-              style={{ 
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 20px',
-                background: 'var(--brand-gradient)',
-                color: '#ffffff',
-                fontSize: '14px',
-                fontWeight: 600,
-                borderRadius: '8px',
-                textDecoration: 'none',
-                boxShadow: '0 4px 14px rgba(0,123,255,0.25)',
-                transition: 'transform 0.2s, box-shadow 0.2s'
-              }}
-              onClick={(e) => e.preventDefault()}
-            >
-              Install {displayName} via AllMCPs
-            </a>
+              <a
+                href={tweetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackShare({ method: 'twitter', serverId })}
+                style={{ ...shareBtnStyle, textDecoration: 'none' }}
+              >
+                <X size={16} /> Post on X
+              </a>
+              <a
+                href={linkedInUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackShare({ method: 'linkedin', serverId })}
+                style={{ ...shareBtnStyle, textDecoration: 'none' }}
+              >
+                LinkedIn
+              </a>
+              {canNativeShare && (
+                <button type="button" onClick={shareNative} style={shareBtnStyle}>
+                  <Share2 size={16} /> More…
+                </button>
+              )}
+            </div>
           </div>
 
-          <CodeBlock snippetKey="install" />
+          {/* Badge Section */}
+          <div className="share-modal-section">
+            <BadgeEmbedBuilder serverId={serverId} serverName={serverName} />
+          </div>
+
+          {/* Widget Section */}
+          <div className="share-modal-section">
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Embeddable Widget</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Perfect for your blog or landing page. Paste the HTML snippet below.</p>
+
+            <div className="share-modal-label">Preview</div>
+            <div className="share-modal-preview" style={{ minHeight: '260px' }}>
+              <iframe
+                src={`/mcp/${serverId}/embed`}
+                height="260"
+                frameBorder="0"
+                style={{ width: '100%', maxWidth: '350px', borderRadius: '12px', overflow: 'hidden', background: 'transparent', border: 'none' }}
+                title={`${serverName} embed widget preview`}
+              />
+            </div>
+
+            <CodeBlock snippetKey="widget" />
+          </div>
+
+          {/* Install Link Section */}
+          <div className="share-modal-section">
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Install Button</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '1rem' }}>Standard link to route users to the installation instructions.</p>
+
+            <div className="share-modal-label">Preview</div>
+            <div className="share-modal-preview">
+              <a
+                href={`/mcp/${serverId}`}
+                target="_blank"
+                rel="noopener"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  background: 'var(--brand-gradient)',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 14px rgba(0,123,255,0.25)',
+                  transition: 'transform 0.2s, box-shadow 0.2s'
+                }}
+                onClick={(e) => e.preventDefault()}
+              >
+                Install {displayName} via AllMCPs
+              </a>
+            </div>
+
+            <CodeBlock snippetKey="install" />
+          </div>
         </div>
       </div>
     </div>
@@ -287,6 +289,17 @@ export default function ShareModal({
           aria-label="Share & Embed Badge or Widget"
         >
           <Share2 size={16} />
+          <span>Share &amp; Embed</span>
+        </button>
+      ) : variant === 'action' ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="mcp-action-btn"
+          title="Share & Embed Badge or Widget"
+          aria-label="Share & Embed Badge or Widget"
+        >
+          <Share2 size={18} style={{ color: 'var(--accent-color)' }} />
           <span>Share &amp; Embed</span>
         </button>
       ) : (

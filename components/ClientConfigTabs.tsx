@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Copy, Check, Terminal, Laptop, ShieldCheck, Sparkles, Layers } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { parseArgsJson } from '../lib/installConfig';
+import { CopyBlock } from './ui/CopyBlock';
 
 interface ServerConfigProps {
   server: {
@@ -17,7 +18,6 @@ interface ServerConfigProps {
 
 export function ClientConfigTabs({ server }: ServerConfigProps) {
   const [activeTab, setActiveTab] = useState<'claude' | 'cursor' | 'windsurf' | 'cline' | 'zed' | 'cli'>('claude');
-  const [copied, setCopied] = useState(false);
   const [showEnvVars, setShowEnvVars] = useState(false);
   const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>([
     { key: 'API_KEY', value: '' },
@@ -159,11 +159,21 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
     }
   };
 
-  const handleCopy = () => {
-    const text = getConfigText();
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const getFileTitle = () => {
+    switch (activeTab) {
+      case 'claude':
+        return 'claude_desktop_config.json';
+      case 'cursor':
+        return '.cursor/mcp.json';
+      case 'windsurf':
+        return '~/.codeium/windsurf/mcp_config.json';
+      case 'cline':
+        return 'cline_mcp_settings.json';
+      case 'zed':
+        return '~/.config/zed/settings.json';
+      case 'cli':
+        return 'Terminal Command';
+    }
   };
 
   const handleAddEnvVar = () => {
@@ -196,33 +206,22 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
           <Sparkles size={18} style={{ color: 'var(--accent-color)' }} />
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Install Config Generator</h3>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button
-            type="button"
-            onClick={() => setShowEnvVars(!showEnvVars)}
-            className="btn btn-sm"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              background: showEnvVars ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
-              border: showEnvVars ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-              color: showEnvVars ? 'var(--accent-color)' : 'var(--text-secondary)',
-              fontSize: '0.8rem',
-            }}
-          >
-            {showEnvVars ? 'Hide Env Variables' : '+ Custom Env Variables'}
-          </button>
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="btn btn-sm btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            <span>{copied ? 'Copied!' : 'Copy Config'}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowEnvVars(!showEnvVars)}
+          className="btn btn-sm"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            background: showEnvVars ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
+            border: showEnvVars ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+            color: showEnvVars ? 'var(--accent-color)' : 'var(--text-secondary)',
+            fontSize: '0.8rem',
+          }}
+        >
+          {showEnvVars ? 'Hide Env Variables' : '+ Custom Env Variables'}
+        </button>
       </div>
 
       {showEnvVars && (
@@ -330,24 +329,13 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
       </div>
 
       {/* Code Snippet Box */}
-      <div style={{ position: 'relative' }}>
-        <pre
-          style={{
-            background: 'var(--bg-muted)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '10px',
-            padding: '1rem 1.25rem',
-            fontFamily: 'monospace',
-            fontSize: '0.875rem',
-            color: 'var(--text-primary)',
-            overflowX: 'auto',
-            margin: 0,
-            lineHeight: 1.5,
-          }}
-        >
-          <code>{getConfigText()}</code>
-        </pre>
-      </div>
+      <CopyBlock
+        code={getConfigText()}
+        title={getFileTitle()}
+        serverId={server.id}
+        snippetType={`config_${activeTab}`}
+        toastMessage={`Copied ${TABS.find((t) => t.id === activeTab)?.label} config`}
+      />
 
       <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.75rem', marginBottom: 0 }}>
         💡 {getPathHint()}

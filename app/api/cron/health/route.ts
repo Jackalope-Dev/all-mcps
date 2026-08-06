@@ -14,18 +14,31 @@ import {
 } from '../../../../lib/installConfig';
 import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
 
-/** Best-effort npm last-month downloads for a package name. Returns null if not on npm. */
+/**
+ * Best-effort npm last-month downloads for a package name. Returns null if not on npm.
+ *
+ * Guards against a degenerate-name quirk in npm's API: querying a name that isn't a real
+ * package (e.g. "." from a misparsed "pip install ." dev instruction) can return HTTP 200
+ * with a registry-wide aggregate instead of a 404 — observed as 674 billion "downloads"
+ * for a single listing. A valid per-package response always echoes the queried name back
+ * in `package`; the aggregate response omits it, so checking that field rejects it. The
+ * ceiling below is a second backstop against any other npm response shape carrying an
+ * implausible count — no real single package sees anywhere near that volume.
+ */
 async function fetchNpmDownloads(pkg: string): Promise<number | null> {
   const name = pkg.trim();
-  if (!name || /\s/.test(name) || name.includes('://')) return null;
+  if (!name || /^[.\-_]+$/.test(name) || /\s/.test(name) || name.includes('://')) return null;
   try {
     const res = await fetch(`https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(name)}`, {
       headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as { downloads?: number };
-    return typeof data.downloads === 'number' ? data.downloads : null;
+    const data = (await res.json()) as { downloads?: number; package?: string };
+    if (typeof data.downloads !== 'number' || data.package !== name) return null;
+    // No real single npm package has ever cleared ~1B monthly downloads.
+    if (data.downloads > 1_000_000_000) return null;
+    return data.downloads;
   } catch {
     return null;
   }

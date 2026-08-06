@@ -681,6 +681,9 @@ export default function DirectoryGrid({
         </section>
       )}
 
+      {/* Trust-signal stats strip — homepage landing only, right below the hero */}
+      {!isBrowse && !selectedCategory && <StatsBanner stats={siteStats} />}
+
       {/* Browse page title — the marketing hero (with its own <h1>) only renders on the
           unfiltered homepage landing above, so the dedicated /browse route needs its own
           single, page-specific <h1> here instead of relying on the "Results" <h2> below. */}
@@ -1182,14 +1185,7 @@ export default function DirectoryGrid({
                   <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} />
                   <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {isFeaturedListing(server) && (
-                      <Badge
-                        variant="success"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,123,255,0.12))',
-                          color: '#00E5FF',
-                          borderColor: 'rgba(0,229,255,0.35)',
-                        }}
-                      >
+                      <Badge variant="success" className="badge-featured">
                         ★ Featured
                       </Badge>
                     )}

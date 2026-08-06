@@ -399,7 +399,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               {server.isPremium && (
                 <IconTooltip
                   label="Premium listing"
-                  trigger={<Crown size={20} color="#facc15" fill="#facc15" />}
+                  trigger={
+                    <Badge className="mcp-trust-badge mcp-trust-badge--premium">
+                      <Crown size={13} color="#d97706" fill="#d97706" />
+                      <span className="mcp-trust-badge-label">Premium</span>
+                    </Badge>
+                  }
                 >
                   <span className="mcp-icon-tooltip-title">
                     <Crown size={14} color="#facc15" fill="#facc15" /> Premium listing
@@ -412,7 +417,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               {isVerifiedListing(server) && (
                 <IconTooltip
                   label={server.isOfficial ? 'Ownership verified' : 'Premium listing'}
-                  trigger={<BadgeCheck size={20} color="var(--accent-color)" />}
+                  trigger={
+                    <Badge variant="official" className="mcp-trust-badge">
+                      <BadgeCheck size={13} />
+                      <span className="mcp-trust-badge-label">{server.isOfficial ? 'Verified' : 'Premium'}</span>
+                    </Badge>
+                  }
                 >
                   <span className="mcp-icon-tooltip-title">
                     <BadgeCheck size={14} color="var(--accent-color)" />
@@ -426,9 +436,24 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 </IconTooltip>
               )}
               {isFeaturedListing(server) && (
-                <Badge variant="success" className="badge-featured">
-                  ★ Featured
-                </Badge>
+                <IconTooltip
+                  label="Featured listing"
+                  trigger={
+                    <Badge variant="success" className="badge-featured mcp-trust-badge">
+                      <Star size={13} color="var(--accent-color)" fill="var(--accent-color)" />
+                      <span className="mcp-trust-badge-label">Featured</span>
+                    </Badge>
+                  }
+                >
+                  <span className="mcp-icon-tooltip-title">
+                    <Star size={14} color="var(--accent-color)" fill="var(--accent-color)" /> Featured listing
+                  </span>
+                  <span className="mcp-icon-tooltip-body">
+                    {server.isPremium
+                      ? 'Included with this listing’s active Premium subscription — boosted placement across search, category pages, and homepage spotlight rotation.'
+                      : 'Currently boosted for extra visibility — priority placement across search, category pages, and homepage spotlight rotation.'}
+                  </span>
+                </IconTooltip>
               )}
             </h1>
           </div>
@@ -438,38 +463,17 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </div>
           )}
 
-          {/* Engagement Metrics & Action Buttons (Views, Installs, Upvote, Share) */}
-          <div className="listing-metrics-row">
-            <ViewTracker serverId={server.id} initialCount={server.views || 0} />
-            <InstallsStat count={server.copies || 0} />
+          {/* Primary actions: Upvote, Repository, Website, Share & Embed */}
+          <div className="mcp-header-toolbar">
             <UpvoteButton serverId={server.id} initialCount={server.upvotes || 0} />
-            <ShareModal serverId={server.id} serverName={server.name} variant="mini" />
-          </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
             <OutboundLink
               href={server.url}
               destinationType="github"
               serverId={server.id}
               target="_blank"
               rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                padding: '0.5rem 1.25rem',
-                minHeight: '42px',
-                boxSizing: 'border-box',
-                borderRadius: '10px',
-                background: 'var(--bg-muted)',
-                border: '1px solid var(--border-strong)',
-                color: 'var(--text-primary)',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                transition: 'all 0.2s ease',
-                boxShadow: 'var(--shadow-sm)',
-                textDecoration: 'none',
-              }}
+              className="mcp-action-btn"
             >
               <FolderGit2 size={18} style={{ color: 'var(--accent-color)' }} />
               <span>View Repository</span>
@@ -503,23 +507,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 serverId={server.id}
                 target="_blank"
                 rel={websiteLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.55rem',
-                  padding: '0.5rem 1.25rem',
-                  minHeight: '42px',
-                  boxSizing: 'border-box',
-                  borderRadius: '10px',
-                  background: 'var(--brand-gradient-soft)',
-                  border: '1px solid var(--accent-color)',
-                  color: 'var(--accent-color)',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  transition: 'all 0.2s ease',
-                  boxShadow: 'var(--shadow-sm)',
-                  textDecoration: 'none',
-                }}
+                className="mcp-action-btn mcp-action-btn--accent"
               >
                 <Globe size={18} style={{ color: 'var(--accent-color)' }} />
                 <span>Visit Website</span>
@@ -530,8 +518,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 )}
               </OutboundLink>
             )}
+
+            <ShareModal serverId={server.id} serverName={server.name} variant="action" />
           </div>
-          
+
           <div style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
             <SafeMarkdown content={(server.aiSummary && server.aiSummary.trim()) || server.description} utmContent={server.id} />
           </div>
@@ -832,13 +822,16 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   {healthKey === 'active' ? 'Active' : healthKey === 'down' ? 'Issues' : 'Unknown'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: (typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') ? '1px solid var(--border-color)' : 'none', paddingBottom: (typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number') ? '0.5rem' : '0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Category</span>
                 <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                   <span aria-hidden="true">{catMeta.emoji}</span>
                   <span>{catMeta.label}</span>
                 </Link>
               </div>
+
+              <ViewTracker serverId={server.id} initialCount={server.views || 0} />
+              <InstallsStat count={server.copies || 0} showBorder={typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number'} />
 
               {typeof server.githubStars === 'number' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: typeof server.npmDownloads === 'number' ? '1px solid var(--border-color)' : 'none', paddingBottom: typeof server.npmDownloads === 'number' ? '0.5rem' : '0' }}>
