@@ -3,7 +3,7 @@
  * Aggregates api_access_logs and impression_logs data per server.
  */
 import { and, count, desc, eq, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
-import { apiAccessLogs, impressionLogs } from '@/db/schema';
+import { apiAccessLogs, impressionLogs, socialPosts } from '@/db/schema';
 import type { CallerClass } from './accessLog';
 import type { ImpressionSurface } from './impressionLog';
 
@@ -14,6 +14,7 @@ export type AnalyticsSummary = {
   uniqueCallers: number;
   topCaller: string | null;
   trend: 'up' | 'down' | 'flat';
+  ctr: number;
 };
 
 export type CallerBreakdown = {
@@ -37,13 +38,26 @@ export type SurfaceBreakdown = {
   impressions: number;
 };
 
+export type CountryBreakdown = {
+  country: string;
+  hits: number;
+  pct: number;
+};
+
+export type RecentTweet = {
+  tweetText: string;
+  sentAt: string;
+} | null;
+
 export type ServerAnalytics = {
   summary: AnalyticsSummary;
   byCallerClass: CallerBreakdown[];
   byDay: DailyHits[];
   byEndpoint: EndpointBreakdown[];
   bySurface: SurfaceBreakdown[];
+  byCountry: CountryBreakdown[];
   recentSearchQueries: string[];
+  recentTweet: RecentTweet;
 };
 
 /**
@@ -61,7 +75,9 @@ export async function getServerAnalytics(
     dailyRows,
     endpointRows,
     surfaceRows,
+    countryRows,
     searchRows,
+    tweetRows,
     // Previous period for trend calculation
     prevPeriodRows,
   ] = await Promise.all([
@@ -109,6 +125,24 @@ export async function getServerAnalytics(
       .groupBy(impressionLogs.surface)
       .orderBy(desc(count())),
 
+    // Country breakdown
+    db
+      .select({
+        country: apiAccessLogs.ipCountry,
+        hits: count(),
+      })
+      .from(apiAccessLogs)
+      .where(
+        and(
+          eq(apiAccessLogs.serverId, serverId),
+          gte(apiAccessLogs.createdAt, cutoff),
+          isNotNull(apiAccessLogs.ipCountry)
+        )
+      )
+      .groupBy(apiAccessLogs.ipCountry)
+      .orderBy(desc(count()))
+      .limit(10),
+
     // Recent search queries that returned this server
     db
       .select({ query: apiAccessLogs.methodOrTool })
@@ -123,6 +157,15 @@ export async function getServerAnalytics(
       )
       .orderBy(desc(apiAccessLogs.createdAt))
       .limit(20),
+
+    // Recent sent tweet for this server
+    db
+      .select({ tweetText: socialPosts.tweetText, sentAt: socialPosts.sentAt })
+      .from(socialPosts)
+      .where(and(eq(socialPosts.serverId, serverId), eq(socialPosts.status, 'sent')))
+      .orderBy(desc(socialPosts.sentAt))
+      .limit(1)
+      .catch(() => []),
 
     // Previous period total for trend
     db
@@ -149,6 +192,8 @@ export async function getServerAnalytics(
     .filter((r: { surface: string; impressions: number }) => r.surface === 'outbound_github' || r.surface === 'outbound_website')
     .reduce((sum: number, r: { impressions: number }) => sum + r.impressions, 0);
 
+  const ctr = totalImpressions > 0 ? Math.round((totalOutboundClicks / totalImpressions) * 1000) / 10 : 0;
+
   const uniqueCallers = callerRows.length;
   const topCaller =
     callerRows.length > 0 ? (callerRows[0] as { caller: string }).caller : null;
@@ -166,6 +211,14 @@ export async function getServerAnalytics(
     })
   );
 
+  const byCountry: CountryBreakdown[] = (countryRows || []).map(
+    (r: { country: string | null; hits: number }) => ({
+      country: r.country || 'Unknown',
+      hits: r.hits,
+      pct: totalApiHits > 0 ? Math.round((r.hits / totalApiHits) * 1000) / 10 : 0,
+    })
+  );
+
   // Deduplicate search queries
   const seen = new Set<string>();
   const recentSearchQueries: string[] = [];
@@ -177,13 +230,23 @@ export async function getServerAnalytics(
     }
   }
 
+  const rawTweet = tweetRows && tweetRows.length > 0 ? tweetRows[0] : null;
+  const recentTweet: RecentTweet = rawTweet
+    ? {
+        tweetText: rawTweet.tweetText,
+        sentAt: rawTweet.sentAt instanceof Date ? rawTweet.sentAt.toISOString() : String(rawTweet.sentAt),
+      }
+    : null;
+
   return {
-    summary: { totalApiHits, totalImpressions, totalOutboundClicks, uniqueCallers, topCaller, trend },
+    summary: { totalApiHits, totalImpressions, totalOutboundClicks, uniqueCallers, topCaller, trend, ctr },
     byCallerClass,
     byDay: dailyRows as DailyHits[],
     byEndpoint: endpointRows as EndpointBreakdown[],
     bySurface: surfaceRows as SurfaceBreakdown[],
+    byCountry,
     recentSearchQueries,
+    recentTweet,
   };
 }
 
@@ -259,6 +322,7 @@ export async function getServerAnalyticsBatch(
       uniqueCallers: 0,
       topCaller: null,
       trend: 'flat',
+      ctr: 0,
     };
   }
 
@@ -292,7 +356,7 @@ export async function getServerAnalyticsBatch(
     }
   }
 
-  // Process trend
+  // Process trend & CTR
   const prevMap = new Map<string, number>();
   for (const row of prevRows as { serverId: string; hits: number }[]) {
     if (row.serverId) prevMap.set(row.serverId, row.hits);
@@ -302,6 +366,10 @@ export async function getServerAnalyticsBatch(
     const cur = result[id].totalApiHits;
     if (cur > prev * 1.1) result[id].trend = 'up';
     else if (cur < prev * 0.9) result[id].trend = 'down';
+
+    const imp = result[id].totalImpressions;
+    const clicks = result[id].totalOutboundClicks;
+    result[id].ctr = imp > 0 ? Math.round((clicks / imp) * 1000) / 10 : 0;
   }
 
   return result;

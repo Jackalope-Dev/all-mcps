@@ -7,10 +7,13 @@ import { parsePendingRevision } from '@/lib/pendingRevision';
 import { CALLER_LABELS, CALLER_COLORS, type CallerClass } from '@/lib/accessLog';
 import { SURFACE_LABELS, type ImpressionSurface } from '@/lib/impressionLog';
 import type { AnalyticsSummary, ServerAnalytics } from '@/lib/analytics';
+import { isFeaturedListing } from '@/lib/featuredStatus';
+import { computeQualityScore, tierColor } from '@/lib/qualityScore';
 import {
   Eye, Heart, Download, TrendingUp, TrendingDown, Minus,
   BarChart3, Search, Globe, Lock, Activity, Zap, Sparkles,
   Crown, MousePointerClick, CheckCircle2, AlertCircle, Edit3, Image as ImageIcon,
+  Percent, MapPin, Award, ExternalLink, HelpCircle, ShieldCheck,
 } from 'lucide-react';
 import { DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { PremiumUpgrade } from '@/components/PremiumUpgrade';
@@ -34,11 +37,19 @@ type Server = {
   views?: number;
   copies?: number;
   upvotes?: number;
+  healthStatus?: string | null;
+  isVerifiedActive?: boolean | null;
+  githubStars?: number | null;
+  npmDownloads?: number | null;
+  tools?: string | null;
+  url?: string;
+  lastTweetedAt?: string | Date | null;
 };
 
 type Props = {
   initialServers: Server[];
   initialAnalytics?: Record<string, AnalyticsSummary>;
+  categoryRanks?: Record<string, { rank: number; totalInCategory: number }>;
   isPremium?: boolean;
   /** Deep-links from a listing's "Manage listing" button (`/dashboard?edit=<id>`) straight into that listing's edit form. */
   initialEditId?: string | null;
@@ -46,7 +57,13 @@ type Props = {
 
 type TabType = 'overview' | 'seo' | 'boost' | 'edit';
 
-export default function DashboardClient({ initialServers, initialAnalytics = {}, isPremium = false, initialEditId = null }: Props) {
+export default function DashboardClient({
+  initialServers,
+  initialAnalytics = {},
+  categoryRanks = {},
+  isPremium = false,
+  initialEditId = null,
+}: Props) {
   const [servers, setServers] = useState(initialServers);
   const [analytics, setAnalytics] = useState(initialAnalytics);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -140,10 +157,11 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-fetch deep analytics for all premium servers
+  // Auto-fetch deep analytics for all premium or boosted servers
   useEffect(() => {
     servers.forEach((server) => {
-      if (server.isPremium && !detailAnalytics[server.id] && !loadingDetailMap[server.id]) {
+      const hasAccess = isFeaturedListing(server);
+      if (hasAccess && !detailAnalytics[server.id] && !loadingDetailMap[server.id]) {
         setLoadingDetailMap((prev) => ({ ...prev, [server.id]: true }));
         fetch(`/api/dashboard/analytics?serverId=${server.id}`)
           .then((res) => (res.ok ? (res.json() as Promise<{ analytics: ServerAnalytics }>) : null))
@@ -285,6 +303,9 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
         const summary = analytics[server.id];
         const detail = detailAnalytics[server.id];
         const isLoadingDetail = Boolean(loadingDetailMap[server.id]);
+        const rankInfo = categoryRanks?.[server.id];
+        const hasAnalyticsAccess = isFeaturedListing(server);
+        const hasActiveBoost = !server.isPremium && hasAnalyticsAccess;
 
         return (
           <li key={server.id} id={`server-${server.id}`} style={cardStyle}>
@@ -309,6 +330,11 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{server.name}</h2>
                     <span style={categoryBadgeStyle}>{server.category}</span>
+                    {rankInfo && (
+                      <span style={{ ...categoryBadgeStyle, color: '#FACC15', borderColor: 'rgba(250, 204, 21, 0.3)', background: 'rgba(250, 204, 21, 0.08)' }}>
+                        🏆 Rank #{rankInfo.rank} of {rankInfo.totalInCategory}
+                      </span>
+                    )}
                     {server.isPremium && <span style={premiumBadgeStyle}>★ Premium</span>}
                     {pending && <span style={pendingBadgeStyle}>Awaiting Review</span>}
                     {server.featuredUntil && new Date(server.featuredUntil).getTime() > Date.now() && (
@@ -428,6 +454,8 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
             {/* TAB CONTENT: Overview & Analytics */}
             {activeTab === 'overview' && (
               <div style={{ marginTop: '1.25rem' }}>
+                <QualityScoreCard server={server} />
+
                 <div style={quickStatsRowStyle}>
                   <StatPill icon={<Eye size={13} />} label="Views" value={server.views || 0} />
                   <StatPill icon={<Download size={13} />} label="Installs" value={server.copies || 0} />
@@ -437,31 +465,50 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                       <StatPill icon={<Activity size={13} />} label="API Hits" value={summary.totalApiHits} accent trend={summary.trend} />
                       <StatPill icon={<Globe size={13} />} label="Impressions" value={summary.totalImpressions} accent />
                       <StatPill icon={<MousePointerClick size={13} />} label="Clicks" value={summary.totalOutboundClicks || 0} accent />
+                      {summary.ctr != null && (
+                        <StatPill icon={<Percent size={13} />} label="CTR" value={`${summary.ctr}%`} accent />
+                      )}
                     </>
                   )}
                 </div>
 
                 <div style={{ marginTop: '1.25rem' }}>
-                  {!server.isPremium ? (
+                  {!hasAnalyticsAccess ? (
                     <PremiumTeaser />
-                  ) : loadingDetailMap[server.id] ? (
+                  ) : isLoadingDetail ? (
                     <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                       <Activity size={20} style={{ animation: 'spin 1s linear infinite' }} />
                       <p style={{ marginTop: '0.5rem' }}>Loading analytics…</p>
                     </div>
                   ) : detail ? (
-                    detail.summary.totalApiHits === 0 && detail.summary.totalImpressions === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
-                          Premium tracking is on — we just haven&apos;t seen API hits or directory impressions yet. Share your listing and check back after agents discover you.
-                        </p>
-                        <Link href={`/mcp/${server.id}`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
-                          Open public listing
-                        </Link>
-                      </div>
-                    ) : (
-                      <AnalyticsPanel detail={detail} />
-                    )
+                    <>
+                      {hasActiveBoost && (
+                        <div style={boostBannerStyle}>
+                          <Sparkles size={16} color="#FACC15" />
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontWeight: 700, color: '#FACC15' }}>Active Boost Analytics Access</span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginLeft: '0.4rem' }}>
+                              — Full analytics unlocked through your boost window! Upgrade to Premium for 24/7 perpetual analytics &amp; dofollow backlinks.
+                            </span>
+                          </div>
+                          <Link href="/pricing" className="btn btn-secondary" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', flexShrink: 0 }}>
+                            Upgrade to Premium →
+                          </Link>
+                        </div>
+                      )}
+                      {detail.summary.totalApiHits === 0 && detail.summary.totalImpressions === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+                          <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
+                            Analytics tracking is active — we just haven&apos;t seen API hits or directory impressions yet. Share your listing and check back after agents discover you.
+                          </p>
+                          <Link href={`/mcp/${server.id}`} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
+                            Open public listing
+                          </Link>
+                        </div>
+                      ) : (
+                        <AnalyticsPanel detail={detail} />
+                      )}
+                    </>
                   ) : (
                     <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>
                       No analytics data yet. Data will appear as LLMs and users interact with your listing.
@@ -661,7 +708,16 @@ function BacklinkStatus({ server }: { server: Server }) {
 
 /* ─── Sub-components ─── */
 
-function StatPill({ icon, label, value, accent, trend }: { icon: React.ReactNode; label: string; value: number; accent?: boolean; trend?: 'up' | 'down' | 'flat' }) {
+function TwitterIcon({ size = 16, color = '#1DA1F2' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
+      <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
+    </svg>
+  );
+}
+
+function StatPill({ icon, label, value, accent, trend }: { icon: React.ReactNode; label: string; value: number | string; accent?: boolean; trend?: 'up' | 'down' | 'flat' }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: '0.4rem',
@@ -669,12 +725,6 @@ function StatPill({ icon, label, value, accent, trend }: { icon: React.ReactNode
       padding: '0.6rem 0.75rem', borderRadius: '10px', minWidth: 0,
       border: `1px solid ${accent ? 'rgba(var(--accent-rgb), 0.2)' : 'var(--border-color)'}`,
     }}>
-      {/* Fixed height so the value row below always sits at the same
-          offset, regardless of label length (kept to one line — see
-          minWidth:0 + nowrap + ellipsis below). The label row no longer
-          has to share space with the trend badge, which sits next to the
-          number instead — a long label like "Impressions" was getting
-          truncated tighter than it needed to just to make room for it. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0, height: '1rem' }}>
         <span style={{
           display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0,
@@ -688,7 +738,7 @@ function StatPill({ icon, label, value, accent, trend }: { icon: React.ReactNode
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <span style={{ fontSize: '1.4rem', fontWeight: 800, lineHeight: 1, color: accent ? 'var(--accent-color)' : 'var(--text-primary)' }}>
-          {value.toLocaleString()}
+          {typeof value === 'number' ? value.toLocaleString() : value}
         </span>
         {trend && <TrendIndicator trend={trend} compact />}
       </div>
@@ -818,6 +868,53 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
         )}
       </div>
 
+      {/* Geographic Traffic Distribution */}
+      <div style={panelCardStyle}>
+        <h3 style={panelTitleStyle}>
+          <Globe size={16} style={{ color: 'var(--accent-color)' }} />
+          Traffic by Country / Region
+        </h3>
+        {(!detail.byCountry || detail.byCountry.length === 0) ? (
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No geographic data yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {detail.byCountry.map((row) => (
+              <CountryBar key={row.country} country={row.country} hits={row.hits} pct={row.pct} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* X / Twitter Spotlight Status */}
+      <div style={panelCardStyle}>
+        <h3 style={panelTitleStyle}>
+          <TwitterIcon size={16} color="#1DA1F2" />
+          X / Twitter Spotlight Status
+        </h3>
+        {detail.recentTweet ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div style={{ fontSize: '0.825rem', color: 'var(--text-primary)', background: 'rgba(255,255,255,0.04)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontStyle: 'italic', lineHeight: 1.5 }}>
+              &ldquo;{detail.recentTweet.tweetText}&rdquo;
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              <span>Highlighted on {new Date(detail.recentTweet.sentAt).toLocaleDateString()}</span>
+              <a href="https://x.com/AllMCPs" target="_blank" rel="noopener noreferrer" style={{ color: '#1DA1F2', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
+                View on @AllMCPs <ExternalLink size={12} />
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+            <p style={{ margin: '0 0 0.5rem' }}>
+              No custom tweet logged yet. Highlighting occurs periodically via our RSS feed and spotlight rotation.
+            </p>
+            <a href="https://x.com/AllMCPs" target="_blank" rel="noopener noreferrer" style={{ color: '#1DA1F2', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: 600 }}>
+              Follow @AllMCPs on X → <ExternalLink size={12} />
+            </a>
+          </div>
+        )}
+      </div>
+
       {/* Daily Activity Sparkline */}
       <div style={panelCardStyle}>
         <h3 style={panelTitleStyle}>
@@ -849,6 +946,98 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function CountryBar({ country, hits, pct }: { country: string; hits: number; pct: number }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.2rem' }}>
+        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>📍 {country}</span>
+        <span style={{ color: 'var(--text-secondary)' }}>{hits.toLocaleString()} ({pct}%)</span>
+      </div>
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', borderRadius: '3px',
+          width: `${Math.max(pct, 2)}%`,
+          background: 'linear-gradient(90deg, #3B82F6, #60A5FA)',
+          transition: 'width 0.5s ease',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+function QualityScoreCard({ server }: { server: Server }) {
+  const quality = computeQualityScore(server as any);
+  const color = tierColor(quality.tier);
+
+  // Actionable tips to improve quality score
+  const tips: string[] = [];
+  if (!server.isOfficial && !server.websiteVerified && !server.isPremium) {
+    tips.push('Claim ownership or verify your domain (+20 pts)');
+  }
+  if (!server.tools || server.tools === '[]') {
+    tips.push('Document callable MCP tools & schemas (+30 pts)');
+  }
+  if (!server.websiteUrl) {
+    tips.push('Attach your product website URL (+10 pts)');
+  }
+  if ((server.description || '').trim().length < 300) {
+    tips.push('Expand description to 300+ characters (+15 pts)');
+  }
+
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid var(--border-color)',
+      borderRadius: '12px',
+      padding: '1.15rem 1.25rem',
+      marginBottom: '1.25rem',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ShieldCheck size={18} style={{ color }} />
+          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+            Listing Quality Score
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color }}>{quality.score}/100</span>
+          <span style={{
+            fontSize: '0.75rem', fontWeight: 700, color,
+            background: `${color}18`, border: `1px solid ${color}40`,
+            borderRadius: '999px', padding: '0.2rem 0.6rem',
+          }}>
+            {quality.tier}
+          </span>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: tips.length > 0 ? '0.85rem' : '0' }}>
+        <div style={{
+          height: '100%', borderRadius: '3px',
+          width: `${quality.score}%`,
+          background: color,
+          transition: 'width 0.5s ease',
+        }} />
+      </div>
+
+      {/* Actionable Tips */}
+      {tips.length > 0 && (
+        <div style={{ background: 'rgba(var(--accent-rgb), 0.05)', border: '1px solid rgba(var(--accent-rgb), 0.15)', borderRadius: '8px', padding: '0.75rem 0.85rem', marginTop: '0.5rem' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-color)', margin: '0 0 0.35rem' }}>
+            💡 Tips to Improve Your Score:
+          </p>
+          <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            {tips.map((tip) => (
+              <li key={tip}>{tip}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -1087,6 +1276,18 @@ const quickStatsRowStyle: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
   gap: '0.6rem',
+};
+
+const boostBannerStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.75rem',
+  padding: '0.85rem 1.15rem',
+  borderRadius: '10px',
+  background: 'linear-gradient(135deg, rgba(250, 204, 21, 0.12), rgba(245, 158, 11, 0.06))',
+  border: '1px solid rgba(250, 204, 21, 0.3)',
+  marginBottom: '1.25rem',
+  flexWrap: 'wrap',
 };
 
 const fieldLabelStyle: CSSProperties = {

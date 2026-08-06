@@ -6,6 +6,8 @@ import { servers } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { getServerAnalytics, getServerAnalyticsBatch } from '@/lib/analytics';
 
+import { isFeaturedListing } from '@/lib/featuredStatus';
+
 export const dynamic = 'force-dynamic';
 
 /**
@@ -41,47 +43,60 @@ export async function GET(request: Request) {
 
   // Verify the user owns the requested server(s)
   const ownedRows = await db
-    .select({ id: servers.id, isPremium: servers.isPremium })
+    .select({
+      id: servers.id,
+      isPremium: servers.isPremium,
+      featuredUntil: servers.featuredUntil,
+      categorySponsorUntil: servers.categorySponsorUntil,
+    })
     .from(servers)
     .where(eq(servers.ownerUserId, session.user.id));
 
   const ownedById = new Map(ownedRows.map((r) => [r.id, r]));
 
   if (serverId) {
-    // Detail view for a single server — premium is per-listing (Stripe checkout
-    // targets one serverId), so gate on *this* server's status, not whether the
-    // caller owns some other premium listing.
+    // Detail view for a single server — allowed if premium OR currently boosted
     const owned = ownedById.get(serverId);
     if (!owned) {
       return NextResponse.json({ error: 'Not your server' }, { status: 403 });
     }
-    if (!owned.isPremium) {
-      return NextResponse.json({ error: 'Premium required for detailed analytics' }, { status: 403 });
+
+    const hasAccess = isFeaturedListing(owned);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Premium or active Boost required for detailed analytics' }, { status: 403 });
     }
 
     const analytics = await getServerAnalytics(db, serverId, days);
+    const hasActiveBoost = !owned.isPremium && isFeaturedListing(owned);
 
     return NextResponse.json({
       serverId,
-      isPremium: true,
+      isPremium: owned.isPremium,
+      hasActiveBoost,
+      featuredUntil: owned.featuredUntil ? owned.featuredUntil.toISOString() : null,
       analytics,
     });
   }
 
-  // Batch view for all owned servers — detailed summaries only for premium listings.
+  // Batch view for all owned servers — detailed summaries for premium/boosted listings.
   const serverIds = Array.from(ownedById.keys());
   if (serverIds.length === 0) {
     return NextResponse.json({ servers: [] });
   }
 
-  const premiumIds = serverIds.filter((id) => ownedById.get(id)!.isPremium);
-  const summaries = premiumIds.length > 0 ? await getServerAnalyticsBatch(db, premiumIds, days) : {};
+  const allowedIds = serverIds.filter((id) => isFeaturedListing(ownedById.get(id)!));
+  const summaries = allowedIds.length > 0 ? await getServerAnalyticsBatch(db, allowedIds, days) : {};
 
   return NextResponse.json({
-    servers: serverIds.map((id) => ({
-      id,
-      isPremium: ownedById.get(id)!.isPremium,
-      analytics: ownedById.get(id)!.isPremium ? summaries[id] : null,
-    })),
+    servers: serverIds.map((id) => {
+      const row = ownedById.get(id)!;
+      const access = isFeaturedListing(row);
+      return {
+        id,
+        isPremium: row.isPremium,
+        hasActiveBoost: !row.isPremium && access,
+        analytics: access ? summaries[id] : null,
+      };
+    }),
   });
 }

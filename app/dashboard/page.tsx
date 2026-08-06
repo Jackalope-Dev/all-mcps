@@ -42,6 +42,7 @@ type OwnedServer = {
 async function getOwnedServers(userId: string): Promise<{
   servers: OwnedServer[];
   analytics: Record<string, AnalyticsSummary>;
+  categoryRanks: Record<string, { rank: number; totalInCategory: number }>;
   isPremium: boolean;
 }> {
   try {
@@ -69,6 +70,12 @@ async function getOwnedServers(userId: string): Promise<{
           views: servers.views,
           copies: servers.copies,
           upvotes: servers.upvotes,
+          healthStatus: servers.healthStatus,
+          isVerifiedActive: servers.isVerifiedActive,
+          githubStars: servers.githubStars,
+          npmDownloads: servers.npmDownloads,
+          tools: servers.tools,
+          url: servers.url,
         })
         .from(servers)
         .where(eq(servers.ownerUserId, userId));
@@ -86,12 +93,35 @@ async function getOwnedServers(userId: string): Promise<{
         }
       }
 
-      return { servers: rows as OwnedServer[], analytics, isPremium };
+      // Compute category ranks for owned servers
+      const { and, desc, sql } = await import('drizzle-orm');
+      const categoryRanks: Record<string, { rank: number; totalInCategory: number }> = {};
+      for (const server of rows) {
+        try {
+          const categoryList = await db
+            .select({ id: servers.id })
+            .from(servers)
+            .where(and(eq(servers.category, server.category), eq(servers.status, 'active')))
+            .orderBy(desc(sql`${servers.upvotes} * 10 + ${servers.views}`));
+
+          const index = categoryList.findIndex((item) => item.id === server.id);
+          if (index !== -1) {
+            categoryRanks[server.id] = {
+              rank: index + 1,
+              totalInCategory: categoryList.length,
+            };
+          }
+        } catch {
+          // Fallback if category ranking query fails
+        }
+      }
+
+      return { servers: rows as OwnedServer[], analytics, categoryRanks, isPremium };
     }
   } catch {
     // fall through with empty list
   }
-  return { servers: [], analytics: {}, isPremium: false };
+  return { servers: [], analytics: {}, categoryRanks: {}, isPremium: false };
 }
 
 export default async function DashboardPage({
@@ -104,7 +134,7 @@ export default async function DashboardPage({
     redirect('/login?callbackUrl=/dashboard');
   }
 
-  const { servers: ownedServers, analytics, isPremium } = await getOwnedServers(session.user.id);
+  const { servers: ownedServers, analytics, categoryRanks, isPremium } = await getOwnedServers(session.user.id);
   const { edit } = await searchParams;
 
   return (
@@ -124,6 +154,7 @@ export default async function DashboardPage({
         <DashboardClient
           initialServers={ownedServers as any}
           initialAnalytics={analytics}
+          categoryRanks={categoryRanks}
           isPremium={isPremium}
           initialEditId={edit ?? null}
         />
