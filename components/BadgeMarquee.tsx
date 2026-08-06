@@ -97,6 +97,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://dailypings.com/p/allmcps',
     imageUrl: 'https://dailypings.com/badge.svg',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'fazier',
+    name: 'Fazier badge',
+    href: 'https://fazier.com/launches/allmcps.com',
+    imageUrl: 'https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=featured&theme=neutral',
+    rel: 'noopener noreferrer'
   }
 ];
 
