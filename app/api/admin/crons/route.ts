@@ -27,19 +27,22 @@ export async function POST(req: Request) {
       // Best-effort context
     }
 
-    const secret = env?.ADMIN_SECRET || process.env.ADMIN_SECRET;
+    const secret = env?.CRON_SECRET || env?.ADMIN_SECRET || process.env.CRON_SECRET || process.env.ADMIN_SECRET;
     const origin = new URL(req.url).origin;
 
     const cronUrl = `${origin}/api/cron/${job}`;
+    const cookieHeader = req.headers.get('cookie');
+    const authHeader = req.headers.get('authorization');
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    if (secret) {
-      headers['Authorization'] = `Bearer ${secret}`;
-    }
+    if (cookieHeader) headers['Cookie'] = cookieHeader;
+    if (authHeader) headers['Authorization'] = authHeader;
+    else if (secret) headers['Authorization'] = `Bearer ${secret}`;
 
     const cronRes = await fetch(cronUrl, {
-      method: 'GET',
+      method: 'POST',
       headers,
     });
 

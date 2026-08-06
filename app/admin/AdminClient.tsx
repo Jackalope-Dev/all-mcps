@@ -9,7 +9,7 @@ import { StatsBar } from './StatsBar';
 import ManageListings from './ManageListings';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
 import { AdminSocialQueue } from './AdminSocialQueue';
-import { AdminCronsControl } from './AdminCronsControl';
+import { AdminToolsControl } from './AdminCronsControl';
 import {
   LayoutDashboard,
   Clock,
@@ -17,6 +17,7 @@ import {
   BarChart3,
   Share2,
   Cpu,
+  Wrench,
   CheckCircle2,
   AlertTriangle,
   Layers,
@@ -74,9 +75,9 @@ export default function AdminClient({
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const totalPending = pending.length + pendingEdits.length + pendingClaims.length + pendingLogos.length;
-  const defaultTab = totalPending > 0 ? 'moderation' : 'overview';
-
-  const [activeTab, setActiveTab] = useState<'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'crons'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'crons' | 'tools'
+  >(defaultTab);
   const [modSubTab, setModSubTab] = useState<'submissions' | 'edits' | 'claims' | 'logos'>('submissions');
 
   const handleAction = async (
@@ -144,7 +145,7 @@ export default function AdminClient({
     { id: 'listings', label: 'Listings Directory', icon: List },
     { id: 'analytics', label: 'Analytics & Logs', icon: BarChart3 },
     { id: 'social', label: 'Social & Twitter', icon: Share2 },
-    { id: 'crons', label: 'Crons & System', icon: Cpu },
+    { id: 'tools', label: 'Admin Tools & Actions', icon: Wrench },
   ];
 
   return (
@@ -340,11 +341,11 @@ export default function AdminClient({
         </section>
       )}
 
-      {/* TAB 6: CRONS & SYSTEM */}
-      {activeTab === 'crons' && (
+      {/* TAB 6: ADMIN TOOLS & UTILITIES */}
+      {(activeTab === 'tools' || (activeTab as string) === 'crons') && (
         <section>
-          <h2 className="admin-section-title">Crons & System</h2>
-          <AdminCronsControl />
+          <h2 className="admin-section-title">Admin Tools & Maintenance Utilities</h2>
+          <AdminToolsControl />
         </section>
       )}
     </div>
