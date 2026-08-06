@@ -512,16 +512,16 @@ export default function ManageListings() {
                       {listing.description}
                     </p>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                      <span>Category: <strong style={{ color: 'white' }}>{listing.category}</strong></span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(128,128,128,0.04)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                      <span>Category: <strong style={{ color: 'var(--text-primary)' }}>{listing.category}</strong></span>
                       {listing.submitterEmail && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Mail className="w-3.5 h-3.5" /> Submitter: <strong style={{ color: 'white' }}>{listing.submitterEmail}</strong>
+                          <Mail className="w-3.5 h-3.5" /> Submitter: <strong style={{ color: 'var(--text-primary)' }}>{listing.submitterEmail}</strong>
                         </span>
                       )}
                       {listing.ownerUserId && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <User className="w-3.5 h-3.5" /> Owner: <strong style={{ color: 'white' }}>{listing.ownerUserId.slice(0, 8)}...</strong>
+                          <User className="w-3.5 h-3.5" /> Owner: <strong style={{ color: 'var(--text-primary)' }}>{listing.ownerUserId.slice(0, 8)}...</strong>
                         </span>
                       )}
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Eye className="w-3.5 h-3.5" /> {listing.views || 0} views</span>
@@ -542,7 +542,7 @@ export default function ManageListings() {
                       disabled={rowLoading}
                       className="admin-btn"
                       style={{
-                        background: listing.isOfficial ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.04)',
+                        background: listing.isOfficial ? 'rgba(16, 185, 129, 0.15)' : 'rgba(128,128,128,0.08)',
                         color: listing.isOfficial ? '#10b981' : 'var(--text-secondary)',
                         border: '1px solid var(--border-color)',
                         padding: '0.3rem 0.6rem',
@@ -561,8 +561,8 @@ export default function ManageListings() {
                       disabled={rowLoading}
                       className="admin-btn"
                       style={{
-                        background: listing.websiteVerified ? 'rgba(0, 123, 255, 0.15)' : 'rgba(255,255,255,0.04)',
-                        color: listing.websiteVerified ? '#007BFF' : 'var(--text-secondary)',
+                        background: listing.websiteVerified ? 'rgba(37, 99, 235, 0.15)' : 'rgba(128,128,128,0.08)',
+                        color: listing.websiteVerified ? '#2563eb' : 'var(--text-secondary)',
                         border: '1px solid var(--border-color)',
                         padding: '0.3rem 0.6rem',
                         fontSize: '0.75rem',
@@ -580,8 +580,8 @@ export default function ManageListings() {
                       disabled={rowLoading}
                       className="admin-btn"
                       style={{
-                        background: 'rgba(255,255,255,0.04)',
-                        color: '#94a3b8',
+                        background: 'rgba(128,128,128,0.08)',
+                        color: 'var(--text-primary)',
                         border: '1px solid var(--border-color)',
                         padding: '0.3rem 0.6rem',
                         fontSize: '0.75rem',
@@ -601,7 +601,7 @@ export default function ManageListings() {
                       onClick={() => runAction(listing.id, 'feature', { days: 7 })}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(0,229,255,0.12)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.3)', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                      style={{ background: 'rgba(2,132,199,0.15)', color: '#0284c7', border: '1px solid rgba(2,132,199,0.4)', padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: 700 }}
                     >
                       +7d Boost
                     </button>
@@ -610,7 +610,7 @@ export default function ManageListings() {
                       onClick={() => runAction(listing.id, 'feature', { days: 30 })}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(255,215,0,0.12)', color: '#ffd700', border: '1px solid rgba(255,215,0,0.3)', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                      style={{ background: 'rgba(245,158,11,0.15)', color: '#d97706', border: '1px solid rgba(245,158,11,0.4)', padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: 700 }}
                     >
                       +30d Boost
                     </button>
@@ -619,7 +619,7 @@ export default function ManageListings() {
                       onClick={() => setBoostModalListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                      style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
                     >
                       Custom Boost...
                     </button>
@@ -628,7 +628,7 @@ export default function ManageListings() {
                       onClick={() => runAction(listing.id, listing.isPremium ? 'unset_premium' : 'set_premium')}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: listing.isPremium ? '#64748b' : '#007BFF', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      style={{ background: listing.isPremium ? '#64748b' : '#0284c7', color: '#ffffff', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
                     >
                       {listing.isPremium ? 'Unset Premium' : 'Make Premium'}
                     </button>
@@ -637,7 +637,7 @@ export default function ManageListings() {
                       onClick={() => startEdit(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: '#64748b', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      style={{ background: '#64748b', color: '#ffffff', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
                     >
                       Edit
                     </button>
@@ -646,7 +646,7 @@ export default function ManageListings() {
                       onClick={() => setInspectListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
                     >
                       Inspector
                     </button>
@@ -743,20 +743,22 @@ export default function ManageListings() {
         >
           <div
             style={{
-              background: '#0f172a',
+              background: 'var(--card-bg)',
+              color: 'var(--text-primary)',
               border: '1px solid var(--border-color)',
               borderRadius: '12px',
               padding: '1.5rem',
               maxWidth: '440px',
               width: '100%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                 Grant Placement Boost: {boostModalListing.name}
               </h3>
-              <button onClick={() => setBoostModalListing(null)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+              <button onClick={() => setBoostModalListing(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -788,7 +790,7 @@ export default function ManageListings() {
                     type="button"
                     onClick={() => setCustomBoostDays(String(d))}
                     className="admin-btn"
-                    style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                    style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                   >
                     {d} days
                   </button>
@@ -796,10 +798,10 @@ export default function ManageListings() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <button onClick={() => setBoostModalListing(null)} className="admin-btn" style={{ background: '#64748b' }}>
+                <button onClick={() => setBoostModalListing(null)} className="admin-btn" style={{ background: '#64748b', color: '#ffffff' }}>
                   Cancel
                 </button>
-                <button onClick={() => grantFeaturedModal(boostModalListing.id)} className="admin-btn" style={{ background: '#007BFF' }}>
+                <button onClick={() => grantFeaturedModal(boostModalListing.id)} className="admin-btn" style={{ background: '#0284c7', color: '#ffffff' }}>
                   Grant {customBoostDays} Days Boost
                 </button>
               </div>
@@ -826,7 +828,8 @@ export default function ManageListings() {
         >
           <div
             style={{
-              background: '#0f172a',
+              background: 'var(--card-bg)',
+              color: 'var(--text-primary)',
               border: '1px solid var(--border-color)',
               borderRadius: '12px',
               padding: '1.5rem',
@@ -834,18 +837,19 @@ export default function ManageListings() {
               width: '100%',
               maxHeight: '85vh',
               overflowY: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Listing Inspector: {inspectListing.name}</h3>
-              <button onClick={() => setInspectListing(null)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Listing Inspector: {inspectListing.name}</h3>
+              <button onClick={() => setInspectListing(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
-              <div><strong>ID:</strong> <code style={{ color: '#00E5FF' }}>{inspectListing.id}</code></div>
+              <div><strong>ID:</strong> <code style={{ color: 'var(--accent-color)', fontWeight: 700 }}>{inspectListing.id}</code></div>
               <div><strong>Submitter Email:</strong> {inspectListing.submitterEmail || 'Not recorded'}</div>
               <div><strong>Owner User ID:</strong> {inspectListing.ownerUserId || 'Unclaimed'}</div>
               <div><strong>Official Project Badge:</strong> {inspectListing.isOfficial ? 'Yes (Verified)' : 'No'}</div>
@@ -857,7 +861,7 @@ export default function ManageListings() {
               <div>
                 <strong>Introspected MCP Tools:</strong>
                 {inspectListing.tools ? (
-                  <pre style={{ background: 'rgba(0,0,0,0.4)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.75rem', overflowX: 'auto', marginTop: '0.25rem' }}>
+                  <pre style={{ background: 'rgba(128,128,128,0.06)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.75rem', overflowX: 'auto', marginTop: '0.25rem' }}>
                     {JSON.stringify(JSON.parse(inspectListing.tools), null, 2)}
                   </pre>
                 ) : (
