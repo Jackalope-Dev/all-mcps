@@ -111,6 +111,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://newtool.site/item/allmcps',
     imageUrl: 'https://newtool.site/badges/newtool-light.svg',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'saasfame',
+    name: 'Featured on saasfame.com',
+    href: 'https://saasfame.com/item/allmcps',
+    imageUrl: 'https://saasfame.com/badge-light.svg',
+    rel: 'noopener noreferrer'
   }
 ];
 
