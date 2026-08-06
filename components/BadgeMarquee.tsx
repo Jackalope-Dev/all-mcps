@@ -118,6 +118,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://saasfame.com/item/allmcps',
     imageUrl: 'https://saasfame.com/badge-light.svg',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'drchecker',
+    name: 'DR Checker - Domain Rating',
+    href: 'https://drchecker.net/item/allmcps.com',
+    imageUrl: 'https://drchecker.net/api/badge?domain=allmcps.com',
+    rel: 'noopener noreferrer'
   }
 ];
 
