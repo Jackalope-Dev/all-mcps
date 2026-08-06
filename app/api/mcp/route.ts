@@ -1,6 +1,6 @@
 import { getActiveServers, getServerById, formatServerAsMarkdown } from '@/lib/servers';
 import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
-import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
+import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
 import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
 
 const SERVER_INFO = {
@@ -164,6 +164,40 @@ export async function POST(request: Request) {
     }
   }
 
+  // Attribute a search_mcp_servers call to every server it surfaced, so
+  // each owner's "search queries that find you" panel has data — a single
+  // serverId:null row (like other tool calls use) is invisible to every
+  // server's per-id analytics query.
+  async function logMcpSearch(serverIds: string[], tool: string) {
+    try {
+      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+      const cfCtx = await getCloudflareContext();
+      if (cfCtx?.env && (cfCtx.env as any).DB) {
+        const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+        const meta = extractRequestMeta(request);
+        cfCtx.ctx.waitUntil(
+          serverIds.length > 0
+            ? logApiAccessBatch(logDb, {
+                serverIds,
+                endpoint: 'mcp_jsonrpc',
+                methodOrTool: tool,
+                userAgent: meta.userAgent,
+                ipCountry: meta.ipCountry,
+              })
+            : logApiAccess(logDb, {
+                serverId: null,
+                endpoint: 'mcp_jsonrpc',
+                methodOrTool: tool,
+                userAgent: meta.userAgent,
+                ipCountry: meta.ipCountry,
+              })
+        );
+      }
+    } catch {
+      /* best-effort */
+    }
+  }
+
   try {
     const body = (await request.json()) as any;
     const { jsonrpc, id, method, params } = body || {};
@@ -258,7 +292,10 @@ export async function POST(request: Request) {
             ? results.map((s) => formatServerAsMarkdown(s)).join('\n---\n\n')
             : `No MCP servers found matching query: "${query}"`;
 
-        await logMcp(null, `search_mcp_servers${query ? ` query: ${query}` : ''}`);
+        await logMcpSearch(
+          query ? results.map((s) => s.id) : [],
+          `search_mcp_servers${query ? ` query: ${query}` : ''}`
+        );
         return Response.json(
           {
             jsonrpc: '2.0',

@@ -4,6 +4,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { ExternalLink, Copy, Cloud } from 'lucide-react';
 import { toast } from '../../../../components/ui/Toast';
+import { CopyBlock } from '../../../../components/ui/CopyBlock';
 import { getClaimVerificationToken } from '../../../../lib/verificationTokens';
 import { getApexDomain, getDnsProviderLinks } from '../../../../lib/dnsProviders';
 
@@ -320,7 +321,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             style={{
               padding: '0.75rem 1.5rem',
               border: '1px solid var(--border-color)',
-              background: 'rgba(255,255,255,0.05)',
+              background: 'var(--bg-muted)',
               color: 'var(--text-primary)',
               borderRadius: '8px',
               textDecoration: 'none',
@@ -334,7 +335,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             style={{
               padding: '0.75rem 1.5rem',
               border: '1px solid var(--border-color)',
-              background: 'rgba(255,255,255,0.05)',
+              background: 'var(--bg-muted)',
               color: 'var(--text-primary)',
               borderRadius: '8px',
               textDecoration: 'none',
@@ -471,7 +472,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 padding: '1.15rem',
                 borderRadius: '12px',
                 border: isSelected ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                background: isSelected ? 'rgba(var(--accent-rgb),0.08)' : 'rgba(255,255,255,0.02)',
+                background: isSelected ? 'rgba(var(--accent-rgb),0.08)' : 'var(--bg-muted)',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
@@ -602,38 +603,13 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               </div>
             </div>
 
-            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
-              <pre
-                style={{
-                  background: 'rgba(0,0,0,0.5)',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  overflowX: 'auto',
-                  border: '1px solid var(--border-color)',
-                  color: '#10b981',
-                  fontSize: '0.8rem',
-                }}
-              >
-                <code>{githubVerifyMarkdown}</code>
-              </pre>
-              <button
-                type="button"
-                onClick={() => copyText(githubVerifyMarkdown || '', 'README badge snippet')}
-                style={{
-                  position: 'absolute',
-                  top: '0.5rem',
-                  right: '0.5rem',
-                  background: 'var(--accent-color)',
-                  border: 'none',
-                  color: 'var(--bg-color)',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '0.8rem',
-                }}
-              >
-                Copy Markdown
-              </button>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <CopyBlock
+                code={githubVerifyMarkdown || ''}
+                title="README.md"
+                language="markdown"
+                toastMessage="README badge snippet copied"
+              />
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
               This link includes your account — it's what ties the claim to you, not just the badge image.
@@ -770,22 +746,12 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
           <div style={{ marginBottom: '1rem' }}>
             <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>Markdown</h3>
-            <pre style={codeBoxStyle}>
-              <code>{badgeMarkdown}</code>
-            </pre>
-            <button type="button" className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => copyText(badgeMarkdown, 'Markdown badge')}>
-              Copy Markdown
-            </button>
+            <CopyBlock code={badgeMarkdown} title="README.md" language="markdown" toastMessage="Markdown badge copied" />
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
             <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>HTML</h3>
-            <pre style={codeBoxStyle}>
-              <code>{badgeHtml}</code>
-            </pre>
-            <button type="button" className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => copyText(badgeHtml, 'HTML badge')}>
-              Copy HTML
-            </button>
+            <CopyBlock code={badgeHtml} title="badge.html" language="html" toastMessage="HTML badge copied" />
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.5 }}>
               This badge links back to AllMCPs <strong>dofollow</strong> — keep it that way (don&apos;t add{' '}
               <code>rel=&quot;nofollow&quot;</code>) and your listing&apos;s website link becomes dofollow in return. We
@@ -795,12 +761,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>Or meta tag (in &lt;head&gt;)</h3>
-            <pre style={codeBoxStyle}>
-              <code>{metaTag}</code>
-            </pre>
-            <button type="button" className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => copyText(metaTag, 'Meta tag')}>
-              Copy meta tag
-            </button>
+            <CopyBlock code={metaTag} title="index.html" language="html" toastMessage="Meta tag copied" />
           </div>
         </>
       ))}
@@ -826,7 +787,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               padding: '1rem',
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
-              background: 'rgba(0,0,0,0.25)',
+              background: 'var(--bg-muted)',
             }}
           >
             <DnsFieldRow label="Type" value="TXT" onCopy={() => copyText('TXT', 'Type')} />
@@ -958,7 +919,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                     padding: '0.4rem 0.75rem',
                     borderRadius: '999px',
                     border: '1px solid var(--border-color)',
-                    background: 'rgba(255,255,255,0.04)',
+                    background: 'var(--bg-muted)',
                     color: 'var(--text-primary)',
                     fontSize: '0.8rem',
                     fontWeight: 500,
@@ -1050,17 +1011,6 @@ function SignInGate({ href }: { href: string }) {
   );
 }
 
-const codeBoxStyle: CSSProperties = {
-  background: 'rgba(0,0,0,0.5)',
-  padding: '1rem',
-  borderRadius: '8px',
-  overflowX: 'auto',
-  border: '1px solid var(--border-color)',
-  color: '#a1a1aa',
-  fontSize: '0.75rem',
-  margin: 0,
-};
-
 function DnsFieldRow({
   label,
   value,
@@ -1114,7 +1064,7 @@ function DnsFieldRow({
           height: '2rem',
           borderRadius: '6px',
           border: '1px solid var(--border-color)',
-          background: 'rgba(255,255,255,0.05)',
+          background: 'var(--card-bg)',
           color: 'var(--text-secondary)',
           cursor: 'pointer',
         }}

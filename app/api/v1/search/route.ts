@@ -1,7 +1,7 @@
 import { getActiveServers } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
 import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
-import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
+import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
 import { resolveInstallConfig, toClaudeConfigSnippet } from '@/lib/installConfig';
 
 export async function GET(request: Request) {
@@ -90,13 +90,25 @@ export async function GET(request: Request) {
     if (cfCtx?.env && (cfCtx.env as any).DB) {
       const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
       const meta = extractRequestMeta(request);
-      cfCtx.ctx.waitUntil(logApiAccess(logDb, {
-        serverId: null,
-        endpoint: 'v1_search',
-        methodOrTool: query || null,
-        userAgent: meta.userAgent,
-        ipCountry: meta.ipCountry,
-      }));
+      // Attribute the search to every server it actually surfaced so each
+      // owner's "search queries that find you" panel has data to show.
+      cfCtx.ctx.waitUntil(
+        query && results.length > 0
+          ? logApiAccessBatch(logDb, {
+              serverIds: results.map((r) => r.id),
+              endpoint: 'v1_search',
+              methodOrTool: query,
+              userAgent: meta.userAgent,
+              ipCountry: meta.ipCountry,
+            })
+          : logApiAccess(logDb, {
+              serverId: null,
+              endpoint: 'v1_search',
+              methodOrTool: query || null,
+              userAgent: meta.userAgent,
+              ipCountry: meta.ipCountry,
+            })
+      );
     }
   } catch { /* logging is best-effort */ }
 

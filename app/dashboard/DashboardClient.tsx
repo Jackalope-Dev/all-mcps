@@ -415,10 +415,9 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
                   <StatPill icon={<Heart size={13} />} label="Upvotes" value={server.upvotes || 0} />
                   {summary && (
                     <>
-                      <StatPill icon={<Activity size={13} />} label="API Hits" value={summary.totalApiHits} accent />
+                      <StatPill icon={<Activity size={13} />} label="API Hits" value={summary.totalApiHits} accent trend={summary.trend} />
                       <StatPill icon={<Globe size={13} />} label="Impressions" value={summary.totalImpressions} accent />
                       <StatPill icon={<MousePointerClick size={13} />} label="Clicks" value={summary.totalOutboundClicks || 0} accent />
-                      <TrendIndicator trend={summary.trend} />
                     </>
                   )}
                 </div>
@@ -635,38 +634,49 @@ function BacklinkStatus({ server }: { server: Server }) {
 
 /* ─── Sub-components ─── */
 
-function StatPill({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent?: boolean }) {
+function StatPill({ icon, label, value, accent, trend }: { icon: React.ReactNode; label: string; value: number; accent?: boolean; trend?: 'up' | 'down' | 'flat' }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: '0.35rem',
-      fontSize: '0.8rem', color: accent ? 'var(--accent-color)' : 'var(--text-secondary)',
+      display: 'flex', flexDirection: 'column', gap: '0.4rem',
       background: accent ? 'rgba(var(--accent-rgb), 0.08)' : 'rgba(255,255,255,0.03)',
-      padding: '0.35rem 0.65rem', borderRadius: '8px',
+      padding: '0.6rem 0.75rem', borderRadius: '10px', minWidth: '104px',
       border: `1px solid ${accent ? 'rgba(var(--accent-rgb), 0.2)' : 'var(--border-color)'}`,
     }}>
-      {icon}
-      <span style={{ fontWeight: 700, color: accent ? 'var(--accent-color)' : 'var(--text-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+        <span style={{
+          display: 'flex', alignItems: 'center', gap: '0.3rem',
+          fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
+          color: accent ? 'var(--accent-color)' : 'var(--text-secondary)',
+        }}>
+          {icon}
+          {label}
+        </span>
+        {trend && <TrendIndicator trend={trend} compact />}
+      </div>
+      <span style={{ fontSize: '1.4rem', fontWeight: 800, lineHeight: 1, color: accent ? 'var(--accent-color)' : 'var(--text-primary)' }}>
         {value.toLocaleString()}
       </span>
-      <span>{label}</span>
     </div>
   );
 }
 
-function TrendIndicator({ trend }: { trend: 'up' | 'down' | 'flat' }) {
-  const config = {
-    up: { Icon: TrendingUp, color: '#34D399', label: 'Trending up' },
-    down: { Icon: TrendingDown, color: '#F87171', label: 'Trending down' },
-    flat: { Icon: Minus, color: '#94A3B8', label: 'Stable' },
-  };
-  const { Icon, color, label } = config[trend];
+const TREND_CONFIG = {
+  up: { Icon: TrendingUp, color: '#059669', bg: 'rgba(16,185,129,0.14)', border: 'rgba(16,185,129,0.35)', label: 'Trending up', shortLabel: 'Up' },
+  down: { Icon: TrendingDown, color: '#DC2626', bg: 'rgba(239,68,68,0.14)', border: 'rgba(239,68,68,0.35)', label: 'Trending down', shortLabel: 'Down' },
+  flat: { Icon: Minus, color: 'var(--text-secondary)', bg: 'rgba(148,163,184,0.14)', border: 'var(--border-color)', label: 'Stable', shortLabel: 'Stable' },
+} as const;
+
+function TrendIndicator({ trend, compact }: { trend: 'up' | 'down' | 'flat'; compact?: boolean }) {
+  const { Icon, color, bg, border, label, shortLabel } = TREND_CONFIG[trend];
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: '0.3rem',
-      fontSize: '0.75rem', color, fontWeight: 600,
+      display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+      fontSize: compact ? '0.65rem' : '0.75rem', color, fontWeight: 700,
+      background: bg, border: `1px solid ${border}`, borderRadius: '999px',
+      padding: compact ? '0.12rem 0.4rem' : '0.25rem 0.6rem', whiteSpace: 'nowrap',
     }} title={label}>
-      <Icon size={14} />
-      {label}
+      <Icon size={compact ? 11 : 14} />
+      {compact ? shortLabel : label}
     </div>
   );
 }
@@ -1028,10 +1038,9 @@ const tabBadgeAlertStyle: CSSProperties = {
 };
 
 const quickStatsRowStyle: CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '0.5rem',
-  alignItems: 'center',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(104px, 1fr))',
+  gap: '0.6rem',
 };
 
 const fieldLabelStyle: CSSProperties = {
