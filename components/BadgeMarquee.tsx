@@ -132,6 +132,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://turbo0.com/item/allmcps',
     imageUrl: 'https://img.turbo0.com/badge-listed-light.svg',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'launchboard',
+    name: 'Launched on LaunchBoard - Product Launch Platform',
+    href: 'https://launchboard.dev',
+    imageUrl: 'https://launchboard.dev/launchboard-badge.png',
+    rel: 'noopener'
   }
 ];
 
