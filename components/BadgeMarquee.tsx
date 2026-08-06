@@ -104,6 +104,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://fazier.com/launches/allmcps.com',
     imageUrl: 'https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=featured&theme=neutral',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'newtool',
+    name: 'Featured on NewTool.site',
+    href: 'https://newtool.site/item/allmcps',
+    imageUrl: 'https://newtool.site/badges/newtool-light.svg',
+    rel: 'noopener noreferrer'
   }
 ];
 
