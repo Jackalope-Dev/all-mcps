@@ -139,6 +139,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://launchboard.dev',
     imageUrl: 'https://launchboard.dev/launchboard-badge.png',
     rel: 'noopener'
+  },
+  {
+    id: 'similarlabs',
+    name: 'List on Similarlabs',
+    href: 'https://similarlabs.com',
+    imageUrl: 'https://similarlabs.com/similarlabs-embed-badge-light.svg',
+    rel: 'noopener noreferrer'
   }
 ];
 
