@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, ne, gt } from 'drizzle-orm';
 import { servers } from '@/db/schema';
-import { getPriceId, PAID_PRODUCTS, type PaidSku } from '@/lib/pricing';
+import { getPriceId, getProductId, tieredUnitPrice, PAID_PRODUCTS, type PaidSku } from '@/lib/pricing';
 import { getAppUrl, getStripe } from '@/lib/stripe';
 
 export type CreateCheckoutParams = {
@@ -101,13 +101,28 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     };
   }
 
-  const priceId = getPriceId(sku, env);
-  if (!priceId) {
+  const isWeeklyTiered = !!product.weeklyTiers;
+
+  // Weekly-tiered SKUs are priced dynamically per request (Stripe doesn't support tiered
+  // billing on one-time prices) and only need the Product ID to attach the ad-hoc price to;
+  // everything else uses a fixed pre-created Price.
+  const priceId = isWeeklyTiered ? null : getPriceId(sku, env);
+  if (!isWeeklyTiered && !priceId) {
     return {
       success: false,
       status: 503,
       error: `Missing Stripe Price ID for ${product.name}.`,
       hint: `Set ${product.priceEnv} in Cloudflare Dashboard environment secrets.`,
+    };
+  }
+
+  const productId = isWeeklyTiered ? getProductId(sku, env) : null;
+  if (isWeeklyTiered && !productId) {
+    return {
+      success: false,
+      status: 503,
+      error: `Missing Stripe Product ID for ${product.name}.`,
+      hint: `Set ${product.productEnv} in Cloudflare Dashboard environment secrets.`,
     };
   }
 
@@ -152,11 +167,12 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
       ? `/submit?paid=priority&id=${encodeURIComponent(serverId)}`
       : `/mcp/${encodeURIComponent(serverId)}?paid=${encodeURIComponent(sku)}`;
 
-  // Weekly-tiered products (featured_7d, category_sponsor_7d) are sold in blocks of weeks against
-  // a Stripe `tiered`/`volume` Price — quantity IS weeks. adjustable_quantity lets the customer
-  // change it on Stripe's own Checkout page too, so the webhook re-reads the final line item
-  // quantity rather than trusting this initial value.
-  const isWeeklyTiered = !!product.weeklyTiers;
+  // Weekly-tiered products (featured_7d, category_sponsor_7d) are sold in blocks of weeks.
+  // Stripe doesn't support tiered billing on one-time prices, so the discounted per-week rate
+  // for this exact quantity is computed here (from the same table the UI previews) and passed
+  // inline via price_data rather than a pre-created Price — the charge can never drift from
+  // what was shown. No adjustable_quantity: changing weeks means picking a new quantity on our
+  // own page (which creates a fresh, correctly-priced session), not adjusting on Stripe's page.
   const initialWeeks = isWeeklyTiered
     ? Math.min(product.maxWeeks || 8, Math.max(1, Math.round(weeks || 1)))
     : 1;
@@ -166,17 +182,21 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     line_items: [
       isWeeklyTiered
         ? {
-            price: priceId,
+            price_data: {
+              currency: 'usd',
+              product: productId!,
+              unit_amount: tieredUnitPrice(product, initialWeeks),
+            },
             quantity: initialWeeks,
-            adjustable_quantity: { enabled: true, minimum: 1, maximum: product.maxWeeks || 8 },
           }
-        : { price: priceId, quantity: 1 },
+        : { price: priceId!, quantity: 1 },
     ],
     success_url: `${appUrl}${successPath}`,
     cancel_url: `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&canceled=1`,
     metadata: {
       serverId,
       sku,
+      ...(isWeeklyTiered ? { weeks: String(initialWeeks) } : {}),
     },
     client_reference_id: serverId,
     allow_promotion_codes: true,

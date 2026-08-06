@@ -326,7 +326,9 @@ export type RankOptions = {
 /**
  * Filter `servers` to those matching `query` and return them ranked by relevance,
  * tie-broken by engagement. An empty query returns the input unchanged (callers
- * decide the default order in that case).
+ * decide the default order in that case). A non-empty query that tokenizes to nothing
+ * (e.g. "!!!" — all punctuation, no alphanumeric terms) is a real search with no possible
+ * matches, not "no filter" — it returns no results rather than the whole catalog.
  */
 export function rankServers<T extends Searchable & Engagement>(
   servers: T[],
@@ -335,7 +337,10 @@ export function rankServers<T extends Searchable & Engagement>(
 ): T[] {
   const terms = compileQuery(query);
   if (terms.length === 0) {
-    return typeof opts.limit === 'number' ? servers.slice(0, opts.limit) : servers;
+    if (!query.trim()) {
+      return typeof opts.limit === 'number' ? servers.slice(0, opts.limit) : servers;
+    }
+    return [];
   }
   const fullQuery = terms.map((t) => t.term).join(' ');
 
@@ -375,7 +380,10 @@ export function hybridRankServers<T extends Searchable & Engagement & { id: stri
 ): T[] {
   const terms = compileQuery(query);
   if (terms.length === 0) {
-    return typeof opts.limit === 'number' ? servers.slice(0, opts.limit) : servers;
+    if (!query.trim()) {
+      return typeof opts.limit === 'number' ? servers.slice(0, opts.limit) : servers;
+    }
+    return [];
   }
   const fullQuery = terms.map((t) => t.term).join(' ');
 

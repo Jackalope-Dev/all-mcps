@@ -248,15 +248,15 @@ export default function DashboardClient({ initialServers, initialAnalytics = {},
         </li>
         <li style={summaryMetricCardStyle}>
           <span style={summaryLabelStyle}>API Hits (30d)</span>
-          <span style={{ ...summaryValueStyle, color: '#00E5FF' }}>{totalApiHits.toLocaleString()}</span>
+          <span style={{ ...summaryValueStyle, color: 'var(--accent-color)' }}>{totalApiHits.toLocaleString()}</span>
         </li>
       </ul>
 
       {/* Global stats / alerts */}
       {isPremium && (
         <div style={premiumBannerStyle}>
-          <Zap size={16} style={{ color: '#00E5FF' }} />
-          <span style={{ fontWeight: 600, color: '#00E5FF' }}>Premium Analytics Active</span>
+          <Zap size={16} style={{ color: 'var(--accent-color)' }} />
+          <span style={{ fontWeight: 600, color: 'var(--accent-color)' }}>Premium Analytics Active</span>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             — Your listings are tracked across all directory surfaces &amp; LLM agents
           </span>
@@ -587,8 +587,8 @@ function BacklinkStatus({ server }: { server: Server }) {
   return (
     <div style={backlinkPendingContainerStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-        <AlertCircle size={18} style={{ color: '#00E5FF' }} />
-        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#00E5FF' }}>
+        <AlertCircle size={18} style={{ color: 'var(--accent-color)' }} />
+        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--accent-color)' }}>
           Free dofollow backlink setup checklist
         </span>
       </div>
@@ -639,13 +639,13 @@ function StatPill({ icon, label, value, accent }: { icon: React.ReactNode; label
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '0.35rem',
-      fontSize: '0.8rem', color: accent ? '#00E5FF' : 'var(--text-secondary)',
-      background: accent ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.03)',
+      fontSize: '0.8rem', color: accent ? 'var(--accent-color)' : 'var(--text-secondary)',
+      background: accent ? 'rgba(var(--accent-rgb), 0.08)' : 'rgba(255,255,255,0.03)',
       padding: '0.35rem 0.65rem', borderRadius: '8px',
-      border: `1px solid ${accent ? 'rgba(0,229,255,0.2)' : 'var(--border-color)'}`,
+      border: `1px solid ${accent ? 'rgba(var(--accent-rgb), 0.2)' : 'var(--border-color)'}`,
     }}>
       {icon}
-      <span style={{ fontWeight: 700, color: accent ? '#00E5FF' : 'var(--text-primary)' }}>
+      <span style={{ fontWeight: 700, color: accent ? 'var(--accent-color)' : 'var(--text-primary)' }}>
         {value.toLocaleString()}
       </span>
       <span>{label}</span>
@@ -675,11 +675,11 @@ function PremiumTeaser() {
   return (
     <div style={{
       position: 'relative', overflow: 'hidden', borderRadius: '12px',
-      border: '1px solid rgba(0,229,255,0.3)',
-      background: 'linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,123,255,0.04))',
+      border: '1px solid rgba(var(--accent-rgb), 0.3)',
+      background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.06), rgba(var(--accent-secondary-rgb), 0.04))',
       padding: '2rem', textAlign: 'center',
     }}>
-      <Lock size={32} style={{ color: '#00E5FF', marginBottom: '0.75rem', position: 'relative' }} />
+      <Lock size={32} style={{ color: 'var(--accent-color)', marginBottom: '0.75rem', position: 'relative' }} />
       <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', position: 'relative', color: 'var(--text-primary)' }}>Unlock Premium Analytics</h3>
       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '460px', margin: '0 auto 1rem', lineHeight: 1.55, position: 'relative' }}>
         Free dashboards show views, installs, and upvotes. Premium shows{' '}
@@ -731,7 +731,7 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
       {/* LLM Caller Breakdown */}
       <div style={panelCardStyle}>
         <h3 style={panelTitleStyle}>
-          <BarChart3 size={16} style={{ color: '#00E5FF' }} />
+          <BarChart3 size={16} style={{ color: 'var(--accent-color)' }} />
           Which LLMs Use Your MCP
         </h3>
         {detail.byCallerClass.length === 0 ? (
@@ -753,7 +753,7 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
       {/* Impression Surface Breakdown */}
       <div style={panelCardStyle}>
         <h3 style={panelTitleStyle}>
-          <Eye size={16} style={{ color: '#00E5FF' }} />
+          <Eye size={16} style={{ color: 'var(--accent-color)' }} />
           Where Users See You
         </h3>
         {detail.bySurface.length === 0 ? (
@@ -775,7 +775,7 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
       {/* Daily Activity Sparkline */}
       <div style={panelCardStyle}>
         <h3 style={panelTitleStyle}>
-          <Activity size={16} style={{ color: '#00E5FF' }} />
+          <Activity size={16} style={{ color: 'var(--accent-color)' }} />
           Daily API Activity (30 days)
         </h3>
         {detail.byDay.length === 0 ? (
@@ -788,7 +788,7 @@ function AnalyticsPanel({ detail }: { detail: ServerAnalytics }) {
       {/* Search Discovery */}
       <div style={panelCardStyle}>
         <h3 style={panelTitleStyle}>
-          <Search size={16} style={{ color: '#00E5FF' }} />
+          <Search size={16} style={{ color: 'var(--accent-color)' }} />
           Search Queries That Find You
         </h3>
         {detail.recentSearchQueries.length === 0 ? (
@@ -841,7 +841,7 @@ function SurfaceBar({ surface, impressions, total }: { surface: ImpressionSurfac
         <div style={{
           height: '100%', borderRadius: '3px',
           width: `${Math.max(pct, 2)}%`,
-          background: 'linear-gradient(90deg, #00E5FF, #007BFF)',
+          background: 'linear-gradient(90deg, var(--accent-color), var(--accent-secondary))',
           transition: 'width 0.5s ease',
         }} />
       </div>
@@ -877,14 +877,14 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
       >
         <defs>
           <linearGradient id="sparkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#00E5FF" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#00E5FF" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="var(--accent-color)" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path d={areaD} fill="url(#sparkGrad)" />
-        <path d={pathD} fill="none" stroke="#00E5FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={pathD} fill="none" stroke="var(--accent-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="3" fill="#00E5FF" opacity="0" style={{ transition: 'opacity 0.2s' }}>
+          <circle key={i} cx={p.x} cy={p.y} r="3" fill="var(--accent-color)" opacity="0" style={{ transition: 'opacity 0.2s' }}>
             <title>{labels[i]}: {data[i]} hits</title>
             <set attributeName="opacity" to="1" begin="mouseover" end="mouseout" />
           </circle>
@@ -941,9 +941,9 @@ const logoPlaceholderStyle: CSSProperties = {
   width: 44,
   height: 44,
   borderRadius: 10,
-  background: 'rgba(0,229,255,0.1)',
-  border: '1px solid rgba(0,229,255,0.25)',
-  color: '#00E5FF',
+  background: 'rgba(var(--accent-rgb), 0.1)',
+  border: '1px solid rgba(var(--accent-rgb), 0.25)',
+  color: 'var(--accent-color)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -977,17 +977,17 @@ const boostBadgeStyle: CSSProperties = {
   fontWeight: 700,
   padding: '0.25rem 0.6rem',
   borderRadius: '6px',
-  background: 'rgba(0,229,255,0.12)',
-  border: '1px solid rgba(0,229,255,0.3)',
-  color: '#00E5FF',
+  background: 'rgba(var(--accent-rgb), 0.12)',
+  border: '1px solid rgba(var(--accent-rgb), 0.3)',
+  color: 'var(--accent-color)',
 };
 
 const premiumBadgeStyle: CSSProperties = {
   fontSize: '0.75rem',
   fontWeight: 700,
-  color: '#00E5FF',
-  background: 'rgba(0,229,255,0.12)',
-  border: '1px solid rgba(0,229,255,0.3)',
+  color: 'var(--accent-color)',
+  background: 'rgba(var(--accent-rgb), 0.12)',
+  border: '1px solid rgba(var(--accent-rgb), 0.3)',
   borderRadius: '6px',
   padding: '0.25rem 0.6rem',
   whiteSpace: 'nowrap',
@@ -1009,8 +1009,8 @@ function getTabButtonStyle(isActive: boolean): CSSProperties {
     padding: '0.45rem 0.85rem',
     borderRadius: '8px',
     border: 'none',
-    background: isActive ? 'rgba(0,229,255,0.12)' : 'transparent',
-    color: isActive ? '#00E5FF' : 'var(--text-secondary)',
+    background: isActive ? 'rgba(var(--accent-rgb), 0.12)' : 'transparent',
+    color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
     fontWeight: isActive ? 700 : 500,
     fontSize: '0.825rem',
     cursor: 'pointer',
@@ -1048,8 +1048,8 @@ const premiumBannerStyle: CSSProperties = {
   gap: '0.5rem',
   padding: '0.75rem 1rem',
   borderRadius: '10px',
-  background: 'linear-gradient(135deg, rgba(0,229,255,0.08), rgba(0,123,255,0.04))',
-  border: '1px solid rgba(0,229,255,0.2)',
+  background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(var(--accent-secondary-rgb), 0.04))',
+  border: '1px solid rgba(var(--accent-rgb), 0.2)',
 };
 
 const backlinkAlertBannerStyle: CSSProperties = {
@@ -1069,8 +1069,8 @@ const backlinkActiveContainerStyle: CSSProperties = {
 const backlinkPendingContainerStyle: CSSProperties = {
   padding: '1.15rem',
   borderRadius: 12,
-  border: '1px solid rgba(0,229,255,0.28)',
-  background: 'rgba(0,229,255,0.05)',
+  border: '1px solid rgba(var(--accent-rgb), 0.28)',
+  background: 'rgba(var(--accent-rgb), 0.05)',
 };
 
 const panelCardStyle: CSSProperties = {
@@ -1094,8 +1094,8 @@ const queryChipStyle: CSSProperties = {
   fontSize: '0.75rem',
   padding: '0.25rem 0.6rem',
   borderRadius: '6px',
-  background: 'rgba(0,229,255,0.08)',
-  border: '1px solid rgba(0,229,255,0.15)',
+  background: 'rgba(var(--accent-rgb), 0.08)',
+  border: '1px solid rgba(var(--accent-rgb), 0.15)',
   color: 'var(--text-secondary)',
   whiteSpace: 'nowrap',
 };
