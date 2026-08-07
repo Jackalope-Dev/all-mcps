@@ -6,7 +6,7 @@ import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
 import { engagementScore, buildAiSearchText } from './search';
 import { resolveInstallConfig } from './installConfig';
-import { parseStringArray } from './aiContent';
+import { parseStringArray, parseFaqArray, type AiFaqItem } from './aiContent';
 
 export type ServerTool = { name: string; description?: string; parameters?: Record<string, unknown> };
 
@@ -35,7 +35,7 @@ export function parseServerTools(raw: unknown): ServerTool[] {
  * must not be mutated in place. Also parses the `tools` JSON column into an array.
  */
 function normalizeServer<T extends { description?: string | null; tools?: unknown }>(server: T): T {
-  const s = server as { aiUseCases?: unknown; aiFeatures?: unknown };
+  const s = server as { aiUseCases?: unknown; aiFeatures?: unknown; aiFaq?: unknown };
   return {
     ...server,
     description: cleanListingDescription(server.description),
@@ -43,6 +43,7 @@ function normalizeServer<T extends { description?: string | null; tools?: unknow
     // AI content JSON-array columns → typed arrays (absent in the static snapshot → []).
     aiUseCases: parseStringArray(s.aiUseCases),
     aiFeatures: parseStringArray(s.aiFeatures),
+    aiFaq: parseFaqArray(s.aiFaq),
   };
 }
 
@@ -78,6 +79,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   aiOverview: serversTable.aiOverview,
   aiUseCases: serversTable.aiUseCases,
   aiFeatures: serversTable.aiFeatures,
+  aiFaq: serversTable.aiFaq,
   aiEnrichedAt: serversTable.aiEnrichedAt,
   installKind: serversTable.installKind,
   installCommand: serversTable.installCommand,
@@ -119,6 +121,9 @@ export type Server = {
   /** Parsed by normalizeServer from the `ai_use_cases` / `ai_features` JSON columns. */
   aiUseCases?: string[];
   aiFeatures?: string[];
+  /** Parsed by normalizeServer from the `ai_faq` JSON column. Empty until the
+   * ai-content/ai-faq cron has generated it — pages fall back to boilerplate. */
+  aiFaq?: AiFaqItem[];
   aiEnrichedAt?: string | Date | null;
   installKind?: string | null;
   installCommand?: string | null;
