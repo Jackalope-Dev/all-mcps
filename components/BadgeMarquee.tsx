@@ -146,6 +146,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://similarlabs.com',
     imageUrl: 'https://similarlabs.com/similarlabs-embed-badge-light.svg',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'codetrendy',
+    name: 'https://codetrendy.com',
+    href: 'https://codetrendy.com/?utm_source=allmcps.com&utm_medium=badge',
+    imageUrl: 'https://codetrendy.com/api/badge?style=classic',
+    rel: 'nofollow noopener noreferrer'
   }
 ];
 
