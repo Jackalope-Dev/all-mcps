@@ -14,6 +14,8 @@
 import { chatJson } from './openai';
 import { cleanListingDescription } from './description';
 
+export type AiFaqItem = { q: string; a: string };
+
 export type AiListingContent = {
   /** One clean sentence, no trailing period stripping — used in cards, meta, digest. */
   summary: string;
@@ -23,6 +25,8 @@ export type AiListingContent = {
   useCases: string[];
   /** Key capabilities / features. */
   features: string[];
+  /** 3-5 grounded Q&A pairs for the /mcp/[id] FAQ section and its FAQPage schema. */
+  faq: AiFaqItem[];
 };
 
 /**
@@ -50,6 +54,28 @@ export function parseStringArray(raw: unknown): string[] {
   }
 }
 
+/** Parse a stored JSON string-array-of-{q,a} column tolerantly (bad data → []). */
+export function parseFaqArray(raw: unknown): AiFaqItem[] {
+  const toItems = (arr: unknown[]): AiFaqItem[] =>
+    arr
+      .filter(
+        (x): x is { q: unknown; a: unknown } =>
+          !!x && typeof x === 'object' && 'q' in x && 'a' in x
+      )
+      .map((x) => ({ q: String((x as any).q).trim(), a: String((x as any).a).trim() }))
+      .filter((x) => x.q && x.a);
+
+  if (Array.isArray(raw)) return toItems(raw);
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return toItems(parsed);
+  } catch {
+    return [];
+  }
+}
+
 function clampSentence(text: unknown, maxLen: number): string {
   if (typeof text !== 'string') return '';
   const t = text.trim().replace(/\s+/g, ' ');
@@ -62,6 +88,19 @@ function clampList(value: unknown, maxItems: number, maxLen: number): string[] {
   for (const item of value) {
     const s = clampSentence(item, maxLen);
     if (s && /[\p{L}\p{N}]/u.test(s)) out.push(s);
+    if (out.length >= maxItems) break;
+  }
+  return out;
+}
+
+export function clampFaq(value: unknown, maxItems: number, maxQLen: number, maxALen: number): AiFaqItem[] {
+  if (!Array.isArray(value)) return [];
+  const out: AiFaqItem[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const q = clampSentence((item as any).q, maxQLen);
+    const a = clampSentence((item as any).a, maxALen);
+    if (q && a) out.push({ q, a });
     if (out.length >= maxItems) break;
   }
   return out;
@@ -86,7 +125,12 @@ const SYSTEM_PROMPT =
   'Return ONLY JSON with keys: "summary" (one sentence, <=150 chars, no name-dropping the directory), ' +
   '"overview" (2-4 sentences on what it does and when to use it), ' +
   '"useCases" (3-5 short concrete strings, each starting with a verb), ' +
-  '"features" (3-6 short capability strings). If the material is too thin to support a field, return fewer items rather than guessing.';
+  '"features" (3-6 short capability strings), ' +
+  '"faq" (3-5 objects with "q" and "a" keys — real questions a developer evaluating this server would ' +
+  'search for or ask, e.g. what it requires, what it does NOT do, how it compares to doing the task ' +
+  'manually, or a specific setup/auth detail if the material covers one; each "a" is 1-3 plain sentences ' +
+  'grounded only in the provided material). ' +
+  'If the material is too thin to support a field, return fewer items rather than guessing.';
 
 /** Chat failure reasons that mean "stop spending" rather than "this one didn't work". */
 const BUDGET_REASONS = new Set(['budget_or_rate_limit', 'auth', 'not_configured']);
@@ -121,6 +165,7 @@ export async function generateListingContent(
     overview?: string;
     useCases?: unknown;
     features?: unknown;
+    faq?: unknown;
   }>({
     model: 'gpt-4.1-mini',
     temperature: 0.3,
@@ -142,9 +187,10 @@ export async function generateListingContent(
   const overview = clampSentence(result.data.overview, 600);
   const useCases = clampList(result.data.useCases, 5, 120);
   const features = clampList(result.data.features, 6, 100);
+  const faq = clampFaq(result.data.faq, 5, 150, 400);
 
   // A usable summary is the minimum bar — without it the page gains nothing over the raw scrape.
   if (!summary || summary.length < 12) return { status: 'skip', reason: 'empty' };
 
-  return { status: 'ok', content: { summary, overview, useCases, features } };
+  return { status: 'ok', content: { summary, overview, useCases, features, faq } };
 }
