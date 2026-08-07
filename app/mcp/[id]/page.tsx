@@ -40,6 +40,7 @@ import { categorySlug, getCategoryMeta } from '../../../lib/categories';
 import { ToolSchemaInspector } from '../../../components/ui/ToolSchemaInspector';
 import { CollapsibleText } from '../../../components/CollapsibleText';
 import { MobileInstallBar } from '../../../components/MobileInstallBar';
+import { ScreenshotViewer } from '../../../components/ui/ScreenshotViewer';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
@@ -498,6 +499,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             >
               <FolderGit2 size={18} style={{ color: 'var(--accent-color)' }} />
               <span>View Repository</span>
+              {server.isOfficial && (
+                <BadgeCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
+              )}
               {typeof server.githubStars === 'number' && server.githubStars > 0 && (
                 <span
                   style={{
@@ -568,18 +572,15 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           )}
 
           {server.screenshotUrl && (
-            <figure style={{ margin: '0 0 1.5rem', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={server.screenshotUrl}
-                alt={`${displayName} screenshot`}
-                style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 420, objectFit: 'cover' }}
-              />
-            </figure>
+            <ScreenshotViewer
+              src={server.screenshotUrl}
+              alt={`${displayName} screenshot`}
+              title={`${displayName} Screenshot`}
+            />
           )}
 
           <div className="detail-summary" style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.6' }}>
-            <SafeMarkdown content={(server.aiSummary && server.aiSummary.trim()) || server.description} utmContent={server.id} />
+            <SafeMarkdown content={(server.aiSummary && server.aiSummary.trim()) || server.description} utmContent={server.id} repoUrl={server.url} />
           </div>
 
           {/* Install-first: primary conversion path sits above long AI copy / README. */}
@@ -706,7 +707,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <div className="detail-readme-scroll">
               <div className="markdown-body">
                 {readme ? (
-                  <SafeMarkdown content={readme} utmContent={server.id} />
+                  <SafeMarkdown content={readme} utmContent={server.id} repoUrl={server.url} />
                 ) : (
                   <>
                     <p>

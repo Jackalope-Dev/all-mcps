@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -13,15 +13,86 @@ interface SafeMarkdownProps {
   isInline?: boolean;
   /** When set, stored as utm_content on outbound README links (e.g. server id). */
   utmContent?: string;
+  /** Repository URL to resolve relative images and links against. */
+  repoUrl?: string;
+}
+
+/**
+ * Resolves relative URLs (e.g. `assets/logo.png`, `./LICENSE`) against a repository URL.
+ */
+function resolveUrl(url: string | Blob | undefined, repoUrl?: string, isImage?: boolean): string {
+  if (!url || typeof url !== 'string') return '';
+  if (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('//') ||
+    url.startsWith('data:') ||
+    url.startsWith('#') ||
+    url.startsWith('mailto:') ||
+    url.startsWith('tel:')
+  ) {
+    if (isImage && url.includes('github.com/') && url.includes('/blob/')) {
+      return url.replace('github.com/', 'raw.githubusercontent.com/').replace('/blob/', '/');
+    }
+    return url;
+  }
+
+  if (!repoUrl) return url;
+
+  const match = repoUrl.match(/github\.com\/([^/]+)\/([^/#?]+)/);
+  if (!match) return url;
+
+  const owner = match[1];
+  let repo = match[2];
+  if (repo.endsWith('.git')) repo = repo.slice(0, -4);
+
+  const cleanPath = url.replace(/^\.\//, '').replace(/^\//, '');
+
+  if (isImage) {
+    return `https://raw.githubusercontent.com/${owner}/${repo}/main/${cleanPath}`;
+  }
+  return `https://github.com/${owner}/${repo}/blob/main/${cleanPath}`;
+}
+
+function MarkdownImage({
+  src,
+  alt,
+  repoUrl,
+  style,
+  ...rest
+}: React.ImgHTMLAttributes<HTMLImageElement> & { repoUrl?: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) return null;
+
+  const resolvedSrc = resolveUrl(src, repoUrl, true);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={resolvedSrc}
+      alt={alt || ''}
+      onError={() => setHasError(true)}
+      style={{
+        maxWidth: '100%',
+        height: 'auto',
+        borderRadius: '8px',
+        display: 'inline-block',
+        verticalAlign: 'middle',
+        ...style,
+      }}
+      {...rest}
+    />
+  );
 }
 
 function MarkdownLink({
   href,
   children,
   utmContent,
+  repoUrl,
   ...rest
-}: React.AnchorHTMLAttributes<HTMLAnchorElement> & { utmContent?: string }) {
-  // In-page anchors stay same-tab, no UTM
+}: React.AnchorHTMLAttributes<HTMLAnchorElement> & { utmContent?: string; repoUrl?: string }) {
   if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) {
     return (
       <a href={href} {...rest}>
@@ -30,32 +101,23 @@ function MarkdownLink({
     );
   }
 
-  const trackedHref = isOutboundHttpUrl(href)
-    ? withAllMcpsUtm(href, { content: utmContent })
-    : href;
+  const resolvedHref = resolveUrl(href, repoUrl, false);
+  const trackedHref = isOutboundHttpUrl(resolvedHref)
+    ? withAllMcpsUtm(resolvedHref, { content: utmContent })
+    : resolvedHref;
 
   return (
-    <a
-      href={trackedHref}
-      target="_blank"
-      rel="noopener noreferrer"
-      {...rest}
-    >
+    <a href={trackedHref} target="_blank" rel="noopener noreferrer" {...rest}>
       {children}
     </a>
   );
 }
 
-export function SafeMarkdown({ content, isInline, utmContent }: SafeMarkdownProps) {
+export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMarkdownProps) {
   let processedContent = content;
 
-  // If rendering inline (like in a card paragraph), we want to avoid block wrappers like <p>
-  // that might conflict with a parent clamping <div> or <p>.
-  // We also strip links to prevent nested <a> tags since cards themselves are links.
   if (isInline) {
-    // Strip markdown links [text](url) -> text
     processedContent = processedContent.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-    // Strip HTML links <a href="...">text</a> -> text
     processedContent = processedContent.replace(/<a[^>]*>(.*?)<\/a>/gi, '$1');
 
     return (
@@ -65,6 +127,9 @@ export function SafeMarkdown({ content, isInline, utmContent }: SafeMarkdownProp
         components={{
           p: ({ children }) => <span style={{ display: 'inline' }}>{children}</span>,
           a: ({ children }) => <span>{children}</span>,
+          img: ({ src, alt }) => (
+            <MarkdownImage src={src} alt={alt} repoUrl={repoUrl} />
+          ),
         }}
       >
         {processedContent}
@@ -78,13 +143,13 @@ export function SafeMarkdown({ content, isInline, utmContent }: SafeMarkdownProp
       rehypePlugins={[rehypeRaw, rehypeSanitize]}
       components={{
         a: ({ href, children, node: _node, ...props }) => (
-          <MarkdownLink href={href} utmContent={utmContent} {...props}>
+          <MarkdownLink href={href} utmContent={utmContent} repoUrl={repoUrl} {...props}>
             {children}
           </MarkdownLink>
         ),
-        // Fenced code blocks (```lang ... ```) always render as <pre><code>; inline
-        // `code` spans never do. Intercepting <pre> lets fenced blocks get the full
-        // CopyBlock treatment while inline code keeps the plain markdown-body pill style.
+        img: ({ src, alt, node: _node, style, ...props }) => (
+          <MarkdownImage src={src} alt={alt} repoUrl={repoUrl} style={style} {...props} />
+        ),
         pre: ({ children }) => {
           const codeEl = React.isValidElement(children)
             ? (children as React.ReactElement<{ className?: string; children?: React.ReactNode }>)

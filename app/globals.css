@@ -1457,13 +1457,27 @@ p {
   border-radius: 0 8px 8px 0;
 }
 
+.markdown-body p:has(img),
+.markdown-body div:has(img) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.markdown-body p[align="center"],
+.markdown-body div[align="center"] {
+  justify-content: center;
+}
+
 .markdown-body img,
 .markdown-body video,
 .markdown-body iframe {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
-  margin-bottom: 1.5rem;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .markdown-body table {
@@ -7103,3 +7117,21 @@ code.inline-path {
   gap: 1rem;
   margin-top: 1.25rem;
 }
+
+/* Screenshot Preview Lightbox Styles */
+.screenshot-preview-container:hover {
+  border-color: var(--accent-color, #00e5ff) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 15px var(--accent-glow, rgba(0, 229, 255, 0.28)) !important;
+}
+
+.screenshot-preview-container:hover .screenshot-expand-badge {
+  background: var(--brand-gradient) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  transform: translateY(-2px);
+}
+
+.screenshot-preview-container:hover .screenshot-expand-badge svg {
+  color: #ffffff !important;
+}
+
