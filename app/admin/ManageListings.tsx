@@ -16,6 +16,7 @@ import {
   Trash2,
   ShieldCheck,
   Globe,
+  Award,
   Activity,
   Sparkles,
   Crown,
@@ -54,6 +55,7 @@ type Listing = {
   isPremium: boolean;
   isOfficial?: boolean;
   websiteVerified?: boolean;
+  reciprocalBadgeOk?: boolean;
   status: string;
   healthStatus: string;
   featuredUntil?: string | null;
@@ -245,6 +247,7 @@ export default function ManageListings({
       | 'resend_approval'
       | 'toggle_official'
       | 'toggle_website_verified'
+      | 'toggle_reciprocal_badge'
       | 'check_health',
     extra?: { fields?: Partial<EditFields>; days?: number }
   ) => {
@@ -261,6 +264,7 @@ export default function ManageListings({
         featuredUntil?: string;
         isOfficial?: boolean;
         websiteVerified?: boolean;
+        reciprocalBadgeOk?: boolean;
         healthStatus?: string;
       };
       if (!res.ok) throw new Error(data.error || 'Action failed');
@@ -278,7 +282,21 @@ export default function ManageListings({
         );
       } else if (action === 'toggle_website_verified') {
         setItems((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, websiteVerified: data.websiteVerified ?? !s.websiteVerified } : s))
+          prev.map((s) =>
+            s.id === id
+              ? {
+                  ...s,
+                  websiteVerified: data.websiteVerified ?? !s.websiteVerified,
+                  reciprocalBadgeOk: data.reciprocalBadgeOk ?? s.reciprocalBadgeOk,
+                }
+              : s
+          )
+        );
+      } else if (action === 'toggle_reciprocal_badge') {
+        setItems((prev) =>
+          prev.map((s) =>
+            s.id === id ? { ...s, reciprocalBadgeOk: data.reciprocalBadgeOk ?? !s.reciprocalBadgeOk } : s
+          )
         );
       } else if (action === 'check_health') {
         setItems((prev) =>
@@ -716,6 +734,25 @@ export default function ManageListings({
                     </button>
 
                     <button
+                      onClick={() => runAction(listing.id, 'toggle_reciprocal_badge')}
+                      disabled={rowLoading}
+                      className="admin-btn"
+                      style={{
+                        background: listing.reciprocalBadgeOk ? 'rgba(16, 185, 129, 0.15)' : 'rgba(128,128,128,0.08)',
+                        color: listing.reciprocalBadgeOk ? '#10b981' : 'var(--text-secondary)',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.3rem 0.6rem',
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                      }}
+                      title="Manually toggle Reciprocal Badge (dofollow backlink) status"
+                    >
+                      <Award className="w-3.5 h-3.5" /> {listing.reciprocalBadgeOk ? 'Badge: OK' : 'Grant Badge'}
+                    </button>
+
+                    <button
                       onClick={() => runAction(listing.id, 'check_health')}
                       disabled={rowLoading}
                       className="admin-btn"
@@ -994,6 +1031,7 @@ export default function ManageListings({
               <div><strong>Owner User ID:</strong> {inspectListing.ownerUserId || 'Unclaimed'}</div>
               <div><strong>Official Project Badge:</strong> {inspectListing.isOfficial ? 'Yes (Verified)' : 'No'}</div>
               <div><strong>Website Verified:</strong> {inspectListing.websiteVerified ? 'Yes (Verified)' : 'No'}</div>
+              <div><strong>Reciprocal Badge (SEO Dofollow):</strong> {inspectListing.reciprocalBadgeOk ? 'Yes (Active dofollow)' : 'No (Pending)'}</div>
               <div><strong>Health Status:</strong> {inspectListing.healthStatus}</div>
               <div><strong>Created At:</strong> {new Date(inspectListing.createdAt).toLocaleString()}</div>
               <div><strong>AI Summary:</strong> {inspectListing.aiSummary || 'Not generated yet'}</div>

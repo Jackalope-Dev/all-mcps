@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Copy, Cloud } from 'lucide-react';
+import { ExternalLink, Copy, Cloud, CheckCircle2, AlertCircle, ShieldCheck, Globe, Terminal, Sparkles, HelpCircle, ArrowRight, Lock } from 'lucide-react';
 import { toast } from '../../../../components/ui/Toast';
 import { CopyBlock } from '../../../../components/ui/CopyBlock';
 import { getClaimVerificationToken } from '../../../../lib/verificationTokens';
@@ -11,12 +11,11 @@ import { getApexDomain, getDnsProviderLinks } from '../../../../lib/dnsProviders
 type ClaimMethod = 'github' | 'website_badge' | 'dns';
 type BadgeStyle = 'shield' | 'flat-square' | 'featured' | 'directory';
 
-// Repo READMEs read best with compact GitHub-style badges; a website has room
-// for the larger card styles. Scope the picker to what actually fits each.
 const REPO_BADGE_STYLES: { id: BadgeStyle; label: string }[] = [
   { id: 'shield', label: 'Standard (20px)' },
   { id: 'flat-square', label: 'Square (20px)' },
 ];
+
 const SITE_BADGE_STYLES: { id: BadgeStyle; label: string }[] = [
   { id: 'featured', label: 'Featured Banner (32px)' },
   { id: 'directory', label: 'Directory Card (40px)' },
@@ -40,8 +39,9 @@ export default function ClaimClient({
   userId: string | null;
 }) {
   const isSignedIn = !!userId;
+  const hasGithub = repoUrl.includes('github.com');
   const [method, setMethod] = useState<ClaimMethod>(
-    repoUrl.includes('github.com') ? 'github' : 'website_badge'
+    hasGithub ? 'github' : 'website_badge'
   );
   const [websiteUrl, setWebsiteUrl] = useState(initialWebsite || '');
   const [loading, setLoading] = useState(false);
@@ -55,7 +55,7 @@ export default function ClaimClient({
   const [siteVerified, setSiteVerified] = useState(!!websiteVerified);
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
   const [badgeStyle, setBadgeStyle] = useState<BadgeStyle>(
-    repoUrl.includes('github.com') ? 'shield' : 'directory'
+    hasGithub ? 'shield' : 'directory'
   );
   const [badgeMetric, setBadgeMetric] = useState<'status' | 'upvotes' | 'views' | 'installs'>('status');
 
@@ -80,9 +80,7 @@ export default function ClaimClient({
   const badgeMarkdown = `[![AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`;
   const badgeHtml = `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="AllMCPs" height="${badgeHeight}" /></a>`;
   const metaTag = personalizedToken ? `<meta name="allmcps-verification" content="${personalizedToken}" />` : '';
-  // The link (not the badge image) carries the `verify` token — it's what
-  // proves *this* signed-in account added the badge, not just that a generic
-  // AllMCPs link exists somewhere in the README (see readmeContainsClaimBadge).
+  
   const githubVerifyMarkdown = userId
     ? `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${serverId}?verify=${userId})`
     : null;
@@ -90,8 +88,6 @@ export default function ClaimClient({
 
   const selectMethod = (next: ClaimMethod) => {
     setMethod(next);
-    // Keep the badge style sane for the target — a repo doesn't want a
-    // 40px directory card, and a website doesn't want a tiny GitHub shield.
     if (next === 'github' && !REPO_BADGE_STYLES.some((s) => s.id === badgeStyle)) {
       setBadgeStyle('shield');
     } else if (next === 'website_badge' && !SITE_BADGE_STYLES.some((s) => s.id === badgeStyle)) {
@@ -99,10 +95,6 @@ export default function ClaimClient({
     }
   };
 
-  // The claim button's label should reflect whether *this* target (repo vs.
-  // website) has already been proven — not the listing's overall claimed
-  // state. Otherwise verifying a website for the first time on an
-  // already-claimed (via repo) listing misleadingly reads "Re-verify".
   const alreadyVerifiedForMethod = method === 'github' ? claimed : siteVerified;
 
   const copyText = async (text: string, label: string) => {
@@ -255,7 +247,6 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         );
       }
 
-      // Clear token from memory after use
       setCfToken('');
       toast.success('DNS record ready', {
         description: data.message || 'You can verify now.',
@@ -274,44 +265,47 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
       <div
         style={{
           textAlign: 'center',
-          padding: '3rem',
+          padding: '3.5rem 2rem',
           background: 'var(--card-bg)',
           border: '1px solid var(--border-color)',
-          borderRadius: '12px',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
         }}
       >
-        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-        <h2 style={{ marginBottom: '1rem', color: '#10b981' }}>Claim Successful!</h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
-          This listing is now marked as verified. If you attached a website, it is marked verified too.
+        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>🎉</div>
+        <h2 style={{ marginBottom: '1rem', color: '#10b981', fontSize: '1.75rem', fontWeight: 800 }}>Claim Successful!</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 1.5rem' }}>
+          Your listing is now marked as <strong>Verified</strong> on AllMCPs. {siteVerified ? 'Your product website is verified as well!' : ''}
         </p>
-        <p
+        <div
           style={{
             color: 'var(--text-secondary)',
-            marginBottom: '1.5rem',
-            lineHeight: 1.55,
+            marginBottom: '2rem',
+            lineHeight: 1.6,
             fontSize: '0.9rem',
-            padding: '0.85rem 1rem',
-            borderRadius: 8,
+            padding: '1rem 1.25rem',
+            borderRadius: 12,
             background: 'rgba(16,185,129,0.08)',
             border: '1px solid rgba(16,185,129,0.25)',
             textAlign: 'left',
+            maxWidth: '560px',
+            margin: '0 auto 2rem',
           }}
         >
-          <strong style={{ color: '#34d399' }}>Free dofollow backlink:</strong> keep a dofollow AllMCPs
-          badge on your product site or README. We recheck it on health runs — when it&apos;s live, your
-          website link on AllMCPs becomes dofollow. Premium skips the badge requirement.
-        </p>
+          <strong style={{ color: '#34d399', display: 'block', marginBottom: '0.25rem' }}>✨ Earn Reciprocal Dofollow Backlinks:</strong>
+          Keep an AllMCPs badge live on your GitHub README or product website. When our automated health checker sees your live link, your website link on AllMCPs becomes a high-value dofollow backlink!
+        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
           <Link
             href={`/mcp/${serverId}`}
             style={{
               padding: '0.75rem 1.5rem',
-              background: 'var(--accent-color)',
-              color: 'var(--bg-color)',
+              background: 'var(--brand-gradient, var(--accent-color))',
+              color: '#ffffff',
               borderRadius: '8px',
               textDecoration: 'none',
               fontWeight: 'bold',
+              boxShadow: '0 4px 14px rgba(0, 229, 255, 0.25)',
             }}
           >
             View listing
@@ -349,815 +343,932 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
     );
   }
 
-  const hasGithub = repoUrl.includes('github.com');
-  const methods: { id: ClaimMethod; label: string; hint: string }[] = [
-    ...(hasGithub
-      ? [
-          {
-            id: 'github' as ClaimMethod,
-            label: 'GitHub README Badge',
-            hint: 'Recommended for GitHub repos. Adding a badge to your README.md proves write access for instant verification.',
-          },
-        ]
-      : []),
-    {
-      id: 'website_badge' as ClaimMethod,
-      label: 'Website Badge / Meta Tag',
-      hint: 'Recommended for websites. Embed a dynamic badge or HTML verification tag on your domain.',
-    },
-    {
-      id: 'dns' as ClaimMethod,
-      label: 'DNS TXT Record',
-      hint: 'Add a TXT record to your domain DNS settings to prove domain ownership.',
-    },
-  ];
-
   return (
-    <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '2rem' }}>
-      <h2 style={{ marginBottom: '0.5rem' }}>{claimed ? 'Manage' : 'Claim'} {serverName}</h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-        {claimed
-          ? 'This listing is verified. Attach or update your website, then prove control with a badge or DNS if you have not already.'
-          : 'Prove you own this project to get the Verified badge and unlock owner management.'}
-        {siteVerified ? ' Website is verified.' : claimed && websiteUrl ? ' Website not verified yet.' : ''}
-      </p>
-
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      
+      {/* Verification Status Banner Header */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
-          border: '1px solid rgba(var(--accent-rgb), 0.3)',
-          borderRadius: '12px',
-          padding: '1.25rem',
-          marginBottom: '1.75rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.75rem',
-        }}
-      >
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.95rem' }}>
-            <span style={{ fontSize: '1.25rem' }}>🤖</span>
-            <span>Have an AI Agent claim &amp; verify this server for you!</span>
-          </div>
-          <button
-            type="button"
-            onClick={copyAgentClaimPrompt}
-            style={{
-              background: 'var(--accent-color)',
-              color: 'var(--bg-color)',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.45rem 0.85rem',
-              fontSize: '0.825rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.2)',
-            }}
-          >
-            📋 Copy Agent Claim Prompt
-          </button>
-        </div>
-        <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          Paste this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your MCP project repository. Your agent will add the badge, commit/push, and verify ownership automatically!
-        </p>
-      </div>
-
-      {/* Active Verification Status Summary Bar */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1.75rem',
-          padding: '1.1rem 1.25rem',
-          borderRadius: '12px',
+          background: 'var(--card-bg)',
           border: '1px solid var(--border-color)',
-          background: 'var(--bg-muted)',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: '1.25rem',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
         }}
       >
-        {/* GitHub Status */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-          <div style={{ fontSize: '1.5rem', lineHeight: 1 }}>🐙</div>
-          <div>
-            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              GitHub Repo Ownership
-            </div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.2rem', color: claimed ? '#10b981' : 'var(--text-primary)' }}>
-              {claimed ? '✓ Confirmed & Claimed' : 'Unverified'}
-            </div>
-            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              {claimed
-                ? 'Repository ownership verified via GitHub README.'
-                : 'Add badge to README to claim repo ownership.'}
-            </p>
-          </div>
-        </div>
-
-        {/* Website Status */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-          <div style={{ fontSize: '1.5rem', lineHeight: 1 }}>🌐</div>
-          <div>
-            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Product Website Verification
-            </div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.2rem', color: siteVerified ? '#10b981' : websiteUrl ? '#f59e0b' : 'var(--text-secondary)' }}>
-              {siteVerified ? '✓ Website Confirmed' : websiteUrl ? 'Needs Verification' : 'No Website Attached'}
-            </div>
-            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              {siteVerified
-                ? `Domain verified for ${websiteUrl}.`
-                : websiteUrl
-                  ? `Verify ${websiteUrl} via badge or DNS for dofollow.`
-                  : 'Attach a website below to earn a reciprocal dofollow link.'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {claimed && (
+        {/* GitHub Ownership Card */}
         <div
           style={{
-            marginBottom: '1.75rem',
-            padding: '1.1rem',
+            padding: '1rem 1.15rem',
             borderRadius: '12px',
-            border: '1px solid rgba(var(--accent-rgb),0.25)',
-            background: 'rgba(var(--accent-rgb),0.05)',
+            background: claimed ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-muted)',
+            border: claimed ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.85rem',
           }}
         >
-          <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Website on this listing</h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
-            Free listings show this URL with nofollow; premium gets dofollow. Saving does not require re-claiming.
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'stretch' }}>
-            <input
-              type="url"
-              className="form-input"
-              placeholder="https://yoursite.com"
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              style={{ flex: '1 1 220px', margin: 0 }}
-            />
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={attachLoading}
-              onClick={handleAttachWebsite}
-              style={{ padding: '0.65rem 1rem', fontSize: '0.85rem', opacity: attachLoading ? 0.7 : 1 }}
-            >
-              {attachLoading ? 'Saving…' : 'Save website'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Verification Target Groups */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.75rem' }}>
-        
-        {/* GROUP 1: GitHub Repository Claim */}
-        {hasGithub && (
           <div
             style={{
-              padding: '1.25rem',
-              borderRadius: '14px',
-              border: '1px solid rgba(var(--accent-rgb), 0.25)',
-              background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)',
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: claimed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.25rem',
+              flexShrink: 0,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  🐙 GitHub Repository Ownership
-                </h3>
-                <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
-                  Proves code ownership &amp; grants Official Verified listing status on AllMCPs.
-                </p>
-              </div>
-              {claimed && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.2rem 0.65rem', borderRadius: '999px' }}>
-                  ✓ Confirmed &amp; Verified
-                </span>
-              )}
+            🐙
+          </div>
+          <div>
+            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              GitHub Repo Control
             </div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: claimed ? '#10b981' : 'var(--text-primary)' }}>
+              {claimed ? '✓ Verified & Claimed' : 'Unverified'}
+            </div>
+            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              {claimed ? 'Codebase ownership confirmed via README badge.' : 'Add README badge to claim official project.'}
+            </p>
+          </div>
+        </div>
 
-            <div
-              onClick={() => selectMethod('github')}
+        {/* Website Verification Card */}
+        <div
+          style={{
+            padding: '1rem 1.15rem',
+            borderRadius: '12px',
+            background: siteVerified ? 'rgba(16, 185, 129, 0.08)' : websiteUrl ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
+            border: siteVerified ? '1px solid rgba(16, 185, 129, 0.3)' : websiteUrl ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.85rem',
+          }}
+        >
+          <div
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              background: siteVerified ? 'rgba(16, 185, 129, 0.2)' : websiteUrl ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.25rem',
+              flexShrink: 0,
+            }}
+          >
+            🌐
+          </div>
+          <div>
+            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Product Website Link
+            </div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: siteVerified ? '#10b981' : websiteUrl ? '#f59e0b' : 'var(--text-secondary)' }}>
+              {siteVerified ? '✓ Domain Confirmed' : websiteUrl ? 'Needs Verification' : 'No Website Attached'}
+            </div>
+            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              {siteVerified ? `Domain verified for ${websiteUrl}.` : websiteUrl ? `Verify site for dofollow backlink.` : 'Attach site to qualify for reciprocal link.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Wizard Shell */}
+      <div
+        style={{
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '16px',
+          padding: '2rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '2rem',
+        }}
+      >
+        {/* STEP 1: Select Method */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1rem' }}>
+            <span
               style={{
-                padding: '1.15rem',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: 'var(--accent-color)',
+                color: 'var(--bg-color)',
+                fontWeight: 'bold',
+                fontSize: '0.875rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              1
+            </span>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              Choose Verification Method
+            </h2>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '0.85rem',
+            }}
+          >
+            {hasGithub && (
+              <button
+                type="button"
+                onClick={() => selectMethod('github')}
+                style={{
+                  padding: '1.1rem 1.25rem',
+                  borderRadius: '12px',
+                  border: method === 'github' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                  background: method === 'github' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-muted)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  position: 'relative',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    🐙 GitHub README
+                  </span>
+                  {claimed && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
+                      ✓ Verified
+                    </span>
+                  )}
+                </div>
+                <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  Claims repo ownership &amp; grants Official status badge on AllMCPs.
+                </p>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => selectMethod('website_badge')}
+              style={{
+                padding: '1.1rem 1.25rem',
                 borderRadius: '12px',
-                border: method === 'github' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                background: method === 'github' ? 'rgba(var(--accent-rgb),0.12)' : 'var(--bg-muted)',
+                border: method === 'website_badge' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                background: method === 'website_badge' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-muted)',
+                textAlign: 'left',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>GitHub README Badge</span>
-                {method === 'github' && (
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color)', background: 'rgba(var(--accent-rgb),0.2)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                    Selected
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  🌐 Website Badge / Tag
+                </span>
+                {siteVerified && method === 'website_badge' && (
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
+                    ✓ Verified
                   </span>
                 )}
               </div>
               <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                Recommended for GitHub repos. Add the personalized badge snippet to your <code>README.md</code> to prove write access and claim official project ownership.
+                Embed badge or meta tag on website for a reciprocal dofollow link.
               </p>
-            </div>
-          </div>
-        )}
+            </button>
 
-        {/* GROUP 2: Product Website Verification */}
-        <div
-          style={{
-            padding: '1.25rem',
-            borderRadius: '14px',
-            border: '1px solid rgba(0, 229, 255, 0.25)',
-            background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(59, 130, 246, 0.03) 100%)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                🌐 Product Website Verification
-              </h3>
-              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
-                Proves domain ownership &amp; unlocks the reciprocal dofollow backlink to your website.
-              </p>
-            </div>
-            {siteVerified && (
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.2rem 0.65rem', borderRadius: '999px' }}>
-                ✓ Confirmed &amp; Verified
-              </span>
-            )}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-            {[
-              {
-                id: 'website_badge' as ClaimMethod,
-                label: 'Website Badge / Meta Tag',
-                icon: '🌐',
-                hint: 'Recommended for websites. Embed a dynamic badge or HTML verification meta tag on your domain.',
-              },
-              {
-                id: 'dns' as ClaimMethod,
-                label: 'DNS TXT Record',
-                icon: '⚡',
-                hint: 'Add a TXT record to your domain DNS settings to prove domain control.',
-              },
-            ].map((m) => {
-              const isSelected = method === m.id;
-              return (
-                <div
-                  key={m.id}
-                  onClick={() => selectMethod(m.id)}
-                  style={{
-                    padding: '1.15rem',
-                    borderRadius: '12px',
-                    border: isSelected ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                    background: isSelected ? 'rgba(var(--accent-rgb),0.12)' : 'var(--bg-muted)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span>{m.icon}</span> {m.label}
-                    </span>
-                    {isSelected && (
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color)', background: 'rgba(var(--accent-rgb),0.2)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                        Selected
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>{m.hint}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {alreadyVerifiedForMethod && (
-        <div
-          style={{
-            padding: '1rem 1.15rem',
-            borderRadius: '10px',
-            background: 'rgba(16,185,129,0.08)',
-            border: '1px solid rgba(16,185,129,0.3)',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-          }}
-        >
-          <div style={{ fontSize: '1.5rem', color: '#10b981', lineHeight: 1 }}>✓</div>
-          <div>
-            <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>
-              {method === 'github' ? 'GitHub README Ownership Already Confirmed' : 'Website Verification Already Confirmed'}
-            </strong>
-            <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.785rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-              This verification is active and confirmed for this listing. You do not need to re-verify unless you updated your domain or repository settings.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {(method === 'website_badge' || method === 'dns') && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          {claimed ? (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-              Proving ownership of{' '}
-              <strong style={{ color: 'var(--text-primary)' }}>{websiteUrl || 'the website above'}</strong>.
-              Change the URL in the &quot;Website on this listing&quot; box above if needed.
-            </p>
-          ) : (
-            <>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                Website URL
-              </label>
-              <input
-                type="url"
-                className="form-input"
-                placeholder="https://yoursite.com"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                required
-              />
-            </>
-          )}
-        </div>
-      )}
-
-      {method === 'github' && (!isSignedIn ? (
-        <SignInGate href={signInHref} />
-      ) : (
-        <>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>1. Add badge to your GitHub README</h3>
-
-            {/* Badge controls for GitHub */}
-            <div style={{ marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Style (sized for a README):</span>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {REPO_BADGE_STYLES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setBadgeStyle(s.id)}
-                    style={{
-                      padding: '0.3rem 0.65rem',
-                      borderRadius: '999px',
-                      border: '1px solid var(--border-color)',
-                      background: badgeStyle === s.id ? 'rgba(59,130,246,0.15)' : 'transparent',
-                      color: badgeStyle === s.id ? 'var(--accent-color)' : 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem',
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Displayed Metric:</span>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {[
-                  { id: 'status', label: 'Status' },
-                  { id: 'upvotes', label: 'Upvotes' },
-                  { id: 'views', label: 'Views' },
-                  { id: 'installs', label: 'Installs' },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setBadgeMetric(m.id as any)}
-                    style={{
-                      padding: '0.3rem 0.65rem',
-                      borderRadius: '999px',
-                      border: '1px solid var(--border-color)',
-                      background: badgeMetric === m.id ? 'rgba(59,130,246,0.15)' : 'transparent',
-                      color: badgeMetric === m.id ? 'var(--accent-color)' : 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem',
-                    }}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Theme:</span>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {(['dark', 'light'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setBadgeTheme(t)}
-                    style={{
-                      padding: '0.3rem 0.65rem',
-                      borderRadius: '999px',
-                      border: '1px solid var(--border-color)',
-                      background: badgeTheme === t ? 'rgba(59,130,246,0.15)' : 'transparent',
-                      color: 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem',
-                    }}
-                  >
-                    {t === 'dark' ? 'Dark' : 'Light'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '0.75rem' }}>
-              <CopyBlock
-                code={githubVerifyMarkdown || ''}
-                title="README.md"
-                language="markdown"
-                toastMessage="README badge snippet copied"
-              />
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-              This link includes your account — it's what ties the claim to you, not just the badge image.
-            </p>
-
-            <div
+            <button
+              type="button"
+              onClick={() => selectMethod('dns')}
               style={{
-                padding: '0.75rem 1rem',
-                borderRadius: '8px',
-                background: badgeTheme === 'light' ? '#f1f5f9' : '#0a0a0a',
-                border: '1px solid var(--border-color)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
+                padding: '1.1rem 1.25rem',
+                borderRadius: '12px',
+                border: method === 'dns' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                background: method === 'dns' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-muted)',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Badge Preview:</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={badgeSrc} alt="GitHub badge preview" height={badgeHeight} />
-            </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  ⚡ DNS TXT Record
+                </span>
+                {siteVerified && method === 'dns' && (
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
+                    ✓ Verified
+                  </span>
+                )}
+              </div>
+              <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                Publish TXT record on domain DNS for instant owner proof.
+              </p>
+            </button>
           </div>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>2. Target Repository</h3>
-            <a href={repoUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)' }}>
-              {repoUrl}
-            </a>
-          </div>
-        </>
-      ))}
+        </div>
 
-      {method === 'website_badge' && (!isSignedIn ? (
-        <SignInGate href={signInHref} />
-      ) : (
-        <>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>1. Customize your badge</h3>
-            
-            {/* Style buttons */}
-            <div style={{ marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Style (sized for a website):</span>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {SITE_BADGE_STYLES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setBadgeStyle(s.id)}
-                    style={{
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '999px',
-                      border: '1px solid var(--border-color)',
-                      background: badgeStyle === s.id ? 'rgba(59,130,246,0.15)' : 'transparent',
-                      color: badgeStyle === s.id ? 'var(--accent-color)' : 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Metric buttons */}
-            <div style={{ marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Displayed Metric:</span>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {[
-                  { id: 'status', label: 'Status' },
-                  { id: 'upvotes', label: 'Upvotes' },
-                  { id: 'views', label: 'Views' },
-                  { id: 'installs', label: 'Installs' },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setBadgeMetric(m.id as any)}
-                    style={{
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '999px',
-                      border: '1px solid var(--border-color)',
-                      background: badgeMetric === m.id ? 'rgba(59,130,246,0.15)' : 'transparent',
-                      color: badgeMetric === m.id ? 'var(--accent-color)' : 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                    }}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Theme buttons */}
-            <div style={{ marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Theme:</span>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {(['dark', 'light'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setBadgeTheme(t)}
-                    style={{
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '999px',
-                      border: '1px solid var(--border-color)',
-                      background: badgeTheme === t ? 'rgba(59,130,246,0.15)' : 'transparent',
-                      color: 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                    }}
-                  >
-                    {t === 'dark' ? 'Dark' : 'Light'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div
+        {/* STEP 2: Configure & Copy Snippet */}
+        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+            <span
               style={{
-                padding: '1rem',
-                borderRadius: '10px',
-                background: badgeTheme === 'light' ? '#f1f5f9' : '#0a0a0a',
-                border: '1px solid var(--border-color)',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: 'var(--accent-color)',
+                color: 'var(--bg-color)',
+                fontWeight: 'bold',
+                fontSize: '0.875rem',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: '48px',
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={badgeSrc} alt="AllMCPs badge preview" height={badgeHeight} />
+              2
+            </span>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              Follow Instructions &amp; Copy Code
+            </h2>
+          </div>
+
+          {/* Already Verified Banner */}
+          {alreadyVerifiedForMethod && (
+            <div
+              style={{
+                padding: '1rem 1.15rem',
+                borderRadius: '12px',
+                background: 'rgba(16,185,129,0.08)',
+                border: '1px solid rgba(16,185,129,0.3)',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+              }}
+            >
+              <CheckCircle2 size={22} color="#10b981" />
+              <div>
+                <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>
+                  {method === 'github' ? 'GitHub README Ownership Confirmed' : 'Website Verification Active'}
+                </strong>
+                <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.785rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  This method is verified and active. You don't need to repeat this unless your repository or DNS settings change.
+                </p>
+              </div>
             </div>
+          )}
+
+          {/* Website URL Field for Website / DNS methods */}
+          {(method === 'website_badge' || method === 'dns') && (
+            <div style={{ marginBottom: '1.5rem', padding: '1.15rem', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-muted)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Product Website URL
+                </label>
+                {claimed && (
+                  <button
+                    type="button"
+                    onClick={handleAttachWebsite}
+                    disabled={attachLoading}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
+                  >
+                    {attachLoading ? 'Saving…' : 'Save Website URL'}
+                  </button>
+                )}
+              </div>
+              <input
+                type="url"
+                className="form-input"
+                placeholder="https://yourproduct.com"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem', marginBottom: 0 }}>
+                This is the website address that will receive the reciprocal dofollow backlink on AllMCPs.
+              </p>
+            </div>
+          )}
+
+          {/* METHOD: GITHUB README */}
+          {method === 'github' && (
+            <div>
+              {/* AI Agent Banner Box */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
+                  border: '1px solid rgba(var(--accent-rgb), 0.3)',
+                  borderRadius: '12px',
+                  padding: '1.1rem 1.25rem',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.925rem' }}>
+                    <Sparkles size={18} />
+                    <span>Have an AI Agent claim &amp; verify this for you!</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={copyAgentClaimPrompt}
+                    style={{
+                      background: 'var(--accent-color)',
+                      color: 'var(--bg-color)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.45rem 0.85rem',
+                      fontSize: '0.825rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.2)',
+                    }}
+                  >
+                    📋 Copy AI Agent Prompt
+                  </button>
+                </div>
+                <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Copy this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your codebase. The agent will add the badge and push it automatically.
+                </p>
+              </div>
+
+              {/* Badge Configurator */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
+                  1. Customize your README badge:
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                  {/* Style */}
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Style:</span>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {REPO_BADGE_STYLES.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setBadgeStyle(s.id)}
+                          style={{
+                            padding: '0.3rem 0.65rem',
+                            borderRadius: '999px',
+                            border: '1px solid var(--border-color)',
+                            background: badgeStyle === s.id ? 'rgba(0,229,255,0.15)' : 'transparent',
+                            color: badgeStyle === s.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: badgeStyle === s.id ? 700 : 500,
+                          }}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Metric */}
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Displayed Metric:</span>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {[
+                        { id: 'status', label: 'Status' },
+                        { id: 'upvotes', label: 'Upvotes' },
+                        { id: 'views', label: 'Views' },
+                        { id: 'installs', label: 'Installs' },
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setBadgeMetric(m.id as any)}
+                          style={{
+                            padding: '0.3rem 0.65rem',
+                            borderRadius: '999px',
+                            border: '1px solid var(--border-color)',
+                            background: badgeMetric === m.id ? 'rgba(0,229,255,0.15)' : 'transparent',
+                            color: badgeMetric === m.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: badgeMetric === m.id ? 700 : 500,
+                          }}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Theme */}
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Theme:</span>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {(['dark', 'light'] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setBadgeTheme(t)}
+                          style={{
+                            padding: '0.3rem 0.65rem',
+                            borderRadius: '999px',
+                            border: '1px solid var(--border-color)',
+                            background: badgeTheme === t ? 'rgba(0,229,255,0.15)' : 'transparent',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: badgeTheme === t ? 700 : 500,
+                          }}
+                        >
+                          {t === 'dark' ? 'Dark' : 'Light'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Badge Preview */}
+                <div
+                  style={{
+                    padding: '0.85rem 1.15rem',
+                    borderRadius: '10px',
+                    background: badgeTheme === 'light' ? '#ffffff' : '#090d16',
+                    border: '1px solid var(--border-color)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    marginBottom: '1.25rem',
+                  }}
+                >
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Preview:</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={badgeSrc} alt="GitHub badge preview" height={badgeHeight} />
+                </div>
+              </div>
+
+              {/* Code Snippet Block */}
+              {!isSignedIn ? (
+                <SignInGate href={signInHref} />
+              ) : (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                    2. Add code to your <code>README.md</code>:
+                  </h3>
+                  <CopyBlock
+                    code={githubVerifyMarkdown || ''}
+                    title="README.md"
+                    language="markdown"
+                    toastMessage="README badge snippet copied"
+                  />
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.45 }}>
+                    🔒 This snippet includes your unique verification signature. It links directly to your project on AllMCPs.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* METHOD: WEBSITE BADGE */}
+          {method === 'website_badge' && (
+            <div>
+              {!isSignedIn ? (
+                <SignInGate href={signInHref} />
+              ) : (
+                <>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
+                      1. Customize website badge:
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                      {/* Style */}
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Style:</span>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {SITE_BADGE_STYLES.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => setBadgeStyle(s.id)}
+                              style={{
+                                padding: '0.35rem 0.75rem',
+                                borderRadius: '999px',
+                                border: '1px solid var(--border-color)',
+                                background: badgeStyle === s.id ? 'rgba(0,229,255,0.15)' : 'transparent',
+                                color: badgeStyle === s.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                fontWeight: badgeStyle === s.id ? 700 : 500,
+                              }}
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Metric */}
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Metric:</span>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {[
+                            { id: 'status', label: 'Status' },
+                            { id: 'upvotes', label: 'Upvotes' },
+                            { id: 'views', label: 'Views' },
+                            { id: 'installs', label: 'Installs' },
+                          ].map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => setBadgeMetric(m.id as any)}
+                              style={{
+                                padding: '0.35rem 0.75rem',
+                                borderRadius: '999px',
+                                border: '1px solid var(--border-color)',
+                                background: badgeMetric === m.id ? 'rgba(0,229,255,0.15)' : 'transparent',
+                                color: badgeMetric === m.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                fontWeight: badgeMetric === m.id ? 700 : 500,
+                              }}
+                            >
+                              {m.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Theme */}
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Theme:</span>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {(['dark', 'light'] as const).map((t) => (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setBadgeTheme(t)}
+                              style={{
+                                padding: '0.35rem 0.75rem',
+                                borderRadius: '999px',
+                                border: '1px solid var(--border-color)',
+                                background: badgeTheme === t ? 'rgba(0,229,255,0.15)' : 'transparent',
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                fontWeight: badgeTheme === t ? 700 : 500,
+                              }}
+                            >
+                              {t === 'dark' ? 'Dark' : 'Light'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: '1rem 1.25rem',
+                        borderRadius: '10px',
+                        background: badgeTheme === 'light' ? '#ffffff' : '#090d16',
+                        border: '1px solid var(--border-color)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '52px',
+                        marginBottom: '1.25rem',
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={badgeSrc} alt="AllMCPs badge preview" height={badgeHeight} />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>Markdown format:</h3>
+                    <CopyBlock code={badgeMarkdown} title="README.md" language="markdown" toastMessage="Markdown badge copied" />
+                  </div>
+
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>HTML format:</h3>
+                    <CopyBlock code={badgeHtml} title="badge.html" language="html" toastMessage="HTML badge copied" />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem', lineHeight: 1.5 }}>
+                      This badge includes a reciprocal link back to AllMCPs. Keep it live to qualify for a dofollow backlink to your site.
+                    </p>
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>Or HTML Meta Tag (alternative to badge):</h3>
+                    <CopyBlock code={metaTag} title="index.html" language="html" toastMessage="Meta tag copied" />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* METHOD: DNS TXT RECORD */}
+          {method === 'dns' && (
+            <div>
+              {!isSignedIn ? (
+                <SignInGate href={signInHref} />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0, lineHeight: 1.6 }}>
+                    Publish the following TXT record on <strong style={{ color: 'var(--text-primary)' }}>{apexDomain || 'your domain DNS'}</strong>:
+                  </p>
+
+                  {/* Record fields */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: '0.65rem',
+                      padding: '1.15rem',
+                      borderRadius: '12px',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-muted)',
+                    }}
+                  >
+                    <DnsFieldRow label="Type" value="TXT" onCopy={() => copyText('TXT', 'Type')} />
+                    <DnsFieldRow
+                      label="Name"
+                      value="@"
+                      hint={apexDomain ? `or ${apexDomain}` : 'apex / root host'}
+                      onCopy={() => copyText('@', 'Name')}
+                    />
+                    <DnsFieldRow label="Value" value={dnsValue} mono onCopy={() => copyText(dnsValue, 'TXT value')} />
+                    <DnsFieldRow label="TTL" value="Auto / 3600" onCopy={() => copyText('3600', 'TTL')} />
+                  </div>
+
+                  {/* Cloudflare helper */}
+                  <div
+                    style={{
+                      padding: '1.15rem',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(249,115,22,0.35)',
+                      background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(59,130,246,0.06))',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                      <Cloud size={18} color="#f97316" />
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>Cloudflare (1-Click Setup)</h4>
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.85rem', lineHeight: 1.5 }}>
+                      Open Cloudflare DNS and paste the fields above, or use a scoped API token to auto-create the TXT record in 1 click.
+                    </p>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: showCfToken ? '0.85rem' : 0 }}>
+                      <a
+                        href="https://dash.cloudflare.com/?to=/:account/:zone/dns/records"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          textDecoration: 'none',
+                          fontSize: '0.85rem',
+                          padding: '0.55rem 0.9rem',
+                        }}
+                        onClick={() => {
+                          void copyText(dnsValue, 'TXT value');
+                          toast.info('TXT value copied', {
+                            description: 'Paste it as Content when adding the record in Cloudflare.',
+                          });
+                        }}
+                      >
+                        Open Cloudflare DNS <ExternalLink size={14} />
+                      </a>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.85rem', padding: '0.55rem 0.9rem' }}
+                        onClick={() => setShowCfToken((v) => !v)}
+                      >
+                        {showCfToken ? 'Hide API one-click' : 'One-click with API token'}
+                      </button>
+                    </div>
+
+                    {showCfToken && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
+                        <label style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          Token with template <strong>Edit zone DNS</strong> limited to {apexDomain || 'this domain'}:
+                        </label>
+                        <input
+                          type="password"
+                          className="form-input"
+                          autoComplete="off"
+                          placeholder="Cloudflare API Token"
+                          value={cfToken}
+                          onChange={(e) => setCfToken(e.target.value)}
+                          style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCloudflareOneClick}
+                          disabled={cfLoading}
+                          className="btn btn-primary"
+                          style={{
+                            alignSelf: 'flex-start',
+                            fontSize: '0.85rem',
+                            padding: '0.55rem 0.9rem',
+                            opacity: cfLoading ? 0.7 : 1,
+                          }}
+                        >
+                          {cfLoading ? 'Adding record…' : 'Add TXT record in Cloudflare'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Other Providers */}
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
+                      Other Provider Quick-Links:
+                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {providerLinks
+                        .filter((p) => p.id !== 'cloudflare')
+                        .map((p) => (
+                          <a
+                            key={p.id}
+                            href={p.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => {
+                              void copyText(dnsValue, 'TXT value');
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.4rem 0.75rem',
+                              borderRadius: '999px',
+                              border: '1px solid var(--border-color)',
+                              background: 'var(--bg-muted)',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.775rem',
+                              fontWeight: 500,
+                              textDecoration: 'none',
+                            }}
+                          >
+                            {p.name}
+                            <ExternalLink size={12} style={{ opacity: 0.6 }} />
+                          </a>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* STEP 3: Confirm & Claim */}
+        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+            <span
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: 'var(--accent-color)',
+                color: 'var(--bg-color)',
+                fontWeight: 'bold',
+                fontSize: '0.875rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              3
+            </span>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              Confirm &amp; Run Verification
+            </h2>
           </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>Markdown</h3>
-            <CopyBlock code={badgeMarkdown} title="README.md" language="markdown" toastMessage="Markdown badge copied" />
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>HTML</h3>
-            <CopyBlock code={badgeHtml} title="badge.html" language="html" toastMessage="HTML badge copied" />
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.5 }}>
-              This badge links back to AllMCPs <strong>dofollow</strong> — keep it that way (don&apos;t add{' '}
-              <code>rel=&quot;nofollow&quot;</code>) and your listing&apos;s website link becomes dofollow in return. We
-              re-verify the badge is a live dofollow link on each health check.
-            </p>
-          </div>
-
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem' }}>Or meta tag (in &lt;head&gt;)</h3>
-            <CopyBlock code={metaTag} title="index.html" language="html" toastMessage="Meta tag copied" />
-          </div>
-        </>
-      ))}
-
-      {method === 'dns' && (!isSignedIn ? (
-        <SignInGate href={signInHref} />
-      ) : (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>1. Add a DNS TXT record</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: 1.6 }}>
-            Prove you control{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>{apexDomain || 'your domain'}</strong> by publishing
-            this TXT record. Use one-click for Cloudflare when you can; otherwise open your provider and paste the
-            fields below.
-          </p>
-
-          {/* Record fields */}
+          {/* Action Callout Box */}
           <div
             style={{
-              display: 'grid',
-              gap: '0.65rem',
-              marginBottom: '1.25rem',
-              padding: '1rem',
+              padding: '1.25rem',
               borderRadius: '12px',
               border: '1px solid var(--border-color)',
               background: 'var(--bg-muted)',
-            }}
-          >
-            <DnsFieldRow label="Type" value="TXT" onCopy={() => copyText('TXT', 'Type')} />
-            <DnsFieldRow
-              label="Name"
-              value="@"
-              hint={apexDomain ? `or ${apexDomain}` : 'apex / root host'}
-              onCopy={() => copyText('@', 'Name')}
-            />
-            <DnsFieldRow label="Content / Value" value={dnsValue} mono onCopy={() => copyText(dnsValue, 'TXT value')} />
-            <DnsFieldRow label="TTL" value="Auto / 3600" onCopy={() => copyText('3600', 'TTL')} />
-          </div>
-
-          {/* Cloudflare primary path */}
-          <div
-            style={{
               marginBottom: '1.25rem',
-              padding: '1.1rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(249,115,22,0.35)',
-              background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(59,130,246,0.06))',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <Cloud size={18} color="#f97316" />
-              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>Cloudflare (recommended)</h4>
-            </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.9rem', lineHeight: 1.55 }}>
-              Open DNS Records, click <strong>Add record</strong>, paste Type/Name/Content above — or use a scoped API
-              token to create the record for you in one click. We never store the token.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: showCfToken ? '0.85rem' : 0 }}>
-              <a
-                href="https://dash.cloudflare.com/?to=/:account/:zone/dns/records"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  textDecoration: 'none',
-                  fontSize: '0.85rem',
-                  padding: '0.55rem 0.9rem',
-                }}
-                onClick={() => {
-                  void copyText(dnsValue, 'TXT value');
-                  toast.info('TXT value copied', {
-                    description: 'Paste it as Content when you add the record in Cloudflare.',
-                  });
-                }}
-              >
-                Open Cloudflare DNS <ExternalLink size={14} />
-              </a>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem', padding: '0.55rem 0.9rem' }}
-                onClick={() => setShowCfToken((v) => !v)}
-              >
-                {showCfToken ? 'Hide API one-click' : 'One-click with API token'}
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Selected Action:</span>
+              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--accent-color)' }}>
+                {method === 'github'
+                  ? 'Verify GitHub Repository README'
+                  : method === 'website_badge'
+                    ? 'Verify Website Badge / Meta Tag'
+                    : 'Verify Domain DNS TXT Record'}
+              </span>
             </div>
 
-            {showCfToken && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  Create a token at{' '}
-                  <a
-                    href="https://dash.cloudflare.com/profile/api-tokens"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'var(--accent-color)' }}
-                  >
-                    API Tokens
-                  </a>{' '}
-                  → Create Token → use template <strong>Edit zone DNS</strong> (or custom: Zone DNS Edit + Zone Read)
-                  limited to {apexDomain || 'this domain'}.
-                </label>
-                <input
-                  type="password"
-                  className="form-input"
-                  autoComplete="off"
-                  placeholder="Cloudflare API token"
-                  value={cfToken}
-                  onChange={(e) => setCfToken(e.target.value)}
-                  style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem' }}
-                />
-                <button
-                  type="button"
-                  onClick={handleCloudflareOneClick}
-                  disabled={cfLoading}
-                  className="btn btn-primary"
-                  style={{
-                    alignSelf: 'flex-start',
-                    fontSize: '0.85rem',
-                    padding: '0.55rem 0.9rem',
-                    opacity: cfLoading ? 0.7 : 1,
-                    cursor: cfLoading ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {cfLoading ? 'Adding record…' : 'Add TXT record in Cloudflare'}
-                </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Target URL:</span>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                {method === 'github' ? repoUrl : websiteUrl || 'Not set yet'}
+              </span>
+            </div>
+          </div>
+
+          {/* Main Action Button */}
+          {!isSignedIn ? (
+            <a
+              href={signInHref}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '1rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontWeight: 800,
+                fontSize: '1.05rem',
+                textDecoration: 'none',
+                background: 'var(--brand-gradient, var(--accent-color))',
+                color: '#ffffff',
+                borderRadius: '10px',
+                boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
+              }}
+            >
+              <Lock size={18} /> Sign In to Verify &amp; Claim Listing
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleVerify}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '1.05rem',
+                background: loading ? '#374151' : 'var(--brand-gradient, var(--accent-color))',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '10px',
+                fontWeight: 800,
+                fontSize: '1.05rem',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                boxShadow: loading ? 'none' : '0 4px 16px rgba(0, 229, 255, 0.25)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {loading ? (
+                'Verifying…'
+              ) : (
+                <>
+                  <ShieldCheck size={20} />
+                  {alreadyVerifiedForMethod
+                    ? method === 'github'
+                      ? 'Re-verify Repo Ownership'
+                      : 'Re-verify Website'
+                    : claimed
+                      ? method === 'github'
+                        ? 'Verify Repo Ownership'
+                        : 'Verify Website Domain'
+                      : 'Verify & Claim Listing'}
+                </>
+              )}
+            </button>
+          )}
+
+          {error && (
+            <div
+              style={{
+                marginTop: '1.25rem',
+                padding: '1rem',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid #ef4444',
+                borderRadius: '10px',
+                color: '#ef4444',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+              }}
+            >
+              <AlertCircle size={20} />
+              <div>
+                <strong>Verification Failure:</strong> {error}
               </div>
-            )}
-          </div>
-
-          {/* Other providers */}
-          <h4 style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.6rem', color: 'var(--text-secondary)' }}>
-            Other providers
-          </h4>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            {providerLinks
-              .filter((p) => p.id !== 'cloudflare')
-              .map((p) => (
-                <a
-                  key={p.id}
-                  href={p.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={p.description}
-                  onClick={() => {
-                    void copyText(dnsValue, 'TXT value');
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.4rem 0.75rem',
-                    borderRadius: '999px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-muted)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                    textDecoration: 'none',
-                  }}
-                >
-                  {p.name}
-                  <ExternalLink size={12} style={{ opacity: 0.6 }} />
-                </a>
-              ))}
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.5, margin: 0 }}>
-            Clicking a provider copies the TXT value for you. DNS can take a few minutes to propagate — we check apex
-            and www.
-          </p>
+            </div>
+          )}
         </div>
-      ))}
-
-      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-        <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>
-          {method === 'github' ? '3' : '2'}. Verify
-        </h3>
-        <button
-          type="button"
-          onClick={handleVerify}
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '1rem',
-            background: loading ? '#374151' : 'var(--accent-color)',
-            color: loading ? 'white' : 'var(--bg-color)',
-            border: 'none',
-            borderRadius: '8px',
-            fontWeight: 'bold',
-            fontSize: '1.05rem',
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {loading
-            ? 'Verifying...'
-            : alreadyVerifiedForMethod
-              ? method === 'github'
-                ? 'Re-verify repo ownership'
-                : 'Re-verify website'
-              : claimed
-                ? method === 'github'
-                  ? 'Verify repo'
-                  : 'Verify website'
-                : 'Verify & claim listing'}
-        </button>
-        {error && (
-          <div
-            style={{
-              marginTop: '1rem',
-              padding: '1rem',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              color: '#ef4444',
-              fontSize: '0.9rem',
-            }}
-          >
-            <strong>Error:</strong> {error}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -1167,18 +1278,19 @@ function SignInGate({ href }: { href: string }) {
   return (
     <div
       style={{
-        padding: '1.5rem',
+        padding: '1.75rem',
         textAlign: 'center',
         border: '1px dashed var(--border-color)',
         borderRadius: '12px',
-        marginBottom: '1.5rem',
+        background: 'var(--bg-muted)',
       }}
     >
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-        Sign in to get your personalized verification tag for this method.
+      <Lock size={28} color="var(--accent-color)" style={{ marginBottom: '0.5rem' }} />
+      <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+        Sign in to generate your account-linked verification token.
       </p>
-      <a href={href} className="btn btn-primary" style={{ textDecoration: 'none' }}>
-        Sign in
+      <a href={href} className="btn btn-primary" style={{ textDecoration: 'none', padding: '0.6rem 1.25rem' }}>
+        Sign In to Continue
       </a>
     </div>
   );
@@ -1201,12 +1313,12 @@ function DnsFieldRow({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '7rem 1fr auto',
+        gridTemplateColumns: '6.5rem 1fr auto',
         gap: '0.5rem',
         alignItems: 'center',
       }}
     >
-      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
         {label}
       </span>
       <div style={{ minWidth: 0 }}>

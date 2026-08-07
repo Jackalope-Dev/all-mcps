@@ -38,6 +38,7 @@ const actionSchema = z.object({
     'resend_approval',
     'toggle_official',
     'toggle_website_verified',
+    'toggle_reciprocal_badge',
     'check_health',
   ]),
   fields: z
@@ -73,6 +74,7 @@ const MESSAGES: Record<string, string> = {
   resend_approval: 'Approval email resent.',
   toggle_official: 'Official status updated.',
   toggle_website_verified: 'Website verification status updated.',
+  toggle_reciprocal_badge: 'Reciprocal badge status updated.',
   check_health: 'Health check completed.',
 };
 
@@ -508,11 +510,26 @@ export async function POST(req: Request) {
       await db.update(servers).set({ isOfficial: nextOfficial, claimedAt: nextOfficial ? new Date() : null }).where(eq(servers.id, id));
       return NextResponse.json({ success: true, message: `Official badge ${nextOfficial ? 'granted' : 'removed'}.`, isOfficial: nextOfficial });
     } else if (action === 'toggle_website_verified') {
-      const rows = await db.select({ websiteVerified: servers.websiteVerified }).from(servers).where(eq(servers.id, id)).limit(1);
+      const rows = await db.select({ websiteVerified: servers.websiteVerified, reciprocalBadgeOk: servers.reciprocalBadgeOk }).from(servers).where(eq(servers.id, id)).limit(1);
       if (rows.length === 0) return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
       const nextVerified = !rows[0].websiteVerified;
-      await db.update(servers).set({ websiteVerified: nextVerified }).where(eq(servers.id, id));
-      return NextResponse.json({ success: true, message: `Website verification ${nextVerified ? 'verified' : 'unverified'}.`, websiteVerified: nextVerified });
+      await db.update(servers).set({ websiteVerified: nextVerified, reciprocalBadgeOk: nextVerified }).where(eq(servers.id, id));
+      return NextResponse.json({
+        success: true,
+        message: `Website verification ${nextVerified ? 'verified' : 'unverified'} (badge ${nextVerified ? 'granted' : 'removed'}).`,
+        websiteVerified: nextVerified,
+        reciprocalBadgeOk: nextVerified,
+      });
+    } else if (action === 'toggle_reciprocal_badge') {
+      const rows = await db.select({ reciprocalBadgeOk: servers.reciprocalBadgeOk }).from(servers).where(eq(servers.id, id)).limit(1);
+      if (rows.length === 0) return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
+      const nextBadge = !rows[0].reciprocalBadgeOk;
+      await db.update(servers).set({ reciprocalBadgeOk: nextBadge }).where(eq(servers.id, id));
+      return NextResponse.json({
+        success: true,
+        message: `Reciprocal badge ${nextBadge ? 'marked active' : 'marked inactive'}.`,
+        reciprocalBadgeOk: nextBadge,
+      });
     } else if (action === 'check_health') {
       const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
       const server = rows[0];

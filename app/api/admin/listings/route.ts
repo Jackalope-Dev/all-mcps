@@ -124,6 +124,7 @@ export async function GET(req: Request) {
           isPremium: servers.isPremium,
           isOfficial: servers.isOfficial,
           websiteVerified: servers.websiteVerified,
+          reciprocalBadgeOk: servers.reciprocalBadgeOk,
           status: servers.status,
           healthStatus: servers.healthStatus,
           featuredUntil: servers.featuredUntil,
