@@ -5,12 +5,65 @@ import { eq } from 'drizzle-orm';
 import serversData from '../../../data/mcp-servers.json';
 import { cleanListingDescription } from '../../../lib/description';
 import { truncateTitle, truncateDescription } from '../../../lib/ogHelpers';
+import { parseServerName } from '../../../lib/displayName';
 
 export const alt = 'AllMCPs - Tool Directory';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-async function getServer(rawId: string) {
+const SITE_ORIGIN = 'https://allmcps.com';
+
+type OgServer = {
+  id: string;
+  name: string;
+  description: string;
+  category?: string | null;
+  logoUrl?: string | null;
+};
+
+/**
+ * Absolute URL for the listing logo (OG images require absolute img src).
+ * Prefers approved R2 logos, then GitHub org avatars — same cascade as ServerAvatar.
+ */
+function resolveListingLogoSrc(server: OgServer | null | undefined): string | null {
+  if (!server) return null;
+  const logo = server.logoUrl?.trim();
+  if (logo) {
+    if (/^https?:\/\//i.test(logo)) return logo;
+    if (logo.startsWith('/')) return `${SITE_ORIGIN}${logo}`;
+  }
+  const { org } = parseServerName(server.name);
+  if (org) {
+    // Strip leading @ from scoped package names so GitHub avatar URLs resolve.
+    const ghOrg = org.replace(/^@/, '');
+    if (ghOrg) return `https://github.com/${ghOrg}.png`;
+  }
+  return null;
+}
+
+/**
+ * Satori/ImageResponse throws if an <img> src fails to load. Probe first so a
+ * missing R2 logo or dead GitHub avatar falls back to the letter tile instead
+ * of breaking the entire social card.
+ */
+async function probeImageUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'image/*' },
+      // Short budget — OG generation shouldn't stall on a slow logo host.
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!res.ok) return null;
+    const type = res.headers.get('content-type') || '';
+    if (type && !type.startsWith('image/') && !type.includes('octet-stream')) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+async function getServer(rawId: string): Promise<OgServer | null | undefined> {
   const id = rawId ? decodeURIComponent(rawId).replace(/^-+/, '') : '';
   if (!id) return null;
 
@@ -19,16 +72,36 @@ async function getServer(rawId: string) {
     const ctx = await getCloudflareContext();
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db.select().from(serversTable).where(eq(serversTable.id, id)).limit(1);
+      const dbServers = await db
+        .select({
+          id: serversTable.id,
+          name: serversTable.name,
+          description: serversTable.description,
+          category: serversTable.category,
+          logoUrl: serversTable.logoUrl,
+        })
+        .from(serversTable)
+        .where(eq(serversTable.id, id))
+        .limit(1);
       if (dbServers.length > 0) return dbServers[0];
 
       // Try with rawId as fallback
-      const altServers = await db.select().from(serversTable).where(eq(serversTable.id, rawId)).limit(1);
+      const altServers = await db
+        .select({
+          id: serversTable.id,
+          name: serversTable.name,
+          description: serversTable.description,
+          category: serversTable.category,
+          logoUrl: serversTable.logoUrl,
+        })
+        .from(serversTable)
+        .where(eq(serversTable.id, rawId))
+        .limit(1);
       if (altServers.length > 0) return altServers[0];
     }
   } catch (e) {}
 
-  const servers = serversData as { id: string; name: string; description: string; category?: string }[];
+  const servers = serversData as OgServer[];
   return servers.find((s) => s.id === id || s.id === rawId);
 }
 
@@ -47,7 +120,11 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 
   const displayTitle = truncateTitle(displayTitleRaw, 75);
   const displayDesc = truncateDescription(rawDesc, 145);
-  const categoryBadge = (server && (server as any).category) ? String((server as any).category).toUpperCase() : 'MCP SERVER';
+  const categoryBadge = (server && server.category) ? String(server.category).toUpperCase() : 'MCP SERVER';
+  const candidateLogo = resolveListingLogoSrc(server ?? null);
+  const listingLogoSrc = candidateLogo ? await probeImageUrl(candidateLogo) : null;
+  // First letter tile when no logo resolves (mirrors ServerAvatar gradient fallback).
+  const listingInitial = (displayTitleRaw.match(/[\p{L}\p{N}]/u)?.[0] || 'M').toUpperCase();
 
   return new ImageResponse(
     (
@@ -166,7 +243,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             </div>
           </div>
 
-          {/* Main Title & Description Container */}
+          {/* Main Title & Description Container — listing logo + title row */}
           <div
             style={{
               display: 'flex',
@@ -178,23 +255,71 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               overflow: 'hidden',
             }}
           >
-            <h1
+            <div
               style={{
-                fontSize: '60px',
-                fontWeight: 800,
-                color: '#ffffff',
-                lineHeight: 1.15,
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: '28px',
                 marginBottom: '16px',
-                letterSpacing: '-0.025em',
-                maxWidth: '980px',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
+                maxWidth: '1040px',
               }}
             >
-              {displayTitle}
-            </h1>
+              {listingLogoSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element -- ImageResponse requires raw img
+                <img
+                  src={listingLogoSrc}
+                  width={112}
+                  height={112}
+                  alt=""
+                  style={{
+                    width: '112px',
+                    height: '112px',
+                    borderRadius: '22px',
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                    background: 'rgba(15, 23, 42, 0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.14)',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '112px',
+                    height: '112px',
+                    borderRadius: '22px',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #00e5ff, #007bff)',
+                    color: '#ffffff',
+                    fontSize: '48px',
+                    fontWeight: 800,
+                    border: '1px solid rgba(255, 255, 255, 0.14)',
+                  }}
+                >
+                  {listingInitial}
+                </div>
+              )}
+              <h1
+                style={{
+                  fontSize: '56px',
+                  fontWeight: 800,
+                  color: '#ffffff',
+                  lineHeight: 1.15,
+                  letterSpacing: '-0.025em',
+                  margin: 0,
+                  maxWidth: '880px',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {displayTitle}
+              </h1>
+            </div>
 
             <p
               style={{

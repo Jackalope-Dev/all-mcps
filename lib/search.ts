@@ -19,9 +19,9 @@ export type Searchable = {
   /** Optional space-joined tool names / install package for extra recall. */
   toolText?: string | null;
   /**
-   * Optional AI-authored search text (summary + overview + use cases + features).
+   * Optional AI-authored search text (summary + overview + use cases + FAQ + features).
    * Lets intent queries — "read my pdfs", "query a database" — match the use cases
-   * even when the raw name/description don't contain those words.
+   * and grounded FAQ answers even when the raw name/description don't contain those words.
    */
   extraText?: string | null;
 };
@@ -30,6 +30,9 @@ export type Searchable = {
  * Build the AI search-text blob for a listing from its enriched fields. Pure and
  * loose-typed so it's safe to call server-side and to bundle. Bounded length keeps
  * the client feed small.
+ *
+ * Includes grounded FAQ Q&A so intent queries can match listing-specific answers
+ * (e.g. "how do I authenticate") even when name/description lack those words.
  */
 export function buildAiSearchText(
   parts: {
@@ -37,13 +40,25 @@ export function buildAiSearchText(
     aiOverview?: string | null;
     aiUseCases?: string[] | null;
     aiFeatures?: string[] | null;
+    /** Parsed `{q,a}` pairs from `ai_faq`; both sides feed search. */
+    aiFaq?: Array<{ q?: string; a?: string }> | null;
   },
   maxLen = 600
 ): string | null {
+  const faqBits = (parts.aiFaq || []).flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const out: string[] = [];
+    if (typeof item.q === 'string' && item.q.trim()) out.push(item.q.trim());
+    if (typeof item.a === 'string' && item.a.trim()) out.push(item.a.trim());
+    return out;
+  });
   const text = [
     parts.aiSummary || '',
     parts.aiOverview || '',
     ...(parts.aiUseCases || []),
+    // FAQ questions often mirror user search intent; place before features so they
+    // survive the length cap when the blob is tight.
+    ...faqBits,
     ...(parts.aiFeatures || []),
   ]
     .filter(Boolean)

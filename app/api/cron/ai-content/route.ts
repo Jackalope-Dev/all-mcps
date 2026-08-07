@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { fetchGithubReadme, parseGithubUrl } from '../../../../lib/listingEnrich';
@@ -23,9 +23,23 @@ import { generateListingContent } from '../../../../lib/aiContent';
  *    ai_enriched_at. Because SQLite/D1 serializes writers, a concurrent run's claim sees
  *    those rows as already taken and picks different ones — so no listing is ever
  *    generated twice.
- *  - Claims are released (ai_enriched_at reset to NULL) for any listing that failed or
- *    that we didn't reach, so a transient error or a mid-batch spend-cap stop never
- *    permanently marks a row as "done" with no content.
+ *  - Claims are released for any listing that failed or that we didn't reach, so a
+ *    transient error or a mid-batch spend-cap stop never permanently marks a row as
+ *    "done" with no content. Never-enriched rows release back to NULL; stale re-checks
+ *    (see below) release back to their previous ai_enriched_at, not NULL — a re-check
+ *    that keeps failing should retry after the normal staleness window, not cut in line
+ *    ahead of listings that have never been enriched at all.
+ *
+ * Two-phase batch, in priority order:
+ *  1. Never-enriched listings (ai_enriched_at IS NULL) — always fully drained first,
+ *     highest-value (views/community/stars) first within that.
+ *  2. Only once phase 1 has no more candidates for this batch, stale re-checks: listings
+ *     enriched more than STALE_RECHECK_MS ago, oldest-enriched first. Content and READMEs
+ *     do change after initial enrichment (new install instructions, new env vars, a
+ *     rewritten description) and there was previously no path back to fresh content once
+ *     a row was enriched once. Oldest-first (rather than weighted by popularity, like
+ *     phase 1) guarantees every listing eventually rotates through instead of popular
+ *     ones being refreshed forever while long-tail listings never are.
  *
  * Spend-cap aware: the moment a generation reports 'budget' (429/402/quota/auth/no key),
  * the run stops — every further call would fail the same way — and releases the rest of
@@ -42,6 +56,13 @@ const CONCURRENCY = 6;
 // Below this cleaned-description length with no README there's nothing to write from —
 // the row stays claimed (a permanent skip) so we never reselect a hopeless listing.
 const MIN_MATERIAL_CHARS = 30;
+// How long enriched content is trusted before it's eligible for a refresh. The cron fires
+// every 4h and claims up to BATCH_SIZE=24 rows/tick (144/day); re-checking the ~3.4k-listing
+// catalog on a 90-day rotation needs ~38 rows/day, well inside that headroom even while
+// phase 1 (never-enriched) keeps first priority. Kept well above the health cron's 3-day
+// popularity-refresh window (app/api/cron/health) because this pass costs an LLM call per
+// row, not just an HTTP fetch — READMEs don't churn often enough to justify checking more often.
+const STALE_RECHECK_MS = 90 * 24 * 60 * 60 * 1000;
 
 type ClaimedRow = {
   id: string;
@@ -50,6 +71,8 @@ type ClaimedRow = {
   description: string;
   category: string;
   tools: string | null;
+  /** Set only for phase-2 rows — the ai_enriched_at value to restore if this re-check fails. */
+  previousEnrichedAt?: Date | null;
 };
 
 export async function POST(req: Request) {
@@ -71,10 +94,10 @@ export async function POST(req: Request) {
     const githubToken = getGithubToken(env);
     const claimTime = new Date();
 
-    // Atomically claim the highest-value unenriched listings (views → community → stars).
-    // Stamping ai_enriched_at in the same statement that selects them is the claim: any
-    // concurrent run skips these rows. Released below for anything we don't complete.
-    const claimed = (await db
+    // Phase 1: atomically claim the highest-value never-enriched listings (views →
+    // community → stars). Stamping ai_enriched_at in the same statement that selects
+    // them is the claim: any concurrent run skips these rows.
+    const claimedNew = (await db
       .update(servers)
       .set({ aiEnrichedAt: claimTime })
       .where(
@@ -103,7 +126,69 @@ export async function POST(req: Request) {
         tools: servers.tools,
       })) as ClaimedRow[];
 
-    const stats = { claimed: claimed.length, enriched: 0, skippedThin: 0, failed: 0, budgetStopped: false };
+    // Phase 2: only spend leftover batch capacity on stale re-checks, oldest-enriched
+    // first. Not a single atomic UPDATE…RETURNING like phase 1 (need each row's previous
+    // ai_enriched_at to restore on failure — see the docstring) — select candidates, then
+    // claim exactly those ids. The gap between the two statements is a real but narrow
+    // double-claim window; a duplicate LLM call on an already-fresh row is a cheap price
+    // for reusing the simple claim pattern the rest of this cron already relies on.
+    let claimedStale: ClaimedRow[] = [];
+    const staleSlots = BATCH_SIZE - claimedNew.length;
+    if (staleSlots > 0) {
+      const staleCutoff = new Date(claimTime.getTime() - STALE_RECHECK_MS);
+      const candidates = await db
+        .select({
+          id: servers.id,
+          name: servers.name,
+          url: servers.url,
+          description: servers.description,
+          category: servers.category,
+          tools: servers.tools,
+          aiEnrichedAt: servers.aiEnrichedAt,
+        })
+        .from(servers)
+        .where(
+          and(
+            eq(servers.status, 'active'),
+            isNotNull(servers.aiEnrichedAt),
+            lt(servers.aiEnrichedAt, staleCutoff)
+          )
+        )
+        .orderBy(asc(servers.aiEnrichedAt))
+        .limit(staleSlots);
+
+      if (candidates.length > 0) {
+        await db
+          .update(servers)
+          .set({ aiEnrichedAt: claimTime })
+          .where(
+            inArray(
+              servers.id,
+              candidates.map((c) => c.id)
+            )
+          );
+        claimedStale = candidates.map((c) => ({
+          id: c.id,
+          name: c.name,
+          url: c.url,
+          description: c.description,
+          category: c.category,
+          tools: c.tools,
+          previousEnrichedAt: c.aiEnrichedAt as Date | null,
+        }));
+      }
+    }
+
+    const claimed = [...claimedNew, ...claimedStale];
+    const stats = {
+      claimed: claimed.length,
+      claimedNew: claimedNew.length,
+      claimedStale: claimedStale.length,
+      enriched: 0,
+      skippedThin: 0,
+      failed: 0,
+      budgetStopped: false,
+    };
     // Rows that reached a terminal, keep-the-claim state (stored content, or a permanent
     // thin-skip). Everything else in `claimed` gets its claim released at the end.
     const keep = new Set<string>();
@@ -170,10 +255,20 @@ export async function POST(req: Request) {
     }
 
     // Release every claimed row we didn't complete: failures, plus anything left unprocessed
-    // when a budget stop broke the loop. These return to the pool with ai_enriched_at = NULL.
-    const toRelease = claimed.filter((c) => !keep.has(c.id)).map((c) => c.id);
-    if (toRelease.length > 0) {
-      await db.update(servers).set({ aiEnrichedAt: null }).where(inArray(servers.id, toRelease));
+    // when a budget stop broke the loop. Never-enriched releases return to NULL (top
+    // priority again); stale re-checks release back to their previous ai_enriched_at, not
+    // NULL, so a re-check that keeps failing doesn't masquerade as brand-new backlog.
+    const unreleased = claimed.filter((c) => !keep.has(c.id));
+    const releaseNew = unreleased.filter((c) => c.previousEnrichedAt === undefined).map((c) => c.id);
+    const releaseStale = unreleased.filter((c) => c.previousEnrichedAt !== undefined);
+    if (releaseNew.length > 0) {
+      await db.update(servers).set({ aiEnrichedAt: null }).where(inArray(servers.id, releaseNew));
+    }
+    for (const row of releaseStale) {
+      await db
+        .update(servers)
+        .set({ aiEnrichedAt: row.previousEnrichedAt })
+        .where(eq(servers.id, row.id));
     }
     stats.budgetStopped = budgetHit;
 
@@ -182,14 +277,29 @@ export async function POST(req: Request) {
       .from(servers)
       .where(and(eq(servers.status, 'active'), isNull(servers.aiEnrichedAt)));
 
+    const staleCutoffNow = new Date(Date.now() - STALE_RECHECK_MS);
+    const [{ dueForRecheck }] = await db
+      .select({ dueForRecheck: sql<number>`count(*)` })
+      .from(servers)
+      .where(
+        and(
+          eq(servers.status, 'active'),
+          isNotNull(servers.aiEnrichedAt),
+          lt(servers.aiEnrichedAt, staleCutoffNow)
+        )
+      );
+
     return NextResponse.json({
       success: true,
       ...stats,
       remaining,
+      dueForRecheck,
       githubAuth: Boolean(githubToken),
-      message: `AI content: enriched ${stats.enriched}, skipped-thin ${stats.skippedThin}, failed ${stats.failed}${
-        stats.budgetStopped ? ' (stopped — LLM spend cap/outage)' : ''
-      }. ~${remaining} listings remaining.`,
+      message:
+        `AI content: enriched ${stats.enriched} (${stats.claimedNew} new, ${stats.claimedStale} re-checked), ` +
+        `skipped-thin ${stats.skippedThin}, failed ${stats.failed}${
+          stats.budgetStopped ? ' (stopped — LLM spend cap/outage)' : ''
+        }. ~${remaining} never-enriched, ~${dueForRecheck} due for re-check.`,
     });
   } catch (error: any) {
     console.error('AI content cron error:', error);

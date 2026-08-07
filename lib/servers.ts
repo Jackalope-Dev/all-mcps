@@ -187,8 +187,8 @@ export type DirectoryFeedItem = {
   createdAt: string | Date | null;
 };
 
-/** Max length of the client-side AI search blob — matches the old feed bound. */
-const FEED_AI_TEXT_MAX = 320;
+/** Max length of the client-side AI search blob — room for FAQ terms after the core AI fields. */
+const FEED_AI_TEXT_MAX = 400;
 /** Max length of the space-joined tool-name blob for search recall. */
 const FEED_TOOL_TEXT_MAX = 400;
 
@@ -205,17 +205,21 @@ function feedToolText(rawTools: unknown): string | null {
 
 /**
  * Build the bounded AI search blob from already-length-capped raw column values.
- * `aiUseCases`/`aiFeatures` arrive as JSON-array *strings* (the columns store JSON);
+ * `aiUseCases`/`aiFeatures`/`aiFaq` arrive as JSON *strings* (the columns store JSON);
  * we strip the structural punctuation so only the human-readable words feed search.
  */
 function feedAiTextFromRaw(
   summary?: string | null,
   overview?: string | null,
   useCases?: string | null,
-  features?: string | null
+  features?: string | null,
+  faq?: string | null
 ): string | null {
   const clean = (v?: string | null) => (v || '').replace(/["[\]{}]/g, ' ');
-  const text = [summary || '', overview || '', clean(useCases), clean(features)]
+  // FAQ JSON keys (`q`/`a`) would otherwise leak into the blob as noise tokens.
+  const cleanFaq = (v?: string | null) => clean(v).replace(/\b[qa]\s*:/gi, ' ');
+  // FAQ after use-cases so intent-shaped questions contribute before features fill the cap.
+  const text = [summary || '', overview || '', clean(useCases), cleanFaq(faq), clean(features)]
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -267,6 +271,7 @@ export async function getDirectoryFeedPage(
           aiOverview: sql<string | null>`substr(${serversTable.aiOverview}, 1, ${FEED_AI_TEXT_MAX})`,
           aiUseCases: sql<string | null>`substr(${serversTable.aiUseCases}, 1, ${FEED_AI_TEXT_MAX})`,
           aiFeatures: sql<string | null>`substr(${serversTable.aiFeatures}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiFaq: sql<string | null>`substr(${serversTable.aiFaq}, 1, ${FEED_AI_TEXT_MAX})`,
         })
         .from(serversTable)
         .where(eq(serversTable.status, 'active'))
@@ -295,7 +300,7 @@ export async function getDirectoryFeedPage(
         npmDownloads: r.npmDownloads ?? null,
         installConfidence: r.installConfidence ?? null,
         toolText: feedToolText(r.tools),
-        aiText: feedAiTextFromRaw(r.aiSummary, r.aiOverview, r.aiUseCases, r.aiFeatures),
+        aiText: feedAiTextFromRaw(r.aiSummary, r.aiOverview, r.aiUseCases, r.aiFeatures, r.aiFaq),
         views: r.views ?? 0,
         copies: r.copies ?? 0,
         upvotes: r.upvotes ?? 0,

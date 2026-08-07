@@ -68,6 +68,24 @@ const rows: Row[] = [
   assert(buildAiSearchText({}) === null, 'buildAiSearchText returns null when empty');
 }
 
+// 6b. FAQ Q&A pairs feed the search blob (questions often match user intent).
+{
+  const withFaq = buildAiSearchText({
+    aiSummary: 'A database bridge.',
+    aiFaq: [
+      { q: 'How do I connect with a connection string?', a: 'Set DATABASE_URL to your Postgres DSN.' },
+      { q: 'Does it support read-only mode?', a: 'Yes, pass READ_ONLY=true.' },
+    ],
+  });
+  assert(!!withFaq && withFaq.includes('connection string'), 'buildAiSearchText includes FAQ questions');
+  assert(!!withFaq && withFaq.includes('READ_ONLY'), 'buildAiSearchText includes FAQ answers');
+  // FAQ-only listings still produce a blob (no summary/overview required).
+  const faqOnly = buildAiSearchText({
+    aiFaq: [{ q: 'Can agents write rows?', a: 'Only when write tools are enabled.' }],
+  });
+  assert(!!faqOnly && faqOnly.includes('write rows'), 'FAQ-only content still builds a search blob');
+}
+
 // 7. Conversational intent queries with stopwords (e.g. "find latest btc prices", "check transit times")
 {
   const intentRows: Row[] = [

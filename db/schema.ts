@@ -59,6 +59,8 @@ export const servers = sqliteTable('servers', {
   toolsCheckedAt: integer('tools_checked_at', { mode: 'timestamp' }),
   /** Error from the last tools/list attempt (e.g. "Connection timed out."). Null on success or before first attempt — lets us see *why* introspection is failing instead of just that `tools` is empty. */
   toolsError: text('tools_error'),
+  /** How `tools` was obtained: 'introspected' (live MCP tools/list handshake) or 'readme' (best-effort static parse of the repo README, for the vast majority of listings that are npx/uvx/pip stdio packages, not a live HTTP endpoint). Null = not yet attempted. */
+  toolsSource: text('tools_source'),
   /**
    * LLM-generated, human-readable content that turns a scraped README-mirror page into a
    * unique, useful listing (see /api/cron/ai-content). All nullable — absence means the

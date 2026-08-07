@@ -18,6 +18,8 @@ export function buildServerVectorText(server: {
   aiOverview?: string | null;
   aiUseCases?: string | string[] | null;
   aiFeatures?: string | string[] | null;
+  /** Parsed FAQ pairs or raw JSON column — both accepted for cron/API callers. */
+  aiFaq?: string | Array<{ q?: string; a?: string }> | null;
   tools?: string | any[] | null;
 }): string {
   const parts: string[] = [
@@ -35,6 +37,27 @@ export function buildServerVectorText(server: {
       : server.aiUseCases;
     if (useCases.length > 0) {
       parts.push(`Use Cases: ${useCases.join(', ')}`);
+    }
+  }
+
+  if (server.aiFaq) {
+    const faq = typeof server.aiFaq === 'string'
+      ? safeParseJson<Array<{ q?: string; a?: string }>>(server.aiFaq, [])
+      : server.aiFaq;
+    if (Array.isArray(faq) && faq.length > 0) {
+      const faqTexts = faq
+        .map((item) => {
+          if (!item || typeof item !== 'object') return '';
+          const q = typeof item.q === 'string' ? item.q.trim() : '';
+          const a = typeof item.a === 'string' ? item.a.trim() : '';
+          if (q && a) return `Q: ${q} A: ${a}`;
+          return q || a;
+        })
+        .filter(Boolean)
+        .slice(0, 5);
+      if (faqTexts.length > 0) {
+        parts.push(`FAQ: ${faqTexts.join(' | ')}`);
+      }
     }
   }
 

@@ -349,7 +349,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         {/* Main Content (Left Column) */}
         <div className="detail-main">
           <div className="detail-title-row">
-            <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
+            {/* Prefer approved R2 logo, else GitHub org avatar, else category gradient (ServerAvatar). */}
+            <ServerAvatar
+              name={server.name}
+              logoUrl={server.logoUrl}
+              category={server.category}
+              size={72}
+            />
             <div className="detail-title-text">
               <div className="detail-title-heading">
                 <IconTooltip
