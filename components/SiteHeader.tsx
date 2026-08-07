@@ -65,6 +65,16 @@ export function SiteHeader() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  // Escape closes the mobile drawer (overlay click already does).
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [mobileMenuOpen]);
+
   // Lock scroll when mobile menu is open. `overflow: hidden` on <body> looks
   // like the obvious approach, but it silently breaks .site-header's
   // `position: sticky` — toggling body's overflow makes it a new scroll
@@ -99,7 +109,7 @@ export function SiteHeader() {
           <BrandLogo size="md" />
 
           {/* Desktop Navigation */}
-          <nav className="site-nav desktop-only-nav animate-fade-in delay-1" aria-label="Main Navigation">
+          <nav className="site-nav desktop-only-nav animate-fade-in delay-1" aria-label="Main">
             {NAV.map(({ href, label }) => (
               <Link
                 key={href}
@@ -114,19 +124,20 @@ export function SiteHeader() {
               type="button"
               onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
               className="header-search-btn"
-              title="Search directory (Cmd+K)"
+              title="Search directory (⌘K)"
+              aria-label="Search directory"
             >
-              <Search size={13} className="text-cyan-400" />
+              <Search size={13} className="text-cyan-400" aria-hidden="true" />
               <span>Search</span>
-              <kbd className="header-search-kbd">⌘K</kbd>
+              <kbd className="header-search-kbd" aria-hidden="true">⌘K</kbd>
             </button>
             {!isSignedIn && (
               <Button href={loginHref} variant="secondary" size="sm" className="site-nav-login">
-                <LogIn size={13} /> Log in
+                <LogIn size={13} aria-hidden="true" /> Log in
               </Button>
             )}
             <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
-              <Sparkles size={13} /> {ctaLabel}
+              <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
             </Button>
           </nav>
 
@@ -136,9 +147,10 @@ export function SiteHeader() {
             className="mobile-menu-btn"
             onClick={() => setMobileMenuOpen((open) => !open)}
             aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? 'Close Navigation Menu' : 'Open Navigation Menu'}
+            aria-controls="mobile-navigation"
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
           >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileMenuOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
           </button>
         </div>
       </div>
@@ -148,9 +160,19 @@ export function SiteHeader() {
           position: fixed descendants and would otherwise collapse the overlay
           to the header's height (making the menu appear to do nothing). */}
       {mounted && mobileMenuOpen && createPortal(
-        <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)}>
-          <div className="mobile-menu-drawer" onClick={(e) => e.stopPropagation()}>
-            <nav className="mobile-nav-list" aria-label="Mobile Navigation">
+        <div
+          className="mobile-menu-overlay"
+          onClick={() => setMobileMenuOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="mobile-menu-drawer"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site navigation"
+          >
+            <nav id="mobile-navigation" className="mobile-nav-list" aria-label="Mobile">
               {NAV.map(({ href, label }) => (
                 <Link
                   key={href}
@@ -170,8 +192,9 @@ export function SiteHeader() {
                 }}
                 className="mobile-nav-link"
                 style={{ width: '100%', justifyContent: 'flex-start', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                aria-label="Search directory"
               >
-                <Search size={18} className="text-cyan-400" />
+                <Search size={18} className="text-cyan-400" aria-hidden="true" />
                 <span>Search Directory</span>
               </button>
               <Link
