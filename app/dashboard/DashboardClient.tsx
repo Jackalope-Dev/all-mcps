@@ -13,7 +13,7 @@ import {
   Eye, Heart, Download, TrendingUp, TrendingDown, Minus,
   BarChart3, Search, Globe, Lock, Activity, Zap, Sparkles,
   Crown, MousePointerClick, CheckCircle2, AlertCircle, Edit3, Image as ImageIcon,
-  Percent, MapPin, Award, ExternalLink, HelpCircle, ShieldCheck,
+  Percent, MapPin, Award, ExternalLink, HelpCircle, ShieldCheck, X,
 } from 'lucide-react';
 import { DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { PremiumUpgrade } from '@/components/PremiumUpgrade';
@@ -488,9 +488,9 @@ export default function DashboardClient({
                             fontWeight: 600,
                             padding: '0.12rem 0.45rem',
                             borderRadius: '999px',
-                            background: server.healthStatus === 'healthy' ? 'rgba(52,211,153,0.15)' : 'rgba(245,158,11,0.15)',
-                            color: server.healthStatus === 'healthy' ? '#34d399' : '#f59e0b',
-                            border: `1px solid ${server.healthStatus === 'healthy' ? 'rgba(52,211,153,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                            background: server.healthStatus === 'healthy' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245,158,11,0.15)',
+                            color: server.healthStatus === 'healthy' ? '#10b981' : '#f59e0b',
+                            border: `1px solid ${server.healthStatus === 'healthy' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245,158,11,0.3)'}`,
                           }}
                         >
                           {server.healthStatus === 'healthy' ? 'Healthy' : server.healthStatus}
@@ -545,7 +545,7 @@ export default function DashboardClient({
                   />
                 </label>
                 {server.isPremium ? (
-                  <label className="btn btn-secondary btn-sm dashboard-logo-upload">
+                  <label className="btn btn-secondary btn-sm dashboard-logo-upload dashboard-screenshot-upload">
                     <ImageIcon size={14} aria-hidden="true" />
                     {uploadingScreenshotId === server.id
                       ? 'Uploading…'
@@ -576,9 +576,10 @@ export default function DashboardClient({
                     }}
                     className="btn btn-secondary btn-sm dashboard-logo-upload"
                     style={{
-                      borderColor: 'rgba(255, 215, 0, 0.4)',
+                      borderColor: 'rgba(255, 215, 0, 0.5)',
                       background: 'rgba(255, 215, 0, 0.08)',
                       color: 'var(--gold-color)',
+                      boxShadow: '0 0 0 1px rgba(255, 215, 0, 0.2)',
                     }}
                     title="Unlock high-res screenshot uploads with Premium"
                   >
@@ -994,6 +995,27 @@ function ListingSetupSteps({
   onEdit: () => void;
   onUploadClick: () => void;
 }) {
+  const cookieName = `dismiss_setup_${server.id}`;
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const dismissed = document.cookie
+        .split('; ')
+        .some((item) => item.trim().startsWith(`${cookieName}=`));
+      if (dismissed) {
+        setIsDismissed(true);
+      }
+    }
+  }, [cookieName]);
+
+  const handleDismiss = () => {
+    const oneWeekInSeconds = 7 * 24 * 60 * 60;
+    document.cookie = `${cookieName}=1; max-age=${oneWeekInSeconds}; path=/; SameSite=Lax`;
+    setIsDismissed(true);
+    toast.info('Listing setup section hidden for 1 week');
+  };
+
   const steps: SetupStep[] = [
     {
       id: 'logo',
@@ -1063,6 +1085,10 @@ function ListingSetupSteps({
     },
   ];
 
+  if (isDismissed) {
+    return null;
+  }
+
   const doneCount = steps.filter((s) => s.done).length;
   const total = steps.length;
   const allDone = doneCount === total;
@@ -1087,11 +1113,22 @@ function ListingSetupSteps({
                 : 'Complete the remaining steps to unlock SEO and trust signals.'}
           </p>
         </div>
-        <div className="listing-setup-progress-meta" aria-hidden={false}>
-          <span className="listing-setup-count">
-            {doneCount}/{total}
-          </span>
-          <span className="listing-setup-count-label">done</span>
+        <div className="listing-setup-header-actions">
+          <div className="listing-setup-progress-meta" aria-hidden={false}>
+            <span className="listing-setup-count">
+              {doneCount}/{total}
+            </span>
+            <span className="listing-setup-count-label">done</span>
+          </div>
+          <button
+            type="button"
+            className="listing-setup-dismiss-btn"
+            onClick={handleDismiss}
+            title="Dismiss for 1 week"
+            aria-label="Dismiss setup guide for 1 week"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
         </div>
       </div>
 
@@ -1169,8 +1206,8 @@ function BacklinkStatus({ server }: { server: Server }) {
     return (
       <div style={backlinkActiveContainerStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-          <CheckCircle2 size={18} style={{ color: '#34d399' }} />
-          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#34d399' }}>
+          <CheckCircle2 size={18} style={{ color: '#10b981' }} />
+          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#10b981' }}>
             Website backlink is active dofollow
           </span>
         </div>
@@ -1213,9 +1250,9 @@ function BacklinkStatus({ server }: { server: Server }) {
                 borderRadius: '50%',
                 fontSize: '0.75rem',
                 fontWeight: 700,
-                background: s.done ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)',
-                color: s.done ? '#34d399' : 'var(--text-secondary)',
-                border: `1px solid ${s.done ? 'rgba(52,211,153,0.4)' : 'var(--border-color)'}`,
+                background: s.done ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.08)',
+                color: s.done ? '#10b981' : 'var(--text-secondary)',
+                border: `1px solid ${s.done ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-color)'}`,
               }}
             >
               {s.done ? '✓' : idx + 1}

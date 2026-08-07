@@ -5386,8 +5386,8 @@ nav[aria-label="Table of contents"] {
 }
 
 .listing-setup--complete {
-  border-color: color-mix(in srgb, #34d399 35%, var(--border-color));
-  background: color-mix(in srgb, #34d399 6%, var(--bg-muted));
+  border-color: color-mix(in srgb, #10b981 35%, var(--border-color));
+  background: color-mix(in srgb, #10b981 6%, var(--bg-muted));
 }
 
 .listing-setup-header {
@@ -5414,12 +5414,40 @@ nav[aria-label="Table of contents"] {
   font-weight: 500;
 }
 
+.listing-setup-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
 .listing-setup-progress-meta {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   flex-shrink: 0;
   line-height: 1.1;
+}
+
+.listing-setup-dismiss-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.listing-setup-dismiss-btn:hover {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--text-secondary) 40%, var(--border-color));
 }
 
 .listing-setup-count {
@@ -5448,7 +5476,7 @@ nav[aria-label="Table of contents"] {
 .listing-setup-progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #34d399, var(--accent-color));
+  background: linear-gradient(90deg, #10b981, var(--accent-color));
   transition: width 0.35s ease;
 }
 
@@ -5474,7 +5502,7 @@ nav[aria-label="Table of contents"] {
 
 .listing-setup-step--done {
   opacity: 0.88;
-  border-color: color-mix(in srgb, #34d399 22%, var(--border-color));
+  border-color: color-mix(in srgb, #10b981 22%, var(--border-color));
 }
 
 .listing-setup-step--todo {
@@ -5493,7 +5521,7 @@ nav[aria-label="Table of contents"] {
   width: 28px;
   height: 28px;
   margin-top: 0.05rem;
-  color: #34d399;
+  color: #10b981;
   flex-shrink: 0;
 }
 
@@ -5557,9 +5585,9 @@ nav[aria-label="Table of contents"] {
 }
 
 .listing-setup-step-badge--done {
-  color: #34d399;
-  background: color-mix(in srgb, #34d399 14%, transparent);
-  border: 1px solid color-mix(in srgb, #34d399 30%, transparent);
+  color: #10b981;
+  background: color-mix(in srgb, #10b981 16%, transparent);
+  border: 1px solid color-mix(in srgb, #10b981 35%, transparent);
 }
 
 .listing-setup-step-badge--pending {
@@ -6513,6 +6541,18 @@ code.inline-path {
 .dashboard-logo-upload {
   cursor: pointer;
   position: relative;
+}
+
+.dashboard-screenshot-upload {
+  border-color: color-mix(in srgb, var(--accent-color) 45%, var(--border-color)) !important;
+  background: color-mix(in srgb, var(--accent-color) 7%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 18%, transparent);
+  transition: all 0.15s ease;
+}
+
+.dashboard-screenshot-upload:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 65%, var(--border-color)) !important;
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent) !important;
 }
 
 .dashboard-logo-upload input {
