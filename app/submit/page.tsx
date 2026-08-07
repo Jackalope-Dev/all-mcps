@@ -47,12 +47,11 @@ export default function SubmitPage() {
     <PageShell variant="content" panel>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PageHeader
-        title="Submit an MCP Server"
+        title="Submit an MCP server"
         description={
           <>
-            Have you built an incredible MCP server? Submit it below to get it listed in our
-            directory. You can add a website (nofollow on free listings; dofollow for premium) and
-            claim ownership after approval via GitHub badge, site badge, or DNS.
+            Free listing review for Model Context Protocol servers. Add a repo or website, we prefill
+            what we can, then you claim ownership after approval.
           </>
         }
       />

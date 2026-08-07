@@ -8,6 +8,13 @@ import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../../../lib/categor
 import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';
 import { sendNotificationEmail, getEmailEnv } from '../../../lib/notify';
 import { getAppUrl } from '../../../lib/stripe';
+import {
+  isPricingModel,
+  isAuthType,
+  isMaintenanceStatus,
+  normalizeTags,
+  normalizeCompatibleClients,
+} from '../../../lib/serverEnums';
 
 const submitSchema = z.object({
   url: z.string().optional().or(z.literal('')),
@@ -23,6 +30,19 @@ const submitSchema = z.object({
     .refine((v) => !v || z.string().url().safeParse(v).success, {
       message: 'Website must be a valid URL',
     }),
+  // Optional submitter-controlled enrichment fields. Kept loosely typed here and
+  // coerced/validated below (same "always coerce to something valid" approach as
+  // `category`) rather than rejecting the whole submission over a malformed extra.
+  tags: z.array(z.string()).optional(),
+  pricingModel: z.string().optional(),
+  pricingNotes: z.string().optional(),
+  authType: z.string().optional(),
+  license: z.string().optional(),
+  compatibleClients: z.array(z.string()).optional(),
+  maintenanceStatus: z.string().optional(),
+  supportUrl: z.string().optional().or(z.literal('')),
+  suggestedInstallCommand: z.string().optional(),
+  suggestedInstallArgs: z.array(z.string()).optional(),
 });
 
 export async function POST(req: Request) {
@@ -69,6 +89,24 @@ export async function POST(req: Request) {
     let description = result.data.description || '';
     let category = normalizeCategory(result.data.category);
     let url = (result.data.url || '').trim();
+
+    const tags = normalizeTags(result.data.tags);
+    const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
+    const pricingModel = isPricingModel(result.data.pricingModel) ? result.data.pricingModel : null;
+    const authType = isAuthType(result.data.authType) ? result.data.authType : null;
+    const maintenanceStatus = isMaintenanceStatus(result.data.maintenanceStatus)
+      ? result.data.maintenanceStatus
+      : null;
+    const pricingNotes = (result.data.pricingNotes || '').trim().slice(0, 280) || null;
+    const license = (result.data.license || '').trim().slice(0, 60) || null;
+    const suggestedInstallCommand = (result.data.suggestedInstallCommand || '').trim().slice(0, 100) || null;
+    const suggestedInstallArgs = (result.data.suggestedInstallArgs || [])
+      .filter((a) => typeof a === 'string' && a.trim())
+      .map((a) => a.trim())
+      .slice(0, 20);
+    // Supplementary link — drop silently if unsafe/malformed rather than failing the submission over it.
+    let supportUrl = (result.data.supportUrl || '').trim();
+    if (supportUrl && !isSafeSubmissionUrl(supportUrl)) supportUrl = '';
 
     // Website-only: use website as primary url when repo omitted
     if (!url && websiteUrl) {
@@ -158,6 +196,16 @@ export async function POST(req: Request) {
         premiumStatus: 'free',
         status: 'pending',
         createdAt: new Date(),
+        tags: tags.length ? JSON.stringify(tags) : null,
+        pricingModel,
+        pricingNotes,
+        authType,
+        license,
+        compatibleClients: compatibleClients.length ? JSON.stringify(compatibleClients) : null,
+        maintenanceStatus,
+        supportUrl: supportUrl || null,
+        suggestedInstallCommand,
+        suggestedInstallArgs: suggestedInstallArgs.length ? JSON.stringify(suggestedInstallArgs) : null,
       })
       .onConflictDoNothing()
       .returning({ id: servers.id });

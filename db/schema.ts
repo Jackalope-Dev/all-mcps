@@ -106,6 +106,30 @@ export const servers = sqliteTable('servers', {
   /** Last time this listing was posted to X/Twitter (highlight cron or new-listing announce). Drives least-recently-posted rotation so highlights don't repeat. */
   lastTweetedAt: integer('last_tweeted_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  /** JSON string array of freeform submitter-chosen keywords (max 5, ≤30 chars each). Distinct from the single curated `category`. */
+  tags: text('tags'),
+  /** free | freemium | paid | byok — self-declared cost model of *using* this MCP server (not directory pricing). */
+  pricingModel: text('pricing_model'),
+  /** Optional free-text elaboration on pricing, e.g. "Free tier: 100 req/day". */
+  pricingNotes: text('pricing_notes'),
+  /** none | api_key | oauth | other — self-declared auth requirement. */
+  authType: text('auth_type'),
+  /** Free-text license identifier, e.g. "MIT", "Apache-2.0". */
+  license: text('license'),
+  /** JSON string array of MCP_CLIENTS slugs this server is confirmed compatible with. */
+  compatibleClients: text('compatible_clients'),
+  /** active | stable | experimental | archived — self-declared maintenance status, distinct from the auto `healthStatus`. */
+  maintenanceStatus: text('maintenance_status'),
+  /** Support/community link (Discord, docs site), distinct from `url` (repo) and `websiteUrl`. */
+  supportUrl: text('support_url'),
+  /** Live, admin-approved screenshot URL (e.g. `/screenshots/<id>`). Null = no screenshot shown. */
+  screenshotUrl: text('screenshot_url'),
+  /** R2 key of an uploaded screenshot awaiting admin approval (e.g. `screenshots/pending/<id>.png`). Null = nothing pending. */
+  pendingScreenshotKey: text('pending_screenshot_key'),
+  /** Submitter-suggested install command (e.g. "npx"), used as a hint only when the auto-detected `installConfidence` is low or absent. */
+  suggestedInstallCommand: text('suggested_install_command'),
+  /** JSON string array of args paired with `suggestedInstallCommand`. */
+  suggestedInstallArgs: text('suggested_install_args'),
 });
 
 export const upvoteRecords = sqliteTable('upvote_records', {

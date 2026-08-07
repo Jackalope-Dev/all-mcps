@@ -1,12 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { TurnstileWidget } from '../ui/TurnstileWidget';
 import { toast } from '../ui/Toast';
 import { DEFAULT_SUBMIT_CATEGORY, DIRECTORY_CATEGORIES } from '../../lib/categories';
 import { trackSubmitLead } from '../../lib/gtag';
+import { MCP_CLIENTS } from '../../lib/clients';
+import {
+  PRICING_MODELS,
+  PRICING_MODEL_LABELS,
+  AUTH_TYPES,
+  AUTH_TYPE_LABELS,
+  MAINTENANCE_STATUSES,
+  MAINTENANCE_STATUS_LABELS,
+} from '../../lib/serverEnums';
+
+type FormStep = 1 | 2 | 3;
 
 export function SubmitForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -21,13 +33,32 @@ export function SubmitForm() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(DEFAULT_SUBMIT_CATEGORY);
 
+  // Optional enrichment fields — none required, all improve discoverability/trust.
+  const [tagsInput, setTagsInput] = useState('');
+  const [pricingModel, setPricingModel] = useState('');
+  const [pricingNotes, setPricingNotes] = useState('');
+  const [authType, setAuthType] = useState('');
+  const [license, setLicense] = useState('');
+  const [compatibleClients, setCompatibleClients] = useState<string[]>([]);
+  const [maintenanceStatus, setMaintenanceStatus] = useState('');
+  const [supportUrl, setSupportUrl] = useState('');
+  const [suggestedInstallCommand, setSuggestedInstallCommand] = useState('');
+  const [suggestedInstallArgsInput, setSuggestedInstallArgsInput] = useState('');
+
   const agentPromptText = `Read this repository's package.json and README.md to extract the MCP server name, description, category, and repository URL. Then submit this MCP server to AllMCPs.com by sending a POST request to https://allmcps.com/api/v1/submit with JSON: {"name": "<name>", "url": "<repo_url>", "description": "<description>", "category": "<category>", "email": "<your_email>"}`;
+
+  /** Which step feels "current" based on what's filled — purely visual guidance. */
+  const activeStep: FormStep = useMemo(() => {
+    if (!url.trim() && !websiteUrl.trim()) return 1;
+    if (!name.trim() || !email.trim() || !description.trim()) return 2;
+    return 3;
+  }, [url, websiteUrl, name, email, description]);
 
   const copyAgentPrompt = async () => {
     try {
       await navigator.clipboard.writeText(agentPromptText);
-      toast.success('AI Agent Prompt Copied!', {
-        description: 'Paste this prompt in Cursor, Claude Code, Windsurf, or Antigravity inside your project repo.',
+      toast.success('AI agent prompt copied', {
+        description: 'Paste it in Cursor, Claude Code, or Windsurf inside your repo.',
       });
     } catch {
       toast.error('Could not copy automatically.');
@@ -58,8 +89,7 @@ export function SubmitForm() {
       };
       if (!res.ok) throw new Error(data.error || 'Prefill failed');
 
-      if (data.name && !name) setName(data.name);
-      else if (data.name) setName(data.name);
+      if (data.name) setName(data.name);
       if (data.description) setDescription(data.description);
       if (data.url) setUrl(data.url);
       if (data.websiteUrl) setWebsiteUrl(data.websiteUrl);
@@ -96,7 +126,7 @@ export function SubmitForm() {
 
     setStatus('loading');
     const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
+    const data: Record<string, unknown> = Object.fromEntries(formData.entries());
     data['cf-turnstile-response'] = token;
     data.name = name;
     data.email = email;
@@ -104,6 +134,16 @@ export function SubmitForm() {
     data.websiteUrl = websiteUrl;
     data.description = description;
     data.category = category;
+    data.tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+    data.pricingModel = pricingModel || undefined;
+    data.pricingNotes = pricingNotes || undefined;
+    data.authType = authType || undefined;
+    data.license = license || undefined;
+    data.compatibleClients = compatibleClients;
+    data.maintenanceStatus = maintenanceStatus || undefined;
+    data.supportUrl = supportUrl || undefined;
+    data.suggestedInstallCommand = suggestedInstallCommand || undefined;
+    data.suggestedInstallArgs = suggestedInstallArgsInput.split(/\s+/).map((a) => a.trim()).filter(Boolean);
 
     try {
       const res = await fetch('/api/submit', {
@@ -154,419 +194,294 @@ export function SubmitForm() {
     const badgeMarkdown = `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${sampleId})`;
 
     return (
-      <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }} aria-hidden="true">🎉</div>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server submitted successfully</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '520px', margin: '0.5rem auto 1.25rem', lineHeight: 1.55 }}>
-          You&apos;re in the review queue. Here&apos;s exactly what happens next — and what you can do while you wait.
-        </p>
+      <div className="submit-success">
+        <div className="submit-success-hero">
+          <div className="submit-success-icon" aria-hidden="true">
+            ✓
+          </div>
+          <h2 className="submit-success-title">You&apos;re in the review queue</h2>
+          <p className="submit-success-lead">
+            We&apos;ll email you when the listing is approved. Meanwhile, prepare your badge and
+            optionally skip the queue with a boost.
+          </p>
+        </div>
 
         <ol className="submit-timeline">
           <li className="submit-timeline-item">
-            <span className="submit-timeline-step" aria-hidden="true">1</span>
+            <span className="submit-timeline-step" aria-hidden="true">
+              1
+            </span>
             <div>
               <h3>We review your listing</h3>
-              <p>Free submissions are reviewed in queue. Priority Review (optional below) jumps ahead.</p>
+              <p>Free submissions are reviewed in queue. Priority Review jumps ahead.</p>
             </div>
           </li>
           <li className="submit-timeline-item">
-            <span className="submit-timeline-step" aria-hidden="true">2</span>
+            <span className="submit-timeline-step" aria-hidden="true">
+              2
+            </span>
             <div>
               <h3>You get an approval email</h3>
-              <p>We send a direct claim link when the listing goes live on the directory.</p>
+              <p>Includes a direct claim link once the listing is live.</p>
             </div>
           </li>
           <li className="submit-timeline-item">
-            <span className="submit-timeline-step" aria-hidden="true">3</span>
+            <span className="submit-timeline-step" aria-hidden="true">
+              3
+            </span>
             <div>
-              <h3>Claim &amp; verify for a free dofollow</h3>
+              <h3>Claim &amp; verify</h3>
               <p>
-                Claim ownership, verify your website, keep the AllMCPs badge live — earn a reciprocal
-                dofollow backlink on free listings.
+                Verify your site and keep the AllMCPs badge live for a free reciprocal dofollow
+                backlink.
               </p>
-            </div>
-          </li>
-          <li className="submit-timeline-item">
-            <span className="submit-timeline-step" aria-hidden="true">4</span>
-            <div>
-              <h3>Promote installs</h3>
-              <p>Add a logo, polish the description, and optionally boost featured placement after approval.</p>
             </div>
           </li>
         </ol>
 
         {submittedId && (
-          <div
-            style={{
-              textAlign: 'left',
-              maxWidth: '540px',
-              margin: '0 auto 1.75rem',
-              padding: '1.25rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(var(--accent-rgb), 0.25)',
-              background: 'rgba(var(--accent-rgb), 0.04)',
-            }}
-          >
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-color)', marginBottom: '0.5rem' }}>
-              Prepare your AllMCPs badge (ready for claim)
-            </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
+          <div className="submit-badge-prep">
+            <h3 className="submit-badge-prep-title">Prepare your badge</h3>
+            <p className="submit-badge-prep-body">
               {isGithub
-                ? 'Embed this standard 20px badge in your GitHub repository README.md. Adding it triggers automatic verification and marks your listing as Verified.'
-                : 'Embed this badge or HTML verification tag on your website to claim ownership.'}
+                ? 'Add this to your GitHub README after approval to speed up verification.'
+                : 'Add this badge or HTML tag to your site after approval to claim ownership.'}
             </p>
-
-            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
-              <pre
-                style={{
-                  background: 'rgba(0,0,0,0.6)',
-                  padding: '0.85rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  color: '#10b981',
-                  fontSize: '0.75rem',
-                  overflowX: 'auto',
-                  margin: 0,
-                }}
-              >
+            <div className="submit-badge-code-wrap">
+              <pre className="submit-badge-code">
                 <code>{badgeMarkdown}</code>
               </pre>
               <button
                 type="button"
+                className="btn btn-primary btn-sm submit-badge-copy"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(badgeMarkdown);
-                    toast.success('Badge Markdown copied!');
+                    toast.success('Badge markdown copied');
                   } catch {
                     toast.error('Could not copy automatically.');
                   }
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '0.4rem',
-                  right: '0.4rem',
-                  background: 'var(--accent-color)',
-                  color: 'var(--bg-color)',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '0.2rem 0.6rem',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
                 }}
               >
                 Copy
               </button>
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Badge Preview:</span>
+            <div className="submit-badge-preview">
+              <span>Preview</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={badgeSrc} alt="AllMCPs badge preview" height={20} />
             </div>
           </div>
         )}
 
-        {/* High-Converting Boost Up-sell Cards */}
-        <div style={{ maxWidth: '640px', margin: '2rem auto', textAlign: 'left' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: '0.5rem' }}>
-            🚀 Want to Launch Faster & Get More Installs?
-          </h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
-            Optional boosts to feature your new MCP server at the top of search and homepage discovery.
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div
-              className="surface"
-              style={{
-                padding: '1.25rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(var(--accent-rgb), 0.3)',
-                background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(var(--accent-secondary-rgb), 0.04))',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-color)', letterSpacing: '0.05em' }}>⚡ Quick Pass</span>
-                <h4 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>Priority Review</h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                  Jump the manual queue and get reviewed within 2 hours.
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>$5</span>
-                <a
-                  href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}&sku=priority_review` : '/pricing'}
-                  style={{
-                    padding: '0.4rem 0.85rem',
-                    background: 'var(--accent-color)',
-                    color: 'var(--bg-color)',
-                    borderRadius: '6px',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    textDecoration: 'none',
-                  }}
+        <div className="submit-upsell">
+          <h3 className="submit-upsell-title">Optional: launch faster</h3>
+          <p className="submit-upsell-lead">Boosts are optional — free listings are reviewed in queue.</p>
+          <div className="submit-upsell-grid">
+            <div className="submit-upsell-card">
+              <span className="submit-upsell-kicker">Quick pass</span>
+              <h4>Priority Review</h4>
+              <p>Jump the manual queue — typically reviewed within a few hours.</p>
+              <div className="submit-upsell-footer">
+                <span className="submit-upsell-price">$5</span>
+                <Link
+                  href={
+                    submittedId
+                      ? `/pricing?serverId=${encodeURIComponent(submittedId)}&sku=priority_review`
+                      : '/pricing'
+                  }
+                  className="btn btn-primary btn-sm"
                 >
-                  Get Priority →
-                </a>
+                  Get priority
+                </Link>
               </div>
             </div>
-
-            <div
-              className="surface"
-              style={{
-                padding: '1.25rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(var(--accent-rgb), 0.04))',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.05em' }}>⭐ Spotlight</span>
-                <h4 style={{ fontSize: '1.1rem', margin: '0.25rem 0 0.5rem', color: 'var(--text-primary)' }}>7-Day Launch Boost</h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                  7 days featured spotlight in homepage marquee &amp; search.
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>$12</span>
-                <a
-                  href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}&sku=featured_7d` : '/pricing'}
-                  style={{
-                    padding: '0.4rem 0.85rem',
-                    background: '#10b981',
-                    color: '#090d16',
-                    borderRadius: '6px',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    textDecoration: 'none',
-                  }}
+            <div className="submit-upsell-card submit-upsell-card--spotlight">
+              <span className="submit-upsell-kicker submit-upsell-kicker--green">Spotlight</span>
+              <h4>7-day launch boost</h4>
+              <p>Featured placement on homepage discovery and search for a week.</p>
+              <div className="submit-upsell-footer">
+                <span className="submit-upsell-price">$12</span>
+                <Link
+                  href={
+                    submittedId
+                      ? `/pricing?serverId=${encodeURIComponent(submittedId)}&sku=featured_7d`
+                      : '/pricing'
+                  }
+                  className="btn btn-primary btn-sm"
                 >
-                  Boost 7 Days →
-                </a>
+                  Boost 7 days
+                </Link>
               </div>
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+        <div className="submit-success-actions">
           {submittedId && (
             <>
-              <a
-                href={`/mcp/${submittedId}/claim`}
-                style={{
-                  padding: '0.65rem 1.25rem',
-                  background: 'var(--accent-color)',
-                  color: 'var(--bg-color)',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  fontSize: '0.9rem',
-                  textDecoration: 'none',
-                }}
-              >
-                Save claim link (after approval) →
-              </a>
-              <a
-                href={`/mcp/${submittedId}`}
-                style={{
-                  padding: '0.65rem 1.25rem',
-                  border: '1px solid var(--border-color)',
-                  background: 'rgba(255,255,255,0.05)',
-                  color: 'var(--text-primary)',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  textDecoration: 'none',
-                }}
-              >
+              <Link href={`/mcp/${submittedId}/claim`} className="btn btn-primary">
+                Open claim page
+              </Link>
+              <Link href={`/mcp/${submittedId}`} className="btn btn-secondary">
                 Preview listing
-              </a>
+              </Link>
             </>
           )}
-          <a
+          <Link
             href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}` : '/pricing'}
-            style={{
-              padding: '0.65rem 1.25rem',
-              border: '1px solid var(--border-color)',
-              background: 'rgba(255,255,255,0.05)',
-              color: 'var(--text-primary)',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              textDecoration: 'none',
-            }}
+            className="btn btn-secondary"
           >
-            All Premium Plans →
-          </a>
+            All plans
+          </Link>
+          <Link href="/dashboard" className="btn btn-secondary">
+            Go to dashboard
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      {/* AI Agent Automated Submission Prompt Banner */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
-          border: '1px solid rgba(var(--accent-rgb), 0.35)',
-          borderRadius: '14px',
-          padding: '1.25rem 1.5rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.75rem',
-        }}
-      >
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.975rem' }}>
-            <span style={{ fontSize: '1.35rem' }}>🤖</span>
-            <span>Automate Submission with AI Agents</span>
-          </div>
-          <button
-            type="button"
-            onClick={copyAgentPrompt}
-            style={{
-              background: 'var(--accent-color)',
-              color: 'var(--bg-color)',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '0.5rem 0.95rem',
-              fontSize: '0.825rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.25)',
-              transition: 'transform 0.15s ease',
-            }}
-          >
-            📋 Copy Agent Prompt
-          </button>
+    <div className="submit-flow">
+      <div className="submit-agent-banner">
+        <div className="submit-agent-banner-text">
+          <span className="submit-agent-banner-kicker">Optional · for AI agents</span>
+          <p>
+            Have Cursor, Claude Code, or Windsurf submit for you — copy the prompt and run it inside
+            your MCP repo.
+          </p>
         </div>
-        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-          Paste this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your MCP project repository. Your AI agent will parse your repository metadata and submit automatically!
-        </p>
+        <Button type="button" variant="secondary" size="sm" onClick={copyAgentPrompt}>
+          Copy agent prompt
+        </Button>
       </div>
 
-      {/* Visual Step Indicator */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem',
-          padding: '0.85rem 1.15rem',
-          borderRadius: '12px',
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid var(--border-color)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={stepNumberStyle}>1</span>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>URL &amp; Auto-Prefill</span>
-        </div>
-        <span style={{ color: 'var(--border-color)', fontSize: '0.85rem' }}>→</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={stepNumberStyle}>2</span>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Listing Details</span>
-        </div>
-        <span style={{ color: 'var(--border-color)', fontSize: '0.85rem' }}>→</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={stepNumberStyle}>3</span>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Security &amp; Submit</span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-        {/* Step 1 Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={sectionBadgeStyle}>Step 1</span>
-            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Primary Repository or Website URL</h2>
+      <nav className="submit-stepper" aria-label="Submission steps">
+        {(
+          [
+            { n: 1 as FormStep, label: 'URL' },
+            { n: 2 as FormStep, label: 'Details' },
+            { n: 3 as FormStep, label: 'Submit' },
+          ] as const
+        ).map((s, i, arr) => (
+          <div key={s.n} className="submit-stepper-item-wrap">
+            <div
+              className={`submit-stepper-item${activeStep === s.n ? ' is-current' : ''}${
+                activeStep > s.n ? ' is-done' : ''
+              }`}
+            >
+              <span className="submit-stepper-num" aria-hidden="true">
+                {activeStep > s.n ? '✓' : s.n}
+              </span>
+              <span className="submit-stepper-label">{s.label}</span>
+            </div>
+            {i < arr.length - 1 && <span className="submit-stepper-connector" aria-hidden="true" />}
           </div>
+        ))}
+      </nav>
+
+      <form onSubmit={handleSubmit} className="submit-form">
+        <section
+          className={`submit-section${activeStep === 1 ? ' is-active' : ''}`}
+          aria-labelledby="submit-step-1"
+        >
+          <header className="submit-section-header">
+            <span className="submit-section-badge">Step 1</span>
+            <h2 id="submit-step-1">Repository or website</h2>
+            <p>Paste a GitHub URL or product site — we&apos;ll pull what we can automatically.</p>
+          </header>
+
           <Input
             name="url"
-            label="GitHub Repository or Website URL"
-            placeholder="https://github.com/username/repo or https://yoursite.com"
+            label="GitHub repository or website URL"
+            placeholder="https://github.com/username/repo"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            autoComplete="url"
           />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', marginTop: '-0.25rem' }}>
+
+          <div className="submit-prefill-row">
             <Button
               type="button"
               variant="secondary"
-              disabled={prefillLoading}
+              disabled={prefillLoading || (!url.trim() && !websiteUrl.trim())}
               onClick={() => runPrefill(url || websiteUrl)}
-              style={{ fontSize: '0.85rem', padding: '0.45rem 0.95rem' }}
             >
-              ⚡ {prefillLoading ? 'Fetching Metadata…' : 'Auto-Prefill Form'}
+              {prefillLoading ? 'Fetching metadata…' : 'Auto-prefill form'}
             </Button>
-            <span style={{ fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
-              Automatically populates title, description, category, and website from GitHub or page metadata.
-            </span>
+            <p className="submit-hint">
+              Fills name, description, category, and website from GitHub or page meta tags.
+            </p>
           </div>
-        </div>
+        </section>
 
-        {/* Step 2 Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={sectionBadgeStyle}>Step 2</span>
-            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Details &amp; Contact</h2>
-          </div>
+        <section
+          className={`submit-section${activeStep === 2 ? ' is-active' : ''}`}
+          aria-labelledby="submit-step-2"
+        >
+          <header className="submit-section-header">
+            <span className="submit-section-badge">Step 2</span>
+            <h2 id="submit-step-2">Listing details</h2>
+            <p>How your server appears in the directory and where we send status updates.</p>
+          </header>
 
-          <Input name="name" label="Server Name" placeholder="e.g., GitHub MCP" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input
+            name="name"
+            label="Server name"
+            placeholder="e.g. GitHub MCP"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div className="form-field">
             <Input
               name="email"
-              label="Contact Email Address"
+              label="Contact email"
               placeholder="you@example.com"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
-            <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
-              We&apos;ll email you about review status, direct claim link, and status updates.
-            </p>
+            <p className="submit-hint">Used for review status and your claim link — never sold.</p>
           </div>
 
-          <div>
+          <div className="form-field">
             <Input
               name="websiteUrl"
-              label="Website URL (optional if GitHub repository is the main link)"
+              label="Website URL (optional)"
               placeholder="https://yoursite.com"
               type="url"
               value={websiteUrl}
               onChange={(e) => setWebsiteUrl(e.target.value)}
             />
-            <p style={{ margin: '0.35rem 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Free listings show website links with <strong>nofollow</strong>. Place a badge or upgrade to Premium for a <strong>dofollow</strong> reciprocal link.
+            <p className="submit-hint">
+              Free listings use <strong>nofollow</strong> on website links. Verify + badge (or
+              Premium) unlocks a <strong>dofollow</strong> reciprocal link.
             </p>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Short Description</label>
+          <div className="form-field">
+            <label htmlFor="submit-description" className="form-label">
+              Short description
+            </label>
             <textarea
+              id="submit-description"
               name="description"
-              className="form-input"
+              className="form-input submit-textarea"
               rows={3}
-              placeholder="What tools or capabilities this server exposes to LLMs and agents..."
+              placeholder="What tools or capabilities this server exposes to AI agents…"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label htmlFor="submit-category" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+          <div className="form-field">
+            <label htmlFor="submit-category" className="form-label">
               Category
             </label>
             <select
@@ -584,51 +499,207 @@ export function SubmitForm() {
               ))}
             </select>
           </div>
-        </div>
 
-        {/* Step 3 Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={sectionBadgeStyle}>Step 3</span>
-            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Security Check &amp; Submission</h2>
-          </div>
+          <details className="submit-optional-details">
+            <summary>Optional details (pricing, auth, license, compatible clients…)</summary>
+            <div className="submit-optional-body">
+              <p className="submit-hint">
+                None of this is required — the more you fill in, the easier your listing is to find
+                and trust.
+              </p>
+
+              <div className="form-field">
+                <Input
+                  name="tagsInputRaw"
+                  label="Tags (comma-separated, up to 5)"
+                  placeholder="e.g. sql, database, read-only"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                />
+              </div>
+
+              <div className="submit-optional-grid">
+                <div className="form-field">
+                  <label htmlFor="submit-pricing" className="form-label">
+                    Pricing
+                  </label>
+                  <select
+                    id="submit-pricing"
+                    className="form-input"
+                    value={pricingModel}
+                    onChange={(e) => setPricingModel(e.target.value)}
+                  >
+                    <option value="">Not specified</option>
+                    {PRICING_MODELS.map((p) => (
+                      <option key={p} value={p}>
+                        {PRICING_MODEL_LABELS[p]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="submit-auth" className="form-label">
+                    Auth required
+                  </label>
+                  <select
+                    id="submit-auth"
+                    className="form-input"
+                    value={authType}
+                    onChange={(e) => setAuthType(e.target.value)}
+                  >
+                    <option value="">Not specified</option>
+                    {AUTH_TYPES.map((a) => (
+                      <option key={a} value={a}>
+                        {AUTH_TYPE_LABELS[a]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="submit-maintenance" className="form-label">
+                    Maintenance status
+                  </label>
+                  <select
+                    id="submit-maintenance"
+                    className="form-input"
+                    value={maintenanceStatus}
+                    onChange={(e) => setMaintenanceStatus(e.target.value)}
+                  >
+                    <option value="">Not specified</option>
+                    {MAINTENANCE_STATUSES.map((m) => (
+                      <option key={m} value={m}>
+                        {MAINTENANCE_STATUS_LABELS[m]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <Input
+                    name="licenseInputRaw"
+                    label="License"
+                    placeholder="e.g. MIT"
+                    value={license}
+                    onChange={(e) => setLicense(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {pricingModel && pricingModel !== 'free' && (
+                <div className="form-field">
+                  <Input
+                    name="pricingNotesInputRaw"
+                    label="Pricing notes (optional)"
+                    placeholder="e.g. Free tier: 100 req/day, then $0.01/req"
+                    value={pricingNotes}
+                    onChange={(e) => setPricingNotes(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div className="form-field">
+                <Input
+                  name="supportUrlInputRaw"
+                  label="Support / community link (optional)"
+                  placeholder="https://discord.gg/... or a docs URL"
+                  type="url"
+                  value={supportUrl}
+                  onChange={(e) => setSupportUrl(e.target.value)}
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">Compatible clients</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {MCP_CLIENTS.map((c) => {
+                    const checked = compatibleClients.includes(c.slug);
+                    return (
+                      <label
+                        key={c.slug}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          fontSize: '0.8rem',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          padding: '0.3rem 0.6rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setCompatibleClients((prev) =>
+                              e.target.checked ? [...prev, c.slug] : prev.filter((s) => s !== c.slug)
+                            )
+                          }
+                        />
+                        {c.name}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="submit-optional-grid">
+                <div className="form-field">
+                  <Input
+                    name="suggestedInstallCommandInputRaw"
+                    label="Suggested install command (optional)"
+                    placeholder="e.g. npx"
+                    value={suggestedInstallCommand}
+                    onChange={(e) => setSuggestedInstallCommand(e.target.value)}
+                  />
+                </div>
+                <div className="form-field">
+                  <Input
+                    name="suggestedInstallArgsInputRaw"
+                    label="Suggested install args (space-separated)"
+                    placeholder="e.g. -y @scope/package"
+                    value={suggestedInstallArgsInput}
+                    onChange={(e) => setSuggestedInstallArgsInput(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="submit-hint">
+                Only used as a hint if we can&apos;t confidently detect an install command
+                automatically — reviewers can still correct it.
+              </p>
+            </div>
+          </details>
+        </section>
+
+        <section
+          className={`submit-section${activeStep === 3 ? ' is-active' : ''}`}
+          aria-labelledby="submit-step-3"
+        >
+          <header className="submit-section-header">
+            <span className="submit-section-badge">Step 3</span>
+            <h2 id="submit-step-3">Security &amp; submit</h2>
+            <p>One quick check, then you&apos;re in the queue. Listing is free.</p>
+          </header>
 
           <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />
 
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={status === 'loading'}
-            style={{ marginTop: '0.5rem', padding: '0.65rem 1.5rem', fontSize: '0.95rem', alignSelf: 'flex-start' }}
-          >
-            {status === 'loading' ? 'Submitting Server...' : 'Submit Server to AllMCPs →'}
-          </Button>
-        </div>
+          <div className="submit-form-footer">
+            <Button variant="primary" type="submit" disabled={status === 'loading'} size="lg">
+              {status === 'loading' ? 'Submitting…' : 'Submit to AllMCPs'}
+            </Button>
+            <p className="submit-hint">
+              By submitting you agree to our{' '}
+              <Link href="/terms" className="submit-inline-link">
+                Terms
+              </Link>
+              . Paid boosts are optional after submit.
+            </p>
+          </div>
+        </section>
       </form>
     </div>
   );
 }
-
-const stepNumberStyle: React.CSSProperties = {
-  width: 22,
-  height: 22,
-  borderRadius: '50%',
-  background: 'rgba(var(--accent-rgb), 0.12)',
-  border: '1px solid rgba(var(--accent-rgb), 0.3)',
-  color: 'var(--accent-color)',
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
-const sectionBadgeStyle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  padding: '0.2rem 0.5rem',
-  borderRadius: '6px',
-  background: 'rgba(var(--accent-rgb), 0.1)',
-  border: '1px solid rgba(var(--accent-rgb), 0.25)',
-  color: 'var(--accent-color)',
-};

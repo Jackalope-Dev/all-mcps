@@ -197,45 +197,34 @@ export default function DashboardClient({
 
   if (servers.length === 0) {
     return (
-      <div style={emptyStateCardStyle}>
-        <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🚀</div>
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-          Welcome to Your Developer Workspace
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: 520, margin: '0 auto 2rem', lineHeight: 1.6 }}>
-          Claim ownership of your Model Context Protocol servers to access detailed LLM usage analytics, earn reciprocal dofollow SEO backlinks, and boost listing discovery.
-        </p>
-        <ul role="list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', maxWidth: 840, margin: '0 auto', listStyle: 'none', padding: 0 }}>
-          <li style={onboardingActionCardStyle}>
-            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>➕</div>
-            <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Submit a New Server</h3>
-            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
-              List a new MCP server repository or product website in our directory.
-            </p>
-            <Link href="/submit" className="btn btn-primary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
-              + Submit Server
+      <div className="dashboard-empty">
+        <div className="dashboard-empty-hero">
+          <h2>No listings yet</h2>
+          <p>
+            Submit a new MCP server or claim one you already published. Once claimed, you get analytics,
+            logo uploads, and free dofollow backlink setup.
+          </p>
+        </div>
+        <ul className="dashboard-empty-grid" role="list">
+          <li className="dashboard-empty-card">
+            <h3>Submit a server</h3>
+            <p>List a new repository or product site for free review.</p>
+            <Link href="/submit" className="btn btn-primary">
+              + Submit server
             </Link>
           </li>
-
-          <li style={onboardingActionCardStyle}>
-            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔎</div>
-            <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Claim Existing Server</h3>
-            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
-              Find your server in the directory and claim ownership via GitHub README or DNS.
-            </p>
-            <Link href="/browse" className="btn btn-secondary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
-              Browse &amp; Claim →
+          <li className="dashboard-empty-card">
+            <h3>Claim an existing listing</h3>
+            <p>Find your server in the directory and verify ownership via badge or DNS.</p>
+            <Link href="/browse" className="btn btn-secondary">
+              Browse directory
             </Link>
           </li>
-
-          <li style={onboardingActionCardStyle}>
-            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🛡️</div>
-            <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>Embed SVG Badge</h3>
-            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
-              Generate dynamic SVG verification badges for your GitHub README or site.
-            </p>
-            <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
-              Badge Generator →
+          <li className="dashboard-empty-card">
+            <h3>Get a badge</h3>
+            <p>Generate README or site badges for verification and SEO.</p>
+            <Link href="/badge-generator" className="btn btn-secondary">
+              Badge generator
             </Link>
           </li>
         </ul>
@@ -246,56 +235,54 @@ export default function DashboardClient({
   const needsBacklinkHelp = servers.some((s) => !s.isPremium && !s.reciprocalBadgeOk);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      {/* Aggregate Metrics Overview Header */}
-      <ul role="list" style={{ ...globalSummaryContainerStyle, listStyle: 'none', margin: 0, padding: 0 }}>
-        <li style={summaryMetricCardStyle}>
-          <span style={summaryLabelStyle}>Claimed Listings</span>
-          <span style={summaryValueStyle}>{servers.length}</span>
+    <div className="dashboard-workspace">
+      <ul className="dashboard-metrics" role="list" aria-label="Portfolio summary">
+        <li className="dashboard-metric">
+          <span className="dashboard-metric-label">Listings</span>
+          <span className="dashboard-metric-value">{servers.length}</span>
         </li>
-        <li style={summaryMetricCardStyle}>
-          <span style={summaryLabelStyle}>Total Views</span>
-          <span style={summaryValueStyle}>{totalViews.toLocaleString()}</span>
+        <li className="dashboard-metric">
+          <span className="dashboard-metric-label">Views</span>
+          <span className="dashboard-metric-value">{totalViews.toLocaleString()}</span>
         </li>
-        <li style={summaryMetricCardStyle}>
-          <span style={summaryLabelStyle}>Total Installs</span>
-          <span style={summaryValueStyle}>{totalInstalls.toLocaleString()}</span>
+        <li className="dashboard-metric">
+          <span className="dashboard-metric-label">Installs</span>
+          <span className="dashboard-metric-value">{totalInstalls.toLocaleString()}</span>
         </li>
-        <li style={summaryMetricCardStyle}>
-          <span style={summaryLabelStyle}>Total Upvotes</span>
-          <span style={summaryValueStyle}>{totalUpvotes.toLocaleString()}</span>
+        <li className="dashboard-metric">
+          <span className="dashboard-metric-label">Upvotes</span>
+          <span className="dashboard-metric-value">{totalUpvotes.toLocaleString()}</span>
         </li>
-        <li style={summaryMetricCardStyle}>
-          <span style={summaryLabelStyle}>API Hits (30d)</span>
-          <span style={{ ...summaryValueStyle, color: 'var(--accent-color)' }}>{totalApiHits.toLocaleString()}</span>
+        <li className="dashboard-metric dashboard-metric--accent">
+          <span className="dashboard-metric-label">API hits (30d)</span>
+          <span className="dashboard-metric-value">{totalApiHits.toLocaleString()}</span>
         </li>
       </ul>
 
-      {/* Global stats / alerts */}
       {isPremium && (
-        <div style={premiumBannerStyle}>
-          <Zap size={16} style={{ color: 'var(--accent-color)' }} />
-          <span style={{ fontWeight: 600, color: 'var(--accent-color)' }}>Premium Analytics Active</span>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            — Your listings are tracked across all directory surfaces &amp; LLM agents
-          </span>
+        <div className="dashboard-banner dashboard-banner--premium" role="status">
+          <Zap size={16} aria-hidden="true" />
+          <div>
+            <strong>Premium analytics active</strong>
+            <span> — full tracking across directory surfaces and agent traffic.</span>
+          </div>
         </div>
       )}
 
       {needsBacklinkHelp && (
-        <div style={backlinkAlertBannerStyle}>
-          <p style={{ fontWeight: 700, color: '#34d399', marginBottom: '0.35rem', fontSize: '0.95rem' }}>
-            Free dofollow backlink available
-          </p>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
-            For each free listing below: attach a website → verify it → place a dofollow AllMCPs badge.
-            We recheck that the badge stays live. Premium listings get dofollow without a badge.
-          </p>
+        <div className="dashboard-banner dashboard-banner--info" role="status">
+          <ShieldCheck size={18} aria-hidden="true" />
+          <div>
+            <strong>Free dofollow available</strong>
+            <p>
+              On each listing, finish setup: website → verify ownership → place the AllMCPs badge.
+              Premium includes dofollow without a badge.
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Servers list with tabbed sections */}
-      <ul role="list" style={{ display: 'contents', listStyle: 'none', margin: 0, padding: 0 }}>
+      <ul className="dashboard-listing-list" role="list">
       {servers.map((server) => {
         const pending = parsePendingRevision(server.pendingRevision);
         const activeTab = getActiveTab(server.id);
@@ -308,64 +295,78 @@ export default function DashboardClient({
         const hasActiveBoost = !server.isPremium && hasAnalyticsAccess;
 
         return (
-          <li key={server.id} id={`server-${server.id}`} style={cardStyle}>
-            {/* Header row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <li key={server.id} id={`server-${server.id}`} className="dashboard-listing-card">
+            <div className="dashboard-listing-header">
+              <div className="dashboard-listing-identity">
                 {server.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={server.logoUrl}
-                    alt={`${server.name} logo`}
-                    width={44}
-                    height={44}
-                    style={{ borderRadius: 10, flexShrink: 0, objectFit: 'cover' }}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="dashboard-listing-logo"
                   />
                 ) : (
-                  <div style={logoPlaceholderStyle}>
+                  <div className="dashboard-listing-logo-fallback" aria-hidden="true">
                     {server.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{server.name}</h2>
-                    <span style={categoryBadgeStyle}>{server.category}</span>
+                <div className="dashboard-listing-identity-text">
+                  <div className="dashboard-listing-title-row">
+                    <h2>{server.name}</h2>
+                    <span className="dashboard-pill">{server.category}</span>
                     {rankInfo && (
-                      <span style={rankBadgeStyle}>
-                        🏆 Rank #{rankInfo.rank} of {rankInfo.totalInCategory}
+                      <span className="dashboard-pill dashboard-pill--rank">
+                        #{rankInfo.rank} of {rankInfo.totalInCategory}
                       </span>
                     )}
-                    {server.isPremium && <span style={premiumBadgeStyle}>★ Premium</span>}
-                    {pending && <span style={pendingBadgeStyle}>Awaiting Review</span>}
+                    {server.isPremium && <span className="dashboard-pill dashboard-pill--premium">Premium</span>}
+                    {pending && <span className="dashboard-pill dashboard-pill--warn">Edit pending</span>}
                     {server.featuredUntil && new Date(server.featuredUntil).getTime() > Date.now() && (
-                      <span style={boostBadgeStyle}>
-                        ⚡ Boosted until {new Date(server.featuredUntil).toLocaleDateString()}
+                      <span className="dashboard-pill dashboard-pill--boost">
+                        Boosted · {new Date(server.featuredUntil).toLocaleDateString()}
                       </span>
                     )}
                   </div>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    ID: <code style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{server.id}</code>
+                  <p className="dashboard-listing-id">
+                    <code>{server.id}</code>
+                    <span className="dashboard-listing-quick-stats">
+                      {(server.views || 0).toLocaleString()} views · {(server.copies || 0).toLocaleString()} installs
+                    </span>
                   </p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <label
-                  className="btn btn-secondary"
-                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              <div className="dashboard-listing-actions">
+                <Link href={`/mcp/${server.id}`} className="btn btn-secondary btn-sm">
+                  View
+                </Link>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTab(server.id, 'edit')}>
+                  <Edit3 size={14} aria-hidden="true" /> Edit
+                </button>
+                <Link href={`/mcp/${server.id}/claim`} className="btn btn-secondary btn-sm">
+                  Verify
+                </Link>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm dashboard-boost-btn"
+                  onClick={() => setTab(server.id, 'boost')}
                 >
-                  <ImageIcon size={14} />
+                  <Sparkles size={14} aria-hidden="true" /> Boost
+                </button>
+                <label className="btn btn-secondary btn-sm dashboard-logo-upload">
+                  <ImageIcon size={14} aria-hidden="true" />
                   {uploadingLogoId === server.id
                     ? 'Uploading…'
                     : server.pendingLogoKey
-                    ? 'Logo pending'
-                    : server.logoUrl
-                    ? 'Replace logo'
-                    : 'Upload logo'}
+                      ? 'Logo pending'
+                      : server.logoUrl
+                        ? 'Logo'
+                        : 'Add logo'}
                   <input
                     type="file"
                     accept="image/png,image/jpeg"
-                    style={{ display: 'none' }}
                     disabled={uploadingLogoId === server.id}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -374,113 +375,62 @@ export default function DashboardClient({
                     }}
                   />
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setTab(server.id, 'boost')}
-                  className="btn btn-secondary"
-                  style={{
-                    padding: '0.4rem 0.75rem',
-                    fontSize: '0.8rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    color: '#F59E0B',
-                    borderColor: 'rgba(245, 158, 11, 0.3)',
-                  }}
-                >
-                  <Sparkles size={14} /> Boost
-                </button>
-                <Link
-                  href={`/mcp/${server.id}`}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
-                >
-                  View listing →
-                </Link>
-                <Link
-                  href={`/mcp/${server.id}/claim`}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
-                >
-                  Website &amp; Verification
-                </Link>
               </div>
             </div>
 
-            {/* Per-listing readiness checklist — claim / SEO / convert path */}
-            <ul className="listing-checklist" aria-label={`Checklist for ${server.name}`}>
-              <li className={`listing-checklist-item ${server.logoUrl || server.pendingLogoKey ? 'is-done' : 'is-todo'}`}>
-                {server.logoUrl || server.pendingLogoKey ? '✓' : '○'}{' '}
-                {server.logoUrl ? 'Logo live' : server.pendingLogoKey ? 'Logo pending review' : 'Add a logo'}
-              </li>
-              <li className={`listing-checklist-item ${server.websiteUrl ? 'is-done' : 'is-todo'}`}>
-                {server.websiteUrl ? '✓' : '○'}{' '}
-                {server.websiteUrl ? 'Website set' : 'Add website URL'}
-              </li>
-              <li className={`listing-checklist-item ${server.websiteVerified ? 'is-done' : 'is-todo'}`}>
-                {server.websiteVerified ? '✓' : '○'}{' '}
-                {server.websiteVerified ? (
-                  'Website verified'
-                ) : (
-                  <a href={`/mcp/${server.id}/claim`}>Verify website</a>
-                )}
-              </li>
-              <li className={`listing-checklist-item ${server.reciprocalBadgeOk || server.isPremium ? 'is-done' : 'is-todo'}`}>
-                {server.reciprocalBadgeOk || server.isPremium ? '✓' : '○'}{' '}
-                {server.isPremium
-                  ? 'Premium (dofollow included)'
-                  : server.reciprocalBadgeOk
-                    ? 'Badge live (dofollow)'
-                    : (
-                      <a href="/badge-generator">Place AllMCPs badge</a>
-                    )}
-              </li>
-              <li className={`listing-checklist-item ${server.status === 'active' ? 'is-done' : 'is-todo'}`}>
-                {server.status === 'active' ? '✓' : '○'} Listing {server.status || 'status'}
-              </li>
-            </ul>
+            <ListingSetupSteps
+              server={server}
+              onEdit={() => startEdit(server)}
+              onUploadClick={() => {
+                const card = document.getElementById(`server-${server.id}`);
+                const input = card?.querySelector<HTMLInputElement>('input[type="file"]');
+                input?.click();
+              }}
+            />
 
-            {/* Tab Navigation Controls */}
-            <div style={tabContainerStyle}>
+            <div className="dashboard-tabs" role="tablist" aria-label={`Sections for ${server.name}`}>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'overview'}
+                className={`dashboard-tab${activeTab === 'overview' ? ' is-active' : ''}`}
                 onClick={() => setTab(server.id, 'overview')}
-                style={getTabButtonStyle(activeTab === 'overview')}
               >
-                <BarChart3 size={15} />
-                Overview &amp; Analytics
+                <BarChart3 size={15} aria-hidden="true" />
+                Overview
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'seo'}
+                className={`dashboard-tab${activeTab === 'seo' ? ' is-active' : ''}`}
                 onClick={() => setTab(server.id, 'seo')}
-                style={getTabButtonStyle(activeTab === 'seo')}
               >
-                <Globe size={15} />
-                SEO &amp; Dofollow Status
+                <Globe size={15} aria-hidden="true" />
+                SEO
                 {!server.isPremium && !server.reciprocalBadgeOk && (
-                  <span style={tabBadgeAlertStyle} />
+                  <span className="dashboard-tab-dot" aria-label="Action needed" />
                 )}
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'boost'}
+                className={`dashboard-tab dashboard-tab--boost${activeTab === 'boost' ? ' is-active' : ''}`}
                 onClick={() => setTab(server.id, 'boost')}
-                style={{
-                  ...getTabButtonStyle(activeTab === 'boost'),
-                  color: activeTab === 'boost' ? '#FACC15' : '#F59E0B',
-                  background: activeTab === 'boost' ? 'rgba(250, 204, 21, 0.15)' : 'rgba(245, 158, 11, 0.08)',
-                  fontWeight: 700,
-                }}
               >
-                <Sparkles size={15} style={{ color: activeTab === 'boost' ? '#FACC15' : '#F59E0B' }} />
-                <span style={{ color: activeTab === 'boost' ? '#FACC15' : '#F59E0B' }}>Boost &amp; Sponsorship</span>
+                <Sparkles size={15} aria-hidden="true" />
+                Boost
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'edit'}
+                className={`dashboard-tab${activeTab === 'edit' ? ' is-active' : ''}`}
                 onClick={() => setTab(server.id, 'edit')}
-                style={getTabButtonStyle(activeTab === 'edit')}
               >
-                <Edit3 size={15} />
-                {pending ? 'Edit pending draft' : 'Edit details'}
+                <Edit3 size={15} aria-hidden="true" />
+                {pending ? 'Pending edit' : 'Edit'}
               </button>
             </div>
 
@@ -569,8 +519,8 @@ export default function DashboardClient({
                     </span>
                   </div>
                   {server.featuredUntil && new Date(server.featuredUntil).getTime() > Date.now() && (
-                    <span style={boostBadgeStyle}>
-                      ★ Active Boost until {new Date(server.featuredUntil).toLocaleDateString()}
+                    <span className="dashboard-pill dashboard-pill--boost">
+                      Active until {new Date(server.featuredUntil).toLocaleDateString()}
                     </span>
                   )}
                 </div>
@@ -657,6 +607,195 @@ export default function DashboardClient({
       })}
       </ul>
     </div>
+  );
+}
+
+type SetupStep = {
+  id: string;
+  done: boolean;
+  pending?: boolean;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  href?: string;
+};
+
+/**
+ * Clean setup path for each listing: progress bar + numbered steps with CTAs.
+ * Replaces the old green-text checklist wall.
+ */
+function ListingSetupSteps({
+  server,
+  onEdit,
+  onUploadClick,
+}: {
+  server: Server;
+  onEdit: () => void;
+  onUploadClick: () => void;
+}) {
+  const steps: SetupStep[] = [
+    {
+      id: 'logo',
+      done: Boolean(server.logoUrl),
+      pending: Boolean(server.pendingLogoKey) && !server.logoUrl,
+      title: server.logoUrl
+        ? 'Logo live'
+        : server.pendingLogoKey
+          ? 'Logo pending review'
+          : 'Add a logo',
+      description: server.logoUrl
+        ? 'Your listing card shows a custom logo in the directory.'
+        : server.pendingLogoKey
+          ? 'We received your upload — it goes live after admin review.'
+          : 'A logo makes your card stand out in browse and search results.',
+      actionLabel: server.logoUrl || server.pendingLogoKey ? undefined : 'Upload logo',
+      onAction: server.logoUrl || server.pendingLogoKey ? undefined : onUploadClick,
+    },
+    {
+      id: 'website',
+      done: Boolean(server.websiteUrl?.trim()),
+      title: server.websiteUrl?.trim() ? 'Website URL set' : 'Add your website URL',
+      description: server.websiteUrl?.trim()
+        ? 'Visitors can open your product site from the listing.'
+        : 'Required for ownership verification and the free dofollow backlink.',
+      actionLabel: server.websiteUrl?.trim() ? undefined : 'Edit listing',
+      onAction: server.websiteUrl?.trim() ? undefined : onEdit,
+    },
+    {
+      id: 'verify',
+      done: Boolean(server.websiteVerified),
+      title: server.websiteVerified ? 'Website verified' : 'Verify website ownership',
+      description: server.websiteVerified
+        ? 'Ownership is confirmed — badge and DNS checks passed.'
+        : 'Prove you control the site via badge, meta tag, or DNS TXT.',
+      actionLabel: server.websiteVerified ? undefined : 'Verify now',
+      href: server.websiteVerified ? undefined : `/mcp/${server.id}/claim`,
+    },
+    {
+      id: 'badge',
+      done: Boolean(server.reciprocalBadgeOk || server.isPremium),
+      title: server.isPremium
+        ? 'Dofollow included (Premium)'
+        : server.reciprocalBadgeOk
+          ? 'AllMCPs badge live'
+          : 'Place the AllMCPs badge',
+      description: server.isPremium
+        ? 'Premium listings get a dofollow website link without a reciprocal badge.'
+        : server.reciprocalBadgeOk
+          ? 'We detected your badge — your website link is dofollow.'
+          : 'Embed the free dofollow badge on your site to unlock SEO value.',
+      actionLabel:
+        server.reciprocalBadgeOk || server.isPremium ? undefined : 'Get badge code',
+      href: server.reciprocalBadgeOk || server.isPremium ? undefined : '/badge-generator',
+    },
+    {
+      id: 'status',
+      done: server.status === 'active',
+      title:
+        server.status === 'active'
+          ? 'Listing is live'
+          : `Listing status: ${server.status || 'unknown'}`,
+      description:
+        server.status === 'active'
+          ? 'Your server is published and indexable in the directory.'
+          : 'Only active listings appear in search and the public directory.',
+    },
+  ];
+
+  const doneCount = steps.filter((s) => s.done).length;
+  const total = steps.length;
+  const allDone = doneCount === total;
+  const progressPct = Math.round((doneCount / total) * 100);
+  const nextStep = steps.find((s) => !s.done && !s.pending) || steps.find((s) => !s.done);
+
+  return (
+    <section
+      className={`listing-setup${allDone ? ' listing-setup--complete' : ''}`}
+      aria-label={`Setup progress for ${server.name}`}
+    >
+      <div className="listing-setup-header">
+        <div className="listing-setup-header-text">
+          <h3 className="listing-setup-title">
+            {allDone ? 'Listing setup complete' : 'Finish listing setup'}
+          </h3>
+          <p className="listing-setup-subtitle">
+            {allDone
+              ? 'Everything looks good — keep an eye on analytics and boosts below.'
+              : nextStep
+                ? `Next: ${nextStep.title}`
+                : 'Complete the remaining steps to unlock SEO and trust signals.'}
+          </p>
+        </div>
+        <div className="listing-setup-progress-meta" aria-hidden={false}>
+          <span className="listing-setup-count">
+            {doneCount}/{total}
+          </span>
+          <span className="listing-setup-count-label">done</span>
+        </div>
+      </div>
+
+      <div
+        className="listing-setup-progress-track"
+        role="progressbar"
+        aria-valuenow={doneCount}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-label={`${doneCount} of ${total} setup steps complete`}
+      >
+        <div className="listing-setup-progress-fill" style={{ width: `${progressPct}%` }} />
+      </div>
+
+      <ol className="listing-setup-steps">
+        {steps.map((step, index) => {
+          const state = step.done ? 'done' : step.pending ? 'pending' : 'todo';
+          return (
+            <li key={step.id} className={`listing-setup-step listing-setup-step--${state}`}>
+              <div className="listing-setup-step-marker" aria-hidden="true">
+                {step.done ? (
+                  <CheckCircle2 size={18} strokeWidth={2.25} />
+                ) : step.pending ? (
+                  <span className="listing-setup-step-num listing-setup-step-num--pending">…</span>
+                ) : (
+                  <span className="listing-setup-step-num">{index + 1}</span>
+                )}
+              </div>
+              <div className="listing-setup-step-body">
+                <div className="listing-setup-step-title-row">
+                  <span className="listing-setup-step-title">{step.title}</span>
+                  {step.done && (
+                    <span className="listing-setup-step-badge listing-setup-step-badge--done">Done</span>
+                  )}
+                  {step.pending && (
+                    <span className="listing-setup-step-badge listing-setup-step-badge--pending">
+                      Pending
+                    </span>
+                  )}
+                </div>
+                <p className="listing-setup-step-desc">{step.description}</p>
+                {(step.href || step.onAction) && step.actionLabel && (
+                  <div className="listing-setup-step-actions">
+                    {step.href ? (
+                      <Link href={step.href} className="btn btn-primary listing-setup-step-cta">
+                        {step.actionLabel}
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-primary listing-setup-step-cta"
+                        onClick={step.onAction}
+                      >
+                        {step.actionLabel}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 
@@ -1410,8 +1549,8 @@ const premiumBannerStyle: CSSProperties = {
 const backlinkAlertBannerStyle: CSSProperties = {
   padding: '1rem 1.15rem',
   borderRadius: 12,
-  border: '1px solid rgba(16,185,129,0.35)',
-  background: 'rgba(16,185,129,0.08)',
+  border: '1px solid color-mix(in srgb, var(--accent-color) 30%, var(--border-color))',
+  background: 'color-mix(in srgb, var(--accent-color) 8%, var(--bg-elevated))',
 };
 
 const backlinkActiveContainerStyle: CSSProperties = {

@@ -335,7 +335,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main id="main-content" tabIndex={-1} className="container page-shell" style={{ paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-16)' }}>
+      <main className="container page-shell" style={{ paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-16)' }}>
       <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
         <ol className="breadcrumb">
           <li><Link href="/">Home</Link></li>

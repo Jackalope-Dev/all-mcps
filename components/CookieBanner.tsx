@@ -46,7 +46,6 @@ function isUserInEU(countryProp?: string): boolean {
     return EU_COUNTRIES.has(countryProp.toUpperCase());
   }
 
-  // Client-side fallback check (Timezone & Navigator language)
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
     if (
@@ -59,7 +58,7 @@ function isUserInEU(countryProp?: string): boolean {
     ) {
       return true;
     }
-  } catch (e) {
+  } catch {
     // Ignore error
   }
 
@@ -100,14 +99,11 @@ export function CookieBanner({ country }: { country?: string }) {
       return;
     }
 
-    // No consent choice saved yet
     const inEU = isUserInEU(country);
 
     if (inEU) {
-      // Prompt EU users for consent
       setShowBanner(true);
     } else {
-      // Non-EU users default to granted
       setStoredConsent('granted');
       grantAnalyticsConsent();
     }
@@ -131,76 +127,21 @@ export function CookieBanner({ country }: { country?: string }) {
     <div
       role="region"
       aria-label="Cookie consent banner"
-      style={{
-        position: 'fixed',
-        bottom: '1.25rem',
-        right: '1.25rem',
-        maxWidth: '420px',
-        width: 'calc(100vw - 2.5rem)',
-        zIndex: 9999,
-        background: 'var(--bg-elevated)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        border: '1px solid var(--border-strong)',
-        borderRadius: '12px',
-        padding: '1.25rem',
-        boxShadow: 'var(--shadow-md)',
-        color: 'var(--text-primary)',
-        fontFamily: 'var(--font-sans, system-ui, sans-serif)',
-        fontSize: '0.875rem',
-        lineHeight: '1.4',
-        animation: 'fadeInUp 0.3s ease-out',
-      }}
+      className="cookie-banner"
     >
-      <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <span>🍪 Cookie Preferences</span>
-      </div>
-      <p style={{ color: 'var(--text-secondary)', margin: '0 0 1rem 0', fontSize: '0.825rem' }}>
+      <div className="cookie-banner-title">Cookie preferences</div>
+      <p className="cookie-banner-body">
         We use analytics cookies to measure site traffic and improve AllMCPs. Learn more in our{' '}
-        <Link href="/privacy" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>
+        <Link href="/privacy" className="cookie-banner-privacy-link">
           Privacy Policy
-        </Link>.
+        </Link>
+        .
       </p>
-      <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          onClick={handleDecline}
-          style={{
-            background: 'var(--bg-muted)',
-            color: 'var(--text-secondary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            padding: '0.6rem 1.1rem',
-            minHeight: '44px',
-            fontSize: '0.85rem',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'background 0.2s ease',
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.background = 'var(--border-color)')}
-          onMouseOut={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
-        >
+      <div className="cookie-banner-actions">
+        <button type="button" className="btn btn-secondary btn-sm" onClick={handleDecline}>
           Decline
         </button>
-        <button
-          type="button"
-          onClick={handleAccept}
-          style={{
-            background: 'var(--brand-gradient)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '0.6rem 1.1rem',
-            minHeight: '44px',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
-            transition: 'opacity 0.2s ease',
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
-          onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
-        >
+        <button type="button" className="btn btn-primary btn-sm" onClick={handleAccept}>
           Accept
         </button>
       </div>

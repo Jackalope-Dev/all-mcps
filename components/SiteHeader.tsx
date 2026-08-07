@@ -32,6 +32,8 @@ export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [mounted, setMounted] = useState(false);
+  /** Platform-appropriate search shortcut for the header chip (⌘ vs Ctrl). */
+  const [searchModKey, setSearchModKey] = useState('Ctrl');
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
@@ -42,6 +44,12 @@ export function SiteHeader() {
   // mount before createPortal has a DOM target.
   useEffect(() => {
     setMounted(true);
+    try {
+      const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+      setSearchModKey(isApple ? '⌘' : 'Ctrl');
+    } catch {
+      setSearchModKey('Ctrl');
+    }
   }, []);
 
   // Signed-in state isn't known until this client-side check resolves, so the
@@ -177,14 +185,20 @@ export function SiteHeader() {
             ))}
             <button
               type="button"
-              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+              onClick={() =>
+                window.dispatchEvent(
+                  new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true })
+                )
+              }
               className="header-search-btn"
-              title="Search directory (⌘K)"
-              aria-label="Search directory"
+              title={`Search directory (${searchModKey}+K)`}
+              aria-label={`Search directory (${searchModKey}+K)`}
             >
               <Search size={13} className="text-cyan-400" aria-hidden="true" />
-              <span>Search</span>
-              <kbd className="header-search-kbd" aria-hidden="true">⌘K</kbd>
+              <span className="header-search-label">Search</span>
+              <kbd className="header-search-kbd" aria-hidden="true">
+                {searchModKey === '⌘' ? '⌘K' : 'Ctrl+K'}
+              </kbd>
             </button>
             {!isSignedIn && (
               <Button href={loginHref} variant="secondary" size="sm" className="site-nav-login">
@@ -261,13 +275,13 @@ export function SiteHeader() {
               >
                 Build an MCP Server
               </Link>
-              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <div className="mobile-nav-cta-block">
                 {!isSignedIn && (
                   <Button
                     href={loginHref}
                     variant="secondary"
                     size="md"
-                    style={{ width: '100%', justifyContent: 'center', marginBottom: '0.6rem' }}
+                    className="mobile-nav-cta-btn"
                     onClick={closeMobileMenu}
                   >
                     <LogIn size={16} aria-hidden="true" /> Log in
@@ -277,7 +291,7 @@ export function SiteHeader() {
                   href={ctaHref}
                   variant="primary"
                   size="md"
-                  style={{ width: '100%', justifyContent: 'center' }}
+                  className="mobile-nav-cta-btn"
                   onClick={closeMobileMenu}
                 >
                   <Sparkles size={16} aria-hidden="true" /> {mobileCtaLabel}

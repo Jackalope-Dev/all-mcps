@@ -20,6 +20,8 @@ export function Button({
   className = '',
   children,
   style,
+  onClick,
+  type = 'button',
   ...props
 }: ButtonProps) {
   const classes = [
@@ -37,15 +39,23 @@ export function Button({
     .join(' ');
 
   if (href) {
+    // Link-as-button: forward onClick (e.g. close mobile drawer) and common a11y props.
     return (
-      <Link href={href} className={classes} style={style}>
+      <Link
+        href={href}
+        className={classes}
+        style={style}
+        onClick={onClick as React.MouseEventHandler<HTMLAnchorElement> | undefined}
+        aria-label={props['aria-label']}
+        aria-current={props['aria-current'] as React.AriaAttributes['aria-current']}
+      >
         {children}
       </Link>
     );
   }
 
   return (
-    <button className={classes} style={style} {...props}>
+    <button className={classes} style={style} type={type} onClick={onClick} {...props}>
       {children}
     </button>
   );

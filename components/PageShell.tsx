@@ -28,7 +28,7 @@ export function PageShell({
         : `surface page-panel ${panelClassName}`.trim();
 
   return (
-    <main id="main-content" className={shellClass} tabIndex={-1}>
+    <main className={shellClass}>
       <div className="page-shell-inner">
         {panel ? <div className={panelClass}>{children}</div> : children}
       </div>

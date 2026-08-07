@@ -200,7 +200,11 @@ export default function RootLayout({
           }}
         />
         <SiteHeader />
-        {children}
+        {/* Skip-link target for every route. Pages may still use their own <main>
+            for landmarks; this wrapper is the single guaranteed #main-content. */}
+        <div id="main-content" tabIndex={-1} className="main-content-root">
+          {children}
+        </div>
         <SiteFooter />
         <ThemeSwitcher />
       </body>

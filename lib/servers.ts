@@ -35,7 +35,15 @@ export function parseServerTools(raw: unknown): ServerTool[] {
  * must not be mutated in place. Also parses the `tools` JSON column into an array.
  */
 function normalizeServer<T extends { description?: string | null; tools?: unknown }>(server: T): T {
-  const s = server as { aiUseCases?: unknown; aiFeatures?: unknown; aiEnvVars?: unknown; aiFaq?: unknown };
+  const s = server as {
+    aiUseCases?: unknown;
+    aiFeatures?: unknown;
+    aiEnvVars?: unknown;
+    aiFaq?: unknown;
+    tags?: unknown;
+    compatibleClients?: unknown;
+    suggestedInstallArgs?: unknown;
+  };
   return {
     ...server,
     description: cleanListingDescription(server.description),
@@ -45,6 +53,10 @@ function normalizeServer<T extends { description?: string | null; tools?: unknow
     aiFeatures: parseStringArray(s.aiFeatures),
     aiEnvVars: parseStringArray(s.aiEnvVars),
     aiFaq: parseFaqArray(s.aiFaq),
+    // Submitter-controlled JSON-array columns → typed arrays.
+    tags: parseStringArray(s.tags),
+    compatibleClients: parseStringArray(s.compatibleClients),
+    suggestedInstallArgs: parseStringArray(s.suggestedInstallArgs),
   };
 }
 
@@ -93,6 +105,17 @@ export const PUBLIC_SERVER_COLUMNS = {
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
   createdAt: serversTable.createdAt,
+  tags: serversTable.tags,
+  pricingModel: serversTable.pricingModel,
+  pricingNotes: serversTable.pricingNotes,
+  authType: serversTable.authType,
+  license: serversTable.license,
+  compatibleClients: serversTable.compatibleClients,
+  maintenanceStatus: serversTable.maintenanceStatus,
+  supportUrl: serversTable.supportUrl,
+  screenshotUrl: serversTable.screenshotUrl,
+  suggestedInstallCommand: serversTable.suggestedInstallCommand,
+  suggestedInstallArgs: serversTable.suggestedInstallArgs,
 } as const;
 
 export type Server = {
@@ -141,6 +164,25 @@ export type Server = {
   copies?: number;
   upvotes?: number;
   createdAt: string | Date;
+  /** Parsed by normalizeServer from the `tags` JSON column. Freeform, submitter-chosen (≤5, ≤30 chars each). */
+  tags?: string[];
+  /** free | freemium | paid | byok — self-declared cost of *using* this MCP server. See lib/serverEnums.ts. */
+  pricingModel?: string | null;
+  pricingNotes?: string | null;
+  /** none | api_key | oauth | other — self-declared auth requirement. See lib/serverEnums.ts. */
+  authType?: string | null;
+  license?: string | null;
+  /** Parsed by normalizeServer from the `compatible_clients` JSON column. Slugs from lib/clients.ts MCP_CLIENTS. */
+  compatibleClients?: string[];
+  /** active | stable | experimental | archived — self-declared, distinct from the auto healthStatus. See lib/serverEnums.ts. */
+  maintenanceStatus?: string | null;
+  supportUrl?: string | null;
+  /** Live, admin-approved screenshot URL (e.g. `/screenshots/<id>`). Null = no screenshot shown. */
+  screenshotUrl?: string | null;
+  /** Submitter-suggested install command, used as a hint only when installConfidence is low/absent. */
+  suggestedInstallCommand?: string | null;
+  /** Parsed by normalizeServer from the `suggested_install_args` JSON column. */
+  suggestedInstallArgs?: string[];
 };
 
 export async function getActiveServers(): Promise<Server[]> {
@@ -188,6 +230,10 @@ export type DirectoryFeedItem = {
   copies: number;
   upvotes: number;
   createdAt: string | Date | null;
+  tags: string[];
+  pricingModel: string | null;
+  authType: string | null;
+  compatibleClients: string[];
 };
 
 /** Max length of the client-side AI search blob — room for FAQ terms after the core AI fields. */
@@ -268,6 +314,10 @@ export async function getDirectoryFeedPage(
           copies: serversTable.copies,
           upvotes: serversTable.upvotes,
           createdAt: serversTable.createdAt,
+          tags: serversTable.tags,
+          pricingModel: serversTable.pricingModel,
+          authType: serversTable.authType,
+          compatibleClients: serversTable.compatibleClients,
           // Cap the heavy AI-content columns in SQL so a page stays small even
           // when individual overviews/use-case lists are long.
           aiSummary: sql<string | null>`substr(${serversTable.aiSummary}, 1, ${FEED_AI_TEXT_MAX})`,
@@ -308,6 +358,10 @@ export async function getDirectoryFeedPage(
         copies: r.copies ?? 0,
         upvotes: r.upvotes ?? 0,
         createdAt: r.createdAt ?? null,
+        tags: parseStringArray(r.tags),
+        pricingModel: r.pricingModel ?? null,
+        authType: r.authType ?? null,
+        compatibleClients: parseStringArray(r.compatibleClients),
       }));
 
       return { items, total };
@@ -349,6 +403,10 @@ export async function getDirectoryFeedPage(
       copies: s.copies ?? 0,
       upvotes: s.upvotes ?? 0,
       createdAt: s.createdAt ?? null,
+      tags: s.tags ?? [],
+      pricingModel: s.pricingModel ?? null,
+      authType: s.authType ?? null,
+      compatibleClients: s.compatibleClients ?? [],
     };
   });
   return { items, total };

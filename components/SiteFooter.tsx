@@ -3,6 +3,10 @@ import { BrandLogo } from './BrandLogo';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { BadgeMarquee } from './BadgeMarquee';
 
+/**
+ * Site footer — kept to ~5 columns with concise link sets so mobile users
+ * don't face a wall of text. Deep guides live under /guides.
+ */
 export function SiteFooter() {
   return (
     <footer className="container site-footer">
@@ -17,38 +21,110 @@ export function SiteFooter() {
         <NewsletterSignupForm source="footer" compact />
       </div>
       <div className="site-footer-grid">
-        <div>
+        <div className="site-footer-brand">
           <div style={{ marginBottom: '1rem' }}>
             <BrandLogo size="sm" href="/" />
           </div>
           <p className="site-footer-blurb">
-            The definitive directory for discovering and installing Model Context Protocol servers.
+            The open directory for discovering and installing Model Context Protocol servers.
           </p>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-            <a href="https://x.com/AllMCPs" target="_blank" rel="noopener noreferrer" className="nav-link" aria-label="Follow AllMCPs on X (opens in a new tab)" style={{ display: 'inline-flex', alignItems: 'center' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          <div className="site-footer-social">
+            <a
+              href="https://x.com/AllMCPs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link site-footer-social-link"
+              aria-label="Follow AllMCPs on X (opens in a new tab)"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
             </a>
-            <a href="https://github.com/Jackalope-Dev/allmcps-server" target="_blank" rel="noopener noreferrer" className="nav-link" aria-label="AllMCPs on GitHub (opens in a new tab)" style={{ display: 'inline-flex', alignItems: 'center' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+            <a
+              href="https://github.com/Jackalope-Dev/allmcps-server"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link site-footer-social-link"
+              aria-label="AllMCPs on GitHub (opens in a new tab)"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                />
+              </svg>
             </a>
           </div>
         </div>
-        <nav aria-label="Resources">
-          <h2 className="footer-heading">Resources</h2>
+
+        <nav aria-label="Explore">
+          <h2 className="footer-heading">Explore</h2>
           <ul className="site-footer-links">
             <li>
+              <Link href="/browse" className="nav-link">
+                Browse servers
+              </Link>
+            </li>
+            <li>
               <Link href="/best" className="nav-link">
-                Best MCP Servers
+                Best MCP servers
               </Link>
             </li>
             <li>
               <Link href="/categories" className="nav-link">
-                Browse Categories
+                Categories
               </Link>
             </li>
             <li>
+              <Link href="/clients" className="nav-link">
+                MCP clients
+              </Link>
+            </li>
+            <li>
+              <Link href="/prompts" className="nav-link">
+                Agent prompts
+              </Link>
+            </li>
+            <li>
+              <Link href="/submit" className="nav-link">
+                Submit a server
+              </Link>
+            </li>
+            <li>
+              <Link href="/pricing" className="nav-link">
+                Pricing
+              </Link>
+            </li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Learn">
+          <h2 className="footer-heading">Learn</h2>
+          <ul className="site-footer-links">
+            <li>
               <Link href="/guides" className="nav-link">
-                Guides Hub
+                Guides hub
+              </Link>
+            </li>
+            <li>
+              <Link href="/what-is-mcp" className="nav-link">
+                What is MCP?
+              </Link>
+            </li>
+            <li>
+              <Link href="/guide" className="nav-link">
+                Install guide
+              </Link>
+            </li>
+            <li>
+              <Link href="/mcp-troubleshooting" className="nav-link">
+                Troubleshooting
+              </Link>
+            </li>
+            <li>
+              <Link href="/mcp-security" className="nav-link">
+                Security
               </Link>
             </li>
             <li>
@@ -61,100 +137,11 @@ export function SiteFooter() {
                 Blog RSS
               </a>
             </li>
-            <li>
-              <Link href="/pricing" className="nav-link">
-                Pricing
-              </Link>
-            </li>
-            <li>
-              <Link href="/what-is-mcp" className="nav-link">
-                What is MCP?
-              </Link>
-            </li>
-            <li>
-              <Link href="/guide" className="nav-link">
-                Install MCP Guide
-              </Link>
-            </li>
-            <li>
-              <Link href="/build-mcp-server" className="nav-link">
-                Build an MCP Server
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-security" className="nav-link">
-                MCP Security
-              </Link>
-            </li>
-            <li>
-              <Link href="/deploy-mcp-server" className="nav-link">
-                Deploy Remote MCP
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-troubleshooting" className="nav-link">
-                MCP Troubleshooting
-              </Link>
-            </li>
           </ul>
         </nav>
-        <nav aria-label="Popular hubs">
-          <h2 className="footer-heading">Popular hubs</h2>
-          <ul className="site-footer-links">
-            <li>
-              <Link href="/best/databases" className="nav-link">
-                Best for Databases
-              </Link>
-            </li>
-            <li>
-              <Link href="/best/developer-tools" className="nav-link">
-                Best for Developers
-              </Link>
-            </li>
-            <li>
-              <Link href="/best/web-search" className="nav-link">
-                Best for Web Search
-              </Link>
-            </li>
-            <li>
-              <Link href="/best/security" className="nav-link">
-                Best for Security
-              </Link>
-            </li>
-            <li>
-              <Link href="/best/browser-automation" className="nav-link">
-                Best for Browser Automation
-              </Link>
-            </li>
-            <li>
-              <Link href="/categories/databases" className="nav-link">
-                Databases category
-              </Link>
-            </li>
-            <li>
-              <Link href="/categories/developer-tools" className="nav-link">
-                Developer Tools category
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-for-cursor" className="nav-link">
-                MCP for Cursor
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-for-claude-desktop" className="nav-link">
-                MCP for Claude Desktop
-              </Link>
-            </li>
-            <li>
-              <Link href="/clients" className="nav-link">
-                All MCP clients
-              </Link>
-            </li>
-          </ul>
-        </nav>
+
         <nav aria-label="Free tools">
-          <h2 className="footer-heading">Free Tools</h2>
+          <h2 className="footer-heading">Tools</h2>
           <ul className="site-footer-links">
             <li>
               <Link href="/tools" className="nav-link">
@@ -163,17 +150,17 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/tools/config-generator" className="nav-link">
-                Config Generator
+                Config generator
               </Link>
             </li>
             <li>
               <Link href="/tools/config-validator" className="nav-link">
-                Config Validator
+                Config validator
               </Link>
             </li>
             <li>
-              <Link href="/tools/token-calculator" className="nav-link">
-                Token Cost Calculator
+              <Link href="/tools/playground" className="nav-link">
+                MCP playground
               </Link>
             </li>
             <li>
@@ -182,62 +169,47 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/tools/protocol-inspector" className="nav-link">
-                Protocol Inspector
+              <Link href="/badge-generator" className="nav-link">
+                Badge generator
               </Link>
             </li>
           </ul>
         </nav>
+
         <nav aria-label="For AI and agents">
-          <h2 className="footer-heading">For AI &amp; Agents</h2>
+          <h2 className="footer-heading">For agents</h2>
           <ul className="site-footer-links">
             <li>
               <Link href="/docs/api" className="nav-link">
-                API Documentation
+                API docs
               </Link>
             </li>
             <li>
               <Link href="/trust" className="nav-link">
-                Trust &amp; Traffic Transparency
+                Trust &amp; traffic
               </Link>
             </li>
             <li>
               <a href="/llms.txt" className="nav-link" target="_blank" rel="noopener noreferrer">
-                llms.txt Standard <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            </li>
-            <li>
-              <a href="/api/mcp" className="nav-link" target="_blank" rel="noopener noreferrer">
-                Remote MCP Server <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            </li>
-            <li>
-              <a href="/api/v1/search" className="nav-link" target="_blank" rel="noopener noreferrer">
-                Agent Search API <span aria-hidden="true">↗</span>
+                llms.txt <span aria-hidden="true">↗</span>
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
               <a href="/data.json" className="nav-link" target="_blank" rel="noopener noreferrer">
-                Catalog Dataset (JSON) <span aria-hidden="true">↗</span>
+                Catalog JSON <span aria-hidden="true">↗</span>
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
-              <a
-                href="https://www.npmjs.com/package/allmcps-server"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="nav-link"
-              >
-                Submit via npx (allmcps-server) <span aria-hidden="true">↗</span>
+              <a href="/api/mcp" className="nav-link" target="_blank" rel="noopener noreferrer">
+                Remote MCP <span aria-hidden="true">↗</span>
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
           </ul>
         </nav>
+
         <nav aria-label="Company">
           <h2 className="footer-heading">Company</h2>
           <ul className="site-footer-links">
@@ -274,24 +246,13 @@ export function SiteFooter() {
               </a>
             </li>
             <li>
-              <a
-                href="https://jackalope.digital"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="nav-link"
-              >
-                Jackalope Digital <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            </li>
-            <li>
               <Link href="/terms" className="nav-link">
-                Terms of Service
+                Terms
               </Link>
             </li>
             <li>
               <Link href="/privacy" className="nav-link">
-                Privacy Policy
+                Privacy
               </Link>
             </li>
           </ul>
