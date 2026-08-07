@@ -5090,7 +5090,7 @@ nav[aria-label="Table of contents"] {
   top: calc(var(--header-height) + 0.35rem);
   z-index: 40;
   padding: 0.65rem 0 0.35rem;
-  background: var(--bg-color);
+  background: transparent;
 }
 
 .directory-intent-chips {
@@ -5794,13 +5794,13 @@ nav[aria-label="Table of contents"] {
   }
 }
 
-/* Sticky search: solid backdrop so cards don't show through */
+/* Sticky search: transparent backdrop */
 .directory-filters-sticky {
   position: sticky;
   top: calc(var(--header-height) + 0.35rem);
   z-index: 40;
   padding: 0.65rem 0 0.35rem;
-  background: var(--bg-color);
+  background: transparent;
 }
 
 /* Directory cards: slightly shorter on small screens = less scroll */
