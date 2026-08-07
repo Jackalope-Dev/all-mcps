@@ -19,14 +19,23 @@ export default function NotFound() {
         title="Page Not Found"
         description="We couldn't find the page or MCP server tool you were looking for. It may have been moved or removed."
         actions={
-          <>
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <Button href="/browse" variant="primary">
               Browse Directory
             </Button>
             <Button href="/categories" variant="secondary">
-              Browse Categories
+              Categories
             </Button>
-          </>
+            <Button href="/tools" variant="secondary">
+              Free Tools
+            </Button>
+            <Button href="/guides" variant="secondary">
+              Guides
+            </Button>
+            <Button href="/blog" variant="secondary">
+              Blog
+            </Button>
+          </div>
         }
       />
     </PageShell>

@@ -17,6 +17,42 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // 0. Legacy redirects & URL normalization (301 Permanent Redirect)
+  if (pathname.length > 1 && pathname.endsWith('/')) {
+    const url = req.nextUrl.clone();
+    url.pathname = pathname.slice(0, -1);
+    return NextResponse.redirect(url, 301);
+  }
+
+  if (
+    pathname.startsWith('/server/') ||
+    pathname.startsWith('/servers/') ||
+    pathname.startsWith('/mcp-server/') ||
+    pathname.startsWith('/mcp-servers/')
+  ) {
+    const rest = pathname
+      .replace(/^\/servers\//, '')
+      .replace(/^\/server\//, '')
+      .replace(/^\/mcp-servers\//, '')
+      .replace(/^\/mcp-server\//, '');
+    const url = req.nextUrl.clone();
+    url.pathname = `/mcp/${rest}`;
+    return NextResponse.redirect(url, 301);
+  }
+
+  if (pathname === '/directory') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/browse';
+    return NextResponse.redirect(url, 301);
+  }
+
+  if (pathname.startsWith('/directory/')) {
+    const cat = pathname.replace(/^\/directory\//, '');
+    const url = req.nextUrl.clone();
+    url.pathname = `/categories/${cat}`;
+    return NextResponse.redirect(url, 301);
+  }
+
   let response: NextResponse;
 
   // 1. Well-known, OpenAPI & Auth.md rewrites
