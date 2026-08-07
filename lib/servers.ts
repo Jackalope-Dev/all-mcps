@@ -76,6 +76,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   githubStars: serversTable.githubStars,
   npmDownloads: serversTable.npmDownloads,
   tools: serversTable.tools,
+  toolsSource: serversTable.toolsSource,
   aiSummary: serversTable.aiSummary,
   aiOverview: serversTable.aiOverview,
   aiUseCases: serversTable.aiUseCases,
@@ -117,6 +118,8 @@ export type Server = {
   npmDownloads?: number | null;
   /** Parsed by normalizeServer from the `tools` JSON column. */
   tools?: ServerTool[];
+  /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null. */
+  toolsSource?: string | null;
   /** LLM-generated content layer (see lib/aiContent + /api/cron/ai-content). */
   aiSummary?: string | null;
   aiOverview?: string | null;

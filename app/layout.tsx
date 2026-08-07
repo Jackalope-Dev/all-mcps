@@ -16,18 +16,23 @@ import "./globals.css";
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
 // lowercase "l" has a clear tail (not a plain vertical bar). Critical for "AllMCPs".
+// adjustFontFallback keeps a size-matched system fallback to limit CLS while the webfont loads.
 const sans = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
-  adjustFontFallback: false,
+  adjustFontFallback: true,
 });
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#020617",
+  // Match light/dark shell chrome so browser UI doesn't flash the wrong color.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -109,11 +114,15 @@ export default function RootLayout({
             });
           `}
         </Script>
+        {/*
+          Analytics load on idle (lazyOnload) so they stay off the critical path for
+          LCP / TBT. Consent defaults above still run early via beforeInteractive.
+        */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-NZ92KYZX74"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="google-analytics" strategy="afterInteractive">
+        <Script id="google-analytics" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
@@ -132,7 +141,7 @@ export default function RootLayout({
           to reduce ad-blocker/tracking-prevention loss; ui_host keeps PostHog UI
           links (e.g. session replay) pointing back to us.posthog.com.
         */}
-        <Script id="posthog-init" strategy="afterInteractive">
+        <Script id="posthog-init" strategy="lazyOnload">
           {`
             !function(t,e){var o,n,p,r;e.__SV||(window.posthog&&window.posthog.__loaded)||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="an ln init xn Cn Br kn In capture Fn nn calculateEventProperties On register register_once register_for_session unregister unregister_for_session Ln getFeatureFlag getFeatureFlagPayload getFeatureFlagResult getAllFeatureFlags isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync Dn identify setPersonProperties unsetPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset shutdown setIdentity clearIdentity get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException addExceptionStep captureLog startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty An Rn createPersonProfile setInternalOrTestUser $n yn jn opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing Tn debug Ur Rt getPageViewId captureTraceFeedback captureTraceMetric pn".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
             posthog.init('phc_r8gEwaQjDhxSLZVbQEYpdxqbNMLExUwjFyvj94DkyPY5', {
@@ -146,6 +155,9 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={sans.className}>
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <Suspense fallback={null}>
           <PurchaseTracker />
         </Suspense>

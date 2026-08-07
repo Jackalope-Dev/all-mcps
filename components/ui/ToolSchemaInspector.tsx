@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Wrench, Search, ChevronDown, ChevronUp, Code2, Sparkles, Terminal } from 'lucide-react';
+import { Wrench, Search, ChevronDown, ChevronUp, Code2, Sparkles, Terminal, ShieldCheck, FileText } from 'lucide-react';
 
 export interface ToolItem {
   name: string;
@@ -14,14 +14,35 @@ interface ToolSchemaInspectorProps {
   aiFeatures?: string[];
   aiUseCases?: string[];
   serverName: string;
+  /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null/undefined. */
+  toolsSource?: string | null;
 }
+
+const TOOLS_SOURCE_BADGE: Record<string, { label: string; icon: typeof ShieldCheck; color: string; title: string }> = {
+  introspected: {
+    label: 'Verified live',
+    icon: ShieldCheck,
+    color: '#34d399',
+    title: 'Captured by calling this server’s live tools/list endpoint.',
+  },
+  readme: {
+    label: 'Self-reported',
+    icon: FileText,
+    // Concrete hex (not var(--text-secondary)) so the `${color}1f` alpha-suffix trick
+    // below stays valid CSS.
+    color: '#94a3b8',
+    title: 'Parsed from the repository README, not verified against a live server — may be incomplete or out of date.',
+  },
+};
 
 export function ToolSchemaInspector({
   tools = [],
   aiFeatures = [],
   aiUseCases = [],
   serverName,
+  toolsSource,
 }: ToolSchemaInspectorProps) {
+  const sourceBadge = toolsSource ? TOOLS_SOURCE_BADGE[toolsSource] : undefined;
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({});
 
@@ -73,6 +94,26 @@ export function ToolSchemaInspector({
           >
             <Wrench size={22} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
             Capabilities & Tool Schemas {hasTools ? `(${tools.length})` : ''}
+            {hasTools && sourceBadge && (
+              <span
+                title={sourceBadge.title}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  color: sourceBadge.color,
+                  background: `${sourceBadge.color}1f`,
+                  border: `1px solid ${sourceBadge.color}40`,
+                  borderRadius: '999px',
+                  padding: '0.2rem 0.6rem',
+                }}
+              >
+                <sourceBadge.icon size={11} />
+                {sourceBadge.label}
+              </span>
+            )}
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
             Inspect callable tools, capabilities, and parameters exposed to AI agents by {serverName}.

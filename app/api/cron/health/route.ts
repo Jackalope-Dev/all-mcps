@@ -7,6 +7,7 @@ import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { isSafeFetchTarget } from '../../../../lib/urlSafety';
 import { websiteHasReciprocalBadge } from '../../../../lib/verification';
 import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
+import { parseToolsFromReadme } from '../../../../lib/tools/parseToolsFromReadme';
 import {
   resolveInstallFromText,
   resolveInstallConfig,
@@ -157,6 +158,7 @@ export async function POST(req: Request) {
       let toolsJson: string | null = server.tools ?? null;
       let toolsCheckedAt: Date | null = server.toolsCheckedAt ?? null;
       let toolsError: string | null = server.toolsError ?? null;
+      let toolsSource: string | null = server.toolsSource ?? null;
 
       // Prefer package name from cached install, else listing name
       const npmName = server.installPackage || server.name;
@@ -193,6 +195,26 @@ export async function POST(req: Request) {
               if (readmeText) {
                 reciprocalBadgeOk = websiteHasReciprocalBadge(readmeText, server.id);
               }
+
+              // GitHub-linked listings are almost always stdio packages (npx/uvx/pip), not a
+              // live HTTP endpoint, so the tools/list handshake below never applies to them —
+              // this is the only source of tool data they'll ever get. Never overwrite a real
+              // live-introspected result with a weaker guess (moot in practice: a listing's
+              // URL shape doesn't change between runs, so the branches never collide on one
+              // listing, but this keeps the intent explicit).
+              if (readmeText && toolsSource !== 'introspected') {
+                toolsCheckedAt = now;
+                const parsedTools = parseToolsFromReadme(readmeText);
+                if (parsedTools.length > 0) {
+                  toolsJson = JSON.stringify(parsedTools);
+                  toolsSource = 'readme';
+                  toolsError = null;
+                } else {
+                  // Leave any previously-found tools/source alone — this only means
+                  // *this run's* README didn't parse, not that earlier good data is stale.
+                  toolsError = 'No tools section found in README.';
+                }
+              }
             } else if (ghRes.status === 404) {
               healthStatus = 'offline';
             }
@@ -227,6 +249,7 @@ export async function POST(req: Request) {
               toolsJson = JSON.stringify(
                 introspection.tools.map((t) => ({ name: t.name, description: t.description }))
               );
+              toolsSource = 'introspected';
               toolsError = null;
             } else {
               toolsError = (
@@ -302,6 +325,7 @@ export async function POST(req: Request) {
           tools: toolsJson,
           toolsCheckedAt,
           toolsError,
+          toolsSource,
           ...(shouldUnpublish ? { status: 'removed' } : {}),
           ...(installFields
             ? {

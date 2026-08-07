@@ -104,6 +104,45 @@ html {
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
+  /* Help browser form controls / scrollbars match theme surfaces. */
+  color-scheme: dark;
+  scroll-padding-top: calc(var(--header-height) + 0.75rem);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Keyboard skip link — first focusable control; off-screen until focused. */
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 10000;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 2px solid var(--accent-color);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Sticky header offset when skip-link / in-page anchors land on main. */
+#main-content,
+main {
+  scroll-margin-top: calc(var(--header-height) + 0.5rem);
 }
 
 html,
@@ -1219,6 +1258,52 @@ p {
 .delay-1 { animation-delay: 0.1s; opacity: 0; }
 .delay-2 { animation-delay: 0.2s; opacity: 0; }
 .delay-3 { animation-delay: 0.3s; opacity: 0; }
+
+/*
+ * Motion preferences — Lighthouse + WCAG 2.2.
+ * Infinite marquees and staggered opacity:0 delays are the main offenders:
+ * without this, reduced-motion users never see delayed content (opacity stuck at 0)
+ * and infinite transform animations flag "Avoid non-composited animations".
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-fade-in,
+  .delay-1,
+  .delay-2,
+  .delay-3 {
+    animation: none !important;
+    animation-delay: 0s !important;
+    opacity: 1 !important;
+  }
+
+  .marquee-content {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .marquee-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .directory-feed-spinner,
+  .card-hoverable,
+  .directory-search-bar,
+  .directory-search-icon,
+  .nav-link {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .card-hoverable:hover {
+    transform: none;
+  }
+}
 
 .nav-link {
   color: var(--text-secondary);

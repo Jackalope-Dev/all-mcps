@@ -636,6 +636,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             aiFeatures={server.aiFeatures}
             aiUseCases={server.aiUseCases}
             serverName={displayName}
+            toolsSource={server.toolsSource}
           />
 
           <section>

@@ -35,7 +35,6 @@ function BrandMark({ px }: { px: number }) {
       height={px}
       viewBox="0 0 1024 1024"
       className="brand-logo-img"
-      role="img"
       aria-hidden="true"
       focusable="false"
     >
