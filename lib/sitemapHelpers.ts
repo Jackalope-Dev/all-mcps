@@ -167,7 +167,16 @@ export async function getSitemapServers(): Promise<SitemapServer[]> {
     }
   }
 
-  return servers;
+  const seen = new Set<string>();
+  const uniqueServers: SitemapServer[] = [];
+  for (const s of servers) {
+    if (s.id && !seen.has(s.id)) {
+      seen.add(s.id);
+      uniqueServers.push(s);
+    }
+  }
+
+  return uniqueServers;
 }
 
 export function listingLastMod(server: SitemapServer): string {

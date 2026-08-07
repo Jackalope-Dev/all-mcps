@@ -1530,9 +1530,7 @@ p {
 
 .btn-primary {
   background: var(--brand-gradient);
-  /* White text fails contrast against the cyan end of the gradient (~1.5:1);
-     dark text holds >=5:1 across the full cyan-to-blue range. */
-  color: var(--bg-color);
+  color: #ffffff;
   box-shadow: 0 4px 18px 0 rgba(0, 123, 255, 0.35);
 }
 .btn-primary:hover {
@@ -3038,7 +3036,7 @@ nav[aria-label="Table of contents"] {
 
 .directory-segmented-btn.is-active {
   background: var(--brand-gradient);
-  color: var(--bg-color);
+  color: #ffffff;
 }
 
 .directory-segmented-icon {
@@ -4704,7 +4702,10 @@ nav[aria-label="Table of contents"] {
   border-color: rgba(15, 23, 42, 0.12);
 }
 
-[data-theme="light"] .btn-primary {
+[data-theme="light"] .btn-primary,
+[data-theme="light"] .btn-primary:hover,
+[data-theme="light"] .btn-primary:focus,
+[data-theme="light"] .btn-primary:active {
   color: #ffffff;
 }
 
@@ -5857,10 +5858,6 @@ nav[aria-label="Table of contents"] {
   right: calc(1.25rem + env(safe-area-inset-right, 0px));
 }
 
-/* Primary buttons: ensure dark text holds on gradient in light mode too */
-[data-theme="light"] .btn-primary {
-  color: #020617;
-}
 
 /* Light-mode header already themed; ensure mobile overlay matches */
 [data-theme="light"] .mobile-menu-overlay {
@@ -5887,7 +5884,7 @@ nav[aria-label="Table of contents"] {
 
 
 /* ---------------------------------------------------------------
-   Client config path / code — theme-aware contrast (light + dark)
+   Client config path / code ï¿½ theme-aware contrast (light + dark)
    --------------------------------------------------------------- */
 
 /* Inline filesystem / config paths sitewide */
@@ -6155,7 +6152,7 @@ code.inline-path {
 }
 
 /* ===============================================================
-   Dashboard (manage) + Submit flow — conversion-critical UX
+   Dashboard (manage) + Submit flow ï¿½ conversion-critical UX
    =============================================================== */
 
 /* --- Dashboard page shell --- */

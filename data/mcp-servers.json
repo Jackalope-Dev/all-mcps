@@ -7582,14 +7582,6 @@
     "isOfficial": false
   },
   {
-    "id": "fastmcp",
-    "name": "FastMCP",
-    "url": "https://github.com/punkpeye/fastmcp",
-    "description": "📇 - A high-level framework for building MCP servers in TypeScript",
-    "category": "🛠️ Other Tools and Integrations",
-    "isOfficial": false
-  },
-  {
     "id": "fasuizu-br-brainiall-mcp-server",
     "name": "fasuizu-br/brainiall-mcp-server",
     "url": "https://github.com/fasuizu-br/brainiall-mcp-server",
@@ -17046,14 +17038,6 @@
     "isOfficial": false
   },
   {
-    "id": "ogasurfproject-jpg-horizon-shield",
-    "name": "ogasurfproject-jpg/horizon-shield",
-    "url": "https://github.com/ogasurfproject-jpg/horizon-shield/tree/main/workers/hs-mcp",
-    "description": "[](https://glama.ai/mcp/servers/ogasurfproject-jpg/horizon-shield) 🎖️ 📇 ☁️ - Audit Japanese construction and renovation estimates for overcharge: fair price ranges by work type, sales tactic red flags, and signed recomputable verdicts (KIRA). Includes an agent intake desk and a directory of independently audited contractors. Remote server, no API key required.",
-    "category": "🏠 Real Estate",
-    "isOfficial": false
-  },
-  {
     "id": "ohad6k-emulo",
     "name": "ohad6k/emulo",
     "url": "https://github.com/ohad6k/emulo",
@@ -21898,14 +21882,6 @@
     "name": "spanlens/Spanlens",
     "url": "https://github.com/spanlens/Spanlens/tree/main/packages/mcp-server",
     "description": "[](https://glama.ai/mcp/servers/spanlens/Spanlens) 🎖️ 📇 ☁️ - Query Spanlens LLM observability from Claude Desktop, Cursor, or Continue: request logs, costs, agent traces, anomalies, and user analytics with a read-only API key.",
-    "category": "📊 Monitoring",
-    "isOfficial": false
-  },
-  {
-    "id": "spanlens-spanlens",
-    "name": "spanlens/Spanlens",
-    "url": "https://github.com/spanlens/Spanlens",
-    "description": "[](https://glama.ai/mcp/servers/spanlens/Spanlens) 📇 ☁️ 🏠 - Query your Spanlens LLM observability from any MCP client. 7 read tools for request logs, agent traces, cost stats, anomalies, model-savings, and per-user analytics across OpenAI, Anthropic, and Gemini. Open source, self-hostable. npx -y @spanlens/mcp-server",
     "category": "📊 Monitoring",
     "isOfficial": false
   },

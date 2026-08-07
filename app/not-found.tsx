@@ -1,6 +1,15 @@
+import type { Metadata } from 'next';
 import { Button } from '../components/ui/Button';
 import { PageShell } from '../components/PageShell';
 import { EmptyState } from '../components/EmptyState';
+
+export const metadata: Metadata = {
+  title: '404 - Page Not Found | AllMCPs',
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default function NotFound() {
   return (
