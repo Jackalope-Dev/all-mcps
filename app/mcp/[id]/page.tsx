@@ -498,7 +498,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               className="mcp-action-btn"
             >
               <FolderGit2 size={18} style={{ color: 'var(--accent-color)' }} />
-              <span>View Repository</span>
+              <span className="mcp-action-btn-label">View Repository</span>
               {server.isOfficial && (
                 <BadgeCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
               )}
@@ -535,7 +535,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 className="mcp-action-btn mcp-action-btn--accent"
               >
                 <Globe size={18} style={{ color: 'var(--accent-color)' }} />
-                <span>Visit Website</span>
+                <span className="mcp-action-btn-label">Visit Website</span>
                 {server.websiteVerified ? (
                   <BadgeCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
                 ) : (
@@ -554,7 +554,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 className="mcp-action-btn"
               >
                 <LifeBuoy size={18} style={{ color: 'var(--accent-color)' }} />
-                <span>Support</span>
+                <span className="mcp-action-btn-label">Support</span>
               </OutboundLink>
             )}
 
@@ -827,7 +827,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           )}
 
           {/* Query-Forward AEO / FAQ Block */}
-          <section className="surface" style={{ padding: '1.75rem', marginTop: '2rem' }}>
+          <section className="surface detail-faq-section" style={{ padding: '1.75rem', marginTop: '2rem' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-primary)' }}>
               Frequently Asked Questions about {displayName}
             </h2>

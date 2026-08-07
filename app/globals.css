@@ -334,6 +334,7 @@ p {
   width: 100%;
   margin: 0 auto;
   padding: 0 var(--space-8);
+  box-sizing: border-box;
 }
 
 /* ── Site chrome ── */
@@ -3723,7 +3724,17 @@ nav[aria-label="Table of contents"] {
   max-width: 100%;
 }
 
-/* Responsive: Detail page */
+/* Responsive: Detail page — tablet (single-column but still roomy) */
+@media (max-width: 900px) {
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .container {
+    padding: 0 var(--space-6);
+  }
+}
+
 @media (max-width: 768px) {
   .detail-sidebar {
     position: static;
@@ -3735,14 +3746,24 @@ nav[aria-label="Table of contents"] {
     -webkit-mask-image: none;
     overflow-y: visible;
   }
-}
 
-@media (max-width: 900px) {
-  .detail-grid {
-    grid-template-columns: minmax(0, 1fr) !important;
+  .container {
+    padding: 0 var(--space-5);
+  }
+
+  /* Slightly tighten section headings at mid-widths */
+  .detail-summary {
+    font-size: 1.1rem !important;
+  }
+
+  /* Action buttons: tighter horizontal padding */
+  .mcp-action-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
   }
 }
 
+/* Responsive: Detail page — mobile */
 @media (max-width: 640px) {
   .detail-title-row {
     gap: 0.65rem;
@@ -3783,6 +3804,88 @@ nav[aria-label="Table of contents"] {
   .client-config-env-row input {
     width: 100%;
     flex: none !important;
+  }
+
+  /* Next-steps strip: horizontal scroll on small screens */
+  .detail-next-steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.25rem;
+  }
+
+  .detail-next-steps::-webkit-scrollbar {
+    display: none;
+  }
+
+  .detail-next-step {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* FAQ section: tighter padding on mobile */
+  .detail-faq-section {
+    padding: 1.25rem !important;
+  }
+
+  /* Sidebar specs card: tighter padding on mobile */
+  .detail-specs-card {
+    padding: 1rem !important;
+  }
+
+  /* Related grid: single column with smaller cards */
+  .detail-related-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* AI grid: single column */
+  .detail-ai-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Markdown body lists: less indent on mobile */
+  .markdown-body ul, .markdown-body ol {
+    padding-left: 1.25rem;
+  }
+
+  /* Markdown body code blocks: less padding */
+  .markdown-body pre {
+    padding: 0.85rem;
+    font-size: 0.8rem;
+  }
+
+  /* Markdown body blockquotes: tighter */
+  .markdown-body blockquote {
+    padding: 0.75rem 0.75rem 0.75rem 1rem;
+  }
+}
+
+/* Responsive: Detail page — very narrow phones */
+@media (max-width: 420px) {
+  /* Collapse action buttons to icon-only */
+  .mcp-action-btn-label {
+    display: none;
+  }
+
+  .mcp-action-btn {
+    padding: 0.5rem 0.65rem;
+    min-width: 42px;
+    justify-content: center;
+  }
+
+  /* Tighter title avatar */
+  .detail-title-row > :first-child {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  /* Breadcrumb font tighter */
+  .breadcrumb {
+    font-size: 0.78rem;
+    gap: 0.35rem;
   }
 }
 
@@ -3953,6 +4056,12 @@ nav[aria-label="Table of contents"] {
   .page-shell--content .page-shell-inner,
   .page-shell--tool .page-shell-inner {
     padding: 0 var(--space-4);
+  }
+
+  /* Detail page vertical spacing reduction */
+  .page-shell.container {
+    padding-top: var(--space-6) !important;
+    padding-bottom: var(--space-12) !important;
   }
 
   .page-panel {
