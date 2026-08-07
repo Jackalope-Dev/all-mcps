@@ -73,6 +73,14 @@ export const servers = sqliteTable('servers', {
   aiFeatures: text('ai_features'),
   /** When the AI content was last generated. Null = never enriched. */
   aiEnrichedAt: integer('ai_enriched_at', { mode: 'timestamp' }),
+  /** JSON array of {q, a} grounded Q&A pairs for the /mcp/[id] FAQ section and its
+   * FAQPage schema (see /api/cron/ai-faq, /api/cron/ai-content). Null = not
+   * generated yet — the page falls back to generic boilerplate questions. */
+  aiFaq: text('ai_faq'),
+  /** When the FAQ was last generated. Deliberately separate from aiEnrichedAt so
+   * the already-enriched backlog can be backfilled without re-running the rest
+   * of the content pipeline. */
+  aiFaqAt: integer('ai_faq_at', { mode: 'timestamp' }),
   /** stdio | remote — cached install transport from README/description parse. */
   installKind: text('install_kind'),
   /** Runner binary for stdio installs (npx, uvx, bunx, pip). */
