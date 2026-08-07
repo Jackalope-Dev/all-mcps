@@ -88,7 +88,7 @@ export function middleware(req: NextRequest) {
     response = NextResponse.next();
   }
 
-  // RFC 8288 Link Header for Agent Discovery
+  // RFC 8288 Link Header for Agent Discovery + AEO surfaces
   const linkHeader = [
     '</.well-known/api-catalog>; rel="api-catalog"',
     '</docs/api>; rel="service-doc"',
@@ -97,6 +97,11 @@ export function middleware(req: NextRequest) {
     '</.well-known/openid-configuration>; rel="oauth-authorization-server"',
     '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"',
     '</auth.md>; rel="authorizing-agent"',
+    // llms.txt / catalog dataset — discoverable without scraping HTML
+    '</llms.txt>; rel="describedby"; type="text/plain"',
+    '</llms-full.txt>; rel="alternate"; type="text/plain"',
+    '</data.json>; rel="alternate"; type="application/json"',
+    '</blog/rss.xml>; rel="alternate"; type="application/rss+xml"',
   ].join(', ');
 
   response.headers.set('Link', linkHeader);

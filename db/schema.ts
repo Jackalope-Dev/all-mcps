@@ -57,6 +57,8 @@ export const servers = sqliteTable('servers', {
   tools: text('tools'),
   /** Last time we attempted MCP tool introspection for this listing. */
   toolsCheckedAt: integer('tools_checked_at', { mode: 'timestamp' }),
+  /** Error from the last tools/list attempt (e.g. "Connection timed out."). Null on success or before first attempt — lets us see *why* introspection is failing instead of just that `tools` is empty. */
+  toolsError: text('tools_error'),
   /**
    * LLM-generated, human-readable content that turns a scraped README-mirror page into a
    * unique, useful listing (see /api/cron/ai-content). All nullable — absence means the
@@ -81,9 +83,14 @@ export const servers = sqliteTable('servers', {
    * the already-enriched backlog can be backfilled without re-running the rest
    * of the content pipeline. */
   aiFaqAt: integer('ai_faq_at', { mode: 'timestamp' }),
+  /** JSON array of UPPER_SNAKE_CASE env var names (API keys, tokens) the README/setup
+   * instructions say are required to run this server. Generated alongside the rest of
+   * the AI content layer (see lib/aiContent.ts) — used to add env placeholders to
+   * generated mcpServers configs instead of silently omitting required secrets. */
+  aiEnvVars: text('ai_env_vars'),
   /** stdio | remote — cached install transport from README/description parse. */
   installKind: text('install_kind'),
-  /** Runner binary for stdio installs (npx, uvx, bunx, pip). */
+  /** Runner binary for stdio installs (npx, uvx, bunx). */
   installCommand: text('install_command'),
   /** JSON string array of CLI args for stdio installs. */
   installArgs: text('install_args'),

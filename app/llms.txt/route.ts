@@ -82,6 +82,7 @@ export async function GET(request: Request) {
   content += `- Best MCP Servers by Use Case: https://allmcps.com/best\n`;
   content += `- Agent Prompts & Workflows: https://allmcps.com/prompts\n`;
   content += `- Blog & Articles: https://allmcps.com/blog\n`;
+  content += `- Blog RSS: https://allmcps.com/blog/rss.xml\n`;
   content += `- All Guides: https://allmcps.com/guides\n`;
   content += `- Browse Categories: https://allmcps.com/categories\n`;
   content += `- MCP Setup Guide (HowTo): https://allmcps.com/guide\n`;
@@ -89,10 +90,13 @@ export async function GET(request: Request) {
   content += `- How to Build an MCP Server: https://allmcps.com/build-mcp-server\n`;
   content += `- Deploy Remote MCP Server: https://allmcps.com/deploy-mcp-server\n`;
   content += `- MCP Security Best Practices: https://allmcps.com/mcp-security\n`;
+  content += `- MCP Troubleshooting (not connecting, zero tools, timeouts): https://allmcps.com/mcp-troubleshooting\n`;
+  content += `- Trust & Traffic Transparency: https://allmcps.com/trust\n`;
   content += `- Pricing & Boosting: https://allmcps.com/pricing\n`;
   content += `- Free Developer Tools (Config Auditor, MCP Playground, OpenAPI-to-MCP, Protocol Inspector, Config Generator, Config Validator, Token Calculator): https://allmcps.com/tools\n`;
   content += `- Badge Generator: https://allmcps.com/badge-generator\n`;
   content += `- Structured Catalog Dataset (JSON): https://allmcps.com/data.json\n`;
+  content += `- Sitemap index: https://allmcps.com/sitemap.xml (shards: /sitemap/core.xml, /sitemap/listings.xml, /sitemap/secondary.xml)\n`;
 
   // Log llms.txt access (best-effort)
   try {

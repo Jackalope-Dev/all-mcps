@@ -5,7 +5,7 @@ import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
 import { engagementScore, buildAiSearchText } from './search';
-import { resolveInstallConfig } from './installConfig';
+import { resolveInstallConfig, installConfidenceNote } from './installConfig';
 import { parseStringArray, parseFaqArray, type AiFaqItem } from './aiContent';
 
 export type ServerTool = { name: string; description?: string; parameters?: Record<string, unknown> };
@@ -35,7 +35,7 @@ export function parseServerTools(raw: unknown): ServerTool[] {
  * must not be mutated in place. Also parses the `tools` JSON column into an array.
  */
 function normalizeServer<T extends { description?: string | null; tools?: unknown }>(server: T): T {
-  const s = server as { aiUseCases?: unknown; aiFeatures?: unknown; aiFaq?: unknown };
+  const s = server as { aiUseCases?: unknown; aiFeatures?: unknown; aiEnvVars?: unknown; aiFaq?: unknown };
   return {
     ...server,
     description: cleanListingDescription(server.description),
@@ -43,6 +43,7 @@ function normalizeServer<T extends { description?: string | null; tools?: unknow
     // AI content JSON-array columns → typed arrays (absent in the static snapshot → []).
     aiUseCases: parseStringArray(s.aiUseCases),
     aiFeatures: parseStringArray(s.aiFeatures),
+    aiEnvVars: parseStringArray(s.aiEnvVars),
     aiFaq: parseFaqArray(s.aiFaq),
   };
 }
@@ -80,6 +81,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   aiUseCases: serversTable.aiUseCases,
   aiFeatures: serversTable.aiFeatures,
   aiFaq: serversTable.aiFaq,
+  aiEnvVars: serversTable.aiEnvVars,
   aiEnrichedAt: serversTable.aiEnrichedAt,
   installKind: serversTable.installKind,
   installCommand: serversTable.installCommand,
@@ -118,12 +120,14 @@ export type Server = {
   /** LLM-generated content layer (see lib/aiContent + /api/cron/ai-content). */
   aiSummary?: string | null;
   aiOverview?: string | null;
-  /** Parsed by normalizeServer from the `ai_use_cases` / `ai_features` JSON columns. */
+  /** Parsed by normalizeServer from the `ai_use_cases` / `ai_features` / `ai_env_vars` JSON columns. */
   aiUseCases?: string[];
   aiFeatures?: string[];
   /** Parsed by normalizeServer from the `ai_faq` JSON column. Empty until the
    * ai-content/ai-faq cron has generated it — pages fall back to boilerplate. */
   aiFaq?: AiFaqItem[];
+  /** UPPER_SNAKE_CASE env var names the README/setup instructions say are required to run this server. */
+  aiEnvVars?: string[];
   aiEnrichedAt?: string | Date | null;
   installKind?: string | null;
   installCommand?: string | null;
@@ -477,9 +481,12 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
     installConfidence: server.installConfidence,
   });
 
+  const envVars = server.aiEnvVars || [];
+  const confNote = installConfidenceNote(install);
+
   md += `## Claude Desktop Quick Installation\n`;
   if (install.kind === 'remote') {
-    md += `Remote MCP endpoint (confidence: ${install.confidence}). Add as a URL/SSE server in your client:\n\n`;
+    md += `Remote MCP endpoint (confidence: ${install.confidence}). ${confNote} Add as a URL/SSE server in your client:\n\n`;
     md += `\`\`\`json\n`;
     md += `"mcpServers": {\n`;
     md += `  "${slug}": {\n`;
@@ -488,28 +495,46 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
     md += `}\n`;
     md += `\`\`\`\n\n`;
   } else {
-    const confNote =
-      install.confidence === 'high'
-        ? 'Install path detected from listing signals.'
-        : install.confidence === 'medium'
-          ? 'Install path inferred — verify against the README before production use.'
-          : 'Heuristic fallback — verify the package name and runner against the repository README.';
     const argsJson = JSON.stringify(install.args);
     md += `${confNote} Uses \`${install.command}\` (confidence: ${install.confidence}):\n\n`;
     md += `\`\`\`json\n`;
     md += `"mcpServers": {\n`;
     md += `  "${slug}": {\n`;
     md += `    "command": "${install.command}",\n`;
-    md += `    "args": ${argsJson}\n`;
+    md += `    "args": ${argsJson}${envVars.length > 0 ? ',' : ''}\n`;
+    if (envVars.length > 0) {
+      md += `    "env": ${JSON.stringify(Object.fromEntries(envVars.map((v) => [v, ''])), null, 2).split('\n').join('\n    ')}\n`;
+    }
     md += `  }\n`;
     md += `}\n`;
     md += `\`\`\`\n\n`;
+    if (envVars.length > 0) {
+      md += `**Requires environment variables:** ${envVars.map((v) => `\`${v}\``).join(', ')} — the values above are empty placeholders; fill in real credentials before running (see the repository for what each one is for).\n\n`;
+    }
   }
+
+  const hasAiContent = Boolean(
+    server.aiOverview || server.aiUseCases?.length || server.aiFeatures?.length
+  );
 
   if (readme) {
     md += `## Documentation & README\n\n${readme}\n`;
+  } else if (hasAiContent) {
+    md += `## Documentation\n`;
+    if (server.aiOverview) md += `${server.aiOverview}\n\n`;
+    if (server.aiUseCases?.length) {
+      md += `**Use cases:**\n`;
+      for (const useCase of server.aiUseCases) md += `- ${useCase}\n`;
+      md += `\n`;
+    }
+    if (server.aiFeatures?.length) {
+      md += `**Key features:**\n`;
+      for (const feature of server.aiFeatures) md += `- ${feature}\n`;
+      md += `\n`;
+    }
+    md += `_Summarized from the repository README — see the link above for the full text._\n\n`;
   } else {
-    md += `## Documentation\nNo README could be fetched automatically. Check the repository above for setup instructions before installing.\n\n`;
+    md += `## Documentation\nNo cached documentation available for this listing yet. Check the repository above for the README and setup instructions.\n\n`;
   }
 
   return md;

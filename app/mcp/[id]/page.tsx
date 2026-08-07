@@ -242,6 +242,25 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
       : null,
   ].filter(Boolean);
 
+  // Real, listing-specific FAQ once the ai-content/ai-faq pipeline has reached
+  // this row; falls back to generic-but-accurate boilerplate until then, so the
+  // FAQPage schema and the visible section are never empty. Mirrors the
+  // fail-soft pattern already used for aiOverview/aiUseCases/aiFeatures above.
+  const faqItems: { q: string; a: string }[] =
+    server.aiFaq && server.aiFaq.length > 0
+      ? server.aiFaq
+      : [
+          {
+            q: `How do I install the ${server.name} MCP server?`,
+            a: `Add the following block to your claude_desktop_config.json under mcpServers: "mcpServers": { "${installSlug}": { "command": "npx", "args": ["-y", "${server.name}"] } }`,
+          },
+          { q: `What does ${server.name} do?`, a: server.description },
+          {
+            q: `Is the ${server.name} MCP server free to use?`,
+            a: `Yes. ${server.name} is listed on AllMCPs as a free, open Model Context Protocol server you can install into Claude Desktop, Cursor, or any MCP-compatible client.`,
+          },
+        ];
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -276,32 +295,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
       },
       {
         '@type': 'FAQPage',
-        mainEntity: [
-          {
-            '@type': 'Question',
-            name: `How do I install the ${server.name} MCP server?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `Add the following block to your claude_desktop_config.json under mcpServers: "mcpServers": { "${installSlug}": { "command": "npx", "args": ["-y", "${server.name}"] } }`,
-            },
-          },
-          {
-            '@type': 'Question',
-            name: `What does ${server.name} do?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: server.description,
-            },
-          },
-          {
-            '@type': 'Question',
-            name: `Is the ${server.name} MCP server free to use?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `Yes. ${server.name} is listed on AllMCPs as a free, open Model Context Protocol server you can install into Claude Desktop, Cursor, or any MCP-compatible client.`,
-            },
-          },
-        ],
+        mainEntity: faqItems.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
       },
       {
         '@type': 'BreadcrumbList',
@@ -349,116 +347,122 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
       <div className="detail-grid">
 
         {/* Main Content (Left Column) */}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: org ? '0.2rem' : '1rem' }}>
+        <div className="detail-main">
+          <div className="detail-title-row">
             <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={56} />
-            <IconTooltip
-              label={`Health status: ${healthUi.label}`}
-              trigger={
-                <span
+            <div className="detail-title-text">
+              <div className="detail-title-heading">
+                <IconTooltip
+                  label={`Health status: ${healthUi.label}`}
+                  trigger={
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        backgroundColor: healthUi.color,
+                        boxShadow: healthKey === 'active' ? `0 0 8px ${healthUi.color}` : 'none',
+                        flexShrink: 0,
+                      }}
+                    />
+                  }
+                >
+                  <span className="mcp-icon-tooltip-title">
+                    <span className="mcp-icon-tooltip-dot" style={{ backgroundColor: healthUi.color }} />
+                    {healthUi.label}
+                  </span>
+                  <span className="mcp-icon-tooltip-body">{healthUi.detail}</span>
+                  <span className="mcp-icon-tooltip-meta">
+                    {server.lastCheckedAt
+                      ? `Last checked ${new Date(server.lastCheckedAt).toLocaleString()}`
+                      : 'No health check has run yet.'}
+                  </span>
+                </IconTooltip>
+                <h1 className="text-page-title detail-page-title">
+                  <span className="detail-page-name">{displayName}</span>
+                </h1>
+              </div>
+              <div className="detail-title-badges">
+                <Badge
+                  variant="category"
+                  href={`/browse?category=${encodeURIComponent(server.category)}`}
                   style={{
-                    display: 'inline-block',
-                    width: '10px',
-                    height: '10px',
-                    borderRadius: '50%',
-                    backgroundColor: healthUi.color,
-                    boxShadow: healthKey === 'active' ? `0 0 8px ${healthUi.color}` : 'none',
-                    flexShrink: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    verticalAlign: 'middle',
                   }}
-                />
-              }
-            >
-              <span className="mcp-icon-tooltip-title">
-                <span className="mcp-icon-tooltip-dot" style={{ backgroundColor: healthUi.color }} />
-                {healthUi.label}
-              </span>
-              <span className="mcp-icon-tooltip-body">{healthUi.detail}</span>
-              <span className="mcp-icon-tooltip-meta">
-                {server.lastCheckedAt
-                  ? `Last checked ${new Date(server.lastCheckedAt).toLocaleString()}`
-                  : 'No health check has run yet.'}
-              </span>
-            </IconTooltip>
-            <h1 className="text-page-title" style={{ margin: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span>{displayName}</span>
-              <Badge
-                variant="category"
-                href={`/browse?category=${encodeURIComponent(server.category)}`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  verticalAlign: 'middle',
-                }}
-              >
-                <span aria-hidden="true">{catMeta.emoji}</span>
-                <span>{catMeta.label}</span>
-              </Badge>
-              {server.isPremium && (
-                <IconTooltip
-                  label="Premium listing"
-                  trigger={
-                    <Badge className="mcp-trust-badge mcp-trust-badge--premium">
-                      <Crown size={13} color="#d97706" fill="#d97706" />
-                      <span className="mcp-trust-badge-label">Premium</span>
-                    </Badge>
-                  }
                 >
-                  <span className="mcp-icon-tooltip-title">
-                    <Crown size={14} color="#facc15" fill="#facc15" /> Premium listing
-                  </span>
-                  <span className="mcp-icon-tooltip-body">
-                    This owner pays for enhanced visibility — priority placement in search, category pages, and rotating spotlight slots across the directory.
-                  </span>
-                </IconTooltip>
-              )}
-              {isVerifiedListing(server) && (
-                <IconTooltip
-                  label={server.isOfficial ? 'Ownership verified' : 'Premium listing'}
-                  trigger={
-                    <Badge variant="official" className="mcp-trust-badge">
-                      <BadgeCheck size={13} />
-                      <span className="mcp-trust-badge-label">{server.isOfficial ? 'Verified' : 'Premium'}</span>
-                    </Badge>
-                  }
-                >
-                  <span className="mcp-icon-tooltip-title">
-                    <BadgeCheck size={14} color="var(--accent-color)" />
-                    {server.isOfficial ? 'Ownership verified' : 'Premium listing'}
-                  </span>
-                  <span className="mcp-icon-tooltip-body">
-                    {server.isOfficial
-                      ? 'The owner proved control of this listing via a GitHub README, site badge, or DNS TXT record.'
-                      : 'This listing has an active Premium subscription. Ownership has not been separately verified.'}
-                  </span>
-                </IconTooltip>
-              )}
-              {isFeaturedListing(server) && (
-                <IconTooltip
-                  label="Featured listing"
-                  trigger={
-                    <Badge variant="success" className="badge-featured mcp-trust-badge">
-                      <Star size={13} color="var(--accent-color)" fill="var(--accent-color)" />
-                      <span className="mcp-trust-badge-label">Featured</span>
-                    </Badge>
-                  }
-                >
-                  <span className="mcp-icon-tooltip-title">
-                    <Star size={14} color="var(--accent-color)" fill="var(--accent-color)" /> Featured listing
-                  </span>
-                  <span className="mcp-icon-tooltip-body">
-                    {server.isPremium
-                      ? 'Included with this listing’s active Premium subscription — boosted placement across search, category pages, and homepage spotlight rotation.'
-                      : 'Currently boosted for extra visibility — priority placement across search, category pages, and homepage spotlight rotation.'}
-                  </span>
-                </IconTooltip>
-              )}
-            </h1>
+                  <span aria-hidden="true">{catMeta.emoji}</span>
+                  <span>{catMeta.label}</span>
+                </Badge>
+                {server.isPremium && (
+                  <IconTooltip
+                    label="Premium listing"
+                    trigger={
+                      <Badge className="mcp-trust-badge mcp-trust-badge--premium">
+                        <Crown size={13} color="#d97706" fill="#d97706" />
+                        <span className="mcp-trust-badge-label">Premium</span>
+                      </Badge>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Crown size={14} color="#facc15" fill="#facc15" /> Premium listing
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      This owner pays for enhanced visibility — priority placement in search, category pages, and rotating spotlight slots across the directory.
+                    </span>
+                  </IconTooltip>
+                )}
+                {isVerifiedListing(server) && (
+                  <IconTooltip
+                    label={server.isOfficial ? 'Ownership verified' : 'Premium listing'}
+                    trigger={
+                      <Badge variant="official" className="mcp-trust-badge">
+                        <BadgeCheck size={13} />
+                        <span className="mcp-trust-badge-label">{server.isOfficial ? 'Verified' : 'Premium'}</span>
+                      </Badge>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <BadgeCheck size={14} color="var(--accent-color)" />
+                      {server.isOfficial ? 'Ownership verified' : 'Premium listing'}
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      {server.isOfficial
+                        ? 'The owner proved control of this listing via a GitHub README, site badge, or DNS TXT record.'
+                        : 'This listing has an active Premium subscription. Ownership has not been separately verified.'}
+                    </span>
+                  </IconTooltip>
+                )}
+                {isFeaturedListing(server) && (
+                  <IconTooltip
+                    label="Featured listing"
+                    trigger={
+                      <Badge variant="success" className="badge-featured mcp-trust-badge">
+                        <Star size={13} color="var(--accent-color)" fill="var(--accent-color)" />
+                        <span className="mcp-trust-badge-label">Featured</span>
+                      </Badge>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Star size={14} color="var(--accent-color)" fill="var(--accent-color)" /> Featured listing
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      {server.isPremium
+                        ? 'Included with this listing’s active Premium subscription — boosted placement across search, category pages, and homepage spotlight rotation.'
+                        : 'Currently boosted for extra visibility — priority placement across search, category pages, and homepage spotlight rotation.'}
+                    </span>
+                  </IconTooltip>
+                )}
+              </div>
+            </div>
           </div>
           {org && (
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+            <div className="detail-org" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
               {org}
             </div>
           )}
@@ -522,7 +526,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <ShareModal serverId={server.id} serverName={server.name} variant="action" />
           </div>
 
-          <div style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
+          <div className="detail-summary" style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
             <SafeMarkdown content={(server.aiSummary && server.aiSummary.trim()) || server.description} utmContent={server.id} />
           </div>
 
@@ -543,7 +547,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   </p>
                 </>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+              <div className="detail-ai-grid">
                 {(server.aiUseCases?.length ?? 0) > 0 && (
                   <div className="surface" style={{ padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                     <h3 style={{ fontSize: '1rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
@@ -578,10 +582,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </section>
           )}
 
-          <section id="quick-install" className="surface" style={{ padding: '1.75rem', marginBottom: '2.5rem', scrollMarginTop: '5rem', borderRadius: '16px', border: '1px solid var(--border-color)', background: 'var(--brand-gradient-soft)' }}>
+          <section id="quick-install" className="surface detail-quick-install" style={{ marginBottom: '2.5rem', scrollMarginTop: '5rem', borderRadius: '16px', border: '1px solid var(--border-color)', background: 'var(--brand-gradient-soft)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                <Terminal size={20} style={{ color: 'var(--accent-color)' }} /> Quick Install
+                <Terminal size={20} style={{ color: 'var(--accent-color)', flexShrink: 0 }} /> Quick Install
               </h2>
               <Badge variant="success" style={{ fontSize: '0.75rem' }}>
                 Automated &amp; IDE Setup
@@ -610,12 +614,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             />
 
             {/* Collapsed Manual Client JSON Config */}
-            <details style={{ marginTop: '1.25rem', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', padding: '0.75rem 1rem' }}>
-              <summary style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer', outline: 'none', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <details className="detail-manual-config" style={{ marginTop: '1.25rem', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', padding: '0.75rem 1rem' }}>
+              <summary className="detail-manual-config-summary">
                 <span>Manual Client &amp; Custom JSON Config</span>
-                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Expand JSON ▾</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.7, flexShrink: 0 }}>Expand JSON ▾</span>
               </summary>
-              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', minWidth: 0 }}>
                 <ClientConfigTabs server={server} />
               </div>
             </details>
@@ -676,7 +680,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   View all alternatives <ChevronRight size={14} />
                 </Link>
               </div>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.25rem' }}>
+              <ul className="detail-related-grid">
                 {relatedServers.map((rel) => {
                   const relName = parseServerName(rel.name).displayName;
                   return (
@@ -758,30 +762,16 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               Frequently Asked Questions about {displayName}
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.4rem 0' }}>
-                  What is the {displayName} MCP server used for?
-                </h3>
-                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55 }}>
-                  {server.description}
-                </p>
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.4rem 0' }}>
-                  How do I install {displayName} in Claude Desktop or Cursor?
-                </h3>
-                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55 }}>
-                  Copy the client configuration JSON snippet from the installation section above into your <code>claude_desktop_config.json</code> or <code>.cursor/mcp.json</code> file, then restart your AI application.
-                </p>
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.4rem 0' }}>
-                  Is the {displayName} MCP server free and safe to use?
-                </h3>
-                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55 }}>
-                  Yes, {displayName} is listed as a free Model Context Protocol server. Always review repository source code and permissions before granting local workspace access to AI agents.
-                </p>
-              </div>
+              {faqItems.map((item) => (
+                <div key={item.q}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.4rem 0' }}>
+                    {item.q}
+                  </h3>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55 }}>
+                    {item.a}
+                  </p>
+                </div>
+              ))}
             </div>
           </section>
         </div>
@@ -790,21 +780,21 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <div className="detail-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* Technical Specs, Popularity & Quality Summary Card */}
-          <div className="surface" style={{ padding: '1.35rem', borderRadius: '14px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="surface detail-specs-card" style={{ padding: '1.35rem', borderRadius: '14px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
-              <Terminal size={18} style={{ color: 'var(--brand-cyan)' }} />
+              <Terminal size={18} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />
               <span>Technical Specs &amp; Signals</span>
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', minWidth: 0 }}>
+              <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Transport</span>
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
                   {server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com')) ? 'SSE (Remote)' : 'STDIO'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+              <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Runtime</span>
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
                   {(() => {
                     const cmd = (server.installCommand || '').toLowerCase();
                     const desc = (server.description || '').toLowerCase();
@@ -815,18 +805,18 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   })()}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+              <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Health Check</span>
-                <span style={{ fontWeight: 600, color: healthUi.color, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: healthUi.color, display: 'inline-block' }} />
+                <span style={{ fontWeight: 600, color: healthUi.color, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textAlign: 'right' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: healthUi.color, display: 'inline-block', flexShrink: 0 }} />
                   {healthKey === 'active' ? 'Active' : healthKey === 'down' ? 'Issues' : 'Unknown'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+              <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Category</span>
-                <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textAlign: 'right', minWidth: 0 }}>
                   <span aria-hidden="true">{catMeta.emoji}</span>
-                  <span>{catMeta.label}</span>
+                  <span style={{ overflowWrap: 'anywhere' }}>{catMeta.label}</span>
                 </Link>
               </div>
 

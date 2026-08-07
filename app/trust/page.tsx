@@ -14,10 +14,16 @@ import {
   HelpCircle,
   MessageSquare,
   Lock,
+  Star,
+  Download,
+  Globe,
+  Activity,
+  Radio,
 } from 'lucide-react';
 import { getSiteStats, AI_SYSTEM_CLASSES } from '../../lib/siteStats';
 import { CALLER_COLORS } from '../../lib/accessLog';
-import type { CallerBreakdown } from '../../lib/siteStats';
+import type { CallerBreakdown, EndpointBreakdown, CountryBreakdown } from '../../lib/siteStats';
+import { TrendChart } from '../../components/TrustCharts';
 
 export const metadata: Metadata = {
   title: 'Trust & Traffic Transparency | AllMCPs',
@@ -40,6 +46,29 @@ function pct(part: number, total: number): string {
   if (total <= 0) return '0%';
   const p = (part / total) * 100;
   return `${p < 0.1 && p > 0 ? '<0.1' : p.toFixed(1)}%`;
+}
+
+function formatCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`;
+  return formatNumber(n);
+}
+
+/** Two-letter country code → flag emoji, via the regional-indicator Unicode trick. */
+function flagEmoji(code: string): string {
+  if (!code || code.length !== 2) return '\u{1F3F3}\u{FE0F}';
+  const upper = code.toUpperCase();
+  return String.fromCodePoint(...[...upper].map((c) => 127397 + c.charCodeAt(0)));
+}
+
+let regionNames: Intl.DisplayNames | null = null;
+function countryName(code: string): string {
+  try {
+    if (!regionNames) regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+    return regionNames.of(code.toUpperCase()) || code;
+  } catch {
+    return code;
+  }
 }
 
 const GROUP_ICON: Record<string, typeof Bot> = {
@@ -108,11 +137,41 @@ function StatGrid({ children }: { children: ReactNode }) {
   );
 }
 
-function SectionLabel({ title, note }: { title: string; note: string }) {
+function SectionLabel({
+  title,
+  note,
+  icon: Icon,
+  tight,
+}: {
+  title: string;
+  note: string;
+  icon?: typeof Cpu;
+  tight?: boolean;
+}) {
   return (
-    <div style={{ margin: '2.25rem 0 0.75rem' }}>
-      <h2 style={{ fontSize: '1.15rem', margin: '0 0 0.2rem' }}>{title}</h2>
+    <div style={{ margin: tight ? '0 0 0.75rem' : '2.25rem 0 0.75rem' }}>
+      <h2 style={{ fontSize: '1.15rem', margin: '0 0 0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {Icon && <Icon size={17} style={{ color: 'var(--brand-cyan)' }} />}
+        {title}
+      </h2>
       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>{note}</p>
+    </div>
+  );
+}
+
+/** Bordered card used to give each dense visualization block its own contained surface. */
+function Panel({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        border: '1px solid var(--border-color)',
+        borderRadius: 16,
+        background: 'var(--card-bg)',
+        padding: '1.5rem',
+        marginBottom: '1.5rem',
+      }}
+    >
+      {children}
     </div>
   );
 }
@@ -247,6 +306,45 @@ function Group({
   );
 }
 
+type BarItem = { key: string; label: ReactNode; sublabel?: string; value: number };
+
+/** Single-hue magnitude bar list — direct-labeled since these sections top out at 6-8 rows. */
+function BarList({ items, colorVar }: { items: BarItem[]; colorVar: string }) {
+  if (items.length === 0) {
+    return <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>No traffic recorded yet.</p>;
+  }
+  const max = Math.max(...items.map((i) => i.value), 1);
+  return (
+    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+      {items.map((item) => (
+        <li key={item.key}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.3rem' }}>
+            <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {item.label}
+              {item.sublabel && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{item.sublabel}</span>
+              )}
+            </span>
+            <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+              {formatCompact(item.value)}
+            </strong>
+          </div>
+          <div style={{ height: 8, borderRadius: 4, background: 'var(--bg-muted)', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${Math.max((item.value / max) * 100, 3)}%`,
+                background: colorVar,
+                borderRadius: 4,
+              }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function OpennessCard({
   icon: Icon,
   color,
@@ -287,6 +385,22 @@ export default async function TrustPage() {
   const unknownRows = stats.callerBreakdown30d.filter((r) => r.class === 'unknown');
   const totalHits30d = stats.callerBreakdown30d.reduce((acc, r) => acc + r.hits, 0);
 
+  const endpointItems: BarItem[] = stats.endpointBreakdown30d.map((e: EndpointBreakdown) => ({
+    key: e.endpoint,
+    label: e.label,
+    value: e.hits,
+  }));
+
+  const countryItems: BarItem[] = stats.topCountries30d.map((c: CountryBreakdown) => ({
+    key: c.country,
+    label: (
+      <>
+        <span aria-hidden="true">{flagEmoji(c.country)}</span> {countryName(c.country)}
+      </>
+    ),
+    value: c.hits,
+  }));
+
   const trafficGroups: TrafficGroup[] = [
     { key: 'ai', label: 'AI assistants', hits: aiRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-ai', ink: '#ffffff' },
     { key: 'crawler', label: 'Other crawlers & bots', hits: crawlerRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-crawler', ink: '#ffffff' },
@@ -321,7 +435,7 @@ export default async function TrustPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <main className="page-shell page-shell--tool">
-        <div className="page-shell-inner" style={{ maxWidth: 880 }}>
+        <div className="page-shell-inner" style={{ maxWidth: 960 }}>
           <div className="surface page-panel">
             <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
               Trust &amp; Traffic Transparency
@@ -346,51 +460,97 @@ export default async function TrustPage() {
               <StatTile icon={ThumbsUp} color="#fbbf24" value={formatNumber(stats.totalUpvotes)} label="Upvotes cast" />
             </StatGrid>
 
-            <SectionLabel
-              title="Who's reading the API"
-              note={`${formatNumber(totalHits30d)} requests from ${formatNumber(stats.countryCount)} countries in the last 30 days.`}
-            />
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-              Every request to our search, listing, and <Link href="/llms.txt">llms.txt</Link> endpoints
-              gets classified server-side from its User-Agent. &ldquo;AI assistants&rdquo; only counts
-              named systems. Generic crawlers and unclassified agents are counted separately, so the two
-              numbers never get blended into one.
-            </p>
+            <SectionLabel title="Ecosystem reach" note="What the listed servers have earned out in the wild, summed across the catalog." />
+            <StatGrid>
+              <StatTile icon={Star} color="#fbbf24" value={formatCompact(stats.totalGithubStars)} label="Combined GitHub stars" />
+              <StatTile icon={Download} color="#34d399" value={formatCompact(stats.totalNpmDownloads)} label="Monthly npm downloads" />
+            </StatGrid>
 
-            <TrafficStackedBar groups={trafficGroups} total={totalHits30d} />
+            {stats.dailyTrend30d.length > 0 && (
+              <Panel>
+                <SectionLabel
+                  tight
+                  icon={Activity}
+                  title="Traffic over the last 30 days"
+                  note="Total requests to our API vs. the subset that came from a named AI assistant. Hover or focus the chart for exact daily numbers."
+                />
+                <TrendChart data={stats.dailyTrend30d} />
+              </Panel>
+            )}
 
-            <Group
-              title="AI assistants & their crawlers"
-              description="Chat and agent traffic from Claude, ChatGPT, Gemini, Perplexity, Cursor, Copilot, and Windsurf, plus the crawlers those companies run to index content, like ClaudeBot and GPTBot."
-              rows={aiRows}
-              totalHits={totalHits30d}
-              icon={GROUP_ICON.ai}
-              iconColor="var(--brand-cyan)"
-            />
-            <Group
-              title="Other crawlers & bots"
-              description="General-purpose web crawlers, link-preview bots, and unnamed automated clients. Not AI systems, but still worth counting."
-              rows={crawlerRows}
-              totalHits={totalHits30d}
-              icon={GROUP_ICON.crawler}
-              iconColor="#94a3b8"
-            />
-            <Group
-              title="Human visitors (browser requests to the API)"
-              description="Browsers hitting API endpoints directly, separate from normal page views."
-              rows={browserRows}
-              totalHits={totalHits30d}
-              icon={GROUP_ICON.browser}
-              iconColor="#60a5fa"
-            />
-            <Group
-              title="Unclassified"
-              description="Requests with no recognizable User-Agent pattern."
-              rows={unknownRows}
-              totalHits={totalHits30d}
-              icon={GROUP_ICON.unknown}
-              iconColor="#4b5563"
-            />
+            <Panel>
+              <SectionLabel
+                tight
+                title="Who's reading the API"
+                note={`${formatNumber(totalHits30d)} requests from ${formatNumber(stats.countryCount)} countries in the last 30 days.`}
+              />
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+                Every request to our search, listing, and <Link href="/llms.txt">llms.txt</Link> endpoints
+                gets classified server-side from its User-Agent. &ldquo;AI assistants&rdquo; only counts
+                named systems. Generic crawlers and unclassified agents are counted separately, so the two
+                numbers never get blended into one.
+              </p>
+
+              <TrafficStackedBar groups={trafficGroups} total={totalHits30d} />
+
+              <Group
+                title="AI assistants & their crawlers"
+                description="Chat and agent traffic from Claude, ChatGPT, Gemini, Perplexity, Cursor, Copilot, and Windsurf, plus the crawlers those companies run to index content, like ClaudeBot and GPTBot."
+                rows={aiRows}
+                totalHits={totalHits30d}
+                icon={GROUP_ICON.ai}
+                iconColor="var(--brand-cyan)"
+              />
+              <Group
+                title="Other crawlers & bots"
+                description="General-purpose web crawlers, link-preview bots, and unnamed automated clients. Not AI systems, but still worth counting."
+                rows={crawlerRows}
+                totalHits={totalHits30d}
+                icon={GROUP_ICON.crawler}
+                iconColor="#94a3b8"
+              />
+              <Group
+                title="Human visitors (browser requests to the API)"
+                description="Browsers hitting API endpoints directly, separate from normal page views."
+                rows={browserRows}
+                totalHits={totalHits30d}
+                icon={GROUP_ICON.browser}
+                iconColor="#60a5fa"
+              />
+              <Group
+                title="Unclassified"
+                description="Requests with no recognizable User-Agent pattern."
+                rows={unknownRows}
+                totalHits={totalHits30d}
+                icon={GROUP_ICON.unknown}
+                iconColor="#4b5563"
+              />
+            </Panel>
+
+            {(endpointItems.length > 0 || countryItems.length > 0) && (
+              <div
+                className="trust-viz"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '1.5rem',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                {endpointItems.length > 0 && (
+                  <Panel>
+                    <SectionLabel tight icon={Radio} title="What's being requested" note="API surfaces hit in the last 30 days, most-used first." />
+                    <BarList items={endpointItems} colorVar="var(--tv-ai)" />
+                  </Panel>
+                )}
+                {countryItems.length > 0 && (
+                  <Panel>
+                    <SectionLabel tight icon={Globe} title="Where requests come from" note="Top request-origin countries in the last 30 days." />
+                    <BarList items={countryItems} colorVar="var(--tv-browser)" />
+                  </Panel>
+                )}
+              </div>
+            )}
 
             <SectionLabel title="Why we're open about this" note="No login gate, no filtering. This is the same dashboard our team looks at." />
             <div

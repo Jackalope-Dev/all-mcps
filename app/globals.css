@@ -279,6 +279,7 @@ p {
 /* Layout */
 .container {
   max-width: var(--container-max);
+  width: 100%;
   margin: 0 auto;
   padding: 0 var(--space-8);
 }
@@ -1276,6 +1277,10 @@ p {
   color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1.7;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .markdown-body h1, .markdown-body h2, .markdown-body h3 {
@@ -1353,8 +1358,11 @@ p {
   border-radius: 0 8px 8px 0;
 }
 
-.markdown-body img {
+.markdown-body img,
+.markdown-body video,
+.markdown-body iframe {
   max-width: 100%;
+  height: auto;
   border-radius: 8px;
   margin-bottom: 1.5rem;
 }
@@ -1456,7 +1464,9 @@ p {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  flex: 1 1 180px;
+  flex: 1 1 min(180px, 100%);
+  min-width: 0;
+  max-width: 100%;
   padding: 0.7rem 1.1rem;
   border-radius: 10px;
   font-size: 0.85rem;
@@ -1468,6 +1478,7 @@ p {
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
   transition: all 0.18s ease;
+  box-sizing: border-box;
 }
 
 .install-deeplink-btn:hover {
@@ -1614,16 +1625,152 @@ optgroup option {
 }
 
 /* Detail Page Layout */
+.detail-main {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .detail-sidebar {
   position: sticky;
   top: 2rem;
   align-self: start;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Title row: avatar + name/badges. Keeps long package names from forcing
+   horizontal overflow on phones (min-width:0 + wrap is essential). */
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.detail-title-row:has(+ .detail-org) {
+  margin-bottom: 0.2rem;
+}
+
+.detail-title-row > :first-child {
+  flex-shrink: 0;
+}
+
+.detail-title-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.detail-title-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.detail-page-title {
+  margin: 0 !important;
+  min-width: 0;
+  flex: 1 1 auto;
+  line-height: 1.2;
+}
+
+.detail-page-name {
+  display: inline;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.detail-title-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.detail-org {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.detail-summary {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.detail-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 1.25rem;
+}
+
+.detail-related-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 1.25rem;
+}
+
+.detail-quick-install {
+  padding: 1.75rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.detail-manual-config {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.detail-manual-config-summary {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.detail-spec-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.detail-spec-row > span:first-child {
+  flex-shrink: 0;
+}
+
+.detail-spec-row > :last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .detail-readme-scroll {
   max-height: 70vh;
   overflow-y: auto;
+  overflow-x: auto;
   position: relative;
+  min-width: 0;
+  max-width: 100%;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
   mask-image: linear-gradient(to bottom, transparent, black 2%, black 98%, transparent);
@@ -1652,12 +1799,15 @@ optgroup option {
 .breadcrumb {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   font-size: 0.875rem;
   color: var(--text-secondary);
   list-style: none;
   padding: 0;
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .breadcrumb a {
@@ -1681,6 +1831,14 @@ optgroup option {
 .breadcrumb-current {
   color: var(--text-primary);
   font-weight: 500;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.breadcrumb > li {
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Share Modal */
@@ -2953,6 +3111,8 @@ nav[aria-label="Table of contents"] {
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Trust badges (premium / verified / featured) inline in the title — icon-only at
@@ -3004,9 +3164,12 @@ nav[aria-label="Table of contents"] {
 .mcp-action-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.55rem;
   padding: 0.5rem 1.25rem;
   min-height: 42px;
+  min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
   border-radius: 10px;
   background: var(--bg-muted);
@@ -3443,9 +3606,13 @@ nav[aria-label="Table of contents"] {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 3rem;
+  /* minmax(0, …) prevents grid children (README pre/tables) from expanding
+     the track past the viewport and clipping sibling content. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: clamp(1.5rem, 4vw, 3rem);
   align-items: start;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Responsive: Detail page */
@@ -3464,7 +3631,50 @@ nav[aria-label="Table of contents"] {
 
 @media (max-width: 900px) {
   .detail-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-title-row {
+    gap: 0.65rem;
+  }
+
+  .detail-quick-install {
+    padding: 1.15rem !important;
+  }
+
+  .detail-summary {
+    font-size: 1.05rem !important;
+  }
+
+  .mcp-header-toolbar {
+    gap: 0.5rem;
+  }
+
+  .mcp-action-btn {
+    flex: 1 1 auto;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+  }
+
+  .mcp-action-btn svg {
+    flex-shrink: 0;
+  }
+
+  .detail-manual-config {
+    padding: 0.65rem 0.75rem !important;
+  }
+
+  /* Client config env-var rows: stack key/value on narrow screens */
+  .client-config-env-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .client-config-env-row input {
+    width: 100%;
+    flex: none !important;
   }
 }
 
@@ -3718,6 +3928,18 @@ nav[aria-label="Table of contents"] {
   .newsletter-modal-card {
     padding: 1.25rem;
     max-width: calc(100vw - 2rem);
+  }
+
+  /* Nested config generator inside Quick Install: drop outer card chrome
+     that double-pads and can feel cramped on small screens. */
+  .detail-manual-config .client-config-tabs {
+    padding: 0.75rem !important;
+    margin-bottom: 0 !important;
+    box-shadow: none;
+  }
+
+  .detail-page-title {
+    font-size: clamp(1.25rem, 6vw, 1.75rem) !important;
   }
 }
 

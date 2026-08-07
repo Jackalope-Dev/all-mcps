@@ -156,6 +156,7 @@ export async function POST(req: Request) {
       let githubStars: number | null = server.githubStars ?? null;
       let toolsJson: string | null = server.tools ?? null;
       let toolsCheckedAt: Date | null = server.toolsCheckedAt ?? null;
+      let toolsError: string | null = server.toolsError ?? null;
 
       // Prefer package name from cached install, else listing name
       const npmName = server.installPackage || server.name;
@@ -226,6 +227,12 @@ export async function POST(req: Request) {
               toolsJson = JSON.stringify(
                 introspection.tools.map((t) => ({ name: t.name, description: t.description }))
               );
+              toolsError = null;
+            } else {
+              toolsError = (
+                introspection.ok ? 'Endpoint responded but returned no tools.' : introspection.error || 'Unknown error'
+              ).slice(0, 500);
+              console.error(`[health-cron] tools/list failed for ${server.id} (${server.url}): ${toolsError}`);
             }
           }
         }
@@ -294,6 +301,7 @@ export async function POST(req: Request) {
           npmDownloads,
           tools: toolsJson,
           toolsCheckedAt,
+          toolsError,
           ...(shouldUnpublish ? { status: 'removed' } : {}),
           ...(installFields
             ? {

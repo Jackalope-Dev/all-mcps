@@ -155,7 +155,7 @@ export default async function AlternativesPage({
 
         {/* Alternatives grid */}
         {alternatives.length > 0 && (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '1.25rem', minWidth: 0, maxWidth: '100%' }}>
             {alternatives.map((alt) => {
               const altName = parseServerName(alt.name).displayName;
               const featured = isFeaturedListing(alt);

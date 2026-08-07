@@ -2,7 +2,7 @@ import { getActiveServers } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
 import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
-import { resolveInstallConfig, toClaudeConfigSnippet } from '@/lib/installConfig';
+import { resolveInstallConfig, toClaudeConfigSnippet, installConfidenceNote } from '@/lib/installConfig';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -61,6 +61,7 @@ export async function GET(request: Request) {
     const installName =
       install.kind === 'stdio' ? install.packageName : server.id;
     const snippetKey = server.id;
+    const envVars = server.aiEnvVars || [];
 
     return {
       id: server.id,
@@ -76,8 +77,15 @@ export async function GET(request: Request) {
       qualityScore: computeQualityScore(server).score,
       installName,
       installConfidence: install.confidence,
+      // Always accompanies the snippet so a caller that only reads claudeConfigSnippet
+      // (skipping installConfidence) still gets the "verify before running" caveat for
+      // anything below 'high' confidence.
+      installNote: installConfidenceNote(install),
       installKind: install.kind,
-      claudeConfigSnippet: toClaudeConfigSnippet(install, snippetKey),
+      // Required env vars (API keys/tokens) extracted from the README by the AI content
+      // pipeline — also embedded as empty placeholders inside claudeConfigSnippet below.
+      envVars,
+      claudeConfigSnippet: toClaudeConfigSnippet(install, snippetKey, envVars),
       detailUrl: `https://allmcps.com/mcp/${server.id}`,
       markdownUrl: `https://allmcps.com/mcp/${server.id}.md`,
     };

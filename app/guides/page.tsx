@@ -1,26 +1,38 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen, Terminal, Cpu, ShieldCheck, ArrowRight, CheckCircle2, Layers, Key, Server } from 'lucide-react';
+import {
+  BookOpen,
+  Terminal,
+  Cpu,
+  ShieldCheck,
+  ArrowRight,
+  CheckCircle2,
+  Layers,
+  Key,
+  Server,
+  Wrench,
+  Bug,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 export const metadata: Metadata = {
   title: 'Model Context Protocol Guides & Tutorials',
   description:
-    'Comprehensive guides and tutorials for Model Context Protocol (MCP): a conceptual overview, LLM agent setup, building servers, and cloud deployment.',
+    'MCP guides: what MCP is, install and setup, build and deploy servers, security, and troubleshooting connection failures, zero tools, and timeouts.',
   alternates: {
     canonical: 'https://allmcps.com/guides',
   },
   openGraph: {
     title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
     description:
-      'Comprehensive guides and tutorials for Model Context Protocol (MCP): a conceptual overview, LLM agent setup, building servers, and cloud deployment.',
+      'MCP guides: what MCP is, install and setup, build and deploy servers, security, and troubleshooting connection failures, zero tools, and timeouts.',
     url: 'https://allmcps.com/guides',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
     description:
-      'Comprehensive guides and tutorials for Model Context Protocol (MCP): a conceptual overview, LLM agent setup, building servers, and cloud deployment.',
+      'MCP guides: what MCP is, install and setup, build and deploy servers, security, and troubleshooting connection failures, zero tools, and timeouts.',
   },
 };
 
@@ -133,6 +145,43 @@ const guidesList = [
       'A pre-install security checklist',
     ],
   },
+  {
+    slug: 'mcp-troubleshooting',
+    href: '/mcp-troubleshooting',
+    title: 'MCP Troubleshooting',
+    subtitle: 'Fix Connection Failures',
+    description:
+      'Server not connecting, zero tools, PATH errors, stdout corruption, missing env vars, and timeouts — map the symptom to the fix across every major client.',
+    level: 'Troubleshooting',
+    readTime: '12 min read',
+    icon: Wrench,
+    badgeVariant: 'verified' as const,
+    highlights: [
+      'Symptom → cause map for common failures',
+      'Where to find Claude / Cursor / Claude Code logs',
+      'PATH, config JSON, env vars, and stdio hygiene',
+      'Checklist + links to validator & deep-dive posts',
+    ],
+  },
+];
+
+/** Long-tail posts that rank for support queries — linked under the pillar grid. */
+const troubleshootingDeepDives = [
+  {
+    href: '/blog/mcp-server-not-connecting-troubleshooting-guide',
+    title: 'MCP Server Not Connecting?',
+    description: 'Five failure buckets with exact error text and fixes for Claude Desktop, Claude Code, Cursor, and more.',
+  },
+  {
+    href: '/blog/testing-and-debugging-mcp-servers',
+    title: 'Testing & Debugging MCP Servers',
+    description: 'Inspector, unit tests, integration harnesses, structured logging, and a pre-publish checklist for authors.',
+  },
+  {
+    href: '/blog/how-to-install-mcp-servers-in-claude-cursor-windsurf-and-vs-code',
+    title: 'Install MCP Across Clients',
+    description: 'Clean install paths for Claude, Cursor, Windsurf, and VS Code before you debug a bad config.',
+  },
 ];
 
 const jsonLd = {
@@ -193,7 +242,7 @@ export default function GuidesLandingPage() {
                 lineHeight: 1.65,
               }}
             >
-              Master MCP from the ground up: understand the protocol, connect your favorite AI client, or build production-ready custom servers.
+              Master MCP from the ground up: understand the protocol, connect your favorite AI client, build production-ready servers, or fix connection failures when something breaks.
             </p>
           </div>
 
@@ -248,6 +297,54 @@ export default function GuidesLandingPage() {
               );
             })}
           </div>
+
+          {/* Troubleshooting deep dives — long-tail SEO posts linked from the hub */}
+          <section style={{ marginTop: '3.5rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <Bug size={18} style={{ color: 'var(--accent-color)' }} />
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>
+                Troubleshooting deep dives
+              </h2>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', maxWidth: '640px', lineHeight: 1.6 }}>
+              Start with the{' '}
+              <Link href="/mcp-troubleshooting">MCP troubleshooting hub</Link>
+              {' '}for a symptom map, then dig into these focused write-ups when you need more detail.
+            </p>
+            <ul
+              style={{
+                listStyle: 'none',
+                margin: 0,
+                padding: 0,
+                display: 'grid',
+                gap: '0.75rem',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              }}
+            >
+              {troubleshootingDeepDives.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="surface"
+                    style={{
+                      display: 'block',
+                      padding: '1.1rem 1.25rem',
+                      borderRadius: '12px',
+                      textDecoration: 'none',
+                      height: '100%',
+                    }}
+                  >
+                    <div style={{ fontWeight: 650, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                      {item.title}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                      {item.description}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
 
           {/* Directory Callout Banner */}
           <div className="guide-card-banner">

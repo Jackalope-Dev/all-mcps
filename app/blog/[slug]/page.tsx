@@ -152,7 +152,10 @@ export default async function BlogPostPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <main className="page-shell page-shell--default">
         <div className="page-shell-inner">
-          <nav aria-label="Breadcrumb">
+          {/* marginBottom via inline style, not a Tailwind margin utility: this
+              project's unlayered CSS reset (star selector, margin 0) overrides
+              layered utility classes, so mt-6 here computed to 0. */}
+          <nav aria-label="Breadcrumb" style={{ marginBottom: '1.5rem' }}>
             <ol className="breadcrumb">
               <li>
                 <Link href="/">Home</Link>
@@ -170,7 +173,7 @@ export default async function BlogPostPage({
             </ol>
           </nav>
 
-          <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10 mt-6">
+          <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
             <article className="surface page-panel min-w-0">
               <header>
                 <h1 className="text-page-title">{post.title}</h1>

@@ -7,6 +7,32 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # Brand & Styling Rules
 When working on UI, design, or layout tasks, please refer to the [BRAND_GUIDE.md](./BRAND_GUIDE.md) to ensure consistency with our established colors, typography, and logo assets.
 
+# Sitemap lastmod (static marketing pages)
+
+Crawl signals depend on **honest** `lastmod` values. Static hub/guide pages do **not** use `new Date()` on every request — that taught crawlers to ignore our sitemap.
+
+Ship dates live in [`lib/sitemapHelpers.ts`](./lib/sitemapHelpers.ts) as `STATIC_PAGE_LASTMOD` (path → `YYYY-MM-DD`).
+
+**When you must bump the date (use today's date in `YYYY-MM-DD`):**
+
+- You change meaningful body copy, FAQ answers, or step-by-step instructions on a page listed in `STATIC_PAGE_LASTMOD`.
+- You add a **new** static route that should appear in the core sitemap (guides, tools, client pages, trust, pricing, etc.): add a `STATIC_PAGE_LASTMOD` entry **and** a matching `staticEntry(...)` in [`app/sitemap.ts`](./app/sitemap.ts) core shard (if the page is not already generated from blog/categories/listings).
+- You rename or retarget a path: remove the old key, add the new one.
+
+**Do not bump for:**
+
+- Pure refactors (imports, formatting, component renames with no user-visible copy change).
+- CSS-only / layout-only tweaks that do not change content.
+- Blog posts — lastmod comes from the `YYYY-MM-DD` filename prefix automatically.
+- MCP listing pages — lastmod comes from `lastCheckedAt` / `createdAt` automatically.
+
+**Also keep in sync when adding a new evergreen guide or hub:**
+
+1. `STATIC_PAGE_LASTMOD` + core sitemap entry (if applicable).
+2. [`app/guides/page.tsx`](./app/guides/page.tsx) if it belongs on the Guides hub.
+3. Footer / homepage chips / `INDEXNOW_CORE_PATHS` in `lib/sitemapHelpers.ts` for high-priority discovery pages.
+4. Optionally [`app/llms.txt/route.ts`](./app/llms.txt/route.ts) under Useful Links.
+
 # Blog Posts
 
 Blog posts live at `content/blog/YYYY-MM-DD-slug.md` — one markdown file per post. The filename's date prefix and slug are the source of truth; there's no separate `date` field in frontmatter.

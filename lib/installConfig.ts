@@ -257,10 +257,29 @@ export function resolveInstallConfig(input: {
   };
 }
 
-/** Claude Desktop / Cursor style mcpServers fragment for API responses. */
+/**
+ * Human/agent-readable caveat for a resolved install's confidence level. Shared by the
+ * markdown export and the JSON search API so a "low"/"medium" install never ships
+ * silently — every surface that hands out a command carries the same warning text.
+ */
+export function installConfidenceNote(install: ResolvedInstall): string {
+  if (install.confidence === 'high') return 'Install path detected from listing signals.';
+  if (install.confidence === 'medium')
+    return 'Install path inferred — verify against the README before running it.';
+  return 'Heuristic fallback — verify the package name and runner against the repository README before running it.';
+}
+
+/**
+ * Claude Desktop / Cursor style mcpServers fragment for API responses.
+ * `envVars` (from cached AI-extracted setup instructions, see lib/aiContent.ts) become
+ * empty-value placeholders in an `env` block — the caller must still fill in real
+ * secrets, but the config now at least documents that they're required instead of
+ * silently omitting them.
+ */
 export function toClaudeConfigSnippet(
   install: ResolvedInstall,
-  key: string
+  key: string,
+  envVars?: string[]
 ): Record<string, unknown> {
   if (install.kind === 'remote') {
     return {
@@ -271,12 +290,16 @@ export function toClaudeConfigSnippet(
       },
     };
   }
+  const entry: Record<string, unknown> = {
+    command: install.command,
+    args: install.args,
+  };
+  if (envVars && envVars.length > 0) {
+    entry.env = Object.fromEntries(envVars.map((v) => [v, '']));
+  }
   return {
     mcpServers: {
-      [key]: {
-        command: install.command,
-        args: install.args,
-      },
+      [key]: entry,
     },
   };
 }

@@ -57,18 +57,98 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <a href="/blog/rss.xml" className="nav-link">
+                Blog RSS
+              </a>
+            </li>
+            <li>
               <Link href="/pricing" className="nav-link">
                 Pricing
               </Link>
             </li>
             <li>
               <Link href="/what-is-mcp" className="nav-link">
-                What is an MCP?
+                What is MCP?
               </Link>
             </li>
             <li>
               <Link href="/guide" className="nav-link">
-                LLM Agents Guide
+                Install MCP Guide
+              </Link>
+            </li>
+            <li>
+              <Link href="/build-mcp-server" className="nav-link">
+                Build an MCP Server
+              </Link>
+            </li>
+            <li>
+              <Link href="/mcp-security" className="nav-link">
+                MCP Security
+              </Link>
+            </li>
+            <li>
+              <Link href="/deploy-mcp-server" className="nav-link">
+                Deploy Remote MCP
+              </Link>
+            </li>
+            <li>
+              <Link href="/mcp-troubleshooting" className="nav-link">
+                MCP Troubleshooting
+              </Link>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4 className="footer-heading">Popular hubs</h4>
+          <ul className="site-footer-links">
+            <li>
+              <Link href="/best/databases" className="nav-link">
+                Best for Databases
+              </Link>
+            </li>
+            <li>
+              <Link href="/best/developer-tools" className="nav-link">
+                Best for Developers
+              </Link>
+            </li>
+            <li>
+              <Link href="/best/web-search" className="nav-link">
+                Best for Web Search
+              </Link>
+            </li>
+            <li>
+              <Link href="/best/security" className="nav-link">
+                Best for Security
+              </Link>
+            </li>
+            <li>
+              <Link href="/best/browser-automation" className="nav-link">
+                Best for Browser Automation
+              </Link>
+            </li>
+            <li>
+              <Link href="/categories/databases" className="nav-link">
+                Databases category
+              </Link>
+            </li>
+            <li>
+              <Link href="/categories/developer-tools" className="nav-link">
+                Developer Tools category
+              </Link>
+            </li>
+            <li>
+              <Link href="/mcp-for-cursor" className="nav-link">
+                MCP for Cursor
+              </Link>
+            </li>
+            <li>
+              <Link href="/mcp-for-claude-desktop" className="nav-link">
+                MCP for Claude Desktop
+              </Link>
+            </li>
+            <li>
+              <Link href="/clients" className="nav-link">
+                All MCP clients
               </Link>
             </li>
           </ul>

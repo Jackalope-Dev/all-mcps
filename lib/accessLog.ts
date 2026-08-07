@@ -114,6 +114,16 @@ export const CALLER_LABELS: Record<CallerClass, string> = {
   unknown: 'Unknown',
 };
 
+/** Human-readable display names for each logged API endpoint (for dashboard charts). */
+export const ENDPOINT_LABELS: Record<Endpoint, string> = {
+  mcp_jsonrpc: 'MCP tool calls',
+  v1_search: 'Search API',
+  v1_server_detail: 'Server detail API',
+  llms_txt: 'llms.txt',
+  llms_full_txt: 'llms-full.txt',
+  markdown_view: 'Markdown view',
+};
+
 /** Brand colors for each caller class (for dashboard charts). */
 export const CALLER_COLORS: Record<CallerClass, string> = {
   claude: '#D97706',

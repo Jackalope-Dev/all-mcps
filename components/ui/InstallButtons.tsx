@@ -89,7 +89,7 @@ export function InstallButtons({
   };
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem', minWidth: 0, maxWidth: '100%' }}>
       <a
         href={cursorHref}
         onClick={() => handleInstall('cursor')}

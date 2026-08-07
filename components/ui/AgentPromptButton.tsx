@@ -40,7 +40,9 @@ export function AgentPromptButton({ serverId, serverName }: { serverId: string; 
         justifyContent: 'center',
         gap: '0.6rem',
         width: '100%',
-        padding: '0.9rem 1.25rem',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        padding: '0.9rem 1rem',
         background: 'var(--brand-gradient)',
         color: 'var(--bg-color)',
         fontWeight: 700,
@@ -50,6 +52,9 @@ export function AgentPromptButton({ serverId, serverName }: { serverId: string; 
         cursor: 'pointer',
         boxShadow: '0 4px 20px var(--accent-glow)',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        textAlign: 'center',
+        whiteSpace: 'normal',
+        lineHeight: 1.35,
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
@@ -60,8 +65,8 @@ export function AgentPromptButton({ serverId, serverName }: { serverId: string; 
         e.currentTarget.style.boxShadow = '0 4px 20px var(--accent-glow)';
       }}
     >
-      {copied ? <Check size={18} /> : <Bot size={18} />}
-      {copied ? 'Prompt Copied!' : 'Copy Install Prompt for AI Agents'}
+      {copied ? <Check size={18} style={{ flexShrink: 0 }} /> : <Bot size={18} style={{ flexShrink: 0 }} />}
+      <span>{copied ? 'Prompt Copied!' : 'Copy Install Prompt for AI Agents'}</span>
     </button>
   );
 }

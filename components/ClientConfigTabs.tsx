@@ -200,10 +200,10 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
   ] as const;
 
   return (
-    <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--border-color)', background: 'var(--bg-elevated)', boxShadow: 'var(--shadow-sm)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Sparkles size={18} style={{ color: 'var(--accent-color)' }} />
+    <div className="client-config-tabs" style={{ borderRadius: '12px', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+          <Sparkles size={18} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Install Config Generator</h3>
         </div>
         <button
@@ -233,7 +233,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
             💡 Tip: Replace placeholder values with your actual API keys or tokens before pasting into your client config.
           </div>
           {envVars.map((env, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+            <div key={idx} className="client-config-env-row" style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center', minWidth: 0 }}>
               <input
                 type="text"
                 placeholder="KEY (e.g. API_KEY)"
@@ -241,6 +241,8 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                 onChange={(e) => handleEnvChange(idx, 'key', e.target.value)}
                 style={{
                   flex: 1,
+                  minWidth: 0,
+                  boxSizing: 'border-box',
                   padding: '0.35rem 0.65rem',
                   borderRadius: '6px',
                   border: '1px solid var(--border-color)',
@@ -257,6 +259,8 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                 onChange={(e) => handleEnvChange(idx, 'value', e.target.value)}
                 style={{
                   flex: 1.5,
+                  minWidth: 0,
+                  boxSizing: 'border-box',
                   padding: '0.35rem 0.65rem',
                   borderRadius: '6px',
                   border: '1px solid var(--border-color)',
@@ -277,6 +281,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                     cursor: 'pointer',
                     fontSize: '1rem',
                     padding: '0 0.4rem',
+                    flexShrink: 0,
                   }}
                   title="Remove variable"
                 >

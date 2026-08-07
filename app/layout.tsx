@@ -47,6 +47,13 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/logo-icon.png",
   },
+  alternates: {
+    types: {
+      "application/rss+xml": "https://allmcps.com/blog/rss.xml",
+      "text/plain": "https://allmcps.com/llms.txt",
+      "application/json": "https://allmcps.com/data.json",
+    },
+  },
   openGraph: {
     title: "AllMCPs | Directory for Model Context Protocol Servers",
     description:

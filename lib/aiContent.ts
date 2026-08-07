@@ -27,6 +27,13 @@ export type AiListingContent = {
   features: string[];
   /** 3-5 grounded Q&A pairs for the /mcp/[id] FAQ section and its FAQPage schema. */
   faq: AiFaqItem[];
+  /**
+   * UPPER_SNAKE_CASE environment variable names the README/setup instructions say are
+   * required to run this server (API keys, tokens, connection strings). Surfaced as
+   * empty-value placeholders in generated mcpServers configs so an install snippet never
+   * silently omits a secret the server actually needs — see toClaudeConfigSnippet.
+   */
+  envVars: string[];
 };
 
 /**
@@ -107,6 +114,24 @@ export function clampFaq(value: unknown, maxItems: number, maxQLen: number, maxA
   return out;
 }
 
+/** Real env var names look like OPENAI_API_KEY, not sentences — reject anything else the model returns. */
+const ENV_VAR_NAME_PATTERN = /^[A-Z][A-Z0-9_]{1,49}$/;
+
+function clampEnvVars(value: unknown, maxItems: number): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== 'string') continue;
+    const name = item.trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if (!ENV_VAR_NAME_PATTERN.test(name) || seen.has(name)) continue;
+    seen.add(name);
+    out.push(name);
+    if (out.length >= maxItems) break;
+  }
+  return out;
+}
+
 export type ListingContentInput = {
   name: string;
   description: string;
@@ -130,7 +155,10 @@ const SYSTEM_PROMPT =
   '"faq" (3-5 objects with "q" and "a" keys — real questions a developer evaluating this server would ' +
   'search for or ask, e.g. what it requires, what it does NOT do, how it compares to doing the task ' +
   'manually, or a specific setup/auth detail if the material covers one; each "a" is 1-3 plain sentences ' +
-  'grounded only in the provided material). ' +
+  'grounded only in the provided material), ' +
+  '"envVars" (0-8 UPPER_SNAKE_CASE environment variable names, e.g. "OPENAI_API_KEY", that the setup/' +
+  'install instructions say must be set for this server to run — API keys, tokens, connection strings. ' +
+  'Only names explicitly shown in the material, never invented or guessed from what the server "probably" needs). ' +
   'If the material is too thin to support a field, return fewer items rather than guessing.';
 
 /** Chat failure reasons that mean "stop spending" rather than "this one didn't work". */
@@ -167,6 +195,7 @@ export async function generateListingContent(
     useCases?: unknown;
     features?: unknown;
     faq?: unknown;
+    envVars?: unknown;
   }>({
     model: 'gpt-4.1-mini',
     temperature: 0.3,
@@ -189,9 +218,10 @@ export async function generateListingContent(
   const useCases = clampList(result.data.useCases, 5, 120);
   const features = clampList(result.data.features, 6, 100);
   const faq = clampFaq(result.data.faq, 5, 150, 400);
+  const envVars = clampEnvVars(result.data.envVars, 8);
 
   // A usable summary is the minimum bar — without it the page gains nothing over the raw scrape.
   if (!summary || summary.length < 12) return { status: 'skip', reason: 'empty' };
 
-  return { status: 'ok', content: { summary, overview, useCases, features, faq } };
+  return { status: 'ok', content: { summary, overview, useCases, features, faq, envVars } };
 }

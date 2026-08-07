@@ -149,6 +149,7 @@ export async function POST(req: Request) {
               aiOverview: o.content.overview || null,
               aiUseCases: o.content.useCases.length ? JSON.stringify(o.content.useCases) : null,
               aiFeatures: o.content.features.length ? JSON.stringify(o.content.features) : null,
+              aiEnvVars: o.content.envVars.length ? JSON.stringify(o.content.envVars) : null,
               // Every fresh enrichment gets its FAQ in the same call — stamping
               // ai_faq_at here means the ai-faq backfill cron (which only targets
               // ai_faq_at IS NULL) never re-processes this row.

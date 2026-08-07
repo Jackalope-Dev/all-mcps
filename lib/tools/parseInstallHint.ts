@@ -19,6 +19,15 @@ const URL_PATTERN = /https?:\/\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/;
 const NON_ENDPOINT_HOSTS = ['glama.ai', 'github.com', 'npmjs.com', 'pypi.org'];
 
 /**
+ * Package/URL captures come from prose, so a match routinely swallows the sentence's
+ * trailing punctuation (e.g. "...run npx -y foo-mcp." → pkg "foo-mcp."). No real
+ * package name or URL ends in these characters, so trimming is always safe.
+ */
+function trimTrailingPunctuation(candidate: string): string {
+  return candidate.replace(/[).,;:'"\]]+$/, '');
+}
+
+/**
  * Common test-runner/build-tool/linter package names that regularly appear in a README's
  * "Development" or "Testing" section (e.g. `npx vitest`, `npx tsx watch`). RUNNER_PATTERN
  * matches the first npx/uvx/bunx invocation anywhere in the text with no section awareness,
@@ -44,21 +53,28 @@ export function parseInstallHint(description: string): ParsedInstallHint {
 
   const runnerMatch = description.match(RUNNER_PATTERN);
   if (runnerMatch) {
-    const [, runner, , pkg] = runnerMatch;
-    if (!NON_MCP_TOOLING_PACKAGES.has(pkg.toLowerCase())) {
+    const [, runner, , rawPkg] = runnerMatch;
+    const pkg = trimTrailingPunctuation(rawPkg);
+    if (pkg && !NON_MCP_TOOLING_PACKAGES.has(pkg.toLowerCase())) {
       const args = runner === 'npx' ? ['-y', pkg] : [pkg];
       return { command: runner, args };
     }
   }
 
+  // "pip install X" describes how to *obtain* the package, not how to *run* it as an
+  // MCP stdio server — using "pip"/"install" verbatim as the launch command spawns a
+  // process that installs the package and exits immediately, never a running server.
+  // `uvx <package>` is the standard way to run a Python package's console-script entry
+  // point without a separate install step, so treat this the same as an explicit uvx hint.
   const pipMatch = description.match(PIP_PATTERN);
   if (pipMatch) {
-    return { command: 'pip', args: ['install', pipMatch[1]] };
+    const pkg = trimTrailingPunctuation(pipMatch[1]);
+    if (pkg) return { command: 'uvx', args: [pkg] };
   }
 
   const urlMatch = description.match(URL_PATTERN);
   if (urlMatch) {
-    const candidate = urlMatch[0].replace(/[).,]+$/, '');
+    const candidate = trimTrailingPunctuation(urlMatch[0]);
     const isNonEndpoint = NON_ENDPOINT_HOSTS.some((host) => candidate.includes(host));
     if (!isNonEndpoint) {
       return { url: candidate };

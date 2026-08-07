@@ -664,6 +664,11 @@ export default function DirectoryGrid({
               { href: '/categories', label: '📂 Categories' },
               { href: '/tools', label: '🛠 MCP Utilities' },
               { href: '/guides', label: '📖 Guides' },
+              { href: '/what-is-mcp', label: '💡 What is MCP?' },
+              { href: '/guide', label: '⚙️ Install Guide' },
+              { href: '/build-mcp-server', label: '🔧 Build a Server' },
+              { href: '/mcp-security', label: '🔒 Security' },
+              { href: '/mcp-troubleshooting', label: '🧰 Troubleshooting' },
               { href: '/docs/api', label: '🤖 Catalog API' },
             ].map((item) => (
               <Link

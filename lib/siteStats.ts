@@ -1,8 +1,8 @@
-import { count, countDistinct, gte, sql, sum, eq } from 'drizzle-orm';
+import { and, count, countDistinct, gte, isNotNull, sql, sum, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { apiAccessLogs, servers } from '../db/schema';
 import serversData from '../data/mcp-servers.json';
-import { CALLER_LABELS, CallerClass } from './accessLog';
+import { CALLER_LABELS, ENDPOINT_LABELS, CallerClass, Endpoint } from './accessLog';
 
 /**
  * Named AI assistants and their crawlers — the honest "AI is reading us" signal.
@@ -25,6 +25,13 @@ export const AI_SYSTEM_CLASSES: CallerClass[] = [
 
 export type CallerBreakdown = { class: CallerClass; label: string; hits: number };
 
+/** One day of traffic — total hits vs the subset from named AI systems. Zero-filled for days with no rows. */
+export type DailyTrendPoint = { date: string; total: number; ai: number };
+
+export type EndpointBreakdown = { endpoint: Endpoint; label: string; hits: number };
+
+export type CountryBreakdown = { country: string; hits: number };
+
 export type SiteStats = {
   totalServers: number;
   categoryCount: number;
@@ -35,6 +42,12 @@ export type SiteStats = {
   botCrawlerReads30d: number;
   /** Full caller-class breakdown over the last 30 days, ordered by hits desc — powers the /trust page. */
   callerBreakdown30d: CallerBreakdown[];
+  /** Daily total vs AI-system hits for the last 30 days, oldest first, zero-filled — powers the /trust page trend chart. */
+  dailyTrend30d: DailyTrendPoint[];
+  /** Which API surfaces get hit, last 30 days, ordered by hits desc. */
+  endpointBreakdown30d: EndpointBreakdown[];
+  /** Top request-origin countries, last 30 days, ordered by hits desc (max 8). */
+  topCountries30d: CountryBreakdown[];
   countryCount: number;
   totalViews: number;
   totalCopies: number;
@@ -92,6 +105,9 @@ export async function getSiteStats(): Promise<SiteStats> {
       activeAiSystems: [],
       botCrawlerReads30d: 0,
       callerBreakdown30d: [],
+      dailyTrend30d: [],
+      endpointBreakdown30d: [],
+      topCountries30d: [],
       countryCount: 0,
       totalViews: snapshotViews,
       totalCopies: snapshotCopies,
@@ -106,7 +122,7 @@ export async function getSiteStats(): Promise<SiteStats> {
   try {
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [countryRows, callerClassRows, serverStatsRows] = await Promise.all([
+    const [countryRows, callerClassRows, serverStatsRows, dailyRows, endpointRows, topCountryRows] = await Promise.all([
       db
         .select({
           uniqueCountries: countDistinct(apiAccessLogs.ipCountry),
@@ -140,9 +156,48 @@ export async function getSiteStats(): Promise<SiteStats> {
           // until the underlying fetchNpmDownloads() bug is fixed separately.
           totalNpmDownloads: sql<number>`sum(case when ${servers.npmDownloads} < 300000000 then ${servers.npmDownloads} else 0 end)`,
           categories: countDistinct(servers.category),
+          // `tools` is a JSON array per listing (or null if never introspected) — sum the
+          // per-row array lengths for a true catalog-wide tool count instead of relying on
+          // the near-empty static seed snapshot (data/mcp-servers.json).
+          totalTools: sql<number>`sum(case when ${servers.tools} is not null then json_array_length(${servers.tools}) else 0 end)`,
         })
         .from(servers)
         .where(eq(servers.status, 'active'))
+        .catch(() => []),
+
+      // Daily hits by caller class (aggregated into total vs AI in JS below) — powers the trend chart.
+      db
+        .select({
+          date: sql<string>`date(${apiAccessLogs.createdAt}, 'unixepoch')`.as('day'),
+          callerClass: apiAccessLogs.callerClass,
+          hits: count(),
+        })
+        .from(apiAccessLogs)
+        .where(gte(apiAccessLogs.createdAt, cutoff))
+        .groupBy(sql`date(${apiAccessLogs.createdAt}, 'unixepoch')`, apiAccessLogs.callerClass)
+        .catch(() => []),
+
+      db
+        .select({
+          endpoint: apiAccessLogs.endpoint,
+          hits: count(),
+        })
+        .from(apiAccessLogs)
+        .where(gte(apiAccessLogs.createdAt, cutoff))
+        .groupBy(apiAccessLogs.endpoint)
+        .orderBy(sql`count() desc`)
+        .catch(() => []),
+
+      db
+        .select({
+          country: apiAccessLogs.ipCountry,
+          hits: count(),
+        })
+        .from(apiAccessLogs)
+        .where(and(gte(apiAccessLogs.createdAt, cutoff), isNotNull(apiAccessLogs.ipCountry)))
+        .groupBy(apiAccessLogs.ipCountry)
+        .orderBy(sql`count() desc`)
+        .limit(8)
         .catch(() => []),
     ]);
 
@@ -176,6 +231,38 @@ export async function getSiteStats(): Promise<SiteStats> {
       hits: Number(r.hits || 0),
     }));
 
+    // Zero-fill every day in the window so the trend chart has a continuous 30-point line,
+    // even on days with no traffic at all.
+    const dayMap = new Map<string, { total: number; ai: number }>();
+    for (let i = 29; i >= 0; i--) {
+      const key = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      dayMap.set(key, { total: 0, ai: 0 });
+    }
+    for (const r of (dailyRows as { date: string; callerClass: CallerClass; hits: number }[]) || []) {
+      const bucket = dayMap.get(r.date);
+      if (!bucket) continue; // outside the zero-filled window (cutoff boundary)
+      const rowHits = Number(r.hits || 0);
+      bucket.total += rowHits;
+      if (r.callerClass && AI_SYSTEM_CLASSES.includes(r.callerClass)) bucket.ai += rowHits;
+    }
+    const dailyTrend: DailyTrendPoint[] = Array.from(dayMap.entries()).map(([date, v]) => ({
+      date,
+      total: v.total,
+      ai: v.ai,
+    }));
+
+    const endpointBreakdown: EndpointBreakdown[] = ((endpointRows as { endpoint: Endpoint; hits: number }[]) || []).map(
+      (r) => ({
+        endpoint: r.endpoint,
+        label: ENDPOINT_LABELS[r.endpoint] || r.endpoint,
+        hits: Number(r.hits || 0),
+      })
+    );
+
+    const topCountries: CountryBreakdown[] = ((topCountryRows as { country: string | null; hits: number }[]) || [])
+      .filter((r) => r.country)
+      .map((r) => ({ country: r.country as string, hits: Number(r.hits || 0) }));
+
     const dbTotal = Number(serverStatsRows[0]?.totalServers ?? snapshotTotal);
     const dbViews = Number(serverStatsRows[0]?.totalViews ?? snapshotViews);
     const dbCopies = Number(serverStatsRows[0]?.totalCopies ?? snapshotCopies);
@@ -183,6 +270,9 @@ export async function getSiteStats(): Promise<SiteStats> {
     const dbStars = Number(serverStatsRows[0]?.totalGithubStars ?? snapshotStars);
     const dbNpm = Number(serverStatsRows[0]?.totalNpmDownloads ?? snapshotNpm);
     const dbCategories = Number(serverStatsRows[0]?.categories ?? snapshotCategories);
+    // 0 is a legitimate answer here (introspection may genuinely have found nothing yet),
+    // so unlike the fields above this never falls back to the near-empty static snapshot.
+    const dbTools = Number(serverStatsRows[0]?.totalTools ?? 0);
 
     return {
       totalServers: dbTotal > 0 ? dbTotal : snapshotTotal,
@@ -192,13 +282,16 @@ export async function getSiteStats(): Promise<SiteStats> {
       activeAiSystems: activeCallers,
       botCrawlerReads30d: botCrawlerHits,
       callerBreakdown30d: callerBreakdown,
+      dailyTrend30d: dailyTrend,
+      endpointBreakdown30d: endpointBreakdown,
+      topCountries30d: topCountries,
       countryCount: countries,
       totalViews: dbViews,
       totalCopies: dbCopies,
       totalUpvotes: dbUpvotes,
       totalGithubStars: dbStars,
       totalNpmDownloads: dbNpm,
-      toolsIndexed: snapshotTools, // Tools are parsed from JSON column — snapshot count is reliable
+      toolsIndexed: dbTools,
       verifiedCount: snapshotVerified,
     };
   } catch (err) {
@@ -211,6 +304,9 @@ export async function getSiteStats(): Promise<SiteStats> {
       activeAiSystems: [],
       botCrawlerReads30d: 0,
       callerBreakdown30d: [],
+      dailyTrend30d: [],
+      endpointBreakdown30d: [],
+      topCountries30d: [],
       countryCount: 0,
       totalViews: snapshotViews,
       totalCopies: snapshotCopies,

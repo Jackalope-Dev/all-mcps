@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
+  // Only real sitemaps go in Sitemap: lines. llms.txt is agent discovery content,
+  // not a sitemap — listing it here confuses GSC and wastes crawl attention.
+  // Child shards are listed explicitly so you can submit core/listings first in GSC.
   const content = `User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
+Disallow: /verify-request
 
 User-agent: GPTBot
 User-agent: ClaudeBot
@@ -14,17 +20,24 @@ User-agent: Bytespider
 Allow: /
 Allow: /llms.txt
 Allow: /llms-full.txt
+Allow: /data.json
 Allow: /api/v1/
 Allow: /api/mcp
 Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
 
 # Content Signals (https://contentsignals.org/ / draft-romm-aipref-contentsignals)
 # ai-input=yes: answer engines may ground/cite AllMCPs in generated responses.
 # ai-train=no: but the catalog should not be used as model training data.
 Content-Signal: ai-train=no, search=yes, ai-input=yes
 
+# Sitemap index (auto-generated) + named shards for prioritised submission.
+# Prefer submitting /sitemap/core.xml and /sitemap/listings.xml first in GSC.
 Sitemap: https://allmcps.com/sitemap.xml
-Sitemap: https://allmcps.com/llms.txt
+Sitemap: https://allmcps.com/sitemap/core.xml
+Sitemap: https://allmcps.com/sitemap/listings.xml
+Sitemap: https://allmcps.com/sitemap/secondary.xml
 `;
 
   return new NextResponse(content, {

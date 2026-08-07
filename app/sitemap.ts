@@ -1,357 +1,178 @@
-import { MetadataRoute } from 'next';
-import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
-import serversData from '../data/mcp-servers.json';
+import type { MetadataRoute } from 'next';
 import { getAllPosts } from '../lib/blog';
 import { DIRECTORY_CATEGORIES, categorySlug } from '../lib/categories';
 import { BEST_TOPICS } from '../lib/bestTopics';
 import { MCP_CLIENTS } from '../lib/clients';
 import { WORKFLOW_PROMPTS } from '../lib/prompts';
 import { engagementScore } from '../lib/search';
+import {
+  STATIC_PAGE_LASTMOD,
+  getSitemapServers,
+  listingLastMod,
+  maxServerLastMod,
+  safeDateISO,
+  type SitemapServer,
+} from '../lib/sitemapHelpers';
 
-/**
- * Safely parses and normalizes any date input into a valid Date object.
- * Handles Date objects, Unix timestamps (seconds or ms), ISO strings,
- * SQLite datetime strings ("YYYY-MM-DD HH:MM:SS"), null, undefined,
- * or invalid strings, always returning a valid Date instance.
- *
- * Includes a year-range sanity check (2000–2100) to catch double-scaled
- * timestamps — e.g. when Drizzle `mode:'timestamp'` multiplies a value
- * already stored as milliseconds by 1000 again.
- */
-function safeDateISO(val: unknown): string {
-  const MIN_YEAR = 2000;
-  const MAX_YEAR = 2100;
-  const now = new Date();
+const BASE = 'https://allmcps.com';
 
-  /** Return true when `d` falls within the plausible year window. */
-  function plausible(d: Date): boolean {
-    if (isNaN(d.getTime())) return false;
-    const y = d.getFullYear();
-    return y >= MIN_YEAR && y <= MAX_YEAR;
-  }
-
-  /**
-   * Try to rescue an out-of-range Date that was created from a
-   * double-scaled timestamp (ms interpreted as seconds, then ×1000).
-   * Dividing the underlying ms value by 1000 recovers the real date.
-   */
-  function rescue(d: Date): Date | null {
-    const fixed = new Date(Math.floor(d.getTime() / 1000));
-    return plausible(fixed) ? fixed : null;
-  }
-
-  let d: Date = now;
-
-  if (val) {
-    if (val instanceof Date) {
-      if (plausible(val)) {
-        d = val;
-      } else {
-        // Possibly double-scaled; try dividing ms by 1000
-        d = rescue(val) ?? now;
-      }
-    } else if (typeof val === 'number') {
-      if (!isNaN(val) && val > 0) {
-        // Try as-is (milliseconds)
-        let parsed = new Date(val);
-        if (plausible(parsed)) {
-          d = parsed;
-        } else {
-          // Try as seconds → ms
-          parsed = new Date(val * 1000);
-          if (plausible(parsed)) {
-            d = parsed;
-          } else {
-            // Try rescuing (divide by 1000)
-            d = rescue(new Date(val)) ?? rescue(new Date(val * 1000)) ?? now;
-          }
-        }
-      }
-    } else if (typeof val === 'string') {
-      let str = val.trim();
-      if (str && str !== 'null' && str !== 'undefined') {
-        // Normalize SQLite format "YYYY-MM-DD HH:MM:SS" to ISO "YYYY-MM-DDTHH:MM:SSZ"
-        if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/.test(str)) {
-          str = str.replace(' ', 'T') + 'Z';
-        }
-        const parsed = new Date(str);
-        if (plausible(parsed)) {
-          d = parsed;
-        } else if (!isNaN(parsed.getTime())) {
-          d = rescue(parsed) ?? now;
-        }
-      }
-    }
-  }
-
-  // Final guard: if the result is still out of range, use now
-  if (!plausible(d)) {
-    d = now;
-  }
-
-  return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
+/** Named sitemap shards so GSC/Bing can prioritize core + listings first. */
+export async function generateSitemaps() {
+  return [{ id: 'core' }, { id: 'listings' }, { id: 'secondary' }];
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://allmcps.com';
-  
-  let servers = serversData as any[];
-  
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext({ async: true });
-    if (ctx && ctx.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db.select().from(serversTable).where(eq(serversTable.status, 'active'));
-      if (dbServers.length > 0) {
-        servers = dbServers;
-      }
-    }
-  } catch (e: any) {
-    const msg = e?.message || e?.cause?.message || String(e);
-    if (msg.includes('no such table') || msg.includes('D1_ERROR')) {
-      console.warn('[sitemap] D1 table not available during build time, using static mcp-servers.json fallback.');
-    } else {
-      console.error('[sitemap] Failed to fetch D1 for sitemap:', e);
-    }
+function staticEntry(
+  path: string,
+  changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'],
+  priority: number
+): MetadataRoute.Sitemap[number] {
+  const lastMod = STATIC_PAGE_LASTMOD[path] ?? '2026-08-01';
+  return {
+    url: path === '/' ? BASE : `${BASE}${path}`,
+    lastModified: safeDateISO(lastMod),
+    changeFrequency,
+    priority,
+  };
+}
+
+function buildCoreSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
+  const byCategory = new Map<string, SitemapServer[]>();
+  for (const s of servers) {
+    const cat = s.category || 'other';
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat)!.push(s);
   }
 
-  const sitemapEntries: MetadataRoute.Sitemap = [
-    {
-      url: baseUrl,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'hourly',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/browse`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'hourly',
-      priority: 0.95,
-    },
-    {
-      url: `${baseUrl}/categories`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/best`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/clients`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/docs/api`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/submit`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/guides`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/what-is-mcp`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/guide`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/build-mcp-server`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/mcp-security`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/deploy-mcp-server`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/pricing`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/tools`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/tools/openapi-to-mcp`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/tools/protocol-inspector`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/tools/config-generator`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/tools/config-validator`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/tools/token-calculator`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/tools/config-auditor`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/tools/playground`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/prompts`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/badge-generator`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'monthly' as const,
-      priority: 0.75,
-    },
-    {
-      url: `${baseUrl}/mcp-for-cursor`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/mcp-for-claude-desktop`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/mcp-for-windsurf`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/mcp-for-cline`,
-      lastModified: safeDateISO(new Date()),
-      changeFrequency: 'weekly' as const,
-      priority: 0.9,
-    },
+  const entries: MetadataRoute.Sitemap = [
+    staticEntry('/', 'hourly', 1),
+    staticEntry('/browse', 'hourly', 0.95),
+    staticEntry('/categories', 'daily', 0.9),
+    staticEntry('/best', 'weekly', 0.9),
+    staticEntry('/clients', 'weekly', 0.9),
+    staticEntry('/about', 'monthly', 0.8),
+    staticEntry('/docs/api', 'weekly', 0.85),
+    staticEntry('/blog', 'weekly', 0.85),
+    staticEntry('/contact', 'monthly', 0.6),
+    staticEntry('/submit', 'weekly', 0.8),
+    staticEntry('/terms', 'yearly', 0.3),
+    staticEntry('/privacy', 'yearly', 0.3),
+    staticEntry('/guides', 'monthly', 0.9),
+    staticEntry('/what-is-mcp', 'monthly', 0.9),
+    staticEntry('/guide', 'monthly', 0.9),
+    staticEntry('/build-mcp-server', 'monthly', 0.9),
+    staticEntry('/mcp-security', 'monthly', 0.9),
+    staticEntry('/deploy-mcp-server', 'monthly', 0.9),
+    staticEntry('/mcp-troubleshooting', 'monthly', 0.9),
+    staticEntry('/pricing', 'monthly', 0.7),
+    staticEntry('/tools', 'monthly', 0.9),
+    staticEntry('/tools/openapi-to-mcp', 'monthly', 0.9),
+    staticEntry('/tools/protocol-inspector', 'monthly', 0.9),
+    staticEntry('/tools/config-generator', 'monthly', 0.8),
+    staticEntry('/tools/config-validator', 'monthly', 0.8),
+    staticEntry('/tools/token-calculator', 'monthly', 0.8),
+    staticEntry('/tools/config-auditor', 'monthly', 0.85),
+    staticEntry('/tools/playground', 'monthly', 0.85),
+    staticEntry('/prompts', 'weekly', 0.9),
+    staticEntry('/badge-generator', 'monthly', 0.75),
+    staticEntry('/mcp-for-cursor', 'weekly', 0.9),
+    staticEntry('/mcp-for-claude-desktop', 'weekly', 0.9),
+    staticEntry('/mcp-for-windsurf', 'weekly', 0.9),
+    staticEntry('/mcp-for-cline', 'weekly', 0.9),
+    staticEntry('/trust', 'weekly', 0.85),
   ];
 
-  let blogEntries: MetadataRoute.Sitemap = [];
+  // Blog posts — real publish dates
   try {
     const posts = getAllPosts();
-    blogEntries = posts.map((post) => ({
-      url: `${baseUrl}/blog/${post.slug}`,
-      lastModified: safeDateISO(post.date ? `${post.date}T12:00:00.000Z` : undefined),
-      changeFrequency: 'monthly' as const,
-      priority: 0.6,
-    }));
+    for (const post of posts) {
+      entries.push({
+        url: `${BASE}/blog/${post.slug}`,
+        lastModified: safeDateISO(post.date ? `${post.date}T12:00:00.000Z` : undefined),
+        changeFrequency: 'monthly',
+        priority: 0.7,
+      });
+    }
   } catch (e) {
     console.error('Failed to read blog posts for sitemap', e);
   }
 
-  const serverEntries = servers.map((server) => ({
-    url: `${baseUrl}/mcp/${server.id}`,
-    lastModified: safeDateISO(server.lastCheckedAt || server.createdAt || server.created_at),
+  // Category hubs — lastmod from newest listing activity in that category
+  for (const category of DIRECTORY_CATEGORIES) {
+    const inCat = byCategory.get(category) || [];
+    entries.push({
+      url: `${BASE}/categories/${categorySlug(category)}`,
+      lastModified: maxServerLastMod(inCat),
+      changeFrequency: 'daily',
+      priority: 0.85,
+    });
+  }
+
+  // Best-of topics
+  const seenBest = new Set<string>();
+  for (const t of BEST_TOPICS) {
+    if (seenBest.has(t.slug)) continue;
+    seenBest.add(t.slug);
+    const inCat = t.categorySlug
+      ? servers.filter((s) => categorySlug(s.category || '') === t.categorySlug)
+      : [];
+    entries.push({
+      url: `${BASE}/best/${t.slug}`,
+      lastModified: inCat.length > 0 ? maxServerLastMod(inCat) : safeDateISO(STATIC_PAGE_LASTMOD['/best']),
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    });
+  }
+
+  for (const c of MCP_CLIENTS) {
+    entries.push({
+      url: `${BASE}/clients/${c.slug}`,
+      lastModified: safeDateISO(STATIC_PAGE_LASTMOD['/clients']),
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    });
+  }
+
+  for (const w of WORKFLOW_PROMPTS) {
+    entries.push({
+      url: `${BASE}/prompts/${w.slug}`,
+      lastModified: safeDateISO(STATIC_PAGE_LASTMOD['/prompts']),
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    });
+  }
+
+  return entries;
+}
+
+function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
+  return servers.map((server) => ({
+    url: `${BASE}/mcp/${server.id}`,
+    lastModified: listingLastMod(server),
     changeFrequency: 'daily' as const,
     priority: 0.7,
   }));
+}
 
-  // Alternatives pages are indexable + linked from listings; without sitemap
-  // entries they stay under-discovered by crawlers despite full SEO markup.
-  const alternativesEntries = servers.map((server) => ({
-    url: `${baseUrl}/mcp/${server.id}/alternatives`,
-    lastModified: safeDateISO(server.lastCheckedAt || server.createdAt || server.created_at),
+function buildSecondarySitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
+  // Alternatives: indexable but lower priority — don't compete with core + listings.
+  const alternatives: MetadataRoute.Sitemap = servers.map((server) => ({
+    url: `${BASE}/mcp/${server.id}/alternatives`,
+    lastModified: listingLastMod(server),
     changeFrequency: 'weekly' as const,
-    priority: 0.55,
+    priority: 0.45,
   }));
 
-  // Compare pages: top engagement listings × top peers in same category.
-  // Cap pairs + use sorted ids for canonical URLs so we don't explode the sitemap.
-  const engagement = (s: any) => engagementScore(s);
-  const byCategory = new Map<string, any[]>();
+  // Compare pages: top engagement seeds × peers (capped).
+  const engagement = (s: SitemapServer) =>
+    engagementScore({
+      githubStars: s.githubStars ?? s.stars ?? 0,
+      npmDownloads: s.npmDownloads ?? s.downloads ?? 0,
+      views: s.views ?? 0,
+      copies: s.copies ?? 0,
+      upvotes: s.upvotes ?? 0,
+    });
+
+  const byCategory = new Map<string, SitemapServer[]>();
   for (const s of servers) {
     const cat = s.category || 'other';
     if (!byCategory.has(cat)) byCategory.set(cat, []);
@@ -360,11 +181,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const list of byCategory.values()) {
     list.sort((a, b) => engagement(b) - engagement(a));
   }
+
   const topSeeds = [...servers].sort((a, b) => engagement(b) - engagement(a)).slice(0, 80);
   const compareSeen = new Set<string>();
   const compareEntries: MetadataRoute.Sitemap = [];
+
   for (const seed of topSeeds) {
-    const peers = (byCategory.get(seed.category) || [])
+    const peers = (byCategory.get(seed.category || 'other') || [])
       .filter((p) => p.id !== seed.id)
       .slice(0, 3);
     for (const peer of peers) {
@@ -373,62 +196,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (compareSeen.has(key)) continue;
       compareSeen.add(key);
       compareEntries.push({
-        url: `${baseUrl}/mcp/${a}/vs/${b}`,
+        url: `${BASE}/mcp/${a}/vs/${b}`,
         lastModified: safeDateISO(
           seed.lastCheckedAt || seed.createdAt || seed.created_at || peer.lastCheckedAt
         ),
         changeFrequency: 'weekly',
-        priority: 0.5,
+        priority: 0.4,
       });
       if (compareEntries.length >= 400) break;
     }
     if (compareEntries.length >= 400) break;
   }
 
-  const categoryEntries: MetadataRoute.Sitemap = DIRECTORY_CATEGORIES.map((category) => ({
-    url: `${baseUrl}/categories/${categorySlug(category)}`,
-    lastModified: safeDateISO(new Date()),
-    changeFrequency: 'daily' as const,
-    priority: 0.85,
-  }));
-
-  const clientEntries: MetadataRoute.Sitemap = MCP_CLIENTS.map((c) => ({
-    url: `${baseUrl}/clients/${c.slug}`,
-    lastModified: safeDateISO(new Date()),
-    changeFrequency: 'weekly',
-    priority: 0.85,
-  }));
-
-  // De-dupe by slug so accidental double entries never emit two /best/* URLs.
-  const seenBest = new Set<string>();
-  const bestEntries: MetadataRoute.Sitemap = BEST_TOPICS.filter((t) => {
-    if (seenBest.has(t.slug)) return false;
-    seenBest.add(t.slug);
-    return true;
-  }).map((t) => ({
-    url: `${baseUrl}/best/${t.slug}`,
-    lastModified: safeDateISO(new Date()),
-    changeFrequency: 'weekly' as const,
-    priority: 0.85,
-  }));
-
-  const promptEntries: MetadataRoute.Sitemap = WORKFLOW_PROMPTS.map((w) => ({
-    url: `${baseUrl}/prompts/${w.slug}`,
-    lastModified: safeDateISO(new Date()),
-    changeFrequency: 'weekly' as const,
-    priority: 0.85,
-  }));
-
-  return [
-    ...sitemapEntries,
-    ...categoryEntries,
-    ...bestEntries,
-    ...clientEntries,
-    ...promptEntries,
-    ...blogEntries,
-    ...serverEntries,
-    ...alternativesEntries,
-    ...compareEntries,
-  ];
+  return [...alternatives, ...compareEntries];
 }
 
+export default async function sitemap(props: {
+  id: Promise<string>;
+}): Promise<MetadataRoute.Sitemap> {
+  const id = await props.id;
+  const servers = await getSitemapServers();
+
+  if (id === 'core') return buildCoreSitemap(servers);
+  if (id === 'listings') return buildListingsSitemap(servers);
+  if (id === 'secondary') return buildSecondarySitemap(servers);
+
+  // Unknown shard — return empty rather than mixing priorities.
+  return [];
+}

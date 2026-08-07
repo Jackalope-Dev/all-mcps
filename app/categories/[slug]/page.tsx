@@ -17,7 +17,7 @@ import {
 } from '../../../lib/categories';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
-import { BEST_TOPICS } from '../../../lib/bestTopics';
+import { bestTopicForCategory } from '../../../lib/bestTopics';
 import { CategorySponsorBanner } from '../../../components/CategorySponsorBanner';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 
@@ -228,7 +228,7 @@ export default async function CategoryLandingPage({
               Open in interactive directory
             </Link>
             {(() => {
-              const best = BEST_TOPICS.find((t) => t.categorySlug === slug);
+              const best = bestTopicForCategory(category);
               return best ? (
                 <Link href={`/best/${best.slug}`} className="btn btn-secondary">
                   Best {best.title} servers →

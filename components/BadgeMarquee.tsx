@@ -153,6 +153,19 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://codetrendy.com/?utm_source=allmcps.com&utm_medium=badge',
     imageUrl: 'https://codetrendy.com/api/badge?style=classic',
     rel: 'nofollow noopener noreferrer'
+  },
+  {
+    id: 'devtool',
+    name: 'Listed on DevTool.io',
+    href: 'https://devtool.io',
+    rel: 'noopener'
+  },
+  {
+    id: 'buildlist',
+    name: 'Featured on Buildlist',
+    href: 'https://buildlist.io',
+    imageUrl: 'https://buildlist.io/badge.svg',
+    rel: 'noopener'
   }
 ];
 

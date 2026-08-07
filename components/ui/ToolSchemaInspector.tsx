@@ -47,7 +47,7 @@ export function ToolSchemaInspector({
   }
 
   return (
-    <div style={{ marginBottom: '3rem' }}>
+    <div style={{ marginBottom: '3rem', minWidth: 0, maxWidth: '100%' }}>
       <div
         style={{
           display: 'flex',
@@ -56,20 +56,22 @@ export function ToolSchemaInspector({
           flexWrap: 'wrap',
           gap: '1rem',
           marginBottom: '0.75rem',
+          minWidth: 0,
         }}
       >
-        <div>
+        <div style={{ minWidth: 0, flex: '1 1 12rem' }}>
           <h2
             style={{
-              fontSize: '1.4rem',
+              fontSize: 'clamp(1.15rem, 4vw, 1.4rem)',
               fontWeight: 700,
               margin: 0,
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
+              flexWrap: 'wrap',
             }}
           >
-            <Wrench size={22} style={{ color: 'var(--accent-color)' }} />
+            <Wrench size={22} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
             Capabilities & Tool Schemas {hasTools ? `(${tools.length})` : ''}
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
@@ -78,7 +80,7 @@ export function ToolSchemaInspector({
         </div>
 
         {hasTools && tools.length > 4 && (
-          <div style={{ position: 'relative', width: '220px' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '220px', minWidth: 0 }}>
             <Search
               size={14}
               style={{
@@ -96,6 +98,8 @@ export function ToolSchemaInspector({
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
                 padding: '0.4rem 0.75rem 0.4rem 2.2rem',
                 borderRadius: '8px',
                 border: '1px solid var(--border-color)',
@@ -109,7 +113,7 @@ export function ToolSchemaInspector({
       </div>
 
       {hasTools ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.85rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '0.85rem', minWidth: 0 }}>
           {filteredTools.map((tool) => {
             const isExpanded = !!expandedTools[tool.name];
             const hasParams = tool.parameters && Object.keys(tool.parameters).length > 0;
@@ -208,7 +212,7 @@ export function ToolSchemaInspector({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: 'var(--accent-color)', fontWeight: 600, fontSize: '0.9rem' }}>
             <Sparkles size={16} /> Extracted Tool Capabilities
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '0.75rem' }}>
             {aiFeatures.map((f, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 <Terminal size={14} style={{ color: 'var(--accent-color)', flexShrink: 0, marginTop: '0.2rem' }} />
