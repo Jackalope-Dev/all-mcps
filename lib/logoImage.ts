@@ -71,6 +71,70 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array>
   }
 }
 
+const MAX_SCREENSHOT_BYTES = 10 * 1024 * 1024;
+const MAX_SCREENSHOT_WIDTH = 1920;
+const MAX_SCREENSHOT_HEIGHT = 1080;
+
+/**
+ * Validates, decodes, and re-encodes an uploaded listing screenshot while preserving
+ * high resolution (up to 1920x1080 bounds) and natural aspect ratio.
+ */
+export async function processScreenshotUpload(bytes: ArrayBuffer): Promise<Uint8Array> {
+  if (bytes.byteLength === 0) {
+    throw new LogoValidationError('Uploaded file is empty.');
+  }
+  if (bytes.byteLength > MAX_SCREENSHOT_BYTES) {
+    throw new LogoValidationError('Screenshot must be 10MB or smaller.');
+  }
+
+  const view = new Uint8Array(bytes);
+  if (!isPngOrJpeg(view)) {
+    throw new LogoValidationError('Screenshot must be a PNG or JPEG image.');
+  }
+
+  const { PhotonImage, SamplingFilter, resize } = await import(
+    '@cf-wasm/photon/workerd'
+  );
+
+  let input: PhotonImageType;
+  try {
+    input = PhotonImage.new_from_byteslice(view);
+  } catch (err) {
+    console.error('Photon failed to decode uploaded screenshot:', err);
+    throw new LogoValidationError('Could not read this file as an image.');
+  }
+
+  try {
+    const width = input.get_width();
+    const height = input.get_height();
+
+    if (width < 100 || height < 100) {
+      throw new LogoValidationError('Screenshot must be at least 100x100px.');
+    }
+
+    if (width <= MAX_SCREENSHOT_WIDTH && height <= MAX_SCREENSHOT_HEIGHT) {
+      return input.get_bytes();
+    }
+
+    const ratio = Math.min(MAX_SCREENSHOT_WIDTH / width, MAX_SCREENSHOT_HEIGHT / height);
+    const targetW = Math.max(1, Math.round(width * ratio));
+    const targetH = Math.max(1, Math.round(height * ratio));
+
+    const resized = resize(input, targetW, targetH, SamplingFilter.Lanczos3);
+    try {
+      return resized.get_bytes();
+    } finally {
+      resized.free();
+    }
+  } catch (err) {
+    if (err instanceof LogoValidationError) throw err;
+    console.warn('Photon failed to process screenshot image:', err);
+    throw new LogoValidationError('Could not process this screenshot image.');
+  } finally {
+    input.free();
+  }
+}
+
 /**
  * Crop/resize/pad a decoded image into the final square logo.
  *

@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { servers } from '@/db/schema';
 import { auth } from '@/lib/auth';
-import { processLogoUpload, LogoValidationError } from '@/lib/logoImage';
+import { processLogoUpload, processScreenshotUpload, LogoValidationError } from '@/lib/logoImage';
 import { sendNotificationEmail, getEmailEnv } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
 
@@ -12,7 +12,7 @@ const ID_PATTERN = /^[a-z0-9-]+$/;
 
 /**
  * Owner-authenticated screenshot upload. Reuses the LOGOS R2 binding under
- * screenshots/pending/<id>.png — same validation pipeline as logos.
+ * screenshots/pending/<id>.png — premium locked.
  */
 export async function POST(req: Request) {
   try {
@@ -54,10 +54,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'You do not own this listing.' }, { status: 403 });
     }
 
+    if (!server.isPremium) {
+      return NextResponse.json(
+        { error: 'Screenshots are exclusive to Premium listings. Please upgrade your listing to Premium to add high-res screenshots.' },
+        { status: 403 }
+      );
+    }
+
     let processed: Uint8Array;
     try {
-      // Same resize/validate path as logos — keeps uploads bounded and PNG-normalized.
-      processed = await processLogoUpload(await file.arrayBuffer());
+      processed = await processScreenshotUpload(await file.arrayBuffer());
     } catch (err) {
       if (err instanceof LogoValidationError) {
         return NextResponse.json({ error: err.message }, { status: 400 });

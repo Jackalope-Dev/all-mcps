@@ -544,27 +544,49 @@ export default function DashboardClient({
                     }}
                   />
                 </label>
-                <label className="btn btn-secondary btn-sm dashboard-logo-upload">
-                  <ImageIcon size={14} aria-hidden="true" />
-                  {uploadingScreenshotId === server.id
-                    ? 'Uploading…'
-                    : server.pendingScreenshotKey
-                      ? 'Screenshot pending'
-                      : server.screenshotUrl
-                        ? 'Replace screenshot'
-                        : 'Upload screenshot'}
-                  <input
-                    id={`screenshot-input-${server.id}`}
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    disabled={uploadingScreenshotId === server.id}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) uploadScreenshot(server.id, file);
-                      e.target.value = '';
+                {server.isPremium ? (
+                  <label className="btn btn-secondary btn-sm dashboard-logo-upload">
+                    <ImageIcon size={14} aria-hidden="true" />
+                    {uploadingScreenshotId === server.id
+                      ? 'Uploading…'
+                      : server.pendingScreenshotKey
+                        ? 'Screenshot pending'
+                        : server.screenshotUrl
+                          ? 'Replace screenshot'
+                          : 'Upload screenshot'}
+                    <input
+                      id={`screenshot-input-${server.id}`}
+                      type="file"
+                      accept="image/png,image/jpeg"
+                      disabled={uploadingScreenshotId === server.id}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadScreenshot(server.id, file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast.error('Screenshots are a Premium Feature', {
+                        description: 'Upgrade your listing to Premium to upload high-res screenshots and capture user interest.',
+                      });
                     }}
-                  />
-                </label>
+                    className="btn btn-secondary btn-sm dashboard-logo-upload"
+                    style={{
+                      borderColor: 'rgba(255, 215, 0, 0.4)',
+                      background: 'rgba(255, 215, 0, 0.08)',
+                      color: 'var(--gold-color)',
+                    }}
+                    title="Unlock high-res screenshot uploads with Premium"
+                  >
+                    <Crown size={14} style={{ color: 'var(--gold-color)' }} />
+                    <span>Upload screenshot</span>
+                    <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(255, 215, 0, 0.2)', fontWeight: 700, marginLeft: '2px' }}>PRO</span>
+                  </button>
+                )}
               </div>
             </div>
 
