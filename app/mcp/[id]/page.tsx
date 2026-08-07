@@ -29,6 +29,8 @@ import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 import { bestTopicForCategory } from '../../../lib/bestTopics';
 import { categorySlug, getCategoryMeta } from '../../../lib/categories';
 import { ToolSchemaInspector } from '../../../components/ui/ToolSchemaInspector';
+import { CollapsibleText } from '../../../components/CollapsibleText';
+import { MobileInstallBar } from '../../../components/MobileInstallBar';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
@@ -532,81 +534,28 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <ShareModal serverId={server.id} serverName={server.name} variant="action" />
           </div>
 
-          <div className="detail-summary" style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
+          <div className="detail-summary" style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.6' }}>
             <SafeMarkdown content={(server.aiSummary && server.aiSummary.trim()) || server.description} utmContent={server.id} />
           </div>
 
-          {/* AI-authored content layer — the unique, human-useful copy that makes this page
-              worth ranking (and reading) instead of just mirroring the upstream README.
-              Rendered only when the ai-content cron has enriched this listing. */}
-          {(server.aiOverview ||
-            (server.aiUseCases?.length ?? 0) > 0 ||
-            (server.aiFeatures?.length ?? 0) > 0) && (
-            <section style={{ marginBottom: '3rem' }}>
-              {server.aiOverview && (
-                <>
-                  <h2 style={{ fontSize: '1.5rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Overview
-                  </h2>
-                  <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '1rem', margin: '0 0 2rem' }}>
-                    {server.aiOverview}
-                  </p>
-                </>
-              )}
-              <div className="detail-ai-grid">
-                {(server.aiUseCases?.length ?? 0) > 0 && (
-                  <div className="surface" style={{ padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                      <Sparkles size={16} style={{ color: 'var(--accent-color)' }} /> Use cases
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                      {server.aiUseCases!.map((uc) => (
-                        <div key={uc} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                          <span style={{ color: 'var(--accent-color)', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: '1', marginTop: '-1px' }}>•</span>
-                          <span>{uc}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(server.aiFeatures?.length ?? 0) > 0 && (
-                  <div className="surface" style={{ padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                      <Wrench size={16} style={{ color: 'var(--accent-color)' }} /> Key features
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                      {server.aiFeatures!.map((f) => (
-                        <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                          <span style={{ color: 'var(--accent-color)', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: '1', marginTop: '-1px' }}>•</span>
-                          <span>{f}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          <section id="quick-install" className="surface detail-quick-install" style={{ marginBottom: '2.5rem', scrollMarginTop: '5rem', borderRadius: '16px', border: '1px solid var(--border-color)', background: 'var(--brand-gradient-soft)' }}>
+          {/* Install-first: primary conversion path sits above long AI copy / README. */}
+          <section id="quick-install" className="surface detail-quick-install" style={{ marginBottom: '1.75rem', scrollMarginTop: '5rem', borderRadius: '16px', border: '1px solid var(--border-color)', background: 'var(--brand-gradient-soft)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                <Terminal size={20} style={{ color: 'var(--accent-color)', flexShrink: 0 }} /> Quick Install
+                <Terminal size={20} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" /> Quick Install
               </h2>
               <Badge variant="success" style={{ fontSize: '0.75rem' }}>
                 Automated &amp; IDE Setup
               </Badge>
             </div>
             <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.25rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
-              Copy the AI prompt to automatically install this server into your coding agent (Claude Code, Cursor, etc.), or use 1-click editor setup below.
+              Copy the AI prompt to install this server into Claude Code, Cursor, or another agent — or use 1-click editor setup below.
             </p>
 
-            {/* Primary Action: Copy AI Install Prompt */}
             <div style={{ marginBottom: '1.25rem' }}>
               <AgentPromptButton serverId={server.id} serverName={server.name} />
             </div>
 
-            {/* 1-Click IDE Install Buttons */}
             <InstallButtons
               serverId={server.id}
               serverName={server.name}
@@ -619,7 +568,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               installConfidence={server.installConfidence}
             />
 
-            {/* Collapsed Manual Client JSON Config */}
             <details className="detail-manual-config" style={{ marginTop: '1.25rem', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', padding: '0.75rem 1rem' }}>
               <summary className="detail-manual-config-summary">
                 <span>Manual Client &amp; Custom JSON Config</span>
@@ -630,6 +578,74 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </div>
             </details>
           </section>
+
+          {/* Next steps strip — install → claim → compare */}
+          <nav className="detail-next-steps" aria-label="Next steps">
+            <a href="#quick-install" className="detail-next-step">
+              <Terminal size={14} aria-hidden="true" /> Install
+            </a>
+            <Link href={`/mcp/${server.id}/claim`} className="detail-next-step">
+              <BadgeCheck size={14} aria-hidden="true" /> Claim listing
+            </Link>
+            <Link href={`/mcp/${server.id}/alternatives`} className="detail-next-step">
+              <Sparkles size={14} aria-hidden="true" /> Alternatives
+            </Link>
+            <Link href={`/browse?category=${encodeURIComponent(server.category)}`} className="detail-next-step">
+              <span aria-hidden="true">{catMeta.emoji}</span> More in {catMeta.label}
+            </Link>
+          </nav>
+
+          {/* AI-authored content — overview soft-collapsed so install stays primary. */}
+          {(server.aiOverview ||
+            (server.aiUseCases?.length ?? 0) > 0 ||
+            (server.aiFeatures?.length ?? 0) > 0) && (
+            <section style={{ marginBottom: '2.5rem' }}>
+              {server.aiOverview && (
+                <>
+                  <h2 style={{ fontSize: '1.5rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Sparkles size={20} style={{ color: 'var(--accent-color)' }} aria-hidden="true" /> Overview
+                  </h2>
+                  <div style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '1rem', margin: '0 0 1.5rem' }}>
+                    <CollapsibleText collapsedLines={4}>
+                      <p style={{ margin: 0 }}>{server.aiOverview}</p>
+                    </CollapsibleText>
+                  </div>
+                </>
+              )}
+              <div className="detail-ai-grid">
+                {(server.aiUseCases?.length ?? 0) > 0 && (
+                  <div className="surface" style={{ padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                      <Sparkles size={16} style={{ color: 'var(--accent-color)' }} aria-hidden="true" /> Use cases
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                      {server.aiUseCases!.map((uc) => (
+                        <div key={uc} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          <span style={{ color: 'var(--accent-color)', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: '1', marginTop: '-1px' }} aria-hidden="true">•</span>
+                          <span>{uc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(server.aiFeatures?.length ?? 0) > 0 && (
+                  <div className="surface" style={{ padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                      <Wrench size={16} style={{ color: 'var(--accent-color)' }} aria-hidden="true" /> Key features
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                      {server.aiFeatures!.map((f) => (
+                        <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          <span style={{ color: 'var(--accent-color)', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: '1', marginTop: '-1px' }} aria-hidden="true">•</span>
+                          <span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           <ToolSchemaInspector
             tools={server.tools}
@@ -782,6 +798,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </div>
           </section>
         </div>
+
+        <MobileInstallBar displayName={displayName} />
 
         {/* Sidebar (Right Column) */}
         <div className="detail-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

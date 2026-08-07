@@ -116,7 +116,9 @@ export default function DirectoryGrid({
   const [selectedTransport, setSelectedTransport] = useState<TransportKind>('all');
   // Default to relevance ordering whenever there's a query (incl. deep links).
   const [sortMode, setSortMode] = useState<SortMode>(initialQuery.trim() ? 'relevance' : 'trending');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  // Landing favors visual discovery (grid); /browse defaults to power-user list.
+  // localStorage may override after mount.
+  const [viewMode, setViewMode] = useState<ViewMode>(isBrowse ? 'list' : 'grid');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(30);
 
@@ -374,7 +376,7 @@ export default function DirectoryGrid({
     return () => clearTimeout(timer);
   }, [searchQuery, selectedCategory, filteredCount]);
 
-  // Restore preferred view mode once on mount
+  // Restore preferred view mode once on mount (overrides landing/browse defaults).
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const savedView = window.localStorage.getItem('allmcps-view-mode');
@@ -588,110 +590,70 @@ export default function DirectoryGrid({
 
   return (
     <>
-      {/* Marketing hero — only on the unfiltered homepage landing */}
+      {/* Marketing hero — only on the unfiltered homepage landing.
+          Hierarchy: value prop → primary search (below) → one secondary CTA strip. */}
       {!isBrowse && !selectedCategory && (
-        <section className="container animate-fade-in delay-1 landing-hero" style={{ paddingBottom: '1.5rem' }}>
+        <section className="container animate-fade-in delay-1 landing-hero">
           <h1 className="text-display">
             Discover &amp; Install <span className="text-brand-gradient">Model Context Protocol</span> Servers
           </h1>
           <p className="text-lead">
-            The open directory for Model Context Protocol (MCP) servers. Connect Claude, Cursor, Windsurf, and AI agents directly to databases, developer tools, local files, and APIs.
+            The open directory for MCP servers. Connect Claude, Cursor, Windsurf, and AI agents to
+            databases, tools, files, and APIs.
             {typeof totalCount === 'number' && totalCount > 0 ? (
               <>
                 {' '}
-                Explore <strong style={{ color: 'var(--text-primary)' }}>{totalCount.toLocaleString()}+</strong> verified servers.
+                Explore{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>{totalCount.toLocaleString()}+</strong>{' '}
+                servers.
               </>
             ) : null}
           </p>
 
-
-
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-              justifyContent: 'center',
-              marginTop: '1.5rem',
-            }}
-          >
-            <Link href="/browse" className="btn btn-primary btn-lg">
-              Browse All Servers
-            </Link>
+          <div className="landing-hero-actions">
+            <a href="#directory-search" className="btn btn-primary btn-lg">
+              <Search size={16} aria-hidden="true" /> Search servers
+            </a>
             <Link href="/submit" className="btn btn-lg btn-submit-noticeable">
-              <Sparkles size={16} aria-hidden="true" /> Submit a Server
+              <Sparkles size={16} aria-hidden="true" /> Submit a server
             </Link>
           </div>
 
-          {/* Supported Clients Quick Access */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              flexWrap: 'wrap',
-              marginTop: '1.25rem',
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Integrates with:</span>
+          <div className="landing-hero-explore" aria-label="Explore AllMCPs">
             {[
-              { href: '/mcp-for-claude-desktop', label: 'Claude Desktop' },
-              { href: '/mcp-for-cursor', label: 'Cursor' },
-              { href: '/mcp-for-windsurf', label: 'Windsurf' },
-              { href: '/mcp-for-cline', label: 'Cline' },
-              { href: '/clients', label: 'All Clients →' },
-            ].map((client) => (
-              <Link
-                key={client.href}
-                href={client.href}
-                className="directory-tag"
-                style={{ textDecoration: 'none', fontSize: '0.78rem', padding: '0.2rem 0.6rem' }}
-              >
-                {client.label}
-              </Link>
-            ))}
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-              justifyContent: 'center',
-              marginTop: '0.75rem',
-            }}
-          >
-            {[
-              { href: '/best', label: '⭐ Top Rated' },
-              { href: '/categories', label: '📂 Categories' },
-              { href: '/tools', label: '🛠 MCP Utilities' },
-              { href: '/guides', label: '📖 Guides' },
-              { href: '/what-is-mcp', label: '💡 What is MCP?' },
-              { href: '/guide', label: '⚙️ Install Guide' },
-              { href: '/build-mcp-server', label: '🔧 Build a Server' },
-              { href: '/mcp-security', label: '🔒 Security' },
-              { href: '/mcp-troubleshooting', label: '🧰 Troubleshooting' },
-              { href: '/docs/api', label: '🤖 Catalog API' },
+              { href: '/browse', label: 'Browse all' },
+              { href: '/best', label: 'Best of' },
+              { href: '/categories', label: 'Categories' },
+              { href: '/tools', label: 'Tools' },
+              { href: '/guides', label: 'Guides' },
             ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="directory-tag"
-                style={{ textDecoration: 'none', fontSize: '0.78rem' }}
-              >
+              <Link key={item.href} href={item.href} className="landing-hero-explore-link">
                 {item.label}
               </Link>
             ))}
           </div>
 
-
+          <p className="landing-hero-clients">
+            <span className="landing-hero-clients-label">Works with</span>
+            {[
+              { href: '/mcp-for-claude-desktop', label: 'Claude' },
+              { href: '/mcp-for-cursor', label: 'Cursor' },
+              { href: '/mcp-for-windsurf', label: 'Windsurf' },
+              { href: '/mcp-for-cline', label: 'Cline' },
+              { href: '/clients', label: 'All clients' },
+            ].map((client, i, arr) => (
+              <React.Fragment key={client.href}>
+                <Link href={client.href} className="landing-hero-client-link">
+                  {client.label}
+                </Link>
+                {i < arr.length - 1 ? <span className="landing-hero-client-sep" aria-hidden="true">·</span> : null}
+              </React.Fragment>
+            ))}
+          </p>
         </section>
       )}
 
-      {/* Trust-signal stats strip — homepage landing only, right below the hero */}
+      {/* Trust-signal stats strip — three metrics max; detail on /trust */}
       {!isBrowse && !selectedCategory && <StatsBanner stats={siteStats} />}
 
       {/* Browse page title — the marketing hero (with its own <h1>) only renders on the
@@ -711,17 +673,12 @@ export default function DirectoryGrid({
         </section>
       )}
 
-      {/* Search Bar & Filters */}
+      {/* Search Bar & Filters — sticky on scroll so discovery stays one gesture away */}
       <section
-        className="container animate-fade-in delay-2"
-        style={{
-          margin: isBrowse ? '1.5rem auto' : '0 auto',
-          marginBottom: '2rem',
-          display: 'flex',
-          justifyContent: 'center',
-        }}
+        id="directory-search"
+        className="container animate-fade-in delay-2 directory-search-section"
       >
-        <div className="directory-filters">
+        <div className="directory-filters directory-filters-sticky">
           <form
             className="directory-search-bar"
             role="search"
@@ -792,6 +749,34 @@ export default function DirectoryGrid({
               <span>Search</span>
             </button>
           </form>
+
+          {/* Intent chips — popular queries that teach how search works */}
+          {!searchQuery.trim() && (
+            <div className="directory-intent-chips" role="group" aria-label="Popular searches">
+              {[
+                { q: 'postgres', label: 'Postgres' },
+                { q: 'github issues', label: 'GitHub issues' },
+                { q: 'browser automation', label: 'Browser automation' },
+                { q: 'read pdf documents', label: 'PDF documents' },
+                { q: 'slack notifications', label: 'Slack' },
+              ].map((chip) => (
+                <button
+                  key={chip.q}
+                  type="button"
+                  className="directory-intent-chip"
+                  onClick={() => {
+                    if (isBrowse) {
+                      handleSearchChange(chip.q);
+                    } else {
+                      goToFullDirectorySearch(chip.q);
+                    }
+                  }}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Active filter pills (only shown when active filters exist) */}
           {isFiltered && (
@@ -979,52 +964,44 @@ export default function DirectoryGrid({
       {/* Directory */}
       <section className="container animate-fade-in delay-3" style={{ marginBottom: '6rem' }}>
         {lazyFeedUrl && feedStatus === 'loading' && (
-          <div
-            role="status"
-            aria-live="polite"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              padding: '0.75rem 1rem',
-              marginBottom: '1rem',
-              borderRadius: '10px',
-              border: '1px solid rgba(0, 229, 255, 0.22)',
-              background: 'rgba(0, 229, 255, 0.06)',
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <Loader2 size={16} aria-hidden="true" className="directory-feed-spinner" style={{ color: '#00E5FF', flexShrink: 0 }} />
+          <div className="directory-feed-status" role="status" aria-live="polite">
+            <Loader2 size={16} aria-hidden="true" className="directory-feed-spinner" />
             Loading full directory so search and filters cover every listing…
           </div>
         )}
         {lazyFeedUrl && feedStatus === 'error' && (
-          <div
-            role="status"
-            style={{
-              padding: '0.75rem 1rem',
-              marginBottom: '1rem',
-              borderRadius: '10px',
-              border: '1px solid rgba(245, 158, 11, 0.35)',
-              background: 'rgba(245, 158, 11, 0.08)',
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
+          <div className="directory-feed-status directory-feed-status--warn" role="status">
             Showing the initial page of results. Full-catalog search is temporarily unavailable — try
             refreshing.
           </div>
         )}
 
+        {lazyFeedUrl && feedStatus === 'loading' && (
+          <div className="directory-skeleton-grid" aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="directory-skeleton-card surface" />
+            ))}
+          </div>
+        )}
+
         <div className="directory-toolbar">
-          <h2 style={{ marginBottom: 0, fontSize: isBrowse || selectedCategory ? '1.5rem' : undefined }}>
-            {isBrowse || selectedCategory || isFiltered ? 'Results' : 'Newest Servers'}{' '}
-            <span style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', fontWeight: 500 }}>
-              ({filteredServers.length.toLocaleString()} {filteredServers.length === 1 ? 'tool' : 'tools'})
-              {lazyFeedUrl && feedStatus === 'loading' ? ' · loading…' : ''}
-            </span>
-          </h2>
+          <div>
+            <h2 style={{ marginBottom: 0, fontSize: isBrowse || selectedCategory ? '1.5rem' : undefined }}>
+              {isBrowse || selectedCategory || isFiltered ? 'Results' : 'Newest Servers'}{' '}
+              <span style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', fontWeight: 500 }}>
+                ({filteredServers.length.toLocaleString()} {filteredServers.length === 1 ? 'tool' : 'tools'})
+                {lazyFeedUrl && feedStatus === 'loading' ? ' · loading…' : ''}
+              </span>
+            </h2>
+            {sortMode === 'trending' && !searchQuery.trim() && (
+              <p className="directory-sort-hint">Sorted by recent engagement (upvotes, installs, views).</p>
+            )}
+            {sortMode === 'relevance' && searchQuery.trim() && (
+              <p className="directory-sort-hint">
+                Ranked by name, description, tools, and AI summary match for &ldquo;{searchQuery.trim()}&rdquo;.
+              </p>
+            )}
+          </div>
 
           <div className="directory-toolbar-controls">
             <div className="directory-segmented" role="group" aria-label="Tech stack filter">
@@ -1169,27 +1146,36 @@ export default function DirectoryGrid({
           <div className="surface" style={{ borderStyle: 'dashed' }}>
             <EmptyState
               icon={<Search size={22} aria-hidden="true" />}
-              title="No tools found"
+              title={searchQuery.trim() ? `No servers match “${searchQuery.trim()}”` : 'No tools found'}
               description={
                 !isBrowse && typeof totalCount === 'number' && totalCount > initialServers.length
-                  ? 'Nothing in this homepage preview matches. Try the full directory — or submit the MCP if you build it.'
-                  : 'Nothing matches your current search or filters. Build or own an MCP server for this?'
+                  ? 'Nothing in this homepage preview matches. Try the full directory — or browse a popular category.'
+                  : 'Try a broader query, clear filters, or explore a category below.'
               }
               actions={
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <div className="directory-empty-actions">
                   {!isBrowse && searchQuery.trim() && (
                     <Button variant="primary" onClick={() => goToFullDirectorySearch(searchQuery)}>
                       Search full directory
                     </Button>
                   )}
-                  <Link href="/submit" className="btn btn-primary">
-                    + Add Your MCP Server
-                  </Link>
                   {isFiltered && (
                     <Button variant="secondary" onClick={clearAllFilters}>
                       Clear all filters
                     </Button>
                   )}
+                  <div className="directory-empty-suggestions">
+                    {[
+                      { href: '/best/databases', label: 'Best for databases' },
+                      { href: '/best/developer-tools', label: 'Best for developers' },
+                      { href: '/categories', label: 'All categories' },
+                      { href: '/submit', label: 'Submit a server' },
+                    ].map((s) => (
+                      <Link key={s.href} href={s.href} className="directory-intent-chip">
+                        {s.label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               }
             />
@@ -1202,7 +1188,7 @@ export default function DirectoryGrid({
               <ImpressionBeacon key={server.id} serverId={server.id} surface={surface}>
               <Card
                 href={`/mcp/${server.id}`}
-                className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
+                className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''} ${isVerifiedListing(server) ? 'directory-card-verified' : ''}`.trim()}
               >
                 <div className="directory-card-header">
                   <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} />

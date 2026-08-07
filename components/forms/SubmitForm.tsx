@@ -155,14 +155,45 @@ export function SubmitForm() {
 
     return (
       <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎉</div>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server Submitted Successfully!</h2>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem', maxWidth: '500px', margin: '0.5rem auto 1rem' }}>
-          Your MCP server is in the review queue. When it goes live you&apos;ll get an email with a direct claim link — free dofollow after you verify your site and keep the badge.
+        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }} aria-hidden="true">🎉</div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Server submitted successfully</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '520px', margin: '0.5rem auto 1.25rem', lineHeight: 1.55 }}>
+          You&apos;re in the review queue. Here&apos;s exactly what happens next — and what you can do while you wait.
         </p>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '500px', margin: '0 auto 1.5rem', lineHeight: 1.55 }}>
-          Bookmark the claim page below now. Path after approval: open claim → verify domain → badge stays dofollow for a reciprocal SEO link.
-        </p>
+
+        <ol className="submit-timeline">
+          <li className="submit-timeline-item">
+            <span className="submit-timeline-step" aria-hidden="true">1</span>
+            <div>
+              <h3>We review your listing</h3>
+              <p>Free submissions are reviewed in queue. Priority Review (optional below) jumps ahead.</p>
+            </div>
+          </li>
+          <li className="submit-timeline-item">
+            <span className="submit-timeline-step" aria-hidden="true">2</span>
+            <div>
+              <h3>You get an approval email</h3>
+              <p>We send a direct claim link when the listing goes live on the directory.</p>
+            </div>
+          </li>
+          <li className="submit-timeline-item">
+            <span className="submit-timeline-step" aria-hidden="true">3</span>
+            <div>
+              <h3>Claim &amp; verify for a free dofollow</h3>
+              <p>
+                Claim ownership, verify your website, keep the AllMCPs badge live — earn a reciprocal
+                dofollow backlink on free listings.
+              </p>
+            </div>
+          </li>
+          <li className="submit-timeline-item">
+            <span className="submit-timeline-step" aria-hidden="true">4</span>
+            <div>
+              <h3>Promote installs</h3>
+              <p>Add a logo, polish the description, and optionally boost featured placement after approval.</p>
+            </div>
+          </li>
+        </ol>
 
         {submittedId && (
           <div
@@ -177,7 +208,7 @@ export function SubmitForm() {
             }}
           >
             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-color)', marginBottom: '0.5rem' }}>
-              Step 1: Add your AllMCPs Badge
+              Prepare your AllMCPs badge (ready for claim)
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
               {isGithub

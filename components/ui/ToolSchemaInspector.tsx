@@ -45,6 +45,9 @@ export function ToolSchemaInspector({
   const sourceBadge = toolsSource ? TOOLS_SOURCE_BADGE[toolsSource] : undefined;
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({});
+  /** Collapse long tool lists so install stays above the fold on mobile. */
+  const [showAllTools, setShowAllTools] = useState(false);
+  const TOOL_PREVIEW_COUNT = 6;
 
   const filteredTools = useMemo(() => {
     if (!searchQuery.trim()) return tools;
@@ -55,6 +58,12 @@ export function ToolSchemaInspector({
         (t.description && t.description.toLowerCase().includes(q))
     );
   }, [tools, searchQuery]);
+
+  const visibleTools = useMemo(() => {
+    if (searchQuery.trim() || showAllTools) return filteredTools;
+    return filteredTools.slice(0, TOOL_PREVIEW_COUNT);
+  }, [filteredTools, searchQuery, showAllTools]);
+  const hiddenToolCount = Math.max(0, filteredTools.length - visibleTools.length);
 
   const toggleExpand = (name: string) => {
     setExpandedTools((prev) => ({ ...prev, [name]: !prev[name] }));
@@ -154,8 +163,9 @@ export function ToolSchemaInspector({
       </div>
 
       {hasTools ? (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '0.85rem', minWidth: 0 }}>
-          {filteredTools.map((tool) => {
+          {visibleTools.map((tool) => {
             const isExpanded = !!expandedTools[tool.name];
             const hasParams = tool.parameters && Object.keys(tool.parameters).length > 0;
 
@@ -247,6 +257,27 @@ export function ToolSchemaInspector({
             );
           })}
         </div>
+        {hiddenToolCount > 0 && (
+          <button
+            type="button"
+            className="collapsible-text-toggle"
+            style={{ marginTop: '0.85rem' }}
+            onClick={() => setShowAllTools(true)}
+          >
+            Show all {filteredTools.length} tools
+          </button>
+        )}
+        {showAllTools && filteredTools.length > TOOL_PREVIEW_COUNT && !searchQuery.trim() && (
+          <button
+            type="button"
+            className="collapsible-text-toggle"
+            style={{ marginTop: '0.5rem' }}
+            onClick={() => setShowAllTools(false)}
+          >
+            Show fewer tools
+          </button>
+        )}
+        </>
       ) : (
         /* Fallback: render AI-extracted tool capabilities if raw tool schemas aren't introspected yet */
         <div className="surface" style={{ padding: '1.25rem', borderRadius: '12px' }}>

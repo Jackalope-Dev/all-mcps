@@ -407,6 +407,39 @@ export default function DashboardClient({
               </div>
             </div>
 
+            {/* Per-listing readiness checklist — claim / SEO / convert path */}
+            <ul className="listing-checklist" aria-label={`Checklist for ${server.name}`}>
+              <li className={`listing-checklist-item ${server.logoUrl || server.pendingLogoKey ? 'is-done' : 'is-todo'}`}>
+                {server.logoUrl || server.pendingLogoKey ? '✓' : '○'}{' '}
+                {server.logoUrl ? 'Logo live' : server.pendingLogoKey ? 'Logo pending review' : 'Add a logo'}
+              </li>
+              <li className={`listing-checklist-item ${server.websiteUrl ? 'is-done' : 'is-todo'}`}>
+                {server.websiteUrl ? '✓' : '○'}{' '}
+                {server.websiteUrl ? 'Website set' : 'Add website URL'}
+              </li>
+              <li className={`listing-checklist-item ${server.websiteVerified ? 'is-done' : 'is-todo'}`}>
+                {server.websiteVerified ? '✓' : '○'}{' '}
+                {server.websiteVerified ? (
+                  'Website verified'
+                ) : (
+                  <a href={`/mcp/${server.id}/claim`}>Verify website</a>
+                )}
+              </li>
+              <li className={`listing-checklist-item ${server.reciprocalBadgeOk || server.isPremium ? 'is-done' : 'is-todo'}`}>
+                {server.reciprocalBadgeOk || server.isPremium ? '✓' : '○'}{' '}
+                {server.isPremium
+                  ? 'Premium (dofollow included)'
+                  : server.reciprocalBadgeOk
+                    ? 'Badge live (dofollow)'
+                    : (
+                      <a href="/badge-generator">Place AllMCPs badge</a>
+                    )}
+              </li>
+              <li className={`listing-checklist-item ${server.status === 'active' ? 'is-done' : 'is-todo'}`}>
+                {server.status === 'active' ? '✓' : '○'} Listing {server.status || 'status'}
+              </li>
+            </ul>
+
             {/* Tab Navigation Controls */}
             <div style={tabContainerStyle}>
               <button
