@@ -8,6 +8,12 @@
  *
  * Safe to stop and re-run — it always picks up where it left off (rows with a
  * FAQ already, or never-enriched rows, are excluded by the route's own query).
+ *
+ * Avoid running this concurrently with scripts/backfill-ai-content.mjs: both sort
+ * the same backlog by views/upvotes/stars, so they're likely to target the same
+ * high-value rows. The route's own 5-minute "settled" buffer on ai_enriched_at
+ * guards against actually claiming a row ai-content hasn't finished writing yet,
+ * but running them apart avoids the collision (and wasted LLM calls) entirely.
  */
 
 const BASE_URL = process.env.ALLMCPS_BASE_URL || 'https://allmcps.com';

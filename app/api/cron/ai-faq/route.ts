@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { fetchGithubReadme, parseGithubUrl } from '../../../../lib/listingEnrich';
@@ -61,6 +61,10 @@ export async function POST(req: Request) {
     const db = drizzle(env.DB as any);
     const githubToken = getGithubToken(env);
     const claimTime = new Date();
+    // Only touch rows whose ai-content pass has had time to fully settle — closes a
+    // race where a concurrent /api/cron/ai-content run has stamped ai_enriched_at at
+    // claim time but hasn't finished writing content yet (see code review notes).
+    const settledCutoff = new Date(claimTime.getTime() - 5 * 60 * 1000);
 
     // Atomically claim already-enriched rows still missing a FAQ, highest-value first.
     const claimed = (await db
@@ -76,7 +80,8 @@ export async function POST(req: Request) {
               and(
                 eq(servers.status, 'active'),
                 isNotNull(servers.aiEnrichedAt),
-                isNull(servers.aiFaqAt)
+                isNull(servers.aiFaqAt),
+                lt(servers.aiEnrichedAt, settledCutoff)
               )
             )
             .orderBy(
@@ -162,7 +167,12 @@ export async function POST(req: Request) {
       .select({ remaining: sql<number>`count(*)` })
       .from(servers)
       .where(
-        and(eq(servers.status, 'active'), isNotNull(servers.aiEnrichedAt), isNull(servers.aiFaqAt))
+        and(
+          eq(servers.status, 'active'),
+          isNotNull(servers.aiEnrichedAt),
+          isNull(servers.aiFaqAt),
+          lt(servers.aiEnrichedAt, settledCutoff)
+        )
       );
 
     return NextResponse.json({
