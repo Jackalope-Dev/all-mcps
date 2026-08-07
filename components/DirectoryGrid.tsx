@@ -1267,7 +1267,6 @@ export default function DirectoryGrid({
                       </Badge>
                     )}
                     {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
-                    <InstallReadyBadge server={server} />
                   </div>
                 </div>
                 {(() => {
@@ -1336,7 +1335,6 @@ export default function DirectoryGrid({
                       </Badge>
                     )}
                     {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
-                    <InstallReadyBadge server={server} />
                     {!selectedCategory && (
                       (() => {
                         const catMeta = getCategoryMeta(server.category);
