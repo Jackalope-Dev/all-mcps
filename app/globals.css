@@ -341,7 +341,7 @@ p {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(2, 6, 23, 0.88);
+  background: rgba(2, 6, 23, 0.95);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -453,13 +453,6 @@ p {
 }
 
 .mobile-menu-overlay {
-  /* Full-viewport, not offset below the header: the header renders on top
-     (z-index 100 > 99) and is position: sticky, so on mobile browsers where
-     the address bar collapses/expands during scroll a fixed `top` offset
-     tuned to the header's height can drift out of sync and expose a strip
-     of page background between the header and the drawer. Padding the
-     content down instead means any drift just shows more of this overlay's
-     own backdrop, never the page behind it. */
   position: fixed;
   top: 0;
   left: 0;
@@ -473,6 +466,7 @@ p {
   display: flex;
   flex-direction: column;
   animation: fadeIn 0.2s ease-out;
+  overflow-y: auto;
 }
 
 .mobile-menu-drawer {
@@ -4427,7 +4421,7 @@ nav[aria-label="Table of contents"] {
 }
 
 [data-theme="light"] .site-header {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
@@ -5357,6 +5351,10 @@ nav[aria-label="Table of contents"] {
     font-family: inherit;
     cursor: pointer;
     box-shadow: 0 4px 18px var(--accent-glow);
+  }
+
+  [data-theme="light"] .mobile-install-bar-btn {
+    color: #ffffff;
   }
 
   /* Keep theme switcher above the install bar */

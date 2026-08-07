@@ -149,18 +149,13 @@ export function SiteHeader() {
   // sticky positioning keeps working normally.
   useEffect(() => {
     if (mobileMenuOpen) {
-      const scrollY = window.scrollY;
-      const { style } = document.body;
-      style.position = 'fixed';
-      style.top = `-${scrollY}px`;
-      style.left = '0';
-      style.right = '0';
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
       return () => {
-        style.position = '';
-        style.top = '';
-        style.left = '';
-        style.right = '';
-        window.scrollTo(0, scrollY);
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
       };
     }
   }, [mobileMenuOpen]);
