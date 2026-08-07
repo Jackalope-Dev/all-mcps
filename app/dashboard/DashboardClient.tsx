@@ -502,8 +502,13 @@ export default function DashboardClient({
               </div>
 
               <div className="dashboard-listing-actions">
-                <Link href={`/mcp/${server.id}`} className="btn btn-secondary btn-sm">
-                  View
+                <Link
+                  href={`/mcp/${server.id}`}
+                  className="btn btn-secondary btn-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink size={14} aria-hidden="true" /> View listing
                 </Link>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTab(server.id, 'edit')}>
                   <Edit3 size={14} aria-hidden="true" /> Edit
@@ -525,9 +530,10 @@ export default function DashboardClient({
                     : server.pendingLogoKey
                       ? 'Logo pending'
                       : server.logoUrl
-                        ? 'Logo'
-                        : 'Add logo'}
+                        ? 'Replace logo'
+                        : 'Upload logo'}
                   <input
+                    id={`logo-input-${server.id}`}
                     type="file"
                     accept="image/png,image/jpeg"
                     disabled={uploadingLogoId === server.id}
@@ -543,11 +549,12 @@ export default function DashboardClient({
                   {uploadingScreenshotId === server.id
                     ? 'Uploading…'
                     : server.pendingScreenshotKey
-                      ? 'Shot pending'
+                      ? 'Screenshot pending'
                       : server.screenshotUrl
-                        ? 'Screenshot'
-                        : 'Add shot'}
+                        ? 'Replace screenshot'
+                        : 'Upload screenshot'}
                   <input
+                    id={`screenshot-input-${server.id}`}
                     type="file"
                     accept="image/png,image/jpeg"
                     disabled={uploadingScreenshotId === server.id}
@@ -565,8 +572,7 @@ export default function DashboardClient({
               server={server}
               onEdit={() => startEdit(server)}
               onUploadClick={() => {
-                const card = document.getElementById(`server-${server.id}`);
-                const input = card?.querySelector<HTMLInputElement>('input[type="file"]');
+                const input = document.getElementById(`logo-input-${server.id}`) as HTMLInputElement | null;
                 input?.click();
               }}
             />
