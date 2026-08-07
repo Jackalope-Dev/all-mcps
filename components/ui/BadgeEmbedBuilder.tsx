@@ -189,6 +189,48 @@ export function BadgeEmbedBuilder({
         </div>
       </div>
 
+      {/* Claim & Verification Action Block */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          padding: '1rem 1.25rem',
+          borderRadius: '12px',
+          border: '1px solid rgba(var(--accent-rgb), 0.35)',
+          background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(16, 185, 129, 0.08) 100%)',
+          marginTop: '0.5rem',
+        }}
+      >
+        <div style={{ flex: '1 1 260px' }}>
+          <div style={{ fontWeight: 700, fontSize: '0.925rem', color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <ShieldCheck size={18} style={{ color: 'var(--accent-color)' }} />
+            Claim &amp; Verify Ownership for <code>{cleanId}</code>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+            Ready to claim this listing or verify badge presence? Use the claim route to fetch your personalized verification code, verify your GitHub README or site, and get the Verified badge.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <a
+            href={`/mcp/${cleanId}/claim`}
+            className="btn btn-primary"
+            style={{ fontSize: '0.825rem', padding: '0.5rem 0.95rem', textDecoration: 'none', whiteSpace: 'nowrap', fontWeight: 700 }}
+          >
+            Claim &amp; Verify Listing →
+          </a>
+          <a
+            href={`/mcp/${cleanId}`}
+            className="btn btn-secondary"
+            style={{ fontSize: '0.825rem', padding: '0.5rem 0.85rem', textDecoration: 'none', whiteSpace: 'nowrap' }}
+          >
+            View Listing
+          </a>
+        </div>
+      </div>
+
       {/* Code Snippet Outputs */}
       <div className="badge-embed-snippets">
         {/* Markdown Snippet */}

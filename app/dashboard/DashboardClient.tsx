@@ -135,6 +135,8 @@ export default function DashboardClient({
   const totalInstalls = useMemo(() => servers.reduce((acc, s) => acc + (s.copies || 0), 0), [servers]);
   const totalUpvotes = useMemo(() => servers.reduce((acc, s) => acc + (s.upvotes || 0), 0), [servers]);
   const totalApiHits = useMemo(() => Object.values(analytics).reduce((acc, a) => acc + (a.totalApiHits || 0), 0), [analytics]);
+  const totalImpressions = useMemo(() => Object.values(analytics).reduce((acc, a) => acc + (a.totalImpressions || 0), 0), [analytics]);
+  const totalOutboundClicks = useMemo(() => Object.values(analytics).reduce((acc, a) => acc + (a.totalOutboundClicks || 0), 0), [analytics]);
 
   const uploadLogo = async (serverId: string, file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -383,6 +385,14 @@ export default function DashboardClient({
           <span className="dashboard-metric-label">API hits (30d)</span>
           <span className="dashboard-metric-value">{totalApiHits.toLocaleString()}</span>
         </li>
+        <li className="dashboard-metric">
+          <span className="dashboard-metric-label">Impressions (30d)</span>
+          <span className="dashboard-metric-value">{totalImpressions.toLocaleString()}</span>
+        </li>
+        <li className="dashboard-metric">
+          <span className="dashboard-metric-label">Outbound clicks</span>
+          <span className="dashboard-metric-value">{totalOutboundClicks.toLocaleString()}</span>
+        </li>
       </ul>
 
       {isPremium && (
@@ -419,6 +429,14 @@ export default function DashboardClient({
         const rankInfo = categoryRanks?.[server.id];
         const hasAnalyticsAccess = isFeaturedListing(server);
         const hasActiveBoost = !server.isPremium && hasAnalyticsAccess;
+
+        let toolsCount = 0;
+        if (server.tools) {
+          try {
+            const parsed = JSON.parse(server.tools);
+            if (Array.isArray(parsed)) toolsCount = parsed.length;
+          } catch {}
+        }
 
         return (
           <li key={server.id} id={`server-${server.id}`} className="dashboard-listing-card">
@@ -458,7 +476,26 @@ export default function DashboardClient({
                   <p className="dashboard-listing-id">
                     <code>{server.id}</code>
                     <span className="dashboard-listing-quick-stats">
-                      {(server.views || 0).toLocaleString()} views · {(server.copies || 0).toLocaleString()} installs
+                      {(server.views || 0).toLocaleString()} views · {(server.copies || 0).toLocaleString()} installs · {(server.upvotes || 0).toLocaleString()} upvotes
+                      {server.githubStars != null && ` · ⭐ ${server.githubStars.toLocaleString()}`}
+                      {server.npmDownloads != null && ` · 📦 ${server.npmDownloads.toLocaleString()}/mo`}
+                      {toolsCount > 0 && ` · 🛠️ ${toolsCount} tools`}
+                      {server.healthStatus && (
+                        <span
+                          style={{
+                            marginLeft: '0.4rem',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            padding: '0.12rem 0.45rem',
+                            borderRadius: '999px',
+                            background: server.healthStatus === 'healthy' ? 'rgba(52,211,153,0.15)' : 'rgba(245,158,11,0.15)',
+                            color: server.healthStatus === 'healthy' ? '#34d399' : '#f59e0b',
+                            border: `1px solid ${server.healthStatus === 'healthy' ? 'rgba(52,211,153,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                          }}
+                        >
+                          {server.healthStatus === 'healthy' ? 'Healthy' : server.healthStatus}
+                        </span>
+                      )}
                     </span>
                   </p>
                 </div>
@@ -1435,6 +1472,28 @@ function AnalyticsPanel({ detail, lastTweetedAt }: { detail: ServerAnalytics; la
         )}
       </div>
 
+      {/* API Endpoints Requested */}
+      <div style={panelCardStyle}>
+        <h3 style={panelTitleStyle}>
+          <Zap size={16} style={{ color: 'var(--accent-color)' }} />
+          API Endpoints Requested
+        </h3>
+        {(!detail.byEndpoint || detail.byEndpoint.length === 0) ? (
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No endpoint access data yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {detail.byEndpoint.map((row) => (
+              <EndpointBar
+                key={row.endpoint}
+                endpoint={row.endpoint}
+                hits={row.hits}
+                total={detail.summary.totalApiHits || 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Daily Activity Sparkline */}
       <div style={panelCardStyle}>
         <h3 style={panelTitleStyle}>
@@ -1465,6 +1524,35 @@ function AnalyticsPanel({ detail, lastTweetedAt }: { detail: ServerAnalytics; la
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+const ENDPOINT_LABELS: Record<string, string> = {
+  v1_mcp_detail: 'MCP Server Detail API',
+  v1_search: 'MCP Search API',
+  v1_tools: 'MCP Tools Schema API',
+  v1_servers: 'MCP Servers List API',
+  mcp_page: 'Listing Detail View',
+};
+
+function EndpointBar({ endpoint, hits, total }: { endpoint: string; hits: number; total: number }) {
+  const label = ENDPOINT_LABELS[endpoint] || endpoint;
+  const pct = total > 0 ? Math.round((hits / total) * 100) : 0;
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.2rem' }}>
+        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
+        <span style={{ color: 'var(--text-secondary)' }}>{hits.toLocaleString()} ({pct}%)</span>
+      </div>
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(128, 128, 128, 0.25)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', borderRadius: '3px',
+          width: `${Math.max(pct, 2)}%`,
+          background: 'linear-gradient(90deg, #A855F7, #EC4899)',
+          transition: 'width 0.5s ease',
+        }} />
       </div>
     </div>
   );
@@ -1608,47 +1696,151 @@ function SurfaceBar({ surface, impressions, total }: { surface: ImpressionSurfac
 }
 
 function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
   if (data.length === 0) return null;
 
-  const width = 320;
-  const height = 80;
-  const padding = 4;
-  const max = Math.max(...data, 1);
-  const step = (width - padding * 2) / Math.max(data.length - 1, 1);
+  const totalHits = data.reduce((a, b) => a + b, 0);
+  const peakHits = Math.max(...data, 0);
+  const avgHits = Math.round((totalHits / Math.max(data.length, 1)) * 10) / 10;
+
+  const width = 360;
+  const height = 110;
+  const paddingX = 12;
+  const paddingTop = 12;
+  const paddingBottom = 20;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const max = Math.max(peakHits, 1);
+  const step = (width - paddingX * 2) / Math.max(data.length - 1, 1);
 
   const points = data.map((v, i) => ({
-    x: padding + i * step,
-    y: height - padding - ((v / max) * (height - padding * 2)),
+    x: paddingX + i * step,
+    y: paddingTop + chartHeight - (v / max) * chartHeight,
   }));
 
   const pathD = points
     .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
     .join(' ');
 
-  const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${height - padding} L ${padding} ${height - padding} Z`;
+  const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${paddingTop + chartHeight} L ${paddingX} ${paddingTop + chartHeight} Z`;
+
+  const activeIndex = hoverIndex !== null && hoverIndex >= 0 && hoverIndex < data.length ? hoverIndex : null;
+  const activePoint = activeIndex !== null ? points[activeIndex] : null;
 
   return (
-    <div>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        style={{ width: '100%', height: 'auto', maxHeight: '100px' }}
-      >
-        <defs>
-          <linearGradient id="sparkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="var(--accent-color)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={areaD} fill="url(#sparkGrad)" />
-        <path d={pathD} fill="none" stroke="var(--accent-color)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="3" fill="var(--accent-color)" opacity="0" style={{ transition: 'opacity 0.2s' }}>
-            <title>{labels[i]}: {data[i]} hits</title>
-            <set attributeName="opacity" to="1" begin="mouseover" end="mouseout" />
-          </circle>
-        ))}
-      </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+    <div style={{ width: '100%' }}>
+      {/* Chart Summary Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.6rem', padding: '0 0.1rem' }}>
+        <div>
+          <span>30d Total: </span>
+          <strong style={{ color: 'var(--text-primary)' }}>{totalHits.toLocaleString()}</strong>
+        </div>
+        <div>
+          <span>Peak: </span>
+          <strong style={{ color: '#F43F5E' }}>{peakHits.toLocaleString()}</strong>
+          <span style={{ margin: '0 0.3rem', opacity: 0.4 }}>|</span>
+          <span>Avg: </span>
+          <strong style={{ color: 'var(--accent-color)' }}>{avgHits}</strong>/day
+        </div>
+      </div>
+
+      <div style={{ position: 'relative', width: '100%' }}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}
+          onMouseLeave={() => setHoverIndex(null)}
+        >
+          <defs>
+            <linearGradient id="chartGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="var(--accent-color)" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          {/* Grid lines */}
+          <line x1={paddingX} y1={paddingTop} x2={width - paddingX} y2={paddingTop} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+          <line x1={paddingX} y1={paddingTop + chartHeight / 2} x2={width - paddingX} y2={paddingTop + chartHeight / 2} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+          <line x1={paddingX} y1={paddingTop + chartHeight} x2={width - paddingX} y2={paddingTop + chartHeight} stroke="rgba(255,255,255,0.12)" />
+
+          {/* Area under curve */}
+          <path d={areaD} fill="url(#chartGrad)" />
+
+          {/* Main stroke line */}
+          <path d={pathD} fill="none" stroke="var(--accent-color)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+
+          {/* Hover highlight line and point */}
+          {activePoint && (
+            <>
+              <line
+                x1={activePoint.x}
+                y1={paddingTop}
+                x2={activePoint.x}
+                y2={paddingTop + chartHeight}
+                stroke="rgba(var(--accent-rgb), 0.5)"
+                strokeWidth="1.5"
+                strokeDasharray="2 2"
+              />
+              <circle
+                cx={activePoint.x}
+                cy={activePoint.y}
+                r="5"
+                fill="var(--accent-color)"
+                stroke="var(--bg-elevated, #0f172a)"
+                strokeWidth="2"
+              />
+            </>
+          )}
+
+          {/* Invisible hover trigger columns for smooth mouse interaction */}
+          {points.map((p, i) => {
+            const colWidth = step;
+            const xLeft = p.x - colWidth / 2;
+            return (
+              <rect
+                key={i}
+                x={xLeft}
+                y={paddingTop}
+                width={colWidth}
+                height={chartHeight}
+                fill="transparent"
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setHoverIndex(i)}
+              />
+            );
+          })}
+        </svg>
+
+        {/* Hover Tooltip display */}
+        {activeIndex !== null && activePoint && (
+          <div
+            style={{
+              position: 'absolute',
+              top: Math.max(0, activePoint.y * (110 / height) - 45),
+              left: `${Math.min(85, Math.max(15, (activePoint.x / width) * 100))}%`,
+              transform: 'translateX(-50%)',
+              background: 'rgba(15, 23, 42, 0.95)',
+              border: '1px solid rgba(var(--accent-rgb), 0.4)',
+              borderRadius: '6px',
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.75rem',
+              color: '#F8FAFC',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+              zIndex: 10,
+            }}
+          >
+            <div style={{ fontWeight: 700, color: 'var(--accent-color)' }}>
+              {data[activeIndex].toLocaleString()} hits
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+              {labels[activeIndex]}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem', padding: '0 0.1rem' }}>
         <span>{labels[0]}</span>
         <span>{labels[labels.length - 1]}</span>
       </div>

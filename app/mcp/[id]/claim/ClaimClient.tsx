@@ -425,6 +425,58 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         </p>
       </div>
 
+      {/* Active Verification Status Summary Bar */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1.75rem',
+          padding: '1.1rem 1.25rem',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          background: 'var(--bg-muted)',
+        }}
+      >
+        {/* GitHub Status */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+          <div style={{ fontSize: '1.5rem', lineHeight: 1 }}>🐙</div>
+          <div>
+            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              GitHub Repo Ownership
+            </div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.2rem', color: claimed ? '#10b981' : 'var(--text-primary)' }}>
+              {claimed ? '✓ Confirmed & Claimed' : 'Unverified'}
+            </div>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              {claimed
+                ? 'Repository ownership verified via GitHub README.'
+                : 'Add badge to README to claim repo ownership.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Website Status */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+          <div style={{ fontSize: '1.5rem', lineHeight: 1 }}>🌐</div>
+          <div>
+            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Product Website Verification
+            </div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 700, marginTop: '0.2rem', color: siteVerified ? '#10b981' : websiteUrl ? '#f59e0b' : 'var(--text-secondary)' }}>
+              {siteVerified ? '✓ Website Confirmed' : websiteUrl ? 'Needs Verification' : 'No Website Attached'}
+            </div>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              {siteVerified
+                ? `Domain verified for ${websiteUrl}.`
+                : websiteUrl
+                  ? `Verify ${websiteUrl} via badge or DNS for dofollow.`
+                  : 'Attach a website below to earn a reciprocal dofollow link.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {claimed && (
         <div
           style={{
@@ -461,36 +513,157 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        {methods.map((m) => {
-          const isSelected = method === m.id;
-          return (
+      {/* Verification Target Groups */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.75rem' }}>
+        
+        {/* GROUP 1: GitHub Repository Claim */}
+        {hasGithub && (
+          <div
+            style={{
+              padding: '1.25rem',
+              borderRadius: '14px',
+              border: '1px solid rgba(var(--accent-rgb), 0.25)',
+              background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  🐙 GitHub Repository Ownership
+                </h3>
+                <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
+                  Proves code ownership &amp; grants Official Verified listing status on AllMCPs.
+                </p>
+              </div>
+              {claimed && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.2rem 0.65rem', borderRadius: '999px' }}>
+                  ✓ Confirmed &amp; Verified
+                </span>
+              )}
+            </div>
+
             <div
-              key={m.id}
-              onClick={() => selectMethod(m.id)}
+              onClick={() => selectMethod('github')}
               style={{
                 padding: '1.15rem',
                 borderRadius: '12px',
-                border: isSelected ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                background: isSelected ? 'rgba(var(--accent-rgb),0.08)' : 'var(--bg-muted)',
+                border: method === 'github' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                background: method === 'github' ? 'rgba(var(--accent-rgb),0.12)' : 'var(--bg-muted)',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '1.25rem' }}>{m.id === 'github' ? '🐙' : m.id === 'website_badge' ? '🌐' : '⚡'}</span>
-                {isSelected && (
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color)', background: 'rgba(var(--accent-rgb),0.15)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>GitHub README Badge</span>
+                {method === 'github' && (
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color)', background: 'rgba(var(--accent-rgb),0.2)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
                     Selected
                   </span>
                 )}
               </div>
-              <h4 style={{ margin: '0 0 0.35rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{m.label}</h4>
-              <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>{m.hint}</p>
+              <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                Recommended for GitHub repos. Add the personalized badge snippet to your <code>README.md</code> to prove write access and claim official project ownership.
+              </p>
             </div>
-          );
-        })}
+          </div>
+        )}
+
+        {/* GROUP 2: Product Website Verification */}
+        <div
+          style={{
+            padding: '1.25rem',
+            borderRadius: '14px',
+            border: '1px solid rgba(0, 229, 255, 0.25)',
+            background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(59, 130, 246, 0.03) 100%)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                🌐 Product Website Verification
+              </h3>
+              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
+                Proves domain ownership &amp; unlocks the reciprocal dofollow backlink to your website.
+              </p>
+            </div>
+            {siteVerified && (
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.2rem 0.65rem', borderRadius: '999px' }}>
+                ✓ Confirmed &amp; Verified
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            {[
+              {
+                id: 'website_badge' as ClaimMethod,
+                label: 'Website Badge / Meta Tag',
+                icon: '🌐',
+                hint: 'Recommended for websites. Embed a dynamic badge or HTML verification meta tag on your domain.',
+              },
+              {
+                id: 'dns' as ClaimMethod,
+                label: 'DNS TXT Record',
+                icon: '⚡',
+                hint: 'Add a TXT record to your domain DNS settings to prove domain control.',
+              },
+            ].map((m) => {
+              const isSelected = method === m.id;
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => selectMethod(m.id)}
+                  style={{
+                    padding: '1.15rem',
+                    borderRadius: '12px',
+                    border: isSelected ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                    background: isSelected ? 'rgba(var(--accent-rgb),0.12)' : 'var(--bg-muted)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span>{m.icon}</span> {m.label}
+                    </span>
+                    {isSelected && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color)', background: 'rgba(var(--accent-rgb),0.2)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                        Selected
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>{m.hint}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
+
+      {alreadyVerifiedForMethod && (
+        <div
+          style={{
+            padding: '1rem 1.15rem',
+            borderRadius: '10px',
+            background: 'rgba(16,185,129,0.08)',
+            border: '1px solid rgba(16,185,129,0.3)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+          }}
+        >
+          <div style={{ fontSize: '1.5rem', color: '#10b981', lineHeight: 1 }}>✓</div>
+          <div>
+            <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>
+              {method === 'github' ? 'GitHub README Ownership Already Confirmed' : 'Website Verification Already Confirmed'}
+            </strong>
+            <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.785rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+              This verification is active and confirmed for this listing. You do not need to re-verify unless you updated your domain or repository settings.
+            </p>
+          </div>
+        </div>
+      )}
 
       {(method === 'website_badge' || method === 'dns') && (
         <div style={{ marginBottom: '1.5rem' }}>

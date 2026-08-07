@@ -57,5 +57,9 @@
     "tailwindcss": "^4",
     "typescript": "^7.0.2",
     "wrangler": "^4.114.0"
+  },
+  "optionalDependencies": {
+    "@typescript/typescript-win32-x64": "^7.0.2",
+    "lightningcss-win32-x64-msvc": "*"
   }
 }

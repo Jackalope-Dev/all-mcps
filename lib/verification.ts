@@ -69,9 +69,11 @@ export function websiteHasReciprocalBadge(html: string, serverId: string): boole
 
   // HTML context → demand a genuine dofollow backlink to our listing/badge.
   for (const [tag] of anchors) {
-    const href = tag.match(/href\s*=\s*["']([^"']*)["']/)?.[1] ?? '';
+    const hrefMatch = tag.match(/href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const href = hrefMatch ? (hrefMatch[1] || hrefMatch[2] || hrefMatch[3] || '') : '';
     if (!href.includes(listingPath) && !href.includes(badgePath)) continue;
-    const rel = tag.match(/rel\s*=\s*["']([^"']*)["']/)?.[1] ?? '';
+    const relMatch = tag.match(/rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const rel = relMatch ? (relMatch[1] || relMatch[2] || relMatch[3] || '') : '';
     if (relIsDofollow(rel)) return true;
   }
   return false;
@@ -121,7 +123,10 @@ export async function verifyWebsiteHtml(
   const lower = html.toLowerCase();
   const token = getClaimVerificationToken(serverId, userId).toLowerCase();
 
-  const hasMeta = lower.includes(`content="${token}"`) || lower.includes(`content='${token}'`);
+  const hasMeta =
+    lower.includes(token) ||
+    lower.includes(`content="${token}"`) ||
+    lower.includes(`content='${token}'`);
 
   if (hasMeta) {
     return { ok: true };
@@ -189,7 +194,7 @@ export async function verifyDnsTxt(
 }
 
 export async function verifyGithubReadme(repoUrl: string, serverId: string, userId: string): Promise<{ ok: boolean; reason?: string }> {
-  const githubMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+  const githubMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/#?]+)/);
   if (!githubMatch) {
     return { ok: false, reason: 'Repository is not a GitHub URL. Use website badge or DNS verification instead.' };
   }

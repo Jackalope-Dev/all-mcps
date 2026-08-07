@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, asc, count, desc, eq, gt, isNotNull, isNull, like, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, isNotNull, isNull, like, ne, or } from 'drizzle-orm';
 import { servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
 
@@ -23,6 +23,8 @@ export async function GET(req: Request) {
     const category = url.searchParams.get('category');
     const aiEnriched = url.searchParams.get('aiEnriched');
     const hasTools = url.searchParams.get('hasTools');
+    const hasToolsError = url.searchParams.get('hasToolsError');
+    const categorySponsor = url.searchParams.get('categorySponsor');
     const pricingModel = url.searchParams.get('pricingModel');
     const authType = url.searchParams.get('authType');
     const maintenanceStatus = url.searchParams.get('maintenanceStatus');
@@ -62,7 +64,12 @@ export async function GET(req: Request) {
     if (featured === 'true') {
       conditions.push(or(eq(servers.isPremium, true), gt(servers.featuredUntil, new Date())));
     }
-    if (health) {
+    if (categorySponsor === 'true') {
+      conditions.push(gt(servers.categorySponsorUntil, new Date()));
+    }
+    if (health === 'unhealthy') {
+      conditions.push(ne(servers.healthStatus, 'healthy'));
+    } else if (health) {
       conditions.push(eq(servers.healthStatus, health));
     }
     if (category) {
@@ -86,6 +93,11 @@ export async function GET(req: Request) {
       conditions.push(isNotNull(servers.tools));
     } else if (hasTools === 'false') {
       conditions.push(isNull(servers.tools));
+    }
+    if (hasToolsError === 'true') {
+      conditions.push(isNotNull(servers.toolsError));
+    } else if (hasToolsError === 'false') {
+      conditions.push(isNull(servers.toolsError));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -115,8 +127,11 @@ export async function GET(req: Request) {
           status: servers.status,
           healthStatus: servers.healthStatus,
           featuredUntil: servers.featuredUntil,
+          categorySponsorUntil: servers.categorySponsorUntil,
           aiSummary: servers.aiSummary,
           tools: servers.tools,
+          toolsError: servers.toolsError,
+          toolsCheckedAt: servers.toolsCheckedAt,
           githubStars: servers.githubStars,
           npmDownloads: servers.npmDownloads,
           views: servers.views,
@@ -147,6 +162,8 @@ export async function GET(req: Request) {
         ...s,
         createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
         featuredUntil: s.featuredUntil instanceof Date ? s.featuredUntil.toISOString() : s.featuredUntil,
+        categorySponsorUntil: s.categorySponsorUntil instanceof Date ? s.categorySponsorUntil.toISOString() : s.categorySponsorUntil,
+        toolsCheckedAt: s.toolsCheckedAt instanceof Date ? s.toolsCheckedAt.toISOString() : s.toolsCheckedAt,
       })),
       total: totalRows[0]?.total ?? 0,
     });

@@ -28,6 +28,20 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+export type ListingFilters = {
+  status?: string;
+  premium?: string;
+  featured?: string;
+  health?: string;
+  aiEnriched?: string;
+  hasTools?: string;
+  hasToolsError?: string;
+  categorySponsor?: string;
+  pricingModel?: string;
+  authType?: string;
+  maintenanceStatus?: string;
+};
+
 type Listing = {
   id: string;
   name: string;
@@ -43,8 +57,11 @@ type Listing = {
   status: string;
   healthStatus: string;
   featuredUntil?: string | null;
+  categorySponsorUntil?: string | null;
   aiSummary?: string | null;
   tools?: string | null;
+  toolsError?: string | null;
+  toolsCheckedAt?: string | null;
   githubStars?: number | null;
   npmDownloads?: number | null;
   views?: number;
@@ -63,7 +80,11 @@ type EditFields = {
 
 const PAGE_SIZE = 25;
 
-export default function ManageListings() {
+export default function ManageListings({
+  initialFilters,
+}: {
+  initialFilters?: ListingFilters;
+}) {
   const [items, setItems] = useState<Listing[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -71,17 +92,65 @@ export default function ManageListings() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [premiumFilter, setPremiumFilter] = useState('');
-  const [featuredFilter, setFeaturedFilter] = useState('');
-  const [healthFilter, setHealthFilter] = useState('');
-  const [aiFilter, setAiFilter] = useState('');
-  const [toolsFilter, setToolsFilter] = useState('');
-  const [pricingModelFilter, setPricingModelFilter] = useState('');
-  const [authTypeFilter, setAuthTypeFilter] = useState('');
-  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(initialFilters?.status || 'all');
+  const [premiumFilter, setPremiumFilter] = useState(initialFilters?.premium || '');
+  const [featuredFilter, setFeaturedFilter] = useState(initialFilters?.featured || '');
+  const [healthFilter, setHealthFilter] = useState(initialFilters?.health || '');
+  const [aiFilter, setAiFilter] = useState(initialFilters?.aiEnriched || '');
+  const [toolsFilter, setToolsFilter] = useState(initialFilters?.hasTools || '');
+  const [hasToolsErrorFilter, setHasToolsErrorFilter] = useState(initialFilters?.hasToolsError || '');
+  const [categorySponsorFilter, setCategorySponsorFilter] = useState(initialFilters?.categorySponsor || '');
+  const [pricingModelFilter, setPricingModelFilter] = useState(initialFilters?.pricingModel || '');
+  const [authTypeFilter, setAuthTypeFilter] = useState(initialFilters?.authType || '');
+  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState(initialFilters?.maintenanceStatus || '');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  // Update internal filter state if parent passes new initialFilters (e.g. from KPI card click)
+  useEffect(() => {
+    if (initialFilters) {
+      if (initialFilters.status !== undefined) setStatusFilter(initialFilters.status);
+      if (initialFilters.premium !== undefined) setPremiumFilter(initialFilters.premium);
+      if (initialFilters.featured !== undefined) setFeaturedFilter(initialFilters.featured);
+      if (initialFilters.health !== undefined) setHealthFilter(initialFilters.health);
+      if (initialFilters.aiEnriched !== undefined) setAiFilter(initialFilters.aiEnriched);
+      if (initialFilters.hasTools !== undefined) setToolsFilter(initialFilters.hasTools);
+      if (initialFilters.hasToolsError !== undefined) setHasToolsErrorFilter(initialFilters.hasToolsError);
+      if (initialFilters.categorySponsor !== undefined) setCategorySponsorFilter(initialFilters.categorySponsor);
+      if (initialFilters.pricingModel !== undefined) setPricingModelFilter(initialFilters.pricingModel);
+      if (initialFilters.authType !== undefined) setAuthTypeFilter(initialFilters.authType);
+      if (initialFilters.maintenanceStatus !== undefined) setMaintenanceStatusFilter(initialFilters.maintenanceStatus);
+    }
+  }, [initialFilters]);
+
+  const resetAllFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setPremiumFilter('');
+    setFeaturedFilter('');
+    setHealthFilter('');
+    setAiFilter('');
+    setToolsFilter('');
+    setHasToolsErrorFilter('');
+    setCategorySponsorFilter('');
+    setPricingModelFilter('');
+    setAuthTypeFilter('');
+    setMaintenanceStatusFilter('');
+  };
+
+  const hasActiveFilters =
+    Boolean(search.trim()) ||
+    statusFilter !== 'all' ||
+    Boolean(premiumFilter) ||
+    Boolean(featuredFilter) ||
+    Boolean(healthFilter) ||
+    Boolean(aiFilter) ||
+    Boolean(toolsFilter) ||
+    Boolean(hasToolsErrorFilter) ||
+    Boolean(categorySponsorFilter) ||
+    Boolean(pricingModelFilter) ||
+    Boolean(authTypeFilter) ||
+    Boolean(maintenanceStatusFilter);
 
   const [inspectListing, setInspectListing] = useState<Listing | null>(null);
   const [boostModalListing, setBoostModalListing] = useState<Listing | null>(null);
@@ -110,6 +179,8 @@ export default function ManageListings() {
       if (healthFilter) params.set('health', healthFilter);
       if (aiFilter) params.set('aiEnriched', aiFilter);
       if (toolsFilter) params.set('hasTools', toolsFilter);
+      if (hasToolsErrorFilter) params.set('hasToolsError', hasToolsErrorFilter);
+      if (categorySponsorFilter) params.set('categorySponsor', categorySponsorFilter);
       if (pricingModelFilter) params.set('pricingModel', pricingModelFilter);
       if (authTypeFilter) params.set('authType', authTypeFilter);
       if (maintenanceStatusFilter) params.set('maintenanceStatus', maintenanceStatusFilter);
@@ -152,6 +223,8 @@ export default function ManageListings() {
     healthFilter,
     aiFilter,
     toolsFilter,
+    hasToolsErrorFilter,
+    categorySponsorFilter,
     pricingModelFilter,
     authTypeFilter,
     maintenanceStatusFilter,
@@ -341,8 +414,13 @@ export default function ManageListings() {
             <option value="">Featured: Any</option>
             <option value="true">Currently Featured</option>
           </select>
+          <select className="form-input" value={categorySponsorFilter} onChange={(e) => setCategorySponsorFilter(e.target.value)}>
+            <option value="">Category Sponsor: Any</option>
+            <option value="true">Category Sponsors only</option>
+          </select>
           <select className="form-input" value={healthFilter} onChange={(e) => setHealthFilter(e.target.value)}>
             <option value="">Health: Any</option>
+            <option value="unhealthy">Unhealthy / Offline (All)</option>
             <option value="healthy">Healthy</option>
             <option value="unknown">Unknown</option>
             <option value="archived">Archived</option>
@@ -357,6 +435,11 @@ export default function ManageListings() {
             <option value="">MCP Tools: Any</option>
             <option value="true">Has Tools</option>
             <option value="false">No Tools</option>
+          </select>
+          <select className="form-input" value={hasToolsErrorFilter} onChange={(e) => setHasToolsErrorFilter(e.target.value)}>
+            <option value="">Introspection Error: Any</option>
+            <option value="true">Errors only</option>
+            <option value="false">No Errors</option>
           </select>
           <select className="form-input" value={pricingModelFilter} onChange={(e) => setPricingModelFilter(e.target.value)}>
             <option value="">Pricing: Any</option>
@@ -379,6 +462,23 @@ export default function ManageListings() {
             <option value="experimental">Experimental</option>
             <option value="archived">Archived</option>
           </select>
+
+          {hasActiveFilters && (
+            <button
+              onClick={resetAllFilters}
+              className="admin-btn"
+              style={{
+                background: 'rgba(239, 68, 68, 0.15)',
+                color: '#ef4444',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                padding: '0.4rem 0.75rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+            >
+              Reset Filters ✕
+            </button>
+          )}
         </div>
       </div>
 

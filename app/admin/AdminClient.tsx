@@ -5,8 +5,8 @@ import { toast } from '../../components/ui/Toast';
 import { parsePendingRevision } from '../../lib/pendingRevision';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import type { AdminStats } from '@/lib/adminStats';
-import { StatsBar } from './StatsBar';
-import ManageListings from './ManageListings';
+import { StatsBar, type KpiCardSelection } from './StatsBar';
+import ManageListings, { type ListingFilters } from './ManageListings';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
 import { AdminSocialQueue } from './AdminSocialQueue';
 import { AdminToolsControl } from './AdminCronsControl';
@@ -101,6 +101,14 @@ export default function AdminClient({
   const [modSubTab, setModSubTab] = useState<
     'submissions' | 'edits' | 'claims' | 'logos' | 'screenshots'
   >('submissions');
+  const [activeListingsFilters, setActiveListingsFilters] = useState<ListingFilters | undefined>(undefined);
+
+  const handleKpiCardSelect = (selection: KpiCardSelection) => {
+    setActiveTab(selection.tab);
+    if (selection.filters) {
+      setActiveListingsFilters(selection.filters);
+    }
+  };
 
   const handleAction = async (
     id: string,
@@ -178,7 +186,11 @@ export default function AdminClient({
   return (
     <div className="admin-shell">
       {/* KPI Stats Deck */}
-      <StatsBar initialStats={stats} onSelectTab={(tab: any) => setActiveTab(tab)} />
+      <StatsBar
+        initialStats={stats}
+        onSelectCard={handleKpiCardSelect}
+        onSelectTab={(tab: any) => setActiveTab(tab)}
+      />
 
       {/* Main Responsive Tab Navigation Bar */}
       <nav className="admin-tabs-nav">
@@ -374,7 +386,7 @@ export default function AdminClient({
               Search, filter, edit metadata, adjust status, grant boost placements, or view deep inspector metadata.
             </p>
           </div>
-          <ManageListings />
+          <ManageListings initialFilters={activeListingsFilters} />
         </section>
       )}
 

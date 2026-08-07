@@ -3,13 +3,37 @@
 import { useEffect, useState } from 'react';
 import type { AdminStats } from '@/lib/adminStats';
 import { ADMIN_STATS_REFRESH_EVENT } from '@/lib/adminStatsRefresh';
-import { Clock, CheckCircle2, Crown, Sparkles, AlertTriangle, Cpu, Eye, Heart, Download } from 'lucide-react';
+import {
+  Clock,
+  CheckCircle2,
+  Crown,
+  Sparkles,
+  AlertTriangle,
+  Cpu,
+  User,
+  AlertCircle,
+} from 'lucide-react';
+
+export type KpiCardSelection = {
+  tab: 'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'tools';
+  filters?: {
+    status?: string;
+    premium?: string;
+    featured?: string;
+    health?: string;
+    aiEnriched?: string;
+    categorySponsor?: string;
+    hasToolsError?: string;
+  };
+};
 
 export function StatsBar({
   initialStats,
+  onSelectCard,
   onSelectTab,
 }: {
   initialStats: AdminStats;
+  onSelectCard?: (selection: KpiCardSelection) => void;
   onSelectTab?: (tab: string) => void;
 }) {
   const [stats, setStats] = useState<AdminStats>(initialStats);
@@ -34,14 +58,22 @@ export function StatsBar({
     ? Math.round(((stats.aiEnrichedCount || 0) / stats.statusCounts.active) * 100)
     : 0;
 
+  const handleCardClick = (card: (typeof cards)[0]) => {
+    if (onSelectCard) {
+      onSelectCard(card.action);
+    } else if (onSelectTab) {
+      onSelectTab(card.action.tab);
+    }
+  };
+
   const cards = [
     {
       label: 'Moderation Queue',
       value: String(totalPending),
-      subtext: `${stats.pendingCounts?.submissions || 0} sub · ${stats.pendingCounts?.edits || 0} edit · ${stats.pendingCounts?.claims || 0} claim`,
+      subtext: `${stats.pendingCounts?.submissions || 0} sub · ${stats.pendingCounts?.edits || 0} edit · ${stats.pendingCounts?.claims || 0} claim · ${stats.pendingCounts?.logos || 0} logo`,
       icon: Clock,
       color: totalPending > 0 ? '#d97706' : 'var(--text-secondary)',
-      tab: 'moderation',
+      action: { tab: 'moderation' } as KpiCardSelection,
     },
     {
       label: 'Active Listings',
@@ -49,7 +81,7 @@ export function StatsBar({
       subtext: `${stats.statusCounts.removed} removed`,
       icon: CheckCircle2,
       color: '#10b981',
-      tab: 'listings',
+      action: { tab: 'listings', filters: { status: 'active' } } as KpiCardSelection,
     },
     {
       label: 'Premium (Dofollow)',
@@ -57,15 +89,15 @@ export function StatsBar({
       subtext: 'Paid / verified listings',
       icon: Crown,
       color: 'var(--accent-color)',
-      tab: 'listings',
+      action: { tab: 'listings', filters: { premium: 'true', status: 'all' } } as KpiCardSelection,
     },
     {
       label: 'Featured Boosts',
       value: String(stats.featuredCount),
-      subtext: 'Active placement boosts',
+      subtext: `${stats.categorySponsorsCount || 0} category sponsors`,
       icon: Sparkles,
       color: '#d97706',
-      tab: 'listings',
+      action: { tab: 'listings', filters: { featured: 'true', status: 'all' } } as KpiCardSelection,
     },
     {
       label: 'Unhealthy / Offline',
@@ -73,7 +105,7 @@ export function StatsBar({
       subtext: 'Needs health re-check',
       icon: AlertTriangle,
       color: stats.unhealthyCount > 0 ? '#ef4444' : 'var(--text-secondary)',
-      tab: 'listings',
+      action: { tab: 'listings', filters: { health: 'unhealthy', status: 'all' } } as KpiCardSelection,
     },
     {
       label: 'AI Enriched',
@@ -81,7 +113,23 @@ export function StatsBar({
       subtext: `${aiEnrichedPercent}% of active catalog`,
       icon: Cpu,
       color: '#8b5cf6',
-      tab: 'analytics',
+      action: { tab: 'listings', filters: { aiEnriched: 'true', status: 'all' } } as KpiCardSelection,
+    },
+    {
+      label: 'Registered Users',
+      value: `${stats.usersCount || 0}`,
+      subtext: 'Claimed owners & accounts',
+      icon: User,
+      color: '#0284c7',
+      action: { tab: 'analytics' } as KpiCardSelection,
+    },
+    {
+      label: 'Introspection Errors',
+      value: `${stats.toolsIntrospectionErrorCount || 0}`,
+      subtext: 'Failed MCP tool discovery',
+      icon: AlertCircle,
+      color: (stats.toolsIntrospectionErrorCount || 0) > 0 ? '#f59e0b' : 'var(--text-secondary)',
+      action: { tab: 'listings', filters: { hasToolsError: 'true', status: 'all' } } as KpiCardSelection,
     },
   ];
 
@@ -103,20 +151,20 @@ export function StatsBar({
           return (
             <li
               key={card.label}
-              onClick={() => onSelectTab && onSelectTab(card.tab)}
+              onClick={() => handleCardClick(card)}
               style={{
                 background: 'var(--card-bg)',
                 border: '1px solid var(--border-color)',
                 borderRadius: '12px',
                 padding: '0.9rem 1rem',
-                cursor: onSelectTab ? 'pointer' : 'default',
-                transition: 'transform 0.15s ease, border-color 0.15s ease',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 height: '110px',
               }}
-              className="admin-kpi-card hover:border-cyan-500/40"
+              className="admin-kpi-card hover:border-cyan-500/40 hover:-translate-y-0.5"
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '1.4rem' }}>
                 <span
@@ -148,3 +196,4 @@ export function StatsBar({
     </div>
   );
 }
+

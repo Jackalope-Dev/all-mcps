@@ -25,12 +25,17 @@ const EMPTY_STATS: AdminStats = {
   unhealthyCount: 0,
   aiEnrichedCount: 0,
   toolsCount: 0,
-  pendingCounts: { submissions: 0, edits: 0, claims: 0, logos: 0, total: 0 },
+  usersCount: 0,
+  categorySponsorsCount: 0,
+  toolsIntrospectionErrorCount: 0,
+  pendingCounts: { submissions: 0, edits: 0, claims: 0, logos: 0, screenshots: 0, total: 0 },
   socialCounts: { queued: 0, sent: 0, failed: 0 },
   callerCounts: {},
+  surfaceImpressions: {},
   logoSourceCounts: { manual: 0, readme: 0, website_favicon: 0, github_org: 0, github_user: 0, none: 0 },
   engagement: { totalViews: 0, totalUpvotes: 0, totalCopies: 0 },
   topByViews: [],
+  recentToolsErrors: [],
 };
 
 async function getAdminData() {

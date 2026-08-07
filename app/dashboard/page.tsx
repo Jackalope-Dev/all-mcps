@@ -28,6 +28,8 @@ type OwnedServer = {
   pendingRevision?: string | null;
   logoUrl?: string | null;
   pendingLogoKey?: string | null;
+  screenshotUrl?: string | null;
+  pendingScreenshotKey?: string | null;
   isPremium: boolean;
   status: string;
   featuredUntil: Date | null;
@@ -38,6 +40,23 @@ type OwnedServer = {
   views: number;
   copies: number;
   upvotes: number;
+  healthStatus?: string | null;
+  isVerifiedActive?: boolean | null;
+  githubStars?: number | null;
+  npmDownloads?: number | null;
+  tools?: string | null;
+  url?: string | null;
+  tags?: string[] | null;
+  pricingModel?: string | null;
+  pricingNotes?: string | null;
+  authType?: string | null;
+  license?: string | null;
+  compatibleClients?: string[] | null;
+  maintenanceStatus?: string | null;
+  supportUrl?: string | null;
+  suggestedInstallCommand?: string | null;
+  suggestedInstallArgs?: string[] | null;
+  lastTweetedAt?: Date | string | null;
 };
 
 async function getOwnedServers(userId: string): Promise<{
@@ -89,6 +108,7 @@ async function getOwnedServers(userId: string): Promise<{
           suggestedInstallArgs: servers.suggestedInstallArgs,
           screenshotUrl: servers.screenshotUrl,
           pendingScreenshotKey: servers.pendingScreenshotKey,
+          lastTweetedAt: servers.lastTweetedAt,
         })
         .from(servers)
         .where(eq(servers.ownerUserId, userId));
