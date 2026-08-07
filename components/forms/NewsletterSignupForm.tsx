@@ -80,6 +80,8 @@ export function NewsletterSignupForm({
         type="email"
         placeholder="you@example.com"
         required
+        autoComplete="email"
+        inputMode="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         aria-label="Email address"
