@@ -9,19 +9,22 @@ import { CookieBanner } from "../components/CookieBanner";
 import { NewsletterModal } from "../components/NewsletterModal";
 import { ToastProvider } from "../components/ui/Toast";
 import { PurchaseTracker } from "../components/PurchaseTracker";
-import { CommandPalette } from "../components/ui/CommandPalette";
+import { CommandPaletteLazy } from "../components/CommandPaletteLazy";
 import { PostHogIdentify } from "../components/PostHogIdentify";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import "./globals.css";
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
 // lowercase "l" has a clear tail (not a plain vertical bar). Critical for "AllMCPs".
-// adjustFontFallback keeps a size-matched system fallback to limit CLS while the webfont loads.
+//
+// adjustFontFallback MUST stay false: next/font has no size-adjust override metrics
+// for this family ("Failed to find font override values…"). Enabling it only logs
+// that error and still falls back to an unadjusted system font — no CLS win.
 const sans = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
-  adjustFontFallback: true,
+  adjustFontFallback: false,
 });
 
 export const viewport: Viewport = {
@@ -163,7 +166,7 @@ export default function RootLayout({
         </Suspense>
         <WebMCPProvider />
         <PostHogIdentify />
-        <CommandPalette />
+        <CommandPaletteLazy />
         <CookieBanner />
         <NewsletterModal />
         <ToastProvider />

@@ -52,8 +52,6 @@ export type SiteStats = {
   totalViews: number;
   totalCopies: number;
   totalUpvotes: number;
-  totalGithubStars: number;
-  totalNpmDownloads: number;
   toolsIndexed: number;
   verifiedCount: number;
 };
@@ -70,8 +68,6 @@ export async function getSiteStats(): Promise<SiteStats> {
   const snapshotViews = snapshotServers.reduce((acc, s) => acc + (Number(s.views) || 0), 0);
   const snapshotCopies = snapshotServers.reduce((acc, s) => acc + (Number(s.copies) || 0), 0);
   const snapshotUpvotes = snapshotServers.reduce((acc, s) => acc + (Number(s.upvotes) || 0), 0);
-  const snapshotStars = snapshotServers.reduce((acc, s) => acc + (Number(s.githubStars) || 0), 0);
-  const snapshotNpm = snapshotServers.reduce((acc, s) => acc + (Number(s.npmDownloads) || 0), 0);
   const snapshotVerified = snapshotServers.filter(
     (s) => s.isOfficial || s.isPremium || s.websiteVerified
   ).length;
@@ -112,8 +108,6 @@ export async function getSiteStats(): Promise<SiteStats> {
       totalViews: snapshotViews,
       totalCopies: snapshotCopies,
       totalUpvotes: snapshotUpvotes,
-      totalGithubStars: snapshotStars,
-      totalNpmDownloads: snapshotNpm,
       toolsIndexed: snapshotTools,
       verifiedCount: snapshotVerified,
     };
@@ -148,13 +142,6 @@ export async function getSiteStats(): Promise<SiteStats> {
           totalViews: sum(servers.views),
           totalCopies: sum(servers.copies),
           totalUpvotes: sum(servers.upvotes),
-          totalGithubStars: sum(servers.githubStars),
-          // Defensive cap: the npm-downloads enrichment cron has produced corrupted
-          // per-package values (one listing alone reported 674B monthly downloads —
-          // more than npm's entire registry). Excluding outliers above a generous
-          // per-package ceiling keeps a single bad row from poisoning the site total
-          // until the underlying fetchNpmDownloads() bug is fixed separately.
-          totalNpmDownloads: sql<number>`sum(case when ${servers.npmDownloads} < 300000000 then ${servers.npmDownloads} else 0 end)`,
           categories: countDistinct(servers.category),
           // `tools` is a JSON array per listing (or null if never introspected) — sum the
           // per-row array lengths for a true catalog-wide tool count instead of relying on
@@ -267,8 +254,6 @@ export async function getSiteStats(): Promise<SiteStats> {
     const dbViews = Number(serverStatsRows[0]?.totalViews ?? snapshotViews);
     const dbCopies = Number(serverStatsRows[0]?.totalCopies ?? snapshotCopies);
     const dbUpvotes = Number(serverStatsRows[0]?.totalUpvotes ?? snapshotUpvotes);
-    const dbStars = Number(serverStatsRows[0]?.totalGithubStars ?? snapshotStars);
-    const dbNpm = Number(serverStatsRows[0]?.totalNpmDownloads ?? snapshotNpm);
     const dbCategories = Number(serverStatsRows[0]?.categories ?? snapshotCategories);
     // 0 is a legitimate answer here (introspection may genuinely have found nothing yet),
     // so unlike the fields above this never falls back to the near-empty static snapshot.
@@ -289,8 +274,6 @@ export async function getSiteStats(): Promise<SiteStats> {
       totalViews: dbViews,
       totalCopies: dbCopies,
       totalUpvotes: dbUpvotes,
-      totalGithubStars: dbStars,
-      totalNpmDownloads: dbNpm,
       toolsIndexed: dbTools,
       verifiedCount: snapshotVerified,
     };
@@ -311,8 +294,6 @@ export async function getSiteStats(): Promise<SiteStats> {
       totalViews: snapshotViews,
       totalCopies: snapshotCopies,
       totalUpvotes: snapshotUpvotes,
-      totalGithubStars: snapshotStars,
-      totalNpmDownloads: snapshotNpm,
       toolsIndexed: snapshotTools,
       verifiedCount: snapshotVerified,
     };

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, BookOpen, Sparkles, Layers, Search, LogIn } from 'lucide-react';
+import { Menu, X, Sparkles, Search, LogIn } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { Button } from './ui/Button';
 
@@ -16,6 +16,9 @@ const NAV = [
   { href: '/guides', label: 'Guides' },
   { href: '/blog', label: 'Blog' },
 ] as const;
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/browse') {
@@ -29,6 +32,11 @@ export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   // The mobile drawer is portaled to <body>, so it must wait for the client
   // mount before createPortal has a DOM target.
@@ -65,15 +73,62 @@ export function SiteHeader() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Escape closes the mobile drawer (overlay click already does).
+  // Focus trap + Escape while the drawer is open; restore focus on close.
   useEffect(() => {
     if (!mobileMenuOpen) return;
+
+    previouslyFocusedRef.current =
+      (document.activeElement as HTMLElement | null) || menuButtonRef.current;
+
+    // Defer so the portal has painted before we move focus.
+    const focusTimer = window.setTimeout(() => {
+      const drawer = drawerRef.current;
+      if (!drawer) return;
+      const first = drawer.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      first?.focus();
+    }, 0);
+
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false);
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMobileMenu();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const drawer = drawerRef.current;
+      if (!drawer) return;
+      const focusable = Array.from(
+        drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter((el) => !el.hasAttribute('disabled') && el.tabIndex !== -1);
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (active === first || !drawer.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !drawer.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
+
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [mobileMenuOpen]);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', onKeyDown);
+      // Restore focus to the menu button (or prior focus) after close.
+      const restore = previouslyFocusedRef.current || menuButtonRef.current;
+      restore?.focus?.();
+    };
+  }, [mobileMenuOpen, closeMobileMenu]);
 
   // Lock scroll when mobile menu is open. `overflow: hidden` on <body> looks
   // like the obvious approach, but it silently breaks .site-header's
@@ -143,6 +198,7 @@ export function SiteHeader() {
 
           {/* Mobile Menu Toggle Button */}
           <button
+            ref={menuButtonRef}
             type="button"
             className="mobile-menu-btn"
             onClick={() => setMobileMenuOpen((open) => !open)}
@@ -162,10 +218,11 @@ export function SiteHeader() {
       {mounted && mobileMenuOpen && createPortal(
         <div
           className="mobile-menu-overlay"
-          onClick={() => setMobileMenuOpen(false)}
+          onClick={closeMobileMenu}
           role="presentation"
         >
           <div
+            ref={drawerRef}
             className="mobile-menu-drawer"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
@@ -179,7 +236,7 @@ export function SiteHeader() {
                   href={href}
                   className={`mobile-nav-link${isActive(pathname, href) ? ' is-active' : ''}`}
                   aria-current={isActive(pathname, href) ? 'page' : undefined}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={closeMobileMenu}
                 >
                   {label}
                 </Link>
@@ -187,7 +244,7 @@ export function SiteHeader() {
               <button
                 type="button"
                 onClick={() => {
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
                 }}
                 className="mobile-nav-link"
@@ -200,7 +257,7 @@ export function SiteHeader() {
               <Link
                 href="/build-mcp-server"
                 className={`mobile-nav-link${isActive(pathname, '/build-mcp-server') ? ' is-active' : ''}`}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={closeMobileMenu}
               >
                 Build an MCP Server
               </Link>
@@ -211,9 +268,9 @@ export function SiteHeader() {
                     variant="secondary"
                     size="md"
                     style={{ width: '100%', justifyContent: 'center', marginBottom: '0.6rem' }}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                   >
-                    <LogIn size={16} /> Log in
+                    <LogIn size={16} aria-hidden="true" /> Log in
                   </Button>
                 )}
                 <Button
@@ -221,9 +278,9 @@ export function SiteHeader() {
                   variant="primary"
                   size="md"
                   style={{ width: '100%', justifyContent: 'center' }}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={closeMobileMenu}
                 >
-                  <Sparkles size={16} /> {mobileCtaLabel}
+                  <Sparkles size={16} aria-hidden="true" /> {mobileCtaLabel}
                 </Button>
               </div>
             </nav>

@@ -14,8 +14,6 @@ import {
   HelpCircle,
   MessageSquare,
   Lock,
-  Star,
-  Download,
   Globe,
   Activity,
   Radio,
@@ -458,12 +456,6 @@ export default async function TrustPage() {
               <StatTile icon={Eye} color="#38bdf8" value={formatNumber(stats.totalViews)} label="Listing views" />
               <StatTile icon={Copy} color="#f472b6" value={formatNumber(stats.totalCopies)} label="Install configs copied" />
               <StatTile icon={ThumbsUp} color="#fbbf24" value={formatNumber(stats.totalUpvotes)} label="Upvotes cast" />
-            </StatGrid>
-
-            <SectionLabel title="Ecosystem reach" note="What the listed servers have earned out in the wild, summed across the catalog." />
-            <StatGrid>
-              <StatTile icon={Star} color="#fbbf24" value={formatCompact(stats.totalGithubStars)} label="Combined GitHub stars" />
-              <StatTile icon={Download} color="#34d399" value={formatCompact(stats.totalNpmDownloads)} label="Monthly npm downloads" />
             </StatGrid>
 
             {stats.dailyTrend30d.length > 0 && (
