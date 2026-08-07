@@ -63,6 +63,7 @@ export async function getSiteStats(): Promise<SiteStats> {
     (s) => s.isOfficial || s.isPremium || s.websiteVerified
   ).length;
   const snapshotTools = snapshotServers.reduce((acc, s) => {
+    if (Array.isArray(s.tools)) return acc + s.tools.length;
     try {
       const tools = JSON.parse(s.tools || '[]');
       return acc + (Array.isArray(tools) ? tools.length : 0);

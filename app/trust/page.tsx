@@ -5,13 +5,9 @@ import {
   Cpu,
   Tag,
   ShieldCheck,
-  Wrench,
   Eye,
   Copy,
   ThumbsUp,
-  Star,
-  Package,
-  Globe,
   Bot,
   Search,
   Users,
@@ -26,7 +22,7 @@ import type { CallerBreakdown } from '../../lib/siteStats';
 export const metadata: Metadata = {
   title: 'Trust & Traffic Transparency | AllMCPs',
   description:
-    'Live, unfiltered numbers on how people and AI systems actually use AllMCPs — site visits, install activity, and a full breakdown of every AI assistant and crawler that reads the directory.',
+    'Live, unfiltered numbers on how people and AI systems actually use AllMCPs: site visits, install activity, and a full breakdown of every AI assistant and crawler that reads the directory.',
   alternates: { canonical: 'https://allmcps.com/trust' },
   openGraph: {
     title: 'Trust & Traffic Transparency | AllMCPs',
@@ -117,6 +113,78 @@ function SectionLabel({ title, note }: { title: string; note: string }) {
     <div style={{ margin: '2.25rem 0 0.75rem' }}>
       <h2 style={{ fontSize: '1.15rem', margin: '0 0 0.2rem' }}>{title}</h2>
       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>{note}</p>
+    </div>
+  );
+}
+
+type TrafficGroup = {
+  key: string;
+  label: string;
+  hits: number;
+  colorVar: string;
+  ink: string;
+};
+
+/** Part-to-whole stacked bar for the top-level traffic split, plus a legend with exact counts (the direct-label relief the light-mode palette requires). */
+function TrafficStackedBar({ groups, total }: { groups: TrafficGroup[]; total: number }) {
+  if (total <= 0 || groups.length === 0) return null;
+
+  return (
+    <div className="trust-viz" style={{ marginBottom: '1.5rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 2,
+          height: 22,
+          borderRadius: 8,
+          overflow: 'hidden',
+          background: 'var(--bg-muted)',
+        }}
+      >
+        {groups.map((g) => {
+          const widthPct = (g.hits / total) * 100;
+          const showLabel = widthPct >= 12;
+          return (
+            <div
+              key={g.key}
+              title={`${g.label}: ${formatNumber(g.hits)} (${pct(g.hits, total)})`}
+              style={{
+                width: `${Math.max(widthPct, 1)}%`,
+                background: `var(${g.colorVar})`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {showLabel && (
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: g.ink }}>
+                  {pct(g.hits, total)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <ul
+        style={{
+          listStyle: 'none',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.5rem 1.25rem',
+          margin: '0.65rem 0 0',
+          padding: 0,
+        }}
+      >
+        {groups.map((g) => (
+          <li
+            key={g.key}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}
+          >
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: `var(${g.colorVar})`, flexShrink: 0 }} />
+            {g.label}: {formatNumber(g.hits)} ({pct(g.hits, total)})
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -219,6 +287,13 @@ export default async function TrustPage() {
   const unknownRows = stats.callerBreakdown30d.filter((r) => r.class === 'unknown');
   const totalHits30d = stats.callerBreakdown30d.reduce((acc, r) => acc + r.hits, 0);
 
+  const trafficGroups: TrafficGroup[] = [
+    { key: 'ai', label: 'AI assistants', hits: aiRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-ai', ink: '#ffffff' },
+    { key: 'crawler', label: 'Other crawlers & bots', hits: crawlerRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-crawler', ink: '#ffffff' },
+    { key: 'browser', label: 'Human browsers', hits: browserRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-browser', ink: '#ffffff' },
+    { key: 'unknown', label: 'Unclassified', hits: unknownRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-unknown', ink: '#1a1200' },
+  ].filter((g) => g.hits > 0);
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -248,40 +323,12 @@ export default async function TrustPage() {
       <main className="page-shell page-shell--tool">
         <div className="page-shell-inner" style={{ maxWidth: 880 }}>
           <div className="surface page-panel">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-              <p className="directory-category-kicker" style={{ margin: 0 }}>
-                Real numbers, no spin
-              </p>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-secondary)',
-                  padding: '0.25rem 0.6rem',
-                  borderRadius: 'var(--radius-full)',
-                  border: '1px solid var(--border-color)',
-                }}
-              >
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: '#34d399',
-                    animation: 'trust-live-pulse 2s ease-in-out infinite',
-                  }}
-                />
-                Live &middot; trailing 30 days
-              </span>
-            </div>
             <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
               Trust &amp; Traffic Transparency
             </h1>
             <p className="text-lead" style={{ marginBottom: '2rem' }}>
-              Every number on this page is pulled straight from our production database — no
-              vanity metrics, no cherry-picked screenshots. Here&apos;s what&apos;s in the catalog,
+              Every number on this page comes from our production database. No vanity
+              metrics, no cherry-picked screenshots. Here&apos;s what&apos;s in the catalog,
               how people use it, and which AI systems and crawlers actually read it.
             </p>
 
@@ -290,7 +337,6 @@ export default async function TrustPage() {
               <StatTile icon={Cpu} color="#34d399" value={formatNumber(stats.totalServers)} label="MCP servers listed" />
               <StatTile icon={Tag} color="#60a5fa" value={formatNumber(stats.categoryCount)} label="Categories covered" />
               <StatTile icon={ShieldCheck} color="#22d3ee" value={formatNumber(stats.verifiedCount)} label="Verified listings" />
-              <StatTile icon={Wrench} color="#a78bfa" value={formatNumber(stats.toolsIndexed)} label="Tools indexed" />
             </StatGrid>
 
             <SectionLabel title="How people use it" note="All-time engagement, summed across every listing page." />
@@ -301,28 +347,21 @@ export default async function TrustPage() {
             </StatGrid>
 
             <SectionLabel
-              title="Ecosystem signal"
-              note="Combined GitHub and npm stats across every project we list — not our traffic, but part of the honest picture."
-            />
-            <StatGrid>
-              <StatTile icon={Star} color="#eab308" value={formatNumber(stats.totalGithubStars)} label="Combined GitHub stars" />
-              <StatTile icon={Package} color="#fb923c" value={formatNumber(stats.totalNpmDownloads)} label="Combined npm downloads (monthly)" />
-            </StatGrid>
-
-            <SectionLabel
               title="Who's reading the API"
               note={`${formatNumber(totalHits30d)} requests from ${formatNumber(stats.countryCount)} countries in the last 30 days.`}
             />
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
               Every request to our search, listing, and <Link href="/llms.txt">llms.txt</Link> endpoints
-              is classified server-side from its User-Agent. &ldquo;AI assistants&rdquo; below is limited
-              to named systems only — generic crawlers and unclassified agents are counted separately so
-              the two never blend into one inflated number.
+              gets classified server-side from its User-Agent. &ldquo;AI assistants&rdquo; only counts
+              named systems. Generic crawlers and unclassified agents are counted separately, so the two
+              numbers never get blended into one.
             </p>
+
+            <TrafficStackedBar groups={trafficGroups} total={totalHits30d} />
 
             <Group
               title="AI assistants & their crawlers"
-              description="Live chat/agent traffic (Claude, ChatGPT, Gemini, Perplexity, Cursor, Copilot, Windsurf) plus the offline crawlers those companies run to index content (ClaudeBot, GPTBot)."
+              description="Chat and agent traffic from Claude, ChatGPT, Gemini, Perplexity, Cursor, Copilot, and Windsurf, plus the crawlers those companies run to index content, like ClaudeBot and GPTBot."
               rows={aiRows}
               totalHits={totalHits30d}
               icon={GROUP_ICON.ai}
@@ -330,7 +369,7 @@ export default async function TrustPage() {
             />
             <Group
               title="Other crawlers & bots"
-              description="General-purpose web crawlers, link-preview bots, and unnamed automated clients — not AI systems, but still worth counting honestly."
+              description="General-purpose web crawlers, link-preview bots, and unnamed automated clients. Not AI systems, but still worth counting."
               rows={crawlerRows}
               totalHits={totalHits30d}
               icon={GROUP_ICON.crawler}
@@ -338,7 +377,7 @@ export default async function TrustPage() {
             />
             <Group
               title="Human visitors (browser requests to the API)"
-              description="Real browsers hitting API endpoints directly, separate from normal page views."
+              description="Browsers hitting API endpoints directly, separate from normal page views."
               rows={browserRows}
               totalHits={totalHits30d}
               icon={GROUP_ICON.browser}
@@ -353,7 +392,7 @@ export default async function TrustPage() {
               iconColor="#4b5563"
             />
 
-            <SectionLabel title="Why we're open about this" note="No login gate, no filtering — this is the same dashboard our team looks at." />
+            <SectionLabel title="Why we're open about this" note="No login gate, no filtering. This is the same dashboard our team looks at." />
             <div
               style={{
                 display: 'grid',
@@ -366,9 +405,7 @@ export default async function TrustPage() {
                 icon={Bot}
                 color="var(--brand-cyan)"
                 title="Crawlers are allowlisted"
-                detail={
-                  'Our robots.txt explicitly allows GPTBot, ClaudeBot, PerplexityBot, Google-Extended, Amazonbot, and Bytespider to read the catalog, search API, and llms-full.txt.'
-                }
+                detail="Our robots.txt allows GPTBot, ClaudeBot, PerplexityBot, Google-Extended, Amazonbot, and Bytespider to read the catalog, search API, and llms-full.txt."
               />
               <OpennessCard
                 icon={MessageSquare}
@@ -380,7 +417,7 @@ export default async function TrustPage() {
                 icon={Lock}
                 color="#f472b6"
                 title="Not used for training"
-                detail="We set ai-train=no — the catalog is available to read, not to train on."
+                detail="We set ai-train=no. The catalog is available to read, not to train on."
               />
             </div>
             <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
@@ -391,9 +428,17 @@ export default async function TrustPage() {
         </div>
       </main>
       <style>{`
-        @keyframes trust-live-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.35; }
+        .trust-viz {
+          --tv-ai: #3987e5;
+          --tv-crawler: #d95926;
+          --tv-browser: #199e70;
+          --tv-unknown: #c98500;
+        }
+        [data-theme="light"] .trust-viz {
+          --tv-ai: #2a78d6;
+          --tv-crawler: #eb6834;
+          --tv-browser: #1baf7a;
+          --tv-unknown: #eda100;
         }
       `}</style>
     </>
