@@ -13,6 +13,14 @@
 
 import { chatJson } from './openai';
 import { cleanListingDescription } from './description';
+import {
+  isPricingModel,
+  isAuthType,
+  normalizeTags,
+  normalizeCompatibleClients,
+  type PricingModel,
+  type AuthType,
+} from './serverEnums';
 
 export type AiFaqItem = { q: string; a: string };
 
@@ -34,6 +42,16 @@ export type AiListingContent = {
    * silently omits a secret the server actually needs — see toClaudeConfigSnippet.
    */
   envVars: string[];
+  /** Inferred pricing model ('free' | 'freemium' | 'paid' | 'byok' | null). */
+  pricingModel?: PricingModel | null;
+  /** Inferred auth requirement ('none' | 'api_key' | 'oauth' | 'other' | null). */
+  authType?: AuthType | null;
+  /** Short license name (e.g. 'MIT', 'Apache-2.0') or null. */
+  license?: string | null;
+  /** 2-5 relevant keyword tags. */
+  tags?: string[];
+  /** Compatible MCP client slugs (e.g. ['claude-desktop', 'cursor']). */
+  compatibleClients?: string[];
 };
 
 /**
@@ -152,14 +170,13 @@ const SYSTEM_PROMPT =
   '"overview" (2-4 sentences on what it does and when to use it), ' +
   '"useCases" (3-5 short concrete strings, each starting with a verb), ' +
   '"features" (3-6 short capability strings), ' +
-  '"faq" (3-5 objects with "q" and "a" keys — real questions a developer evaluating this server would ' +
-  'search for or ask, e.g. what it requires, what it does NOT do, how it compares to doing the task ' +
-  'manually, or a specific setup/auth detail if the material covers one; each "a" is 1-3 plain sentences ' +
-  'grounded only in the provided material), ' +
-  '"envVars" (0-8 UPPER_SNAKE_CASE environment variable names, e.g. "OPENAI_API_KEY", that the setup/' +
-  'install instructions say must be set for this server to run — API keys, tokens, connection strings. ' +
-  'Only names explicitly shown in the material, never invented or guessed from what the server "probably" needs). ' +
-  'If the material is too thin to support a field, return fewer items rather than guessing.';
+  '"faq" (3-5 objects with "q" and "a" keys grounded in the provided material), ' +
+  '"envVars" (0-8 UPPER_SNAKE_CASE environment variable names required to run this server), ' +
+  '"pricingModel" ("free" if open source & no paid API key required; "byok" if requires user\'s own paid API key like OpenAI/GitHub; "freemium" if has free tier + paid upgrade; "paid" if paid service only; null if unknown), ' +
+  '"authType" ("none" if no credentials needed; "api_key" if requires API key/token; "oauth" if uses OAuth; "other"; null if unknown), ' +
+  '"license" (short license name like "MIT", "Apache-2.0", or null), ' +
+  '"tags" (2-5 short lowercase keyword slugs like ["github", "developer-tools", "issues"]), ' +
+  '"compatibleClients" (array of slugs from ["claude-desktop", "cursor", "windsurf", "cline"] mentioned or compatible).';
 
 /** Chat failure reasons that mean "stop spending" rather than "this one didn't work". */
 const BUDGET_REASONS = new Set(['budget_or_rate_limit', 'auth', 'not_configured']);
@@ -196,10 +213,15 @@ export async function generateListingContent(
     features?: unknown;
     faq?: unknown;
     envVars?: unknown;
+    pricingModel?: unknown;
+    authType?: unknown;
+    license?: unknown;
+    tags?: unknown;
+    compatibleClients?: unknown;
   }>({
     model: 'gpt-4.1-mini',
     temperature: 0.3,
-    maxTokens: 800,
+    maxTokens: 900,
     timeoutMs: 20_000,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -220,8 +242,30 @@ export async function generateListingContent(
   const faq = clampFaq(result.data.faq, 5, 150, 400);
   const envVars = clampEnvVars(result.data.envVars, 8);
 
+  const pricingModel = isPricingModel(result.data.pricingModel) ? result.data.pricingModel : null;
+  const authType = isAuthType(result.data.authType) ? result.data.authType : null;
+  const rawLicense = typeof result.data.license === 'string' ? result.data.license.trim().slice(0, 30) : null;
+  const license = rawLicense && /^[\w\.\-]+$/.test(rawLicense) ? rawLicense : null;
+  const tags = normalizeTags(result.data.tags);
+  const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
+
   // A usable summary is the minimum bar — without it the page gains nothing over the raw scrape.
   if (!summary || summary.length < 12) return { status: 'skip', reason: 'empty' };
 
-  return { status: 'ok', content: { summary, overview, useCases, features, faq, envVars } };
+  return {
+    status: 'ok',
+    content: {
+      summary,
+      overview,
+      useCases,
+      features,
+      faq,
+      envVars,
+      pricingModel,
+      authType,
+      license,
+      tags,
+      compatibleClients,
+    },
+  };
 }

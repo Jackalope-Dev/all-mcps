@@ -1660,7 +1660,7 @@
     "name": "ammawla/encode-toolkit",
     "url": "https://github.com/ammawla/encode-toolkit",
     "description": "MCP server and Claude Plugin for a full ENCODE Project genomic data and analysis toolkit — search, download, track, and analyze functional genomics experiments.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -1788,7 +1788,7 @@
     "name": "andyliszewski/grounding-ai",
     "url": "https://github.com/andyliszewski/grounding-ai",
     "description": "Build a searchable index from PDFs, EPUBs, and Word docs. Claude queries it via MCP and pulls grounded answers with exact page-and-section citations. Local-first, no cloud dependency.",
-    "category": "🔎 end to end RAG platforms",
+    "category": "🔎 Search & Data Extraction",
     "isOfficial": false
   },
   {
@@ -3820,7 +3820,7 @@
     "name": "cafferychen777/ChatSpatial",
     "url": "https://github.com/cafferychen777/ChatSpatial",
     "description": "MCP server for spatial transcriptomics analysis with 60+ integrated methods covering cell annotation, deconvolution, spatial statistics, and visualization.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -5036,7 +5036,7 @@
     "name": "Crindo2/gph-mcp-server",
     "url": "https://github.com/Crindo2/gph-mcp-server",
     "description": "Healthcare service vendor matching for medical practices: 76,000+ curated vendors across 25 categories (billing, credentialing, EHR, compliance, legal) in all 50 US states.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -5580,7 +5580,7 @@
     "name": "davidmosiah/wellness-cgm-mcp",
     "url": "https://github.com/davidmosiah/wellness-cgm-mcp",
     "description": "Local-first continuous glucose monitor MCP server for Dexcom Developer API and FreeStyle Libre via LibreLink Up.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -6116,7 +6116,7 @@
     "name": "dnaerys/onekgpd-mcp",
     "url": "https://github.com/dnaerys/onekgpd-mcp",
     "description": "real-time access to 1000 Genomes Project dataset",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -7804,7 +7804,7 @@
     "name": "fulcradynamics/fulcra-context-mcp",
     "url": "https://github.com/fulcradynamics/fulcra-context-mcp",
     "description": "MCP server for accessing personal health and biometric data including sleep stages, heart rate, HRV, glucose, workouts, calendar, and location via the Fulcra Life API with OAuth2 consent.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -8420,7 +8420,7 @@
     "name": "gogabrielordonez/mcp-ragchat",
     "url": "https://github.com/gogabrielordonez/mcp-ragchat",
     "description": "Add RAG-powered AI chat to any website with one command. Local vector store, multi-provider LLM (OpenAI/Anthropic/Gemini), self-contained chat server and embeddable widget.",
-    "category": "🔎 end to end RAG platforms",
+    "category": "🔎 Search & Data Extraction",
     "isOfficial": false
   },
   {
@@ -9468,7 +9468,7 @@
     "name": "hlydecker/ucsc-genome-mcp",
     "url": "https://github.com/hlydecker/ucsc-genome-mcp",
     "description": "MCP server to interact with the UCSC Genome Browser API, letting you find genomes, chromosomes, and more.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -10572,7 +10572,7 @@
     "name": "JamesANZ/medical-mcp",
     "url": "https://github.com/JamesANZ/medical-mcp",
     "description": "An MCP server that provides access to medical information, drug databases, and healthcare resources. Enables AI assistants to query medical data, drug interactions, and clinical guidelines.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -13452,7 +13452,7 @@
     "name": "longevity-genie/biothings-mcp",
     "url": "https://github.com/longevity-genie/biothings-mcp",
     "description": "MCP server to interact with the BioThings API, including genes, genetic variants, drugs, and taxonomic information.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -13460,7 +13460,7 @@
     "name": "longevity-genie/gget-mcp",
     "url": "https://github.com/longevity-genie/gget-mcp",
     "description": "MCP server providing a powerful bioinformatics toolkit for genomics queries and analysis, wrapping the popular gget library.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -13468,7 +13468,7 @@
     "name": "longevity-genie/opengenes-mcp",
     "url": "https://github.com/longevity-genie/opengenes-mcp",
     "description": "MCP server for a queryable database for aging and longevity research from the OpenGenes project.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -13476,7 +13476,7 @@
     "name": "longevity-genie/synergy-age-mcp",
     "url": "https://github.com/longevity-genie/synergy-age-mcp",
     "description": "MCP server for the SynergyAge database of synergistic and antagonistic genetic interactions in longevity.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -14508,7 +14508,7 @@
     "name": "mgnirck/lecka-mcp",
     "url": "https://github.com/mgnirck/lecka-mcp",
     "description": "Race nutrition planning for endurance athletes. Calculates carb, sodium and fluid targets for marathons, ultras, cycling and triathlons. Returns personalised Lecka product recommendations by race type, conditions and athlete weight. [](https://glama.ai/mcp/servers/mgnirck/lecka-mcp)",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -15340,7 +15340,7 @@
     "name": "musharna/plant-genomics-mcp",
     "url": "https://github.com/musharna/plant-genomics-mcp",
     "description": "32 tools for plant-genomics locus lookup across 11 public backends (Ensembl Plants, Phytozome, UniProtKB, KEGG, STRING-DB, Gramene, Europe PMC, QuickGO, NCBI BLAST, ATTED-II, BAR). Single-locus, parallel-batch, and cross-source synthesis variants; JSON output schemas and EDAM ontology tags on every tool. pipx install plant-genomics-mcp.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -15388,7 +15388,7 @@
     "name": "MyMedi-AI/mymedi-ai-mcp-server",
     "url": "https://github.com/MyMedi-AI/mymedi-ai-mcp-server",
     "description": "Healthcare billing AI for agents: ICD-10/CPT/HCPCS code lookup (81,769 codes with RVU + OPPS pricing), prior auth prediction, medical NER, claims validation, denial-risk scoring, HIPAA compliance auditing, and NPI/drug enrichment. 20 tools, 10 free credits then pay-per-call via credits or anonymous USDC (x402). npx @mymedi-ai/mcp-server",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -15684,7 +15684,7 @@
     "name": "neptun2000/heor-agent-mcp",
     "url": "https://github.com/neptun2000/heor-agent-mcp",
     "description": "HEOR (Health Economics and Outcomes Research) MCP server with 7 tools for literature search across 41 medical data sources (PubMed, NICE, CADTH, ICER, etc.), cost-effectiveness modeling (Markov/PartSA/PSA), and HTA dossier preparation for pharmaceutical and biotech teams.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -16036,7 +16036,7 @@
     "name": "NyxToolsDev/dicom-hl7-mcp-server",
     "url": "https://github.com/NyxToolsDev/dicom-hl7-mcp-server",
     "description": "The only MCP server bridging DICOM, HL7v2, and FHIR in one package. Cross-standard mapping, Mirth Connect channel generation, vendor private tag decoding (GE, Siemens, Philips), and integration pattern knowledge. Built by a 19-year healthcare IT veteran. pip install dicom-hl7-mcp",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -16268,7 +16268,7 @@
     "name": "OHNLP/omop_mcp",
     "url": "https://github.com/OHNLP/omop_mcp",
     "description": "Map clinical terminology to OMOP concepts using LLMs for healthcare data standardization and interoperability.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -16892,7 +16892,7 @@
     "name": "PantelisGeorgiadis/dicomweb-mcp-server",
     "url": "https://github.com/PantelisGeorgiadis/dicomweb-mcp-server",
     "description": "A DICOMweb MCP server that exposes a DICOMweb-compliant DICOM archive to AI assistants, enabling search of studies, series and instances, metadata inspection, structured report reading, encapsulated PDF text extraction, and frame rendering.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -17508,7 +17508,7 @@
     "name": "pkotecha-eng/aria-mcp-server",
     "url": "https://github.com/pkotecha-eng/aria-mcp-server",
     "description": "Clinical research MCP server for trial coordinators and life sciences teams. Real-time access to PubMed (35M+ papers) and ClinicalTrials.gov (400K+ trials). No API key required.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -17572,7 +17572,7 @@
     "name": "poll-the-people/customgpt-mcp",
     "url": "https://github.com/Poll-The-People/customgpt-mcp",
     "description": "An MCP server for accessing all of CustomGPT.ai's anti-hallucination RAG-as-a-service API endpoints.",
-    "category": "🔎 end to end RAG platforms",
+    "category": "🔎 Search & Data Extraction",
     "isOfficial": false
   },
   {
@@ -17924,7 +17924,7 @@
     "name": "pubspro/pubmed-search",
     "url": "https://github.com/pubspro/pubmed-search",
     "description": "Search PubMed and summarize biomedical literature, designed for AI health agents.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -18500,7 +18500,7 @@
     "name": "Rajskij/oura-mcp",
     "url": "https://github.com/Rajskij/oura-mcp",
     "description": "Ask your Oura Ring about sleep, readiness, activity, stress and heart rate in ChatGPT or Claude, in any language. Read-only, token-efficient, self-hosted; 10 task-oriented tools grouped by how people actually ask.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -19404,7 +19404,7 @@
     "name": "salwks/mcp-techTrend",
     "url": "https://github.com/salwks/mcp-techTrend",
     "description": "Multi-source academic + code + medical-regulatory trend monitoring (arXiv, PubMed, GitHub, Hugging Face, openFDA 510(k)/Recalls). Newspaper-style briefings, per-domain tuning, sandbox-safe Python launcher.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -19972,7 +19972,7 @@
     "name": "SEOSiri-Official/biorobotics",
     "url": "https://github.com/SEOSiri-Official/biorobotics",
     "description": "A stateless, deterministic Bio-Robotics Core Engine converting biological data (UniProt API) to Cartesian G-code coordinates using the Model Context Protocol.  🐍 🏠 🍎 🪟 🐧",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -20356,7 +20356,7 @@
     "name": "SidneyBissoli/medical-terminologies-mcp",
     "url": "https://github.com/SidneyBissoli/medical-terminologies-mcp",
     "description": "Unified MCP server for ICD-11 (WHO), LOINC, RxNorm, MeSH (NLM), ATC, CID-10 (Brazilian DataSUS), and optional SNOMED CT. 28 tools (34 with SNOMED) with structuredContent + outputSchema on every default tool. Hosted on Cloudflare Workers, listed on Smithery, and on npm.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -20612,7 +20612,7 @@
     "name": "smaniches/uniprot-mcp",
     "url": "https://github.com/smaniches/uniprot-mcp",
     "description": "Auditable UniProt MCP server: 41 tools over the UniProt knowledgebase (entries, features, variants, PTMs, GO terms, cross-references) with per-query SHA-256 provenance and offline replay. uvx uniprot-mcp-server",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -21620,7 +21620,7 @@
     "name": "tatsuju/opdstar-nhi-mcp",
     "url": "https://github.com/tatsuju/opdstar-nhi-mcp",
     "description": "Taiwan's first public MCP server for National Health Insurance (NHI) data — 234 rejection codes, 1,497 ICD-10→procedure mappings across 20 specialties, audit indicators (008/014/027/P043), and semantic wiki search over 8,232 chunks of official NHI documentation. Powered by OPDSTAR. Install: npx @opdstar/nhi-mcp.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -21804,7 +21804,7 @@
     "name": "the-momentum/apple-health-mcp-server",
     "url": "https://github.com/the-momentum/apple-health-mcp-server",
     "description": "An MCP server that provides access to exported data from Apple Health. Data analytics included.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -21812,7 +21812,7 @@
     "name": "the-momentum/fhir-mcp-server",
     "url": "https://github.com/the-momentum/fhir-mcp-server",
     "description": "MCP Server that connects AI agents to FHIR servers. One example use case is querying patient history in natural language.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -21868,7 +21868,7 @@
     "name": "thelongevityvault/decoder-3am-mcp",
     "url": "https://github.com/thelongevityvault/decoder-3am-mcp",
     "description": "Sleep disruption cause classifier using The Longevity Vault's 5-cause framework. Identifies the biological mechanism behind 3am wakeups from symptom descriptions, with tracked links to the full interactive 3AM Decoder.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
@@ -23156,7 +23156,7 @@
     "name": "vectara/vectara-mcp",
     "url": "https://github.com/vectara/vectara-mcp",
     "description": "An MCP server for accessing Vectara's trusted RAG-as-a-service platform.",
-    "category": "🔎 end to end RAG platforms",
+    "category": "🔎 Search & Data Extraction",
     "isOfficial": false
   },
   {
@@ -24092,7 +24092,7 @@
     "name": "wso2/fhir-mcp-server",
     "url": "https://github.com/wso2/fhir-mcp-server",
     "description": "Model Context Protocol server for Fast Healthcare Interoperability Resources (FHIR) APIs. Provides seamless integration with FHIR servers, enabling AI assistants to search, retrieve, create, update, and analyze clinical healthcare data with SMART-on-FHIR authentication support.",
-    "category": "Biology, Medicine and Bioinformatics",
+    "category": "🧬 Biology & Bioinformatics",
     "isOfficial": false
   },
   {
