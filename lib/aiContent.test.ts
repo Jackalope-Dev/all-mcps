@@ -52,4 +52,13 @@ assert(emptyish.length === 1, 'Should drop items with a blank question');
 // 10. Non-array input returns [].
 assert(clampFaq('not an array', 5, 200, 400).length === 0, 'Should return [] for non-array input');
 
+// 11. Non-string q/a values (null, number, object, boolean) are dropped, not coerced into garbage strings.
+const nonString = parseFaqArray(JSON.stringify([
+  { q: null, a: 'Real answer' },
+  { q: 42, a: 'Real answer' },
+  { q: 'Real question', a: 'Real answer' },
+]));
+assert(nonString.length === 1, 'Should drop items with non-string q/a instead of coercing them');
+assert(nonString[0].q === 'Real question', 'Should keep only the well-formed item');
+
 console.log('ALL TESTS PASSED SUCCESSFULLY!');

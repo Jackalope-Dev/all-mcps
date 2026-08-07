@@ -59,10 +59,10 @@ export function parseFaqArray(raw: unknown): AiFaqItem[] {
   const toItems = (arr: unknown[]): AiFaqItem[] =>
     arr
       .filter(
-        (x): x is { q: unknown; a: unknown } =>
-          !!x && typeof x === 'object' && 'q' in x && 'a' in x
+        (x): x is { q: string; a: string } =>
+          !!x && typeof x === 'object' && typeof (x as any).q === 'string' && typeof (x as any).a === 'string'
       )
-      .map((x) => ({ q: String((x as any).q).trim(), a: String((x as any).a).trim() }))
+      .map((x) => ({ q: x.q.trim(), a: x.a.trim() }))
       .filter((x) => x.q && x.a);
 
   if (Array.isArray(raw)) return toItems(raw);
@@ -93,6 +93,7 @@ function clampList(value: unknown, maxItems: number, maxLen: number): string[] {
   return out;
 }
 
+/** Cap FAQ item count and per-field length (mirrors clampList, but for {q,a} pairs). */
 export function clampFaq(value: unknown, maxItems: number, maxQLen: number, maxALen: number): AiFaqItem[] {
   if (!Array.isArray(value)) return [];
   const out: AiFaqItem[] = [];
