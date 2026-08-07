@@ -13,7 +13,8 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "submit-index": "node scripts/submit-indexnow.mjs",
     "submit-directories": "node scripts/llm-directory-agent.mjs",
-    "capture-screenshots": "node scripts/capture-screenshots.mjs"
+    "capture-screenshots": "node scripts/capture-screenshots.mjs",
+    "sync-snapshot": "node scripts/sync-snapshot.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.41.3",
