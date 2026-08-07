@@ -110,7 +110,10 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
   );
 
   return (
-    <div style={{ margin: '1.75rem 0 2.5rem 0' }}>
+    <section
+      style={{ margin: '1.75rem 0 2.5rem 0' }}
+      aria-label="Featured and trending MCP servers"
+    >
       <div 
         style={{ 
           display: 'flex', 
@@ -125,10 +128,12 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
           color: 'var(--text-secondary)',
         }}
       >
-        <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} />
-        <span>Featured & Trending MCP Servers</span>
+        <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} aria-hidden="true" />
+        <span>Featured &amp; Trending MCP Servers</span>
       </div>
 
+      {/* Duplicate track is decorative for seamless scroll; hidden from AT.
+          Animation pauses via CSS when prefers-reduced-motion is set. */}
       <div className="marquee-container" style={{ margin: 0, padding: '0.5rem 0' }}>
         <div className="marquee-content">
           <MarqueeItems />
@@ -137,7 +142,7 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
           <MarqueeItems isDuplicate />
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

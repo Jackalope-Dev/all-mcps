@@ -135,8 +135,13 @@ export default function DirectoryGrid({
 
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
+  // Rotating placeholders are decorative; pause when reduced motion is preferred
+  // so the input isn't constantly changing under the cursor for sensitive users.
   useEffect(() => {
     if (searchQuery.trim()) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
     const timer = setInterval(() => {
       setPlaceholderIndex((prev) => (prev + 1) % SEARCH_PLACEHOLDERS.length);
     }, 3200);
@@ -614,7 +619,7 @@ export default function DirectoryGrid({
               Browse All Servers
             </Link>
             <Link href="/submit" className="btn btn-lg btn-submit-noticeable">
-              <Sparkles size={16} /> Submit a Server
+              <Sparkles size={16} aria-hidden="true" /> Submit a Server
             </Link>
           </div>
 
@@ -717,11 +722,22 @@ export default function DirectoryGrid({
         }}
       >
         <div className="directory-filters">
-          <div className="directory-search-bar">
+          <form
+            className="directory-search-bar"
+            role="search"
+            aria-label="Search MCP servers"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!isBrowse) {
+                goToFullDirectorySearch(searchQuery);
+              }
+            }}
+          >
             <div className="directory-search-input-wrap">
-              <Search size={22} className="directory-search-icon" />
+              <Search size={22} className="directory-search-icon" aria-hidden="true" />
               <input
-                type="text"
+                type="search"
+                name="q"
                 className="directory-search-input"
                 placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
                 value={searchQuery}
@@ -732,7 +748,9 @@ export default function DirectoryGrid({
                     goToFullDirectorySearch(searchQuery);
                   }
                 }}
-                aria-label="Search MCP Servers"
+                aria-label="Search MCP servers"
+                autoComplete="off"
+                enterKeyHint="search"
               />
               {searchQuery ? (
                 <button
@@ -742,7 +760,7 @@ export default function DirectoryGrid({
                   aria-label="Clear search"
                   title="Clear search"
                 >
-                  <X size={16} />
+                  <X size={16} aria-hidden="true" />
                 </button>
               ) : null}
             </div>
@@ -754,7 +772,7 @@ export default function DirectoryGrid({
                 className="directory-search-category-select"
                 value={selectedCategory || ''}
                 onChange={(e) => handleCategorySelect(e.target.value === '' ? null : e.target.value)}
-                aria-label="Filter by Category"
+                aria-label="Filter by category"
               >
                 <option value="">All Categories</option>
                 {(DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories).map((cat) => (
@@ -766,32 +784,28 @@ export default function DirectoryGrid({
             </div>
 
             <button
-              type="button"
+              type="submit"
               className="directory-search-submit-btn"
-              onClick={() => {
-                if (!isBrowse) {
-                  goToFullDirectorySearch(searchQuery);
-                }
-              }}
               aria-label="Search"
             >
-              <Search size={18} />
+              <Search size={18} aria-hidden="true" />
               <span>Search</span>
             </button>
-          </div>
+          </form>
 
           {/* Active filter pills (only shown when active filters exist) */}
           {isFiltered && (
-            <div className="directory-tags-row">
+            <div className="directory-tags-row" role="group" aria-label="Active filters">
               {verifiedOnly && (
                 <button
                   type="button"
                   className="directory-tag directory-tag-active"
                   onClick={() => setVerifiedOnly(false)}
+                  aria-label="Remove verified filter"
                 >
-                  <BadgeCheck size={14} />
+                  <BadgeCheck size={14} aria-hidden="true" />
                   Verified
-                  <X size={12} />
+                  <X size={12} aria-hidden="true" />
                 </button>
               )}
 
@@ -800,9 +814,10 @@ export default function DirectoryGrid({
                   type="button"
                   className="directory-tag directory-tag-active"
                   onClick={() => handleCategorySelect(null)}
+                  aria-label={`Remove category filter: ${selectedCategory}`}
                 >
                   {selectedCategory}
-                  <X size={12} />
+                  <X size={12} aria-hidden="true" />
                 </button>
               )}
 
@@ -811,9 +826,10 @@ export default function DirectoryGrid({
                   type="button"
                   className="directory-tag directory-tag-active"
                   onClick={() => setSelectedStack('all')}
+                  aria-label={`Remove stack filter: ${selectedStack}`}
                 >
                   Stack: {selectedStack}
-                  <X size={12} />
+                  <X size={12} aria-hidden="true" />
                 </button>
               )}
 
@@ -822,9 +838,10 @@ export default function DirectoryGrid({
                   type="button"
                   className="directory-tag directory-tag-active"
                   onClick={() => setSelectedTransport('all')}
+                  aria-label={`Remove transport filter: ${selectedTransport}`}
                 >
                   Transport: {selectedTransport}
-                  <X size={12} />
+                  <X size={12} aria-hidden="true" />
                 </button>
               )}
 
@@ -833,6 +850,7 @@ export default function DirectoryGrid({
                 className="directory-tag"
                 onClick={clearAllFilters}
                 style={{ opacity: 0.8 }}
+                aria-label="Clear all filters"
               >
                 Clear all filters
               </button>
@@ -850,7 +868,7 @@ export default function DirectoryGrid({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Grid size={20} style={{ color: 'var(--accent-color)' }} />
+                <Grid size={20} style={{ color: 'var(--accent-color)' }} aria-hidden="true" />
                 <span>Browse by Category &amp; Ecosystem</span>
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: '0.2rem 0 0' }}>
@@ -1084,7 +1102,7 @@ export default function DirectoryGrid({
                 aria-label="List view"
                 title="List view"
               >
-                <List size={16} />
+                <List size={16} aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -1094,7 +1112,7 @@ export default function DirectoryGrid({
                 aria-label="Grid view"
                 title="Grid view"
               >
-                <LayoutGrid size={16} />
+                <LayoutGrid size={16} aria-hidden="true" />
               </button>
             </div>
           </div>

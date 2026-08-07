@@ -129,8 +129,9 @@ export function ThemeSwitcher() {
         type="button"
         className="theme-switcher-btn"
         onClick={() => setIsOpen((prev) => !prev)}
-        aria-label={`Toggle theme (current: ${themeMode})`}
+        aria-label={`Theme: ${themeMode}. Open theme menu`}
         aria-expanded={isOpen}
+        aria-haspopup="menu"
         title={`Theme: ${themeMode.charAt(0).toUpperCase() + themeMode.slice(1)}`}
       >
         {getDisplayIcon()}

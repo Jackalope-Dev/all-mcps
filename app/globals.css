@@ -139,6 +139,19 @@ html {
   outline-offset: 2px;
 }
 
+/* Screen-reader-only text (new-tab cues, supplemental labels). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Sticky header offset when skip-link / in-page anchors land on main. */
 #main-content,
 main {
@@ -530,9 +543,10 @@ p {
 
 .footer-heading {
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin: 0 0 1rem;
   font-size: 0.95rem;
   color: var(--text-primary);
+  line-height: 1.3;
 }
 
 .site-footer-links {
@@ -2595,6 +2609,7 @@ nav[aria-label="Table of contents"] {
   display: flex;
   align-items: center;
   width: 100%;
+  margin: 0; /* form element resets */
   background: var(--bg-elevated, #0f172a);
   border: 1px solid rgba(0, 229, 255, 0.28);
   border-radius: var(--radius-xl, 20px);

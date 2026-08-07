@@ -97,9 +97,9 @@ export function SiteFooter() {
               </Link>
             </li>
           </ul>
-        </div>
-        <div>
-          <h4 className="footer-heading">Popular hubs</h4>
+        </nav>
+        <nav aria-label="Popular hubs">
+          <h2 className="footer-heading">Popular hubs</h2>
           <ul className="site-footer-links">
             <li>
               <Link href="/best/databases" className="nav-link">
@@ -152,9 +152,9 @@ export function SiteFooter() {
               </Link>
             </li>
           </ul>
-        </div>
-        <div>
-          <h4 className="footer-heading">Free Tools</h4>
+        </nav>
+        <nav aria-label="Free tools">
+          <h2 className="footer-heading">Free Tools</h2>
           <ul className="site-footer-links">
             <li>
               <Link href="/tools" className="nav-link">
@@ -187,9 +187,9 @@ export function SiteFooter() {
               </Link>
             </li>
           </ul>
-        </div>
-        <div>
-          <h4 className="footer-heading">For AI &amp; Agents</h4>
+        </nav>
+        <nav aria-label="For AI and agents">
+          <h2 className="footer-heading">For AI &amp; Agents</h2>
           <ul className="site-footer-links">
             <li>
               <Link href="/docs/api" className="nav-link">
@@ -202,23 +202,27 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <a href="/llms.txt" className="nav-link" target="_blank" rel="noopener">
-                llms.txt Standard ↗
+              <a href="/llms.txt" className="nav-link" target="_blank" rel="noopener noreferrer">
+                llms.txt Standard <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
-              <a href="/api/mcp" className="nav-link" target="_blank" rel="noopener">
-                Remote MCP Server ↗
+              <a href="/api/mcp" className="nav-link" target="_blank" rel="noopener noreferrer">
+                Remote MCP Server <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
-              <a href="/api/v1/search" className="nav-link" target="_blank" rel="noopener">
-                Agent Search API ↗
+              <a href="/api/v1/search" className="nav-link" target="_blank" rel="noopener noreferrer">
+                Agent Search API <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
-              <a href="/data.json" className="nav-link" target="_blank" rel="noopener">
-                Catalog Dataset (JSON) ↗
+              <a href="/data.json" className="nav-link" target="_blank" rel="noopener noreferrer">
+                Catalog Dataset (JSON) <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
@@ -228,13 +232,14 @@ export function SiteFooter() {
                 rel="noopener noreferrer"
                 className="nav-link"
               >
-                Submit via npx (allmcps-server) ↗
+                Submit via npx (allmcps-server) <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
           </ul>
-        </div>
-        <div>
-          <h4 className="footer-heading">Company</h4>
+        </nav>
+        <nav aria-label="Company">
+          <h2 className="footer-heading">Company</h2>
           <ul className="site-footer-links">
             <li>
               <Link href="/about" className="nav-link">
@@ -253,7 +258,8 @@ export function SiteFooter() {
                 rel="noopener noreferrer"
                 className="nav-link"
               >
-                X (@AllMCPs) ↗
+                X (@AllMCPs) <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
@@ -263,7 +269,8 @@ export function SiteFooter() {
                 rel="noopener noreferrer"
                 className="nav-link"
               >
-                GitHub ↗
+                GitHub <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
@@ -273,7 +280,8 @@ export function SiteFooter() {
                 rel="noopener noreferrer"
                 className="nav-link"
               >
-                Jackalope Digital ↗
+                Jackalope Digital <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
@@ -287,7 +295,7 @@ export function SiteFooter() {
               </Link>
             </li>
           </ul>
-        </div>
+        </nav>
       </div>
       <BadgeMarquee />
       <div className="site-footer-copy">

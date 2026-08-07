@@ -333,14 +333,14 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="container page-shell" style={{ paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-16)' }}>
+      <main id="main-content" tabIndex={-1} className="container page-shell" style={{ paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-16)' }}>
       <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
         <ol className="breadcrumb">
           <li><Link href="/">Home</Link></li>
-          <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+          <li className="breadcrumb-separator" aria-hidden="true"><ChevronRight size={12} aria-hidden="true" /></li>
           <li><Link href={`/browse?category=${encodeURIComponent(server.category)}`}>{server.category}</Link></li>
-          <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
-          <li className="breadcrumb-current">{displayName}</li>
+          <li className="breadcrumb-separator" aria-hidden="true"><ChevronRight size={12} aria-hidden="true" /></li>
+          <li className="breadcrumb-current" aria-current="page">{displayName}</li>
         </ol>
       </nav>
 
