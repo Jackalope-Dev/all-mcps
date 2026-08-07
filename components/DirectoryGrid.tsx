@@ -502,24 +502,7 @@ export default function DirectoryGrid({
     </div>
   );
 
-  /** Compact install-readiness chip — only when we have a real signal. */
-  const InstallReadyBadge = ({ server }: { server: Server }) => {
-    const conf = (server.installConfidence || '').toLowerCase();
-    if (conf !== 'high' && conf !== 'medium') return null;
-    const isHigh = conf === 'high';
-    return (
-      <Badge
-        variant={isHigh ? 'official' : 'success'}
-        title={
-          isHigh
-            ? 'Install command detected from README or listing signals'
-            : 'Install path inferred — verify in the listing'
-        }
-      >
-        {isHigh ? 'Install ready' : 'Install known'}
-      </Badge>
-    );
-  };
+
 
   const TransportBadge = ({ server }: { server: Server }) => {
     const isRemote = server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com'));
