@@ -40,3 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 
+# one-off generated SQL (scripts/seed-sql.mjs, scripts/ingest-sources.mjs) —
+# not schema migrations, shouldn't live in git history
+drizzle/seed.sql
+drizzle/ingest-*.sql
+
