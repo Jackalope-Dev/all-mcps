@@ -4660,7 +4660,7 @@ nav[aria-label="Table of contents"] {
 
 [data-theme="light"] .directory-search-category-select,
 [data-theme="light"] .directory-search-verified-toggle {
-  background-color: rgba(15, 23, 42, 0.04) !important;
+  background-color: transparent !important;
   border-color: rgba(15, 23, 42, 0.12) !important;
   color: #475569;
 }
@@ -5090,11 +5090,7 @@ nav[aria-label="Table of contents"] {
   top: calc(var(--header-height) + 0.35rem);
   z-index: 40;
   padding: 0.65rem 0 0.35rem;
-  background: linear-gradient(
-    to bottom,
-    var(--bg-color) 70%,
-    transparent
-  );
+  background: var(--bg-color);
 }
 
 .directory-intent-chips {
@@ -5800,10 +5796,11 @@ nav[aria-label="Table of contents"] {
 
 /* Sticky search: solid backdrop so cards don't show through */
 .directory-filters-sticky {
-  background: color-mix(in srgb, var(--bg-color) 92%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid transparent;
+  position: sticky;
+  top: calc(var(--header-height) + 0.35rem);
+  z-index: 40;
+  padding: 0.65rem 0 0.35rem;
+  background: var(--bg-color);
 }
 
 /* Directory cards: slightly shorter on small screens = less scroll */
