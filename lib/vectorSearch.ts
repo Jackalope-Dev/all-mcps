@@ -21,6 +21,12 @@ export function buildServerVectorText(server: {
   /** Parsed FAQ pairs or raw JSON column — both accepted for cron/API callers. */
   aiFaq?: string | Array<{ q?: string; a?: string }> | null;
   tools?: string | any[] | null;
+  tags?: string | string[] | null;
+  license?: string | null;
+  pricingModel?: string | null;
+  authType?: string | null;
+  compatibleClients?: string | string[] | null;
+  maintenanceStatus?: string | null;
 }): string {
   const parts: string[] = [
     `Name: ${server.name}`,
@@ -30,6 +36,23 @@ export function buildServerVectorText(server: {
 
   if (server.aiSummary) parts.push(`Summary: ${server.aiSummary}`);
   if (server.aiOverview) parts.push(`Overview: ${server.aiOverview}`);
+
+  if (server.tags) {
+    const tags =
+      typeof server.tags === 'string' ? safeParseJson<string[]>(server.tags, []) : server.tags;
+    if (tags.length > 0) parts.push(`Tags: ${tags.join(', ')}`);
+  }
+  if (server.license) parts.push(`License: ${server.license}`);
+  if (server.pricingModel) parts.push(`Pricing: ${server.pricingModel}`);
+  if (server.authType) parts.push(`Auth: ${server.authType}`);
+  if (server.maintenanceStatus) parts.push(`Maintenance: ${server.maintenanceStatus}`);
+  if (server.compatibleClients) {
+    const clients =
+      typeof server.compatibleClients === 'string'
+        ? safeParseJson<string[]>(server.compatibleClients, [])
+        : server.compatibleClients;
+    if (clients.length > 0) parts.push(`Compatible clients: ${clients.join(', ')}`);
+  }
 
   if (server.aiUseCases) {
     const useCases = typeof server.aiUseCases === 'string'

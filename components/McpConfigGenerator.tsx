@@ -184,6 +184,8 @@ export function McpConfigGenerator({
   installArgs,
   installPackage,
   installConfidence,
+  suggestedInstallCommand,
+  suggestedInstallArgs,
 }: McpConfigGeneratorProps) {
   const [activeIde, setActiveIde] = useState<IdeTarget>('claude-desktop');
 
@@ -199,6 +201,8 @@ export function McpConfigGenerator({
         installArgs,
         installPackage,
         installConfidence,
+        suggestedInstallCommand,
+        suggestedInstallArgs,
       }),
     [
       serverId,
@@ -210,6 +214,8 @@ export function McpConfigGenerator({
       installArgs,
       installPackage,
       installConfidence,
+      suggestedInstallCommand,
+      suggestedInstallArgs,
     ]
   );
 

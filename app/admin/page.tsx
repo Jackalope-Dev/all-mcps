@@ -60,6 +60,11 @@ async function getAdminData() {
         .from(servers)
         .where(isNotNull(servers.pendingLogoKey))
         .orderBy(desc(servers.createdAt));
+      const pendingScreenshots = await db
+        .select()
+        .from(servers)
+        .where(isNotNull(servers.pendingScreenshotKey))
+        .orderBy(desc(servers.createdAt));
       // Most-recently-added live listings, so newly approved MCPs are easy to find again.
       const recentlyAdded = await db
         .select({
@@ -91,6 +96,7 @@ async function getAdminData() {
         pendingEdits: pendingEdits.map(map),
         pendingClaims: pendingClaims.map(map),
         pendingLogos: pendingLogos.map(map),
+        pendingScreenshots: pendingScreenshots.map(map),
         recentlyAdded: recentlyAdded.map(mapRecent),
         stats: await getAdminStats(db),
       };
@@ -98,7 +104,7 @@ async function getAdminData() {
   } catch (e) {
     // Fallback if not in edge context
   }
-  return { pending: [], pendingEdits: [], pendingClaims: [], pendingLogos: [], recentlyAdded: [], stats: EMPTY_STATS };
+  return { pending: [], pendingEdits: [], pendingClaims: [], pendingLogos: [], pendingScreenshots: [], recentlyAdded: [], stats: EMPTY_STATS };
 }
 
 export default async function AdminPage() {
@@ -114,7 +120,7 @@ export default async function AdminPage() {
     );
   }
 
-  const { pending, pendingEdits, pendingClaims, pendingLogos, recentlyAdded, stats } = await getAdminData();
+  const { pending, pendingEdits, pendingClaims, pendingLogos, pendingScreenshots, recentlyAdded, stats } = await getAdminData();
 
   return (
     <main className="container animate-fade-in" style={{ padding: '2.5rem 1rem 4rem' }}>
@@ -131,6 +137,7 @@ export default async function AdminPage() {
           initialPendingEdits={pendingEdits as any}
           initialPendingClaims={pendingClaims as any}
           initialPendingLogos={pendingLogos as any}
+          initialPendingScreenshots={pendingScreenshots as any}
           recentlyAdded={recentlyAdded as any}
           stats={stats}
         />

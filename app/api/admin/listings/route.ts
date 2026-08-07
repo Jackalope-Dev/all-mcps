@@ -23,6 +23,9 @@ export async function GET(req: Request) {
     const category = url.searchParams.get('category');
     const aiEnriched = url.searchParams.get('aiEnriched');
     const hasTools = url.searchParams.get('hasTools');
+    const pricingModel = url.searchParams.get('pricingModel');
+    const authType = url.searchParams.get('authType');
+    const maintenanceStatus = url.searchParams.get('maintenanceStatus');
     const sortBy = url.searchParams.get('sort') || 'createdAt';
     const sortOrder = url.searchParams.get('order') || 'desc';
 
@@ -64,6 +67,15 @@ export async function GET(req: Request) {
     }
     if (category) {
       conditions.push(eq(servers.category, category));
+    }
+    if (pricingModel) {
+      conditions.push(eq(servers.pricingModel, pricingModel));
+    }
+    if (authType) {
+      conditions.push(eq(servers.authType, authType));
+    }
+    if (maintenanceStatus) {
+      conditions.push(eq(servers.maintenanceStatus, maintenanceStatus));
     }
     if (aiEnriched === 'true') {
       conditions.push(isNotNull(servers.aiSummary));
@@ -111,6 +123,16 @@ export async function GET(req: Request) {
           upvotes: servers.upvotes,
           copies: servers.copies,
           ownerUserId: servers.ownerUserId,
+          tags: servers.tags,
+          pricingModel: servers.pricingModel,
+          pricingNotes: servers.pricingNotes,
+          authType: servers.authType,
+          license: servers.license,
+          compatibleClients: servers.compatibleClients,
+          maintenanceStatus: servers.maintenanceStatus,
+          supportUrl: servers.supportUrl,
+          suggestedInstallCommand: servers.suggestedInstallCommand,
+          suggestedInstallArgs: servers.suggestedInstallArgs,
         })
         .from(servers)
         .where(where)

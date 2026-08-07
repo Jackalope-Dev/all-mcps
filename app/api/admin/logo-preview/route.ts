@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
 
-const PENDING_KEY_PATTERN = /^pending\/[a-z0-9-]+\.png$/;
+/** Logos: pending/<id>.png — Screenshots: screenshots/pending/<id>.png */
+const PENDING_KEY_PATTERN = /^(?:screenshots\/)?pending\/[a-z0-9-]+\.png$/;
 
 export async function GET(req: Request) {
   if (!(await getAuthorizedAdminEmail(req.headers))) {

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
-import { parsePendingRevision } from '../../../../lib/pendingRevision';
+import { parsePendingRevision, pendingRevisionToDbPatch } from '../../../../lib/pendingRevision';
 import { sendNotificationEmail, sendListingStatusEmail } from '../../../../lib/notify';
 import { getAppUrl } from '../../../../lib/stripe';
 import { notifyListingApproved } from '../../../../lib/listingApprovalNotify';
@@ -33,6 +33,8 @@ const actionSchema = z.object({
     'reject_claim',
     'approve_logo',
     'reject_logo',
+    'approve_screenshot',
+    'reject_screenshot',
     'resend_approval',
     'toggle_official',
     'toggle_website_verified',
@@ -66,6 +68,8 @@ const MESSAGES: Record<string, string> = {
   reject_claim: 'Claim rejected.',
   approve_logo: 'Logo approved.',
   reject_logo: 'Logo rejected.',
+  approve_screenshot: 'Screenshot approved.',
+  reject_screenshot: 'Screenshot rejected.',
   resend_approval: 'Approval email resent.',
   toggle_official: 'Official status updated.',
   toggle_website_verified: 'Website verification status updated.',
@@ -288,10 +292,12 @@ export async function POST(req: Request) {
       await db.delete(upvoteRecords).where(eq(upvoteRecords.serverId, id));
       await db.delete(viewRecords).where(eq(viewRecords.serverId, id));
 
-      // Best-effort — an id that never had a logo just no-ops here.
+      // Best-effort — an id that never had a logo/screenshot just no-ops here.
       if (env.LOGOS) {
         await env.LOGOS.delete(`live/${id}.png`).catch(() => {});
         await env.LOGOS.delete(`pending/${id}.png`).catch(() => {});
+        await env.LOGOS.delete(`screenshots/live/${id}.png`).catch(() => {});
+        await env.LOGOS.delete(`screenshots/pending/${id}.png`).catch(() => {});
       }
     } else if (action === 'feature') {
       if (!days) {
@@ -333,7 +339,11 @@ export async function POST(req: Request) {
       }
 
       if (action === 'approve_edit') {
-        const fieldUpdates: Record<string, unknown> = { ...pending.proposed, pendingRevision: null };
+        // Arrays must be JSON-stringified for text columns — never spread raw arrays into D1.
+        const fieldUpdates: Record<string, unknown> = {
+          ...pendingRevisionToDbPatch(pending.proposed),
+          pendingRevision: null,
+        };
         if ('websiteUrl' in pending.proposed) {
           fieldUpdates.websiteVerified = false;
         }
@@ -437,6 +447,55 @@ export async function POST(req: Request) {
               action === 'approve_logo'
                 ? `Your new logo for ${server.name} is now live.`
                 : `Your uploaded logo for ${server.name} was not approved. You can upload a different one from your dashboard.`,
+            actionText: 'View listing',
+            actionUrl: `${getAppUrl()}/mcp/${id}`,
+          });
+        }
+      }
+    } else if (action === 'approve_screenshot' || action === 'reject_screenshot') {
+      const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
+      const server = rows[0];
+      if (!server || !server.pendingScreenshotKey) {
+        return NextResponse.json({ error: 'No pending screenshot for this listing.' }, { status: 400 });
+      }
+
+      if (action === 'approve_screenshot') {
+        const pendingObject = await env.LOGOS.get(server.pendingScreenshotKey);
+        if (!pendingObject) {
+          await db.update(servers).set({ pendingScreenshotKey: null }).where(eq(servers.id, id));
+          return NextResponse.json(
+            { error: 'Pending screenshot was missing in storage; cleared.' },
+            { status: 400 }
+          );
+        }
+        const liveKey = `screenshots/live/${id}.png`;
+        await env.LOGOS.put(liveKey, await pendingObject.arrayBuffer(), {
+          httpMetadata: { contentType: 'image/png' },
+        });
+        await env.LOGOS.delete(server.pendingScreenshotKey);
+        await db
+          .update(servers)
+          .set({ screenshotUrl: `/screenshots/${id}`, pendingScreenshotKey: null })
+          .where(eq(servers.id, id));
+      } else {
+        await env.LOGOS.delete(server.pendingScreenshotKey);
+        await db.update(servers).set({ pendingScreenshotKey: null }).where(eq(servers.id, id));
+      }
+
+      if (server.ownerUserId) {
+        const ownerRows = await db.select().from(users).where(eq(users.id, server.ownerUserId)).limit(1);
+        const ownerEmail = ownerRows[0]?.email;
+        if (ownerEmail) {
+          await sendNotificationEmail({
+            to: ownerEmail,
+            heading:
+              action === 'approve_screenshot'
+                ? 'Your screenshot was approved'
+                : 'Your screenshot needs changes',
+            message:
+              action === 'approve_screenshot'
+                ? `Your screenshot for ${server.name} is now live.`
+                : `Your uploaded screenshot for ${server.name} was not approved. You can upload a different one from your dashboard.`,
             actionText: 'View listing',
             actionUrl: `${getAppUrl()}/mcp/${id}`,
           });

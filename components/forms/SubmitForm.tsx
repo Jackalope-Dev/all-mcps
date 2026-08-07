@@ -84,6 +84,10 @@ export function SubmitForm() {
         url?: string;
         websiteUrl?: string;
         category?: string;
+        pricingModel?: string;
+        authType?: string;
+        license?: string;
+        maintenanceStatus?: string;
         source?: string;
         llmEnriched?: boolean;
       };
@@ -95,6 +99,10 @@ export function SubmitForm() {
       if (data.websiteUrl) setWebsiteUrl(data.websiteUrl);
       else if (data.source === 'website') setWebsiteUrl(fromUrl.trim());
       if (data.category) setCategory(data.category);
+      if (data.pricingModel) setPricingModel(data.pricingModel);
+      if (data.authType) setAuthType(data.authType);
+      if (data.license) setLicense(data.license);
+      if (data.maintenanceStatus) setMaintenanceStatus(data.maintenanceStatus);
 
       toast.success('Details prefilled', {
         description: data.llmEnriched
@@ -612,24 +620,11 @@ export function SubmitForm() {
 
               <div className="form-field">
                 <label className="form-label">Compatible clients</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div className="submit-client-checks">
                   {MCP_CLIENTS.map((c) => {
                     const checked = compatibleClients.includes(c.slug);
                     return (
-                      <label
-                        key={c.slug}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          fontSize: '0.8rem',
-                          color: 'var(--text-secondary)',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '8px',
-                          padding: '0.3rem 0.6rem',
-                          cursor: 'pointer',
-                        }}
-                      >
+                      <label key={c.slug} className="submit-client-check">
                         <input
                           type="checkbox"
                           checked={checked}

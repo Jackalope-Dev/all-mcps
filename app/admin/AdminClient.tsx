@@ -40,6 +40,17 @@ type Server = {
   pendingClaimUserId?: string | null;
   pendingClaimWebsiteUrl?: string | null;
   pendingLogoKey?: string | null;
+  pendingScreenshotKey?: string | null;
+  tags?: string[] | string | null;
+  pricingModel?: string | null;
+  pricingNotes?: string | null;
+  authType?: string | null;
+  license?: string | null;
+  compatibleClients?: string[] | string | null;
+  maintenanceStatus?: string | null;
+  supportUrl?: string | null;
+  suggestedInstallCommand?: string | null;
+  suggestedInstallArgs?: string[] | string | null;
 };
 
 type RecentServer = {
@@ -58,6 +69,7 @@ export default function AdminClient({
   initialPendingEdits = [],
   initialPendingClaims = [],
   initialPendingLogos = [],
+  initialPendingScreenshots = [],
   recentlyAdded = [],
   stats,
 }: {
@@ -65,6 +77,7 @@ export default function AdminClient({
   initialPendingEdits?: Server[];
   initialPendingClaims?: Server[];
   initialPendingLogos?: Server[];
+  initialPendingScreenshots?: Server[];
   recentlyAdded?: RecentServer[];
   stats: AdminStats;
 }) {
@@ -72,14 +85,22 @@ export default function AdminClient({
   const [pendingEdits, setPendingEdits] = useState<Server[]>(initialPendingEdits);
   const [pendingClaims, setPendingClaims] = useState<Server[]>(initialPendingClaims);
   const [pendingLogos, setPendingLogos] = useState<Server[]>(initialPendingLogos);
+  const [pendingScreenshots, setPendingScreenshots] = useState<Server[]>(initialPendingScreenshots);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const totalPending = pending.length + pendingEdits.length + pendingClaims.length + pendingLogos.length;
+  const totalPending =
+    pending.length +
+    pendingEdits.length +
+    pendingClaims.length +
+    pendingLogos.length +
+    pendingScreenshots.length;
   const defaultTab = totalPending > 0 ? 'moderation' : 'overview';
   const [activeTab, setActiveTab] = useState<
     'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'crons' | 'tools'
   >(defaultTab);
-  const [modSubTab, setModSubTab] = useState<'submissions' | 'edits' | 'claims' | 'logos'>('submissions');
+  const [modSubTab, setModSubTab] = useState<
+    'submissions' | 'edits' | 'claims' | 'logos' | 'screenshots'
+  >('submissions');
 
   const handleAction = async (
     id: string,
@@ -92,6 +113,8 @@ export default function AdminClient({
       | 'reject_claim'
       | 'approve_logo'
       | 'reject_logo'
+      | 'approve_screenshot'
+      | 'reject_screenshot'
       | 'resend_approval'
   ) => {
     setLoadingId(id);
@@ -119,6 +142,9 @@ export default function AdminClient({
       } else if (action === 'approve_claim' || action === 'reject_claim') {
         setPendingClaims((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_claim' ? 'Claim approved' : 'Claim rejected');
+      } else if (action === 'approve_screenshot' || action === 'reject_screenshot') {
+        setPendingScreenshots((prev) => prev.filter((s) => s.id !== id));
+        toast.success(action === 'approve_screenshot' ? 'Screenshot approved' : 'Screenshot rejected');
       } else if (action === 'resend_approval') {
         toast.success(data.message || 'Approval email resent');
       } else {
@@ -252,6 +278,17 @@ export default function AdminClient({
             >
               Logos ({pendingLogos.length})
             </button>
+            <button
+              onClick={() => setModSubTab('screenshots')}
+              className={`admin-btn ${modSubTab === 'screenshots' ? 'admin-btn-primary' : ''}`}
+              style={{
+                background: modSubTab === 'screenshots' ? 'var(--accent-color)' : 'rgba(128, 128, 128, 0.08)',
+                color: modSubTab === 'screenshots' ? '#ffffff' : 'var(--text-secondary)',
+                border: modSubTab === 'screenshots' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+              }}
+            >
+              Screenshots ({pendingScreenshots.length})
+            </button>
           </div>
 
           {modSubTab === 'submissions' && (
@@ -307,6 +344,21 @@ export default function AdminClient({
                 loadingId={loadingId}
                 onApprove={(id) => handleAction(id, 'approve_logo')}
                 onReject={(id) => handleAction(id, 'reject_logo')}
+              />
+            </section>
+          )}
+
+          {modSubTab === 'screenshots' && (
+            <section>
+              <h2 className="admin-section-title">Pending Screenshots ({pendingScreenshots.length})</h2>
+              <p className="admin-section-desc">
+                Screenshots uploaded by verified owners awaiting approval before publication.
+              </p>
+              <PendingScreenshotsTable
+                servers={pendingScreenshots}
+                loadingId={loadingId}
+                onApprove={(id) => handleAction(id, 'approve_screenshot')}
+                onReject={(id) => handleAction(id, 'reject_screenshot')}
               />
             </section>
           )}
@@ -383,59 +435,145 @@ function ServerTable({
               </td>
             </tr>
           ) : (
-            servers.map((server) => (
-              <tr key={server.id}>
-                <td data-label="Name">
-                  <strong>{server.name}</strong>
-                  {server.reviewPriority && (
-                    <span className="admin-badge" style={{ color: '#d97706', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)' }}>
-                      PRIORITY
-                    </span>
-                  )}
-                  {server.isPremium && (
-                    <span className="admin-badge" style={{ color: '#0284c7', background: 'rgba(2,132,199,0.15)', border: '1px solid rgba(2,132,199,0.4)' }}>
-                      PREMIUM
-                    </span>
-                  )}
-                  <div className="admin-desc-line">{server.description}</div>
-                </td>
-                <td data-label="Links">
-                  <div className="admin-links-cell">
-                    <a href={server.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}>
-                      Repo
-                    </a>
-                    {server.websiteUrl && (
-                      <a href={server.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}>
-                        Website
-                      </a>
+            servers.map((server) => {
+              const tagsList = Array.isArray(server.tags)
+                ? server.tags
+                : typeof server.tags === 'string'
+                  ? JSON.parse(server.tags || '[]')
+                  : [];
+              const clientsList = Array.isArray(server.compatibleClients)
+                ? server.compatibleClients
+                : typeof server.compatibleClients === 'string'
+                  ? JSON.parse(server.compatibleClients || '[]')
+                  : [];
+              const hasExtra =
+                tagsList.length > 0 ||
+                Boolean(server.pricingModel) ||
+                Boolean(server.authType) ||
+                Boolean(server.license) ||
+                Boolean(server.maintenanceStatus) ||
+                Boolean(server.supportUrl) ||
+                clientsList.length > 0 ||
+                Boolean(server.suggestedInstallCommand);
+
+              return (
+                <tr key={server.id}>
+                  <td data-label="Name">
+                    <strong>{server.name}</strong>
+                    {server.reviewPriority && (
+                      <span
+                        className="admin-badge"
+                        style={{
+                          color: '#d97706',
+                          background: 'rgba(245,158,11,0.15)',
+                          border: '1px solid rgba(245,158,11,0.4)',
+                        }}
+                      >
+                        PRIORITY
+                      </span>
                     )}
-                  </div>
-                </td>
-                <td data-label="Submitted" style={{ color: 'var(--text-secondary)' }}>
-                  {new Date(server.createdAt).toLocaleDateString()}
-                </td>
-                <td data-label="Actions">
-                  <div className="admin-actions">
-                    <button
-                      onClick={() => onAction(server.id, 'approve')}
-                      disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#047857' }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => onAction(server.id, 'reject')}
-                      disabled={loadingId === server.id}
-                      className="admin-btn"
-                      style={{ background: '#b91c1c' }}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
+                    {server.isPremium && (
+                      <span
+                        className="admin-badge"
+                        style={{
+                          color: '#0284c7',
+                          background: 'rgba(2,132,199,0.15)',
+                          border: '1px solid rgba(2,132,199,0.4)',
+                        }}
+                      >
+                        PREMIUM
+                      </span>
+                    )}
+                    <div className="admin-desc-line">{server.description}</div>
+
+                    {hasExtra && (
+                      <details style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        <summary style={{ cursor: 'pointer', color: 'var(--accent-color)' }}>
+                          Extra details (pricing, auth, license…)
+                        </summary>
+                        <div
+                          style={{
+                            marginTop: '0.4rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem',
+                            background: 'rgba(0,0,0,0.2)',
+                            padding: '0.5rem',
+                            borderRadius: '6px',
+                          }}
+                        >
+                          {tagsList.length > 0 && <div>Tags: {tagsList.join(', ')}</div>}
+                          {server.pricingModel && (
+                            <div>
+                              Pricing: {server.pricingModel}
+                              {server.pricingNotes ? ` (${server.pricingNotes})` : ''}
+                            </div>
+                          )}
+                          {server.authType && <div>Auth: {server.authType}</div>}
+                          {server.license && <div>License: {server.license}</div>}
+                          {server.maintenanceStatus && <div>Maintenance: {server.maintenanceStatus}</div>}
+                          {clientsList.length > 0 && <div>Compatible clients: {clientsList.join(', ')}</div>}
+                          {server.supportUrl && <div>Support: {server.supportUrl}</div>}
+                          {server.suggestedInstallCommand && (
+                            <div>
+                              Install hint: {server.suggestedInstallCommand}{' '}
+                              {Array.isArray(server.suggestedInstallArgs)
+                                ? server.suggestedInstallArgs.join(' ')
+                                : server.suggestedInstallArgs || ''}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    )}
+                  </td>
+                  <td data-label="Links">
+                    <div className="admin-links-cell">
+                      <a
+                        href={server.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
+                      >
+                        Repo
+                      </a>
+                      {server.websiteUrl && (
+                        <a
+                          href={server.websiteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--accent-color)', fontSize: '0.85rem' }}
+                        >
+                          Website
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                  <td data-label="Submitted" style={{ color: 'var(--text-secondary)' }}>
+                    {new Date(server.createdAt).toLocaleDateString()}
+                  </td>
+                  <td data-label="Actions">
+                    <div className="admin-actions">
+                      <button
+                        onClick={() => onAction(server.id, 'approve')}
+                        disabled={loadingId === server.id}
+                        className="admin-btn"
+                        style={{ background: '#047857' }}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => onAction(server.id, 'reject')}
+                        disabled={loadingId === server.id}
+                        className="admin-btn"
+                        style={{ background: '#b91c1c' }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
@@ -579,11 +717,11 @@ function PendingEditsTable({
               const pending = parsePendingRevision(server.pendingRevision);
               if (!pending) return null;
               const fields = Object.keys(pending.proposed) as (keyof typeof pending.proposed)[];
-              const currentValues: Record<string, string | undefined> = {
-                name: server.name,
-                description: server.description,
-                category: server.category,
-                websiteUrl: server.websiteUrl ?? '',
+              const serverRow = server as Record<string, unknown>;
+              const formatVal = (v: unknown): string => {
+                if (v == null || v === '') return '(empty)';
+                if (Array.isArray(v)) return v.length ? v.join(', ') : '(empty)';
+                return String(v);
               };
               return (
                 <tr key={server.id}>
@@ -591,17 +729,22 @@ function PendingEditsTable({
                     <strong>{server.name}</strong>
                   </td>
                   <td data-label="Proposed changes">
-                    {fields.map((field) => (
-                      <div key={field} style={{ marginBottom: '0.5rem' }}>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                          {field}
+                    {fields.map((field) => {
+                      const currentRaw = serverRow[field as string];
+                      return (
+                        <div key={field} style={{ marginBottom: '0.5rem' }}>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                            {field}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', textDecoration: 'line-through', color: 'var(--text-secondary)' }}>
+                            {formatVal(currentRaw)}
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#10b981' }}>
+                            {formatVal(pending.proposed[field])}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.8rem', textDecoration: 'line-through', color: 'var(--text-secondary)' }}>
-                          {currentValues[field] || '(empty)'}
-                        </div>
-                        <div style={{ fontSize: '0.85rem', color: '#10b981' }}>{pending.proposed[field]}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </td>
                   <td data-label="Submitted" style={{ color: 'var(--text-secondary)' }}>
                     {new Date(pending.submittedAt).toLocaleDateString()}
@@ -762,6 +905,81 @@ function PendingLogosTable({
                       width={64}
                       height={64}
                       style={{ borderRadius: 8, display: 'block' }}
+                    />
+                  )}
+                </td>
+                <td data-label="Actions">
+                  <div className="admin-actions">
+                    <button
+                      onClick={() => onApprove(server.id)}
+                      disabled={loadingId === server.id}
+                      className="admin-btn"
+                      style={{ background: '#047857' }}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => onReject(server.id)}
+                      disabled={loadingId === server.id}
+                      className="admin-btn"
+                      style={{ background: '#b91c1c' }}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PendingScreenshotsTable({
+  servers,
+  loadingId,
+  onApprove,
+  onReject,
+}: {
+  servers: Server[];
+  loadingId: string | null;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}) {
+  return (
+    <div className="admin-card">
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>Listing</th>
+            <th>Preview</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {servers.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="admin-table-empty">
+                No pending screenshots!
+              </td>
+            </tr>
+          ) : (
+            servers.map((server) => (
+              <tr key={server.id}>
+                <td data-label="Listing">
+                  <strong>{server.name}</strong>
+                </td>
+                <td data-label="Preview">
+                  {server.pendingScreenshotKey && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/api/admin/logo-preview?key=${encodeURIComponent(server.pendingScreenshotKey)}`}
+                      alt={`${server.name} pending screenshot`}
+                      width={120}
+                      height={70}
+                      style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }}
                     />
                   )}
                 </td>

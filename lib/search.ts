@@ -42,6 +42,11 @@ export function buildAiSearchText(
     aiFeatures?: string[] | null;
     /** Parsed `{q,a}` pairs from `ai_faq`; both sides feed search. */
     aiFaq?: Array<{ q?: string; a?: string }> | null;
+    tags?: string[] | null;
+    license?: string | null;
+    pricingModel?: string | null;
+    authType?: string | null;
+    compatibleClients?: string[] | null;
   },
   maxLen = 600
 ): string | null {
@@ -60,6 +65,11 @@ export function buildAiSearchText(
     // survive the length cap when the blob is tight.
     ...faqBits,
     ...(parts.aiFeatures || []),
+    ...(parts.tags || []),
+    parts.license || '',
+    parts.pricingModel || '',
+    parts.authType || '',
+    ...(parts.compatibleClients || []),
   ]
     .filter(Boolean)
     .join(' ')

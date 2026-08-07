@@ -7027,3 +7027,85 @@ code.inline-path {
 [data-theme="light"] .dashboard-listing-id code {
   color: #0f172a;
 }
+
+/* Submit optional details (enrichment fields) */
+.submit-optional-details {
+  margin-top: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-muted);
+  overflow: hidden;
+}
+
+.submit-optional-details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.submit-optional-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.submit-optional-details > summary::before {
+  content: '?';
+  display: inline-block;
+  margin-right: 0.45rem;
+  color: var(--accent-color);
+  transition: transform 0.15s ease;
+}
+
+.submit-optional-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.submit-optional-body {
+  padding: 0 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.submit-optional-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.submit-client-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.submit-client-check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+}
+
+.submit-client-check:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent-color) 40%, var(--border-color));
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent-color) 8%, var(--bg-elevated));
+}
+
+.dashboard-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}

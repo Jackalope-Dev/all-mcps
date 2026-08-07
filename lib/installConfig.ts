@@ -25,13 +25,13 @@ export type ResolvedInstall =
       args: string[];
       packageName: string;
       confidence: InstallConfidence;
-      source: 'description' | 'heuristic' | 'cached';
+      source: 'description' | 'heuristic' | 'cached' | 'submitted';
     }
   | {
       kind: 'remote';
       url: string;
       confidence: InstallConfidence;
-      source: 'description' | 'endpoint' | 'cached';
+      source: 'description' | 'endpoint' | 'cached' | 'submitted';
     };
 
 function slugify(name: string): string {
@@ -91,6 +91,9 @@ export type CachedInstallFields = {
   installArgs?: string | string[] | null;
   installPackage?: string | null;
   installConfidence?: string | null;
+  /** Submitter/owner hint — only used when cached confidence is low/absent. */
+  suggestedInstallCommand?: string | null;
+  suggestedInstallArgs?: string | string[] | null;
 };
 
 function fromCached(cached: CachedInstallFields | undefined | null): ResolvedInstall | null {
@@ -195,6 +198,28 @@ export function resolveInstallConfig(input: {
   description?: string | null;
 } & CachedInstallFields): ResolvedInstall {
   const cached = fromCached(input);
+  // High/medium cached wins. Low-confidence cache falls through so submitter
+  // suggestions (and description/endpoint hints) can still improve the result.
+  if (cached && cached.confidence !== 'low') return cached;
+
+  const suggestedCmd =
+    typeof input.suggestedInstallCommand === 'string'
+      ? input.suggestedInstallCommand.trim()
+      : '';
+  if (suggestedCmd) {
+    const args = parseArgsJson(input.suggestedInstallArgs) || [];
+    const packageName = args[args.length - 1] || input.id;
+    return {
+      kind: 'stdio',
+      command: suggestedCmd,
+      args: args.length ? args : ['-y', packageName],
+      packageName,
+      confidence: 'medium',
+      source: 'submitted',
+    };
+  }
+
+  // Prefer a low-confidence cache over pure heuristics when no submitter hint.
   if (cached) return cached;
 
   const descHint: ParsedInstallHint = parseInstallHint(input.description || '');

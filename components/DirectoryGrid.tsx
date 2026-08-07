@@ -48,6 +48,10 @@ type Server = {
   installCommand?: string | null;
   /** Space-joined tool names for search recall (from directory feed). */
   toolText?: string | null;
+  pricingModel?: string | null;
+  authType?: string | null;
+  tags?: string[] | null;
+  compatibleClients?: string[] | null;
   /** Bounded AI search text (summary + use cases + features) for intent-query recall. */
   aiText?: string | null;
   createdAt?: string | Date;
@@ -114,6 +118,8 @@ export default function DirectoryGrid({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
   const [selectedStack, setSelectedStack] = useState<TechStack>('all');
   const [selectedTransport, setSelectedTransport] = useState<TransportKind>('all');
+  const [selectedPricing, setSelectedPricing] = useState<'all' | 'free' | 'freemium' | 'paid' | 'byok'>('all');
+  const [selectedAuth, setSelectedAuth] = useState<'all' | 'none' | 'api_key' | 'oauth' | 'other'>('all');
   // Default to relevance ordering whenever there's a query (incl. deep links).
   const [sortMode, setSortMode] = useState<SortMode>(initialQuery.trim() ? 'relevance' : 'trending');
   // Landing favors visual discovery (grid); /browse defaults to power-user list.
@@ -290,6 +296,16 @@ export default function DirectoryGrid({
       return true;
     };
 
+    const pricingMatch = (server: Server): boolean => {
+      if (selectedPricing === 'all') return true;
+      return (server.pricingModel || '').toLowerCase() === selectedPricing;
+    };
+
+    const authMatch = (server: Server): boolean => {
+      if (selectedAuth === 'all') return true;
+      return (server.authType || '').toLowerCase() === selectedAuth;
+    };
+
     // Score once, filter on non-search facets, and drop query non-matches.
     const scored: Array<{ server: Server; relevance: number }> = [];
     for (const server of servers) {
@@ -297,6 +313,8 @@ export default function DirectoryGrid({
       if (verifiedOnly && !isVerifiedListing(server)) continue;
       if (!stackMatch(server)) continue;
       if (!transportMatch(server)) continue;
+      if (!pricingMatch(server)) continue;
+      if (!authMatch(server)) continue;
 
       const relevance = hasQuery
         ? scoreServerMatch(
@@ -360,7 +378,7 @@ export default function DirectoryGrid({
     });
 
     return scored.map((s) => s.server);
-  }, [servers, queryTerms, fullQuery, selectedCategory, selectedStack, selectedTransport, sortMode, verifiedOnly]);
+  }, [servers, queryTerms, fullQuery, selectedCategory, selectedStack, selectedTransport, selectedPricing, selectedAuth, sortMode, verifiedOnly]);
 
   const filteredCount = filteredServers.length;
 
@@ -452,7 +470,14 @@ export default function DirectoryGrid({
   const visibleServers = filteredServers.slice(0, visibleCount);
   const hasMore = visibleCount < filteredServers.length;
 
-  const isFiltered = searchQuery.length > 0 || selectedCategory !== null || verifiedOnly || selectedStack !== 'all' || selectedTransport !== 'all';
+  const isFiltered =
+    searchQuery.length > 0 ||
+    selectedCategory !== null ||
+    verifiedOnly ||
+    selectedStack !== 'all' ||
+    selectedTransport !== 'all' ||
+    selectedPricing !== 'all' ||
+    selectedAuth !== 'all';
   // Discovery chrome (marquee / featured) only on the unfiltered marketing landing
   const showDiscovery = !isBrowse && !isFiltered;
   const categoryMeta = selectedCategory ? parseCategoryLabel(selectedCategory) : null;
@@ -1040,6 +1065,49 @@ export default function DirectoryGrid({
                   onClick={() => setSelectedTransport(tr)}
                   className={`directory-segmented-btn ${selectedTransport === tr ? 'is-active' : ''}`}
                   aria-pressed={selectedTransport === tr}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="directory-segmented" role="group" aria-label="Pricing filter">
+              {(
+                [
+                  ['all', 'Any price'],
+                  ['free', 'Free'],
+                  ['freemium', 'Freemium'],
+                  ['paid', 'Paid'],
+                  ['byok', 'BYOK'],
+                ] as const
+              ).map(([p, label]) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setSelectedPricing(p)}
+                  className={`directory-segmented-btn ${selectedPricing === p ? 'is-active' : ''}`}
+                  aria-pressed={selectedPricing === p}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="directory-segmented" role="group" aria-label="Auth filter">
+              {(
+                [
+                  ['all', 'Any auth'],
+                  ['none', 'No auth'],
+                  ['api_key', 'API key'],
+                  ['oauth', 'OAuth'],
+                ] as const
+              ).map(([a, label]) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setSelectedAuth(a)}
+                  className={`directory-segmented-btn ${selectedAuth === a ? 'is-active' : ''}`}
+                  aria-pressed={selectedAuth === a}
                 >
                   {label}
                 </button>

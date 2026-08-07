@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { servers } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { getServerAnalyticsBatch, type AnalyticsSummary } from '@/lib/analytics';
+import { parseStringArray } from '@/lib/aiContent';
 import DashboardClient from './DashboardClient';
 
 export const dynamic = 'force-dynamic';
@@ -76,6 +77,18 @@ async function getOwnedServers(userId: string): Promise<{
           npmDownloads: servers.npmDownloads,
           tools: servers.tools,
           url: servers.url,
+          tags: servers.tags,
+          pricingModel: servers.pricingModel,
+          pricingNotes: servers.pricingNotes,
+          authType: servers.authType,
+          license: servers.license,
+          compatibleClients: servers.compatibleClients,
+          maintenanceStatus: servers.maintenanceStatus,
+          supportUrl: servers.supportUrl,
+          suggestedInstallCommand: servers.suggestedInstallCommand,
+          suggestedInstallArgs: servers.suggestedInstallArgs,
+          screenshotUrl: servers.screenshotUrl,
+          pendingScreenshotKey: servers.pendingScreenshotKey,
         })
         .from(servers)
         .where(eq(servers.ownerUserId, userId));
@@ -116,7 +129,14 @@ async function getOwnedServers(userId: string): Promise<{
         }
       }
 
-      return { servers: rows as OwnedServer[], analytics, categoryRanks, isPremium };
+      const normalized = rows.map((r) => ({
+        ...r,
+        tags: parseStringArray(r.tags),
+        compatibleClients: parseStringArray(r.compatibleClients),
+        suggestedInstallArgs: parseStringArray(r.suggestedInstallArgs),
+      }));
+
+      return { servers: normalized as OwnedServer[], analytics, categoryRanks, isPremium };
     }
   } catch {
     // fall through with empty list

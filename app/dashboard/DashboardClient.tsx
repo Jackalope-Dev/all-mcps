@@ -17,6 +17,15 @@ import {
 } from 'lucide-react';
 import { DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { PremiumUpgrade } from '@/components/PremiumUpgrade';
+import { MCP_CLIENTS } from '@/lib/clients';
+import {
+  AUTH_TYPES,
+  AUTH_TYPE_LABELS,
+  MAINTENANCE_STATUSES,
+  MAINTENANCE_STATUS_LABELS,
+  PRICING_MODELS,
+  PRICING_MODEL_LABELS,
+} from '@/lib/serverEnums';
 
 type Server = {
   id: string;
@@ -27,6 +36,8 @@ type Server = {
   pendingRevision?: string | null;
   logoUrl?: string | null;
   pendingLogoKey?: string | null;
+  screenshotUrl?: string | null;
+  pendingScreenshotKey?: string | null;
   isPremium?: boolean;
   status?: string;
   featuredUntil?: string | null;
@@ -44,7 +55,51 @@ type Server = {
   tools?: string | null;
   url?: string;
   lastTweetedAt?: string | Date | null;
+  tags?: string[] | null;
+  pricingModel?: string | null;
+  pricingNotes?: string | null;
+  authType?: string | null;
+  license?: string | null;
+  compatibleClients?: string[] | null;
+  maintenanceStatus?: string | null;
+  supportUrl?: string | null;
+  suggestedInstallCommand?: string | null;
+  suggestedInstallArgs?: string[] | null;
 };
+
+type EditFormState = {
+  name: string;
+  description: string;
+  category: string;
+  websiteUrl: string;
+  tagsInput: string;
+  pricingModel: string;
+  pricingNotes: string;
+  authType: string;
+  license: string;
+  compatibleClients: string[];
+  maintenanceStatus: string;
+  supportUrl: string;
+  suggestedInstallCommand: string;
+  suggestedInstallArgsInput: string;
+};
+
+const emptyEditForm = (): EditFormState => ({
+  name: '',
+  description: '',
+  category: '',
+  websiteUrl: '',
+  tagsInput: '',
+  pricingModel: '',
+  pricingNotes: '',
+  authType: '',
+  license: '',
+  compatibleClients: [],
+  maintenanceStatus: '',
+  supportUrl: '',
+  suggestedInstallCommand: '',
+  suggestedInstallArgsInput: '',
+});
 
 type Props = {
   initialServers: Server[];
@@ -70,9 +125,10 @@ export default function DashboardClient({
   const [activeTabMap, setActiveTabMap] = useState<Record<string, TabType>>({});
   const [detailAnalytics, setDetailAnalytics] = useState<Record<string, ServerAnalytics>>({});
   const [loadingDetailMap, setLoadingDetailMap] = useState<Record<string, boolean>>({});
-  const [form, setForm] = useState({ name: '', description: '', category: '', websiteUrl: '' });
+  const [form, setForm] = useState<EditFormState>(emptyEditForm);
   const [saving, setSaving] = useState(false);
   const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null);
+  const [uploadingScreenshotId, setUploadingScreenshotId] = useState<string | null>(null);
 
   // Compute aggregate stats across all claimed servers
   const totalViews = useMemo(() => servers.reduce((acc, s) => acc + (s.views || 0), 0), [servers]);
@@ -108,23 +164,84 @@ export default function DashboardClient({
 
   const startEdit = (server: Server) => {
     setEditingId(server.id);
+    const pending = parsePendingRevision(server.pendingRevision);
+    const p = pending?.proposed;
     setForm({
-      name: server.name,
-      description: server.description,
-      category: server.category,
-      websiteUrl: server.websiteUrl || '',
+      name: (p?.name as string) || server.name,
+      description: (p?.description as string) || server.description,
+      category: (p?.category as string) || server.category,
+      websiteUrl: (p?.websiteUrl as string) || server.websiteUrl || '',
+      tagsInput: ((p?.tags as string[]) || server.tags || []).join(', '),
+      pricingModel: (p?.pricingModel as string) || server.pricingModel || '',
+      pricingNotes: (p?.pricingNotes as string) || server.pricingNotes || '',
+      authType: (p?.authType as string) || server.authType || '',
+      license: (p?.license as string) || server.license || '',
+      compatibleClients: (p?.compatibleClients as string[]) || server.compatibleClients || [],
+      maintenanceStatus: (p?.maintenanceStatus as string) || server.maintenanceStatus || '',
+      supportUrl: (p?.supportUrl as string) || server.supportUrl || '',
+      suggestedInstallCommand:
+        (p?.suggestedInstallCommand as string) || server.suggestedInstallCommand || '',
+      suggestedInstallArgsInput: (
+        (p?.suggestedInstallArgs as string[]) ||
+        server.suggestedInstallArgs ||
+        []
+      ).join(' '),
     });
     setActiveTabMap((prev) => ({ ...prev, [server.id]: 'edit' }));
+  };
+
+  const uploadScreenshot = async (serverId: string, file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Screenshot too large', { description: 'Must be 5MB or smaller.' });
+      return;
+    }
+    setUploadingScreenshotId(serverId);
+    try {
+      const formData = new FormData();
+      formData.append('id', serverId);
+      formData.append('screenshot', file);
+      const res = await fetch('/api/dashboard/screenshot', { method: 'POST', body: formData });
+      const data = (await res.json()) as { error?: string; message?: string };
+      if (!res.ok) throw new Error(data.error || 'Could not upload screenshot');
+      setServers((prev) =>
+        prev.map((s) => (s.id === serverId ? { ...s, pendingScreenshotKey: 'pending' } : s))
+      );
+      toast.success('Screenshot submitted', { description: data.message || 'Awaiting review.' });
+    } catch (err: any) {
+      toast.error('Could not upload screenshot', { description: err?.message });
+    } finally {
+      setUploadingScreenshotId(null);
+    }
   };
 
   const submitEdit = async () => {
     if (!editingId) return;
     setSaving(true);
     try {
+      const payload = {
+        id: editingId,
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        websiteUrl: form.websiteUrl,
+        tags: form.tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
+        pricingModel: form.pricingModel || undefined,
+        pricingNotes: form.pricingNotes || undefined,
+        authType: form.authType || undefined,
+        license: form.license || undefined,
+        compatibleClients: form.compatibleClients,
+        maintenanceStatus: form.maintenanceStatus || undefined,
+        supportUrl: form.supportUrl || undefined,
+        suggestedInstallCommand: form.suggestedInstallCommand || undefined,
+        suggestedInstallArgs: form.suggestedInstallArgsInput
+          .split(/\s+/)
+          .map((s) => s.trim())
+          .filter(Boolean),
+      };
       const res = await fetch('/api/dashboard/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editingId, ...form }),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) {
@@ -134,7 +251,16 @@ export default function DashboardClient({
       setServers((prev) =>
         prev.map((s) =>
           s.id === editingId
-            ? { ...s, pendingRevision: JSON.stringify({ proposed: form, submittedAt }) }
+            ? {
+                ...s,
+                pendingRevision: JSON.stringify({
+                  proposed: {
+                    ...payload,
+                    websiteUrl: form.websiteUrl,
+                  },
+                  submittedAt,
+                }),
+              }
             : s
         )
       );
@@ -375,6 +501,26 @@ export default function DashboardClient({
                     }}
                   />
                 </label>
+                <label className="btn btn-secondary btn-sm dashboard-logo-upload">
+                  <ImageIcon size={14} aria-hidden="true" />
+                  {uploadingScreenshotId === server.id
+                    ? 'Uploading…'
+                    : server.pendingScreenshotKey
+                      ? 'Shot pending'
+                      : server.screenshotUrl
+                        ? 'Screenshot'
+                        : 'Add shot'}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    disabled={uploadingScreenshotId === server.id}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadScreenshot(server.id, file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
               </div>
             </div>
 
@@ -538,9 +684,13 @@ export default function DashboardClient({
 
             {/* TAB CONTENT: Edit Details */}
             {activeTab === 'edit' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.25rem' }}>
+              <div className="dashboard-edit-form">
+                <p className="submit-hint" style={{ marginBottom: '0.25rem' }}>
+                  Changes go to admin review before they go live
+                  {pending ? ' — you already have a pending edit; submitting again replaces it.' : '.'}
+                </p>
                 <div>
-                  <label style={fieldLabelStyle}>Server Name</label>
+                  <label style={fieldLabelStyle}>Server name</label>
                   <input
                     className="form-input"
                     value={form.name}
@@ -558,38 +708,183 @@ export default function DashboardClient({
                     rows={4}
                   />
                 </div>
-                <div>
-                  <label style={fieldLabelStyle}>Category</label>
-                  <select
-                    className="form-input"
-                    value={form.category}
-                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  >
-                    {(!form.category || DIRECTORY_CATEGORIES.includes(form.category)
-                      ? DIRECTORY_CATEGORIES
-                      : [form.category, ...DIRECTORY_CATEGORIES]
-                    ).map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
+                <div className="submit-optional-grid">
+                  <div>
+                    <label style={fieldLabelStyle}>Category</label>
+                    <select
+                      className="form-input"
+                      value={form.category}
+                      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    >
+                      {(!form.category || DIRECTORY_CATEGORIES.includes(form.category)
+                        ? DIRECTORY_CATEGORIES
+                        : [form.category, ...DIRECTORY_CATEGORIES]
+                      ).map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Website URL</label>
+                    <input
+                      className="form-input"
+                      type="url"
+                      value={form.websiteUrl}
+                      onChange={(e) => setForm((f) => ({ ...f, websiteUrl: e.target.value }))}
+                      placeholder="https://yoursite.com"
+                    />
+                  </div>
                 </div>
+
                 <div>
-                  <label style={fieldLabelStyle}>Website URL</label>
+                  <label style={fieldLabelStyle}>Tags (comma-separated, up to 5)</label>
+                  <input
+                    className="form-input"
+                    value={form.tagsInput}
+                    onChange={(e) => setForm((f) => ({ ...f, tagsInput: e.target.value }))}
+                    placeholder="sql, database, read-only"
+                  />
+                </div>
+
+                <div className="submit-optional-grid">
+                  <div>
+                    <label style={fieldLabelStyle}>Pricing</label>
+                    <select
+                      className="form-input"
+                      value={form.pricingModel}
+                      onChange={(e) => setForm((f) => ({ ...f, pricingModel: e.target.value }))}
+                    >
+                      <option value="">Not specified</option>
+                      {PRICING_MODELS.map((p) => (
+                        <option key={p} value={p}>
+                          {PRICING_MODEL_LABELS[p]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Auth</label>
+                    <select
+                      className="form-input"
+                      value={form.authType}
+                      onChange={(e) => setForm((f) => ({ ...f, authType: e.target.value }))}
+                    >
+                      <option value="">Not specified</option>
+                      {AUTH_TYPES.map((a) => (
+                        <option key={a} value={a}>
+                          {AUTH_TYPE_LABELS[a]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Maintenance</label>
+                    <select
+                      className="form-input"
+                      value={form.maintenanceStatus}
+                      onChange={(e) => setForm((f) => ({ ...f, maintenanceStatus: e.target.value }))}
+                    >
+                      <option value="">Not specified</option>
+                      {MAINTENANCE_STATUSES.map((m) => (
+                        <option key={m} value={m}>
+                          {MAINTENANCE_STATUS_LABELS[m]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>License</label>
+                    <input
+                      className="form-input"
+                      value={form.license}
+                      onChange={(e) => setForm((f) => ({ ...f, license: e.target.value }))}
+                      placeholder="MIT"
+                    />
+                  </div>
+                </div>
+
+                {form.pricingModel && form.pricingModel !== 'free' && (
+                  <div>
+                    <label style={fieldLabelStyle}>Pricing notes</label>
+                    <input
+                      className="form-input"
+                      value={form.pricingNotes}
+                      onChange={(e) => setForm((f) => ({ ...f, pricingNotes: e.target.value }))}
+                      placeholder="Free tier limits, plan pricing…"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label style={fieldLabelStyle}>Support / community URL</label>
                   <input
                     className="form-input"
                     type="url"
-                    value={form.websiteUrl}
-                    onChange={(e) => setForm((f) => ({ ...f, websiteUrl: e.target.value }))}
-                    placeholder="https://yoursite.com"
+                    value={form.supportUrl}
+                    onChange={(e) => setForm((f) => ({ ...f, supportUrl: e.target.value }))}
+                    placeholder="https://discord.gg/…"
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  <button className="btn btn-primary" disabled={saving} onClick={submitEdit}>
+
+                <div>
+                  <label style={fieldLabelStyle}>Compatible clients</label>
+                  <div className="submit-client-checks">
+                    {MCP_CLIENTS.map((c) => {
+                      const checked = form.compatibleClients.includes(c.slug);
+                      return (
+                        <label key={c.slug} className="submit-client-check">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                compatibleClients: e.target.checked
+                                  ? [...f.compatibleClients, c.slug]
+                                  : f.compatibleClients.filter((s) => s !== c.slug),
+                              }))
+                            }
+                          />
+                          {c.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="submit-optional-grid">
+                  <div>
+                    <label style={fieldLabelStyle}>Suggested install command</label>
+                    <input
+                      className="form-input"
+                      value={form.suggestedInstallCommand}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, suggestedInstallCommand: e.target.value }))
+                      }
+                      placeholder="npx"
+                    />
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Suggested install args</label>
+                    <input
+                      className="form-input"
+                      value={form.suggestedInstallArgsInput}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, suggestedInstallArgsInput: e.target.value }))
+                      }
+                      placeholder="-y @scope/pkg"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                  <button type="button" className="btn btn-primary" disabled={saving} onClick={submitEdit}>
                     {saving ? 'Submitting…' : pending ? 'Update pending edit' : 'Submit for review'}
                   </button>
                   <button
+                    type="button"
                     className="btn btn-secondary"
                     disabled={saving}
                     onClick={() => {

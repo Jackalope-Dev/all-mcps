@@ -5,10 +5,29 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { servers } from '@/db/schema';
 import { auth } from '@/lib/auth';
-import { diffEditableFields, serializePendingRevision } from '@/lib/pendingRevision';
+import { diffEditableFields, serializePendingRevision, type EditableServerFields } from '@/lib/pendingRevision';
 import { isSafeSubmissionUrl } from '@/lib/urlSafety';
 import { sendNotificationEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
+import {
+  AUTH_TYPES,
+  MAINTENANCE_STATUSES,
+  PRICING_MODELS,
+  normalizeCompatibleClients,
+  normalizeTags,
+  TAG_LIMITS,
+} from '@/lib/serverEnums';
+import { parseStringArray } from '@/lib/aiContent';
+
+const optionalEnum = <T extends string>(values: readonly T[]) =>
+  z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (v == null || v === '') return '';
+      return (values as readonly string[]).includes(v) ? v : '';
+    });
 
 const editSchema = z.object({
   id: z.string().min(1),
@@ -16,6 +35,16 @@ const editSchema = z.object({
   description: z.string().min(1).max(2000),
   category: z.string().min(1).max(100),
   websiteUrl: z.string().url().optional().or(z.literal('')),
+  tags: z.array(z.string()).max(TAG_LIMITS.maxTags).optional(),
+  pricingModel: optionalEnum(PRICING_MODELS),
+  pricingNotes: z.string().max(280).optional().or(z.literal('')),
+  authType: optionalEnum(AUTH_TYPES),
+  license: z.string().max(60).optional().or(z.literal('')),
+  compatibleClients: z.array(z.string()).optional(),
+  maintenanceStatus: optionalEnum(MAINTENANCE_STATUSES),
+  supportUrl: z.string().url().optional().or(z.literal('')).or(z.null()),
+  suggestedInstallCommand: z.string().max(80).optional().or(z.literal('')),
+  suggestedInstallArgs: z.array(z.string()).max(20).optional(),
 });
 
 export async function POST(req: Request) {
@@ -31,10 +60,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const { id, name, description, category } = parsed.data;
-    const websiteUrl = (parsed.data.websiteUrl || '').trim();
+    const data = parsed.data;
+    const id = data.id;
+    const websiteUrl = (data.websiteUrl || '').trim();
     if (websiteUrl && !isSafeSubmissionUrl(websiteUrl)) {
       return NextResponse.json({ error: 'Website URL must be a public http(s) address.' }, { status: 400 });
+    }
+    const supportUrl = (data.supportUrl || '').trim();
+    if (supportUrl && !isSafeSubmissionUrl(supportUrl)) {
+      return NextResponse.json({ error: 'Support URL must be a public http(s) address.' }, { status: 400 });
     }
 
     let env: any;
@@ -58,15 +92,47 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'You do not own this listing.' }, { status: 403 });
     }
 
-    const diff = diffEditableFields(
-      {
-        name: server.name,
-        description: server.description,
-        category: server.category,
-        websiteUrl: server.websiteUrl || '',
-      },
-      { name, description, category, websiteUrl }
-    );
+    const tags = normalizeTags(data.tags ?? []);
+    const compatibleClients = normalizeCompatibleClients(data.compatibleClients ?? []);
+    const suggestedInstallArgs = Array.isArray(data.suggestedInstallArgs)
+      ? data.suggestedInstallArgs.map(String).map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    const submitted: EditableServerFields = {
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      websiteUrl,
+      tags,
+      pricingModel: data.pricingModel || '',
+      pricingNotes: (data.pricingNotes || '').trim(),
+      authType: data.authType || '',
+      license: (data.license || '').trim(),
+      compatibleClients,
+      maintenanceStatus: data.maintenanceStatus || '',
+      supportUrl,
+      suggestedInstallCommand: (data.suggestedInstallCommand || '').trim(),
+      suggestedInstallArgs,
+    };
+
+    const current: EditableServerFields = {
+      name: server.name,
+      description: server.description,
+      category: server.category,
+      websiteUrl: server.websiteUrl || '',
+      tags: parseStringArray(server.tags),
+      pricingModel: server.pricingModel || '',
+      pricingNotes: server.pricingNotes || '',
+      authType: server.authType || '',
+      license: server.license || '',
+      compatibleClients: parseStringArray(server.compatibleClients),
+      maintenanceStatus: server.maintenanceStatus || '',
+      supportUrl: server.supportUrl || '',
+      suggestedInstallCommand: server.suggestedInstallCommand || '',
+      suggestedInstallArgs: parseStringArray(server.suggestedInstallArgs),
+    };
+
+    const diff = diffEditableFields(current, submitted);
 
     if (Object.keys(diff).length === 0) {
       return NextResponse.json({ error: 'No changes to submit.' }, { status: 400 });

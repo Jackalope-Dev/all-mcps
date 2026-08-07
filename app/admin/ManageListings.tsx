@@ -77,6 +77,9 @@ export default function ManageListings() {
   const [healthFilter, setHealthFilter] = useState('');
   const [aiFilter, setAiFilter] = useState('');
   const [toolsFilter, setToolsFilter] = useState('');
+  const [pricingModelFilter, setPricingModelFilter] = useState('');
+  const [authTypeFilter, setAuthTypeFilter] = useState('');
+  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
@@ -107,6 +110,9 @@ export default function ManageListings() {
       if (healthFilter) params.set('health', healthFilter);
       if (aiFilter) params.set('aiEnriched', aiFilter);
       if (toolsFilter) params.set('hasTools', toolsFilter);
+      if (pricingModelFilter) params.set('pricingModel', pricingModelFilter);
+      if (authTypeFilter) params.set('authType', authTypeFilter);
+      if (maintenanceStatusFilter) params.set('maintenanceStatus', maintenanceStatusFilter);
       params.set('sort', sortBy);
       params.set('order', sortOrder);
       params.set('offset', String(nextOffset));
@@ -138,7 +144,20 @@ export default function ManageListings() {
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter, premiumFilter, featuredFilter, healthFilter, aiFilter, toolsFilter, sortBy, sortOrder]);
+  }, [
+    search,
+    statusFilter,
+    premiumFilter,
+    featuredFilter,
+    healthFilter,
+    aiFilter,
+    toolsFilter,
+    pricingModelFilter,
+    authTypeFilter,
+    maintenanceStatusFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
   const runAction = async (
     id: string,
@@ -338,6 +357,27 @@ export default function ManageListings() {
             <option value="">MCP Tools: Any</option>
             <option value="true">Has Tools</option>
             <option value="false">No Tools</option>
+          </select>
+          <select className="form-input" value={pricingModelFilter} onChange={(e) => setPricingModelFilter(e.target.value)}>
+            <option value="">Pricing: Any</option>
+            <option value="free">Free</option>
+            <option value="freemium">Freemium</option>
+            <option value="paid">Paid</option>
+            <option value="byok">BYOK</option>
+          </select>
+          <select className="form-input" value={authTypeFilter} onChange={(e) => setAuthTypeFilter(e.target.value)}>
+            <option value="">Auth: Any</option>
+            <option value="none">No Auth</option>
+            <option value="api_key">API Key</option>
+            <option value="oauth">OAuth</option>
+            <option value="other">Other</option>
+          </select>
+          <select className="form-input" value={maintenanceStatusFilter} onChange={(e) => setMaintenanceStatusFilter(e.target.value)}>
+            <option value="">Maintenance: Any</option>
+            <option value="active">Active</option>
+            <option value="stable">Stable</option>
+            <option value="experimental">Experimental</option>
+            <option value="archived">Archived</option>
           </select>
         </div>
       </div>

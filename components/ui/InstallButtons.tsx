@@ -26,6 +26,8 @@ export function InstallButtons({
   installArgs,
   installPackage,
   installConfidence,
+  suggestedInstallCommand,
+  suggestedInstallArgs,
 }: InstallButtonsProps) {
   const install = useMemo(
     () =>
@@ -39,6 +41,8 @@ export function InstallButtons({
         installArgs,
         installPackage,
         installConfidence,
+        suggestedInstallCommand,
+        suggestedInstallArgs,
       }),
     [
       serverId,
@@ -50,6 +54,8 @@ export function InstallButtons({
       installArgs,
       installPackage,
       installConfidence,
+      suggestedInstallCommand,
+      suggestedInstallArgs,
     ]
   );
 

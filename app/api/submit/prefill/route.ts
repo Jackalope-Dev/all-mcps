@@ -3,38 +3,67 @@ import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 import { chatJson } from '../../../../lib/openai';
 import { DIRECTORY_CATEGORIES, DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
+import {
+  AUTH_TYPES,
+  isAuthType,
+  isMaintenanceStatus,
+  isPricingModel,
+  MAINTENANCE_STATUSES,
+  PRICING_MODELS,
+} from '../../../../lib/serverEnums';
 
 const bodySchema = z.object({
   url: z.string().url(),
 });
 
+type PrefillEnrichment = {
+  name?: string;
+  description?: string;
+  category?: string;
+  pricingModel?: string;
+  authType?: string;
+  license?: string;
+  maintenanceStatus?: string;
+};
+
 /**
- * Optional LLM polish for name/description/category. Soft-fails on budget/4xx
- * so prefill never depends on OpenAI availability.
+ * Optional LLM polish for name/description/category + soft-infer enums.
+ * Soft-fails on budget/4xx so prefill never depends on OpenAI availability.
  */
 async function enrichWithLlm(input: {
   name: string;
   description: string;
   url: string;
-}): Promise<{ name?: string; description?: string; category?: string } | null> {
+  readmeSnippet?: string;
+}): Promise<PrefillEnrichment | null> {
   const categories = DIRECTORY_CATEGORIES.slice(0, 40).join('\n');
   const result = await chatJson<{
     name?: string;
     description?: string;
     category?: string;
+    pricingModel?: string;
+    authType?: string;
+    license?: string;
+    maintenanceStatus?: string;
   }>({
     model: 'gpt-4.1-mini',
-    maxTokens: 400,
+    maxTokens: 500,
     timeoutMs: 12_000,
     messages: [
       {
         role: 'system',
         content:
-          'You clean MCP server listing fields for a directory. Return JSON only with keys name, description, category. description max 280 chars, plain text, no marketing fluff. category must be copied exactly from the allowed list when possible.',
+          'You clean MCP server listing fields for a directory. Return JSON only with keys: name, description, category, pricingModel, authType, license, maintenanceStatus. description max 280 chars, plain text. category must match the allowed list when possible. pricingModel one of: free|freemium|paid|byok (omit if unsure). authType one of: none|api_key|oauth|other (omit if unsure). license short string like MIT or Apache-2.0 (omit if unsure). maintenanceStatus one of: active|stable|experimental|archived (omit if unsure).',
       },
       {
         role: 'user',
-        content: `URL: ${input.url}\nName: ${input.name}\nDescription: ${input.description}\n\nAllowed categories (prefer exact match):\n${categories}\nDefault if unsure: ${DEFAULT_SUBMIT_CATEGORY}`,
+        content: `URL: ${input.url}\nName: ${input.name}\nDescription: ${input.description}\n${
+          input.readmeSnippet ? `README excerpt:\n${input.readmeSnippet.slice(0, 2500)}\n` : ''
+        }\nAllowed categories (prefer exact match):\n${categories}\nDefault category if unsure: ${DEFAULT_SUBMIT_CATEGORY}\nAllowed pricingModel: ${PRICING_MODELS.join(
+          ', '
+        )}\nAllowed authType: ${AUTH_TYPES.join(', ')}\nAllowed maintenanceStatus: ${MAINTENANCE_STATUSES.join(
+          ', '
+        )}`,
       },
     ],
   });
@@ -45,7 +74,7 @@ async function enrichWithLlm(input: {
   }
 
   const data = result.data;
-  const out: { name?: string; description?: string; category?: string } = {};
+  const out: PrefillEnrichment = {};
   if (typeof data.name === 'string' && data.name.trim()) out.name = data.name.trim().slice(0, 120);
   if (typeof data.description === 'string' && data.description.trim()) {
     out.description = data.description.trim().slice(0, 500);
@@ -55,6 +84,12 @@ async function enrichWithLlm(input: {
       (c) => c.toLowerCase() === data.category!.trim().toLowerCase()
     );
     if (match) out.category = match;
+  }
+  if (isPricingModel(data.pricingModel)) out.pricingModel = data.pricingModel;
+  if (isAuthType(data.authType)) out.authType = data.authType;
+  if (isMaintenanceStatus(data.maintenanceStatus)) out.maintenanceStatus = data.maintenanceStatus;
+  if (typeof data.license === 'string' && data.license.trim()) {
+    out.license = data.license.trim().slice(0, 60);
   }
   return Object.keys(out).length ? out : null;
 }
@@ -143,10 +178,27 @@ export async function POST(req: Request) {
         url: gh.html_url || url,
         websiteUrl: gh.homepage && isSafeSubmissionUrl(gh.homepage) ? gh.homepage : '',
       };
+
+      // Best-effort README snippet for pricing/auth/license inference (soft-fail).
+      let readmeSnippet = '';
+      try {
+        const readmeRes = await fetch(
+          `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/README.md`,
+          {
+            headers: { 'User-Agent': 'AllMCPs-Directory' },
+            signal: AbortSignal.timeout(6000),
+          }
+        );
+        if (readmeRes.ok) readmeSnippet = (await readmeRes.text()).slice(0, 4000);
+      } catch {
+        /* ignore */
+      }
+
       const enriched = await enrichWithLlm({
         name: base.name,
         description: base.description,
         url: base.url,
+        readmeSnippet,
       });
       return NextResponse.json({
         ...base,
@@ -191,6 +243,7 @@ export async function POST(req: Request) {
       name: base.name,
       description: base.description,
       url: base.url,
+      readmeSnippet: html.replace(/<[^>]+>/g, ' ').slice(0, 2500),
     });
     return NextResponse.json({
       ...base,

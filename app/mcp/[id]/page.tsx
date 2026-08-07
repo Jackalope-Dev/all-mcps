@@ -1,4 +1,13 @@
-import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy } from 'lucide-react';
+import {
+  AUTH_TYPE_LABELS,
+  MAINTENANCE_STATUS_LABELS,
+  PRICING_MODEL_LABELS,
+  type AuthType,
+  type MaintenanceStatus,
+  type PricingModel,
+} from '@/lib/serverEnums';
+import { MCP_CLIENTS } from '@/lib/clients';
 import { QualityBadge } from '../../../components/ui/QualityBadge';
 import Link from 'next/link';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
@@ -531,8 +540,43 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </OutboundLink>
             )}
 
+            {server.supportUrl && (
+              <OutboundLink
+                href={server.supportUrl}
+                destinationType="website"
+                serverId={server.id}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mcp-action-btn"
+              >
+                <LifeBuoy size={18} style={{ color: 'var(--accent-color)' }} />
+                <span>Support</span>
+              </OutboundLink>
+            )}
+
             <ShareModal serverId={server.id} serverName={server.name} variant="action" />
           </div>
+
+          {server.tags && server.tags.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
+              {server.tags.map((tag) => (
+                <Badge key={tag} variant="category" style={{ fontSize: '0.72rem' }}>
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {server.screenshotUrl && (
+            <figure style={{ margin: '0 0 1.5rem', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={server.screenshotUrl}
+                alt={`${displayName} screenshot`}
+                style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 420, objectFit: 'cover' }}
+              />
+            </figure>
+          )}
 
           <div className="detail-summary" style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.6' }}>
             <SafeMarkdown content={(server.aiSummary && server.aiSummary.trim()) || server.description} utmContent={server.id} />
@@ -566,6 +610,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               installArgs={server.installArgs}
               installPackage={server.installPackage}
               installConfidence={server.installConfidence}
+              suggestedInstallCommand={server.suggestedInstallCommand}
+              suggestedInstallArgs={server.suggestedInstallArgs}
             />
 
             <details className="detail-manual-config" style={{ marginTop: '1.25rem', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', padding: '0.75rem 1rem' }}>
@@ -844,6 +890,52 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   <span style={{ overflowWrap: 'anywhere' }}>{catMeta.label}</span>
                 </Link>
               </div>
+              {server.pricingModel && (
+                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Pricing</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                    {PRICING_MODEL_LABELS[server.pricingModel as PricingModel] || server.pricingModel}
+                    {server.pricingNotes ? (
+                      <span style={{ display: 'block', fontWeight: 500, fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                        {server.pricingNotes}
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
+              )}
+              {server.authType && (
+                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Auth</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                    {AUTH_TYPE_LABELS[server.authType as AuthType] || server.authType}
+                  </span>
+                </div>
+              )}
+              {server.license && (
+                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>License</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>{server.license}</span>
+                </div>
+              )}
+              {server.maintenanceStatus && (
+                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Maintenance</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                    {MAINTENANCE_STATUS_LABELS[server.maintenanceStatus as MaintenanceStatus] ||
+                      server.maintenanceStatus}
+                  </span>
+                </div>
+              )}
+              {server.compatibleClients && server.compatibleClients.length > 0 && (
+                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Clients</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                    {server.compatibleClients
+                      .map((slug) => MCP_CLIENTS.find((c) => c.slug === slug)?.name || slug)
+                      .join(', ')}
+                  </span>
+                </div>
+              )}
 
               <ViewTracker serverId={server.id} initialCount={server.views || 0} />
               <InstallsStat count={server.copies || 0} showBorder={typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number'} />
