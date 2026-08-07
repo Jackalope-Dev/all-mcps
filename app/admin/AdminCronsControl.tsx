@@ -70,14 +70,6 @@ const UTILITY_ACTIONS: UtilityAction[] = [
     icon: Search,
     color: '#d97706',
   },
-  {
-    id: 'newsletter-digest',
-    name: 'Weekly Newsletter Dispatcher',
-    category: 'Email Marketing',
-    description: 'Generates and dispatches the weekly digest email containing new top MCP listings to subscribers.',
-    icon: Mail,
-    color: '#ec4899',
-  },
 ];
 
 export function AdminToolsControl() {

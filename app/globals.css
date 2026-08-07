@@ -4375,6 +4375,50 @@ nav[aria-label="Table of contents"] {
     radial-gradient(circle at 50% 100%, rgba(0, 102, 204, 0.04), transparent 50%);
 }
 
+/* Admin Dashboard Light Theme Contrast */
+[data-theme="light"] .admin-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="light"] .admin-table th {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-bottom-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] .admin-tab-btn {
+  color: #475569;
+}
+
+[data-theme="light"] .admin-tab-btn:hover {
+  color: #0f172a;
+  background: rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="light"] .admin-tab-btn.active {
+  color: #0284c7;
+  background: #e0f2fe;
+  border-color: #0284c7;
+}
+
+[data-theme="light"] .admin-tab-badge {
+  color: #ffffff;
+}
+
+[data-theme="light"] .admin-badge-priority {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+[data-theme="light"] .admin-badge-premium {
+  color: #0369a1;
+  background: #e0f2fe;
+  border-color: #bae6fd;
+}
+
 [data-theme="light"] .text-display {
   background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
   -webkit-background-clip: text;
@@ -6553,6 +6597,42 @@ code.inline-path {
 .dashboard-screenshot-upload:hover {
   border-color: color-mix(in srgb, var(--accent-color) 65%, var(--border-color)) !important;
   background: color-mix(in srgb, var(--accent-color) 12%, transparent) !important;
+}
+
+.dashboard-screenshot-pro-btn {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+  color: var(--gold-color) !important;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2);
+  transition: all 0.15s ease;
+}
+
+.dashboard-screenshot-pro-btn:hover {
+  border-color: rgba(245, 158, 11, 0.7) !important;
+  background: rgba(245, 158, 11, 0.15) !important;
+}
+
+[data-theme="light"] .dashboard-screenshot-upload {
+  border-color: color-mix(in srgb, var(--accent-color) 75%, #0f172a) !important;
+  background: color-mix(in srgb, var(--accent-color) 10%, #ffffff) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 35%, transparent);
+}
+
+[data-theme="light"] .dashboard-screenshot-upload:hover {
+  border-color: var(--accent-color) !important;
+  background: color-mix(in srgb, var(--accent-color) 18%, #ffffff) !important;
+}
+
+[data-theme="light"] .dashboard-screenshot-pro-btn {
+  border-color: #d97706 !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #b45309 !important;
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.3);
+}
+
+[data-theme="light"] .dashboard-screenshot-pro-btn:hover {
+  border-color: #b45309 !important;
+  background: rgba(245, 158, 11, 0.2) !important;
 }
 
 .dashboard-logo-upload input {

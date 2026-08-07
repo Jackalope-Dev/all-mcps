@@ -23,6 +23,8 @@ import {
   Layers,
   ArrowRight,
   ShieldCheck,
+  Mail,
+  X,
 } from 'lucide-react';
 
 type Server = {
@@ -30,6 +32,7 @@ type Server = {
   name: string;
   url: string;
   websiteUrl?: string | null;
+  submitterEmail?: string | null;
   description: string;
   category?: string;
   createdAt: string;
@@ -88,13 +91,22 @@ export default function AdminClient({
   const [pendingScreenshots, setPendingScreenshots] = useState<Server[]>(initialPendingScreenshots);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
+  // Rejection Reason Modal State
+  const [rejectingItem, setRejectingItem] = useState<{
+    id: string;
+    name: string;
+    action: 'reject' | 'reject_edit' | 'reject_claim' | 'reject_logo' | 'reject_screenshot';
+    submitterEmail?: string | null;
+  } | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+
   const totalPending =
     pending.length +
     pendingEdits.length +
     pendingClaims.length +
     pendingLogos.length +
     pendingScreenshots.length;
-  const defaultTab = totalPending > 0 ? 'moderation' : 'overview';
+  const defaultTab = totalPending > 0 ? 'moderation' : 'listings';
   const [activeTab, setActiveTab] = useState<
     'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'crons' | 'tools'
   >(defaultTab);
@@ -104,10 +116,23 @@ export default function AdminClient({
   const [activeListingsFilters, setActiveListingsFilters] = useState<ListingFilters | undefined>(undefined);
 
   const handleKpiCardSelect = (selection: KpiCardSelection) => {
-    setActiveTab(selection.tab);
+    const targetTab = (selection.tab as string) === 'overview' ? 'listings' : selection.tab;
+    setActiveTab(targetTab as any);
     if (selection.filters) {
       setActiveListingsFilters(selection.filters);
     }
+  };
+
+  const openRejectModal = (
+    id: string,
+    name: string,
+    action: 'reject' | 'reject_edit' | 'reject_claim' | 'reject_logo' | 'reject_screenshot',
+    submitterEmail?: string | null
+  ) => {
+    setRejectingItem({ id, name, action, submitterEmail });
+    setRejectionReason(
+      'Your submission was not approved because the details or repository information were incomplete. You are welcome to update your information and submit again.'
+    );
   };
 
   const handleAction = async (
@@ -123,7 +148,8 @@ export default function AdminClient({
       | 'reject_logo'
       | 'approve_screenshot'
       | 'reject_screenshot'
-      | 'resend_approval'
+      | 'resend_approval',
+    extra?: { reason?: string }
   ) => {
     setLoadingId(id);
 
@@ -131,7 +157,7 @@ export default function AdminClient({
       const res = await fetch('/api/admin/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action }),
+        body: JSON.stringify({ id, action, ...extra }),
       });
 
       const data = (await res.json()) as { error?: string; message?: string };
@@ -142,7 +168,7 @@ export default function AdminClient({
 
       if (action === 'approve' || action === 'reject') {
         setPending((prev) => prev.filter((s) => s.id !== id));
-        toast.success(action === 'approve' ? 'Listing approved' : 'Listing rejected');
+        toast.success(action === 'approve' ? 'Listing approved' : 'Listing rejected & submitter notified');
         notifyAdminStatsChanged();
       } else if (action === 'approve_edit' || action === 'reject_edit') {
         setPendingEdits((prev) => prev.filter((s) => s.id !== id));
@@ -169,13 +195,12 @@ export default function AdminClient({
   };
 
   const navItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     {
       id: 'moderation',
       label: 'Moderation Queue',
       icon: Clock,
       badge: totalPending > 0 ? totalPending : undefined,
-      badgeColor: '#fbbf24',
+      badgeColor: '#d97706',
     },
     { id: 'listings', label: 'Listings Directory', icon: List },
     { id: 'analytics', label: 'Analytics & Logs', icon: BarChart3 },
@@ -310,7 +335,8 @@ export default function AdminClient({
                 servers={pending}
                 empty="No pending submissions in queue!"
                 loadingId={loadingId}
-                onAction={(id, action) => handleAction(id, action)}
+                onApprove={(id) => handleAction(id, 'approve')}
+                onReject={(server) => openRejectModal(server.id, server.name, 'reject', server.submitterEmail)}
               />
             </section>
           )}
@@ -325,7 +351,7 @@ export default function AdminClient({
                 servers={pendingEdits}
                 loadingId={loadingId}
                 onApprove={(id) => handleAction(id, 'approve_edit')}
-                onReject={(id) => handleAction(id, 'reject_edit')}
+                onReject={(server) => openRejectModal(server.id, server.name, 'reject_edit')}
               />
             </section>
           )}
@@ -340,7 +366,7 @@ export default function AdminClient({
                 servers={pendingClaims}
                 loadingId={loadingId}
                 onApprove={(id) => handleAction(id, 'approve_claim')}
-                onReject={(id) => handleAction(id, 'reject_claim')}
+                onReject={(server) => openRejectModal(server.id, server.name, 'reject_claim')}
               />
             </section>
           )}
@@ -355,7 +381,7 @@ export default function AdminClient({
                 servers={pendingLogos}
                 loadingId={loadingId}
                 onApprove={(id) => handleAction(id, 'approve_logo')}
-                onReject={(id) => handleAction(id, 'reject_logo')}
+                onReject={(server) => openRejectModal(server.id, server.name, 'reject_logo')}
               />
             </section>
           )}
@@ -370,7 +396,7 @@ export default function AdminClient({
                 servers={pendingScreenshots}
                 loadingId={loadingId}
                 onApprove={(id) => handleAction(id, 'approve_screenshot')}
-                onReject={(id) => handleAction(id, 'reject_screenshot')}
+                onReject={(server) => openRejectModal(server.id, server.name, 'reject_screenshot')}
               />
             </section>
           )}
@@ -413,6 +439,96 @@ export default function AdminClient({
           <AdminToolsControl />
         </section>
       )}
+
+      {/* Rejection Reason & Email Modal */}
+      {rejectingItem && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="admin-card"
+            style={{
+              maxWidth: '520px',
+              width: '100%',
+              padding: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              boxShadow: 'var(--shadow-md)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Reject & Send Feedback
+              </h3>
+              <button
+                onClick={() => setRejectingItem(null)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Rejecting: <strong style={{ color: 'var(--text-primary)' }}>{rejectingItem.name}</strong>
+              {rejectingItem.submitterEmail ? (
+                <div style={{ marginTop: '0.35rem', color: 'var(--text-primary)' }}>
+                  Notification email will be sent to: <strong>{rejectingItem.submitterEmail}</strong>
+                </div>
+              ) : (
+                <div style={{ marginTop: '0.35rem', fontStyle: 'italic' }}>
+                  No submitter email attached (anonymous submission).
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Rejection Reason / Feedback to Submitter:
+              </label>
+              <textarea
+                className="form-input"
+                rows={4}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Enter rejection reason or instructions..."
+                style={{ width: '100%', fontSize: '0.85rem', lineHeight: 1.4 }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <button
+                onClick={() => setRejectingItem(null)}
+                className="admin-btn"
+                style={{ background: 'rgba(128, 128, 128, 0.15)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleAction(rejectingItem.id, rejectingItem.action, { reason: rejectionReason.trim() });
+                  setRejectingItem(null);
+                }}
+                disabled={loadingId === rejectingItem.id}
+                className="admin-btn"
+                style={{ background: '#b91c1c', color: '#ffffff' }}
+              >
+                Confirm Rejection & Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -421,12 +537,14 @@ function ServerTable({
   servers,
   empty,
   loadingId,
-  onAction,
+  onApprove,
+  onReject,
 }: {
   servers: Server[];
   empty: string;
   loadingId: string | null;
-  onAction: (id: string, action: 'approve' | 'reject') => void;
+  onApprove: (id: string) => void;
+  onReject: (server: Server) => void;
 }) {
   return (
     <div className="admin-card">
@@ -471,36 +589,35 @@ function ServerTable({
               return (
                 <tr key={server.id}>
                   <td data-label="Name">
-                    <strong>{server.name}</strong>
-                    {server.reviewPriority && (
-                      <span
-                        className="admin-badge"
-                        style={{
-                          color: '#d97706',
-                          background: 'rgba(245,158,11,0.15)',
-                          border: '1px solid rgba(245,158,11,0.4)',
-                        }}
-                      >
-                        PRIORITY
-                      </span>
-                    )}
-                    {server.isPremium && (
-                      <span
-                        className="admin-badge"
-                        style={{
-                          color: '#0284c7',
-                          background: 'rgba(2,132,199,0.15)',
-                          border: '1px solid rgba(2,132,199,0.4)',
-                        }}
-                      >
-                        PREMIUM
-                      </span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <strong>{server.name}</strong>
+                      {server.reviewPriority && (
+                        <span className="admin-badge admin-badge-priority">
+                          PRIORITY
+                        </span>
+                      )}
+                      {server.isPremium && (
+                        <span className="admin-badge admin-badge-premium">
+                          PREMIUM
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.35rem', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                      <Mail size={13} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
+                      <span>Submitter:</span>
+                      {server.submitterEmail ? (
+                        <strong style={{ color: 'var(--text-primary)' }}>{server.submitterEmail}</strong>
+                      ) : (
+                        <span style={{ fontStyle: 'italic', opacity: 0.8 }}>Anonymous</span>
+                      )}
+                    </div>
+
                     <div className="admin-desc-line">{server.description}</div>
 
                     {hasExtra && (
                       <details style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        <summary style={{ cursor: 'pointer', color: 'var(--accent-color)' }}>
+                        <summary style={{ cursor: 'pointer', color: 'var(--accent-color)', fontWeight: 600 }}>
                           Extra details (pricing, auth, license…)
                         </summary>
                         <div
@@ -509,8 +626,9 @@ function ServerTable({
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '0.25rem',
-                            background: 'rgba(0,0,0,0.2)',
-                            padding: '0.5rem',
+                            background: 'var(--bg-muted)',
+                            border: '1px solid var(--border-color)',
+                            padding: '0.5rem 0.75rem',
                             borderRadius: '6px',
                           }}
                         >
@@ -566,7 +684,7 @@ function ServerTable({
                   <td data-label="Actions">
                     <div className="admin-actions">
                       <button
-                        onClick={() => onAction(server.id, 'approve')}
+                        onClick={() => onApprove(server.id)}
                         disabled={loadingId === server.id}
                         className="admin-btn"
                         style={{ background: '#047857' }}
@@ -574,7 +692,7 @@ function ServerTable({
                         Approve
                       </button>
                       <button
-                        onClick={() => onAction(server.id, 'reject')}
+                        onClick={() => onReject(server)}
                         disabled={loadingId === server.id}
                         className="admin-btn"
                         style={{ background: '#b91c1c' }}
@@ -704,7 +822,7 @@ function PendingEditsTable({
   servers: Server[];
   loadingId: string | null;
   onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onReject: (server: Server) => void;
 }) {
   return (
     <div className="admin-card">
@@ -772,7 +890,7 @@ function PendingEditsTable({
                         Approve
                       </button>
                       <button
-                        onClick={() => onReject(server.id)}
+                        onClick={() => onReject(server)}
                         disabled={loadingId === server.id}
                         className="admin-btn"
                         style={{ background: '#b91c1c' }}
@@ -800,7 +918,7 @@ function PendingClaimsTable({
   servers: Server[];
   loadingId: string | null;
   onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onReject: (server: Server) => void;
 }) {
   return (
     <div className="admin-card">
@@ -856,7 +974,7 @@ function PendingClaimsTable({
                       Approve
                     </button>
                     <button
-                      onClick={() => onReject(server.id)}
+                      onClick={() => onReject(server)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
                       style={{ background: '#b91c1c' }}
@@ -883,7 +1001,7 @@ function PendingLogosTable({
   servers: Server[];
   loadingId: string | null;
   onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onReject: (server: Server) => void;
 }) {
   return (
     <div className="admin-card">
@@ -931,7 +1049,7 @@ function PendingLogosTable({
                       Approve
                     </button>
                     <button
-                      onClick={() => onReject(server.id)}
+                      onClick={() => onReject(server)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
                       style={{ background: '#b91c1c' }}
@@ -958,7 +1076,7 @@ function PendingScreenshotsTable({
   servers: Server[];
   loadingId: string | null;
   onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onReject: (server: Server) => void;
 }) {
   return (
     <div className="admin-card">
@@ -1006,7 +1124,7 @@ function PendingScreenshotsTable({
                       Approve
                     </button>
                     <button
-                      onClick={() => onReject(server.id)}
+                      onClick={() => onReject(server)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
                       style={{ background: '#b91c1c' }}

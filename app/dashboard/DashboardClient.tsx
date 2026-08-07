@@ -574,13 +574,7 @@ export default function DashboardClient({
                         description: 'Upgrade your listing to Premium to upload high-res screenshots and capture user interest.',
                       });
                     }}
-                    className="btn btn-secondary btn-sm dashboard-logo-upload"
-                    style={{
-                      borderColor: 'rgba(255, 215, 0, 0.5)',
-                      background: 'rgba(255, 215, 0, 0.08)',
-                      color: 'var(--gold-color)',
-                      boxShadow: '0 0 0 1px rgba(255, 215, 0, 0.2)',
-                    }}
+                    className="btn btn-secondary btn-sm dashboard-logo-upload dashboard-screenshot-pro-btn"
                     title="Unlock high-res screenshot uploads with Premium"
                   >
                     <Crown size={14} style={{ color: 'var(--gold-color)' }} />

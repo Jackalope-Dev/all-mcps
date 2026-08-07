@@ -51,6 +51,7 @@ const actionSchema = z.object({
     })
     .optional(),
   days: z.number().int().min(1).max(365).optional(),
+  reason: z.string().trim().max(2000).optional(),
 });
 
 const MESSAGES: Record<string, string> = {
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    const { id, action, fields, days } = result.data;
+    const { id, action, fields, days, reason } = result.data;
 
     let env;
     try {
@@ -208,6 +209,7 @@ export async function POST(req: Request) {
             status: 'rejected',
             listingUrl: `${getAppUrl()}/submit`,
             feedback:
+              reason ||
               'Your listing was not approved. Common reasons: incomplete description, unsafe URL, spam, or a duplicate of an existing listing. You can submit again with clearer details.',
           });
         } catch (e) {
@@ -364,7 +366,7 @@ export async function POST(req: Request) {
             message:
               action === 'approve_edit'
                 ? `Your changes to ${server.name} are now live.`
-                : `Your proposed changes to ${server.name} were not approved. You can submit a new edit from your dashboard.`,
+                : reason || `Your proposed changes to ${server.name} were not approved. You can submit a new edit from your dashboard.`,
             actionText: 'View listing',
             actionUrl: `${getAppUrl()}/mcp/${id}`,
           });
@@ -406,7 +408,7 @@ export async function POST(req: Request) {
           message:
             action === 'approve_claim'
               ? `Your claim on ${server.name} is now approved — the listing is yours.`
-              : `Your claim on ${server.name} wasn't approved. Contact us if you believe this is a mistake.`,
+              : reason || `Your claim on ${server.name} wasn't approved. Contact us if you believe this is a mistake.`,
           actionText: 'View listing',
           actionUrl: `${getAppUrl()}/mcp/${id}`,
         });
@@ -448,7 +450,7 @@ export async function POST(req: Request) {
             message:
               action === 'approve_logo'
                 ? `Your new logo for ${server.name} is now live.`
-                : `Your uploaded logo for ${server.name} was not approved. You can upload a different one from your dashboard.`,
+                : reason || `Your uploaded logo for ${server.name} was not approved. You can upload a different one from your dashboard.`,
             actionText: 'View listing',
             actionUrl: `${getAppUrl()}/mcp/${id}`,
           });
@@ -497,7 +499,7 @@ export async function POST(req: Request) {
             message:
               action === 'approve_screenshot'
                 ? `Your screenshot for ${server.name} is now live.`
-                : `Your uploaded screenshot for ${server.name} was not approved. You can upload a different one from your dashboard.`,
+                : reason || `Your uploaded screenshot for ${server.name} was not approved. You can upload a different one from your dashboard.`,
             actionText: 'View listing',
             actionUrl: `${getAppUrl()}/mcp/${id}`,
           });

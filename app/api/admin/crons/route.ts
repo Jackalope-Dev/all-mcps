@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { job } = body as { job?: string };
 
-    const validJobs = ['health', 'ai-content', 'enrich', 'highlight', 'indexnow', 'newsletter-digest'];
+    const validJobs = ['health', 'ai-content', 'enrich', 'highlight', 'indexnow'];
     if (!job || !validJobs.includes(job)) {
       return NextResponse.json(
         { error: `Invalid job. Allowed: ${validJobs.join(', ')}` },

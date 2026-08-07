@@ -372,6 +372,79 @@ export default function ManageListings({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Search & Filter Toolbar */}
       <div className="admin-card" style={{ padding: '1.25rem' }}>
+        {/* Quick Views / Shortcut Pills */}
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.85rem', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '0.25rem' }}>
+            Quick Views:
+          </span>
+          <button
+            onClick={() => { resetAllFilters(); setSortBy('createdAt'); setSortOrder('desc'); }}
+            className="admin-btn"
+            style={{
+              background: sortBy === 'createdAt' && sortOrder === 'desc' && !hasActiveFilters ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
+              color: sortBy === 'createdAt' && sortOrder === 'desc' && !hasActiveFilters ? '#ffffff' : 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              padding: '0.25rem 0.65rem',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+            }}
+          >
+            ⚡ Recently Approved / Newest
+          </button>
+          <button
+            onClick={() => { resetAllFilters(); setStatusFilter('active'); }}
+            className="admin-btn"
+            style={{
+              background: statusFilter === 'active' ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
+              color: statusFilter === 'active' ? '#ffffff' : 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              padding: '0.25rem 0.65rem',
+              fontSize: '0.78rem',
+            }}
+          >
+            Active Listings
+          </button>
+          <button
+            onClick={() => { resetAllFilters(); setStatusFilter('pending'); }}
+            className="admin-btn"
+            style={{
+              background: statusFilter === 'pending' ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
+              color: statusFilter === 'pending' ? '#ffffff' : 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              padding: '0.25rem 0.65rem',
+              fontSize: '0.78rem',
+            }}
+          >
+            Pending Submissions
+          </button>
+          <button
+            onClick={() => { resetAllFilters(); setHealthFilter('unhealthy'); }}
+            className="admin-btn"
+            style={{
+              background: healthFilter === 'unhealthy' ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
+              color: healthFilter === 'unhealthy' ? '#ffffff' : 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              padding: '0.25rem 0.65rem',
+              fontSize: '0.78rem',
+            }}
+          >
+            ⚠️ Unhealthy / Offline
+          </button>
+          <button
+            onClick={() => { resetAllFilters(); setPremiumFilter('true'); }}
+            className="admin-btn"
+            style={{
+              background: premiumFilter === 'true' ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
+              color: premiumFilter === 'true' ? '#ffffff' : 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              padding: '0.25rem 0.65rem',
+              fontSize: '0.78rem',
+            }}
+          >
+            ★ Premium
+          </button>
+        </div>
+
         <div style={{ display: 'flex', gap: '0.75rem', width: '100%', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
             <Search className="w-4 h-4" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
@@ -691,10 +764,21 @@ export default function ManageListings({
                   </div>
                 )}
 
-                {/* Verification & Placement Control Toolbars */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
-                  {/* Manual Verification Action Pills */}
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {/* Clean Grouped Actions Bar */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    paddingTop: '0.75rem',
+                    borderTop: '1px solid var(--border-color)',
+                  }}
+                >
+                  {/* Action Group 1: Verification & Badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', width: '90px' }}>
+                      Badges:
+                    </span>
                     <button
                       onClick={() => runAction(listing.id, 'toggle_official')}
                       disabled={rowLoading}
@@ -703,7 +787,7 @@ export default function ManageListings({
                         background: listing.isOfficial ? 'rgba(16, 185, 129, 0.15)' : 'rgba(128,128,128,0.08)',
                         color: listing.isOfficial ? '#10b981' : 'var(--text-secondary)',
                         border: '1px solid var(--border-color)',
-                        padding: '0.3rem 0.6rem',
+                        padding: '0.25rem 0.55rem',
                         fontSize: '0.75rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -711,7 +795,7 @@ export default function ManageListings({
                       }}
                       title="Manually toggle Official Project badge"
                     >
-                      <ShieldCheck className="w-3.5 h-3.5" /> {listing.isOfficial ? 'Official Badge: ON' : 'Make Official'}
+                      <ShieldCheck className="w-3.5 h-3.5" /> {listing.isOfficial ? 'Official: ON' : 'Make Official'}
                     </button>
 
                     <button
@@ -722,7 +806,7 @@ export default function ManageListings({
                         background: listing.websiteVerified ? 'rgba(37, 99, 235, 0.15)' : 'rgba(128,128,128,0.08)',
                         color: listing.websiteVerified ? '#2563eb' : 'var(--text-secondary)',
                         border: '1px solid var(--border-color)',
-                        padding: '0.3rem 0.6rem',
+                        padding: '0.25rem 0.55rem',
                         fontSize: '0.75rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -730,7 +814,7 @@ export default function ManageListings({
                       }}
                       title="Manually toggle Website Verified status"
                     >
-                      <Globe className="w-3.5 h-3.5" /> {listing.websiteVerified ? 'Site Verified: YES' : 'Verify Site'}
+                      <Globe className="w-3.5 h-3.5" /> {listing.websiteVerified ? 'Verified Site: YES' : 'Verify Site'}
                     </button>
 
                     <button
@@ -741,13 +825,13 @@ export default function ManageListings({
                         background: listing.reciprocalBadgeOk ? 'rgba(16, 185, 129, 0.15)' : 'rgba(128,128,128,0.08)',
                         color: listing.reciprocalBadgeOk ? '#10b981' : 'var(--text-secondary)',
                         border: '1px solid var(--border-color)',
-                        padding: '0.3rem 0.6rem',
+                        padding: '0.25rem 0.55rem',
                         fontSize: '0.75rem',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.3rem',
                       }}
-                      title="Manually toggle Reciprocal Badge (dofollow backlink) status"
+                      title="Manually toggle Reciprocal Badge status"
                     >
                       <Award className="w-3.5 h-3.5" /> {listing.reciprocalBadgeOk ? 'Badge: OK' : 'Grant Badge'}
                     </button>
@@ -760,7 +844,7 @@ export default function ManageListings({
                         background: 'rgba(128,128,128,0.08)',
                         color: 'var(--text-primary)',
                         border: '1px solid var(--border-color)',
-                        padding: '0.3rem 0.6rem',
+                        padding: '0.25rem 0.55rem',
                         fontSize: '0.75rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -772,13 +856,16 @@ export default function ManageListings({
                     </button>
                   </div>
 
-                  {/* Primary Action Buttons Bar */}
-                  <div className="admin-actions" style={{ gap: '0.4rem' }}>
+                  {/* Action Group 2: Boost & Premium Placements */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', width: '90px' }}>
+                      Placements:
+                    </span>
                     <button
                       onClick={() => runAction(listing.id, 'feature', { days: 7 })}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(2,132,199,0.15)', color: '#0284c7', border: '1px solid rgba(2,132,199,0.4)', padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: 700 }}
+                      style={{ background: 'rgba(2,132,199,0.15)', color: '#0284c7', border: '1px solid rgba(2,132,199,0.4)', padding: '0.25rem 0.55rem', fontSize: '0.75rem', fontWeight: 700 }}
                     >
                       +7d Boost
                     </button>
@@ -787,7 +874,7 @@ export default function ManageListings({
                       onClick={() => runAction(listing.id, 'feature', { days: 30 })}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(245,158,11,0.15)', color: '#d97706', border: '1px solid rgba(245,158,11,0.4)', padding: '0.3rem 0.6rem', fontSize: '0.75rem', fontWeight: 700 }}
+                      style={{ background: 'rgba(245,158,11,0.15)', color: '#d97706', border: '1px solid rgba(245,158,11,0.4)', padding: '0.25rem 0.55rem', fontSize: '0.75rem', fontWeight: 700 }}
                     >
                       +30d Boost
                     </button>
@@ -796,7 +883,7 @@ export default function ManageListings({
                       onClick={() => setBoostModalListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                      style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
                     >
                       Custom Boost...
                     </button>
@@ -805,16 +892,22 @@ export default function ManageListings({
                       onClick={() => runAction(listing.id, listing.isPremium ? 'unset_premium' : 'set_premium')}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: listing.isPremium ? '#64748b' : '#0284c7', color: '#ffffff', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      style={{ background: listing.isPremium ? '#64748b' : '#0284c7', color: '#ffffff', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
                     >
                       {listing.isPremium ? 'Unset Premium' : 'Make Premium'}
                     </button>
+                  </div>
 
+                  {/* Action Group 3: Directory Controls */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', width: '90px' }}>
+                      Management:
+                    </span>
                     <button
                       onClick={() => startEdit(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: '#64748b', color: '#ffffff', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      style={{ background: '#64748b', color: '#ffffff', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
                     >
                       Edit
                     </button>
@@ -823,7 +916,7 @@ export default function ManageListings({
                       onClick={() => setInspectListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
                     >
                       Inspector
                     </button>
@@ -834,7 +927,7 @@ export default function ManageListings({
                           onClick={() => runAction(listing.id, 'resend_approval')}
                           disabled={rowLoading}
                           className="admin-btn"
-                          style={{ background: '#0284c7', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                          style={{ background: '#0284c7', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
                           title="Resend approval email"
                         >
                           Resend Email
@@ -843,7 +936,7 @@ export default function ManageListings({
                           onClick={() => runAction(listing.id, 'unpublish')}
                           disabled={rowLoading}
                           className="admin-btn"
-                          style={{ background: '#f59e0b', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                          style={{ background: '#d97706', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
                         >
                           Unpublish
                         </button>
@@ -853,7 +946,7 @@ export default function ManageListings({
                         onClick={() => runAction(listing.id, 'republish')}
                         disabled={rowLoading}
                         className="admin-btn"
-                        style={{ background: '#10b981', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                        style={{ background: '#10b981', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
                       >
                         Republish
                       </button>
@@ -863,7 +956,7 @@ export default function ManageListings({
                       onClick={() => deleteListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: '#ef4444', padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      style={{ background: '#ef4444', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
                     >
                       Delete
                     </button>
