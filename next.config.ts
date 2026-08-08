@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
   // compile step, which runs first). Leaving it external skips webpack bundling
   // for it entirely, so the wasm import passes through untouched to that later stage.
   serverExternalPackages: ['@cf-wasm/photon'],
+  // /sitemap.xml itself can't be a route folder (it collides with the
+  // app/sitemap.ts metadata convention's reserved slot), so the sitemap index
+  // route lives at /sitemap-index.xml and is rewritten to the public URL here.
+  async rewrites() {
+    return [{ source: '/sitemap.xml', destination: '/sitemap-index.xml' }];
+  },
 };
 
 export default nextConfig;
