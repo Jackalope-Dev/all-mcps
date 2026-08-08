@@ -676,6 +676,115 @@ p {
   margin: 0 auto 2.5rem;
 }
 
+.mcp-promo-section {
+  margin: 0 auto 2.5rem;
+}
+
+.mcp-promo-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  background: var(--bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 30%, var(--border-color));
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+}
+
+.mcp-promo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.mcp-promo-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-promo-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.mcp-promo-official-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  background: rgba(var(--accent-rgb), 0.12);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+}
+
+.mcp-promo-desc {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  max-width: 560px;
+}
+
+.mcp-promo-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.mcp-promo-features li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.mcp-promo-features svg {
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.mcp-promo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.mcp-promo-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background: var(--bg-subtle, var(--bg-primary));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
+
+.mcp-promo-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .newsletter-form {
   display: flex;
   flex-direction: column;
@@ -3672,6 +3781,30 @@ nav[aria-label="Table of contents"] {
 
   .newsletter-homepage-section > * {
     width: 100%;
+  }
+
+  /* MCP self-promo callout: stack icon/content/actions, drop the right-aligned actions */
+  .mcp-promo-card {
+    flex-direction: column;
+    padding: 1.25rem;
+  }
+
+  .mcp-promo-actions {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .mcp-promo-install {
+    justify-content: center;
+  }
+
+  .mcp-promo-buttons {
+    width: 100%;
+  }
+
+  .mcp-promo-buttons .btn {
+    flex: 1;
+    justify-content: center;
   }
 
   /* Category title row: column layout */

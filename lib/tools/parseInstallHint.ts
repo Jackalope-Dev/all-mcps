@@ -10,13 +10,28 @@ export interface RemoteHint {
 export type ParsedInstallHint = InstallHint | RemoteHint | null;
 
 const RUNNER_PATTERN = /\b(npx|uvx|bunx)\s+(-y\s+)?([@a-zA-Z0-9._/-]+)/;
+// Many READMEs show the launch command as a JSON `mcpServers` config block (the format
+// Claude Desktop / Cursor docs recommend) instead of a shell one-liner, e.g.
+// `"command": "npx", "args": ["-y", "some-package"]`. RUNNER_PATTERN never matches that
+// shape since "npx" is followed by a quote, not whitespace, so this pulls the runner and
+// package out of the two JSON fields independently and requires them to appear near each
+// other (loose proximity, not full JSON parsing — good enough for real-world READMEs).
+const JSON_COMMAND_PATTERN = /"command"\s*:\s*"(npx|uvx|bunx)"/;
+const JSON_ARGS_PATTERN = /"args"\s*:\s*\[([^\]]*)\]/;
+const JSON_FIELD_PROXIMITY = 300;
 // Package name must start with an alphanumeric or `@` (scoped) so a bare "." or "-foo"
 // (e.g. from a local "pip install ." dev-setup instruction) can never match.
 const PIP_PATTERN = /\bpip install\s+([@a-zA-Z0-9][a-zA-Z0-9._-]*)/;
 const URL_PATTERN = /https?:\/\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/;
 
-/** Hosts that show up in descriptions as badges/repo links, not as the server's own remote endpoint. */
-const NON_ENDPOINT_HOSTS = ['glama.ai', 'github.com', 'npmjs.com', 'pypi.org'];
+/**
+ * Hosts that show up in descriptions/READMEs as badges, repo links, or our own listing/verify
+ * links — never the server's own remote MCP endpoint. Without `allmcps.com` here, a listing
+ * that has added the AllMCPs "Verified" badge to its README (badge markdown links back to
+ * `allmcps.com/mcp/<id>?verify=...`) gets that badge link mistaken for its install endpoint —
+ * confidently wrong, and it would only get more common as badge adoption grows.
+ */
+const NON_ENDPOINT_HOSTS = ['glama.ai', 'github.com', 'npmjs.com', 'pypi.org', 'allmcps.com'];
 
 /**
  * Package/URL captures come from prose, so a match routinely swallows the sentence's
@@ -44,6 +59,31 @@ const NON_MCP_TOOLING_PACKAGES = new Set([
 ]);
 
 /**
+ * Extracts a runner + package from a JSON `mcpServers`-style config block, e.g.
+ * `"command": "npx", "args": ["-y", "some-package"]`. The two fields are matched
+ * independently and required to fall within JSON_FIELD_PROXIMITY of each other, so an
+ * unrelated "args" array elsewhere in a long README (a different tool's example, say)
+ * doesn't get paired with this one's "command".
+ */
+function parseJsonConfigHint(text: string): InstallHint | null {
+  const cmdMatch = text.match(JSON_COMMAND_PATTERN);
+  const argsMatch = text.match(JSON_ARGS_PATTERN);
+  if (!cmdMatch || !argsMatch) return null;
+  if (Math.abs((argsMatch.index ?? 0) - (cmdMatch.index ?? 0)) > JSON_FIELD_PROXIMITY) return null;
+
+  const rawArgs = Array.from(argsMatch[1].matchAll(/"([^"]*)"/g)).map((m) => m[1]);
+  if (rawArgs.length === 0) return null;
+
+  const lastIdx = rawArgs.length - 1;
+  const pkg = trimTrailingPunctuation(rawArgs[lastIdx]);
+  if (!pkg || NON_MCP_TOOLING_PACKAGES.has(pkg.toLowerCase())) return null;
+
+  const runner = cmdMatch[1];
+  const args = rawArgs.slice(0, lastIdx).concat(pkg);
+  return { command: runner, args };
+}
+
+/**
  * Best-effort extraction of an install command from a directory server's free-text
  * description. Returns null when nothing recognizable is found — callers must treat
  * that as "ask the user," never fall back to a guess.
@@ -60,6 +100,9 @@ export function parseInstallHint(description: string): ParsedInstallHint {
       return { command: runner, args };
     }
   }
+
+  const jsonHint = parseJsonConfigHint(description);
+  if (jsonHint) return jsonHint;
 
   // "pip install X" describes how to *obtain* the package, not how to *run* it as an
   // MCP stdio server — using "pip"/"install" verbatim as the launch command spawns a

@@ -25,7 +25,7 @@ import { notFound } from 'next/navigation';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
-import { repoLinkRel, websiteLinkRel } from '../../../lib/linkRel';
+import { repoLinkRel, websiteLinkRel, supportLinkRel } from '../../../lib/linkRel';
 import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
@@ -550,7 +550,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 destinationType="website"
                 serverId={server.id}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel={supportLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk, server.supportUrl, server.websiteUrl)}
                 className="mcp-action-btn"
               >
                 <LifeBuoy size={18} style={{ color: 'var(--accent-color)' }} />

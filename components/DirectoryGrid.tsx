@@ -19,6 +19,7 @@ import {
 import { parseServerName } from '../lib/displayName';
 import { trackSearch, trackOutboundClick } from '../lib/gtag';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
+import { OutboundLink } from './ui/OutboundLink';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
@@ -955,7 +956,62 @@ export default function DirectoryGrid({
       {/* Featured Marquee near top of the discovery section */}
       {showDiscovery && <FeaturedMarquee servers={marqueeServers} />}
 
-
+      {/* AllMCPs' own MCP server — self-promo callout, homepage landing only */}
+      {showDiscovery && (
+        <section className="container mcp-promo-section">
+          <div className="mcp-promo-card">
+            <div className="mcp-promo-icon" aria-hidden="true">
+              <Terminal size={22} />
+            </div>
+            <div className="mcp-promo-content">
+              <h3 className="mcp-promo-title">
+                AllMCPs has its own MCP server
+                <span className="mcp-promo-official-badge">
+                  <BadgeCheck size={13} aria-hidden="true" /> Official
+                </span>
+              </h3>
+              <p className="mcp-promo-desc">
+                Search the directory, get install configs, submit servers, and check boost pricing —
+                directly from Claude, Cursor, or any MCP client.
+              </p>
+              <ul className="mcp-promo-features">
+                <li>
+                  <CheckCircle2 size={14} aria-hidden="true" /> Search &amp; browse listings
+                </li>
+                <li>
+                  <CheckCircle2 size={14} aria-hidden="true" /> Ready-to-paste install configs
+                </li>
+                <li>
+                  <CheckCircle2 size={14} aria-hidden="true" /> Submit &amp; verify servers
+                </li>
+                <li>
+                  <CheckCircle2 size={14} aria-hidden="true" /> Check boost pricing
+                </li>
+              </ul>
+            </div>
+            <div className="mcp-promo-actions">
+              <code className="mcp-promo-install">
+                <Zap size={12} aria-hidden="true" /> npx -y allmcps-server
+              </code>
+              <div className="mcp-promo-buttons">
+                <Link href="/mcp/allmcps-server" className="btn btn-primary btn-sm">
+                  View listing <ArrowRight size={14} aria-hidden="true" />
+                </Link>
+                <OutboundLink
+                  href="https://github.com/Jackalope-Dev/allmcps-server"
+                  destinationType="github"
+                  serverId="allmcps-server"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                >
+                  GitHub
+                </OutboundLink>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {showDiscovery && (
         <section className="container newsletter-homepage-section">
