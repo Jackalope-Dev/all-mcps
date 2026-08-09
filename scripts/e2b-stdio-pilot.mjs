@@ -134,6 +134,7 @@ async function verifyListing(listing) {
 
     const proc = await sbx.commands.run(cmd, {
       background: true,
+      stdin: true,
       onStdout: (data) => reader.feed(data),
       onStderr: (data) => {
         stderrBuf += data;
