@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
-import { Share2, Send, Clock, AlertCircle, CheckCircle2, RefreshCw, Plus } from 'lucide-react';
+import { Share2, Send, Clock, AlertCircle, CheckCircle2, RefreshCw, Plus, CopyX } from 'lucide-react';
 
 type SocialPost = {
   id: number;
@@ -21,6 +21,8 @@ export function AdminSocialQueue() {
   const [loading, setLoading] = useState(false);
   const [customTweet, setCustomTweet] = useState('');
   const [queuing, setQueuing] = useState(false);
+  const [deduping, setDeduping] = useState(false);
+  const [pendingId, setPendingId] = useState<number | null>(null);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -65,6 +67,44 @@ export function AdminSocialQueue() {
     }
   };
 
+  const handleDedupe = async () => {
+    setDeduping(true);
+    try {
+      const res = await fetch('/api/admin/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'dedupe_queue' }),
+      });
+      const data: any = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to clear duplicates');
+      toast.success(data.message || 'Duplicates cleared.');
+      fetchPosts();
+    } catch (err: any) {
+      toast.error('Failed to clear duplicates', { description: err?.message });
+    } finally {
+      setDeduping(false);
+    }
+  };
+
+  const handleMarkSent = async (id: number) => {
+    setPendingId(id);
+    try {
+      const res = await fetch('/api/admin/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark_sent', id }),
+      });
+      const data: any = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to mark as sent');
+      toast.success('Marked as sent — removed from the outbound feed.');
+      fetchPosts();
+    } catch (err: any) {
+      toast.error('Failed to mark as sent', { description: err?.message });
+    } finally {
+      setPendingId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'queued':
@@ -99,14 +139,25 @@ export function AdminSocialQueue() {
             <Share2 className="w-5 h-5" style={{ color: 'var(--accent-color)' }} />
             <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>Social Tweet Pipeline</h3>
           </div>
-          <button
-            onClick={fetchPosts}
-            disabled={loading}
-            className="admin-btn"
-            style={{ background: 'rgba(128, 128, 128, 0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={handleDedupe}
+              disabled={deduping || loading}
+              className="admin-btn"
+              title="Delete queued tweets whose text duplicates a newer one so Buffer never reposts the same content."
+              style={{ background: 'rgba(128, 128, 128, 0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <CopyX className={`w-3.5 h-3.5 ${deduping ? 'animate-spin' : ''}`} /> Clear duplicates
+            </button>
+            <button
+              onClick={fetchPosts}
+              disabled={loading}
+              className="admin-btn"
+              style={{ background: 'rgba(128, 128, 128, 0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+          </div>
         </div>
 
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
@@ -142,16 +193,17 @@ export function AdminSocialQueue() {
               <th>Tweet Preview</th>
               <th>Source</th>
               <th>Queued Date</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="admin-table-empty">Loading social posts...</td>
+                <td colSpan={6} className="admin-table-empty">Loading social posts...</td>
               </tr>
             ) : posts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="admin-table-empty">No social posts in history.</td>
+                <td colSpan={6} className="admin-table-empty">No social posts in history.</td>
               </tr>
             ) : (
               posts.map((post) => (
@@ -170,6 +222,19 @@ export function AdminSocialQueue() {
                   </td>
                   <td data-label="Queued Date" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     {new Date(post.createdAt).toLocaleString()}
+                  </td>
+                  <td data-label="Actions">
+                    {post.status === 'queued' ? (
+                      <button
+                        onClick={() => handleMarkSent(post.id)}
+                        disabled={pendingId === post.id}
+                        className="admin-btn"
+                        title="Mark this post as sent so it drops out of the outbound RSS feed."
+                        style={{ background: 'rgba(128, 128, 128, 0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                      >
+                        <Send className="w-3.5 h-3.5" /> Mark sent
+                      </button>
+                    ) : null}
                   </td>
                 </tr>
               ))
