@@ -25,6 +25,7 @@ import { Badge } from '../../../../../components/ui/Badge';
 import { ServerAvatar } from '../../../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../../../components/ui/SafeMarkdown';
 import { CopyBlock } from '../../../../../components/ui/CopyBlock';
+import { FaqSection } from '../../../../../components/ui/FaqSection';
 import { getServerById, getRelatedServers, type Server } from '../../../../../lib/servers';
 import { isFeaturedListing, isVerifiedListing } from '../../../../../lib/featuredStatus';
 import { parseServerName } from '../../../../../lib/displayName';
@@ -437,23 +438,22 @@ export default async function ComparePage({
 
         {/* Executive Summary & Verdict Card */}
         <section
+          className="surface"
           style={{
-            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.7))',
-            border: '1px solid rgba(0, 229, 255, 0.25)',
+            border: '1px solid rgba(var(--accent-rgb, 0, 229, 255), 0.3)',
             borderRadius: 14,
             padding: '1.5rem',
             marginBottom: '2.5rem',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
             <Zap size={18} color="var(--brand-cyan)" />
-            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#ffffff' }}>
+            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>
               At a Glance & Executive Verdict
             </h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border-color)' }}>
+            <div style={{ background: 'var(--bg-muted)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border-color)' }}>
               <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--brand-cyan)', fontWeight: 700, marginBottom: 4 }}>
                 {nameL}
               </div>
@@ -461,11 +461,11 @@ export default async function ComparePage({
                 {catL} · {installL.kind === 'remote' ? 'Remote HTTP/SSE' : 'Local stdio'}
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Quality: <strong>{qL.score}/100</strong> ({qL.tier}) | Auth: <strong>{formatAuthLabel(left.authType)}</strong>
+                Quality: <strong style={{ color: 'var(--text-primary)' }}>{qL.score}/100</strong> ({qL.tier}) | Auth: <strong style={{ color: 'var(--text-primary)' }}>{formatAuthLabel(left.authType)}</strong>
               </div>
             </div>
 
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border-color)' }}>
+            <div style={{ background: 'var(--bg-muted)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border-color)' }}>
               <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--brand-cyan)', fontWeight: 700, marginBottom: 4 }}>
                 {nameR}
               </div>
@@ -473,12 +473,12 @@ export default async function ComparePage({
                 {catR} · {installR.kind === 'remote' ? 'Remote HTTP/SSE' : 'Local stdio'}
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Quality: <strong>{qR.score}/100</strong> ({qR.tier}) | Auth: <strong>{formatAuthLabel(right.authType)}</strong>
+                Quality: <strong style={{ color: 'var(--text-primary)' }}>{qR.score}/100</strong> ({qR.tier}) | Auth: <strong style={{ color: 'var(--text-primary)' }}>{formatAuthLabel(right.authType)}</strong>
               </div>
             </div>
           </div>
           <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-            <strong style={{ color: '#ffffff' }}>Verdict Summary:</strong> Choose <strong style={{ color: 'var(--brand-cyan)' }}>{nameL}</strong> if you need specialized {catL} tools running via {installL.kind === 'remote' ? 'a hosted cloud SSE transport' : 'a local process'}.
+            <strong style={{ color: 'var(--text-primary)' }}>Verdict Summary:</strong> Choose <strong style={{ color: 'var(--brand-cyan)' }}>{nameL}</strong> if you need specialized {catL} tools running via {installL.kind === 'remote' ? 'a hosted cloud SSE transport' : 'a local process'}.
             Choose <strong style={{ color: 'var(--brand-cyan)' }}>{nameR}</strong> if your workspace requires {catR} integration with {installR.kind === 'remote' ? 'remote web transport' : 'local subprocess execution'}.
             Both servers can be configured concurrently in your client's <code style={{ color: 'var(--brand-cyan)' }}>mcpServers</code> manifest.
           </div>
@@ -486,38 +486,40 @@ export default async function ComparePage({
 
         {/* "Which Should You Choose?" Decision Matrix */}
         <section style={{ marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '1.35rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
             <HelpCircle size={20} color="var(--brand-cyan)" /> Which MCP Server Should You Choose?
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {/* Card Left */}
-            <div className="surface" style={{ padding: '1.5rem', borderRadius: 12, border: '1px solid var(--border-color)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
-                <ServerAvatar name={left.name} logoUrl={left.logoUrl} size={32} />
-                <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>Choose {nameL} when:</h3>
+            <div className="surface" style={{ padding: '1.5rem', borderRadius: 12, border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
+                  <ServerAvatar name={left.name} logoUrl={left.logoUrl} size={32} />
+                  <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>Choose {nameL} when:</h3>
+                </div>
+                <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.65rem', lineHeight: 1.5 }}>
+                  <li>
+                    You need dedicated capabilities in the <strong style={{ color: 'var(--text-primary)' }}>{catL}</strong> domain.
+                  </li>
+                  <li>
+                    You prefer <strong style={{ color: 'var(--text-primary)' }}>{installL.kind === 'remote' ? 'remote streaming HTTP/SSE' : 'local stdio subprocess'}</strong> transport architecture.
+                  </li>
+                  <li>
+                    Your security boundary fits: <strong style={{ color: 'var(--text-primary)' }}>{formatAuthLabel(left.authType)}</strong> ({formatPricingLabel(left.pricingModel)}).
+                  </li>
+                  {left.aiEnvVars && left.aiEnvVars.length > 0 && (
+                    <li>
+                      You have access to required keys: <code style={{ fontSize: '0.75rem' }}>{left.aiEnvVars.join(', ')}</code>.
+                    </li>
+                  )}
+                  {toolsL.length > 0 && (
+                    <li>
+                      Primary tools included: <span style={{ color: 'var(--brand-cyan)', fontWeight: 600 }}>{toolsL.slice(0, 3).join(', ')}</span>.
+                    </li>
+                  )}
+                </ul>
               </div>
-              <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.65rem', lineHeight: 1.5 }}>
-                <li>
-                  You need dedicated capabilities in the <strong style={{ color: '#ffffff' }}>{catL}</strong> domain.
-                </li>
-                <li>
-                  You prefer <strong style={{ color: '#ffffff' }}>{installL.kind === 'remote' ? 'remote streaming HTTP/SSE' : 'local stdio subprocess'}</strong> transport architecture.
-                </li>
-                <li>
-                  Your security boundary fits: <strong style={{ color: '#ffffff' }}>{formatAuthLabel(left.authType)}</strong> ({formatPricingLabel(left.pricingModel)}).
-                </li>
-                {left.aiEnvVars && left.aiEnvVars.length > 0 && (
-                  <li>
-                    You have access to required keys: <code style={{ fontSize: '0.75rem' }}>{left.aiEnvVars.join(', ')}</code>.
-                  </li>
-                )}
-                {toolsL.length > 0 && (
-                  <li>
-                    Primary tools included: <span style={{ color: 'var(--brand-cyan)' }}>{toolsL.slice(0, 3).join(', ')}</span>.
-                  </li>
-                )}
-              </ul>
-              <div style={{ marginTop: '1.25rem' }}>
+              <div style={{ marginTop: '1.5rem' }}>
                 <Link href={`/mcp/${left.id}`} className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}>
                   Explore {nameL} Details <ArrowRight size={14} />
                 </Link>
@@ -525,33 +527,35 @@ export default async function ComparePage({
             </div>
 
             {/* Card Right */}
-            <div className="surface" style={{ padding: '1.5rem', borderRadius: 12, border: '1px solid var(--border-color)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
-                <ServerAvatar name={right.name} logoUrl={right.logoUrl} size={32} />
-                <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>Choose {nameR} when:</h3>
+            <div className="surface" style={{ padding: '1.5rem', borderRadius: 12, border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
+                  <ServerAvatar name={right.name} logoUrl={right.logoUrl} size={32} />
+                  <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>Choose {nameR} when:</h3>
+                </div>
+                <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.65rem', lineHeight: 1.5 }}>
+                  <li>
+                    You need dedicated capabilities in the <strong style={{ color: 'var(--text-primary)' }}>{catR}</strong> domain.
+                  </li>
+                  <li>
+                    You prefer <strong style={{ color: 'var(--text-primary)' }}>{installR.kind === 'remote' ? 'remote streaming HTTP/SSE' : 'local stdio subprocess'}</strong> transport architecture.
+                  </li>
+                  <li>
+                    Your security boundary fits: <strong style={{ color: 'var(--text-primary)' }}>{formatAuthLabel(right.authType)}</strong> ({formatPricingLabel(right.pricingModel)}).
+                  </li>
+                  {right.aiEnvVars && right.aiEnvVars.length > 0 && (
+                    <li>
+                      You have access to required keys: <code style={{ fontSize: '0.75rem' }}>{right.aiEnvVars.join(', ')}</code>.
+                    </li>
+                  )}
+                  {toolsR.length > 0 && (
+                    <li>
+                      Primary tools included: <span style={{ color: 'var(--brand-cyan)', fontWeight: 600 }}>{toolsR.slice(0, 3).join(', ')}</span>.
+                    </li>
+                  )}
+                </ul>
               </div>
-              <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.65rem', lineHeight: 1.5 }}>
-                <li>
-                  You need dedicated capabilities in the <strong style={{ color: '#ffffff' }}>{catR}</strong> domain.
-                </li>
-                <li>
-                  You prefer <strong style={{ color: '#ffffff' }}>{installR.kind === 'remote' ? 'remote streaming HTTP/SSE' : 'local stdio subprocess'}</strong> transport architecture.
-                </li>
-                <li>
-                  Your security boundary fits: <strong style={{ color: '#ffffff' }}>{formatAuthLabel(right.authType)}</strong> ({formatPricingLabel(right.pricingModel)}).
-                </li>
-                {right.aiEnvVars && right.aiEnvVars.length > 0 && (
-                  <li>
-                    You have access to required keys: <code style={{ fontSize: '0.75rem' }}>{right.aiEnvVars.join(', ')}</code>.
-                  </li>
-                )}
-                {toolsR.length > 0 && (
-                  <li>
-                    Primary tools included: <span style={{ color: 'var(--brand-cyan)' }}>{toolsR.slice(0, 3).join(', ')}</span>.
-                  </li>
-                )}
-              </ul>
-              <div style={{ marginTop: '1.25rem' }}>
+              <div style={{ marginTop: '1.5rem' }}>
                 <Link href={`/mcp/${right.id}`} className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}>
                   Explore {nameR} Details <ArrowRight size={14} />
                 </Link>
@@ -562,12 +566,12 @@ export default async function ComparePage({
 
         {/* Feature & Specification Comparison Table */}
         <section style={{ marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '1.35rem', marginBottom: '1rem' }}>Feature & Specification Comparison</h2>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Feature & Specification Comparison</h2>
           <div className="surface" style={{ padding: 0, overflow: 'hidden', borderRadius: 12 }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
                 <thead>
-                  <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <tr style={{ background: 'var(--bg-muted)' }}>
                     <th
                       style={{
                         padding: '1.1rem 1rem',
@@ -635,12 +639,12 @@ export default async function ComparePage({
                     label="Quality signal"
                     hint="Editorial completeness/health signal calculated by AllMCPs directory"
                     left={
-                      <span style={{ fontWeight: 700 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                         {qL.score}/100 <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>({qL.tier})</span>
                       </span>
                     }
                     right={
-                      <span style={{ fontWeight: 700 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                         {qR.score}/100 <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>({qR.tier})</span>
                       </span>
                     }
@@ -649,13 +653,13 @@ export default async function ComparePage({
                     label="Transport Protocol"
                     hint="Model Context Protocol transport layer mechanism"
                     left={
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--text-primary)' }}>
                         <Terminal size={14} color="var(--brand-cyan)" />
                         {installL.kind === 'remote' ? 'Remote HTTP/SSE' : 'Local Subprocess (stdio)'}
                       </span>
                     }
                     right={
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--text-primary)' }}>
                         <Terminal size={14} color="var(--brand-cyan)" />
                         {installR.kind === 'remote' ? 'Remote HTTP/SSE' : 'Local Subprocess (stdio)'}
                       </span>
@@ -664,13 +668,13 @@ export default async function ComparePage({
                   <Row
                     label="Auth Requirement"
                     left={
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}>
                         <Lock size={13} color="var(--text-secondary)" />
                         {formatAuthLabel(left.authType)}
                       </span>
                     }
                     right={
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}>
                         <Lock size={13} color="var(--text-secondary)" />
                         {formatAuthLabel(right.authType)}
                       </span>
@@ -679,13 +683,13 @@ export default async function ComparePage({
                   <Row
                     label="Pricing Model"
                     left={
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}>
                         <DollarSign size={13} color="#34d399" />
                         {formatPricingLabel(left.pricingModel)}
                       </span>
                     }
                     right={
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}>
                         <DollarSign size={13} color="#34d399" />
                         {formatPricingLabel(right.pricingModel)}
                       </span>
@@ -697,7 +701,7 @@ export default async function ComparePage({
                       left.aiEnvVars && left.aiEnvVars.length > 0 ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                           {left.aiEnvVars.map((v: string) => (
-                            <code key={v} style={{ fontSize: '0.725rem', padding: '0.2rem 0.4rem', borderRadius: 4, background: 'rgba(255,255,255,0.06)' }}>
+                            <code key={v} style={{ fontSize: '0.725rem', padding: '0.2rem 0.4rem', borderRadius: 4, background: 'var(--bg-muted)' }}>
                               {v}
                             </code>
                           ))}
@@ -710,7 +714,7 @@ export default async function ComparePage({
                       right.aiEnvVars && right.aiEnvVars.length > 0 ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                           {right.aiEnvVars.map((v: string) => (
-                            <code key={v} style={{ fontSize: '0.725rem', padding: '0.2rem 0.4rem', borderRadius: 4, background: 'rgba(255,255,255,0.06)' }}>
+                            <code key={v} style={{ fontSize: '0.725rem', padding: '0.2rem 0.4rem', borderRadius: 4, background: 'var(--bg-muted)' }}>
                               {v}
                             </code>
                           ))}
@@ -788,7 +792,7 @@ export default async function ComparePage({
                   <Row
                     label="Verified / Official"
                     left={
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                         {isVerifiedListing(left) ? (
                           <>
                             <BadgeCheck size={16} color="#34d399" /> Yes (Verified)
@@ -799,7 +803,7 @@ export default async function ComparePage({
                       </span>
                     }
                     right={
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                         {isVerifiedListing(right) ? (
                           <>
                             <BadgeCheck size={16} color="#34d399" /> Yes (Verified)
@@ -831,12 +835,12 @@ export default async function ComparePage({
 
         {/* Side-by-Side Tools & Capabilities Inspector */}
         <section style={{ marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '1.35rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
             <Wrench size={20} color="var(--brand-cyan)" /> Tools & Capabilities Breakdown
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             <div className="surface" style={{ padding: '1.5rem', borderRadius: 12 }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#ffffff', fontWeight: 700 }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--text-primary)', fontWeight: 700 }}>
                 {nameL} Tools ({left.tools?.length || toolsL.length})
               </h3>
               {toolsL.length > 0 ? (
@@ -844,7 +848,7 @@ export default async function ComparePage({
                   {toolsL.map((t: string) => {
                     const toolObj = left.tools?.find((item) => item.name === t);
                     return (
-                      <div key={t} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.85rem', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                      <div key={t} style={{ background: 'var(--bg-muted)', padding: '0.65rem 0.85rem', borderRadius: 8, border: '1px solid var(--border-color)' }}>
                         <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--brand-cyan)', display: 'flex', alignItems: 'center', gap: 6 }}>
                           <Wrench size={12} /> {t}
                         </div>
@@ -870,7 +874,7 @@ export default async function ComparePage({
             </div>
 
             <div className="surface" style={{ padding: '1.5rem', borderRadius: 12 }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#ffffff', fontWeight: 700 }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--text-primary)', fontWeight: 700 }}>
                 {nameR} Tools ({right.tools?.length || toolsR.length})
               </h3>
               {toolsR.length > 0 ? (
@@ -878,7 +882,7 @@ export default async function ComparePage({
                   {toolsR.map((t: string) => {
                     const toolObj = right.tools?.find((item) => item.name === t);
                     return (
-                      <div key={t} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.85rem', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                      <div key={t} style={{ background: 'var(--bg-muted)', padding: '0.65rem 0.85rem', borderRadius: 8, border: '1px solid var(--border-color)' }}>
                         <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--brand-cyan)', display: 'flex', alignItems: 'center', gap: 6 }}>
                           <Wrench size={12} /> {t}
                         </div>
@@ -907,7 +911,7 @@ export default async function ComparePage({
 
         {/* Ready-to-Paste Client Configuration Snippets */}
         <section style={{ marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '1.35rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
             <Code2 size={20} color="var(--brand-cyan)" /> Ready-to-Paste Client Configurations
           </h2>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
@@ -915,14 +919,14 @@ export default async function ComparePage({
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: '#ffffff' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                 {nameL} Configuration
               </div>
               <CopyBlock code={snippetL} serverId={left.id} title="mcpServers (Claude Desktop / Cursor)" language="json" />
             </div>
 
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: '#ffffff' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
                 {nameR} Configuration
               </div>
               <CopyBlock code={snippetR} serverId={right.id} title="mcpServers (Claude Desktop / Cursor)" language="json" />
@@ -930,62 +934,62 @@ export default async function ComparePage({
           </div>
         </section>
 
-        {/* Detailed FAQ Section */}
+        {/* Shared FaqSection Component (Theme-Safe) */}
         <section style={{ marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '1.35rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <HelpCircle size={20} color="var(--brand-cyan)" /> Frequently Asked Questions
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
-                What is the main functional difference between {nameL} and {nameR}?
-              </h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                {nameL} is categorized under <strong>{catL}</strong> and uses a <strong>{installL.kind === 'remote' ? 'remote streaming HTTP/SSE transport' : 'local stdio subprocess'}</strong>.
-                In contrast, {nameR} belongs to <strong>{catR}</strong> using <strong>{installR.kind === 'remote' ? 'remote streaming HTTP/SSE transport' : 'local stdio subprocess'}</strong>.
-                Select {nameL} when you need capabilities focused on {catL.toLowerCase()} and {nameR} when you require tools for {catR.toLowerCase()}.
-              </p>
-            </div>
-
-            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
-                How do I install {nameL} or {nameR} in Claude Desktop, Cursor, or Windsurf?
-              </h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Both servers follow the standard Model Context Protocol configuration format. Simply copy the JSON block from the configuration section above and paste it into your AI client's <code>mcpServers</code> configuration object (for instance in <code>claude_desktop_config.json</code> or <code>~/.cursor/mcp.json</code>), then completely restart or refresh the application.
-              </p>
-            </div>
-
-            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
-                Are {nameL} and {nameR} free to use, or do they require API keys?
-              </h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                {nameL} is listed under a <strong>{formatPricingLabel(left.pricingModel)}</strong> model with <strong>{formatAuthLabel(left.authType)}</strong>.
-                {nameR} operates under a <strong>{formatPricingLabel(right.pricingModel)}</strong> model with <strong>{formatAuthLabel(right.authType)}</strong>.
-                If environment variables are required (such as API keys), be sure to define them under the <code>env</code> key in your MCP client's configuration file.
-              </p>
-            </div>
-
-            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
-                Can I run both {nameL} and {nameR} at the same time in my AI client?
-              </h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Yes! MCP clients support multi-server orchestration. You can include both <code>{left.id}</code> and <code>{right.id}</code> as distinct keys inside the single <code>mcpServers</code> object in your configuration file. Your AI assistant will automatically select and call the appropriate tool from either server during chat sessions.
-              </p>
-            </div>
-
-            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
-                Which MCP server has higher directory engagement and quality ratings?
-              </h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                On AllMCPs, {nameL} has a Quality Score of <strong>{qL.score}/100 ({qL.tier})</strong> with {(left.views || 0).toLocaleString()} views, {(left.copies || 0).toLocaleString()} installs, and {(left.githubStars || 0).toLocaleString()} GitHub stars.
-                {nameR} holds a Quality Score of <strong>{qR.score}/100 ({qR.tier})</strong> with {(right.views || 0).toLocaleString()} views, {(right.copies || 0).toLocaleString()} installs, and {(right.githubStars || 0).toLocaleString()} GitHub stars.
-              </p>
-            </div>
-          </div>
+          <FaqSection
+            title={
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <HelpCircle size={20} color="var(--brand-cyan)" /> Frequently Asked Questions
+              </span>
+            }
+            items={[
+              {
+                question: `What is the main functional difference between ${nameL} and ${nameR}?`,
+                answer: (
+                  <p style={{ margin: 0 }}>
+                    {nameL} is categorized under <strong>{catL}</strong> and uses a <strong>{installL.kind === 'remote' ? 'remote streaming HTTP/SSE transport' : 'local stdio subprocess'}</strong>.
+                    In contrast, {nameR} belongs to <strong>{catR}</strong> using <strong>{installR.kind === 'remote' ? 'remote streaming HTTP/SSE transport' : 'local stdio subprocess'}</strong>.
+                    Select {nameL} when you need capabilities focused on {catL.toLowerCase()} and {nameR} when you require tools for {catR.toLowerCase()}.
+                  </p>
+                ),
+              },
+              {
+                question: `How do I install ${nameL} or ${nameR} in Claude Desktop, Cursor, or Windsurf?`,
+                answer: (
+                  <p style={{ margin: 0 }}>
+                    Both servers follow the standard Model Context Protocol configuration format. Simply copy the JSON block from the configuration section above and paste it into your AI client's <code>mcpServers</code> configuration object (for instance in <code>claude_desktop_config.json</code> or <code>~/.cursor/mcp.json</code>), then completely restart or refresh the application.
+                  </p>
+                ),
+              },
+              {
+                question: `Are ${nameL} and ${nameR} free to use, or do they require API keys?`,
+                answer: (
+                  <p style={{ margin: 0 }}>
+                    {nameL} is listed under a <strong>{formatPricingLabel(left.pricingModel)}</strong> model with <strong>{formatAuthLabel(left.authType)}</strong>.
+                    {nameR} operates under a <strong>{formatPricingLabel(right.pricingModel)}</strong> model with <strong>{formatAuthLabel(right.authType)}</strong>.
+                    If environment variables are required (such as API keys), be sure to define them under the <code>env</code> key in your MCP client's configuration file.
+                  </p>
+                ),
+              },
+              {
+                question: `Can I run both ${nameL} and ${nameR} at the same time in my AI client?`,
+                answer: (
+                  <p style={{ margin: 0 }}>
+                    Yes! MCP clients support multi-server orchestration. You can include both <code>{left.id}</code> and <code>{right.id}</code> as distinct keys inside the single <code>mcpServers</code> object in your configuration file. Your AI assistant will automatically select and call the appropriate tool from either server during chat sessions.
+                  </p>
+                ),
+              },
+              {
+                question: `Which MCP server has higher directory engagement and quality ratings?`,
+                answer: (
+                  <p style={{ margin: 0 }}>
+                    On AllMCPs, {nameL} has a Quality Score of <strong>{qL.score}/100 ({qL.tier})</strong> with {(left.views || 0).toLocaleString()} views, {(left.copies || 0).toLocaleString()} installs, and {(left.githubStars || 0).toLocaleString()} GitHub stars.
+                    {nameR} holds a Quality Score of <strong>{qR.score}/100 ({qR.tier})</strong> with {(right.views || 0).toLocaleString()} views, {(right.copies || 0).toLocaleString()} installs, and {(right.githubStars || 0).toLocaleString()} GitHub stars.
+                  </p>
+                ),
+              },
+            ]}
+          />
         </section>
 
         {/* Alternative Links & Category Hub Navigation */}
@@ -1009,7 +1013,7 @@ export default async function ComparePage({
         {/* Peer Comparisons for Both Servers */}
         {(moreAltsLeft.length > 0 || moreAltsRight.length > 0) && (
           <section style={{ borderTop: '1px solid var(--border-color)', paddingTop: '2rem' }}>
-            <h2 style={{ fontSize: '1.35rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h2 style={{ fontSize: '1.35rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}>
               <Layers size={20} color="var(--brand-cyan)" /> Related MCP Server Comparisons
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
@@ -1035,7 +1039,7 @@ export default async function ComparePage({
                               border: '1px solid var(--border-color)',
                               textDecoration: 'none',
                               color: 'inherit',
-                              background: 'rgba(255, 255, 255, 0.02)',
+                              background: 'var(--bg-muted)',
                             }}
                           >
                             <ServerAvatar name={alt.name} logoUrl={alt.logoUrl} size={28} />
@@ -1071,7 +1075,7 @@ export default async function ComparePage({
                               border: '1px solid var(--border-color)',
                               textDecoration: 'none',
                               color: 'inherit',
-                              background: 'rgba(255, 255, 255, 0.02)',
+                              background: 'var(--bg-muted)',
                             }}
                           >
                             <ServerAvatar name={alt.name} logoUrl={alt.logoUrl} size={28} />
