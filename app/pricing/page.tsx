@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { PricingClient } from './PricingClient';
 import { PAID_PRODUCTS, FREE_TIER, formatUsd, tieredSavingsPct, type PaidSku } from '../../lib/pricing';
+import { getSiteStats } from '../../lib/siteStats';
+import { FaqSection } from '../../components/ui/FaqSection';
 import { Sparkles, Zap, Crown, Check, HelpCircle, ShieldCheck, BarChart3, Link2, TrendingUp, Clock, ArrowRight, X } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -55,7 +57,7 @@ export default async function PricingPage({
 }: {
   searchParams: Promise<{ serverId?: string; category?: string; canceled?: string; sku?: string }>;
 }) {
-  const params = await searchParams;
+  const [params, siteStats] = await Promise.all([searchParams, getSiteStats()]);
   const serverId = typeof params.serverId === 'string' ? params.serverId : '';
   const canceled = params.canceled === '1';
   const sku: PaidSku | null =
@@ -168,20 +170,26 @@ export default async function PricingPage({
           }}
         >
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>500+</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+              {siteStats.totalServers.toLocaleString()}+
+            </p>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>MCP Servers Indexed</p>
           </div>
           <div style={{ textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-color)', margin: 0 }}>25k+</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Monthly Agent Queries</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-color)', margin: 0 }}>
+              {siteStats.categoryCount.toLocaleString()}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Active Categories</p>
           </div>
           <div style={{ textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--verified-green)', margin: 0 }}>&lt; 24h</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Priority Review Turnaround</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--verified-green)', margin: 0 }}>
+              {siteStats.toolsIndexed > 0 ? `${siteStats.toolsIndexed.toLocaleString()}+` : '3,000+'}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Tools Introspected</p>
           </div>
           <div style={{ textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--gold-color)', margin: 0 }}>100%</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Dofollow Backlink SEO</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--gold-color)', margin: 0 }}>&lt; 24h</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Priority Queue Turnaround</p>
           </div>
         </div>
 
@@ -300,7 +308,7 @@ export default async function PricingPage({
                     display: 'flex',
                     flexDirection: 'column',
                     border: '2px solid var(--accent-color)',
-                    background: 'linear-gradient(160deg, rgba(var(--accent-rgb),0.14), rgba(var(--accent-secondary-rgb),0.08), #0f172a)',
+                    background: 'linear-gradient(160deg, rgba(var(--accent-rgb),0.12), rgba(var(--accent-secondary-rgb),0.06), var(--bg-elevated))',
                     scrollMarginTop: '5rem',
                     boxShadow: '0 12px 40px rgba(var(--accent-rgb), 0.18)',
                     position: 'relative',
@@ -340,7 +348,7 @@ export default async function PricingPage({
                   <div style={{ marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '2.5rem', fontWeight: 800 }}>{formatUsd(p.unitAmount)}</span>
                     <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>/mo</span>
-                    <div style={{ display: 'inline-block', marginLeft: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '6px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', fontSize: '0.725rem', fontWeight: 700 }}>
+                    <div style={{ display: 'inline-block', marginLeft: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', background: 'var(--verified-green-bg)', border: '1px solid var(--verified-green-border)', color: 'var(--verified-green)', fontSize: '0.75rem', fontWeight: 700 }}>
                       Or $149/yr (Save 35%)
                     </div>
                   </div>
@@ -403,7 +411,7 @@ export default async function PricingPage({
                     flexDirection: 'column',
                     border: isCategorySponsor ? '1px solid rgba(var(--gold-rgb),0.4)' : '1px solid var(--border-color)',
                     background: isCategorySponsor
-                      ? 'linear-gradient(160deg, rgba(var(--gold-rgb),0.08), rgba(255,140,0,0.04), #0f172a)'
+                      ? 'linear-gradient(160deg, rgba(var(--gold-rgb),0.08), rgba(255,140,0,0.04), var(--bg-elevated))'
                       : 'var(--bg-elevated)',
                     scrollMarginTop: '5rem',
                   }}
@@ -447,7 +455,7 @@ export default async function PricingPage({
                     )}
                   </div>
                   {p.weeklyTiers && (
-                    <p style={{ fontSize: '0.775rem', color: '#34d399', fontWeight: 600, marginBottom: '0.85rem' }}>
+                    <p style={{ fontSize: '0.775rem', color: 'var(--verified-green)', fontWeight: 600, marginBottom: '0.85rem' }}>
                       Buy {p.maxWeeks || 8} weeks at checkout — save up to{' '}
                       {tieredSavingsPct(p, p.maxWeeks || 8)}%
                     </p>
@@ -500,59 +508,59 @@ export default async function PricingPage({
               <tbody style={{ color: 'var(--text-secondary)' }}>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Directory Search & Category Indexing</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Guaranteed &lt; 24h Review Turnaround</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Homepage Discovery Grid Spotlight</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Pinned #1 Spot on Category Page</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Dofollow SEO Website Backlink</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Live Agent & LLM Access Analytics</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Verified Badge & Glowing Card Border</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="#64748b" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="#34d399" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
               </tbody>
             </table>
@@ -568,34 +576,16 @@ export default async function PricingPage({
 
         {/* Frequently Asked Questions Section */}
         <div style={{ marginTop: '4.5rem', marginBottom: '3rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.4rem' }}>Frequently Asked Questions</h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Everything you need to know about listing, boosting, and billing on AllMCPs.</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-            {FAQ_ITEMS.map((item, idx) => (
-              <details
-                key={idx}
-                className="surface"
-                style={{
-                  padding: '1.25rem 1.5rem',
-                  borderRadius: '14px',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-elevated)',
-                  cursor: 'pointer',
-                }}
-              >
-                <summary style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{item.q}</span>
-                  <HelpCircle size={18} color="var(--accent-color)" style={{ flexShrink: 0, marginLeft: '0.5rem' }} />
-                </summary>
-                <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                  {item.a}
-                </p>
-              </details>
-            ))}
-          </div>
+          <FaqSection
+            items={FAQ_ITEMS.map((item) => ({ question: item.q, answer: item.a }))}
+            defaultOpenIndex={0}
+            renderJsonLd={false}
+          />
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '3rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
