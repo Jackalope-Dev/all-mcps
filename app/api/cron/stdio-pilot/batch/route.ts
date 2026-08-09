@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, desc, eq, isNotNull, lt, notInArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, lt, notInArray } from 'drizzle-orm';
 import { servers, stdioVerificationPilot } from '../../../../../db/schema';
 import { isAdminAuthorized } from '../../../../../lib/adminAuth';
 import { parseArgsJson } from '../../../../../lib/installConfig';
@@ -132,6 +132,24 @@ export async function POST(req: Request) {
         installArgs: parseArgsJson(r.installArgs) ?? [],
         installPackage: r.installPackage as string,
       }));
+
+    // The overselect above claims up to batchSize*2 candidates for claim-race
+    // headroom, but only batchSize are ever handed to a caller — the rest sat
+    // 'pending' and unreachable until PENDING_STALE_MS next got them released
+    // (confirmed in practice: a single-page request stranded 100 rows this
+    // way). Release them immediately instead of leaving that gap.
+    const returnedIds = new Set(batch.map((b) => b.id));
+    const strandedIds = [...claimedIds].filter((id) => !returnedIds.has(id as string));
+    if (strandedIds.length > 0) {
+      await db
+        .delete(stdioVerificationPilot)
+        .where(
+          and(
+            inArray(stdioVerificationPilot.serverId, strandedIds as string[]),
+            eq(stdioVerificationPilot.status, 'pending')
+          )
+        );
+    }
 
     return NextResponse.json({ success: true, batch, count: batch.length });
   } catch (error: any) {

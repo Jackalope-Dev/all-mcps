@@ -166,9 +166,24 @@ function makeJsonRpcReader() {
   return { feed, waitFor };
 }
 
+/**
+ * The E2B base sandbox has npx/node but not uv/uvx — confirmed in practice:
+ * 23 of 34 install_failed results in one clean pilot batch were the exact
+ * same "uvx: command not found", not 23 different broken listings. Bootstrap
+ * it inline (idempotent, cheap if already present) rather than requiring a
+ * custom E2B template.
+ */
+function withRunnerBootstrap(command, cmd) {
+  if (command !== 'uvx') return cmd;
+  return (
+    '(command -v uvx >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1); ' +
+    `export PATH="$HOME/.local/bin:$PATH"; ${cmd}`
+  );
+}
+
 async function verifyListing(listing) {
   const started = Date.now();
-  const cmd = [listing.installCommand, ...listing.installArgs].join(' ');
+  const cmd = withRunnerBootstrap(listing.installCommand, [listing.installCommand, ...listing.installArgs].join(' '));
   let sbx;
   let stderrBuf = '';
   const reader = makeJsonRpcReader();
