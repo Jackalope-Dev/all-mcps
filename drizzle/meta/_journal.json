@@ -204,6 +204,13 @@
       "when": 1786327000000,
       "tag": "0032_server_health_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1786328000000,
+      "tag": "0033_health_check_remote_field",
+      "breakpoints": true
     }
   ]
 }

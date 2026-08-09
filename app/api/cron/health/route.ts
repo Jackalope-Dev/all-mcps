@@ -432,6 +432,9 @@ export async function POST(req: Request) {
         checkedAt: now,
         healthy: isVerifiedActive,
         detail: isVerifiedActive ? null : healthStatus,
+        // Only meaningfully set (non-carried-forward) when this listing has a
+        // remoteEndpointUrl — see remoteEndpointHealthy's declaration above.
+        remoteHealthy: server.remoteEndpointUrl ? remoteEndpointHealthy : null,
       });
       const keepIds = await db
         .select({ id: serverHealthChecks.id })

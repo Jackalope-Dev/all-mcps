@@ -307,6 +307,14 @@ export const serverHealthChecks = sqliteTable('server_health_checks', {
   healthy: integer('healthy', { mode: 'boolean' }).notNull(),
   /** Short reason on failure (e.g. "HTTP 522"). Null on success. */
   detail: text('detail'),
+  /**
+   * The remote-endpoint reading from this same check pass, alongside the
+   * primary `healthy` signal above — lets the quality score's "Server
+   * availability" component use a rolling window instead of a single live
+   * snapshot (see lib/qualityScore.ts). Null when this listing has no
+   * remoteEndpointUrl, or on rows predating this column.
+   */
+  remoteHealthy: integer('remote_healthy', { mode: 'boolean' }),
 }, (table) => ({
   serverIdx: index('idx_health_checks_server').on(table.serverId),
   checkedIdx: index('idx_health_checks_checked').on(table.checkedAt),

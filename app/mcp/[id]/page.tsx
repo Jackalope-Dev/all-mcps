@@ -29,7 +29,7 @@ import { OwnerZone } from '../../../components/ui/OwnerZone';
 import { ClaimHintLink } from '../../../components/ui/ClaimHintLink';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
-import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, getServerHealthHistory, type Server } from '../../../lib/servers';
+import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, getServerHealthHistory, computeCombinedAvailabilityPct, type Server } from '../../../lib/servers';
 import { HealthHistoryStrip } from '../../../components/ui/HealthHistoryStrip';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
@@ -185,6 +185,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
       new Date(rawPilotResult.checkedAt).getTime() >= new Date(server.installExtractedAt).getTime())
       ? rawPilotResult
       : null;
+  // Rolling remote-endpoint history combined with a confirmed-fresh pilot
+  // pass — see computeCombinedAvailabilityPct in lib/servers.ts for why this
+  // takes priority over a single live snapshot in the quality score.
+  const combinedAvailabilityPct = computeCombinedAvailabilityPct(healthHistory, pilotResult?.status === 'ok');
+  const serverForScoring: Server =
+    combinedAvailabilityPct != null ? { ...server, combinedAvailabilityPct } : server;
   // Live tools/list handshake (health cron) already confirmed the server itself
   // works — used to soften the "not yet checked" install-sandbox message below
   // so it doesn't contradict the verified badge shown elsewhere on the page.
@@ -1205,7 +1211,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </div>
 
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem' }}>
-              <QualityBadge server={server} />
+              <QualityBadge server={serverForScoring} />
             </div>
           </div>
 

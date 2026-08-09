@@ -156,6 +156,17 @@ export type Server = {
   /** Live health of remoteEndpointUrl specifically, from the health cron's handshake. Separate from healthStatus/isVerifiedActive, which track the primary url. Null = never checked. */
   remoteEndpointHealthy?: boolean | null;
   remoteEndpointCheckedAt?: string | Date | null;
+  /**
+   * Combined "we actually observed this server working" signal for the
+   * quality score's availability component — max of the rolling
+   * remote-endpoint check history and a recent E2B stdio pilot pass, so a
+   * transient failure on one transport doesn't erase a confirmed-working
+   * result from the other. Not persisted; computed and attached only where a
+   * caller has both signals on hand (currently just the detail page — see
+   * app/mcp/[id]/page.tsx). Undefined everywhere else, where
+   * computeQualityScore falls back to the live remoteEndpointHealthy snapshot.
+   */
+  combinedAvailabilityPct?: number | null;
   /** LLM-generated content layer (see lib/aiContent + /api/cron/ai-content). */
   aiSummary?: string | null;
   aiOverview?: string | null;
@@ -637,6 +648,8 @@ export type ServerHealthCheck = {
   checkedAt: string | Date;
   healthy: boolean;
   detail: string | null;
+  /** Remote-endpoint reading from the same check pass. Null = no remoteEndpointUrl, or predates this column. */
+  remoteHealthy: boolean | null;
 };
 
 /**
@@ -655,6 +668,7 @@ export async function getServerHealthHistory(serverId: string): Promise<ServerHe
         checkedAt: serverHealthChecks.checkedAt,
         healthy: serverHealthChecks.healthy,
         detail: serverHealthChecks.detail,
+        remoteHealthy: serverHealthChecks.remoteHealthy,
       })
       .from(serverHealthChecks)
       .where(eq(serverHealthChecks.serverId, serverId))
@@ -664,6 +678,33 @@ export async function getServerHealthHistory(serverId: string): Promise<ServerHe
   } catch {
     return [];
   }
+}
+
+/** Below this many remote-endpoint readings, prefer the live snapshot over a rolling % (too little data to trust a trend). */
+const MIN_REMOTE_HISTORY_SAMPLES = 4;
+
+/**
+ * Combines the rolling remote-endpoint check history with a recent E2B
+ * stdio-pilot pass into one 0-100 availability signal — max of the two, not
+ * an average: a listing confirmed working via *either* transport shouldn't
+ * be dragged down by the other having a bad day (confirmed as a real,
+ * reported false-negative: a live remote-endpoint blip showed 0/25 on the
+ * quality score despite the stdio install being independently verified
+ * working). Returns null when neither signal has enough data to say
+ * anything, so the caller can fall back to today's live-snapshot behavior.
+ */
+export function computeCombinedAvailabilityPct(
+  history: ServerHealthCheck[],
+  pilotOk: boolean
+): number | null {
+  const remoteSamples = history.filter((h) => h.remoteHealthy !== null);
+  const remotePct =
+    remoteSamples.length >= MIN_REMOTE_HISTORY_SAMPLES
+      ? (remoteSamples.filter((h) => h.remoteHealthy).length / remoteSamples.length) * 100
+      : null;
+
+  if (remotePct === null && !pilotOk) return null;
+  return Math.max(remotePct ?? 0, pilotOk ? 100 : 0);
 }
 
 export async function fetchServerReadme(url: string): Promise<string | null> {

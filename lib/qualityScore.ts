@@ -83,7 +83,30 @@ export function computeQualityScore(server: Server): QualityScore {
     const isDeadRepo = status === 'archived' || status === 'offline';
     const hasRemoteEndpointSignal = !!server.remoteEndpointUrl && server.remoteEndpointHealthy != null;
 
-    if (hasRemoteEndpointSignal) {
+    if (server.combinedAvailabilityPct != null) {
+      // Rolling remote-endpoint check history combined with a recent E2B
+      // stdio-pilot pass (see computeCombinedAvailabilityPct in
+      // lib/servers.ts) — a real observed trend, not one live snapshot. Only
+      // set by callers with both signals on hand (currently the detail
+      // page); every other caller falls through to the branches below
+      // unchanged. Takes priority over the raw snapshot: confirmed in
+      // practice, a listing with a working stdio install was showing 0/25
+      // purely because its separate remote endpoint had a transient blip at
+      // the exact moment of the live check.
+      const pct = server.combinedAvailabilityPct;
+      components.push({
+        key: 'health',
+        label: 'Server availability',
+        earned: Math.round((pct / 100) * max),
+        max,
+        hint:
+          pct >= 100
+            ? 'Confirmed working recently — a live MCP handshake or an automated install/tools check succeeded.'
+            : pct > 0
+              ? `Reachable in ${Math.round(pct)}% of recent automated checks.`
+              : "Recent automated checks haven't been able to reach this server.",
+      });
+    } else if (hasRemoteEndpointSignal) {
       components.push({
         key: 'health',
         label: 'Server availability',
