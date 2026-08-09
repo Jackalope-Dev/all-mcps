@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable } from '../../../../db/schema';
-import { eq } from 'drizzle-orm';
-import serversData from '../../../../data/mcp-servers.json';
+import { getServerById } from '../../../../lib/servers';
 
 type Theme = 'dark' | 'light';
 type Style = 'shield' | 'flat-square' | 'featured' | 'directory';
@@ -239,43 +235,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   let views = 0;
   let copies = 0;
 
-  try {
-    const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select({
-          isOfficial: serversTable.isOfficial,
-          upvotes: serversTable.upvotes,
-          views: serversTable.views,
-          copies: serversTable.copies,
-        })
-        .from(serversTable)
-        .where(eq(serversTable.id, id))
-        .limit(1);
-
-      if (dbServers.length > 0) {
-        isOfficial = dbServers[0].isOfficial || false;
-        upvotes = dbServers[0].upvotes || 0;
-        views = dbServers[0].views || 0;
-        copies = dbServers[0].copies || 0;
-      }
-      const server = serversData.find((s: any) => s.id === id);
-      if (server) {
-        isOfficial = server.isOfficial || false;
-        upvotes = (server as any).upvotes || 0;
-        views = (server as any).views || 0;
-        copies = (server as any).copies || 0;
-      }
-    }
-  } catch (e) {
-    const server = serversData.find((s: any) => s.id === id);
-    if (server) {
-      isOfficial = server.isOfficial || false;
-      upvotes = (server as any).upvotes || 0;
-      views = (server as any).views || 0;
-      copies = (server as any).copies || 0;
-    }
+  const server = await getServerById(id);
+  if (server) {
+    isOfficial = server.isOfficial || false;
+    upvotes = server.upvotes || 0;
+    views = server.views || 0;
+    copies = server.copies || 0;
   }
 
   const metricsData = { upvotes, views, copies };
