@@ -41,7 +41,7 @@ export type OpenAIChatFailure = {
 export type OpenAIChatResult = OpenAIChatSuccess | OpenAIChatFailure;
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
-const DEFAULT_MODEL = 'gpt-5.6-luna';
+const DEFAULT_MODEL = 'gpt-4.1-mini';
 const DEFAULT_TIMEOUT_MS = 20_000;
 
 /** Status codes that mean "stop spending / don't hammer" rather than transient blips. */
@@ -86,7 +86,7 @@ export async function getOpenAIApiKey(): Promise<string | undefined> {
 
 export type ChatCompletionOptions = {
   messages: OpenAIChatMessage[];
-  /** Any OpenAI chat model id the account can access. Defaults to gpt-5.6-luna. */
+  /** Any OpenAI chat model id the account can access. Defaults to gpt-4.1-mini. */
   model?: string;
   temperature?: number;
   maxTokens?: number;

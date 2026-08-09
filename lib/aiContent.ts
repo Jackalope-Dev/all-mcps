@@ -321,7 +321,7 @@ export async function generateListingContent(
     compatibleClients?: unknown;
     install?: unknown;
   }>({
-    model: 'gpt-5.6-luna',
+    model: 'gpt-4.1-mini',
     temperature: 0.3,
     // Bumped from 900 to give the new "install" object headroom — the existing
     // fields already used most of that budget, and a truncated response fails

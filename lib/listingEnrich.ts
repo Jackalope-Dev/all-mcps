@@ -382,7 +382,7 @@ export async function pickBestWebsiteAndLogoWithLlm(input: {
     websiteUrl?: string;
     logoUrl?: string;
   }>({
-    model: 'gpt-5.6-luna',
+    model: 'gpt-4.1-mini',
     maxTokens: 300,
     timeoutMs: 10_000,
     messages: [
