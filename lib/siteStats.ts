@@ -227,7 +227,12 @@ export async function getSiteStats(): Promise<SiteStats> {
           introspected: sql<number>`sum(case when ${servers.toolsSource} = 'introspected' then 1 else 0 end)`,
           readme: sql<number>`sum(case when ${servers.toolsSource} = 'readme' then 1 else 0 end)`,
           reciprocalBadges: sql<number>`sum(case when ${servers.reciprocalBadgeOk} = 1 then 1 else 0 end)`,
-          recentCommits: sql<number>`sum(case when ${servers.lastCommitAt} >= ${cutoff} then 1 else 0 end)`,
+          // Uses gte() (not a bare `${cutoff}` interpolation) so Drizzle encodes the Date
+          // through the column's own timestamp mapping — binding a raw JS Date directly as
+          // a sql-template parameter fails at the D1 driver level and previously rejected
+          // this whole multi-column query, silently falling back to stale snapshot values
+          // for introspected/readme/reciprocalBadges/verified too, not just this field.
+          recentCommits: sql<number>`sum(case when ${gte(servers.lastCommitAt, cutoff)} then 1 else 0 end)`,
           verified: sql<number>`sum(case when ${servers.isOfficial} = 1 or ${servers.isPremium} = 1 or ${servers.websiteVerified} = 1 then 1 else 0 end)`,
         })
         .from(servers)
