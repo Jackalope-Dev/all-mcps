@@ -6,6 +6,7 @@ import { Card } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
+import { FaqSection } from '../../../components/ui/FaqSection';
 import { getActiveServers, relatedRankingScore, type Server } from '../../../lib/servers';
 import {
   DIRECTORY_CATEGORIES,
@@ -345,36 +346,36 @@ export default async function CategoryLandingPage({
         )}
 
         {/* Query-Forward AEO/SEO Information Section */}
-        <section style={{ marginTop: '4rem', paddingTop: '2.5rem', borderTop: '1px solid var(--border-color, rgba(255,255,255,0.1))' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>
-            Frequently Asked Questions about {label} MCP Servers
-          </h2>
-          <div style={{ display: 'grid', gap: '1.5rem' }}>
-            <div className="surface" style={{ padding: '1.5rem', borderRadius: '12px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                What are {label} Model Context Protocol (MCP) servers?
-              </h3>
-              <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Model Context Protocol (MCP) servers in the <strong>{label}</strong> category allow AI assistants (such as Claude Desktop, Cursor, Windsurf, and Cline) to connect directly to {label.toLowerCase()} tools, APIs, and databases without manual copy-pasting.
-              </p>
-            </div>
-            <div className="surface" style={{ padding: '1.5rem', borderRadius: '12px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                How do I connect a {label} MCP server to Claude Desktop or Cursor?
-              </h3>
-              <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                To install a {label} MCP server, select your desired server from the directory, copy the JSON configuration snippet, and add it to your client config file (such as <code>claude_desktop_config.json</code> or <code>.cursor/mcp.json</code>).
-              </p>
-            </div>
-            <div className="surface" style={{ padding: '1.5rem', borderRadius: '12px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                Are {label} MCP servers free to use?
-              </h3>
-              <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Yes, all {label} MCP servers listed in this directory are open-source and free to integrate into compatible Model Context Protocol clients.
-              </p>
-            </div>
-          </div>
+        <section style={{ marginTop: '4rem', paddingTop: '2.5rem', borderTop: '1px solid var(--border-color)' }}>
+          <FaqSection
+            title={`Frequently Asked Questions about ${label} MCP Servers`}
+            items={[
+              {
+                question: `What are ${label} Model Context Protocol (MCP) servers?`,
+                answer: (
+                  <p style={{ margin: 0 }}>
+                    Model Context Protocol (MCP) servers in the <strong>{label}</strong> category allow AI assistants (such as Claude Desktop, Cursor, Windsurf, and Cline) to connect directly to {label.toLowerCase()} tools, APIs, and databases without manual copy-pasting.
+                  </p>
+                ),
+              },
+              {
+                question: `How do I connect a ${label} MCP server to Claude Desktop or Cursor?`,
+                answer: (
+                  <p style={{ margin: 0 }}>
+                    To install a {label} MCP server, select your desired server from the directory, copy the JSON configuration snippet, and add it to your client config file (such as <code>claude_desktop_config.json</code> or <code>.cursor/mcp.json</code>).
+                  </p>
+                ),
+              },
+              {
+                question: `Are ${label} MCP servers free to use?`,
+                answer: (
+                  <p style={{ margin: 0 }}>
+                    Yes, all {label} MCP servers listed in this directory are open-source and free to integrate into compatible Model Context Protocol clients.
+                  </p>
+                ),
+              },
+            ]}
+          />
         </section>
       </main>
     </>

@@ -43,6 +43,7 @@ import { ToolSchemaInspector } from '../../../components/ui/ToolSchemaInspector'
 import { CollapsibleText } from '../../../components/CollapsibleText';
 import { MobileInstallBar } from '../../../components/MobileInstallBar';
 import { ScreenshotViewer } from '../../../components/ui/ScreenshotViewer';
+import { FaqSection } from '../../../components/ui/FaqSection';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
@@ -415,21 +416,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 </h1>
               </div>
               <div className="detail-title-badges">
-                <Badge
-                  variant="category"
-                  href={`/browse?category=${encodeURIComponent(server.category)}`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    verticalAlign: 'middle',
-                  }}
-                >
-                  <span aria-hidden="true">{catMeta.emoji}</span>
-                  <span>{catMeta.label}</span>
-                </Badge>
                 {server.isPremium && (
                   <IconTooltip
                     label="Premium listing"
@@ -492,11 +478,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </div>
             </div>
           </div>
-          {org && (
-            <div className="detail-org" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-              {org}
-            </div>
-          )}
 
           {/* Primary actions: Upvote, Repository, Website, Share & Embed */}
           <div className="mcp-header-toolbar">
@@ -858,12 +839,21 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 <h2 style={{ fontSize: '1.5rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Sparkles size={20} style={{ color: 'var(--accent-color)' }} /> Related MCP Servers
                 </h2>
-                <Link
-                  href={`/mcp/${server.id}/alternatives`}
-                  style={{ fontSize: '0.85rem', color: 'var(--accent-color)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}
-                >
-                  View all alternatives <ChevronRight size={14} />
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <Link
+                    href={`/categories/${categorySlug(server.category)}`}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.85rem', padding: '0.4rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}
+                  >
+                    View all in {catMeta.label} <ChevronRight size={14} />
+                  </Link>
+                  <Link
+                    href={`/mcp/${server.id}/alternatives`}
+                    style={{ fontSize: '0.85rem', color: 'var(--accent-color)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}
+                  >
+                    View all alternatives <ChevronRight size={14} />
+                  </Link>
+                </div>
               </div>
               <ul className="detail-related-grid">
                 {relatedServers.map((rel) => {
@@ -942,22 +932,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           )}
 
           {/* Query-Forward AEO / FAQ Block */}
-          <section className="surface detail-faq-section" style={{ padding: '1.75rem', marginTop: '2rem' }}>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-primary)' }}>
-              Frequently Asked Questions about {displayName}
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {faqItems.map((item) => (
-                <div key={item.q}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.4rem 0' }}>
-                    {item.q}
-                  </h3>
-                  <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55 }}>
-                    {item.a}
-                  </p>
-                </div>
-              ))}
-            </div>
+          <section style={{ marginTop: '2.5rem' }}>
+            <FaqSection
+              title={`Frequently Asked Questions about ${displayName}`}
+              items={faqItems.map((item) => ({ question: item.q, answer: item.a }))}
+            />
           </section>
         </div>
 

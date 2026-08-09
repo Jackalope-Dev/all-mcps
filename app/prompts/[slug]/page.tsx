@@ -5,6 +5,7 @@ import { ChevronRight, Sparkles, Terminal, Layers, Check, Copy } from 'lucide-re
 import { WORKFLOW_PROMPTS, getWorkflowBySlug } from '@/lib/prompts';
 import { Badge } from '@/components/ui/Badge';
 import { CopyBlock } from '@/components/ui/CopyBlock';
+import { FaqSection } from '@/components/ui/FaqSection';
 
 export function generateStaticParams() {
   return WORKFLOW_PROMPTS.map((w) => ({ slug: w.slug }));
@@ -161,15 +162,10 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
         {/* FAQ */}
         {workflow.faq.length > 0 && (
           <section style={{ maxWidth: '760px' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Frequently Asked Questions</h2>
-            <ul style={{ display: 'flex', flexDirection: 'column', gap: '1rem', listStyle: 'none', margin: 0, padding: 0 }}>
-              {workflow.faq.map((f) => (
-                <li key={f.q} className="surface" style={{ listStyle: 'none', padding: '1.25rem', borderRadius: '12px' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.35rem' }}>{f.q}</h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{f.a}</p>
-                </li>
-              ))}
-            </ul>
+            <FaqSection
+              title="Frequently Asked Questions"
+              items={workflow.faq.map((f) => ({ question: f.q, answer: f.a }))}
+            />
           </section>
         )}
       </main>

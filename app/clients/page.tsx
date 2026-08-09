@@ -104,7 +104,7 @@ export default function ClientsIndexPage() {
               </div>
 
               <div style={{ marginBottom: '0.75rem' }}>
-                <code style={{ fontSize: '0.75rem', background: 'rgba(2, 6, 23, 0.8)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--accent-color)' }}>
+                <code style={{ fontSize: '0.75rem', background: 'var(--bg-muted)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', color: 'var(--brand-cyan)' }}>
                   {c.configFilename}
                 </code>
               </div>

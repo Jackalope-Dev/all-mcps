@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { TableOfContents, TocItem } from '@/components/ui/TableOfContents';
+import { FaqSection } from '@/components/ui/FaqSection';
 
 export const metadata: Metadata = {
   title: 'MCP Security Best Practices: A Complete Guide',
@@ -286,36 +287,11 @@ export default function MCPSecurityPage() {
                 you to hand over the keys to everything.
               </p>
 
-              <h2 id="faq">Frequently Asked Questions</h2>
-              <div style={{ display: 'grid', gap: '1.25rem', marginTop: '1.5rem', marginBottom: '2.5rem' }}>
-                {faqs.map((f) => (
-                  <div
-                    key={f.q}
-                    style={{
-                      padding: '1.25rem 1.5rem',
-                      borderRadius: '12px',
-                      background: 'rgba(255, 255, 255, 0.025)',
-                      border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
-                    }}
-                  >
-                    <h3
-                      style={{
-                        fontSize: '1.05rem',
-                        fontWeight: 600,
-                        marginTop: 0,
-                        marginBottom: '0.5rem',
-                        color: 'var(--text-primary)',
-                        borderBottom: 'none',
-                        paddingBottom: 0,
-                      }}
-                    >
-                      {f.q}
-                    </h3>
-                    <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.65, fontSize: '0.95rem' }}>
-                      {f.a}
-                    </p>
-                  </div>
-                ))}
+              <div style={{ marginTop: '2rem', marginBottom: '2.5rem' }}>
+                <FaqSection
+                  title="Frequently Asked Questions"
+                  items={faqs.map((f) => ({ question: f.q, answer: f.a }))}
+                />
               </div>
 
               <p style={{ marginTop: '2rem' }}>
