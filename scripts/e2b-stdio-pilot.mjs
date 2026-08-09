@@ -188,29 +188,35 @@ async function verifyListing(listing) {
     // Give the process a moment to boot before writing to its stdin.
     await new Promise((r) => setTimeout(r, 1500));
 
-    await sbx.commands.sendStdin(
-      proc.pid,
-      JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2025-06-18',
-          capabilities: {},
-          clientInfo: { name: 'AllMCPs E2B Pilot', version: '1.0.0' },
-        },
-      }) + '\n'
-    );
-
     let initMsg;
     try {
+      // sendStdin itself can throw here — a process that crashed on a bad
+      // install/package before we got to write (confirmed in practice: this
+      // was landing in the outer catch as an opaque "pid not found" error,
+      // discarding the real stderr sitting right there in stderrBuf) needs
+      // the same install-failure classification as a wait-for-initialize
+      // timeout, not a generic 'error'.
+      await sbx.commands.sendStdin(
+        proc.pid,
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: {
+            protocolVersion: '2025-06-18',
+            capabilities: {},
+            clientInfo: { name: 'AllMCPs E2B Pilot', version: '1.0.0' },
+          },
+        }) + '\n'
+      );
       initMsg = await reader.waitFor(1, HANDSHAKE_TIMEOUT_MS);
-    } catch {
-      const looksLikeInstallFailure = INSTALL_FAILURE_MARKERS.some((m) => stderrBuf.includes(m));
+    } catch (e) {
+      const looksLikeInstallFailure =
+        INSTALL_FAILURE_MARKERS.some((m) => stderrBuf.includes(m)) || /pid \d+ not found/.test(e?.message || '');
       return {
         serverId: listing.id,
         status: looksLikeInstallFailure ? 'install_failed' : 'timeout',
-        error: (looksLikeInstallFailure ? stderrBuf : 'No response to initialize.').slice(0, 500),
+        error: (looksLikeInstallFailure ? stderrBuf || e?.message : 'No response to initialize.').slice(0, 500),
         durationMs: Date.now() - started,
       };
     }
@@ -223,23 +229,25 @@ async function verifyListing(listing) {
       };
     }
 
-    await sbx.commands.sendStdin(
-      proc.pid,
-      JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n'
-    );
-    await sbx.commands.sendStdin(
-      proc.pid,
-      JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }) + '\n'
-    );
-
     let toolsMsg;
     try {
+      await sbx.commands.sendStdin(
+        proc.pid,
+        JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n'
+      );
+      await sbx.commands.sendStdin(
+        proc.pid,
+        JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }) + '\n'
+      );
       toolsMsg = await reader.waitFor(2, HANDSHAKE_TIMEOUT_MS);
-    } catch {
+    } catch (e) {
       return {
         serverId: listing.id,
         status: 'handshake_failed',
-        error: 'initialize succeeded but no response to tools/list.',
+        error: (/pid \d+ not found/.test(e?.message || '')
+          ? `Process exited after initialize, before tools/list: ${stderrBuf || e.message}`
+          : 'initialize succeeded but no response to tools/list.'
+        ).slice(0, 500),
         durationMs: Date.now() - started,
       };
     }

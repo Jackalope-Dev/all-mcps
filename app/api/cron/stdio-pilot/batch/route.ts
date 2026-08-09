@@ -84,6 +84,15 @@ export async function POST(req: Request) {
           eq(servers.installKind, 'stdio'),
           isNotNull(servers.installCommand),
           isNotNull(servers.installPackage),
+          // Only test installs the LLM validator (lib/aiContent.ts) has already
+          // confirmed — it re-checks every listing on its own 4h cron and nulls
+          // installCommand/installKind when unconfident (see installExtractedAt
+          // in db/schema.ts). Skipping this let the pilot burn sandboxes on
+          // stale heuristic guesses the validator was independently discarding
+          // out from under it — confirmed in practice: 80% of one pilot batch's
+          // tested rows had already gone null in servers by the time results
+          // were reviewed.
+          isNotNull(servers.installExtractedAt),
           notInArray(
             servers.id,
             db.select({ id: stdioVerificationPilot.serverId }).from(stdioVerificationPilot)
