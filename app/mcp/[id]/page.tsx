@@ -1,5 +1,5 @@
 import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy, Clock, Info } from 'lucide-react';
-import { formatCommitAge } from '../../../lib/format';
+import { formatCommitAge, formatFullDate } from '../../../lib/format';
 import { parseArgsJson } from '../../../lib/installConfig';
 import {
   AUTH_TYPE_LABELS,
@@ -1052,7 +1052,14 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 </div>
               )}
               {formatCommitAge(server.lastCommitAt) && (
-                <div className="detail-stat-item" title="Last time this repo was pushed to, from the GitHub API">
+                <div
+                  className="detail-stat-item"
+                  title={
+                    formatFullDate(server.lastCommitAt)
+                      ? `Last commit on ${formatFullDate(server.lastCommitAt)}`
+                      : 'Last time this repo was pushed to, from the GitHub API'
+                  }
+                >
                   <span className="detail-stat-item-label">
                     <Clock size={12} style={{ color: 'var(--accent-color)' }} /> Last commit
                   </span>

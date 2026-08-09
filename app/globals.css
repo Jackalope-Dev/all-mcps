@@ -1314,6 +1314,8 @@ p {
   white-space: nowrap;
   text-decoration: none;
   border: 1px solid transparent;
+  cursor: default;
+  user-select: none;
 }
 
 .badge-default {
@@ -4982,7 +4984,7 @@ nav[aria-label="Table of contents"] {
   font-weight: 600;
 }
 
-[data-theme="light"] .badge-category:hover {
+[data-theme="light"] .badge-link.badge-category:hover {
   background: #e2e8f0;
   color: #0f172a;
   border-color: #94a3b8;

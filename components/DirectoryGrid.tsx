@@ -25,7 +25,7 @@ import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
 import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel } from '../lib/categories';
 import { compileQuery, scoreServerMatch, engagementScore, trendingScore } from '../lib/search';
-import { formatCommitAge } from '../lib/format';
+import { formatCommitAge, formatFullDate } from '../lib/format';
 
 
 type Server = {
@@ -526,7 +526,7 @@ export default function DirectoryGrid({
           </div>
         )}
         {commitAge && (
-          <div title={`Last commit: ${commitAge}`}>
+          <div title={formatFullDate(server.lastCommitAt) ? `Last commit on ${formatFullDate(server.lastCommitAt)}` : `Last commit: ${commitAge}`}>
             <Clock size={12} aria-hidden="true" /> {commitAge}
           </div>
         )}
