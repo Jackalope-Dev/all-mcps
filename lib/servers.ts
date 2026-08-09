@@ -747,8 +747,12 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
     const semanticSim = computeServerSemanticSimilarity(current, candidate);
     score += semanticSim * 120;
 
-    // Tool name overlap
-    if (current.tools?.length && candidate.tools?.length) {
+    // Tool name overlap. Array.isArray-guarded: some callers (e.g. the sitemap
+    // route) pass raw D1 rows through here without normalizeServer's JSON-column
+    // parsing, so these fields can arrive as unparsed JSON strings instead of
+    // arrays — `.length` on a non-empty string is truthy, so a plain `?.length`
+    // check isn't enough to guard the `.map`/`.forEach` calls below it.
+    if (Array.isArray(current.tools) && Array.isArray(candidate.tools) && current.tools.length && candidate.tools.length) {
       const currentNames = new Set(
         current.tools.map((t) => t.name.toLowerCase()).filter(Boolean)
       );
@@ -760,7 +764,7 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
     }
 
     // Tag overlap
-    if (current.tags?.length && candidate.tags?.length) {
+    if (Array.isArray(current.tags) && Array.isArray(candidate.tags) && current.tags.length && candidate.tags.length) {
       const currentTags = new Set(current.tags.map((t) => t.toLowerCase()));
       let tagOverlap = 0;
       for (const t of candidate.tags) {
@@ -770,7 +774,7 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
     }
 
     // Shared environment variables (indicates same API/service family)
-    if (current.aiEnvVars?.length && candidate.aiEnvVars?.length) {
+    if (Array.isArray(current.aiEnvVars) && Array.isArray(candidate.aiEnvVars) && current.aiEnvVars.length && candidate.aiEnvVars.length) {
       const currentEnvs = new Set(current.aiEnvVars.map((v) => v.toUpperCase()));
       let envOverlap = 0;
       for (const v of candidate.aiEnvVars) {
