@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, desc, eq, inArray, isNotNull, lt, notInArray } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, lt, notInArray } from 'drizzle-orm';
 import { servers, stdioVerificationPilot } from '../../../../../db/schema';
 import { isAdminAuthorized } from '../../../../../lib/adminAuth';
 import { parseArgsJson } from '../../../../../lib/installConfig';
@@ -138,17 +138,22 @@ export async function POST(req: Request) {
     // 'pending' and unreachable until PENDING_STALE_MS next got them released
     // (confirmed in practice: a single-page request stranded 100 rows this
     // way). Release them immediately instead of leaving that gap.
+    //
+    // One DELETE per row via db.batch(), not a single inArray(...) — D1 hard-
+    // caps bound parameters at 100/query (see 588406c, same limit that broke
+    // the claim insert originally). Up to ~100 stranded ids in one inArray
+    // reliably hit that cap again here, 500ing the whole response and
+    // stranding the claims with no batch ever reaching a caller (confirmed in
+    // practice: 200 claimed, 0 processed, release never ran).
     const returnedIds = new Set(batch.map((b) => b.id));
     const strandedIds = [...claimedIds].filter((id) => !returnedIds.has(id as string));
     if (strandedIds.length > 0) {
-      await db
-        .delete(stdioVerificationPilot)
-        .where(
-          and(
-            inArray(stdioVerificationPilot.serverId, strandedIds as string[]),
-            eq(stdioVerificationPilot.status, 'pending')
-          )
-        );
+      const releaseStatements = strandedIds.map((id) =>
+        db
+          .delete(stdioVerificationPilot)
+          .where(and(eq(stdioVerificationPilot.serverId, id as string), eq(stdioVerificationPilot.status, 'pending')))
+      );
+      await db.batch(releaseStatements as any);
     }
 
     return NextResponse.json({ success: true, batch, count: batch.length });
