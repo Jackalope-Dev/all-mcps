@@ -3841,6 +3841,79 @@ nav[aria-label="Table of contents"] {
   }
 }
 
+/* Lightweight CSS-only tooltip for dense repeated elements (e.g. the health-
+   history strip's per-check bars) where a real IconTooltip per item would be
+   ~100 component instances for no benefit — same visual language (bubble bg/
+   border/shadow/radius) as .mcp-icon-tooltip-bubble above, driven by :hover/
+   :focus-visible instead of JS state. Text comes from a data-tip attribute
+   via CSS attr() so no extra markup is needed per item. */
+.health-dot {
+  position: relative;
+}
+
+.health-dot::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(2px);
+  width: max-content;
+  max-width: 200px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.65rem;
+  box-shadow: var(--shadow-md);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-primary);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition-delay: 0s;
+  pointer-events: none;
+  z-index: 20;
+  text-align: left;
+}
+
+.health-dot::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--border-strong);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  z-index: 20;
+}
+
+@media (hover: hover) {
+  .health-dot:hover::after,
+  .health-dot:hover::before {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0.1s;
+  }
+  .health-dot:hover::after {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.health-dot:focus-visible::after,
+.health-dot:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+}
+.health-dot:focus-visible::after {
+  transform: translateX(-50%) translateY(0);
+}
+
 .mcp-icon-tooltip-title {
   display: flex;
   align-items: center;

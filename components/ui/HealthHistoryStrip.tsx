@@ -33,7 +33,9 @@ export function HealthHistoryStrip({ history }: { history: ServerHealthCheck[] }
         {history.map((h, i) => (
           <span
             key={i}
-            title={`${h.healthy ? 'Healthy' : `Issue${h.detail ? ` — ${h.detail}` : ''}`} · ${new Date(h.checkedAt).toLocaleString()}`}
+            className="health-dot"
+            tabIndex={0}
+            data-tip={`${h.healthy ? 'Healthy' : `Issue${h.detail ? ` — ${h.detail}` : ''}`} · ${new Date(h.checkedAt).toLocaleString()}`}
             style={{
               flex: '1 1 0',
               minWidth: '2px',
@@ -42,6 +44,7 @@ export function HealthHistoryStrip({ history }: { history: ServerHealthCheck[] }
               borderRadius: '1px',
               backgroundColor: h.healthy ? '#10b981' : '#f87171',
               opacity: h.healthy ? 0.55 : 0.9,
+              outline: 'none',
             }}
           />
         ))}
