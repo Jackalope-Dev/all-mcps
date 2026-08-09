@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable, stdioVerificationPilot } from '../db/schema';
 import { eq, desc, sql, and, ne } from 'drizzle-orm';
@@ -292,7 +293,13 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
     .slice(0, limit);
 }
 
-export async function getActiveServers(): Promise<Server[]> {
+/**
+ * Full active-catalog scan (thousands of rows, every column). Wrapped in React's
+ * `cache()` so multiple call sites within the same request/render (e.g. a detail
+ * page's related-servers and featured-servers lookups both need it) share one
+ * D1 query + normalize pass instead of each re-scanning the whole table.
+ */
+export const getActiveServers = cache(async (): Promise<Server[]> => {
   let servers = serversData as unknown as Server[];
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
@@ -311,7 +318,7 @@ export async function getActiveServers(): Promise<Server[]> {
     // Fall back to static JSON
   }
   return servers.map(normalizeServer);
-}
+});
 
 /**
  * Slim listing shape powering the /browse client feed. Only the fields the
@@ -661,10 +668,13 @@ function extractSemanticTokens(s: Server): Set<string> {
   add(s.description);
   add(s.aiSummary);
   add(s.aiOverview);
-  if (s.tags) s.tags.forEach(add);
-  if (s.aiUseCases) s.aiUseCases.forEach(add);
-  if (s.aiFeatures) s.aiFeatures.forEach(add);
-  if (s.tools) s.tools.forEach((t) => { add(t.name); add(t.description); });
+  // Guarded with Array.isArray: some callers (e.g. the sitemap route) pass raw D1
+  // rows through here without normalizeServer's JSON-column parsing, so these
+  // fields can arrive as unparsed JSON strings instead of arrays.
+  if (Array.isArray(s.tags)) s.tags.forEach(add);
+  if (Array.isArray(s.aiUseCases)) s.aiUseCases.forEach(add);
+  if (Array.isArray(s.aiFeatures)) s.aiFeatures.forEach(add);
+  if (Array.isArray(s.tools)) s.tools.forEach((t) => { add(t.name); add(t.description); });
 
   return tokens;
 }

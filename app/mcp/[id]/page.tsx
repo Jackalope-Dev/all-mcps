@@ -169,8 +169,6 @@ export async function generateStaticParams() {
 export default async function MCPDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const server = await getServer(id);
-  const session = await auth();
-  const isOwner = session?.user?.id ? await checkIsOwner(id, session.user.id) : false;
 
   if (!server) {
     // Serve a genuine HTTP 404 (via app/not-found.tsx) instead of a 200 page with a
@@ -179,9 +177,18 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
     notFound();
   }
 
-  const readme = await fetchReadme(server.url);
-  const relatedServers = await getRelatedServers(server as any, 4);
-  const rawPilotResult = await getStdioPilotResult(server.id);
+  // Independent I/O (external README fetch, two catalog-backed lookups, a pilot-check
+  // query, and the session read) — run concurrently instead of one big sequential
+  // waterfall. getRelatedServers/getFeaturedServers both hit getActiveServers(), which
+  // is request-memoized (see lib/servers.ts), so this doesn't double the catalog scan.
+  const [session, readme, relatedServers, rawPilotResult, featuredPool] = await Promise.all([
+    auth(),
+    fetchReadme(server.url),
+    getRelatedServers(server as any, 4),
+    getStdioPilotResult(server.id),
+    getFeaturedServers(server.id, 10),
+  ]);
+  const isOwner = session?.user?.id ? await checkIsOwner(id, session.user.id) : false;
   // A pilot check is only meaningful for the install command it actually
   // tested. install_extracted_at (LLM re-validation) can rewrite that
   // command after the pilot ran — stale otherwise, showing a mismatched
@@ -227,7 +234,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   // Sidebar ad slot rotates between paid featured listings and the "spotlight your own
   // server" upsell — one extra slot in the pool reserved for the upsell keeps it showing
   // occasionally even as more advertisers are in rotation.
-  const featuredPool = await getFeaturedServers(server.id, 10);
   const spotlightCandidates = [...featuredPool, null];
   const spotlightPick = spotlightCandidates[Math.floor(Math.random() * spotlightCandidates.length)];
   // The mcpServers key just needs to be a readable identifier; the npx arg below
