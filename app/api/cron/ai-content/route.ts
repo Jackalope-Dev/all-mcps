@@ -25,11 +25,17 @@ import { generateListingContent } from '../../../../lib/aiContent';
 
 const BATCH_SIZE = 24;
 // Claim step is a single atomic UPDATE ... WHERE id IN (subquery), so raising
-// this is safe against double-claims even under concurrent callers (see the
-// backfill workflow, which now also fires requests concurrently). Kept below
-// what would risk tripping OpenAI's rate limit (a 429 hard-stops the rest of
-// the chunk with no retry, see lib/openai.ts) rather than maxed out.
-const CONCURRENCY = 10;
+// this is safe against double-claims even under concurrent callers. Was
+// bumped to 10 for throughput, then reverted: the real constraint isn't
+// OpenAI's rate limit (accommodates far more), it's that this endpoint runs
+// in the same shared Worker instance as live page traffic — confirmed in
+// practice, 10 x parallel_calls=3 (up to 30 concurrent README fetches +
+// OpenAI calls) correlated with "Worker exceeded memory limit" and hung-
+// request errors on real /mcp/[id] page loads during a backfill run. Back to
+// the original conservative value; don't raise this again without a way to
+// isolate backfill load from production traffic (e.g. a separate Worker/
+// queue) rather than just retuning the number.
+const CONCURRENCY = 6;
 const MIN_MATERIAL_CHARS = 30;
 const STALE_RECHECK_MS = 90 * 24 * 60 * 60 * 1000;
 
