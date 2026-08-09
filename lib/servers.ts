@@ -708,7 +708,26 @@ const COMMON_STOP_WORDS = new Set([
   'http', 'com', 'github', 'org', 'repo', 'package', 'npm', 'pypi', 'python', 'typescript', 'javascript'
 ]);
 
+// Keyed by object identity, not server.id — getActiveServers() is request-
+// memoized (see `cache()` below), so every call within a request reuses the
+// same Server object references, and stale entries become garbage-collectable
+// on their own once a request's objects are no longer reachable, with no
+// unbounded/cross-request growth to worry about.
+const semanticTokenCache = new WeakMap<Server, Set<string>>();
+
+/**
+ * Full-text tokenization is expensive (every tool name/description, not just
+ * short fields) and relatedRankingScore calls this per-candidate across the
+ * whole active catalog — memoized, or this recomputes from scratch for every
+ * comparison. Confirmed in practice: some listings carry hundreds of tools
+ * (one had 987), and getRelatedServers() scoring the full ~3200-listing
+ * catalog against both sides of a compare page without this cache OOM'd the
+ * Worker (each call allocating a fresh multi-hundred-entry Set).
+ */
 function extractSemanticTokens(s: Server): Set<string> {
+  const cached = semanticTokenCache.get(s);
+  if (cached) return cached;
+
   const tokens = new Set<string>();
   const add = (text?: string | null) => {
     if (!text) return;
@@ -733,6 +752,7 @@ function extractSemanticTokens(s: Server): Set<string> {
   if (Array.isArray(s.aiFeatures)) s.aiFeatures.forEach(add);
   if (Array.isArray(s.tools)) s.tools.forEach((t) => { add(t.name); add(t.description); });
 
+  semanticTokenCache.set(s, tokens);
   return tokens;
 }
 
