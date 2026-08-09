@@ -24,6 +24,15 @@
   "routes": [
     { "pattern": "allmcps.com", "custom_domain": true }
   ],
+  "services": [
+    {
+      // Self-reference binding required by the R2/DO ISR revalidation queue
+      // (see @opennextjs/cloudflare) — without it every ISR page fails with
+      // "Failed to revalidate stale page" and just re-renders on every hit.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "all-mcps"
+    }
+  ],
   "triggers": {
     "crons": ["0 */4 * * *"]
   },

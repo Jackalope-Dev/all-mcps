@@ -200,22 +200,36 @@ export function logApiAccessBatch(db: any, params: BatchLogParams): Promise<void
   if (params.serverIds.length === 0) return Promise.resolve();
   const callerClass = classifyCaller(params.userAgent);
   const userAgent = (params.userAgent || '').slice(0, 512);
-  return db
-    .insert(apiAccessLogs)
-    .values(
-      params.serverIds.map((serverId) => ({
-        serverId,
-        endpoint: params.endpoint,
-        methodOrTool: params.methodOrTool || null,
-        userAgent,
-        callerClass,
-        ipCountry: params.ipCountry || null,
-      }))
+
+  // D1 caps bound parameters per statement at 100. Each row binds 7 columns
+  // (id is autoincrement, so it isn't bound), so chunk at 12 rows/statement
+  // (84 params) to stay under the limit with headroom — a search can surface
+  // up to `limit` (max 100) server IDs in one call.
+  const ROWS_PER_STATEMENT = 12;
+  const chunks: string[][] = [];
+  for (let i = 0; i < params.serverIds.length; i += ROWS_PER_STATEMENT) {
+    chunks.push(params.serverIds.slice(i, i + ROWS_PER_STATEMENT));
+  }
+
+  return Promise.all(
+    chunks.map((serverIds) =>
+      db
+        .insert(apiAccessLogs)
+        .values(
+          serverIds.map((serverId) => ({
+            serverId,
+            endpoint: params.endpoint,
+            methodOrTool: params.methodOrTool || null,
+            userAgent,
+            callerClass,
+            ipCountry: params.ipCountry || null,
+          }))
+        )
+        .catch((err: any) => {
+          console.error('[accessLog] Failed to batch insert:', err?.message);
+        })
     )
-    .then(() => {})
-    .catch((err: any) => {
-      console.error('[accessLog] Failed to batch insert:', err?.message);
-    });
+  ).then(() => {});
 }
 
 /**

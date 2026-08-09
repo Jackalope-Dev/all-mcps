@@ -30,6 +30,13 @@ import { CALLER_COLORS } from '../../lib/accessLog';
 import type { CallerBreakdown, EndpointBreakdown, CountryBreakdown } from '../../lib/siteStats';
 import { TrendChart } from '../../components/TrustCharts';
 
+// This page had no dynamic/revalidate export at all, so Next statically froze it
+// at build time — and D1 isn't reachable during build (see lib/siteStats.ts's
+// getSiteStats, same pattern as sitemapHelpers.ts), so every rebuild baked in the
+// zeroed static-snapshot fallback (0 views/copies/upvotes) instead of live numbers.
+// ISR instead of fully static so it actually reflects the production database.
+export const revalidate = 900;
+
 export const metadata: Metadata = {
   title: 'Trust & Traffic Transparency | AllMCPs',
   description:

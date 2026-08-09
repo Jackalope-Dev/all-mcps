@@ -228,6 +228,7 @@ export async function getSiteStats(): Promise<SiteStats> {
           readme: sql<number>`sum(case when ${servers.toolsSource} = 'readme' then 1 else 0 end)`,
           reciprocalBadges: sql<number>`sum(case when ${servers.reciprocalBadgeOk} = 1 then 1 else 0 end)`,
           recentCommits: sql<number>`sum(case when ${servers.lastCommitAt} >= ${cutoff} then 1 else 0 end)`,
+          verified: sql<number>`sum(case when ${servers.isOfficial} = 1 or ${servers.isPremium} = 1 or ${servers.websiteVerified} = 1 then 1 else 0 end)`,
         })
         .from(servers)
         .where(eq(servers.status, 'active'))
@@ -332,6 +333,7 @@ export async function getSiteStats(): Promise<SiteStats> {
 
     const dbReciprocalBadges = Number(serverExtraRows[0]?.reciprocalBadges ?? snapshotReciprocalBadges);
     const dbRecentCommits = Number(serverExtraRows[0]?.recentCommits ?? snapshotRecentCommits);
+    const dbVerified = Number(serverExtraRows[0]?.verified ?? snapshotVerified);
 
     return {
       totalServers: dbTotal > 0 ? dbTotal : snapshotTotal,
