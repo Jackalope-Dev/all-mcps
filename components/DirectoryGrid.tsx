@@ -487,8 +487,8 @@ export default function DirectoryGrid({
     selectedTransport !== 'all' ||
     selectedPricing !== 'all' ||
     selectedAuth !== 'all';
-  // Discovery chrome (marquee / featured) only on the unfiltered marketing landing
-  const showDiscovery = !isBrowse && !isFiltered;
+  // Discovery chrome (marquee / featured) only on the marketing landing page
+  const showDiscovery = !isBrowse;
   const categoryMeta = selectedCategory ? parseCategoryLabel(selectedCategory) : null;
 
   // Width for the category select so long names are never clipped
