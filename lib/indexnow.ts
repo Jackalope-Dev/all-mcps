@@ -32,7 +32,16 @@ export async function submitIndexNowUrls(urls: string[]): Promise<boolean> {
     });
     if (res.status === 200 || res.status === 202) return true;
     const text = await res.text().catch(() => '');
-    console.error(`IndexNow failed (${res.status}):`, text.slice(0, 200));
+    // 429 is an expected outcome of firing one ping per admin approve/republish
+    // with no shared rate limiting — a burst of admin actions can exceed
+    // IndexNow's per-key limit. Best-effort by design (see submitIndexNowUrls
+    // doc comment); the daily indexnow cron re-submits recent listings anyway,
+    // so a dropped ping here isn't a lasting problem worth error-level noise.
+    if (res.status === 429) {
+      console.warn(`IndexNow rate-limited (429):`, text.slice(0, 200));
+    } else {
+      console.error(`IndexNow failed (${res.status}):`, text.slice(0, 200));
+    }
     return false;
   } catch (e) {
     console.error('IndexNow network error:', e);

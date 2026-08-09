@@ -19,6 +19,72 @@ function isPngOrJpeg(bytes: Uint8Array): boolean {
 }
 
 /**
+ * MAX_BYTES/MAX_SCREENSHOT_BYTES only cap the *compressed* upload size. A
+ * small, well-compressed PNG/JPEG can still declare pixel dimensions that
+ * decode to a huge raw RGBA bitmap (a "decompression bomb") — Photon
+ * allocates that full bitmap during decode, before any of our post-decode
+ * dimension checks run. These images come from arbitrary external URLs
+ * (README images, website favicons, GitHub avatars), so a hostile or just
+ * unusually large source image can OOM the Worker mid-decode. Reading
+ * width/height straight from the file header (a few bytes, no allocation)
+ * lets us reject oversized images before Photon ever touches them.
+ */
+const MAX_DECODE_PIXELS = 20_000_000; // ~20MP, e.g. 5000x4000 — well beyond any real favicon/logo/screenshot
+
+/** Reads width/height from a PNG's IHDR chunk (always the first chunk, right after the signature). */
+function readPngDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+  if (bytes.length < 24) return null;
+  const width = ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>> 0;
+  const height = ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>> 0;
+  return { width, height };
+}
+
+/** Walks JPEG markers to find the SOF segment carrying width/height. */
+function readJpegDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+  let offset = 2;
+  while (offset + 4 <= bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset++;
+      continue;
+    }
+    const marker = bytes[offset + 1];
+    // Markers with no payload/length field.
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) {
+      offset += 2;
+      continue;
+    }
+    if (marker === 0xd9) return null; // EOI reached without finding a SOF
+    const segmentLength = (bytes[offset + 2] << 8) | bytes[offset + 3];
+    const isSOF =
+      (marker >= 0xc0 && marker <= 0xc3) ||
+      (marker >= 0xc5 && marker <= 0xc7) ||
+      (marker >= 0xc9 && marker <= 0xcb) ||
+      (marker >= 0xcd && marker <= 0xcf);
+    if (isSOF) {
+      const dataStart = offset + 4;
+      if (dataStart + 5 > bytes.length) return null;
+      const height = (bytes[dataStart + 1] << 8) | bytes[dataStart + 2];
+      const width = (bytes[dataStart + 3] << 8) | bytes[dataStart + 4];
+      return { width, height };
+    }
+    offset += 2 + segmentLength;
+  }
+  return null;
+}
+
+/** Rejects images whose declared pixel dimensions would blow the Worker's memory budget on decode, without decoding them. Unreadable headers pass through — Photon's own decode error handling covers those. */
+function assertDecodeSizeSafe(bytes: Uint8Array): void {
+  const dims = matchesSignature(bytes, PNG_SIGNATURE)
+    ? readPngDimensions(bytes)
+    : readJpegDimensions(bytes);
+  if (dims && dims.width * dims.height > MAX_DECODE_PIXELS) {
+    throw new LogoValidationError(
+      `Image is too large (${dims.width}x${dims.height}px). Please use a smaller image.`
+    );
+  }
+}
+
+/**
  * Validates, decodes, and re-encodes an uploaded logo. Re-encoding (not just
  * passing the original bytes through) is what strips embedded
  * metadata/payloads — the decode step alone isn't enough.
@@ -51,6 +117,7 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array>
   if (!isPngOrJpeg(view)) {
     throw new LogoValidationError('Logo must be a PNG or JPEG image.');
   }
+  assertDecodeSizeSafe(view);
 
   const { PhotonImage, SamplingFilter, Rgba, crop, padding_uniform, resize } = await import(
     '@cf-wasm/photon/workerd'
@@ -91,6 +158,7 @@ export async function processScreenshotUpload(bytes: ArrayBuffer): Promise<Uint8
   if (!isPngOrJpeg(view)) {
     throw new LogoValidationError('Screenshot must be a PNG or JPEG image.');
   }
+  assertDecodeSizeSafe(view);
 
   const { PhotonImage, SamplingFilter, resize } = await import(
     '@cf-wasm/photon/workerd'

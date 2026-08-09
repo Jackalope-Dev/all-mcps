@@ -41,6 +41,8 @@ const submitSchema = z.object({
   compatibleClients: z.array(z.string()).optional(),
   maintenanceStatus: z.string().optional(),
   supportUrl: z.string().optional().or(z.literal('')),
+  /** Optional hosted MCP endpoint offered alongside the primary install (see db/schema.ts). */
+  remoteEndpointUrl: z.string().optional().or(z.literal('')),
   suggestedInstallCommand: z.string().optional(),
   suggestedInstallArgs: z.array(z.string()).optional(),
 });
@@ -107,6 +109,8 @@ export async function POST(req: Request) {
     // Supplementary link — drop silently if unsafe/malformed rather than failing the submission over it.
     let supportUrl = (result.data.supportUrl || '').trim();
     if (supportUrl && !isSafeSubmissionUrl(supportUrl)) supportUrl = '';
+    let remoteEndpointUrl = (result.data.remoteEndpointUrl || '').trim();
+    if (remoteEndpointUrl && !isSafeSubmissionUrl(remoteEndpointUrl)) remoteEndpointUrl = '';
 
     // Website-only: use website as primary url when repo omitted
     if (!url && websiteUrl) {
@@ -204,6 +208,7 @@ export async function POST(req: Request) {
         compatibleClients: compatibleClients.length ? JSON.stringify(compatibleClients) : null,
         maintenanceStatus,
         supportUrl: supportUrl || null,
+        remoteEndpointUrl: remoteEndpointUrl || null,
         suggestedInstallCommand,
         suggestedInstallArgs: suggestedInstallArgs.length ? JSON.stringify(suggestedInstallArgs) : null,
       })

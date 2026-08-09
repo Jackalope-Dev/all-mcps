@@ -42,6 +42,7 @@ export function SubmitForm() {
   const [compatibleClients, setCompatibleClients] = useState<string[]>([]);
   const [maintenanceStatus, setMaintenanceStatus] = useState('');
   const [supportUrl, setSupportUrl] = useState('');
+  const [remoteEndpointUrl, setRemoteEndpointUrl] = useState('');
   const [suggestedInstallCommand, setSuggestedInstallCommand] = useState('');
   const [suggestedInstallArgsInput, setSuggestedInstallArgsInput] = useState('');
 
@@ -150,6 +151,7 @@ export function SubmitForm() {
     data.compatibleClients = compatibleClients;
     data.maintenanceStatus = maintenanceStatus || undefined;
     data.supportUrl = supportUrl || undefined;
+    data.remoteEndpointUrl = remoteEndpointUrl || undefined;
     data.suggestedInstallCommand = suggestedInstallCommand || undefined;
     data.suggestedInstallArgs = suggestedInstallArgsInput.split(/\s+/).map((a) => a.trim()).filter(Boolean);
 
@@ -616,6 +618,20 @@ export function SubmitForm() {
                   value={supportUrl}
                   onChange={(e) => setSupportUrl(e.target.value)}
                 />
+              </div>
+
+              <div className="form-field">
+                <Input
+                  name="remoteEndpointUrlInputRaw"
+                  label="Hosted MCP endpoint (optional)"
+                  placeholder="https://your-server.com/mcp"
+                  type="url"
+                  value={remoteEndpointUrl}
+                  onChange={(e) => setRemoteEndpointUrl(e.target.value)}
+                />
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '0.35rem 0 0' }}>
+                  If you offer a live remote endpoint in addition to the install method above, we&rsquo;ll verify it directly instead of guessing tools from your README.
+                </p>
               </div>
 
               <div className="form-field">

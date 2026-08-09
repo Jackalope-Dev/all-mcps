@@ -27,6 +27,13 @@
   --border-strong: rgba(255, 255, 255, 0.15);
   --card-bg: #0f172a;
 
+  /* "Verified"/dofollow green — matches .badge-verified. Themed via var() (not
+     hardcoded hex) so text stays readable in light mode without a separate
+     light-mode component fork. */
+  --verified-green: #34d399;
+  --verified-green-bg: rgba(16, 185, 129, 0.1);
+  --verified-green-border: rgba(16, 185, 129, 0.25);
+
   /* Space (4px base) */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -87,6 +94,12 @@
   --border-color: rgba(15, 23, 42, 0.12);
   --border-strong: rgba(15, 23, 42, 0.22);
   --card-bg: #ffffff;
+
+  /* Darker than the dark-mode #34d399 — the light #34d399 on a light card
+     background was low-contrast/hard to read. */
+  --verified-green: #047857;
+  --verified-green-bg: rgba(16, 185, 129, 0.14);
+  --verified-green-border: rgba(16, 185, 129, 0.35);
 
   /* Elevation */
   --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.05);

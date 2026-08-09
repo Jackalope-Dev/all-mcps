@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Wrench, Search, ChevronDown, ChevronUp, Code2, Sparkles, Terminal, ShieldCheck, FileText } from 'lucide-react';
+import { IconTooltip } from './IconTooltip';
 
 export interface ToolItem {
   name: string;
@@ -18,19 +19,26 @@ interface ToolSchemaInspectorProps {
   toolsSource?: string | null;
 }
 
-const TOOLS_SOURCE_BADGE: Record<string, { label: string; icon: typeof ShieldCheck; color: string; title: string }> = {
+const TOOLS_SOURCE_BADGE: Record<
+  string,
+  { label: string; icon: typeof ShieldCheck; color: string; background: string; border: string; title: string }
+> = {
   introspected: {
     label: 'Verified live',
     icon: ShieldCheck,
-    color: '#34d399',
+    // Themed via var() — matches .badge-verified, and stays readable in light
+    // mode (the dark-mode #34d399 is low-contrast on a light background).
+    color: 'var(--verified-green)',
+    background: 'var(--verified-green-bg)',
+    border: 'var(--verified-green-border)',
     title: 'Captured by calling this server’s live tools/list endpoint.',
   },
   readme: {
     label: 'Self-reported',
     icon: FileText,
-    // Concrete hex (not var(--text-secondary)) so the `${color}1f` alpha-suffix trick
-    // below stays valid CSS.
     color: '#94a3b8',
+    background: 'rgba(148, 163, 184, 0.12)',
+    border: 'rgba(148, 163, 184, 0.25)',
     title: 'Parsed from the repository README, not verified against a live server — may be incomplete or out of date.',
   },
 };
@@ -119,20 +127,31 @@ export function ToolSchemaInspector({
             <Wrench size={22} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
             Capabilities & Tool Schemas {hasTools ? `(${tools.length})` : ''}
             {hasTools && approxTokens > 0 && (
-              <span
-                title="Approximate context cost of this server's tool schemas (~4 chars/token), before any tool is called. Actual usage depends on your client and model."
-                style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  background: 'var(--bg-muted)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '999px',
-                  padding: '0.2rem 0.6rem',
-                }}
+              <IconTooltip
+                label={`Approximate context cost: ~${approxTokens} tokens`}
+                trigger={
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      color: 'var(--text-secondary)',
+                      background: 'var(--bg-muted)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '999px',
+                      padding: '0.2rem 0.6rem',
+                    }}
+                  >
+                    ~{approxTokens >= 1000 ? `${(approxTokens / 1000).toFixed(1)}k` : approxTokens} tokens
+                  </span>
+                }
               >
-                ~{approxTokens >= 1000 ? `${(approxTokens / 1000).toFixed(1)}k` : approxTokens} tokens
-              </span>
+                <span className="mcp-icon-tooltip-title">
+                  <Sparkles size={14} style={{ color: 'var(--accent-color)' }} /> ~{approxTokens >= 1000 ? `${(approxTokens / 1000).toFixed(1)}k` : approxTokens} tokens
+                </span>
+                <span className="mcp-icon-tooltip-body">
+                  Approximate context cost of this server&rsquo;s tool schemas (~4 chars/token), before any tool is called. Actual usage depends on your client and model.
+                </span>
+              </IconTooltip>
             )}
             {hasTools && sourceBadge && (
               <span
@@ -144,8 +163,8 @@ export function ToolSchemaInspector({
                   fontSize: '0.7rem',
                   fontWeight: 600,
                   color: sourceBadge.color,
-                  background: `${sourceBadge.color}1f`,
-                  border: `1px solid ${sourceBadge.color}40`,
+                  background: sourceBadge.background,
+                  border: `1px solid ${sourceBadge.border}`,
                   borderRadius: '999px',
                   padding: '0.2rem 0.6rem',
                 }}

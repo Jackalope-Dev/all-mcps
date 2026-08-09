@@ -252,7 +252,11 @@ export async function POST(req: Request) {
             toolsCheckedAt = now;
             if (introspection.ok && introspection.tools && introspection.tools.length > 0) {
               toolsJson = JSON.stringify(
-                introspection.tools.map((t) => ({ name: t.name, description: t.description }))
+                introspection.tools.map((t) => ({
+                  name: t.name,
+                  description: t.description,
+                  parameters: t.inputSchema,
+                }))
               );
               toolsSource = 'introspected';
               toolsError = null;
@@ -260,12 +264,48 @@ export async function POST(req: Request) {
               toolsError = (
                 introspection.ok ? 'Endpoint responded but returned no tools.' : introspection.error || 'Unknown error'
               ).slice(0, 500);
-              console.error(`[health-cron] tools/list failed for ${server.id} (${server.url}): ${toolsError}`);
+              // Expected, per-listing condition (endpoint doesn't support tools/list, requires
+              // auth, etc.) — already recorded on the row as toolsError. console.warn keeps it
+              // out of error-level alerting while still showing up in logs for debugging.
+              console.warn(`[health-cron] tools/list failed for ${server.id} (${server.url}): ${toolsError}`);
             }
           }
         }
       } catch {
         healthStatus = 'offline';
+      }
+
+      // Secondary connection method: a listing can declare a hosted endpoint
+      // alongside its primary install (e.g. a stdio bridge package that proxies
+      // to a real remote server). When present, always prefer a live tools/list
+      // handshake against it over whatever the primary path above found — it's
+      // the authoritative source the owner pointed us at, not a README guess.
+      // Independent try/catch so a flaky remote endpoint can't blow away the
+      // primary path's result for this run.
+      if (server.remoteEndpointUrl) {
+        try {
+          const remoteIntrospection = await callMcpEndpoint(server.remoteEndpointUrl, { method: 'tools/list' });
+          toolsCheckedAt = now;
+          if (remoteIntrospection.ok && remoteIntrospection.tools && remoteIntrospection.tools.length > 0) {
+            toolsJson = JSON.stringify(
+              remoteIntrospection.tools.map((t) => ({
+                name: t.name,
+                description: t.description,
+                parameters: t.inputSchema,
+              }))
+            );
+            toolsSource = 'introspected';
+            toolsError = null;
+          } else {
+            toolsError = (
+              remoteIntrospection.ok
+                ? 'Remote endpoint responded but returned no tools.'
+                : remoteIntrospection.error || 'Unknown error'
+            ).slice(0, 500);
+          }
+        } catch {
+          /* Leave primary-path tools data as-is on transient remote-endpoint failures. */
+        }
       }
 
       if (

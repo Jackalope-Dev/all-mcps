@@ -50,6 +50,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
+    "e2b": "^2.38.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.2.12",
     "lightningcss": "^1.33.0",

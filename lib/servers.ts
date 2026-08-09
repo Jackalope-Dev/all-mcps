@@ -90,6 +90,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   lastCommitAt: serversTable.lastCommitAt,
   tools: serversTable.tools,
   toolsSource: serversTable.toolsSource,
+  remoteEndpointUrl: serversTable.remoteEndpointUrl,
   aiSummary: serversTable.aiSummary,
   aiOverview: serversTable.aiOverview,
   aiUseCases: serversTable.aiUseCases,
@@ -146,6 +147,8 @@ export type Server = {
   tools?: ServerTool[];
   /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null. */
   toolsSource?: string | null;
+  /** Optional secondary connection method — a hosted endpoint offered alongside the primary install method. See db/schema.ts. */
+  remoteEndpointUrl?: string | null;
   /** LLM-generated content layer (see lib/aiContent + /api/cron/ai-content). */
   aiSummary?: string | null;
   aiOverview?: string | null;
@@ -187,6 +190,99 @@ export type Server = {
   /** Parsed by normalizeServer from the `suggested_install_args` JSON column. */
   suggestedInstallArgs?: string[];
 };
+
+/** Columns needed for homepage-wide ranking/counts — see getActiveServersLight. */
+const DISCOVERY_COLUMNS = {
+  id: serversTable.id,
+  name: serversTable.name,
+  url: serversTable.url,
+  description: serversTable.description,
+  category: serversTable.category,
+  status: serversTable.status,
+  createdAt: serversTable.createdAt,
+  logoUrl: serversTable.logoUrl,
+  isOfficial: serversTable.isOfficial,
+  isPremium: serversTable.isPremium,
+  featuredUntil: serversTable.featuredUntil,
+  views: serversTable.views,
+  copies: serversTable.copies,
+  upvotes: serversTable.upvotes,
+} as const;
+
+/**
+ * Lightweight full-catalog scan for homepage discovery: marquee/featured
+ * ranking, category counts, total count. Deliberately excludes `tools` and
+ * the AI-content columns — those can be several KB per listing (introspected
+ * tool schemas, generated overviews), and loading them for every active
+ * listing just to rank ~20 cards out of thousands risks tripping the
+ * Worker's memory limit. Same reasoning as getDirectoryFeedPage's column
+ * sharding for /browse; the homepage needs the same treatment because it
+ * scans the whole catalog too (for counts/ranking), not just its own page.
+ */
+export async function getActiveServersLight(): Promise<Server[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(DISCOVERY_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'));
+      if (rows.length > 0) {
+        return rows.map((r) => ({ ...r, description: cleanListingDescription(r.description) })) as unknown as Server[];
+      }
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+  return (serversData as unknown as Server[]).map((s) => ({
+    id: s.id,
+    name: s.name,
+    url: s.url,
+    description: cleanListingDescription(s.description),
+    category: s.category,
+    status: s.status,
+    createdAt: s.createdAt,
+    logoUrl: s.logoUrl ?? null,
+    isOfficial: !!s.isOfficial,
+    isPremium: !!s.isPremium,
+    featuredUntil: s.featuredUntil ?? null,
+    views: s.views ?? 0,
+    copies: s.copies ?? 0,
+    upvotes: s.upvotes ?? 0,
+  })) as unknown as Server[];
+}
+
+/**
+ * Newest N active listings with full detail (tools, AI content, install
+ * hints) — sorted and capped at the DB level so we never have to pull and
+ * parse the entire catalog in the Worker just to keep the first 48.
+ */
+export async function getNewestActiveServers(limit: number): Promise<Server[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'))
+        .orderBy(desc(serversTable.createdAt))
+        .limit(limit);
+      if (rows.length > 0) {
+        return rows.map((r) => normalizeServer(r as unknown as Server));
+      }
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+  return (serversData as unknown as Server[])
+    .map(normalizeServer)
+    .sort((a, b) => toEpoch(b.createdAt) - toEpoch(a.createdAt))
+    .slice(0, limit);
+}
 
 export async function getActiveServers(): Promise<Server[]> {
   let servers = serversData as unknown as Server[];

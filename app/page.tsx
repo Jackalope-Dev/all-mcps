@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import DirectoryGrid from '../components/DirectoryGrid';
 import { redirect } from 'next/navigation';
 import { pickDiscoveryServers } from '../lib/featured';
-import { getActiveServers } from '../lib/servers';
+import { getActiveServersLight, getNewestActiveServers } from '../lib/servers';
 import { getSiteStats } from '../lib/siteStats';
 
 export const metadata: Metadata = {
@@ -38,24 +38,20 @@ export default async function Home({
     redirect(`/browse?${sp.toString()}`);
   }
 
-  const servers = await getActiveServers();
-  const siteStats = await getSiteStats();
-
-  // Newest-first so the landing slice below surfaces the most recent listings.
-  const toTime = (v: unknown): number => {
-    const t = new Date(v as string | number | Date).getTime();
-    return Number.isNaN(t) ? 0 : t;
-  };
-  servers.sort((a, b) => toTime(b.createdAt) - toTime(a.createdAt));
-
-  // Prune initialServers for landing page to keep HTML payload lightweight (~50KB instead of 2.65MB)
-  // so external AI scrapers & submission platforms do not hit response size limit errors
-  const landingServers = servers.slice(0, 48);
+  // Landing cards (full detail, DB-sorted+capped) and the catalog-wide ranking
+  // pool (lightweight columns only — see getActiveServersLight) are independent
+  // queries so a homepage hit never has to load every listing's tools/AI-content
+  // into memory just to pick ~20 marquee/featured cards out of thousands.
+  const [landingServers, discoveryPool, siteStats] = await Promise.all([
+    getNewestActiveServers(48),
+    getActiveServersLight(),
+    getSiteStats(),
+  ]);
 
   // Prefer premium / verified / high-engagement for discovery chrome
   // Seed changes every 5 minutes so different visitors see different featured servers
   const discoverySeed = Math.floor(Date.now() / (5 * 60 * 1000));
-  const { marquee: marqueeServers, featured: featuredCards } = pickDiscoveryServers(servers, {
+  const { marquee: marqueeServers, featured: featuredCards } = pickDiscoveryServers(discoveryPool, {
     marquee: 15,
     featured: 3,
     seed: discoverySeed,
@@ -89,7 +85,7 @@ export default async function Home({
 
   // Compute full category counts across the entire catalog for homepage cards & filters
   const fullCategoryCounts: Record<string, number> = {};
-  for (const s of servers) {
+  for (const s of discoveryPool) {
     if (s.category) {
       fullCategoryCounts[s.category] = (fullCategoryCounts[s.category] || 0) + 1;
     }
@@ -106,7 +102,7 @@ export default async function Home({
         marqueeServers={marqueeServers}
         featuredCards={featuredCards}
         variant="landing"
-        totalCount={servers.length}
+        totalCount={discoveryPool.length}
         siteStats={siteStats}
         fullCategoryCounts={fullCategoryCounts}
         lazyFeedUrl="/api/directory-feed"

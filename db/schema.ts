@@ -92,6 +92,15 @@ export const servers = sqliteTable('servers', {
    * the AI content layer (see lib/aiContent.ts) — used to add env placeholders to
    * generated mcpServers configs instead of silently omitting required secrets. */
   aiEnvVars: text('ai_env_vars'),
+  /**
+   * Optional secondary connection method: a live hosted MCP endpoint offered
+   * *in addition to* the primary stdio/remote install already described by
+   * installKind/installCommand/etc. Common when a server ships both a hosted
+   * endpoint and a stdio wrapper/bridge package for clients without native
+   * remote-MCP support. When set, the health cron prefers a live tools/list
+   * handshake against this URL over README-parsing.
+   */
+  remoteEndpointUrl: text('remote_endpoint_url'),
   /** stdio | remote — cached install transport from README/description parse. */
   installKind: text('install_kind'),
   /** Runner binary for stdio installs (npx, uvx, bunx). */
@@ -220,6 +229,29 @@ export const impressionLogs = sqliteTable('impression_logs', {
   serverIdx: index('idx_impression_server').on(table.serverId),
   createdIdx: index('idx_impression_created').on(table.createdAt),
   surfaceIdx: index('idx_impression_surface').on(table.surface),
+}));
+
+/**
+ * E2B sandbox verification pilot results for stdio listings — kept separate
+ * from `servers.tools`/`tools_source` until the approach is validated (success
+ * rate, timing, cost) rather than feeding unproven data into the live catalog.
+ * Populated by the `e2b-stdio-pilot` GitHub Actions workflow via
+ * /api/cron/stdio-pilot/result; batches are claimed via /api/cron/stdio-pilot/batch.
+ */
+export const stdioVerificationPilot = sqliteTable('stdio_verification_pilot', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  serverId: text('server_id').notNull(),
+  /** ok | install_failed | handshake_failed | timeout | error */
+  status: text('status').notNull(),
+  toolCount: integer('tool_count'),
+  /** JSON array of {name, description, parameters} on success. */
+  tools: text('tools'),
+  error: text('error'),
+  durationMs: integer('duration_ms'),
+  checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  serverIdx: index('idx_stdio_pilot_server').on(table.serverId),
+  checkedIdx: index('idx_stdio_pilot_checked').on(table.checkedAt),
 }));
 
 /** Outbound social queue items (RSS-backed tweet pipeline). */

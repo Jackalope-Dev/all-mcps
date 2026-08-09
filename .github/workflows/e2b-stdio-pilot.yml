@@ -1,0 +1,43 @@
+name: 🧪 E2B Stdio Verification Pilot
+
+# Manual-only pilot. Verifies stdio MCP listings by actually installing and
+# running them in an E2B sandbox (initialize -> tools/list over stdio),
+# instead of trusting README-parsed tool guesses. Results go to the standalone
+# stdio_verification_pilot table (see app/api/cron/stdio-pilot/*) — NOT the
+# live servers.tools/tools_source columns — so we can review success rate,
+# timing, and cost before this feeds anything the public site shows.
+#
+# Needs the E2B_API_KEY repo secret (E2B's SDK doesn't work inside Cloudflare
+# Workers, so this can't run as a Worker cron — see scripts/e2b-stdio-pilot.mjs).
+# Trigger from the GitHub Actions tab: Actions → this workflow → "Run workflow".
+on:
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: 'Number of stdio listings to verify this run'
+        required: false
+        default: '20'
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run E2B stdio verification pilot
+        env:
+          E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
+          ALLMCPS_ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size }}
+        run: node scripts/e2b-stdio-pilot.mjs

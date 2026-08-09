@@ -616,6 +616,41 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               suggestedInstallArgs={server.suggestedInstallArgs}
             />
 
+            {server.remoteEndpointUrl && (
+              <div
+                style={{
+                  marginTop: '1.25rem',
+                  borderRadius: '10px',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-color)',
+                  padding: '0.85rem 1rem',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    marginBottom: '0.5rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  <Globe size={14} style={{ color: 'var(--accent-color)' }} /> Also available as a hosted endpoint
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '0 0 0.6rem' }}>
+                  Clients with native remote MCP support can connect directly to this URL instead of the {server.installKind === 'stdio' ? 'stdio install' : 'install method'} above.
+                </p>
+                <CopyBlock
+                  code={server.remoteEndpointUrl}
+                  serverId={server.id}
+                  title="Remote endpoint"
+                  language="text"
+                  snippetType="remote_endpoint_url"
+                />
+              </div>
+            )}
+
             <details className="detail-manual-config" style={{ marginTop: '1.25rem', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', padding: '0.75rem 1rem' }}>
               <summary className="detail-manual-config-summary">
                 <span>Manual Client &amp; Custom JSON Config</span>
@@ -1091,7 +1126,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   border: '1px solid rgba(16,185,129,0.25)',
                 }}
               >
-                <strong style={{ color: '#34d399' }}>Free dofollow backlink:</strong> after claiming,
+                <strong style={{ color: 'var(--verified-green)' }}>Free dofollow backlink:</strong> after claiming,
                 verify your product site and place a dofollow AllMCPs badge — we recheck it stays live.
               </p>
               <Link
@@ -1138,7 +1173,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                         border: `1px solid ${dofollow ? 'rgba(16,185,129,0.3)' : 'var(--border-color)'}`,
                       }}
                     >
-                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: dofollow ? '#34d399' : 'var(--text-secondary)', marginBottom: dofollow ? 0 : '0.5rem' }}>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: dofollow ? 'var(--verified-green)' : 'var(--text-secondary)', marginBottom: dofollow ? 0 : '0.5rem' }}>
                         {dofollow
                           ? `Website link is dofollow${server.isPremium ? ' — Premium' : ' — reciprocal badge verified'}`
                           : 'Website link is nofollow'}
