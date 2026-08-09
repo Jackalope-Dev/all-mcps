@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable, stdioVerificationPilot } from '../db/schema';
+import { servers as serversTable, stdioVerificationPilot, serverHealthChecks } from '../db/schema';
 import { eq, desc, sql, and, ne } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
@@ -630,6 +630,39 @@ export async function getStdioPilotResult(serverId: string): Promise<StdioPilotR
     return (rows[0] as StdioPilotResult) ?? null;
   } catch {
     return null;
+  }
+}
+
+export type ServerHealthCheck = {
+  checkedAt: string | Date;
+  healthy: boolean;
+  detail: string | null;
+};
+
+/**
+ * Bounded health-check history (see HEALTH_HISTORY_LIMIT in the health cron
+ * and server_health_checks in db/schema.ts), oldest-first so callers can
+ * render it left-to-right as a timeline without re-sorting.
+ */
+export async function getServerHealthHistory(serverId: string): Promise<ServerHealthCheck[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (!ctx?.env || !(ctx.env as any).DB) return [];
+    const db = drizzle((ctx.env as any).DB);
+    const rows = await db
+      .select({
+        checkedAt: serverHealthChecks.checkedAt,
+        healthy: serverHealthChecks.healthy,
+        detail: serverHealthChecks.detail,
+      })
+      .from(serverHealthChecks)
+      .where(eq(serverHealthChecks.serverId, serverId))
+      .orderBy(desc(serverHealthChecks.checkedAt))
+      .limit(96);
+    return (rows as ServerHealthCheck[]).reverse();
+  } catch {
+    return [];
   }
 }
 

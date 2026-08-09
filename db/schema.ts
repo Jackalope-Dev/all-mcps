@@ -287,6 +287,31 @@ export const stdioVerificationPilot = sqliteTable('stdio_verification_pilot', {
   checkedIdx: index('idx_stdio_pilot_checked').on(table.checkedAt),
 }));
 
+/**
+ * Bounded per-listing health-check history — the health cron's existing
+ * healthy/unhealthy verdict (primary URL reachability), persisted per pass
+ * instead of only overwriting servers.healthStatus/isVerifiedActive. Lets the
+ * detail page show a trend ("29/30 checks healthy this week") instead of a
+ * single point-in-time badge, which reads as a false alarm on one transient
+ * blip (confirmed in practice: our own listing showed "Unreachable" from a
+ * one-off Worker memory spike, not a real outage).
+ *
+ * Deliberately NOT unbounded: /api/cron/health trims each server_id to the
+ * most recent HEALTH_HISTORY_LIMIT rows right after inserting, so this stays
+ * flat-sized forever rather than growing with total checks performed.
+ */
+export const serverHealthChecks = sqliteTable('server_health_checks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  serverId: text('server_id').notNull(),
+  checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
+  healthy: integer('healthy', { mode: 'boolean' }).notNull(),
+  /** Short reason on failure (e.g. "HTTP 522"). Null on success. */
+  detail: text('detail'),
+}, (table) => ({
+  serverIdx: index('idx_health_checks_server').on(table.serverId),
+  checkedIdx: index('idx_health_checks_checked').on(table.checkedAt),
+}));
+
 /** Outbound social queue items (RSS-backed tweet pipeline). */
 export const socialPosts = sqliteTable('social_posts', {
   id: integer('id').primaryKey({ autoIncrement: true }),

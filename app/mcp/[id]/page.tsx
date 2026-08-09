@@ -29,7 +29,8 @@ import { OwnerZone } from '../../../components/ui/OwnerZone';
 import { ClaimHintLink } from '../../../components/ui/ClaimHintLink';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
-import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, type Server } from '../../../lib/servers';
+import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, getServerHealthHistory, type Server } from '../../../lib/servers';
+import { HealthHistoryStrip } from '../../../components/ui/HealthHistoryStrip';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { parseServerName } from '../../../lib/displayName';
@@ -167,11 +168,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   // Deliberately no session/auth() read here — that would force this page dynamic
   // (uncacheable) on every request. Ownership-gated UI (OwnerZone, ClaimHintLink)
   // fetches its own status client-side instead so this page can be ISR'd.
-  const [readme, relatedServers, rawPilotResult, featuredPool] = await Promise.all([
+  const [readme, relatedServers, rawPilotResult, featuredPool, healthHistory] = await Promise.all([
     fetchReadme(server.url),
     getRelatedServers(server as any, 4),
     getStdioPilotResult(server.id),
     getFeaturedServers(server.id, 10),
+    getServerHealthHistory(server.id),
   ]);
   // A pilot check is only meaningful for the install command it actually
   // tested. install_extracted_at (LLM re-validation) can rewrite that
@@ -1125,6 +1127,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 )}
               </div>
             </details>
+
+            <HealthHistoryStrip history={healthHistory} />
 
             {/* Popularity signals — 2-up grid reads faster and takes less vertical space than one full-width row each. */}
             <div className="detail-stats-grid">

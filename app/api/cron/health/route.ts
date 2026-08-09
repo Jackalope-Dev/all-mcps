@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers } from '../../../../db/schema';
-import { eq, asc, desc } from 'drizzle-orm';
+import { servers, serverHealthChecks } from '../../../../db/schema';
+import { eq, asc, desc, and, notInArray } from 'drizzle-orm';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { isSafeFetchTarget } from '../../../../lib/urlSafety';
 import { websiteHasReciprocalBadge } from '../../../../lib/verification';
@@ -67,6 +67,13 @@ async function fetchGithubReadme(owner: string, repo: string): Promise<string | 
 const BATCH_SIZE = 50;
 /** Prefer rechecking popular listings at least this often. */
 const POPULAR_STALE_MS = 3 * 24 * 60 * 60 * 1000;
+/**
+ * Bounds server_health_checks per listing — see db/schema.ts for why. The
+ * cron runs every 15min (.github/workflows/health-check.yml), so 96 covers a
+ * full day of history — enough to actually show a trend, not just the last
+ * few hours.
+ */
+const HEALTH_HISTORY_LIMIT = 96;
 
 export async function POST(req: Request) {
   try {
@@ -402,6 +409,34 @@ export async function POST(req: Request) {
             : {}),
         })
         .where(eq(servers.id, server.id));
+
+      // Bounded health-check history for the detail-page trend strip (see
+      // db/schema.ts). Insert then trim to the last HEALTH_HISTORY_LIMIT for
+      // this listing so the table stays flat-sized rather than growing with
+      // total checks ever performed — two small single-server queries, well
+      // under D1's 100-bound-param cap regardless of catalog size.
+      await db.insert(serverHealthChecks).values({
+        serverId: server.id,
+        checkedAt: now,
+        healthy: isVerifiedActive,
+        detail: isVerifiedActive ? null : healthStatus,
+      });
+      const keepIds = await db
+        .select({ id: serverHealthChecks.id })
+        .from(serverHealthChecks)
+        .where(eq(serverHealthChecks.serverId, server.id))
+        .orderBy(desc(serverHealthChecks.checkedAt))
+        .limit(HEALTH_HISTORY_LIMIT);
+      if (keepIds.length === HEALTH_HISTORY_LIMIT) {
+        await db
+          .delete(serverHealthChecks)
+          .where(
+            and(
+              eq(serverHealthChecks.serverId, server.id),
+              notInArray(serverHealthChecks.id, keepIds.map((r) => r.id))
+            )
+          );
+      }
 
       if (shouldUnpublish) unpublished++;
       processed++;
