@@ -175,16 +175,26 @@ const INSTALL_COMMAND_ALLOWLIST = new Set([
 ]);
 
 /**
+ * Unfilled template text from a README example command — "the real value
+ * goes here", not something that can actually run. Structural backstop
+ * alongside the prompt instruction, since a confident-sounding model can
+ * still copy an example verbatim including its placeholders.
+ */
+const PLACEHOLDER_PATTERN = /^[<[{]|[>\]}]$|^(your|my|insert|replace|example)[-_]|path\/to\//i;
+
+/**
  * Defense in depth against the exact failure modes install extraction is
- * meant to fix — a bare CLI flag, an empty value, or anything containing
- * whitespace (real package/image identifiers never do). This can't catch
- * every semantic mistake (that's what the prompt + confidence gate are for),
- * only structural nonsense a confident-sounding model could still emit.
+ * meant to fix — a bare CLI flag, an empty value, whitespace (real package/
+ * image identifiers never contain it), or template placeholder text. This
+ * can't catch every semantic mistake (that's what the prompt + confidence
+ * gate are for), only structural nonsense a confident-sounding model could
+ * still emit.
  */
 function looksLikePackageToken(v: unknown): v is string {
   if (typeof v !== 'string') return false;
   const s = v.trim();
   if (!s || s.startsWith('-') || /\s/.test(s)) return false;
+  if (PLACEHOLDER_PATTERN.test(s)) return false;
   return true;
 }
 
@@ -214,6 +224,12 @@ function clampInstall(value: unknown): AiListingContent['install'] {
     // guess with no identifiable package is exactly the "grabbed a flag or
     // a stray word" failure mode this replaces, not a usable result.
     if (!pkg || args.length === 0) return null;
+
+    // Backstop for the model forgetting the confirmation flag (prompted for
+    // explicitly, but don't rely on compliance alone) — without it, npx
+    // prompts interactively when the package needs installing and hangs any
+    // non-interactive caller, including our own E2B verification pilot.
+    if (command === 'npx' && args[0] !== '-y') args.unshift('-y');
 
     return { kind: 'stdio', command, args, package: pkg, confidence };
   }
@@ -256,7 +272,10 @@ const SYSTEM_PROMPT =
   '(c) framework or library dependencies this project is built WITH, not the project itself (e.g. a Python project built on "fastmcp" is not the "fastmcp" package; a project using psycopg2 is not the "psycopg2-binary" package); ' +
   '(d) other people\'s servers mentioned as examples, comparisons, or things this project can proxy to. ' +
   'When "install" is not null: "kind" is "stdio" (runs locally via a package manager) or "remote" (a hosted HTTP/SSE endpoint URL); ' +
-  'for "stdio", "command" is the runner binary alone (e.g. "npx", "uvx", "bunx", "pipx", "docker" — never a flag), "args" is the full real argument list including the actual package/image name as it would be typed (e.g. ["-y", "the-real-package-name"]), "package" is that same package/image name alone; ' +
+  'for "stdio", "command" is the runner binary alone (e.g. "npx", "uvx", "bunx", "pipx", "docker" — never a flag), "args" is the full real argument list including the actual package/image name as it would be typed, "package" is that same package/image name alone. ' +
+  'A stdio command must be directly runnable with no editing — this rules out two common README patterns: ' +
+  '(i) a bare "npx <package>" with no confirmation flag will prompt interactively when run non-interactively and hang forever — always include "-y" as the first arg for npx (uvx/bunx/pipx do not need it); ' +
+  '(ii) placeholder values in example commands (e.g. "/path/to/your/file", "<YOUR_API_KEY>", "your-project-id") are template text for the human reader to replace, not real arguments — omit them from "args" entirely rather than including the literal placeholder text, unless the exact real value is stated elsewhere in the material. ' +
   'for "remote", "package" is the endpoint URL and "command"/"args" are omitted; ' +
   '"confidence" is "high" only if the README states the exact command verbatim, "medium" if you inferred it from strong context (e.g. the npm/PyPI package name matches the repo unambiguously) — use "medium", or null the whole field, for anything less certain.';
 
