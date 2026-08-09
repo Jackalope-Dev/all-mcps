@@ -9,6 +9,7 @@ import { getActiveServers, type Server } from '../../../lib/servers';
 import { engagementScore } from '../../../lib/search';
 import { isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
+import { formatCompactNumber } from '../../../lib/format';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { MCP_CLIENTS, mcpClientBySlug } from '../../../lib/clients';
 import { ClientConfigSection } from '../../../components/clients/ClientConfigSection';
@@ -249,8 +250,8 @@ export default async function ClientPage({
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                       <div style={{ display: 'flex', gap: '0.65rem', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><Eye size={12} /> {(server.views || 0).toLocaleString()}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}><Download size={12} /> {(server.copies || 0).toLocaleString()}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }} title={`${(server.views || 0).toLocaleString()} views`}><Eye size={12} /> {formatCompactNumber(server.views || 0)}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }} title={`${(server.copies || 0).toLocaleString()} installs`}><Download size={12} /> {formatCompactNumber(server.copies || 0)}</span>
                       </div>
                       <ServerConfigCopyButton clientSlug={c.slug} serverName={server.name} />
                     </div>

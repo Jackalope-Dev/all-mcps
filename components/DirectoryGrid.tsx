@@ -26,7 +26,7 @@ import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
 import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel } from '../lib/categories';
 import { compileQuery, scoreServerMatch, engagementScore, trendingScore } from '../lib/search';
-import { formatCommitAge, formatFullDate } from '../lib/format';
+import { formatCommitAge, formatFullDate, formatCompactNumber } from '../lib/format';
 
 
 type Server = {
@@ -503,8 +503,8 @@ export default function DirectoryGrid({
           label={`${(server.upvotes || 0).toLocaleString()} upvotes`}
           asSpan
           trigger={
-            <div style={{ cursor: 'pointer' }}>
-              <Heart size={12} aria-hidden="true" /> {(server.upvotes || 0).toLocaleString()}
+            <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Heart size={12} aria-hidden="true" /> {formatCompactNumber(server.upvotes || 0)}
             </div>
           }
         >
@@ -521,8 +521,8 @@ export default function DirectoryGrid({
             label={`${server.githubStars.toLocaleString()} GitHub stars`}
             asSpan
             trigger={
-              <div style={{ cursor: 'pointer' }}>
-                <Star size={12} aria-hidden="true" /> {server.githubStars.toLocaleString()}
+              <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Star size={12} aria-hidden="true" /> {formatCompactNumber(server.githubStars)}
               </div>
             }
           >
@@ -539,8 +539,8 @@ export default function DirectoryGrid({
           label={`${(server.copies || 0).toLocaleString()} installs`}
           asSpan
           trigger={
-            <div style={{ cursor: 'pointer' }}>
-              <Download size={12} aria-hidden="true" /> {(server.copies || 0).toLocaleString()}
+            <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Download size={12} aria-hidden="true" /> {formatCompactNumber(server.copies || 0)}
             </div>
           }
         >
@@ -557,11 +557,8 @@ export default function DirectoryGrid({
             label={`${server.toolCount} tools`}
             asSpan
             trigger={
-              <div style={{ cursor: 'pointer' }}>
-                <Wrench size={12} aria-hidden="true" /> {server.toolCount}
-                {server.toolsSource === 'introspected' && (
-                  <ShieldCheck size={11} aria-hidden="true" style={{ color: '#34d399', marginLeft: 2 }} />
-                )}
+              <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Wrench size={12} aria-hidden="true" /> {formatCompactNumber(server.toolCount)}
               </div>
             }
           >
@@ -581,7 +578,7 @@ export default function DirectoryGrid({
             label={`Last commit: ${commitAge}`}
             asSpan
             trigger={
-              <div style={{ cursor: 'pointer' }}>
+              <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                 <Clock size={12} aria-hidden="true" /> {commitAge}
               </div>
             }

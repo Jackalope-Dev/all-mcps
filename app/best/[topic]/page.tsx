@@ -10,6 +10,7 @@ import { engagementScore } from '../../../lib/search';
 import { BEST_TOPICS, bestTopicBySlug, selectServersForTopic } from '../../../lib/bestTopics';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
+import { formatCompactNumber } from '../../../lib/format';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
 
 const SITE = 'https://allmcps.com';
@@ -201,9 +202,9 @@ export default async function BestTopicPage({
                         <SafeMarkdown content={server.description || 'No description provided.'} isInline />
                       </div>
                       <div style={{ display: 'flex', gap: '0.85rem', color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.6rem' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Eye size={13} /> {(server.views || 0).toLocaleString()}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Download size={13} /> {(server.copies || 0).toLocaleString()}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><Heart size={13} /> {(server.upvotes || 0).toLocaleString()}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.views || 0).toLocaleString()} views`}><Eye size={13} /> {formatCompactNumber(server.views || 0)}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.copies || 0).toLocaleString()} installs`}><Download size={13} /> {formatCompactNumber(server.copies || 0)}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.upvotes || 0).toLocaleString()} upvotes`}><Heart size={13} /> {formatCompactNumber(server.upvotes || 0)}</span>
                       </div>
                     </div>
                   </Link>

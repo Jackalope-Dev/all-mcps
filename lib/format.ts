@@ -23,3 +23,24 @@ export function formatFullDate(dateVal?: string | Date | null): string | null {
   });
 }
 
+/**
+ * Formats large numeric counts compactly for directory cards (e.g. 1.2k, 15k, 145k, 1.2M)
+ * while full precision is preserved in tooltips and accessible labels.
+ */
+export function formatCompactNumber(num?: number | null): string {
+  if (num == null || isNaN(num) || num <= 0) return '0';
+  if (num < 1000) return num.toString();
+  if (num < 10000) {
+    const formatted = (num / 1000).toFixed(1);
+    return formatted.endsWith('.0') ? `${Math.floor(num / 1000)}k` : `${formatted}k`;
+  }
+  if (num < 1000000) {
+    return `${Math.floor(num / 1000)}k`;
+  }
+  if (num < 10000000) {
+    const formatted = (num / 1000000).toFixed(1);
+    return formatted.endsWith('.0') ? `${Math.floor(num / 1000000)}M` : `${formatted}M`;
+  }
+  return `${Math.floor(num / 1000000)}M`;
+}
+

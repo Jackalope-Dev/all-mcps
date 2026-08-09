@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { CheckCircle2 } from 'lucide-react';
 
 type BadgeVariant = 'default' | 'official' | 'verified' | 'success' | 'premium' | 'category';
 
@@ -39,17 +40,30 @@ export function Badge({
     .filter(Boolean)
     .join(' ');
 
+  const renderContent = () => {
+    if ((variant === 'official' || variant === 'verified') && typeof children === 'string' && (children.trim().toLowerCase() === 'verified' || children.trim().toLowerCase() === 'official')) {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+          <CheckCircle2 size={11} aria-hidden="true" style={{ flexShrink: 0 }} />
+          <span>{children}</span>
+        </span>
+      );
+    }
+    return children;
+  };
+
   if (href) {
     return (
       <Link className={classes} style={style} {...(props as React.ComponentProps<typeof Link>)} href={href}>
-        {children}
+        {renderContent()}
       </Link>
     );
   }
 
   return (
     <span className={classes} style={style} {...props}>
-      {children}
+      {renderContent()}
     </span>
   );
 }
+
