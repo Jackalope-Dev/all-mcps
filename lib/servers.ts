@@ -776,6 +776,45 @@ export function computeServerSemanticSimilarity(a: Server, b: Server): number {
   return intersection / union;
 }
 
+// Same memoize-by-object-identity rationale as semanticTokenCache above —
+// relatedRankingScore rebuilt these from scratch on every single per-candidate
+// call even though `current`'s side never changes across a whole sort, which
+// on a compare page (current = a huge-tool-count outlier, scored against the
+// ~3200-listing catalog on both sides) meant rebuilding a several-hundred-
+// entry Set per comparison. Confirmed in practice as the remaining cause of a
+// ~40s render even after the semantic-token OOM fix.
+const toolNameSetCache = new WeakMap<Server, Set<string>>();
+function toolNameSet(s: Server): Set<string> {
+  const cached = toolNameSetCache.get(s);
+  if (cached) return cached;
+  // Array.isArray-guarded: some callers (e.g. the sitemap route) pass raw D1
+  // rows through here without normalizeServer's JSON-column parsing, so this
+  // field can arrive as an unparsed JSON string instead of an array.
+  const set = Array.isArray(s.tools)
+    ? new Set(s.tools.map((t) => t.name?.toLowerCase()).filter((n): n is string => Boolean(n)))
+    : new Set<string>();
+  toolNameSetCache.set(s, set);
+  return set;
+}
+
+const tagSetCache = new WeakMap<Server, Set<string>>();
+function tagSet(s: Server): Set<string> {
+  const cached = tagSetCache.get(s);
+  if (cached) return cached;
+  const set = Array.isArray(s.tags) ? new Set(s.tags.map((t) => t.toLowerCase())) : new Set<string>();
+  tagSetCache.set(s, set);
+  return set;
+}
+
+const envVarSetCache = new WeakMap<Server, Set<string>>();
+function envVarSet(s: Server): Set<string> {
+  const cached = envVarSetCache.get(s);
+  if (cached) return cached;
+  const set = Array.isArray(s.aiEnvVars) ? new Set(s.aiEnvVars.map((v) => v.toUpperCase())) : new Set<string>();
+  envVarSetCache.set(s, set);
+  return set;
+}
+
 /**
  * Ranking signal for related/similar listings.
  * Engagement + install readiness + tool overlap + semantic text similarity with current page.
@@ -800,38 +839,35 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
     const semanticSim = computeServerSemanticSimilarity(current, candidate);
     score += semanticSim * 120;
 
-    // Tool name overlap. Array.isArray-guarded: some callers (e.g. the sitemap
-    // route) pass raw D1 rows through here without normalizeServer's JSON-column
-    // parsing, so these fields can arrive as unparsed JSON strings instead of
-    // arrays — `.length` on a non-empty string is truthy, so a plain `?.length`
-    // check isn't enough to guard the `.map`/`.forEach` calls below it.
-    if (Array.isArray(current.tools) && Array.isArray(candidate.tools) && current.tools.length && candidate.tools.length) {
-      const currentNames = new Set(
-        current.tools.map((t) => t.name.toLowerCase()).filter(Boolean)
-      );
+    // Tool name overlap.
+    const currentTools = toolNameSet(current);
+    const candidateTools = toolNameSet(candidate);
+    if (currentTools.size && candidateTools.size) {
       let overlap = 0;
-      for (const t of candidate.tools) {
-        if (currentNames.has(t.name.toLowerCase())) overlap += 1;
+      for (const name of candidateTools) {
+        if (currentTools.has(name)) overlap += 1;
       }
       score += overlap * 12;
     }
 
     // Tag overlap
-    if (Array.isArray(current.tags) && Array.isArray(candidate.tags) && current.tags.length && candidate.tags.length) {
-      const currentTags = new Set(current.tags.map((t) => t.toLowerCase()));
+    const currentTags = tagSet(current);
+    const candidateTags = tagSet(candidate);
+    if (currentTags.size && candidateTags.size) {
       let tagOverlap = 0;
-      for (const t of candidate.tags) {
-        if (currentTags.has(t.toLowerCase())) tagOverlap += 1;
+      for (const t of candidateTags) {
+        if (currentTags.has(t)) tagOverlap += 1;
       }
       score += tagOverlap * 10;
     }
 
     // Shared environment variables (indicates same API/service family)
-    if (Array.isArray(current.aiEnvVars) && Array.isArray(candidate.aiEnvVars) && current.aiEnvVars.length && candidate.aiEnvVars.length) {
-      const currentEnvs = new Set(current.aiEnvVars.map((v) => v.toUpperCase()));
+    const currentEnvs = envVarSet(current);
+    const candidateEnvs = envVarSet(candidate);
+    if (currentEnvs.size && candidateEnvs.size) {
       let envOverlap = 0;
-      for (const v of candidate.aiEnvVars) {
-        if (currentEnvs.has(v.toUpperCase())) envOverlap += 1;
+      for (const v of candidateEnvs) {
+        if (currentEnvs.has(v)) envOverlap += 1;
       }
       score += envOverlap * 15;
     }
