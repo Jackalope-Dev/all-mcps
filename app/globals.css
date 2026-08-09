@@ -5742,6 +5742,11 @@ nav[aria-label="Table of contents"] {
   filter: brightness(1.08);
 }
 
+.client-config-tab[aria-selected="false"]:hover {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+}
+
 .mobile-install-bar {
   display: none;
 }

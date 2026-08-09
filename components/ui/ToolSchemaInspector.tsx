@@ -3,11 +3,36 @@
 import React, { useState, useMemo } from 'react';
 import { Wrench, Search, ChevronDown, ChevronUp, Code2, Sparkles, Terminal, ShieldCheck, FileText } from 'lucide-react';
 import { IconTooltip } from './IconTooltip';
+import { CollapsibleText } from '../CollapsibleText';
 
 export interface ToolItem {
   name: string;
   description?: string;
   parameters?: Record<string, unknown>;
+}
+
+interface SchemaProperty {
+  type?: string | string[];
+  description?: string;
+  [key: string]: unknown;
+}
+
+/** Recognizes a standard JSON Schema object shape so params can render as a readable list instead of raw JSON. */
+function getSchemaProperties(parameters: Record<string, unknown> | undefined) {
+  if (!parameters || typeof parameters !== 'object') return null;
+  const properties = (parameters as { properties?: Record<string, SchemaProperty> }).properties;
+  if (!properties || typeof properties !== 'object') return null;
+  const required = new Set(
+    Array.isArray((parameters as { required?: unknown }).required)
+      ? ((parameters as { required?: string[] }).required as string[])
+      : []
+  );
+  return Object.entries(properties).map(([name, schema]) => ({
+    name,
+    type: typeof schema?.type === 'string' ? schema.type : Array.isArray(schema?.type) ? schema.type.join(' | ') : undefined,
+    description: typeof schema?.description === 'string' ? schema.description : undefined,
+    required: required.has(name),
+  }));
 }
 
 interface ToolSchemaInspectorProps {
@@ -218,6 +243,9 @@ export function ToolSchemaInspector({
           {visibleTools.map((tool) => {
             const isExpanded = !!expandedTools[tool.name];
             const hasParams = tool.parameters && Object.keys(tool.parameters).length > 0;
+            const schemaProps = hasParams ? getSchemaProperties(tool.parameters) : null;
+            const showRawKey = `${tool.name}__raw`;
+            const showRaw = !!expandedTools[showRawKey];
 
             return (
               <div
@@ -291,16 +319,64 @@ export function ToolSchemaInspector({
                       borderRadius: '8px',
                       border: '1px solid var(--border-color)',
                       fontSize: '0.75rem',
-                      fontFamily: 'monospace',
                       color: 'var(--text-primary)',
                     }}
                   >
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', marginBottom: '0.3rem', fontWeight: 600 }}>
-                      INPUT SCHEMA / PARAMETERS
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 600, fontFamily: 'monospace' }}>
+                        INPUT SCHEMA / PARAMETERS
+                      </div>
+                      {schemaProps && schemaProps.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(showRawKey)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--accent-color)',
+                            cursor: 'pointer',
+                            fontSize: '0.68rem',
+                            fontWeight: 600,
+                            padding: 0,
+                            textDecoration: 'underline',
+                            textUnderlineOffset: '2px',
+                          }}
+                        >
+                          {showRaw ? 'View as list' : 'View raw JSON'}
+                        </button>
+                      )}
                     </div>
-                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--text-primary)' }}>
-                      {JSON.stringify(tool.parameters, null, 2)}
-                    </pre>
+
+                    {schemaProps && schemaProps.length > 0 && !showRaw ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                        {schemaProps.map((prop) => (
+                          <div key={prop.name} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                              <code style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{prop.name}</code>
+                              {prop.type && (
+                                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.05rem 0.4rem' }}>
+                                  {prop.type}
+                                </span>
+                              )}
+                              {prop.required && (
+                                <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent-color)' }}>required</span>
+                              )}
+                            </div>
+                            {prop.description ? (
+                              <div style={{ color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                                <CollapsibleText collapsedLines={2}>{prop.description}</CollapsibleText>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', opacity: 0.7 }}>No description provided</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+                        {JSON.stringify(tool.parameters, null, 2)}
+                      </pre>
+                    )}
                   </div>
                 )}
               </div>

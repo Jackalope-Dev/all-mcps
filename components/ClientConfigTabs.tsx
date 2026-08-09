@@ -310,17 +310,36 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+        Choose your client
+      </div>
+      <div
+        role="tablist"
+        aria-label="MCP client"
+        style={{
+          display: 'flex',
+          gap: '0.35rem',
+          flexWrap: 'wrap',
+          marginBottom: '1rem',
+          background: 'var(--bg-muted)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '10px',
+          padding: '0.35rem',
+        }}
+      >
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
+            role="tab"
+            aria-selected={activeTab === t.id}
             onClick={() => setActiveTab(t.id)}
+            className="client-config-tab"
             style={{
               padding: '0.4rem 0.85rem',
               borderRadius: '8px',
               border: activeTab === t.id ? '1px solid var(--accent-color)' : '1px solid transparent',
-              background: activeTab === t.id ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
+              background: activeTab === t.id ? 'var(--brand-gradient-soft)' : 'transparent',
               color: activeTab === t.id ? 'var(--accent-color)' : 'var(--text-secondary)',
               fontWeight: activeTab === t.id ? 700 : 500,
               fontSize: '0.85rem',
