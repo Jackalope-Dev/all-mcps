@@ -78,14 +78,33 @@ if (!E2B_API_KEY) {
   process.exit(1);
 }
 
-async function fetchBatch() {
+async function fetchBatchOnce() {
   const res = await fetch(`${BASE_URL}/api/cron/stdio-pilot/batch?batch_size=${BATCH_SIZE}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${SECRET}` },
   });
-  if (!res.ok) throw new Error(`batch fetch failed: HTTP ${res.status}`);
-  const data = await res.json();
-  return data.batch || [];
+  if (!res.ok) {
+    const body = await res.text().catch(() => '<no body>');
+    throw new Error(`batch fetch failed: HTTP ${res.status} - ${body.slice(0, 500)}`);
+  }
+  return res.json();
+}
+
+/** A transient batch-fetch failure shouldn't kill the whole run — retry with backoff. */
+async function fetchBatch() {
+  const RETRIES = 3;
+  let lastErr;
+  for (let attempt = 1; attempt <= RETRIES; attempt++) {
+    try {
+      const data = await fetchBatchOnce();
+      return data.batch || [];
+    } catch (e) {
+      lastErr = e;
+      console.error(`  ! batch fetch attempt ${attempt}/${RETRIES} failed: ${e.message}`);
+      if (attempt < RETRIES) await new Promise((r) => setTimeout(r, attempt * 3000));
+    }
+  }
+  throw lastErr;
 }
 
 async function postResult(result) {
@@ -95,7 +114,8 @@ async function postResult(result) {
     body: JSON.stringify(result),
   });
   if (!res.ok) {
-    console.error(`  ! failed to record result for ${result.serverId}: HTTP ${res.status}`);
+    const body = await res.text().catch(() => '<no body>');
+    console.error(`  ! failed to record result for ${result.serverId}: HTTP ${res.status} - ${body.slice(0, 500)}`);
   }
 }
 
@@ -302,7 +322,17 @@ async function main() {
 
   async function worker() {
     while (Date.now() - startedAt < RUN_BUDGET_MS) {
-      const listing = await work.next();
+      let listing;
+      try {
+        listing = await work.next();
+      } catch (e) {
+        // fetchBatch() exhausted its retries. Stop this worker quietly rather
+        // than throwing through Promise.all — that would abort the whole run
+        // (and process.exit() in main's catch would kill other workers'
+        // still-in-flight listings before they can post their results).
+        console.error(`  ! worker stopping — could not fetch more work: ${e.message}`);
+        return;
+      }
       if (!listing) return; // Backlog exhausted.
 
       const result = await verifyListing(listing);
