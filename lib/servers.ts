@@ -331,6 +331,52 @@ export const getActiveServers = cache(async (): Promise<Server[]> => {
   return servers.map(normalizeServer);
 });
 
+/** PUBLIC_SERVER_COLUMNS minus aiFaq — never read by relatedRankingScore/engagementScore. */
+const { aiFaq: _omitAiFaq, ...SCORING_SERVER_COLUMNS } = PUBLIC_SERVER_COLUMNS;
+
+/**
+ * Full-catalog scan for the scoring/ranking path only (related servers,
+ * featured servers) — a genuinely separate query from getActiveServers(),
+ * not a transform of it. Calling getActiveServers() internally would still
+ * retain the full heavy result for the rest of the request (React's cache()
+ * holds a reference for exactly that reuse purpose), on top of a trimmed
+ * copy — worse, not better. This fetches its own lighter column set and
+ * strips each tool's `parameters`/inputSchema (full JSON Schema objects)
+ * right after normalizing, before returning, so the heavy nested objects
+ * are never referenced beyond this function's own scope.
+ *
+ * Confirmed as a real cause of Worker OOM crashes in practice: a few
+ * outlier listings carry hundreds of tools (one has 987) each with a full
+ * parameter schema, and getActiveServers() held that for the *entire*
+ * ~3200-row catalog on every single page that computes related/featured
+ * servers — not just pages involving those specific outliers, any page,
+ * since the whole array is retained for the request regardless of which
+ * rows actually get used.
+ */
+export const getActiveServersForScoring = cache(async (): Promise<Server[]> => {
+  let servers = serversData as unknown as Server[];
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const dbServers = await db
+        .select(SCORING_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'));
+      if (dbServers.length > 0) {
+        servers = dbServers as unknown as Server[];
+      }
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+  return servers.map(normalizeServer).map((s) => ({
+    ...s,
+    tools: s.tools?.map((t) => ({ name: t.name, description: t.description })),
+  }));
+});
+
 /**
  * Slim listing shape powering the /browse client feed. Only the fields the
  * directory grid actually reads for search/sort/filter/render — the heavy AI
@@ -1033,7 +1079,7 @@ export function formatServerSummaryLine(server: Server): string {
 }
 
 export async function getRelatedServers(currentServer: Server, limit = 4): Promise<Server[]> {
-  const allServers = await getActiveServers();
+  const allServers = await getActiveServersForScoring();
   const sameCategory = allServers.filter(
     (s) => s.id !== currentServer.id && s.category === currentServer.category
   );
@@ -1058,6 +1104,6 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
 
 /** Paid/featured listings eligible to rotate into promotional ad slots, excluding the given server. */
 export async function getFeaturedServers(excludeId?: string, limit = 10): Promise<Server[]> {
-  const allServers = await getActiveServers();
+  const allServers = await getActiveServersForScoring();
   return allServers.filter((s) => s.id !== excludeId && isFeaturedListing(s)).slice(0, limit);
 }
