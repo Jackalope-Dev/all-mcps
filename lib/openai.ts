@@ -41,8 +41,17 @@ export type OpenAIChatFailure = {
 export type OpenAIChatResult = OpenAIChatSuccess | OpenAIChatFailure;
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
-const DEFAULT_MODEL = 'gpt-4.1-mini';
+const DEFAULT_MODEL = 'gpt-5.6-luna';
 const DEFAULT_TIMEOUT_MS = 20_000;
+
+/**
+ * GPT-5-family models (confirmed against gpt-5.6-luna in practice: every call
+ * failed until this was added) reject the legacy `max_tokens` param — they
+ * require `max_completion_tokens` — and only accept the default temperature,
+ * erroring on any explicit value. Older families (4.1-mini, 4o, etc.) are the
+ * reverse: they expect `max_tokens` and support custom temperature.
+ */
+const GPT5_FAMILY_RE = /^gpt-5/i;
 
 /** Status codes that mean "stop spending / don't hammer" rather than transient blips. */
 function classifyHttpStatus(status: number): Pick<OpenAIChatFailure, 'reason' | 'retryable'> {
@@ -86,7 +95,7 @@ export async function getOpenAIApiKey(): Promise<string | undefined> {
 
 export type ChatCompletionOptions = {
   messages: OpenAIChatMessage[];
-  /** Any OpenAI chat model id the account can access. Defaults to gpt-4.1-mini. */
+  /** Any OpenAI chat model id the account can access. Defaults to gpt-5.6-luna. */
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -123,6 +132,8 @@ export async function chatCompletion(options: ChatCompletionOptions): Promise<Op
 
   const model = options.model || DEFAULT_MODEL;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const isGpt5Family = GPT5_FAMILY_RE.test(model);
+  const maxTokens = options.maxTokens ?? 1024;
 
   try {
     const res = await fetch(OPENAI_URL, {
@@ -134,8 +145,9 @@ export async function chatCompletion(options: ChatCompletionOptions): Promise<Op
       body: JSON.stringify({
         model,
         messages: options.messages,
-        temperature: options.temperature ?? 0.2,
-        max_tokens: options.maxTokens ?? 1024,
+        ...(isGpt5Family
+          ? { max_completion_tokens: maxTokens }
+          : { temperature: options.temperature ?? 0.2, max_tokens: maxTokens }),
         ...(options.json ? { response_format: { type: 'json_object' } } : {}),
       }),
       signal: AbortSignal.timeout(timeoutMs),
