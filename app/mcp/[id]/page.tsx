@@ -683,7 +683,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </div>
             )}
 
-            {pilotResult && (
+            {(pilotResult || (server.installKind === 'stdio' && server.installCommand)) && (
               <div
                 style={{
                   marginTop: '1.25rem',
@@ -693,7 +693,18 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   padding: '0.85rem 1rem',
                 }}
               >
-                {pilotResult.status === 'ok' ? (
+                {!pilotResult ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <Clock size={14} style={{ color: 'var(--text-secondary)' }} /> Not yet automatically verified
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0 }}>
+                      {hasIntrospectedTools
+                        ? "This server is confirmed live — we successfully called its tools/list endpoint directly (see the verified badge above). We haven't yet sandbox-tested the stdio install command below specifically, which is a separate, ongoing check."
+                        : "We haven't yet run this listing's install command through our automated sandbox check. This isn't a red flag — we're steadily working through the catalog."}
+                    </p>
+                  </>
+                ) : pilotResult.status === 'ok' ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>
                     <Sparkles size={14} style={{ color: '#34d399' }} /> Automated check passed
                     <span style={{ color: 'var(--text-secondary)', fontWeight: 400, fontSize: '0.8rem' }}>
