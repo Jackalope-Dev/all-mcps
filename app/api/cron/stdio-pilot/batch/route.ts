@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, desc, eq, isNotNull, notInArray } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, lt, notInArray } from 'drizzle-orm';
 import { servers, stdioVerificationPilot } from '../../../../../db/schema';
 import { isAdminAuthorized } from '../../../../../lib/adminAuth';
 import { parseArgsJson } from '../../../../../lib/installConfig';
@@ -10,13 +10,20 @@ import { parseArgsJson } from '../../../../../lib/installConfig';
  * Hands the E2B stdio-verification pilot (GitHub Actions runner — E2B's SDK
  * doesn't work inside the Workers runtime, see lib/mcpIntrospect.ts's remote-only
  * scope) a batch of stdio listings with a usable cached install hint that
- * haven't been through the pilot yet. Read-only claim — the pilot POSTs
- * results back to /api/cron/stdio-pilot/result, which is what actually
- * records progress, so a batch can be safely re-requested if a run fails
- * partway through.
+ * haven't been through the pilot yet.
+ *
+ * Atomically claims what it hands out by inserting a `pending` row per
+ * listing before returning — without this, concurrent workers can refetch a
+ * page while an earlier worker is still mid-flight on a slow/timing-out
+ * listing (nothing in the table excludes it yet) and get handed the same
+ * listing twice. Same shape as the atomic-claim pattern in
+ * /api/cron/ai-content. /result finalizes the pending row it claimed; a
+ * pending row older than PENDING_STALE_MS is treated as an abandoned run
+ * (crashed job, killed workflow) and released back into the pool.
  */
 const DEFAULT_BATCH_SIZE = 20;
 const MAX_BATCH_SIZE = 100;
+const PENDING_STALE_MS = 10 * 60 * 1000;
 
 export async function POST(req: Request) {
   try {
@@ -41,6 +48,12 @@ export async function POST(req: Request) {
 
     const db = drizzle(env.DB as any);
 
+    // Release abandoned claims (worker/job died before posting a result) so
+    // they're eligible for selection again instead of being stuck forever.
+    await db
+      .delete(stdioVerificationPilot)
+      .where(and(eq(stdioVerificationPilot.status, 'pending'), lt(stdioVerificationPilot.checkedAt, new Date(Date.now() - PENDING_STALE_MS))));
+
     const rows = await db
       .select({
         id: servers.id,
@@ -64,6 +77,15 @@ export async function POST(req: Request) {
       )
       .orderBy(desc(servers.views), desc(servers.upvotes))
       .limit(batchSize);
+
+    if (rows.length === 0) {
+      return NextResponse.json({ success: true, batch: [], count: 0 });
+    }
+
+    const now = new Date();
+    await db.insert(stdioVerificationPilot).values(
+      rows.map((r) => ({ serverId: r.id, status: 'pending', checkedAt: now }))
+    );
 
     const batch = rows.map((r) => ({
       id: r.id,

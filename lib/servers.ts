@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable, stdioVerificationPilot } from '../db/schema';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, and, ne } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
@@ -585,7 +585,7 @@ export async function getStdioPilotResult(serverId: string): Promise<StdioPilotR
         checkedAt: stdioVerificationPilot.checkedAt,
       })
       .from(stdioVerificationPilot)
-      .where(eq(stdioVerificationPilot.serverId, serverId))
+      .where(and(eq(stdioVerificationPilot.serverId, serverId), ne(stdioVerificationPilot.status, 'pending')))
       .orderBy(desc(stdioVerificationPilot.checkedAt))
       .limit(1);
     return (rows[0] as StdioPilotResult) ?? null;
