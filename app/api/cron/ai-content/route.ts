@@ -24,7 +24,12 @@ import { generateListingContent } from '../../../../lib/aiContent';
  */
 
 const BATCH_SIZE = 24;
-const CONCURRENCY = 6;
+// Claim step is a single atomic UPDATE ... WHERE id IN (subquery), so raising
+// this is safe against double-claims even under concurrent callers (see the
+// backfill workflow, which now also fires requests concurrently). Kept below
+// what would risk tripping OpenAI's rate limit (a 429 hard-stops the rest of
+// the chunk with no retry, see lib/openai.ts) rather than maxed out.
+const CONCURRENCY = 10;
 const MIN_MATERIAL_CHARS = 30;
 const STALE_RECHECK_MS = 90 * 24 * 60 * 60 * 1000;
 

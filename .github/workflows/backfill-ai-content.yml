@@ -18,6 +18,10 @@ on:
         description: 'Safety cap on endpoint calls (each processes up to ~12 listings)'
         required: false
         default: '400'
+      parallel_calls:
+        description: 'Concurrent calls per round (claim step is a single atomic UPDATE, safe to raise; watch for budget_stopped if you do)'
+        required: false
+        default: '3'
 
 jobs:
   backfill:
@@ -30,6 +34,7 @@ jobs:
         env:
           ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
           MAX_CALLS: ${{ github.event.inputs.max_calls }}
+          PARALLEL_CALLS: ${{ github.event.inputs.parallel_calls }}
         run: |
           set -uo pipefail
           if [ -z "${ADMIN_SECRET:-}" ]; then
@@ -38,20 +43,50 @@ jobs:
           fi
           endpoint="https://allmcps.com/api/cron/ai-content"
           max="${MAX_CALLS:-400}"
+          parallel="${PARALLEL_CALLS:-3}"
           idle=0
           total=0
-          for i in $(seq 1 "$max"); do
-            resp=$(curl -fsS -X POST "$endpoint" -H "Authorization: Bearer $ADMIN_SECRET") || {
-              echo "Call $i: request failed, backing off"; sleep 15; continue;
-            }
-            enriched=$(echo "$resp" | jq -r '.enriched // 0')
-            thin=$(echo "$resp" | jq -r '.skippedThin // 0')
-            failed=$(echo "$resp" | jq -r '.failed // 0')
-            remaining=$(echo "$resp" | jq -r '.remaining // "?"')
-            install_remaining=$(echo "$resp" | jq -r '.installRemaining // "?"')
-            stopped=$(echo "$resp" | jq -r '.budgetStopped // false')
-            total=$((total + enriched))
-            echo "Call $i: +$enriched enriched, $thin thin-skipped, $failed failed | remaining=$remaining, install_remaining=$install_remaining | run total=$total"
+          call=0
+          # Fires $parallel requests concurrently per round instead of one at a
+          # time. Safe against double-claiming: the endpoint's claim step is a
+          # single atomic UPDATE ... WHERE id IN (subquery), not a separate
+          # SELECT-then-write, so overlapping requests can't grab the same row.
+          while [ "$call" -lt "$max" ]; do
+            tmpdir=$(mktemp -d)
+            pids=()
+            for _ in $(seq 1 "$parallel"); do
+              call=$((call + 1))
+              if [ "$call" -gt "$max" ]; then break; fi
+              (
+                if ! curl -fsS -X POST "$endpoint" -H "Authorization: Bearer $ADMIN_SECRET" -o "$tmpdir/$call.json"; then
+                  echo '{}' > "$tmpdir/$call.json"
+                fi
+              ) &
+              pids+=($!)
+            done
+            for pid in "${pids[@]}"; do wait "$pid"; done
+
+            round_enriched=0
+            round_thin=0
+            round_failed=0
+            remaining="?"
+            install_remaining="?"
+            stopped="false"
+            for f in "$tmpdir"/*.json; do
+              [ -e "$f" ] || continue
+              resp=$(cat "$f")
+              round_enriched=$((round_enriched + $(echo "$resp" | jq -r '.enriched // 0')))
+              round_thin=$((round_thin + $(echo "$resp" | jq -r '.skippedThin // 0')))
+              round_failed=$((round_failed + $(echo "$resp" | jq -r '.failed // 0')))
+              r=$(echo "$resp" | jq -r '.remaining // "?"')
+              ir=$(echo "$resp" | jq -r '.installRemaining // "?"')
+              [ "$r" != "?" ] && remaining="$r"
+              [ "$ir" != "?" ] && install_remaining="$ir"
+              [ "$(echo "$resp" | jq -r '.budgetStopped // false')" = "true" ] && stopped="true"
+            done
+            rm -rf "$tmpdir"
+            total=$((total + round_enriched))
+            echo "Through call $call: +$round_enriched enriched, $round_thin thin-skipped, $round_failed failed this round | remaining=$remaining, install_remaining=$install_remaining | run total=$total"
 
             # Both counters must clear — installExtractedAt backfilling reclaims
             # already-enriched rows too, so `remaining` alone can hit 0 long
@@ -60,14 +95,14 @@ jobs:
               echo "✓ Catalog fully enriched and install-checked."
               break
             fi
-            if [ "$enriched" = "0" ] && [ "$thin" = "0" ]; then
+            if [ "$round_enriched" = "0" ] && [ "$round_thin" = "0" ]; then
               idle=$((idle + 1))
               if [ "$stopped" = "true" ]; then
                 echo "Endpoint stopped early (likely LLM budget/outage) — backing off 30s."
                 sleep 30
               fi
               if [ "$idle" -ge 4 ]; then
-                echo "::warning::No progress across 4 calls — stopping. Re-run later to continue."
+                echo "::warning::No progress across 4 rounds — stopping. Re-run later to continue."
                 break
               fi
             else
