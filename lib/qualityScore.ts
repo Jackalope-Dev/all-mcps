@@ -49,10 +49,10 @@ function ramp(value: number, full: number): number {
 }
 
 function tierFor(score: number): QualityTier {
-  if (score >= 85) return 'Excellent';
-  if (score >= 70) return 'Great';
-  if (score >= 55) return 'Good';
-  if (score >= 40) return 'Fair';
+  if (score >= 80) return 'Excellent';
+  if (score >= 65) return 'Great';
+  if (score >= 50) return 'Good';
+  if (score >= 35) return 'Fair';
   return 'Emerging';
 }
 
@@ -129,17 +129,19 @@ export function computeQualityScore(server: Server): QualityScore {
       earned = max;
       hint = 'Official maintainer claimed listing.';
     } else if (server.websiteVerified || server.isPremium) {
-      earned = max * 0.6;
+      earned = max * 0.7;
       hint = 'Domain control or verified product website linked.';
     } else if (server.reciprocalBadgeOk) {
-      earned = max * 0.5;
+      earned = max * 0.6;
       hint = 'Verified maintainer reciprocal badge detected on repository or website.';
     } else if (repoHosted) {
       const isHealthyActive = server.isVerifiedActive || server.healthStatus === 'healthy';
-      const hasBaselineAdoption = (server.githubStars || 0) >= 10 || (server.npmDownloads || 0) >= 100;
-      if (isHealthyActive || hasBaselineAdoption) {
+      if (isHealthyActive) {
+        earned = max * 0.5;
+        hint = 'Active community repository with verified uptime.';
+      } else {
         earned = max * 0.4;
-        hint = 'Active community repository. Claim your listing to earn full verification credit.';
+        hint = 'Valid open-source community repository. Claim your listing to earn full verification credit.';
       }
     }
     components.push({
@@ -155,19 +157,19 @@ export function computeQualityScore(server: Server): QualityScore {
   {
     const max = 30;
     const descLen = (server.description || '').trim().length;
-    const descScore = ramp(descLen, 400) * 0.45; // ~400 chars ≈ 45% of max
+    const descScore = ramp(descLen, 400) * 0.50; // ~400 chars ≈ 50% of max
     const toolsCount = server.tools ? server.tools.length : 0;
     const hasTools = toolsCount > 0;
     const toolsIntrospected = hasTools && server.toolsSource === 'introspected';
     
     // Base tools credit + schema richness bonus for tool count
-    const toolsBase = toolsIntrospected ? 0.30 : hasTools ? 0.20 : descLen >= 120 ? 0.10 : 0;
+    const toolsBase = toolsIntrospected ? 0.35 : hasTools ? 0.25 : descLen >= 120 ? 0.15 : 0;
     const schemaRichnessBonus = hasTools ? ramp(toolsCount, 10) * (toolsIntrospected ? 0.10 : 0.05) : 0;
     const toolsScore = toolsBase + schemaRichnessBonus;
     
     // Ready-to-run install config (npx, uvx, bunx, or remote url)
     const hasInstallHint = !!(server.installCommand || server.installPackage || server.suggestedInstallCommand);
-    const installScore = hasInstallHint ? 0.10 : 0;
+    const installScore = hasInstallHint ? 0.15 : 0;
 
     // Security & Auth disclosure bonus
     const hasAuthDisclosure = !!(server.authType && server.authType !== 'unknown');
@@ -204,7 +206,7 @@ export function computeQualityScore(server: Server): QualityScore {
       else if (commitAgeDays <= 180) recencyWeight = 0.05;
       else recencyWeight = 0.00;
     } else {
-      recencyWeight = 0.00; // unmeasured fallback (neutral)
+      recencyWeight = 0.05; // neutral fallback
     }
 
     // Stale star decay: discount stars by 50% if the repository hasn't had a commit in >365 days
