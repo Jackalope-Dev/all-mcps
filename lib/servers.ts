@@ -103,6 +103,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   installArgs: serversTable.installArgs,
   installPackage: serversTable.installPackage,
   installConfidence: serversTable.installConfidence,
+  installExtractedAt: serversTable.installExtractedAt,
   views: serversTable.views,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
@@ -166,6 +167,8 @@ export type Server = {
   installArgs?: string | string[] | null;
   installPackage?: string | null;
   installConfidence?: string | null;
+  /** When the LLM last validated/void'd the install fields above. See installExtractedAt in db/schema.ts. */
+  installExtractedAt?: string | Date | null;
   views?: number;
   copies?: number;
   upvotes?: number;

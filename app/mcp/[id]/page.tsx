@@ -178,7 +178,17 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
   const readme = await fetchReadme(server.url);
   const relatedServers = await getRelatedServers(server as any, 4);
-  const pilotResult = await getStdioPilotResult(server.id);
+  const rawPilotResult = await getStdioPilotResult(server.id);
+  // A pilot check is only meaningful for the install command it actually
+  // tested. install_extracted_at (LLM re-validation) can rewrite that
+  // command after the pilot ran — stale otherwise, showing a mismatched
+  // command/error pairing that never actually happened together.
+  const pilotResult =
+    rawPilotResult &&
+    (!server.installExtractedAt ||
+      new Date(rawPilotResult.checkedAt).getTime() >= new Date(server.installExtractedAt).getTime())
+      ? rawPilotResult
+      : null;
   const { displayName, org } = parseServerName(server.name);
   const catMeta = getCategoryMeta(server.category);
 
