@@ -179,24 +179,35 @@ export function ToolSchemaInspector({
               </IconTooltip>
             )}
             {hasTools && sourceBadge && (
-              <span
-                title={sourceBadge.title}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  color: sourceBadge.color,
-                  background: sourceBadge.background,
-                  border: `1px solid ${sourceBadge.border}`,
-                  borderRadius: '999px',
-                  padding: '0.2rem 0.6rem',
-                }}
+              <IconTooltip
+                label={sourceBadge.label}
+                asSpan
+                trigger={
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      color: sourceBadge.color,
+                      background: sourceBadge.background,
+                      border: `1px solid ${sourceBadge.border}`,
+                      borderRadius: '999px',
+                      padding: '0.2rem 0.6rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <sourceBadge.icon size={11} />
+                    {sourceBadge.label}
+                  </span>
+                }
               >
-                <sourceBadge.icon size={11} />
-                {sourceBadge.label}
-              </span>
+                <span className="mcp-icon-tooltip-title">
+                  <sourceBadge.icon size={14} color={sourceBadge.color} /> {sourceBadge.label}
+                </span>
+                <span className="mcp-icon-tooltip-body">{sourceBadge.title}</span>
+              </IconTooltip>
             )}
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>

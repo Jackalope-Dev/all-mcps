@@ -42,8 +42,12 @@ export function HealthHistoryStrip({ history }: { history: ServerHealthCheck[] }
               maxWidth: '4px',
               height: '100%',
               borderRadius: '1px',
-              backgroundColor: h.healthy ? '#10b981' : '#f87171',
-              opacity: h.healthy ? 0.55 : 0.9,
+              // Baked into the color as rgba rather than a separate `opacity`
+              // on the element — opacity would also wash out the ::after/
+              // ::before tooltip pseudo-elements below, since they share this
+              // element's compositing (confirmed in practice: made the
+              // tooltip bubble translucent/unreadable, not just the dot).
+              backgroundColor: h.healthy ? 'rgba(16, 185, 129, 0.55)' : 'rgba(248, 113, 113, 0.9)',
               outline: 'none',
             }}
           />
