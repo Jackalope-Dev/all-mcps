@@ -131,6 +131,9 @@ export function computeQualityScore(server: Server): QualityScore {
     } else if (server.websiteVerified || server.isPremium) {
       earned = max * 0.6;
       hint = 'Domain control or verified product website linked.';
+    } else if (server.reciprocalBadgeOk) {
+      earned = max * 0.5;
+      hint = 'Verified maintainer reciprocal badge detected on repository or website.';
     } else if (repoHosted) {
       const isHealthyActive = server.isVerifiedActive || server.healthStatus === 'healthy';
       const hasBaselineAdoption = (server.githubStars || 0) >= 10 || (server.npmDownloads || 0) >= 100;
@@ -148,23 +151,34 @@ export function computeQualityScore(server: Server): QualityScore {
     });
   }
 
-  // 3. Documentation & capabilities (30) — description depth + real tools + install readiness.
+  // 3. Documentation & capabilities (30) — description depth + real tools + install readiness + auth.
   {
     const max = 30;
     const descLen = (server.description || '').trim().length;
-    const descScore = ramp(descLen, 400) * 0.5; // ~400 chars ≈ full (50%)
-    const hasTools = !!server.tools && server.tools.length > 0;
+    const descScore = ramp(descLen, 400) * 0.45; // ~400 chars ≈ 45% of max
+    const toolsCount = server.tools ? server.tools.length : 0;
+    const hasTools = toolsCount > 0;
     const toolsIntrospected = hasTools && server.toolsSource === 'introspected';
-    const toolsScore = toolsIntrospected ? 0.35 : hasTools ? 0.25 : descLen >= 120 ? 0.15 : 0;
+    
+    // Base tools credit + schema richness bonus for tool count
+    const toolsBase = toolsIntrospected ? 0.30 : hasTools ? 0.20 : descLen >= 120 ? 0.10 : 0;
+    const schemaRichnessBonus = hasTools ? ramp(toolsCount, 10) * (toolsIntrospected ? 0.10 : 0.05) : 0;
+    const toolsScore = toolsBase + schemaRichnessBonus;
     
     // Ready-to-run install config (npx, uvx, bunx, or remote url)
     const hasInstallHint = !!(server.installCommand || server.installPackage || server.suggestedInstallCommand);
-    const installScore = hasInstallHint ? 0.15 : 0;
+    const installScore = hasInstallHint ? 0.10 : 0;
+
+    // Security & Auth disclosure bonus
+    const hasAuthDisclosure = !!(server.authType && server.authType !== 'unknown');
+    const authScore = hasAuthDisclosure ? 0.05 : 0;
+
+    const totalDocMag = Math.min(1, descScore + toolsScore + installScore + authScore);
 
     components.push({
       key: 'docs',
       label: 'Documentation & tools',
-      earned: Math.round(max * (descScore + toolsScore + installScore)),
+      earned: Math.round(max * totalDocMag),
       max,
       hint: toolsIntrospected
         ? 'Rich description, verified tool schemas, and executable install config.'
@@ -174,23 +188,27 @@ export function computeQualityScore(server: Server): QualityScore {
     });
   }
 
-  // 4. Maintenance & Adoption (15) — commit recency + stars & downloads.
+  // 4. Maintenance & Adoption (15) — commit recency + stars & downloads with decay.
   {
     const max = 15;
-    const stars = server.githubStars || 0;
+    const rawStars = server.githubStars || 0;
     const downloads = server.npmDownloads || 0;
     const installs = server.copies || 0;
     
-    // Commit recency score: active commit in last 90d adds 0.2 weight
+    let commitAgeDays = -1;
     let recencyWeight = 0;
     if (server.lastCommitAt) {
-      const commitAgeDays = (Date.now() - new Date(server.lastCommitAt).getTime()) / (1000 * 60 * 60 * 24);
+      commitAgeDays = (Date.now() - new Date(server.lastCommitAt).getTime()) / (1000 * 60 * 60 * 24);
       if (commitAgeDays <= 30) recencyWeight = 0.25;
       else if (commitAgeDays <= 90) recencyWeight = 0.15;
       else if (commitAgeDays <= 180) recencyWeight = 0.05;
+      else recencyWeight = 0.00;
     } else {
-      recencyWeight = 0.1; // unmeasured fallback
+      recencyWeight = 0.00; // unmeasured fallback (neutral)
     }
+
+    // Stale star decay: discount stars by 50% if the repository hasn't had a commit in >365 days
+    const stars = (commitAgeDays > 365) ? rawStars * 0.5 : rawStars;
 
     const adoptionScale = ramp(stars, 1000) * 0.4 + ramp(downloads, 5000) * 0.25 + ramp(installs, 250) * 0.1;
     const totalMag = Math.min(1, adoptionScale + recencyWeight);
