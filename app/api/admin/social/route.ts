@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { socialPosts, servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
-import { tweetMcpServer } from '@/lib/twitter';
+import { dedupeTweetItems, normalizeTweetForDedup, tweetMcpServer } from '@/lib/twitter';
 
 export async function GET(req: Request) {
   try {
@@ -62,7 +62,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { action, serverId, tweetText } = body as { action?: string; serverId?: string; tweetText?: string };
+    const { action, serverId, tweetText, id } = body as {
+      action?: string;
+      serverId?: string;
+      tweetText?: string;
+      id?: number;
+    };
 
     let env: any;
     try {
@@ -77,6 +82,47 @@ export async function POST(req: Request) {
     }
 
     const db = drizzle(env.DB as any);
+
+    // Mark a queued post as sent so it drops out of the outbound RSS feed. Use this
+    // for a row Buffer already posted successfully (an "identify successful posts and
+    // clear them" action) — the feed only serves status='queued' rows.
+    if (action === 'mark_sent') {
+      if (typeof id !== 'number') {
+        return NextResponse.json({ error: 'id is required.' }, { status: 400 });
+      }
+      await db
+        .update(socialPosts)
+        .set({ status: 'sent', sentAt: new Date() })
+        .where(eq(socialPosts.id, id));
+      return NextResponse.json({ success: true, message: 'Post marked as sent.' });
+    }
+
+    // Clear duplicate queued tweets so Buffer never receives two posts X.com would
+    // reject as identical. Keeps the newest row of each unique body and deletes the
+    // older duplicates.
+    if (action === 'dedupe_queue') {
+      const queued = await db
+        .select({ id: socialPosts.id, tweetText: socialPosts.tweetText })
+        .from(socialPosts)
+        .where(and(eq(socialPosts.channel, 'twitter'), eq(socialPosts.status, 'queued')))
+        .orderBy(desc(socialPosts.createdAt));
+
+      const keepIds = new Set(dedupeTweetItems(queued).map((row) => row.id));
+      const duplicateIds = queued.filter((row) => !keepIds.has(row.id)).map((row) => row.id);
+
+      if (duplicateIds.length > 0) {
+        await db.delete(socialPosts).where(inArray(socialPosts.id, duplicateIds));
+      }
+
+      return NextResponse.json({
+        success: true,
+        cleared: duplicateIds.length,
+        message:
+          duplicateIds.length > 0
+            ? `Cleared ${duplicateIds.length} duplicate queued tweet${duplicateIds.length === 1 ? '' : 's'}.`
+            : 'No duplicate queued tweets found.',
+      });
+    }
 
     if (action === 'queue_tweet') {
       if (!serverId && !tweetText) {
@@ -108,6 +154,20 @@ export async function POST(req: Request) {
           result: tweetResult,
         });
       } else if (tweetText) {
+        // Refuse to queue a body identical to one already waiting in the feed —
+        // Buffer would post the first and X.com would reject the second as a repeat.
+        const normalized = normalizeTweetForDedup(tweetText);
+        const existingQueued = await db
+          .select({ tweetText: socialPosts.tweetText })
+          .from(socialPosts)
+          .where(and(eq(socialPosts.channel, 'twitter'), eq(socialPosts.status, 'queued')));
+        if (existingQueued.some((row) => normalizeTweetForDedup(row.tweetText) === normalized)) {
+          return NextResponse.json(
+            { error: 'An identical tweet is already queued.' },
+            { status: 409 },
+          );
+        }
+
         const guid = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         await db.insert(socialPosts).values({
           guid,

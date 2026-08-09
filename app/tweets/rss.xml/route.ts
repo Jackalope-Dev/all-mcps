@@ -2,7 +2,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq } from 'drizzle-orm';
 import { socialPosts } from '../../../db/schema';
-import { escapeForXml, truncateToTwitterLimit, TWITTER_SAFE_CHAR_LIMIT } from '../../../lib/twitter';
+import { dedupeTweetItems, escapeForXml, truncateToTwitterLimit, TWITTER_SAFE_CHAR_LIMIT } from '../../../lib/twitter';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +39,14 @@ export async function GET() {
     console.warn('Tweets RSS feed DB fetch failed.', error);
   }
 
-  const rssItems = items
+  // Collapse duplicate bodies before rendering. Nothing marks a queued row as sent,
+  // so every queued row stays in this feed; two rows with identical text each carry
+  // a distinct <guid>, so Buffer treats the second as new and X.com rejects it with
+  // "you've posted that one recently", stalling the make.com scenario. Items arrive
+  // newest-first, so this keeps the most recent copy of each unique tweet.
+  const dedupedItems = dedupeTweetItems(items);
+
+  const rssItems = dedupedItems
     .map((item) => {
       const pubDate = (item.createdAt ? new Date(item.createdAt) : new Date()).toUTCString();
       const itemUrl = item.serverId ? `${siteUrl}/mcp/${item.serverId}` : `${siteUrl}/tweets/rss.xml`;

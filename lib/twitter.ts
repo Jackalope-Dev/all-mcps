@@ -52,6 +52,35 @@ export function toTweetQueueGuid(dedupeKey?: string): string {
   return dedupeKey ? `tweet:${dedupeKey}` : `tweet:${crypto.randomUUID()}`;
 }
 
+/**
+ * Normalize a tweet body into a stable key for duplicate detection. X.com rejects
+ * a repost of the same content ("you've posted that one recently"), and it ignores
+ * surrounding whitespace and letter case when deciding — so we collapse runs of
+ * whitespace, trim, and lowercase before comparing. Two rows that share this key
+ * would be treated as the same post by X.com and must never both reach Buffer.
+ */
+export function normalizeTweetForDedup(text: string): string {
+  return (text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/**
+ * Collapse a list of queued items down to one per unique tweet body. Callers pass
+ * items already ordered newest-first, so the first occurrence of each normalized
+ * body is kept and later (older) duplicates are dropped — this is what stops the
+ * RSS feed from ever handing Buffer two posts X.com would reject as identical.
+ */
+export function dedupeTweetItems<T extends { tweetText: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    const key = normalizeTweetForDedup(item.tweetText);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
 const FEATURED_HEADERS = [
   '🔥 Featured MCP Server',
   '⭐ Top Pick on AllMCPs',

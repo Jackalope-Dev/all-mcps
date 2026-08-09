@@ -1,6 +1,8 @@
 import {
   buildMcpServerTweetText,
+  dedupeTweetItems,
   getTwitterCharCount,
+  normalizeTweetForDedup,
   truncateToTwitterLimit,
   TWITTER_CHAR_LIMIT,
   TWITTER_SAFE_CHAR_LIMIT,
@@ -69,5 +71,39 @@ assert(
   truncateToTwitterLimit(shortText) === shortText,
   'text under the limit should be returned unchanged',
 );
+
+console.log('Testing tweet duplicate-detection helpers...');
+
+// 7. Normalization ignores case and surrounding/inner whitespace, the way X.com
+//    does when it flags a repost.
+assert(
+  normalizeTweetForDedup('Hello   World') === normalizeTweetForDedup('hello world'),
+  'normalization should ignore case and collapse whitespace',
+);
+assert(
+  normalizeTweetForDedup('  Spaced  \n out  ') === 'spaced out',
+  'normalization should trim and collapse newlines',
+);
+
+// 8. dedupeTweetItems keeps the first occurrence of each unique body and drops
+//    later duplicates — callers feed items newest-first, so the newest copy wins.
+const deduped = dedupeTweetItems([
+  { id: 3, tweetText: 'Check out Server A on @AllMCPs' },
+  { id: 2, tweetText: 'check out server a on @allmcps' }, // duplicate of id 3 (case/space)
+  { id: 1, tweetText: 'A different tweet entirely' },
+]);
+assert(deduped.length === 2, 'dedupeTweetItems should drop the duplicate body');
+assert(
+  (deduped[0] as any).id === 3 && (deduped[1] as any).id === 1,
+  'dedupeTweetItems should keep the first occurrence of each unique body',
+);
+
+// 9. A list with no duplicates is returned intact.
+const unique = dedupeTweetItems([
+  { tweetText: 'one' },
+  { tweetText: 'two' },
+  { tweetText: 'three' },
+]);
+assert(unique.length === 3, 'dedupeTweetItems should leave unique lists unchanged');
 
 console.log('All twitter char-limit tests passed ✔');
