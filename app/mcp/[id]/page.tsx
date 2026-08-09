@@ -1,4 +1,5 @@
-import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy, Clock } from 'lucide-react';
+import { formatCommitAge } from '../../../lib/format';
 import {
   AUTH_TYPE_LABELS,
   MAINTENANCE_STATUS_LABELS,
@@ -942,11 +943,22 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <InstallsStat count={server.copies || 0} showBorder={typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number'} />
 
               {typeof server.githubStars === 'number' && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: typeof server.npmDownloads === 'number' ? '1px solid var(--border-color)' : 'none', paddingBottom: typeof server.npmDownloads === 'number' ? '0.5rem' : '0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                   <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                     <Star size={14} style={{ color: '#f5c518' }} /> GitHub stars
                   </span>
                   <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.githubStars.toLocaleString()}</span>
+                </div>
+              )}
+              {formatCommitAge(server.lastCommitAt) && (
+                <div
+                  title="Last time this repo was pushed to, from the GitHub API"
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: typeof server.npmDownloads === 'number' ? '1px solid var(--border-color)' : 'none', paddingBottom: typeof server.npmDownloads === 'number' ? '0.5rem' : '0' }}
+                >
+                  <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Clock size={14} style={{ color: 'var(--accent-color)' }} /> Last commit
+                  </span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{formatCommitAge(server.lastCommitAt)}</span>
                 </div>
               )}
               {typeof server.npmDownloads === 'number' && (

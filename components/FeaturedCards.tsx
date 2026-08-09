@@ -33,7 +33,7 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
         {displayServers.map((server) => (
           <ImpressionBeacon key={server.id} serverId={server.id} surface="homepage_featured">
-          <Card href={`/mcp/${server.id}`} hoverable className="directory-card-featured" style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', display: 'flex', flexDirection: 'column', minHeight: '310px', maxHeight: '310px', position: 'relative', overflow: 'hidden' }}>
+          <Card href={`/mcp/${server.id}`} hoverable className="directory-card-featured" style={{ padding: 'clamp(1.25rem, 4vw, 2rem)', paddingBottom: '12px', display: 'flex', flexDirection: 'column', minHeight: '310px', maxHeight: '310px', position: 'relative', overflow: 'hidden' }}>
             <div className="featured-card-header">
               <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} size={56} />
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>

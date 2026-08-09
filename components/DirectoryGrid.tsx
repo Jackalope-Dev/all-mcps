@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid, ShieldCheck, Terminal, Zap, CheckCircle2, ArrowRight, Copy, Check } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid, ShieldCheck, Terminal, Zap, CheckCircle2, ArrowRight, Copy, Check, Wrench, Clock } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -25,6 +25,7 @@ import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
 import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel } from '../lib/categories';
 import { compileQuery, scoreServerMatch, engagementScore, trendingScore } from '../lib/search';
+import { formatCommitAge } from '../lib/format';
 
 
 type Server = {
@@ -43,12 +44,18 @@ type Server = {
   upvotes?: number;
   githubStars?: number | null;
   npmDownloads?: number | null;
+  /** Repo `pushed_at` from GitHub, refreshed by the health cron. */
+  lastCommitAt?: string | Date | null;
   /** high | medium | low — from health cron / install resolver. */
   installConfidence?: string | null;
   installKind?: string | null;
   installCommand?: string | null;
   /** Space-joined tool names for search recall (from directory feed). */
   toolText?: string | null;
+  /** Tool count only — full schemas stay server-side. */
+  toolCount?: number;
+  /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null. */
+  toolsSource?: string | null;
   pricingModel?: string | null;
   authType?: string | null;
   tags?: string[] | null;
@@ -487,21 +494,45 @@ export default function DirectoryGrid({
   const selectLabel = selectedCategory || 'All Categories';
   const selectMinCh = Math.min(Math.max(selectLabel.length + 4, 16), 48);
 
-  const Stats = ({ server }: { server: Server }) => (
-    <div className="directory-stats">
-      <div title="Upvotes">
-        <Heart size={12} aria-hidden="true" /> {(server.upvotes || 0).toLocaleString()}
-      </div>
-      {typeof server.githubStars === 'number' && (
-        <div title="GitHub stars">
-          <Star size={12} aria-hidden="true" /> {server.githubStars.toLocaleString()}
+  const Stats = ({ server }: { server: Server }) => {
+    const commitAge = formatCommitAge(server.lastCommitAt);
+    return (
+      <div className="directory-stats">
+        <div title="Upvotes">
+          <Heart size={12} aria-hidden="true" /> {(server.upvotes || 0).toLocaleString()}
         </div>
-      )}
-      <div title="Install / copy actions">
-        <Download size={12} aria-hidden="true" /> {(server.copies || 0).toLocaleString()}
+        {typeof server.githubStars === 'number' && (
+          <div title="GitHub stars">
+            <Star size={12} aria-hidden="true" /> {server.githubStars.toLocaleString()}
+          </div>
+        )}
+        <div title="Install / copy actions">
+          <Download size={12} aria-hidden="true" /> {(server.copies || 0).toLocaleString()}
+        </div>
+        {typeof server.toolCount === 'number' && server.toolCount > 0 && (
+          <div
+            title={
+              server.toolsSource === 'introspected'
+                ? `${server.toolCount} tools — verified live via tools/list`
+                : server.toolsSource === 'readme'
+                  ? `${server.toolCount} tools — self-reported from the README, not live-verified`
+                  : `${server.toolCount} tools`
+            }
+          >
+            <Wrench size={12} aria-hidden="true" /> {server.toolCount}
+            {server.toolsSource === 'introspected' && (
+              <ShieldCheck size={11} aria-hidden="true" style={{ color: '#34d399', marginLeft: 2 }} />
+            )}
+          </div>
+        )}
+        {commitAge && (
+          <div title={`Last commit: ${commitAge}`}>
+            <Clock size={12} aria-hidden="true" /> {commitAge}
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
 
 

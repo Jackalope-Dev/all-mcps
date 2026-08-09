@@ -159,6 +159,7 @@ export async function POST(req: Request) {
       let toolsCheckedAt: Date | null = server.toolsCheckedAt ?? null;
       let toolsError: string | null = server.toolsError ?? null;
       let toolsSource: string | null = server.toolsSource ?? null;
+      let lastCommitAt: Date | null = server.lastCommitAt ?? null;
 
       // Prefer package name from cached install, else listing name
       const npmName = server.installPackage || server.name;
@@ -183,6 +184,10 @@ export async function POST(req: Request) {
               const ghData = (await ghRes.json()) as any;
               if (typeof ghData.stargazers_count === 'number') {
                 githubStars = ghData.stargazers_count;
+              }
+              if (typeof ghData.pushed_at === 'string') {
+                const pushed = new Date(ghData.pushed_at);
+                if (!Number.isNaN(pushed.getTime())) lastCommitAt = pushed;
               }
               if (ghData.archived || ghData.disabled) {
                 healthStatus = 'archived';
@@ -321,6 +326,7 @@ export async function POST(req: Request) {
           reciprocalBadgeOk,
           badgeLastCheckedAt: now,
           githubStars,
+          lastCommitAt,
           npmDownloads,
           tools: toolsJson,
           toolsCheckedAt,

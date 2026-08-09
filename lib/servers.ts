@@ -87,6 +87,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   reciprocalBadgeOk: serversTable.reciprocalBadgeOk,
   githubStars: serversTable.githubStars,
   npmDownloads: serversTable.npmDownloads,
+  lastCommitAt: serversTable.lastCommitAt,
   tools: serversTable.tools,
   toolsSource: serversTable.toolsSource,
   aiSummary: serversTable.aiSummary,
@@ -139,6 +140,8 @@ export type Server = {
   reciprocalBadgeOk?: boolean;
   githubStars?: number | null;
   npmDownloads?: number | null;
+  /** Repo `pushed_at` from GitHub, refreshed by the health cron. Null = not a GitHub-linked listing or not measured yet. */
+  lastCommitAt?: string | Date | null;
   /** Parsed by normalizeServer from the `tools` JSON column. */
   tools?: ServerTool[];
   /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null. */
@@ -223,8 +226,14 @@ export type DirectoryFeedItem = {
   featuredUntil: string | Date | null;
   githubStars: number | null;
   npmDownloads: number | null;
+  /** Repo `pushed_at` from GitHub, refreshed by the health cron. */
+  lastCommitAt: string | Date | null;
   installConfidence: string | null;
   toolText: string | null;
+  /** Tool count only — the full schema JSON stays server-side to keep the feed light. */
+  toolCount: number;
+  /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null. */
+  toolsSource: string | null;
   aiText: string | null;
   views: number;
   copies: number;
@@ -308,8 +317,10 @@ export async function getDirectoryFeedPage(
           featuredUntil: serversTable.featuredUntil,
           githubStars: serversTable.githubStars,
           npmDownloads: serversTable.npmDownloads,
+          lastCommitAt: serversTable.lastCommitAt,
           installConfidence: serversTable.installConfidence,
           tools: serversTable.tools,
+          toolsSource: serversTable.toolsSource,
           views: serversTable.views,
           copies: serversTable.copies,
           upvotes: serversTable.upvotes,
@@ -351,8 +362,11 @@ export async function getDirectoryFeedPage(
         featuredUntil: r.featuredUntil ?? null,
         githubStars: r.githubStars ?? null,
         npmDownloads: r.npmDownloads ?? null,
+        lastCommitAt: r.lastCommitAt ?? null,
         installConfidence: r.installConfidence ?? null,
         toolText: feedToolText(r.tools),
+        toolCount: parseServerTools(r.tools).length,
+        toolsSource: r.toolsSource ?? null,
         aiText: feedAiTextFromRaw(r.aiSummary, r.aiOverview, r.aiUseCases, r.aiFeatures, r.aiFaq),
         views: r.views ?? 0,
         copies: r.copies ?? 0,
@@ -396,8 +410,11 @@ export async function getDirectoryFeedPage(
       featuredUntil: s.featuredUntil ?? null,
       githubStars: s.githubStars ?? null,
       npmDownloads: s.npmDownloads ?? null,
+      lastCommitAt: s.lastCommitAt ?? null,
       installConfidence: s.installConfidence ?? null,
       toolText,
+      toolCount: tools.length,
+      toolsSource: s.toolsSource ?? null,
       aiText: buildAiSearchText(s, FEED_AI_TEXT_MAX),
       views: s.views ?? 0,
       copies: s.copies ?? 0,

@@ -51,6 +51,8 @@ export const servers = sqliteTable('servers', {
   badgeLastCheckedAt: integer('badge_last_checked_at', { mode: 'timestamp' }),
   /** GitHub stargazers, refreshed by the health cron. Null = not measured yet. */
   githubStars: integer('github_stars'),
+  /** Repo's `pushed_at` from the GitHub API (last commit/push), refreshed by the health cron. Null = not a GitHub-linked listing or not measured yet. Surfaced so visitors can judge staleness without cloning the repo. */
+  lastCommitAt: integer('last_commit_at', { mode: 'timestamp' }),
   /** npm last-month downloads for the package, refreshed by the health cron. Null = not an npm package or not measured. */
   npmDownloads: integer('npm_downloads'),
   /** JSON array of {name, description} captured when a listing exposes a callable MCP endpoint. Null = tools not introspected. */

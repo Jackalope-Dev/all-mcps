@@ -38,7 +38,14 @@ import { getGithubToken } from '../../../../lib/githubAuth';
  * Runs every Worker cron tick (see custom-worker.ts).
  */
 
-const BATCH_SIZE = 40;
+// Kept small because each candidate can run several Photon WASM image
+// decode/resize/encode passes (README image → favicon → org/user avatar
+// cascade); a large batch risks exceeding the Worker's per-request CPU
+// budget and getting killed with a bare 503 before any response body is
+// written. GitHub Actions now pings this every 15 min (see
+// .github/workflows/health-check.yml), so a smaller batch still drains the
+// backlog quickly without the risk.
+const BATCH_SIZE = 15;
 
 async function tryUploadLogo(
   url: string,

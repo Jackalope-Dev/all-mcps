@@ -72,6 +72,21 @@ export function ToolSchemaInspector({
   const hasTools = tools && tools.length > 0;
   const hasAiCapabilities = (aiFeatures && aiFeatures.length > 0) || (aiUseCases && aiUseCases.length > 0);
 
+  /**
+   * Rough context-budget signal: ~4 chars/token is the standard back-of-envelope
+   * estimate (no tokenizer dependency needed for a directory-wide approximation).
+   * Counts name + description + full parameter schema, since all three get sent
+   * to the model on every tool-enabled request, not just the visible summary.
+   */
+  const approxTokens = useMemo(() => {
+    if (!hasTools) return 0;
+    const chars = tools.reduce((sum, t) => {
+      const paramsChars = t.parameters ? JSON.stringify(t.parameters).length : 0;
+      return sum + t.name.length + (t.description?.length ?? 0) + paramsChars;
+    }, 0);
+    return Math.round(chars / 4);
+  }, [tools, hasTools]);
+
   if (!hasTools && !hasAiCapabilities) {
     return null;
   }
@@ -103,6 +118,22 @@ export function ToolSchemaInspector({
           >
             <Wrench size={22} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
             Capabilities & Tool Schemas {hasTools ? `(${tools.length})` : ''}
+            {hasTools && approxTokens > 0 && (
+              <span
+                title="Approximate context cost of this server's tool schemas (~4 chars/token), before any tool is called. Actual usage depends on your client and model."
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  background: 'var(--bg-muted)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '999px',
+                  padding: '0.2rem 0.6rem',
+                }}
+              >
+                ~{approxTokens >= 1000 ? `${(approxTokens / 1000).toFixed(1)}k` : approxTokens} tokens
+              </span>
+            )}
             {hasTools && sourceBadge && (
               <span
                 title={sourceBadge.title}

@@ -21,7 +21,8 @@ jobs:
       # automatic GITHUB_TOKEN — that never reaches Cloudflare).
       - name: Ping Catalog Enrich API
         run: |
-          curl -f -X POST https://allmcps.com/api/cron/enrich \
+          curl -f --retry 3 --retry-delay 5 --retry-all-errors \
+          -X POST https://allmcps.com/api/cron/enrich \
           -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}"
 
       # NOTE: The 6x-daily Twitter highlight post lives in its own workflow
