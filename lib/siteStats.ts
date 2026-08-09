@@ -351,7 +351,7 @@ export async function getSiteStats(): Promise<SiteStats> {
       totalCopies: dbCopies,
       totalUpvotes: dbUpvotes,
       toolsIndexed: dbTools > 0 ? dbTools : snapshotTools,
-      verifiedCount: snapshotVerified,
+      verifiedCount: dbVerified,
       toolsSourceBreakdown: {
         introspected: introspectedCount,
         readme: readmeCount,
