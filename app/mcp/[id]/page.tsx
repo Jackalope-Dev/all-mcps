@@ -717,7 +717,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     )}
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', margin: 0 }}>
                       This is an experimental automated check and can have false negatives — missing environment variables, a slow cold install, etc.
-                      It doesn&rsquo;t necessarily mean something&rsquo;s wrong.{' '}
+                      It doesn&rsquo;t necessarily mean something&rsquo;s wrong.
+                      {formatCommitAge(pilotResult.checkedAt) ? ` Last checked ${formatCommitAge(pilotResult.checkedAt)}.` : ''}{' '}
                       {!isOwner && (
                         <Link href={`/mcp/${server.id}/claim`} style={{ color: 'var(--accent-color)' }}>
                           Own this listing? Claim it to help us verify it.
