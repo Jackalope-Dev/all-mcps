@@ -30,12 +30,15 @@ import { CALLER_COLORS } from '../../lib/accessLog';
 import type { CallerBreakdown, EndpointBreakdown, CountryBreakdown } from '../../lib/siteStats';
 import { TrendChart } from '../../components/TrustCharts';
 
-// This page had no dynamic/revalidate export at all, so Next statically froze it
-// at build time — and D1 isn't reachable during build (see lib/siteStats.ts's
-// getSiteStats, same pattern as sitemapHelpers.ts), so every rebuild baked in the
-// zeroed static-snapshot fallback (0 views/copies/upvotes) instead of live numbers.
-// ISR instead of fully static so it actually reflects the production database.
-export const revalidate = 900;
+// D1 isn't reachable during build (see lib/siteStats.ts's getSiteStats, same
+// pattern as sitemapHelpers.ts), so anything that gets prerendered at build time
+// bakes in the zeroed static-snapshot fallback (0 views/copies/upvotes). Plain
+// `revalidate` (ISR) still prerenders once at build, so that zeroed snapshot is
+// what got served after each deploy until a revalidation happened to succeed —
+// which it wasn't. force-dynamic renders per request against the live D1 binding
+// (same as the dashboard/admin pages), so real numbers show immediately after
+// every deploy and never freeze to zero.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Trust & Traffic Transparency | AllMCPs',
