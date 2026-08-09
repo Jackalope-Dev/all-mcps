@@ -849,8 +849,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             />
           </section>
 
-          <DirectoryBadgeCard serverId={server.id} serverName={displayName} />
-
           <section>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Documentation Overview</h2>
             <div className="detail-readme-scroll">
@@ -991,6 +989,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               items={faqItems.map((item) => ({ question: item.q, answer: item.a }))}
             />
           </section>
+
+          {/* Directory Badge Generator Card - Bottom of Page */}
+          <div style={{ marginTop: '2.5rem' }}>
+            <DirectoryBadgeCard serverId={server.id} serverName={displayName} />
+          </div>
         </div>
 
         <MobileInstallBar displayName={displayName} />

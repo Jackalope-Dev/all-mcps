@@ -46,7 +46,7 @@ export default function BadgeGeneratorPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PageHeader
         title="MCP Badge & Embed Generator"
-        description="Customize dynamic SVG badges for your GitHub README, documentation site, or blog. Keep the badge dofollow and verify your site to turn your listing's website link into a reciprocal dofollow backlink."
+        description="Generate dynamic SVG badges in 3 easy steps: 1. Select your MCP server, 2. Customize badge style & metric, 3. Copy the Markdown or HTML snippet for your GitHub README or project site."
       />
       <div
         style={{

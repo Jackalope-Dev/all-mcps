@@ -25147,7 +25147,7 @@
     "id": "allmcps-server",
     "name": "AllMCPs Server",
     "url": "https://github.com/Jackalope-Dev/allmcps-server",
-    "description": "The official MCP server for AllMCPs.com - submit and manage tools directly from your AI.",
+    "description": "The official MCP server for AllMCPs.com - submit, search, and manage MCP tools programmatically directly from your AI agent.",
     "category": "💻 Developer Tools",
     "isOfficial": true,
     "isPremium": true,
@@ -25158,51 +25158,186 @@
     "installConfidence": "high",
     "tools": [
       {
-        "name": "submit_mcp",
-        "description": "Submit a new Model Context Protocol (MCP) server to the AllMCPs directory.",
+        "name": "search_mcp_servers",
+        "description": "Search the AllMCPs directory for Model Context Protocol (MCP) servers by keyword or category.",
         "parameters": {
           "type": "object",
           "properties": {
-            "url": {
+            "query": {
               "type": "string",
-              "description": "The GitHub repository URL or website of the MCP server."
-            },
-            "name": {
-              "type": "string",
-              "description": "The name of the MCP server."
-            },
-            "email": {
-              "type": "string",
-              "description": "Email address for submission confirmation and listing claim link."
-            },
-            "description": {
-              "type": "string",
-              "description": "Optional. Brief description of what the server does."
+              "description": "Search term (e.g. 'github', 'postgres', 'slack', 'database')"
             },
             "category": {
               "type": "string",
-              "description": "Optional. The category of the server."
+              "description": "Optional category name to filter by"
+            },
+            "limit": {
+              "type": "number",
+              "description": "Max number of results to return (default: 10)"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_mcp_install_config",
+        "description": "Get the exact claude_desktop_config.json setup snippet and documentation for a specific MCP server by ID.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The server ID (e.g. 'github-mcp', 'sqlite-mcp')"
             }
           },
           "required": [
-            "url",
+            "id"
+          ]
+        }
+      },
+      {
+        "name": "list_mcp_categories",
+        "description": "List all categories available in the AllMCPs directory along with server counts.",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "submit_mcp_server",
+        "description": "Programmatically submit a new MCP server repository to AllMCPs.com for indexing and review.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Server name (e.g., 'PostgreSQL MCP')"
+            },
+            "url": {
+              "type": "string",
+              "description": "GitHub repository or website URL"
+            },
+            "email": {
+              "type": "string",
+              "description": "Contact email for listing verification & status updates"
+            },
+            "description": {
+              "type": "string",
+              "description": "Short summary of what this MCP server does"
+            },
+            "category": {
+              "type": "string",
+              "description": "Category (e.g., 'Databases', 'Developer Tools')"
+            },
+            "websiteUrl": {
+              "type": "string",
+              "description": "Optional official website URL"
+            }
+          },
+          "required": [
             "name",
+            "url",
             "email"
+          ]
+        }
+      },
+      {
+        "name": "verify_mcp_claim",
+        "description": "Verify ownership and claim an MCP server listing by checking GitHub README badge, website badge, or DNS TXT record.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The server ID to claim & verify"
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "github",
+                "website_badge",
+                "dns"
+              ],
+              "description": "Verification method"
+            },
+            "websiteUrl": {
+              "type": "string",
+              "description": "Optional website URL for website/dns verification"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        }
+      },
+      {
+        "name": "get_boost_pricing",
+        "description": "Get pricing and features for boosting / featuring an MCP server on AllMCPs.com.",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "boost_mcp_server",
+        "description": "Initiate a sponsorship / boost order for an MCP server by ID, returning a Stripe checkout session URL.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The server ID to boost"
+            },
+            "sku": {
+              "type": "string",
+              "enum": [
+                "featured_7d",
+                "category_sponsor_7d",
+                "premium_monthly",
+                "priority_review"
+              ],
+              "description": "Sponsorship tier"
+            },
+            "email": {
+              "type": "string",
+              "description": "Optional contact/billing email"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        }
+      },
+      {
+        "name": "get_boost_status",
+        "description": "Check current boost status, verified badge level, and sponsorship expiration for an MCP server by ID.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The server ID to check"
+            }
+          },
+          "required": [
+            "id"
           ]
         }
       }
     ],
-    "aiSummary": "Official AllMCPs meta server enabling AI agents to submit, query, and manage directory listings programmatically.",
-    "aiOverview": "The AllMCPs meta server provides tools for AI coding agents to discover, query, and submit MCP server repositories to AllMCPs.com directly over standard MCP transport.",
+    "aiSummary": "Official AllMCPs meta server enabling AI agents to search 1,000+ servers, get install configs, verify claims, and submit new MCP tools programmatically.",
+    "aiOverview": "The official AllMCPs meta server provides a complete set of MCP tools for AI coding assistants (Claude Desktop, Cursor, Windsurf, Antigravity, Cline) to discover, query, verify, and submit Model Context Protocol server repositories directly over standard MCP transport.",
     "aiUseCases": [
-      "Submit newly built MCP servers to AllMCPs programmatically from CLI agents",
-      "Check listing claim and verification status",
-      "Retrieve structured directory data for agent context"
+      "Search 1,000+ indexed MCP servers by keyword or category straight from your AI coding prompt",
+      "Retrieve instant JSON configuration snippets for Claude Desktop, Cursor, or Windsurf",
+      "Programmatically submit newly created MCP server repositories to AllMCPs.com",
+      "Verify repository ownership and check listing boost/sponsorship status via agent automation"
     ],
     "aiFeatures": [
-      "submit_mcp: Programmatic directory submission tool",
-      "Automatic claim URL & README badge markdown generation",
-      "Compatible with Claude Desktop, Cursor, Windsurf, and Cline"
+      "search_mcp_servers: Natural-language and category search across the entire AllMCPs catalog",
+      "get_mcp_install_config: Instant client configuration generation for any server ID",
+      "submit_mcp_server: Automated repository submission and verification pipeline",
+      "verify_mcp_claim: Programmatic ownership validation via GitHub, web badges, or DNS",
+      "Zero-config installation with `npx -y allmcps-server`"
     ]
   },
   {
