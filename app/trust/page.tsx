@@ -171,7 +171,7 @@ function SectionLabel({
   return (
     <div style={{ margin: tight ? '0 0 0.75rem' : '2.25rem 0 0.75rem' }}>
       <h2 style={{ fontSize: '1.15rem', margin: '0 0 0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        {Icon && <Icon size={17} style={{ color: 'var(--brand-cyan)' }} />}
+        {Icon && <Icon size={17} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />}
         {title}
       </h2>
       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>{note}</p>
@@ -290,7 +290,7 @@ function Group({
     <div style={{ marginBottom: '1.75rem' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.25rem' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Icon size={15} style={{ color: iconColor }} />
+          <Icon size={15} style={{ color: iconColor, flexShrink: 0 }} />
           <h3 style={{ fontSize: '1rem', margin: 0 }}>{title}</h3>
         </span>
         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
@@ -385,7 +385,7 @@ function OpennessCard({
       }}
     >
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-        <Icon size={15} style={{ color }} />
+        <Icon size={15} style={{ color, flexShrink: 0 }} />
         <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{title}</strong>
       </span>
       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{detail}</p>
@@ -508,7 +508,7 @@ export default async function TrustPage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                    <Sparkles size={16} style={{ color: '#a855f7' }} />
+                    <Sparkles size={16} style={{ color: '#a855f7', flexShrink: 0 }} />
                     <strong style={{ fontSize: '0.875rem' }}>Live MCP Handshakes</strong>
                   </div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -528,7 +528,7 @@ export default async function TrustPage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                    <Wrench size={16} style={{ color: '#60a5fa' }} />
+                    <Wrench size={16} style={{ color: '#60a5fa', flexShrink: 0 }} />
                     <strong style={{ fontSize: '0.875rem' }}>README Structured Parsing</strong>
                   </div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -548,7 +548,7 @@ export default async function TrustPage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                    <CheckCircle2 size={16} style={{ color: '#34d399' }} />
+                    <CheckCircle2 size={16} style={{ color: '#34d399', flexShrink: 0 }} />
                     <strong style={{ fontSize: '0.875rem' }}>Sandbox Verification</strong>
                   </div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -602,7 +602,7 @@ export default async function TrustPage() {
               <div style={{ marginTop: '1rem' }}>
                 <div style={{ padding: '0.85rem 1rem', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-muted)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                    <GitCommit size={16} style={{ color: '#34d399' }} />
+                    <GitCommit size={16} style={{ color: '#34d399', flexShrink: 0 }} />
                     <strong style={{ fontSize: '0.85rem' }}>Active Codebases (Last 30 Days)</strong>
                   </div>
                   <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
