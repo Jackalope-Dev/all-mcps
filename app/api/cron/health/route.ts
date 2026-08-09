@@ -269,6 +269,14 @@ export async function POST(req: Request) {
               );
               toolsSource = 'introspected';
               toolsError = null;
+            } else if (introspection.authRequired) {
+              // Spec-compliant 401 + WWW-Authenticate (RFC 9728) — a real,
+              // correctly-configured OAuth-protected MCP server, not a broken
+              // one. isVerifiedActive/healthStatus above already reflect this
+              // as healthy; this message just needs to not read as a failure.
+              // Reported independently as a common false-negative in other MCP
+              // directories' health probes — worth getting right.
+              toolsError = 'Requires authentication (OAuth) — tools not introspected by the automated check.';
             } else {
               toolsError = (
                 introspection.ok ? 'Endpoint responded but returned no tools.' : introspection.error || 'Unknown error'
@@ -314,6 +322,10 @@ export async function POST(req: Request) {
             );
             toolsSource = 'introspected';
             toolsError = null;
+          } else if (remoteIntrospection.authRequired) {
+            // See the primary-url branch above — same RFC 9728 case, healthy
+            // endpoint, just OAuth-protected.
+            toolsError = 'Requires authentication (OAuth) — tools not introspected by the automated check.';
           } else {
             toolsError = (
               remoteIntrospection.ok

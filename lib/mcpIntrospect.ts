@@ -18,10 +18,32 @@ const TIMEOUT_MS = 12000;
 export type McpResult = {
   ok: boolean;
   error?: string;
+  /**
+   * True when the endpoint answered with a spec-compliant 401 + WWW-Authenticate
+   * (RFC 9728 protected-resource pattern) rather than failing to respond at all.
+   * That's a *healthy*, correctly-configured OAuth-protected MCP server, not a
+   * broken one — see the health-cron comment where this is consumed. A generic
+   * probe that only checks "did initialize succeed anonymously" can't tell these
+   * apart, which is a real, reported failure mode for other MCP directories.
+   */
+  authRequired?: boolean;
+  authResourceMetadataUrl?: string;
   serverInfo?: { name?: string; version?: string };
   tools?: McpTool[];
   result?: unknown;
 };
+
+/** Carries the HTTP status/headers a plain Error would otherwise throw away. */
+class HttpStatusError extends Error {
+  status: number;
+  wwwAuthenticate: string | null;
+  constructor(status: number, wwwAuthenticate: string | null) {
+    super(`HTTP ${status}`);
+    this.name = 'HttpStatusError';
+    this.status = status;
+    this.wwwAuthenticate = wwwAuthenticate;
+  }
+}
 
 function extractJsonRpc(text: string, contentType: string, id: number): any {
   if (contentType.includes('text/event-stream')) {
@@ -73,11 +95,23 @@ async function rpc(
   });
   const returnedSession = res.headers.get('mcp-session-id') || sessionId;
   const text = await res.text();
+
+  // Checked before any body parsing — confirmed in practice against a real
+  // OAuth-protected server (RFC 9728) that its 401 body is valid JSON but not
+  // JSON-RPC-shaped (e.g. {"error":"invalid or missing mcp credentials"}),
+  // which would otherwise parse "successfully" via extractJsonRpc below and
+  // silently skip the throw, masking a healthy auth-required server as a
+  // generic "initialize failed".
+  if (res.status === 401) {
+    const wwwAuthenticate = res.headers.get('www-authenticate');
+    if (wwwAuthenticate) throw new HttpStatusError(401, wwwAuthenticate);
+  }
+
   if (!res.ok && !text) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new HttpStatusError(res.status, res.headers.get('www-authenticate'));
   }
   const msg = extractJsonRpc(text, res.headers.get('content-type') || '', id);
-  if (!msg && !res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!msg && !res.ok) throw new HttpStatusError(res.status, res.headers.get('www-authenticate'));
   return { msg, sessionId: returnedSession || undefined };
 }
 
@@ -101,17 +135,32 @@ export async function callMcpEndpoint(
 
   try {
     // 1. initialize
-    const init = await rpc(
-      url,
-      {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: CLIENT_INFO },
-      },
-      1,
-      headers
-    );
+    let init: Awaited<ReturnType<typeof rpc>>;
+    try {
+      init = await rpc(
+        url,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: CLIENT_INFO },
+        },
+        1,
+        headers
+      );
+    } catch (e) {
+      // A spec-compliant 401 here means "real MCP server, OAuth required" —
+      // never try to complete the flow ourselves (out of scope for a health
+      // probe, and the whole point is not to fake anonymous success: a
+      // server that *does* answer initialize without auth to please health
+      // checkers breaks real clients the same way, confirmed independently
+      // by other MCP server operators — see the health-cron caller).
+      if (e instanceof HttpStatusError && e.status === 401 && e.wwwAuthenticate) {
+        const match = e.wwwAuthenticate.match(/resource_metadata="([^"]+)"/i);
+        return { ok: true, authRequired: true, authResourceMetadataUrl: match?.[1] };
+      }
+      throw e;
+    }
     if (!init.msg) return { ok: false, error: 'No JSON-RPC response from the endpoint (is it an MCP server?).' };
     if (init.msg.error) return { ok: false, error: init.msg.error.message || 'initialize failed' };
     const serverInfo = init.msg.result?.serverInfo;
