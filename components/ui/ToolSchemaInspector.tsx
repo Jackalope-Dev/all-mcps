@@ -195,7 +195,11 @@ export function ToolSchemaInspector({
                       border: `1px solid ${sourceBadge.border}`,
                       borderRadius: '999px',
                       padding: '0.2rem 0.6rem',
-                      cursor: 'pointer',
+                      // 'help' (question-mark cursor), not 'pointer' — this is
+                      // a hover-only tooltip trigger (desktop reveals it via
+                      // CSS :hover, no click needed), so a pointer cursor
+                      // promises a click action that doesn't exist.
+                      cursor: 'help',
                     }}
                   >
                     <sourceBadge.icon size={11} />
