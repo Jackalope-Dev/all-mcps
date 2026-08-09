@@ -46,7 +46,7 @@ async function enrichWithLlm(input: {
     license?: string;
     maintenanceStatus?: string;
   }>({
-    model: 'gpt-4.1-mini',
+    model: 'gpt-5.6-luna',
     maxTokens: 500,
     timeoutMs: 12_000,
     messages: [

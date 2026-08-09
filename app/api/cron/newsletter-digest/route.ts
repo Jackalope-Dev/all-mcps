@@ -180,7 +180,7 @@ async function generateEditorial(
     subjectTeaser?: string;
     items?: Array<{ id: string; blurb?: string }>;
   }>({
-    model: 'gpt-4.1-mini',
+    model: 'gpt-5.6-luna',
     temperature: 0.6,
     maxTokens: 900,
     timeoutMs: 20_000,
