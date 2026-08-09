@@ -39,6 +39,10 @@
     {
       "binding": "LOGOS",
       "bucket_name": "all-mcps-logos"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "all-mcps-isr-cache"
     }
   ],
   "vectorize": [
