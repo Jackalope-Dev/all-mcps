@@ -93,7 +93,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/': '2026-08-08',
   '/browse': '2026-08-05',
   '/categories': '2026-08-05',
-  '/best': '2026-08-05',
+  '/best': '2026-08-09',
   '/clients': '2026-08-05',
   '/about': '2026-07-27',
   '/docs/api': '2026-08-04',

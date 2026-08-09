@@ -558,6 +558,19 @@ export const KEYWORD_TOPICS: BestTopic[] = [
       { q: 'How is this different from a Puppeteer MCP server?', a: 'Both automate a browser; Playwright supports Chromium, Firefox, and WebKit and is often preferred for cross-browser work, while Puppeteer targets Chromium. Pick by the browsers you need.' },
     ],
   },
+  {
+    slug: 'seo',
+    match: ['seo', 'serp', 'backlink', 'search console'],
+    title: 'SEO',
+    lead: 'The best MCP servers for SEO — connect AI agents to Google Search Console, SERP trackers, technical site audits, backlink data, and keyword research so they can investigate rankings and ship fixes, not just report on them.',
+    faq: [
+      { q: 'What is the best MCP server for SEO?', a: 'It depends on the job: Google Search Console servers are the most widely installed for performance and indexing data, alongside dedicated technical-audit and backlink-intelligence servers. This page ranks SEO MCP servers by real usage across the AllMCPs directory so you can start with a proven one.' },
+      { q: 'Can an AI agent run a technical SEO audit automatically?', a: 'Yes — several servers here crawl a URL or site and return a health score, issues by category (robots.txt, sitemaps, schema markup, meta tags), and prioritized fixes, so an agent can diagnose problems without a human running the crawl by hand.' },
+      { q: 'Do SEO MCP servers need API keys or OAuth?', a: 'Google Search Console and most SERP-tracking servers use OAuth or a provider API key you supply. Pure crawl/audit tools that only fetch public pages typically need no credentials at all — check each listing for its exact requirements.' },
+      { q: 'Can these servers help with AI search visibility (AEO/GEO), not just Google?', a: 'Yes — a growing set of listings specifically score and improve visibility in AI answer engines (ChatGPT, Perplexity, Google AI Overviews): checking llms.txt, structured data, and AI-citation likelihood alongside traditional SEO signals.' },
+      { q: 'Is it safe to give an agent write access to Search Console or my CMS?', a: 'Prefer read-only scopes for reporting and audits, and reserve write access (publishing posts, updating meta tags) for servers you trust with a scoped, revocable token — the same least-privilege approach as any other MCP integration.' },
+    ],
+  },
 ];
 
 export const BEST_TOPICS: BestTopic[] = [...CATEGORY_TOPICS, ...KEYWORD_TOPICS];
