@@ -120,6 +120,7 @@ html {
   /* Help browser form controls / scrollbars match theme surfaces. */
   color-scheme: dark;
   scroll-padding-top: calc(var(--header-height) + 0.75rem);
+  scrollbar-gutter: stable;
 }
 
 [data-theme="light"] {
