@@ -546,6 +546,30 @@ function toEpoch(v: unknown): number {
   return Number.isNaN(t) ? 0 : t;
 }
 
+/**
+ * ownerUserId is deliberately excluded from PUBLIC_SERVER_COLUMNS above, so it's
+ * queried separately here — only when a session exists — purely to compute a
+ * boolean, never exposed to the client. Called from the /api/mcp/[id]/is-owner
+ * route rather than the detail page itself, so the page stays cacheable (see
+ * app/mcp/[id]/page.tsx — it no longer reads the session server-side).
+ */
+export async function checkIsOwner(id: string, userId: string): Promise<boolean> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select({ ownerUserId: serversTable.ownerUserId })
+        .from(serversTable)
+        .where(eq(serversTable.id, id))
+        .limit(1);
+      return rows[0]?.ownerUserId === userId;
+    }
+  } catch (e) {}
+  return false;
+}
+
 export async function getServerById(id: string): Promise<Server | undefined> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');

@@ -19,7 +19,14 @@ import { ClientFaqAccordion } from '../../../components/clients/ClientFaqAccordi
 const SITE = 'https://allmcps.com';
 const TOP_N = 8;
 
-export const dynamic = 'force-dynamic';
+// ISR instead of force-dynamic: only 9 fixed client slugs, so pre-render all of
+// them and refresh hourly instead of re-scanning and re-parsing the entire
+// ~3k-listing catalog from D1 on every single visitor request.
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return MCP_CLIENTS.map((c) => ({ client: c.slug }));
+}
 
 export async function generateMetadata({
   params,

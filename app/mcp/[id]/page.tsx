@@ -24,15 +24,12 @@ import { ViewTracker, InstallsStat } from '../../../components/ui/ViewTracker';
 import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import serversData from '../../../data/mcp-servers.json';
 import { notFound } from 'next/navigation';
-import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
 import { repoLinkRel, websiteLinkRel, supportLinkRel } from '../../../lib/linkRel';
-import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
+import { OwnerZone } from '../../../components/ui/OwnerZone';
+import { ClaimHintLink } from '../../../components/ui/ClaimHintLink';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
 import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, type Server } from '../../../lib/servers';
-import { auth } from '../../../lib/auth';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { parseServerName } from '../../../lib/displayName';
@@ -50,28 +47,6 @@ import { DirectoryBadgeCard } from '../../../components/ui/DirectoryBadgeCard';
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
 const getServer = getServerById;
-
-/**
- * ownerUserId is deliberately excluded from PUBLIC_SERVER_COLUMNS (see lib/servers.ts),
- * so it's queried separately here — only when a session exists — purely to compute a
- * boolean, never exposed to the client.
- */
-async function checkIsOwner(id: string, userId: string): Promise<boolean> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({ ownerUserId: serversTable.ownerUserId })
-        .from(serversTable)
-        .where(eq(serversTable.id, id))
-        .limit(1);
-      return rows[0]?.ownerUserId === userId;
-    }
-  } catch (e) {}
-  return false;
-}
 
 // Keeps the rendered <title> (this string + the root layout's " | AllMCPs" suffix)
 // within ~60 chars even for the longest real listing names, which can run 40+
@@ -158,6 +133,14 @@ async function fetchReadme(url: string) {
   }
 }
 
+// Now safe to mark ISR (no server-side session read left in this page — see
+// OwnerZone/ClaimHintLink, which fetch ownership client-side instead). Note:
+// this project's Cloudflare incremental cache is currently unconfigured
+// ("dummy" — see open-next.config.ts), so pages beyond the 50 covered by
+// generateStaticParams below won't yet get persistent cross-request caching
+// from this alone; that needs an R2/KV-backed incrementalCache override.
+export const revalidate = 3600;
+
 // Generate static params so Next.js can pre-render these pages at build time
 export async function generateStaticParams() {
   const servers = serversData as Server[];
@@ -178,17 +161,18 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   }
 
   // Independent I/O (external README fetch, two catalog-backed lookups, a pilot-check
-  // query, and the session read) — run concurrently instead of one big sequential
-  // waterfall. getRelatedServers/getFeaturedServers both hit getActiveServers(), which
-  // is request-memoized (see lib/servers.ts), so this doesn't double the catalog scan.
-  const [session, readme, relatedServers, rawPilotResult, featuredPool] = await Promise.all([
-    auth(),
+  // query) — run concurrently instead of one big sequential waterfall.
+  // getRelatedServers/getFeaturedServers both hit getActiveServers(), which is
+  // request-memoized (see lib/servers.ts), so this doesn't double the catalog scan.
+  // Deliberately no session/auth() read here — that would force this page dynamic
+  // (uncacheable) on every request. Ownership-gated UI (OwnerZone, ClaimHintLink)
+  // fetches its own status client-side instead so this page can be ISR'd.
+  const [readme, relatedServers, rawPilotResult, featuredPool] = await Promise.all([
     fetchReadme(server.url),
     getRelatedServers(server as any, 4),
     getStdioPilotResult(server.id),
     getFeaturedServers(server.id, 10),
   ]);
-  const isOwner = session?.user?.id ? await checkIsOwner(id, session.user.id) : false;
   // A pilot check is only meaningful for the install command it actually
   // tested. install_extracted_at (LLM re-validation) can rewrite that
   // command after the pilot ran — stale otherwise, showing a mismatched
@@ -790,11 +774,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       This is an experimental automated check and can have false negatives — missing environment variables, a slow cold install, etc.
                       It doesn&rsquo;t necessarily mean something&rsquo;s wrong.
                       {formatCommitAge(pilotResult.checkedAt) ? ` Last checked ${formatCommitAge(pilotResult.checkedAt)}.` : ''}{' '}
-                      {!isOwner && !server.isOfficial && (
-                        <Link href={`/mcp/${server.id}/claim`} style={{ color: 'var(--accent-color)' }}>
-                          Own this listing? Claim it to help us verify it.
-                        </Link>
-                      )}
+                      {!server.isOfficial && <ClaimHintLink serverId={server.id} />}
                     </p>
                   </>
                 )}
@@ -1361,115 +1341,19 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 <Sparkles size={16} /> Claim &amp; get free dofollow
               </Link>
             </div>
-          ) : (
-            isOwner && (
-              <div className="surface" style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Globe size={18} color="var(--accent-color)" /> Listing owner
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
-                  {server.websiteUrl
-                    ? server.websiteVerified
-                      ? 'Website is attached and verified. You can re-verify or change it anytime.'
-                      : 'Website is attached but not verified yet — prove control for a stronger listing.'
-                    : 'Add your product site, then verify with a badge or DNS TXT.'}
-                </p>
+          ) : null}
 
-                {server.websiteUrl && (() => {
-                  const dofollow = !!server.isPremium || !!server.reciprocalBadgeOk;
-                  return (
-                    <div
-                      style={{
-                        padding: '0.85rem 1rem',
-                        borderRadius: '8px',
-                        marginBottom: '1rem',
-                        background: dofollow ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${dofollow ? 'rgba(16,185,129,0.3)' : 'var(--border-color)'}`,
-                      }}
-                    >
-                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: dofollow ? 'var(--verified-green)' : 'var(--text-secondary)', marginBottom: dofollow ? 0 : '0.5rem' }}>
-                        {dofollow
-                          ? `Website link is dofollow${server.isPremium ? ' — Premium' : ' — reciprocal badge verified'}`
-                          : 'Website link is nofollow'}
-                      </p>
-                      {!dofollow && (
-                        <>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
-                            Add the AllMCPs badge to your site and verify it to earn a free dofollow backlink — rechecked periodically to stay live. Premium listings get dofollow instantly, no badge required.
-                          </p>
-                          <Link
-                            href={`/mcp/${server.id}/claim`}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.4rem',
-                              padding: '0.5rem 0.85rem',
-                              background: 'rgba(0,229,255,0.1)',
-                              border: '1px solid rgba(0,229,255,0.3)',
-                              color: '#00E5FF',
-                              borderRadius: '8px',
-                              fontWeight: 700,
-                              fontSize: '0.8rem',
-                            }}
-                          >
-                            <Sparkles size={14} /> Get a free dofollow link
-                          </Link>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  <Link
-                    href={`/mcp/${server.id}/claim`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      padding: '0.75rem 1rem',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid var(--border-color)',
-                      color: 'var(--text-primary)',
-                      borderRadius: '8px',
-                      fontWeight: 600,
-                      fontSize: '0.9rem',
-                    }}
-                  >
-                    Manage website &amp; verification
-                  </Link>
-                  <Link
-                    href={`/dashboard?edit=${server.id}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      padding: '0.75rem 1rem',
-                      background: 'var(--brand-gradient)',
-                      color: 'var(--bg-color)',
-                      borderRadius: '8px',
-                      fontWeight: 700,
-                      fontSize: '0.9rem',
-                    }}
-                  >
-                    Manage listing
-                  </Link>
-                </div>
-              </div>
-            )
-          )}
-
-          {isOwner && server.status === 'active' && (
-            <PremiumUpgrade
-              serverId={server.id}
-              listingStatus={server.status}
-              isPremium={!!server.isPremium}
-              featuredUntil={server.featuredUntil}
-              categorySponsorUntil={server.categorySponsorUntil}
-            />
-          )}
+          <OwnerZone
+            serverId={server.id}
+            isOfficial={!!server.isOfficial}
+            websiteUrl={server.websiteUrl}
+            websiteVerified={server.websiteVerified}
+            isPremium={server.isPremium}
+            reciprocalBadgeOk={server.reciprocalBadgeOk}
+            status={server.status}
+            featuredUntil={server.featuredUntil}
+            categorySponsorUntil={server.categorySponsorUntil}
+          />
 
           <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share & Embed</h3>

@@ -16,10 +16,15 @@ import { IconTooltip } from '../../../components/ui/IconTooltip';
 const SITE = 'https://allmcps.com';
 const TOP_N = 10;
 
-// Rendered per request so the ranking reflects live engagement from D1 (the
-// static build has no D1, so prerendering would bake in an unranked order). The
-// valid topic set is small and fixed; invalid slugs 404 via notFound below.
-export const dynamic = 'force-dynamic';
+// ISR instead of force-dynamic: the topic set is small and fixed (50 curated
+// topics), so pre-rendering all of them and refreshing hourly keeps rankings
+// close to live without re-scanning and re-parsing the entire ~3k-listing
+// catalog from D1 on every single visitor request.
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return BEST_TOPICS.map((t) => ({ topic: t.slug }));
+}
 
 /** Builds "Best {topic} MCP Servers (year)", trimming the year first and the topic
  * name second so the rendered title (this + " | AllMCPs") stays within budget even

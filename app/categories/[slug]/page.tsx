@@ -33,6 +33,11 @@ function score(s: Server): number {
   return relatedRankingScore(s);
 }
 
+// Without a revalidate window this page is fully static (baked in at build/deploy
+// time only) — fine for content, but rankings/counts go stale between deploys.
+// Hourly ISR keeps it current without re-scanning the catalog on every request.
+export const revalidate = 3600;
+
 export function generateStaticParams() {
   return DIRECTORY_CATEGORIES.map((c) => ({ slug: categorySlug(c) }));
 }
