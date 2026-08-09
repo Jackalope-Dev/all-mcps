@@ -25,6 +25,14 @@ import { parseArgsJson } from '../../../../../lib/installConfig';
  * /result finalizes the pending row it claimed. A pending row older than
  * PENDING_STALE_MS is treated as an abandoned run (crashed job, killed
  * workflow) and released back into the pool.
+ *
+ * Claims are sent as db.batch() — one INSERT statement per candidate,
+ * bundled into a single round-trip — rather than one multi-row VALUES
+ * insert. Confirmed in practice: D1 has a hard cap on bound variables per
+ * statement well below what a batch of ~20-40 rows needs ("too many SQL
+ * variables" from SQLite), so a single big multi-row insert fails outright
+ * at this scale. batch() avoids that ceiling entirely since each statement
+ * is small, while still executing as one D1 call.
  */
 const DEFAULT_BATCH_SIZE = 20;
 const MAX_BATCH_SIZE = 100;
@@ -90,13 +98,21 @@ export async function POST(req: Request) {
     }
 
     const now = new Date();
-    const claimed = await db
-      .insert(stdioVerificationPilot)
-      .values(rows.map((r) => ({ serverId: r.id, status: 'pending', checkedAt: now })))
-      .onConflictDoNothing({ target: stdioVerificationPilot.serverId })
-      .returning({ serverId: stdioVerificationPilot.serverId });
+    const claimStatements = rows.map((r) =>
+      db
+        .insert(stdioVerificationPilot)
+        .values({ serverId: r.id, status: 'pending', checkedAt: now })
+        .onConflictDoNothing({ target: stdioVerificationPilot.serverId })
+        .returning({ serverId: stdioVerificationPilot.serverId })
+    );
+    // db.batch() requires a non-empty tuple type that a dynamically-built
+    // array can't structurally satisfy — rows.length > 0 is already
+    // guaranteed above (empty-rows returns early).
+    const claimResults = await db.batch(claimStatements as any);
 
-    const claimedIds = new Set(claimed.map((c) => c.serverId));
+    const claimedIds = new Set(
+      claimResults.flatMap((r: any) => (Array.isArray(r) ? r.map((row) => row.serverId) : []))
+    );
     const batch = rows
       .filter((r) => claimedIds.has(r.id))
       .slice(0, batchSize)
