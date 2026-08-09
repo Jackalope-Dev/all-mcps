@@ -1,13 +1,16 @@
 name: 🧠 Backfill AI Content
 
 # Manual-only. Drains the AI content backlog (summary / overview / use cases /
-# features per listing) by looping the /api/cron/ai-content endpoint until the
-# catalog is fully enriched. The Cloudflare Worker cron already runs this pass
-# every 4h automatically (custom-worker.ts) — this workflow is for draining the
-# initial ~3k-listing backlog in one run without waiting weeks, or after a big
-# import. Uses the existing ADMIN_SECRET repo secret; the LLM key lives in the
-# Worker, so nothing extra to configure. Trigger it from the GitHub mobile app
-# or web UI: Actions → this workflow → "Run workflow".
+# features / LLM-validated install command per listing) by looping the
+# /api/cron/ai-content endpoint until both the content and install-check
+# backlogs are empty. The Cloudflare Worker cron already runs this pass every
+# 4h automatically (custom-worker.ts) — this workflow is for draining a large
+# backlog in one run without waiting weeks (initial import, or a schema change
+# like installExtractedAt that makes the whole catalog re-claimable for one
+# specific field without re-running the rest of the content pipeline). Uses
+# the existing ADMIN_SECRET repo secret; the LLM key lives in the Worker, so
+# nothing extra to configure. Trigger it from the GitHub mobile app or web UI:
+# Actions → this workflow → "Run workflow".
 on:
   workflow_dispatch:
     inputs:
@@ -45,12 +48,16 @@ jobs:
             thin=$(echo "$resp" | jq -r '.skippedThin // 0')
             failed=$(echo "$resp" | jq -r '.failed // 0')
             remaining=$(echo "$resp" | jq -r '.remaining // "?"')
+            install_remaining=$(echo "$resp" | jq -r '.installRemaining // "?"')
             stopped=$(echo "$resp" | jq -r '.budgetStopped // false')
             total=$((total + enriched))
-            echo "Call $i: +$enriched enriched, $thin thin-skipped, $failed failed | remaining=$remaining | run total=$total"
+            echo "Call $i: +$enriched enriched, $thin thin-skipped, $failed failed | remaining=$remaining, install_remaining=$install_remaining | run total=$total"
 
-            if [ "$remaining" = "0" ]; then
-              echo "✓ Catalog fully enriched."
+            # Both counters must clear — installExtractedAt backfilling reclaims
+            # already-enriched rows too, so `remaining` alone can hit 0 long
+            # before install_remaining does.
+            if [ "$remaining" = "0" ] && [ "$install_remaining" = "0" ]; then
+              echo "✓ Catalog fully enriched and install-checked."
               break
             fi
             if [ "$enriched" = "0" ] && [ "$thin" = "0" ]; then

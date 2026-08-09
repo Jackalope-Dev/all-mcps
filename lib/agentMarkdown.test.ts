@@ -183,7 +183,7 @@ const compareMd = formatCompareMarkdown(
   fakeServer({ id: 'right-id', name: 'Right Server', githubStars: 200, copies: 20 })
 );
 assert(compareMd.includes('# Left Server vs Right Server'), 'Should render both server names as H1');
-assert(compareMd.includes('| GitHub stars | 100 | 200 |'), 'Should compare GitHub stars in the table');
+assert(compareMd.includes('| GitHub Stars | 100 | 200 |'), 'Should compare GitHub stars in the table');
 assert(compareMd.includes('https://allmcps.com/mcp/left-id'), 'Should link the left listing');
 assert(compareMd.includes('https://allmcps.com/mcp/right-id'), 'Should link the right listing');
 

@@ -12,6 +12,7 @@ import { BEST_TOPICS, bestTopicBySlug, selectServersForTopic, type BestTopic } f
 import { MCP_CLIENTS, mcpClientBySlug, type McpClient } from './clients';
 import { WORKFLOW_PROMPTS, getWorkflowBySlug, type McpWorkflow } from './prompts';
 import { computeQualityScore } from './qualityScore';
+import { resolveInstallConfig } from './installConfig';
 
 const SITE = 'https://allmcps.com';
 
@@ -252,7 +253,7 @@ export function formatAlternativesMarkdown(server: Server, alternatives: Server[
   return md;
 }
 
-/** Top N tool/feature names for the comparison table — mirrors app/mcp/[id]/vs/[other]/page.tsx's toolNames(). */
+/** Top N tool/feature names for the comparison table. */
 function compareToolNames(s: Server, max = 6): string[] {
   if (s.tools?.length) return s.tools.map((t) => t.name).filter(Boolean).slice(0, max);
   if (s.aiFeatures?.length) return s.aiFeatures.slice(0, max);
@@ -262,22 +263,78 @@ function compareToolNames(s: Server, max = 6): string[] {
 export function formatCompareMarkdown(left: Server, right: Server): string {
   const qLeft = computeQualityScore(left);
   const qRight = computeQualityScore(right);
-  const toolsLeft = compareToolNames(left);
-  const toolsRight = compareToolNames(right);
+  const toolsLeft = compareToolNames(left, 12);
+  const toolsRight = compareToolNames(right, 12);
+  const installLeft = resolveInstallConfig(left);
+  const installRight = resolveInstallConfig(right);
+
+  const transportLeft = installLeft.kind === 'remote' ? 'Remote (HTTP/SSE)' : 'Local Subprocess (stdio)';
+  const transportRight = installRight.kind === 'remote' ? 'Remote (HTTP/SSE)' : 'Local Subprocess (stdio)';
+
+  const authLeft = left.authType ? left.authType.toUpperCase() : 'None declared';
+  const authRight = right.authType ? right.authType.toUpperCase() : 'None declared';
+
+  const pricingLeft = left.pricingModel ? left.pricingModel : 'Free / Open';
+  const pricingRight = right.pricingModel ? right.pricingModel : 'Free / Open';
 
   let md = `# ${left.name} vs ${right.name}\n\n`;
-  md += `Side-by-side comparison of two Model Context Protocol servers.\n\n`;
-  md += `| | ${left.name} | ${right.name} |\n`;
+  md += `Side-by-side comparison of the ${left.name} and ${right.name} Model Context Protocol (MCP) servers.\n\n`;
+
+  md += `## Executive Summary & Verdict\n\n`;
+  md += `- **${left.name}**: Category **${left.category}**, ${transportLeft}, Quality Score **${qLeft.score}/100 (${qLeft.tier})**.\n`;
+  md += `- **${right.name}**: Category **${right.category}**, ${transportRight}, Quality Score **${qRight.score}/100 (${qRight.tier})**.\n\n`;
+  md += `Choose **${left.name}** if you need ${left.category} capabilities with ${transportLeft.toLowerCase()} execution. Choose **${right.name}** if you require ${right.category} capabilities with ${transportRight.toLowerCase()} execution. Both servers integrate directly into Claude Desktop, Cursor, Windsurf, Cline, and VS Code.\n\n`;
+
+  md += `## Feature & Specification Comparison\n\n`;
+  md += `| Feature | ${left.name} | ${right.name} |\n`;
   md += `|---|---|---|\n`;
   md += `| Category | ${left.category} | ${right.category} |\n`;
-  md += `| Quality score | ${qLeft.score}/100 (${qLeft.tier}) | ${qRight.score}/100 (${qRight.tier}) |\n`;
-  md += `| GitHub stars | ${left.githubStars ?? '—'} | ${right.githubStars ?? '—'} |\n`;
-  md += `| Installs | ${left.copies ?? 0} | ${right.copies ?? 0} |\n`;
+  md += `| Quality Score | ${qLeft.score}/100 (${qLeft.tier}) | ${qRight.score}/100 (${qRight.tier}) |\n`;
+  md += `| Transport Protocol | ${transportLeft} | ${transportRight} |\n`;
+  md += `| Auth Requirement | ${authLeft} | ${authRight} |\n`;
+  md += `| Pricing Model | ${pricingLeft} | ${pricingRight} |\n`;
+  md += `| Official / Verified | ${left.isOfficial ? 'Yes (Official)' : left.isVerifiedActive ? 'Verified' : 'Community'} | ${right.isOfficial ? 'Yes (Official)' : right.isVerifiedActive ? 'Verified' : 'Community'} |\n`;
+  md += `| GitHub Stars | ${left.githubStars ?? '—'} | ${right.githubStars ?? '—'} |\n`;
+  md += `| Installs / Copies | ${left.copies ?? 0} | ${right.copies ?? 0} |\n`;
   md += `| Upvotes | ${left.upvotes ?? 0} | ${right.upvotes ?? 0} |\n`;
-  md += `| Tools | ${toolsLeft.length ? toolsLeft.join(', ') : '—'} | ${toolsRight.length ? toolsRight.join(', ') : '—'} |\n`;
-  md += `| Listing | ${SITE}/mcp/${left.id} | ${SITE}/mcp/${right.id} |\n\n`;
-  md += `## ${left.name}\n${left.description}\n\n`;
-  md += `## ${right.name}\n${right.description}\n\n`;
+  md += `| Total Tools Listed | ${left.tools?.length ?? toolsLeft.length} | ${right.tools?.length ?? toolsRight.length} |\n`;
+  md += `| Listing URL | ${SITE}/mcp/${left.id} | ${SITE}/mcp/${right.id} |\n\n`;
+
+  md += `## Which Should You Choose?\n\n`;
+  md += `### Choose ${left.name} when:\n`;
+  md += `- You need focused capabilities in **${left.category}**.\n`;
+  md += `- You prefer ${installLeft.kind === 'remote' ? 'cloud HTTP/SSE endpoint execution' : 'local process execution via stdio'}.\n`;
+  md += `- Your workspace requires auth profile: ${authLeft}.\n\n`;
+
+  md += `### Choose ${right.name} when:\n`;
+  md += `- You need focused capabilities in **${right.category}**.\n`;
+  md += `- You prefer ${installRight.kind === 'remote' ? 'cloud HTTP/SSE endpoint execution' : 'local process execution via stdio'}.\n`;
+  md += `- Your workspace requires auth profile: ${authRight}.\n\n`;
+
+  md += `## Tools & Capabilities Breakdown\n\n`;
+  md += `### ${left.name} Tools\n`;
+  if (toolsLeft.length) {
+    toolsLeft.forEach((t) => {
+      md += `- \`${t}\`\n`;
+    });
+  } else {
+    md += `*No specific tool declarations cataloged yet.*\n`;
+  }
+  md += `\n`;
+
+  md += `### ${right.name} Tools\n`;
+  if (toolsRight.length) {
+    toolsRight.forEach((t) => {
+      md += `- \`${t}\`\n`;
+    });
+  } else {
+    md += `*No specific tool declarations cataloged yet.*\n`;
+  }
+  md += `\n`;
+
+  md += `## Descriptions\n\n`;
+  md += `### ${left.name}\n${left.description}\n\n`;
+  md += `### ${right.name}\n${right.description}\n\n`;
 
   return md;
 }

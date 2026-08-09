@@ -87,6 +87,20 @@ export const servers = sqliteTable('servers', {
    * the already-enriched backlog can be backfilled without re-running the rest
    * of the content pipeline. */
   aiFaqAt: integer('ai_faq_at', { mode: 'timestamp' }),
+  /**
+   * When the LLM last extracted/validated install_kind/install_command/
+   * install_args/install_package for this listing (see lib/aiContent.ts,
+   * /api/cron/ai-content). Deliberately separate from aiEnrichedAt so the
+   * already-enriched backlog can be backfilled for install-field re-checks
+   * without re-running the rest of the content pipeline — same pattern as
+   * aiFaqAt. The regex/heuristic README parser this replaces as the primary
+   * source routinely mistook mentioned third-party tools (installer CLIs,
+   * debugging utilities, generic framework/library dependencies) for the
+   * listing's own install command; an LLM reading the README with context
+   * can tell those apart. Null = not yet LLM-validated, still on the
+   * heuristic-parsed value.
+   */
+  installExtractedAt: integer('install_extracted_at', { mode: 'timestamp' }),
   /** JSON array of UPPER_SNAKE_CASE env var names (API keys, tokens) the README/setup
    * instructions say are required to run this server. Generated alongside the rest of
    * the AI content layer (see lib/aiContent.ts) — used to add env placeholders to

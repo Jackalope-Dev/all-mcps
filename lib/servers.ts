@@ -643,15 +643,38 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
   if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy') score += 3;
   if (candidate.reciprocalBadgeOk) score += 2;
 
-  if (current?.tools?.length && candidate.tools?.length) {
-    const currentNames = new Set(
-      current.tools.map((t) => t.name.toLowerCase()).filter(Boolean)
-    );
-    let overlap = 0;
-    for (const t of candidate.tools) {
-      if (currentNames.has(t.name.toLowerCase())) overlap += 1;
+  if (current) {
+    // Tool name overlap
+    if (current.tools?.length && candidate.tools?.length) {
+      const currentNames = new Set(
+        current.tools.map((t) => t.name.toLowerCase()).filter(Boolean)
+      );
+      let overlap = 0;
+      for (const t of candidate.tools) {
+        if (currentNames.has(t.name.toLowerCase())) overlap += 1;
+      }
+      score += overlap * 12;
     }
-    score += overlap * 10;
+
+    // Tag overlap
+    if (current.tags?.length && candidate.tags?.length) {
+      const currentTags = new Set(current.tags.map((t) => t.toLowerCase()));
+      let tagOverlap = 0;
+      for (const t of candidate.tags) {
+        if (currentTags.has(t.toLowerCase())) tagOverlap += 1;
+      }
+      score += tagOverlap * 10;
+    }
+
+    // Shared environment variables (indicates same API/service family)
+    if (current.aiEnvVars?.length && candidate.aiEnvVars?.length) {
+      const currentEnvs = new Set(current.aiEnvVars.map((v) => v.toUpperCase()));
+      let envOverlap = 0;
+      for (const v of candidate.aiEnvVars) {
+        if (currentEnvs.has(v.toUpperCase())) envOverlap += 1;
+      }
+      score += envOverlap * 15;
+    }
   }
 
   return score;

@@ -52,6 +52,22 @@ export type AiListingContent = {
   tags?: string[];
   /** Compatible MCP client slugs (e.g. ['claude-desktop', 'cursor']). */
   compatibleClients?: string[];
+  /**
+   * LLM-validated install command, replacing the regex/heuristic README parser
+   * as the source of truth (see installExtractedAt in db/schema.ts for why).
+   * Null when the model isn't confident — callers must void any stale cached
+   * install fields in that case rather than keep a heuristic guess.
+   */
+  install?: {
+    kind: 'stdio' | 'remote';
+    /** stdio only: the runner, e.g. "npx", "uvx", "bunx", "pipx", "docker". */
+    command?: string | null;
+    /** stdio only: full CLI args including the package name, e.g. ["-y", "the-real-pkg"]. */
+    args?: string[];
+    /** stdio: package/image name. remote: the endpoint URL. */
+    package?: string | null;
+    confidence: 'high' | 'medium';
+  } | null;
 };
 
 /**
@@ -150,6 +166,61 @@ function clampEnvVars(value: unknown, maxItems: number): string[] {
   return out;
 }
 
+/**
+ * Runners we actually recognize — anything else is almost certainly the
+ * model hallucinating a command shape rather than reading one off the page.
+ */
+const INSTALL_COMMAND_ALLOWLIST = new Set([
+  'npx', 'uvx', 'bunx', 'pipx', 'pip', 'pip3', 'python', 'python3', 'node', 'docker', 'deno', 'go', 'cargo',
+]);
+
+/**
+ * Defense in depth against the exact failure modes install extraction is
+ * meant to fix — a bare CLI flag, an empty value, or anything containing
+ * whitespace (real package/image identifiers never do). This can't catch
+ * every semantic mistake (that's what the prompt + confidence gate are for),
+ * only structural nonsense a confident-sounding model could still emit.
+ */
+function looksLikePackageToken(v: unknown): v is string {
+  if (typeof v !== 'string') return false;
+  const s = v.trim();
+  if (!s || s.startsWith('-') || /\s/.test(s)) return false;
+  return true;
+}
+
+/** Validates the model's self-reported install guess; returns null on anything short of confident. */
+function clampInstall(value: unknown): AiListingContent['install'] {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+
+  const confidence = v.confidence === 'high' || v.confidence === 'medium' ? v.confidence : null;
+  if (!confidence) return null;
+
+  if (v.kind === 'remote') {
+    const pkg = typeof v.package === 'string' ? v.package.trim() : '';
+    if (!pkg || !/^https?:\/\//i.test(pkg)) return null;
+    return { kind: 'remote', package: pkg.slice(0, 500), confidence };
+  }
+
+  if (v.kind === 'stdio') {
+    const command = typeof v.command === 'string' ? v.command.trim().toLowerCase() : '';
+    if (!INSTALL_COMMAND_ALLOWLIST.has(command)) return null;
+
+    const args = Array.isArray(v.args)
+      ? v.args.filter(looksLikePackageToken).map((a) => a.slice(0, 200)).slice(0, 15)
+      : [];
+    const pkg = looksLikePackageToken(v.package) ? (v.package as string).slice(0, 200) : '';
+    // Require both a real-looking package name AND real args — a command
+    // guess with no identifiable package is exactly the "grabbed a flag or
+    // a stray word" failure mode this replaces, not a usable result.
+    if (!pkg || args.length === 0) return null;
+
+    return { kind: 'stdio', command, args, package: pkg, confidence };
+  }
+
+  return null;
+}
+
 export type ListingContentInput = {
   name: string;
   description: string;
@@ -176,7 +247,18 @@ const SYSTEM_PROMPT =
   '"authType" ("none" if no credentials needed; "api_key" if requires API key/token; "oauth" if uses OAuth; "other"; null if unknown), ' +
   '"license" (short license name like "MIT", "Apache-2.0", or null), ' +
   '"tags" (2-5 short lowercase keyword slugs like ["github", "developer-tools", "issues"]), ' +
-  '"compatibleClients" (array of slugs from ["claude-desktop", "cursor", "windsurf", "cline"] mentioned or compatible).';
+  '"compatibleClients" (array of slugs from ["claude-desktop", "cursor", "windsurf", "cline"] mentioned or compatible), ' +
+  '"install" (object or null — the command that runs THIS project\'s OWN MCP server, nothing else). ' +
+  'This field feeds install instructions AI agents execute directly, so accuracy matters more than coverage — a wrong answer is worse than no answer. ' +
+  'Set "install" to null unless you can identify the command with real confidence. Do NOT extract: ' +
+  '(a) third-party installer CLIs the README mentions as ONE way to install (e.g. "@smithery/cli", "@modelcontextprotocol/inspector") — these need the real package name as an argument, which is what you must find instead; ' +
+  '(b) generic debugging/proxy/bridge utilities unrelated to this specific server (e.g. "mcp-remote", "@modelcontextprotocol/inspector"); ' +
+  '(c) framework or library dependencies this project is built WITH, not the project itself (e.g. a Python project built on "fastmcp" is not the "fastmcp" package; a project using psycopg2 is not the "psycopg2-binary" package); ' +
+  '(d) other people\'s servers mentioned as examples, comparisons, or things this project can proxy to. ' +
+  'When "install" is not null: "kind" is "stdio" (runs locally via a package manager) or "remote" (a hosted HTTP/SSE endpoint URL); ' +
+  'for "stdio", "command" is the runner binary alone (e.g. "npx", "uvx", "bunx", "pipx", "docker" — never a flag), "args" is the full real argument list including the actual package/image name as it would be typed (e.g. ["-y", "the-real-package-name"]), "package" is that same package/image name alone; ' +
+  'for "remote", "package" is the endpoint URL and "command"/"args" are omitted; ' +
+  '"confidence" is "high" only if the README states the exact command verbatim, "medium" if you inferred it from strong context (e.g. the npm/PyPI package name matches the repo unambiguously) — use "medium", or null the whole field, for anything less certain.';
 
 /** Chat failure reasons that mean "stop spending" rather than "this one didn't work". */
 const BUDGET_REASONS = new Set(['budget_or_rate_limit', 'auth', 'not_configured']);
@@ -218,10 +300,14 @@ export async function generateListingContent(
     license?: unknown;
     tags?: unknown;
     compatibleClients?: unknown;
+    install?: unknown;
   }>({
     model: 'gpt-4.1-mini',
     temperature: 0.3,
-    maxTokens: 900,
+    // Bumped from 900 to give the new "install" object headroom — the existing
+    // fields already used most of that budget, and a truncated response fails
+    // JSON parsing entirely (loses every field, not just install).
+    maxTokens: 1100,
     timeoutMs: 20_000,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -248,6 +334,7 @@ export async function generateListingContent(
   const license = rawLicense && /^[\w\.\-]+$/.test(rawLicense) ? rawLicense : null;
   const tags = normalizeTags(result.data.tags);
   const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
+  const install = clampInstall(result.data.install);
 
   // A usable summary is the minimum bar — without it the page gains nothing over the raw scrape.
   if (!summary || summary.length < 12) return { status: 'skip', reason: 'empty' };
@@ -266,6 +353,7 @@ export async function generateListingContent(
       license,
       tags,
       compatibleClients,
+      install,
     },
   };
 }

@@ -2,10 +2,29 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronRight, Eye, Heart, Download, Star, BadgeCheck, Wrench } from 'lucide-react';
+import {
+  ChevronRight,
+  Eye,
+  Heart,
+  Download,
+  Star,
+  BadgeCheck,
+  Wrench,
+  Zap,
+  Terminal,
+  HelpCircle,
+  Server as ServerIcon,
+  Lock,
+  DollarSign,
+  Sparkles,
+  ArrowRight,
+  Code2,
+  Layers,
+} from 'lucide-react';
 import { Badge } from '../../../../../components/ui/Badge';
 import { ServerAvatar } from '../../../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../../../components/ui/SafeMarkdown';
+import { CopyBlock } from '../../../../../components/ui/CopyBlock';
 import { getServerById, getRelatedServers, type Server } from '../../../../../lib/servers';
 import { isFeaturedListing, isVerifiedListing } from '../../../../../lib/featuredStatus';
 import { parseServerName } from '../../../../../lib/displayName';
@@ -33,12 +52,62 @@ function installSummary(s: Server): string {
     installConfidence: s.installConfidence,
   });
   if (install.kind === 'remote') {
-    return `Remote · ${install.confidence}`;
+    return `Remote (HTTP/SSE) · ${install.confidence}`;
   }
   return `${install.command} · ${install.confidence}`;
 }
 
-function toolNames(s: Server, max = 6): string[] {
+function buildConfigSnippet(s: Server): string {
+  const install = resolveInstallConfig({
+    id: s.id,
+    name: s.name,
+    url: s.url,
+    description: s.description,
+    installKind: s.installKind,
+    installCommand: s.installCommand,
+    installArgs: s.installArgs,
+    installPackage: s.installPackage,
+    installConfidence: s.installConfidence,
+  });
+
+  const key = s.id.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  if (install.kind === 'remote') {
+    return JSON.stringify(
+      {
+        mcpServers: {
+          [key]: {
+            url: install.url,
+          },
+        },
+      },
+      null,
+      2
+    );
+  }
+
+  const envObj: Record<string, string> = {};
+  if (s.aiEnvVars && s.aiEnvVars.length > 0) {
+    s.aiEnvVars.forEach((v: string) => {
+      envObj[v] = `YOUR_${v}_HERE`;
+    });
+  }
+
+  return JSON.stringify(
+    {
+      mcpServers: {
+        [key]: {
+          command: install.command,
+          args: install.args,
+          ...(Object.keys(envObj).length > 0 ? { env: envObj } : {}),
+        },
+      },
+    },
+    null,
+    2
+  );
+}
+
+function toolNames(s: Server, max = 12): string[] {
   if (s.tools?.length) {
     return s.tools
       .map((t) => t.name)
@@ -49,6 +118,22 @@ function toolNames(s: Server, max = 6): string[] {
     return s.aiFeatures.slice(0, max);
   }
   return [];
+}
+
+function formatAuthLabel(auth?: string | null): string {
+  if (!auth || auth === 'none') return 'No auth required';
+  if (auth === 'api_key') return 'API Key required';
+  if (auth === 'oauth') return 'OAuth 2.0';
+  if (auth === 'byok') return 'Bring Your Own Key';
+  return auth;
+}
+
+function formatPricingLabel(pricing?: string | null): string {
+  if (!pricing || pricing === 'free') return 'Free / Open Source';
+  if (pricing === 'freemium') return 'Freemium';
+  if (pricing === 'paid') return 'Paid Service';
+  if (pricing === 'byok') return 'BYOK (Pay Provider Direct)';
+  return pricing;
 }
 
 /** Keeps a display name short enough that the compare title stays inside the SEO budget. */
@@ -63,7 +148,7 @@ function buildCompareTitle(nameA: string, nameB: string): string {
   const b = truncateName(nameB, 22);
   const base = `${a} vs ${b}`;
   const withSuffix = `${base} — MCP Server Comparison`;
-  return withSuffix.length <= 50 ? withSuffix : base;
+  return withSuffix.length <= 55 ? withSuffix : base;
 }
 
 export async function generateMetadata({
@@ -85,7 +170,7 @@ export async function generateMetadata({
   const shortA = truncateName(nameA, 22);
   const shortB = truncateName(nameB, 22);
   const title = buildCompareTitle(nameA, nameB);
-  const description = `Compare ${shortA} and ${shortB} MCP servers: install paths, tools, usage, quality signals, and which fits your AI agent stack.`;
+  const description = `Compare ${shortA} vs ${shortB} MCP servers side-by-side: tools, transport specs, install commands, auth requirements, and Claude/Cursor config snippets.`;
   const url = `${SITE}/mcp/${c0}/vs/${c1}`;
 
   return {
@@ -114,12 +199,12 @@ function Row({
         scope="row"
         style={{
           textAlign: 'left',
-          padding: '0.85rem 1rem',
-          fontSize: '0.8rem',
+          padding: '0.95rem 1rem',
+          fontSize: '0.825rem',
           fontWeight: 600,
           color: 'var(--text-secondary)',
           borderBottom: '1px solid var(--border-color)',
-          width: '22%',
+          width: '24%',
           verticalAlign: 'top',
         }}
         title={hint}
@@ -128,22 +213,22 @@ function Row({
       </th>
       <td
         style={{
-          padding: '0.85rem 1rem',
+          padding: '0.95rem 1rem',
           fontSize: '0.9rem',
           borderBottom: '1px solid var(--border-color)',
           verticalAlign: 'top',
-          width: '39%',
+          width: '38%',
         }}
       >
         {left}
       </td>
       <td
         style={{
-          padding: '0.85rem 1rem',
+          padding: '0.95rem 1rem',
           fontSize: '0.9rem',
           borderBottom: '1px solid var(--border-color)',
           verticalAlign: 'top',
-          width: '39%',
+          width: '38%',
         }}
       >
         {right}
@@ -156,11 +241,11 @@ function SideHeader({ s }: { s: Server }) {
   const { displayName, org } = parseServerName(s.name);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', alignItems: 'flex-start' }}>
-      <ServerAvatar name={s.name} logoUrl={s.logoUrl} size={40} />
+      <ServerAvatar name={s.name} logoUrl={s.logoUrl} size={42} />
       <div>
         <Link
           href={`/mcp/${s.id}`}
-          style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', textDecoration: 'none' }}
+          style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-primary)', textDecoration: 'none' }}
         >
           {displayName}
         </Link>
@@ -180,7 +265,7 @@ function SideHeader({ s }: { s: Server }) {
           </Badge>
         )}
         <Badge variant="category" style={{ fontSize: '0.65rem' }}>
-          {s.category}
+          {parseCategoryLabel(s.category).label}
         </Badge>
       </div>
     </div>
@@ -209,16 +294,28 @@ export default async function ComparePage({
   const qR = computeQualityScore(right);
   const toolsL = toolNames(left);
   const toolsR = toolNames(right);
+  const installL = resolveInstallConfig(left);
+  const installR = resolveInstallConfig(right);
 
-  const moreAlts = (await getRelatedServers(left, 6)).filter((s) => s.id !== right.id).slice(0, 4);
+  const snippetL = buildConfigSnippet(left);
+  const snippetR = buildConfigSnippet(right);
 
+  const catL = parseCategoryLabel(left.category).label;
+  const catR = parseCategoryLabel(right.category).label;
+
+  const [moreAltsLeft, moreAltsRight] = await Promise.all([
+    getRelatedServers(left, 8).then((list) => list.filter((s) => s.id !== right.id).slice(0, 4)),
+    getRelatedServers(right, 8).then((list) => list.filter((s) => s.id !== left.id).slice(0, 4)),
+  ]);
+
+  // Structured Data (Schema.org) for Search Engines & AI Search Crawlers
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'WebPage',
-        name: `${nameL} vs ${nameR}`,
-        description: `Side-by-side comparison of the ${nameL} and ${nameR} Model Context Protocol servers.`,
+        name: `${nameL} vs ${nameR} — MCP Server Comparison`,
+        description: `Detailed comparison between ${nameL} and ${nameR} Model Context Protocol (MCP) servers: tools, install specs, auth models, and client configs.`,
         url: canonicalUrl,
         isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: SITE },
       },
@@ -232,30 +329,60 @@ export default async function ComparePage({
         ],
       },
       {
+        '@type': 'SoftwareApplication',
+        name: nameL,
+        applicationCategory: catL,
+        operatingSystem: 'Cross-platform',
+        url: `${SITE}/mcp/${left.id}`,
+      },
+      {
+        '@type': 'SoftwareApplication',
+        name: nameR,
+        applicationCategory: catR,
+        operatingSystem: 'Cross-platform',
+        url: `${SITE}/mcp/${right.id}`,
+      },
+      {
         '@type': 'FAQPage',
         mainEntity: [
           {
             '@type': 'Question',
-            name: `What is the difference between ${nameL} and ${nameR}?`,
+            name: `What is the key difference between ${nameL} and ${nameR}?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `${nameL} and ${nameR} are both MCP servers listed on AllMCPs. Compare category (${parseCategoryLabel(left.category).label} vs ${parseCategoryLabel(right.category).label}), install path, tools, and usage signals on this page to pick the better fit for your agent stack.`,
+              text: `${nameL} belongs to the ${catL} category with ${installL.kind === 'remote' ? 'cloud HTTP/SSE' : 'local stdio'} execution, while ${nameR} belongs to the ${catR} category with ${installR.kind === 'remote' ? 'cloud HTTP/SSE' : 'local stdio'} execution.`,
             },
           },
           {
             '@type': 'Question',
-            name: `How do I install ${nameL} or ${nameR}?`,
+            name: `How do I install ${nameL} or ${nameR} in Claude Desktop or Cursor?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `Open each listing for client-specific install buttons and config. Install signal: ${nameL} uses ${installSummary(left)}; ${nameR} uses ${installSummary(right)}. Always verify against the project README before production use.`,
+              text: `Copy the mcpServers JSON configuration snippet provided on this page into your claude_desktop_config.json or ~/.cursor/mcp.json file and restart your AI client.`,
             },
           },
           {
             '@type': 'Question',
-            name: `Which MCP server is more popular, ${nameL} or ${nameR}?`,
+            name: `Are ${nameL} and ${nameR} free or paid?`,
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `On AllMCPs, ${nameL} has ${(left.views || 0).toLocaleString()} views and ${(left.upvotes || 0).toLocaleString()} upvotes; ${nameR} has ${(right.views || 0).toLocaleString()} views and ${(right.upvotes || 0).toLocaleString()} upvotes. Popularity is one signal — match tools and install fit to your use case.`,
+              text: `${nameL} operates under a ${formatPricingLabel(left.pricingModel)} model (${formatAuthLabel(left.authType)}). ${nameR} operates under a ${formatPricingLabel(right.pricingModel)} model (${formatAuthLabel(right.authType)}).`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `Which MCP server has more tools and community activity?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `${nameL} lists ${left.tools?.length || toolsL.length} tools with ${(left.views || 0).toLocaleString()} views and ${(left.githubStars || 0).toLocaleString()} GitHub stars. ${nameR} lists ${right.tools?.length || toolsR.length} tools with ${(right.views || 0).toLocaleString()} views and ${(right.githubStars || 0).toLocaleString()} GitHub stars.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `Can I use both ${nameL} and ${nameR} together in the same MCP host?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `Yes! MCP hosts like Claude Desktop, Cursor, Windsurf, Cline, and VS Code support configuring multiple servers under the mcpServers object simultaneously.`,
             },
           },
         ],
@@ -266,9 +393,10 @@ export default async function ComparePage({
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
+      <main className="container page-shell" style={{ paddingBottom: '5rem' }}>
+        {/* Breadcrumb Navigation */}
         <nav aria-label="Breadcrumb">
-          <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
+          <ol className="breadcrumb" style={{ marginBottom: '1.75rem' }}>
             <li>
               <Link href="/">Home</Link>
             </li>
@@ -293,212 +421,574 @@ export default async function ComparePage({
           </ol>
         </nav>
 
-        <section style={{ marginBottom: '2rem', maxWidth: 820 }}>
-          <h1 className="text-display" style={{ marginBottom: '0.75rem' }}>
+        {/* Page Header */}
+        <section style={{ marginBottom: '2rem', maxWidth: 860 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: '0.65rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--brand-cyan)' }}>
+            <Sparkles size={14} /> Side-by-Side Model Context Protocol Comparison
+          </div>
+          <h1 className="text-display" style={{ marginBottom: '0.85rem' }}>
             {nameL} vs {nameR}
           </h1>
-          <p className="text-lead" style={{ margin: 0 }}>
-            Side-by-side comparison of two Model Context Protocol servers — install paths, tools, quality
-            signals, and directory engagement so you can pick the right one for Claude, Cursor, and other
-            MCP clients.
+          <p className="text-lead" style={{ margin: 0, lineHeight: 1.6 }}>
+            In-depth architectural comparison of the <strong>{nameL}</strong> and <strong>{nameR}</strong> MCP servers.
+            Compare execution transports, security boundaries, tool capabilities, quality scores, and ready-to-paste client installation snippets for Claude, Cursor, Windsurf, and VS Code.
           </p>
         </section>
 
-        <div className="surface" style={{ padding: 0, overflow: 'hidden', marginBottom: '2rem' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
-              <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  <th
-                    style={{
-                      padding: '1.1rem 1rem',
-                      textAlign: 'left',
-                      fontSize: '0.75rem',
-                      color: 'var(--text-secondary)',
-                      borderBottom: '1px solid var(--border-color)',
-                      width: '22%',
-                    }}
-                  >
-                    Compare
-                  </th>
-                  <th
-                    style={{
-                      padding: '1.1rem 1rem',
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border-color)',
-                      width: '39%',
-                    }}
-                  >
-                    <SideHeader s={left} />
-                  </th>
-                  <th
-                    style={{
-                      padding: '1.1rem 1rem',
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border-color)',
-                      width: '39%',
-                    }}
-                  >
-                    <SideHeader s={right} />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <Row
-                  label="Summary"
-                  left={
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, display: 'block' }}>
-                      <SafeMarkdown content={left.description || '—'} isInline />
-                    </span>
-                  }
-                  right={
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, display: 'block' }}>
-                      <SafeMarkdown content={right.description || '—'} isInline />
-                    </span>
-                  }
-                />
-                <Row
-                  label="Quality signal"
-                  hint="Editorial completeness/health signal, not a user star rating"
-                  left={
-                    <span style={{ fontWeight: 700 }}>
-                      {qL.score}/100 <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>({qL.tier})</span>
-                    </span>
-                  }
-                  right={
-                    <span style={{ fontWeight: 700 }}>
-                      {qR.score}/100 <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>({qR.tier})</span>
-                    </span>
-                  }
-                />
-                <Row
-                  label="Install path"
-                  left={<code style={{ fontSize: '0.8rem' }}>{installSummary(left)}</code>}
-                  right={<code style={{ fontSize: '0.8rem' }}>{installSummary(right)}</code>}
-                />
-                <Row
-                  label="Engagement"
-                  left={
-                    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Eye size={13} /> {(left.views || 0).toLocaleString()}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Download size={13} /> {(left.copies || 0).toLocaleString()}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Heart size={13} /> {(left.upvotes || 0).toLocaleString()}
-                      </span>
-                      {typeof left.githubStars === 'number' && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <Star size={13} /> {left.githubStars.toLocaleString()}
-                        </span>
-                      )}
-                    </span>
-                  }
-                  right={
-                    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Eye size={13} /> {(right.views || 0).toLocaleString()}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Download size={13} /> {(right.copies || 0).toLocaleString()}
-                      </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Heart size={13} /> {(right.upvotes || 0).toLocaleString()}
-                      </span>
-                      {typeof right.githubStars === 'number' && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <Star size={13} /> {right.githubStars.toLocaleString()}
-                        </span>
-                      )}
-                    </span>
-                  }
-                />
-                <Row
-                  label="Tools"
-                  left={
-                    toolsL.length ? (
-                      <span style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                        {toolsL.map((t) => (
-                          <Badge key={t} variant="default" style={{ fontSize: '0.7rem' }}>
-                            <Wrench size={10} style={{ marginRight: 3 }} />
-                            {t}
-                          </Badge>
-                        ))}
-                        {(left.tools?.length || 0) > toolsL.length && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            +{(left.tools?.length || 0) - toolsL.length} more
-                          </span>
-                        )}
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Not listed yet</span>
-                    )
-                  }
-                  right={
-                    toolsR.length ? (
-                      <span style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                        {toolsR.map((t) => (
-                          <Badge key={t} variant="default" style={{ fontSize: '0.7rem' }}>
-                            <Wrench size={10} style={{ marginRight: 3 }} />
-                            {t}
-                          </Badge>
-                        ))}
-                        {(right.tools?.length || 0) > toolsR.length && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            +{(right.tools?.length || 0) - toolsR.length} more
-                          </span>
-                        )}
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Not listed yet</span>
-                    )
-                  }
-                />
-                <Row
-                  label="Verified / official"
-                  left={
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
-                      {isVerifiedListing(left) ? (
-                        <>
-                          <BadgeCheck size={16} color="#34d399" /> Yes
-                        </>
-                      ) : (
-                        'No'
-                      )}
-                    </span>
-                  }
-                  right={
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
-                      {isVerifiedListing(right) ? (
-                        <>
-                          <BadgeCheck size={16} color="#34d399" /> Yes
-                        </>
-                      ) : (
-                        'No'
-                      )}
-                    </span>
-                  }
-                />
-                <Row
-                  label="Open listing"
-                  left={
-                    <Link href={`/mcp/${left.id}`} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
-                      View {nameL}
-                    </Link>
-                  }
-                  right={
-                    <Link href={`/mcp/${right.id}`} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
-                      View {nameR}
-                    </Link>
-                  }
-                />
-              </tbody>
-            </table>
+        {/* Executive Summary & Verdict Card */}
+        <section
+          style={{
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.7))',
+            border: '1px solid rgba(0, 229, 255, 0.25)',
+            borderRadius: 14,
+            padding: '1.5rem',
+            marginBottom: '2.5rem',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+            <Zap size={18} color="var(--brand-cyan)" />
+            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: '#ffffff' }}>
+              At a Glance & Executive Verdict
+            </h2>
           </div>
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border-color)' }}>
+              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--brand-cyan)', fontWeight: 700, marginBottom: 4 }}>
+                {nameL}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600, marginBottom: 4 }}>
+                {catL} · {installL.kind === 'remote' ? 'Remote HTTP/SSE' : 'Local stdio'}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Quality: <strong>{qL.score}/100</strong> ({qL.tier}) | Auth: <strong>{formatAuthLabel(left.authType)}</strong>
+              </div>
+            </div>
 
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '1rem', borderRadius: 10, border: '1px solid var(--border-color)' }}>
+              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--brand-cyan)', fontWeight: 700, marginBottom: 4 }}>
+                {nameR}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600, marginBottom: 4 }}>
+                {catR} · {installR.kind === 'remote' ? 'Remote HTTP/SSE' : 'Local stdio'}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Quality: <strong>{qR.score}/100</strong> ({qR.tier}) | Auth: <strong>{formatAuthLabel(right.authType)}</strong>
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <strong style={{ color: '#ffffff' }}>Verdict Summary:</strong> Choose <strong style={{ color: 'var(--brand-cyan)' }}>{nameL}</strong> if you need specialized {catL} tools running via {installL.kind === 'remote' ? 'a hosted cloud SSE transport' : 'a local process'}.
+            Choose <strong style={{ color: 'var(--brand-cyan)' }}>{nameR}</strong> if your workspace requires {catR} integration with {installR.kind === 'remote' ? 'remote web transport' : 'local subprocess execution'}.
+            Both servers can be configured concurrently in your client's <code style={{ color: 'var(--brand-cyan)' }}>mcpServers</code> manifest.
+          </div>
+        </section>
+
+        {/* "Which Should You Choose?" Decision Matrix */}
+        <section style={{ marginBottom: '3rem' }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <HelpCircle size={20} color="var(--brand-cyan)" /> Which MCP Server Should You Choose?
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {/* Card Left */}
+            <div className="surface" style={{ padding: '1.5rem', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
+                <ServerAvatar name={left.name} logoUrl={left.logoUrl} size={32} />
+                <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>Choose {nameL} when:</h3>
+              </div>
+              <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.65rem', lineHeight: 1.5 }}>
+                <li>
+                  You need dedicated capabilities in the <strong style={{ color: '#ffffff' }}>{catL}</strong> domain.
+                </li>
+                <li>
+                  You prefer <strong style={{ color: '#ffffff' }}>{installL.kind === 'remote' ? 'remote streaming HTTP/SSE' : 'local stdio subprocess'}</strong> transport architecture.
+                </li>
+                <li>
+                  Your security boundary fits: <strong style={{ color: '#ffffff' }}>{formatAuthLabel(left.authType)}</strong> ({formatPricingLabel(left.pricingModel)}).
+                </li>
+                {left.aiEnvVars && left.aiEnvVars.length > 0 && (
+                  <li>
+                    You have access to required keys: <code style={{ fontSize: '0.75rem' }}>{left.aiEnvVars.join(', ')}</code>.
+                  </li>
+                )}
+                {toolsL.length > 0 && (
+                  <li>
+                    Primary tools included: <span style={{ color: 'var(--brand-cyan)' }}>{toolsL.slice(0, 3).join(', ')}</span>.
+                  </li>
+                )}
+              </ul>
+              <div style={{ marginTop: '1.25rem' }}>
+                <Link href={`/mcp/${left.id}`} className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}>
+                  Explore {nameL} Details <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            {/* Card Right */}
+            <div className="surface" style={{ padding: '1.5rem', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
+                <ServerAvatar name={right.name} logoUrl={right.logoUrl} size={32} />
+                <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>Choose {nameR} when:</h3>
+              </div>
+              <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.65rem', lineHeight: 1.5 }}>
+                <li>
+                  You need dedicated capabilities in the <strong style={{ color: '#ffffff' }}>{catR}</strong> domain.
+                </li>
+                <li>
+                  You prefer <strong style={{ color: '#ffffff' }}>{installR.kind === 'remote' ? 'remote streaming HTTP/SSE' : 'local stdio subprocess'}</strong> transport architecture.
+                </li>
+                <li>
+                  Your security boundary fits: <strong style={{ color: '#ffffff' }}>{formatAuthLabel(right.authType)}</strong> ({formatPricingLabel(right.pricingModel)}).
+                </li>
+                {right.aiEnvVars && right.aiEnvVars.length > 0 && (
+                  <li>
+                    You have access to required keys: <code style={{ fontSize: '0.75rem' }}>{right.aiEnvVars.join(', ')}</code>.
+                  </li>
+                )}
+                {toolsR.length > 0 && (
+                  <li>
+                    Primary tools included: <span style={{ color: 'var(--brand-cyan)' }}>{toolsR.slice(0, 3).join(', ')}</span>.
+                  </li>
+                )}
+              </ul>
+              <div style={{ marginTop: '1.25rem' }}>
+                <Link href={`/mcp/${right.id}`} className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}>
+                  Explore {nameR} Details <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Feature & Specification Comparison Table */}
+        <section style={{ marginBottom: '3rem' }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '1rem' }}>Feature & Specification Comparison</h2>
+          <div className="surface" style={{ padding: 0, overflow: 'hidden', borderRadius: 12 }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <th
+                      style={{
+                        padding: '1.1rem 1rem',
+                        textAlign: 'left',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)',
+                        borderBottom: '1px solid var(--border-color)',
+                        width: '24%',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      Specification
+                    </th>
+                    <th
+                      style={{
+                        padding: '1.1rem 1rem',
+                        textAlign: 'left',
+                        borderBottom: '1px solid var(--border-color)',
+                        width: '38%',
+                      }}
+                    >
+                      <SideHeader s={left} />
+                    </th>
+                    <th
+                      style={{
+                        padding: '1.1rem 1rem',
+                        textAlign: 'left',
+                        borderBottom: '1px solid var(--border-color)',
+                        width: '38%',
+                      }}
+                    >
+                      <SideHeader s={right} />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <Row
+                    label="Summary"
+                    left={
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, display: 'block' }}>
+                        <SafeMarkdown content={left.description || '—'} isInline />
+                      </span>
+                    }
+                    right={
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, display: 'block' }}>
+                        <SafeMarkdown content={right.description || '—'} isInline />
+                      </span>
+                    }
+                  />
+                  <Row
+                    label="Category & Scope"
+                    left={
+                      <Link href={`/categories/${categorySlug(left.category)}`} style={{ color: 'var(--brand-cyan)', textDecoration: 'none', fontWeight: 600 }}>
+                        {catL}
+                      </Link>
+                    }
+                    right={
+                      <Link href={`/categories/${categorySlug(right.category)}`} style={{ color: 'var(--brand-cyan)', textDecoration: 'none', fontWeight: 600 }}>
+                        {catR}
+                      </Link>
+                    }
+                  />
+                  <Row
+                    label="Quality signal"
+                    hint="Editorial completeness/health signal calculated by AllMCPs directory"
+                    left={
+                      <span style={{ fontWeight: 700 }}>
+                        {qL.score}/100 <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>({qL.tier})</span>
+                      </span>
+                    }
+                    right={
+                      <span style={{ fontWeight: 700 }}>
+                        {qR.score}/100 <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>({qR.tier})</span>
+                      </span>
+                    }
+                  />
+                  <Row
+                    label="Transport Protocol"
+                    hint="Model Context Protocol transport layer mechanism"
+                    left={
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                        <Terminal size={14} color="var(--brand-cyan)" />
+                        {installL.kind === 'remote' ? 'Remote HTTP/SSE' : 'Local Subprocess (stdio)'}
+                      </span>
+                    }
+                    right={
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                        <Terminal size={14} color="var(--brand-cyan)" />
+                        {installR.kind === 'remote' ? 'Remote HTTP/SSE' : 'Local Subprocess (stdio)'}
+                      </span>
+                    }
+                  />
+                  <Row
+                    label="Auth Requirement"
+                    left={
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Lock size={13} color="var(--text-secondary)" />
+                        {formatAuthLabel(left.authType)}
+                      </span>
+                    }
+                    right={
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Lock size={13} color="var(--text-secondary)" />
+                        {formatAuthLabel(right.authType)}
+                      </span>
+                    }
+                  />
+                  <Row
+                    label="Pricing Model"
+                    left={
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <DollarSign size={13} color="#34d399" />
+                        {formatPricingLabel(left.pricingModel)}
+                      </span>
+                    }
+                    right={
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <DollarSign size={13} color="#34d399" />
+                        {formatPricingLabel(right.pricingModel)}
+                      </span>
+                    }
+                  />
+                  <Row
+                    label="Required Env Vars"
+                    left={
+                      left.aiEnvVars && left.aiEnvVars.length > 0 ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {left.aiEnvVars.map((v: string) => (
+                            <code key={v} style={{ fontSize: '0.725rem', padding: '0.2rem 0.4rem', borderRadius: 4, background: 'rgba(255,255,255,0.06)' }}>
+                              {v}
+                            </code>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>None required</span>
+                      )
+                    }
+                    right={
+                      right.aiEnvVars && right.aiEnvVars.length > 0 ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {right.aiEnvVars.map((v: string) => (
+                            <code key={v} style={{ fontSize: '0.725rem', padding: '0.2rem 0.4rem', borderRadius: 4, background: 'rgba(255,255,255,0.06)' }}>
+                              {v}
+                            </code>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>None required</span>
+                      )
+                    }
+                  />
+                  <Row
+                    label="Compatible Clients"
+                    left={
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                        {['Claude Desktop', 'Cursor', 'Windsurf', 'Cline', 'VS Code'].map((c) => (
+                          <Badge key={c} variant="default" style={{ fontSize: '0.68rem' }}>
+                            {c}
+                          </Badge>
+                        ))}
+                      </div>
+                    }
+                    right={
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                        {['Claude Desktop', 'Cursor', 'Windsurf', 'Cline', 'VS Code'].map((c) => (
+                          <Badge key={c} variant="default" style={{ fontSize: '0.68rem' }}>
+                            {c}
+                          </Badge>
+                        ))}
+                      </div>
+                    }
+                  />
+                  <Row
+                    label="Install path signal"
+                    left={<code style={{ fontSize: '0.8rem' }}>{installSummary(left)}</code>}
+                    right={<code style={{ fontSize: '0.8rem' }}>{installSummary(right)}</code>}
+                  />
+                  <Row
+                    label="Engagement & Health"
+                    left={
+                      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Eye size={13} /> {(left.views || 0).toLocaleString()} views
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Download size={13} /> {(left.copies || 0).toLocaleString()} copies
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Heart size={13} /> {(left.upvotes || 0).toLocaleString()} upvotes
+                        </span>
+                        {typeof left.githubStars === 'number' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Star size={13} /> {left.githubStars.toLocaleString()} stars
+                          </span>
+                        )}
+                      </span>
+                    }
+                    right={
+                      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Eye size={13} /> {(right.views || 0).toLocaleString()} views
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Download size={13} /> {(right.copies || 0).toLocaleString()} copies
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Heart size={13} /> {(right.upvotes || 0).toLocaleString()} upvotes
+                        </span>
+                        {typeof right.githubStars === 'number' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Star size={13} /> {right.githubStars.toLocaleString()} stars
+                          </span>
+                        )}
+                      </span>
+                    }
+                  />
+                  <Row
+                    label="Verified / Official"
+                    left={
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+                        {isVerifiedListing(left) ? (
+                          <>
+                            <BadgeCheck size={16} color="#34d399" /> Yes (Verified)
+                          </>
+                        ) : (
+                          'Community Listing'
+                        )}
+                      </span>
+                    }
+                    right={
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+                        {isVerifiedListing(right) ? (
+                          <>
+                            <BadgeCheck size={16} color="#34d399" /> Yes (Verified)
+                          </>
+                        ) : (
+                          'Community Listing'
+                        )}
+                      </span>
+                    }
+                  />
+                  <Row
+                    label="Open full listing"
+                    left={
+                      <Link href={`/mcp/${left.id}`} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                        View {nameL} Listing
+                      </Link>
+                    }
+                    right={
+                      <Link href={`/mcp/${right.id}`} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+                        View {nameR} Listing
+                      </Link>
+                    }
+                  />
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* Side-by-Side Tools & Capabilities Inspector */}
+        <section style={{ marginBottom: '3rem' }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Wrench size={20} color="var(--brand-cyan)" /> Tools & Capabilities Breakdown
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            <div className="surface" style={{ padding: '1.5rem', borderRadius: 12 }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#ffffff', fontWeight: 700 }}>
+                {nameL} Tools ({left.tools?.length || toolsL.length})
+              </h3>
+              {toolsL.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {toolsL.map((t: string) => {
+                    const toolObj = left.tools?.find((item) => item.name === t);
+                    return (
+                      <div key={t} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.85rem', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--brand-cyan)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Wrench size={12} /> {t}
+                        </div>
+                        {toolObj?.description && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>
+                            {toolObj.description}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {(left.tools?.length || 0) > toolsL.length && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                      +{(left.tools?.length || 0) - toolsL.length} more tools listed on main page
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  No explicit tool names declared in metadata yet. Check project README on main listing page.
+                </div>
+              )}
+            </div>
+
+            <div className="surface" style={{ padding: '1.5rem', borderRadius: 12 }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: '#ffffff', fontWeight: 700 }}>
+                {nameR} Tools ({right.tools?.length || toolsR.length})
+              </h3>
+              {toolsR.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {toolsR.map((t: string) => {
+                    const toolObj = right.tools?.find((item) => item.name === t);
+                    return (
+                      <div key={t} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.85rem', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--brand-cyan)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Wrench size={12} /> {t}
+                        </div>
+                        {toolObj?.description && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>
+                            {toolObj.description}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {(right.tools?.length || 0) > toolsR.length && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                      +{(right.tools?.length || 0) - toolsR.length} more tools listed on main page
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  No explicit tool names declared in metadata yet. Check project README on main listing page.
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Ready-to-Paste Client Configuration Snippets */}
+        <section style={{ marginBottom: '3rem' }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Code2 size={20} color="var(--brand-cyan)" /> Ready-to-Paste Client Configurations
+          </h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+            Paste either (or both) of these JSON server blocks into your client config file (e.g. <code>claude_desktop_config.json</code> or <code>~/.cursor/mcp.json</code>).
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: '#ffffff' }}>
+                {nameL} Configuration
+              </div>
+              <CopyBlock code={snippetL} serverId={left.id} title="mcpServers (Claude Desktop / Cursor)" language="json" />
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: '#ffffff' }}>
+                {nameR} Configuration
+              </div>
+              <CopyBlock code={snippetR} serverId={right.id} title="mcpServers (Claude Desktop / Cursor)" language="json" />
+            </div>
+          </div>
+        </section>
+
+        {/* Detailed FAQ Section */}
+        <section style={{ marginBottom: '3rem' }}>
+          <h2 style={{ fontSize: '1.35rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <HelpCircle size={20} color="var(--brand-cyan)" /> Frequently Asked Questions
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+                What is the main functional difference between {nameL} and {nameR}?
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                {nameL} is categorized under <strong>{catL}</strong> and uses a <strong>{installL.kind === 'remote' ? 'remote streaming HTTP/SSE transport' : 'local stdio subprocess'}</strong>.
+                In contrast, {nameR} belongs to <strong>{catR}</strong> using <strong>{installR.kind === 'remote' ? 'remote streaming HTTP/SSE transport' : 'local stdio subprocess'}</strong>.
+                Select {nameL} when you need capabilities focused on {catL.toLowerCase()} and {nameR} when you require tools for {catR.toLowerCase()}.
+              </p>
+            </div>
+
+            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+                How do I install {nameL} or {nameR} in Claude Desktop, Cursor, or Windsurf?
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                Both servers follow the standard Model Context Protocol configuration format. Simply copy the JSON block from the configuration section above and paste it into your AI client's <code>mcpServers</code> configuration object (for instance in <code>claude_desktop_config.json</code> or <code>~/.cursor/mcp.json</code>), then completely restart or refresh the application.
+              </p>
+            </div>
+
+            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+                Are {nameL} and {nameR} free to use, or do they require API keys?
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                {nameL} is listed under a <strong>{formatPricingLabel(left.pricingModel)}</strong> model with <strong>{formatAuthLabel(left.authType)}</strong>.
+                {nameR} operates under a <strong>{formatPricingLabel(right.pricingModel)}</strong> model with <strong>{formatAuthLabel(right.authType)}</strong>.
+                If environment variables are required (such as API keys), be sure to define them under the <code>env</code> key in your MCP client's configuration file.
+              </p>
+            </div>
+
+            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+                Can I run both {nameL} and {nameR} at the same time in my AI client?
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                Yes! MCP clients support multi-server orchestration. You can include both <code>{left.id}</code> and <code>{right.id}</code> as distinct keys inside the single <code>mcpServers</code> object in your configuration file. Your AI assistant will automatically select and call the appropriate tool from either server during chat sessions.
+              </p>
+            </div>
+
+            <div className="surface" style={{ padding: '1.25rem', borderRadius: 10 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.4rem' }}>
+                Which MCP server has higher directory engagement and quality ratings?
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                On AllMCPs, {nameL} has a Quality Score of <strong>{qL.score}/100 ({qL.tier})</strong> with {(left.views || 0).toLocaleString()} views, {(left.copies || 0).toLocaleString()} installs, and {(left.githubStars || 0).toLocaleString()} GitHub stars.
+                {nameR} holds a Quality Score of <strong>{qR.score}/100 ({qR.tier})</strong> with {(right.views || 0).toLocaleString()} views, {(right.copies || 0).toLocaleString()} installs, and {(right.githubStars || 0).toLocaleString()} GitHub stars.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Alternative Links & Category Hub Navigation */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2.5rem' }}>
           <Link href={`/mcp/${left.id}/alternatives`} className="btn btn-secondary">
             More alternatives to {nameL}
@@ -507,7 +997,7 @@ export default async function ComparePage({
             More alternatives to {nameR}
           </Link>
           <Link href={`/categories/${categorySlug(left.category)}`} className="btn btn-secondary">
-            {parseCategoryLabel(left.category).label} category
+            {catL} category hub
           </Link>
           {id !== c0 && (
             <Link href={`/mcp/${c0}/vs/${c1}`} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', alignSelf: 'center' }}>
@@ -516,35 +1006,85 @@ export default async function ComparePage({
           )}
         </div>
 
-        {moreAlts.length > 0 && (
-          <section>
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Other servers like {nameL}</h2>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {moreAlts.map((alt) => {
-                const n = parseServerName(alt.name).displayName;
-                return (
-                  <li key={alt.id}>
-                    <Link
-                      href={`/mcp/${left.id}/vs/${alt.id}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        padding: '0.75rem 1rem',
-                        borderRadius: 10,
-                        border: '1px solid var(--border-color)',
-                        textDecoration: 'none',
-                        color: 'inherit',
-                      }}
-                    >
-                      <ServerAvatar name={alt.name} logoUrl={alt.logoUrl} size={28} />
-                      <span style={{ fontWeight: 600, flex: 1 }}>{nameL} vs {n}</span>
-                      <ChevronRight size={16} style={{ color: 'var(--text-secondary)' }} />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+        {/* Peer Comparisons for Both Servers */}
+        {(moreAltsLeft.length > 0 || moreAltsRight.length > 0) && (
+          <section style={{ borderTop: '1px solid var(--border-color)', paddingTop: '2rem' }}>
+            <h2 style={{ fontSize: '1.35rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Layers size={20} color="var(--brand-cyan)" /> Related MCP Server Comparisons
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+              {moreAltsLeft.length > 0 && (
+                <div>
+                  <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Popular comparisons with {nameL}
+                  </h3>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {moreAltsLeft.map((alt) => {
+                      const n = parseServerName(alt.name).displayName;
+                      const [a0, a1] = canonicalPair(left.id, alt.id);
+                      return (
+                        <li key={alt.id}>
+                          <Link
+                            href={`/mcp/${a0}/vs/${a1}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.75rem 1rem',
+                              borderRadius: 10,
+                              border: '1px solid var(--border-color)',
+                              textDecoration: 'none',
+                              color: 'inherit',
+                              background: 'rgba(255, 255, 255, 0.02)',
+                            }}
+                          >
+                            <ServerAvatar name={alt.name} logoUrl={alt.logoUrl} size={28} />
+                            <span style={{ fontWeight: 600, flex: 1, fontSize: '0.9rem' }}>{nameL} vs {n}</span>
+                            <ChevronRight size={16} style={{ color: 'var(--text-secondary)' }} />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {moreAltsRight.length > 0 && (
+                <div>
+                  <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Popular comparisons with {nameR}
+                  </h3>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {moreAltsRight.map((alt) => {
+                      const n = parseServerName(alt.name).displayName;
+                      const [a0, a1] = canonicalPair(right.id, alt.id);
+                      return (
+                        <li key={alt.id}>
+                          <Link
+                            href={`/mcp/${a0}/vs/${a1}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.75rem 1rem',
+                              borderRadius: 10,
+                              border: '1px solid var(--border-color)',
+                              textDecoration: 'none',
+                              color: 'inherit',
+                              background: 'rgba(255, 255, 255, 0.02)',
+                            }}
+                          >
+                            <ServerAvatar name={alt.name} logoUrl={alt.logoUrl} size={28} />
+                            <span style={{ fontWeight: 600, flex: 1, fontSize: '0.9rem' }}>{nameR} vs {n}</span>
+                            <ChevronRight size={16} style={{ color: 'var(--text-secondary)' }} />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
           </section>
         )}
       </main>

@@ -14,6 +14,13 @@ import { generateListingContent } from '../../../../lib/aiContent';
  * AI content pass — writes the unique per-listing content layer (summary, overview,
  * use cases, features, faq, envVars, authType, pricingModel, license, tags, compatibleClients)
  * that turns scraped README-mirror pages into rich, original listings.
+ *
+ * Also validates/replaces install_kind/install_command/install_args/install_package,
+ * which used to come solely from a regex/heuristic README parser (lib/tools/parseInstallHint.ts
+ * via the health cron). That parser routinely mistook mentioned third-party installer CLIs,
+ * debugging tools, and generic framework dependencies for the listing's own install command —
+ * an LLM reading the README with context can tell those apart, and voids the field entirely
+ * (rather than guessing) when it isn't confident. See installExtractedAt in db/schema.ts.
  */
 
 const BATCH_SIZE = 24;
@@ -63,7 +70,12 @@ export async function POST(req: Request) {
             .where(
               and(
                 eq(servers.status, 'active'),
-                or(isNull(servers.aiEnrichedAt), isNull(servers.authType), isNull(servers.pricingModel))
+                or(
+                  isNull(servers.aiEnrichedAt),
+                  isNull(servers.authType),
+                  isNull(servers.pricingModel),
+                  isNull(servers.installExtractedAt)
+                )
               )
             )
             .orderBy(
@@ -195,6 +207,30 @@ export async function POST(req: Request) {
             updatePayload.compatibleClients = JSON.stringify(o.content.compatibleClients);
           }
 
+          // Always mark install-checked, and always replace the cached install
+          // fields with the LLM's verdict — including voiding them to null when
+          // it isn't confident. A stale heuristic guess left in place is worse
+          // than no cached guess: this data feeds install instructions agents
+          // execute directly (see get_mcp_install_config on our own MCP server).
+          updatePayload.installExtractedAt = claimTime;
+          const install = o.content.install;
+          if (install) {
+            updatePayload.installKind = install.kind;
+            updatePayload.installCommand = install.kind === 'stdio' ? install.command ?? null : null;
+            updatePayload.installArgs =
+              install.kind === 'stdio' && install.args && install.args.length > 0
+                ? JSON.stringify(install.args)
+                : null;
+            updatePayload.installPackage = install.package ?? null;
+            updatePayload.installConfidence = install.confidence;
+          } else {
+            updatePayload.installKind = null;
+            updatePayload.installCommand = null;
+            updatePayload.installArgs = null;
+            updatePayload.installPackage = null;
+            updatePayload.installConfidence = null;
+          }
+
           await db
             .update(servers)
             .set(updatePayload as any)
@@ -231,6 +267,11 @@ export async function POST(req: Request) {
       .from(servers)
       .where(and(eq(servers.status, 'active'), isNull(servers.aiEnrichedAt)));
 
+    const [{ installRemaining }] = await db
+      .select({ installRemaining: sql<number>`count(*)` })
+      .from(servers)
+      .where(and(eq(servers.status, 'active'), isNull(servers.installExtractedAt)));
+
     const staleCutoffNow = new Date(Date.now() - STALE_RECHECK_MS);
     const [{ dueForRecheck }] = await db
       .select({ dueForRecheck: sql<number>`count(*)` })
@@ -248,12 +289,13 @@ export async function POST(req: Request) {
       ...stats,
       remaining,
       dueForRecheck,
+      installRemaining,
       githubAuth: Boolean(githubToken),
       message:
         `AI content: enriched ${stats.enriched} (${stats.claimedNew} new, ${stats.claimedStale} re-checked), ` +
         `skipped-thin ${stats.skippedThin}, failed ${stats.failed}${
           stats.budgetStopped ? ' (stopped — LLM spend cap/outage)' : ''
-        }. ~${remaining} never-enriched, ~${dueForRecheck} due for re-check.`,
+        }. ~${remaining} never-enriched, ~${dueForRecheck} due for re-check, ~${installRemaining} install-unchecked.`,
     });
   } catch (error: any) {
     console.error('AI content cron error:', error);
