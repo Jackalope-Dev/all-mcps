@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable } from '../db/schema';
+import { servers as serversTable, stdioVerificationPilot } from '../db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
@@ -552,6 +552,46 @@ export async function getServerById(id: string): Promise<Server | undefined> {
   const servers = serversData as unknown as Server[];
   const found = servers.find((s) => s.id === id);
   return found ? normalizeServer(found) : undefined;
+}
+
+export type StdioPilotResult = {
+  status: 'ok' | 'install_failed' | 'handshake_failed' | 'timeout' | 'error';
+  toolCount: number | null;
+  error: string | null;
+  durationMs: number | null;
+  checkedAt: string | Date;
+};
+
+/**
+ * Latest E2B sandbox verification attempt for a listing, if any (see the
+ * e2b-stdio-pilot GitHub Actions workflow). Deliberately separate from
+ * tools/toolsSource — this surfaces the *attempt*, friendly and non-alarming,
+ * so a submitter/owner can see exactly what we tried and why it didn't
+ * confirm, without us asserting the listing is broken (false negatives from
+ * missing env vars, slow cold installs, etc. are expected).
+ */
+export async function getStdioPilotResult(serverId: string): Promise<StdioPilotResult | null> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (!ctx?.env || !(ctx.env as any).DB) return null;
+    const db = drizzle((ctx.env as any).DB);
+    const rows = await db
+      .select({
+        status: stdioVerificationPilot.status,
+        toolCount: stdioVerificationPilot.toolCount,
+        error: stdioVerificationPilot.error,
+        durationMs: stdioVerificationPilot.durationMs,
+        checkedAt: stdioVerificationPilot.checkedAt,
+      })
+      .from(stdioVerificationPilot)
+      .where(eq(stdioVerificationPilot.serverId, serverId))
+      .orderBy(desc(stdioVerificationPilot.checkedAt))
+      .limit(1);
+    return (rows[0] as StdioPilotResult) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchServerReadme(url: string): Promise<string | null> {

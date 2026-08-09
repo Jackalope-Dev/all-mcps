@@ -7,21 +7,37 @@ name: 🧪 E2B Stdio Verification Pilot
 # live servers.tools/tools_source columns — so we can review success rate,
 # timing, and cost before this feeds anything the public site shows.
 #
+# Runs a concurrency pool that drains the whole stdio backlog (or until
+# run_budget_minutes is hit), not just one fixed batch — see
+# scripts/e2b-stdio-pilot.mjs. Default concurrency (15) sits a few sandboxes
+# below E2B Hobby's 20-concurrent-sandbox free-tier cap as headroom.
+#
 # Needs the E2B_API_KEY repo secret (E2B's SDK doesn't work inside Cloudflare
 # Workers, so this can't run as a Worker cron — see scripts/e2b-stdio-pilot.mjs).
 # Trigger from the GitHub Actions tab: Actions → this workflow → "Run workflow".
 on:
   workflow_dispatch:
     inputs:
-      batch_size:
-        description: 'Number of stdio listings to verify this run'
+      concurrency:
+        description: 'Sandboxes to run at once (stay a few below your E2B plan''s concurrent-sandbox cap)'
         required: false
-        default: '20'
+        default: '15'
+      run_budget_minutes:
+        description: 'Stop starting new listings after this many minutes (in-flight ones still finish)'
+        required: false
+        default: '300'
+      batch_size:
+        description: 'Listings fetched per page from the backlog (capped at 100 by the endpoint)'
+        required: false
+        default: '100'
 
 jobs:
   pilot:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Padded above run_budget_minutes' default so the job timeout itself is
+    # never what cuts a run short — the script's own budget check is the one
+    # meant to bound this.
+    timeout-minutes: 350
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,5 +55,7 @@ jobs:
         env:
           E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
           ALLMCPS_ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+          CONCURRENCY: ${{ github.event.inputs.concurrency }}
+          RUN_BUDGET_MINUTES: ${{ github.event.inputs.run_budget_minutes }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size }}
         run: node scripts/e2b-stdio-pilot.mjs

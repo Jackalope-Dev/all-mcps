@@ -1,5 +1,6 @@
-import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy, Clock } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy, Clock, Info } from 'lucide-react';
 import { formatCommitAge } from '../../../lib/format';
+import { parseArgsJson } from '../../../lib/installConfig';
 import {
   AUTH_TYPE_LABELS,
   MAINTENANCE_STATUS_LABELS,
@@ -30,7 +31,7 @@ import { repoLinkRel, websiteLinkRel, supportLinkRel } from '../../../lib/linkRe
 import { PremiumUpgrade } from '../../../components/PremiumUpgrade';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
-import { getRelatedServers, getFeaturedServers, getServerById, type Server } from '../../../lib/servers';
+import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, type Server } from '../../../lib/servers';
 import { auth } from '../../../lib/auth';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
@@ -177,6 +178,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
   const readme = await fetchReadme(server.url);
   const relatedServers = await getRelatedServers(server as any, 4);
+  const pilotResult = await getStdioPilotResult(server.id);
   const { displayName, org } = parseServerName(server.name);
   const catMeta = getCategoryMeta(server.category);
 
@@ -648,6 +650,72 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   language="text"
                   snippetType="remote_endpoint_url"
                 />
+              </div>
+            )}
+
+            {pilotResult && (
+              <div
+                style={{
+                  marginTop: '1.25rem',
+                  borderRadius: '10px',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-color)',
+                  padding: '0.85rem 1rem',
+                }}
+              >
+                {pilotResult.status === 'ok' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <Sparkles size={14} style={{ color: '#34d399' }} /> Automated check passed
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: 400, fontSize: '0.8rem' }}>
+                      — started and listed {pilotResult.toolCount ?? 'its'} tools correctly
+                      {formatCommitAge(pilotResult.checkedAt) ? ` (${formatCommitAge(pilotResult.checkedAt)})` : ''}.
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <Info size={14} style={{ color: 'var(--accent-color)' }} /> We couldn&rsquo;t automatically confirm this listing starts correctly
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '0 0 0.6rem' }}>
+                      {
+                        {
+                          timeout: "We ran the install command below but it didn't respond within our test window — this can mean a slow first-time install rather than a real problem.",
+                          handshake_failed: "The install command below started, but didn't respond the way we expected when we tried to talk to it.",
+                          install_failed: "The install command below didn't complete successfully in our automated test.",
+                          error: 'We hit an unexpected error while testing this listing automatically.',
+                        }[pilotResult.status]
+                      }
+                    </p>
+                    <code
+                      style={{
+                        display: 'block',
+                        fontSize: '0.78rem',
+                        padding: '0.5rem 0.7rem',
+                        borderRadius: '6px',
+                        background: 'var(--bg-muted)',
+                        border: '1px solid var(--border-color)',
+                        marginBottom: pilotResult.error ? '0.5rem' : 0,
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {[server.installCommand, ...(parseArgsJson(server.installArgs) ?? [])].filter(Boolean).join(' ')}
+                    </code>
+                    {pilotResult.error && (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontFamily: 'monospace', margin: '0 0 0.6rem', wordBreak: 'break-word' }}>
+                        {pilotResult.error}
+                      </p>
+                    )}
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', margin: 0 }}>
+                      This is an experimental automated check and can have false negatives — missing environment variables, a slow cold install, etc.
+                      It doesn&rsquo;t necessarily mean something&rsquo;s wrong.{' '}
+                      {!isOwner && (
+                        <Link href={`/mcp/${server.id}/claim`} style={{ color: 'var(--accent-color)' }}>
+                          Own this listing? Claim it to help us verify it.
+                        </Link>
+                      )}
+                    </p>
+                  </>
+                )}
               </div>
             )}
 

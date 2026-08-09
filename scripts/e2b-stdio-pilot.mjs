@@ -17,11 +17,18 @@
  * servers.tools/tools_source columns. This is a pilot: results get reviewed
  * for success rate/timing/cost before anything here feeds the public site.
  *
+ * Runs a concurrency pool (default 15, capped below E2B Hobby's 20-concurrent-
+ * sandbox limit) that keeps pulling pages from /api/cron/stdio-pilot/batch and
+ * draining them until either the catalog is exhausted or RUN_BUDGET_MS is hit
+ * — so one dispatch can walk through most/all of the stdio backlog instead of
+ * a single fixed-size batch.
+ *
  * Usage:
  *   E2B_API_KEY=xxx ALLMCPS_ADMIN_SECRET=xxx node scripts/e2b-stdio-pilot.mjs
- *   E2B_API_KEY=xxx ALLMCPS_ADMIN_SECRET=xxx BATCH_SIZE=20 node scripts/e2b-stdio-pilot.mjs
+ *   E2B_API_KEY=xxx ALLMCPS_ADMIN_SECRET=xxx CONCURRENCY=15 RUN_BUDGET_MS=18000000 node scripts/e2b-stdio-pilot.mjs
  *
- * Safe to re-run — each batch only returns listings not yet in the pilot table.
+ * Safe to re-run/interrupt — each fetched page only returns listings not yet
+ * in the pilot table, so progress is never lost or reprocessed.
  */
 
 import { Sandbox } from 'e2b';
@@ -29,13 +36,30 @@ import { Sandbox } from 'e2b';
 const BASE_URL = process.env.ALLMCPS_BASE_URL || 'https://allmcps.com';
 const SECRET = process.env.ALLMCPS_ADMIN_SECRET || process.env.ADMIN_SECRET;
 const E2B_API_KEY = process.env.E2B_API_KEY;
-const BATCH_SIZE = Number.parseInt(process.env.BATCH_SIZE || '20', 10);
+// Page size per /batch call — kept well above CONCURRENCY so workers rarely
+// wait on a refetch. Capped at 100 by the endpoint itself.
+const BATCH_SIZE = Number.parseInt(process.env.BATCH_SIZE || '100', 10);
+// How many sandboxes run at once. E2B Hobby (free) tier caps concurrent
+// sandboxes at 20 — default sits a few below that as headroom for teardown
+// lag rather than running flush against the limit.
+const CONCURRENCY = Number.parseInt(process.env.CONCURRENCY || '15', 10);
+// Wall-clock budget for the whole run — stop starting new listings once hit,
+// let in-flight ones finish, then exit cleanly (well under the GH Actions job
+// timeout). Minutes, not ms, since GitHub Actions expression syntax doesn't
+// reliably support arithmetic — the workflow passes raw minutes and the
+// multiplication happens here instead. Default 5h.
+const RUN_BUDGET_MS = process.env.RUN_BUDGET_MS
+  ? Number.parseInt(process.env.RUN_BUDGET_MS, 10)
+  : Number.parseInt(process.env.RUN_BUDGET_MINUTES || '300', 10) * 60_000;
 
 // Per-listing hard cap: bounds worst-case sandbox time/cost from a hung or
 // oversized install (see the cost discussion this pilot came out of — a
-// single runaway install shouldn't blow the run's budget).
-const HANDSHAKE_TIMEOUT_MS = 45_000;
-const SANDBOX_BOOT_TIMEOUT_MS = 60_000;
+// single runaway install shouldn't blow the run's budget). Widened from an
+// initial 45s after the first real batch showed timeouts that were plausibly
+// just slow/uncached npx installs, not genuinely broken servers — a listing
+// can burn up to ~2x this (initialize wait + tools/list wait) worst case.
+const HANDSHAKE_TIMEOUT_MS = 90_000;
+const SANDBOX_BOOT_TIMEOUT_MS = 90_000;
 
 const INSTALL_FAILURE_MARKERS = [
   'npm ERR!',
@@ -233,28 +257,73 @@ async function verifyListing(listing) {
   }
 }
 
-async function main() {
-  const batch = await fetchBatch();
-  if (batch.length === 0) {
-    console.log('No unverified stdio listings left for this pilot batch.');
-    return;
-  }
-  console.log(`Verifying ${batch.length} listing(s)...`);
+/**
+ * Shared work queue drained by a fixed-size worker pool. Refills are guarded
+ * by a single in-flight promise so concurrent workers hitting an empty queue
+ * at once don't fire duplicate /batch calls.
+ */
+function makeWorkQueue() {
+  const queue = [];
+  let noMoreWork = false;
+  let refillPromise = null;
 
-  const counts = {};
-  for (const listing of batch) {
-    process.stdout.write(`  ${listing.id} (${cmdPreview(listing)})... `);
-    const result = await verifyListing(listing);
-    counts[result.status] = (counts[result.status] || 0) + 1;
-    console.log(`${result.status} (${result.durationMs}ms)${result.tools ? `, ${result.tools.length} tools` : ''}`);
-    await postResult(result);
+  async function refill() {
+    if (noMoreWork) return;
+    if (!refillPromise) {
+      refillPromise = fetchBatch()
+        .then((page) => {
+          if (page.length === 0) noMoreWork = true;
+          else queue.push(...page);
+        })
+        .finally(() => {
+          refillPromise = null;
+        });
+    }
+    return refillPromise;
   }
 
-  console.log('\nDone.', counts);
+  async function next() {
+    if (queue.length === 0 && !noMoreWork) await refill();
+    return queue.shift() || null;
+  }
+
+  return { next };
 }
 
-function cmdPreview(listing) {
-  return [listing.installCommand, ...listing.installArgs].join(' ').slice(0, 60);
+async function main() {
+  const startedAt = Date.now();
+  const counts = {};
+  let totalProcessed = 0;
+  const work = makeWorkQueue();
+
+  console.log(
+    `Draining stdio backlog: concurrency=${CONCURRENCY}, page size=${BATCH_SIZE}, budget=${(RUN_BUDGET_MS / 60000).toFixed(0)}min`
+  );
+
+  async function worker() {
+    while (Date.now() - startedAt < RUN_BUDGET_MS) {
+      const listing = await work.next();
+      if (!listing) return; // Backlog exhausted.
+
+      const result = await verifyListing(listing);
+      counts[result.status] = (counts[result.status] || 0) + 1;
+      totalProcessed++;
+      console.log(
+        `[${totalProcessed}] ${listing.id} -> ${result.status} (${result.durationMs}ms)${result.tools ? `, ${result.tools.length} tools` : ''}`
+      );
+      await postResult(result);
+
+      if (totalProcessed % 25 === 0) {
+        const elapsedMin = ((Date.now() - startedAt) / 60000).toFixed(1);
+        console.log(`  -- progress: ${totalProcessed} processed in ${elapsedMin}min | ${JSON.stringify(counts)}`);
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+
+  const elapsedMin = ((Date.now() - startedAt) / 60000).toFixed(1);
+  console.log(`\nDone. Processed ${totalProcessed} in ${elapsedMin}min.`, counts);
 }
 
 main().catch((e) => {
