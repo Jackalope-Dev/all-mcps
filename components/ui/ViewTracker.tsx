@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Eye, Download } from 'lucide-react';
+import { IconTooltip } from './IconTooltip';
 
 const viewKey = (serverId: string) => `view_${serverId}`;
 
@@ -82,12 +83,25 @@ export function ViewTracker({
   }, [serverId]);
 
   return (
-    <div className="detail-stat-item" title="Unique views" aria-label={`${views.toLocaleString()} unique ${views === 1 ? 'view' : 'views'}`}>
-      <span className="detail-stat-item-label">
-        <Eye size={12} aria-hidden="true" /> Views
+    <IconTooltip
+      label={`${views.toLocaleString()} unique views`}
+      asSpan
+      trigger={
+        <div className="detail-stat-item" style={{ cursor: 'pointer' }} aria-label={`${views.toLocaleString()} unique ${views === 1 ? 'view' : 'views'}`}>
+          <span className="detail-stat-item-label">
+            <Eye size={12} aria-hidden="true" /> Views
+          </span>
+          <span className="detail-stat-item-value">{views.toLocaleString()}</span>
+        </div>
+      }
+    >
+      <span className="mcp-icon-tooltip-title">
+        <Eye size={14} style={{ color: 'var(--accent-color)' }} /> Unique Views
       </span>
-      <span className="detail-stat-item-value">{views.toLocaleString()}</span>
-    </div>
+      <span className="mcp-icon-tooltip-body">
+        Total visits recorded for this listing page on AllMCPs.
+      </span>
+    </IconTooltip>
   );
 }
 
@@ -95,11 +109,24 @@ export function ViewTracker({
 export function InstallsStat({ count = 0 }: { count?: number }) {
   const n = count || 0;
   return (
-    <div className="detail-stat-item" title="Install / copy actions" aria-label={`${n.toLocaleString()} ${n === 1 ? 'install' : 'installs'}`}>
-      <span className="detail-stat-item-label">
-        <Download size={12} aria-hidden="true" /> Installs
+    <IconTooltip
+      label={`${n.toLocaleString()} total installs`}
+      asSpan
+      trigger={
+        <div className="detail-stat-item" style={{ cursor: 'pointer' }} aria-label={`${n.toLocaleString()} ${n === 1 ? 'install' : 'installs'}`}>
+          <span className="detail-stat-item-label">
+            <Download size={12} aria-hidden="true" /> Installs
+          </span>
+          <span className="detail-stat-item-value">{n.toLocaleString()}</span>
+        </div>
+      }
+    >
+      <span className="mcp-icon-tooltip-title">
+        <Download size={14} style={{ color: 'var(--accent-color)' }} /> Installs &amp; Copy Actions
       </span>
-      <span className="detail-stat-item-value">{n.toLocaleString()}</span>
-    </div>
+      <span className="mcp-icon-tooltip-body">
+        Total times users copied install commands or configuration snippets for this server.
+      </span>
+    </IconTooltip>
   );
 }

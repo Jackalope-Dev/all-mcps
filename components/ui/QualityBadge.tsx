@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Server } from '../../lib/servers';
 import { computeQualityScore, tierColor } from '../../lib/qualityScore';
+import { IconTooltip } from './IconTooltip';
 
 /**
  * Transparent quality signal for a listing. `compact` renders just the score
@@ -14,27 +15,40 @@ export function QualityBadge({ server, compact = false }: { server: Server; comp
 
   if (compact) {
     return (
-      <span
-        title={`Quality signal: ${q.tier} (${q.score}/100)`}
-        aria-label={`Quality signal ${q.tier}, ${q.score} out of 100`}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minWidth: '1.6rem',
-          height: '1.4rem',
-          padding: '0 0.35rem',
-          borderRadius: '6px',
-          fontSize: '0.72rem',
-          fontWeight: 800,
-          color,
-          background: `${color}1f`,
-          border: `1px solid ${color}55`,
-          flexShrink: 0,
-        }}
+      <IconTooltip
+        label={`Quality signal: ${q.tier} (${q.score}/100)`}
+        asSpan
+        trigger={
+          <span
+            aria-label={`Quality signal ${q.tier}, ${q.score} out of 100`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '1.6rem',
+              height: '1.4rem',
+              padding: '0 0.35rem',
+              borderRadius: '6px',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              color,
+              background: `${color}1f`,
+              border: `1px solid ${color}55`,
+              flexShrink: 0,
+              cursor: 'pointer',
+            }}
+          >
+            {q.score}
+          </span>
+        }
       >
-        {q.score}
-      </span>
+        <span className="mcp-icon-tooltip-title" style={{ color }}>
+          Quality Signal: {q.tier} ({q.score}/100)
+        </span>
+        <span className="mcp-icon-tooltip-body">
+          Automated guidance score built from docs, health checks, and adoption signals.
+        </span>
+      </IconTooltip>
     );
   }
 

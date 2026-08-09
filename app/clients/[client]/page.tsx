@@ -9,6 +9,7 @@ import { getActiveServers, type Server } from '../../../lib/servers';
 import { engagementScore } from '../../../lib/search';
 import { isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
+import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { MCP_CLIENTS, mcpClientBySlug } from '../../../lib/clients';
 import { ClientConfigSection } from '../../../components/clients/ClientConfigSection';
 import { ServerConfigCopyButton } from '../../../components/clients/ServerConfigCopyButton';
@@ -225,9 +226,22 @@ export default async function ClientPage({
                         {org && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{org}</span>}
                       </div>
                       {isVerifiedListing(server) && (
-                        <span title="Verified" style={{ display: 'inline-flex' }}>
-                          <BadgeCheck size={16} style={{ color: 'var(--accent-color)' }} />
-                        </span>
+                        <IconTooltip
+                          label="Verified listing"
+                          asSpan
+                          trigger={
+                            <span style={{ display: 'inline-flex', cursor: 'pointer' }}>
+                              <BadgeCheck size={16} style={{ color: 'var(--accent-color)' }} />
+                            </span>
+                          }
+                        >
+                          <span className="mcp-icon-tooltip-title">
+                            <BadgeCheck size={14} color="var(--accent-color)" /> Verified Listing
+                          </span>
+                          <span className="mcp-icon-tooltip-body">
+                            Ownership or active status confirmed on AllMCPs.
+                          </span>
+                        </IconTooltip>
                       )}
                     </div>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1rem', flexGrow: 1 }}>

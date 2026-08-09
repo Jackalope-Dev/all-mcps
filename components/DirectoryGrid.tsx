@@ -12,6 +12,7 @@ import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Se
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
+import { IconTooltip } from './ui/IconTooltip';
 import {
   isFeaturedListing as isFeaturedListingShared,
   isVerifiedListing as isVerifiedListingShared,
@@ -498,37 +499,102 @@ export default function DirectoryGrid({
     const commitAge = formatCommitAge(server.lastCommitAt);
     return (
       <div className="directory-stats">
-        <div title="Upvotes">
-          <Heart size={12} aria-hidden="true" /> {(server.upvotes || 0).toLocaleString()}
-        </div>
+        <IconTooltip
+          label={`${(server.upvotes || 0).toLocaleString()} upvotes`}
+          asSpan
+          trigger={
+            <div style={{ cursor: 'pointer' }}>
+              <Heart size={12} aria-hidden="true" /> {(server.upvotes || 0).toLocaleString()}
+            </div>
+          }
+        >
+          <span className="mcp-icon-tooltip-title">
+            <Heart size={13} style={{ color: '#f43f5e' }} /> Upvotes
+          </span>
+          <span className="mcp-icon-tooltip-body">
+            Community upvotes on AllMCPs.
+          </span>
+        </IconTooltip>
+
         {typeof server.githubStars === 'number' && (
-          <div title="GitHub stars">
-            <Star size={12} aria-hidden="true" /> {server.githubStars.toLocaleString()}
-          </div>
-        )}
-        <div title="Install / copy actions">
-          <Download size={12} aria-hidden="true" /> {(server.copies || 0).toLocaleString()}
-        </div>
-        {typeof server.toolCount === 'number' && server.toolCount > 0 && (
-          <div
-            title={
-              server.toolsSource === 'introspected'
-                ? `${server.toolCount} tools — verified live via tools/list`
-                : server.toolsSource === 'readme'
-                  ? `${server.toolCount} tools — self-reported from the README, not live-verified`
-                  : `${server.toolCount} tools`
+          <IconTooltip
+            label={`${server.githubStars.toLocaleString()} GitHub stars`}
+            asSpan
+            trigger={
+              <div style={{ cursor: 'pointer' }}>
+                <Star size={12} aria-hidden="true" /> {server.githubStars.toLocaleString()}
+              </div>
             }
           >
-            <Wrench size={12} aria-hidden="true" /> {server.toolCount}
-            {server.toolsSource === 'introspected' && (
-              <ShieldCheck size={11} aria-hidden="true" style={{ color: '#34d399', marginLeft: 2 }} />
-            )}
-          </div>
+            <span className="mcp-icon-tooltip-title">
+              <Star size={13} style={{ color: '#f5c518' }} /> GitHub Stars
+            </span>
+            <span className="mcp-icon-tooltip-body">
+              Stargazers on the official GitHub repository.
+            </span>
+          </IconTooltip>
         )}
+
+        <IconTooltip
+          label={`${(server.copies || 0).toLocaleString()} installs`}
+          asSpan
+          trigger={
+            <div style={{ cursor: 'pointer' }}>
+              <Download size={12} aria-hidden="true" /> {(server.copies || 0).toLocaleString()}
+            </div>
+          }
+        >
+          <span className="mcp-icon-tooltip-title">
+            <Download size={13} style={{ color: 'var(--accent-color)' }} /> Installs &amp; Copy Actions
+          </span>
+          <span className="mcp-icon-tooltip-body">
+            Total times users copied install commands or configuration snippets.
+          </span>
+        </IconTooltip>
+
+        {typeof server.toolCount === 'number' && server.toolCount > 0 && (
+          <IconTooltip
+            label={`${server.toolCount} tools`}
+            asSpan
+            trigger={
+              <div style={{ cursor: 'pointer' }}>
+                <Wrench size={12} aria-hidden="true" /> {server.toolCount}
+                {server.toolsSource === 'introspected' && (
+                  <ShieldCheck size={11} aria-hidden="true" style={{ color: '#34d399', marginLeft: 2 }} />
+                )}
+              </div>
+            }
+          >
+            <span className="mcp-icon-tooltip-title">
+              <Wrench size={13} style={{ color: 'var(--accent-color)' }} /> Tool Schemas ({server.toolCount})
+            </span>
+            <span className="mcp-icon-tooltip-body">
+              {server.toolsSource === 'introspected'
+                ? 'Tools verified live via MCP tools/list protocol handshake.'
+                : 'Tool count parsed from repository documentation.'}
+            </span>
+          </IconTooltip>
+        )}
+
         {commitAge && (
-          <div title={formatFullDate(server.lastCommitAt) ? `Last commit on ${formatFullDate(server.lastCommitAt)}` : `Last commit: ${commitAge}`}>
-            <Clock size={12} aria-hidden="true" /> {commitAge}
-          </div>
+          <IconTooltip
+            label={`Last commit: ${commitAge}`}
+            asSpan
+            trigger={
+              <div style={{ cursor: 'pointer' }}>
+                <Clock size={12} aria-hidden="true" /> {commitAge}
+              </div>
+            }
+          >
+            <span className="mcp-icon-tooltip-title">
+              <Clock size={13} style={{ color: 'var(--accent-color)' }} /> Repository Activity
+            </span>
+            <span className="mcp-icon-tooltip-body">
+              {formatFullDate(server.lastCommitAt)
+                ? `Last commit on ${formatFullDate(server.lastCommitAt)}`
+                : `Last commit ${commitAge}`}
+            </span>
+          </IconTooltip>
         )}
       </div>
     );

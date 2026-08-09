@@ -17,6 +17,13 @@ import {
   Globe,
   Activity,
   Radio,
+  Wrench,
+  Award,
+  Terminal,
+  CheckCircle2,
+  GitCommit,
+  PieChart,
+  Sparkles,
 } from 'lucide-react';
 import { getSiteStats, AI_SYSTEM_CLASSES } from '../../lib/siteStats';
 import { CALLER_COLORS } from '../../lib/accessLog';
@@ -74,6 +81,14 @@ const GROUP_ICON: Record<string, typeof Bot> = {
   crawler: Search,
   browser: Users,
   unknown: HelpCircle,
+};
+
+const TIER_COLORS: Record<string, string> = {
+  Excellent: '#10b981',
+  Great: '#22d3ee',
+  Good: '#f59e0b',
+  Fair: '#94a3b8',
+  Emerging: '#8b9bb4',
 };
 
 function StatTile({
@@ -182,7 +197,7 @@ type TrafficGroup = {
   ink: string;
 };
 
-/** Part-to-whole stacked bar for the top-level traffic split, plus a legend with exact counts (the direct-label relief the light-mode palette requires). */
+/** Part-to-whole stacked bar for the top-level traffic split, plus a legend with exact counts. */
 function TrafficStackedBar({ groups, total }: { groups: TrafficGroup[]; total: number }) {
   if (total <= 0 || groups.length === 0) return null;
 
@@ -306,7 +321,6 @@ function Group({
 
 type BarItem = { key: string; label: ReactNode; sublabel?: string; value: number };
 
-/** Single-hue magnitude bar list — direct-labeled since these sections top out at 6-8 rows. */
 function BarList({ items, colorVar }: { items: BarItem[]; colorVar: string }) {
   if (items.length === 0) {
     return <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>No traffic recorded yet.</p>;
@@ -382,6 +396,7 @@ export default async function TrustPage() {
   const browserRows = stats.callerBreakdown30d.filter((r) => r.class === 'browser');
   const unknownRows = stats.callerBreakdown30d.filter((r) => r.class === 'unknown');
   const totalHits30d = stats.callerBreakdown30d.reduce((acc, r) => acc + r.hits, 0);
+  const totalAiHits30d = aiRows.reduce((acc, r) => acc + r.hits, 0);
 
   const endpointItems: BarItem[] = stats.endpointBreakdown30d.map((e: EndpointBreakdown) => ({
     key: e.endpoint,
@@ -400,7 +415,7 @@ export default async function TrustPage() {
   }));
 
   const trafficGroups: TrafficGroup[] = [
-    { key: 'ai', label: 'AI assistants', hits: aiRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-ai', ink: '#ffffff' },
+    { key: 'ai', label: 'AI assistants', hits: totalAiHits30d, colorVar: '--tv-ai', ink: '#ffffff' },
     { key: 'crawler', label: 'Other crawlers & bots', hits: crawlerRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-crawler', ink: '#ffffff' },
     { key: 'browser', label: 'Human browsers', hits: browserRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-browser', ink: '#ffffff' },
     { key: 'unknown', label: 'Unclassified', hits: unknownRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-unknown', ink: '#1a1200' },
@@ -426,6 +441,8 @@ export default async function TrustPage() {
     ],
   };
 
+  const totalQualityServers = Object.values(stats.qualityTierBreakdown).reduce((a, b) => a + b, 0);
+
   return (
     <>
       <script
@@ -448,6 +465,7 @@ export default async function TrustPage() {
             <StatGrid>
               <StatTile icon={Cpu} color="#34d399" value={formatNumber(stats.totalServers)} label="MCP servers listed" />
               <StatTile icon={Tag} color="#60a5fa" value={formatNumber(stats.categoryCount)} label="Categories covered" />
+              <StatTile icon={Wrench} color="#a855f7" value={formatNumber(stats.toolsIndexed)} label="Callable tools indexed" />
               <StatTile icon={ShieldCheck} color="#22d3ee" value={formatNumber(stats.verifiedCount)} label="Verified listings" />
             </StatGrid>
 
@@ -458,6 +476,157 @@ export default async function TrustPage() {
               <StatTile icon={ThumbsUp} color="#fbbf24" value={formatNumber(stats.totalUpvotes)} label="Upvotes cast" />
             </StatGrid>
 
+            {/* Feature #1: Tool Schema Verification & Sandbox Pilot */}
+            <Panel>
+              <SectionLabel
+                tight
+                icon={Terminal}
+                title="Tool Introspection & Sandbox Verification"
+                note="How we inspect, parse, and verify executable tool schemas across the directory."
+              />
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '1rem',
+                  marginTop: '1rem',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '1rem',
+                    borderRadius: 12,
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-muted)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                    <Sparkles size={16} style={{ color: '#a855f7' }} />
+                    <strong style={{ fontSize: '0.875rem' }}>Live MCP Handshakes</strong>
+                  </div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {formatNumber(stats.toolsSourceBreakdown.introspected)} servers
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                    Verified via live <code style={{ fontSize: '0.75rem' }}>tools/list</code> protocol handshakes against hosted endpoints.
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: '1rem',
+                    borderRadius: 12,
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-muted)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                    <Wrench size={16} style={{ color: '#60a5fa' }} />
+                    <strong style={{ fontSize: '0.875rem' }}>README Structured Parsing</strong>
+                  </div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {formatNumber(stats.toolsSourceBreakdown.readme)} servers
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                    Extracted from repo documentation for stdio/CLI packages where no HTTP endpoint exists.
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: '1rem',
+                    borderRadius: 12,
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-muted)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                    <CheckCircle2 size={16} style={{ color: '#34d399' }} />
+                    <strong style={{ fontSize: '0.875rem' }}>E2B Sandbox Pilot</strong>
+                  </div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {pct(stats.stdioPilotStats.okCount, stats.stdioPilotStats.totalTested)} pass rate
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                    {formatNumber(stats.stdioPilotStats.totalTested)} stdio packages isolated and tested in ephemeral execution sandboxes (avg latency: {(stats.stdioPilotStats.avgDurationMs / 1000).toFixed(1)}s).
+                  </div>
+                </div>
+              </div>
+            </Panel>
+
+            {/* Feature #2: Catalog Quality & Ecosystem Signals */}
+            <Panel>
+              <SectionLabel
+                tight
+                icon={Award}
+                title="Catalog Quality Spectrum & Ecosystem Signals"
+                note="Deterministic quality tiering (0–100) and repository health signals across all active listings."
+              />
+              <div style={{ margin: '1rem 0 1.5rem' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
+                  Listing Quality Tier Distribution ({formatNumber(totalQualityServers)} total active servers):
+                </div>
+                <div style={{ display: 'flex', height: 16, borderRadius: 6, overflow: 'hidden', background: 'var(--bg-muted)', gap: 2 }}>
+                  {Object.entries(stats.qualityTierBreakdown).map(([tier, count]) => {
+                    if (count === 0 || totalQualityServers === 0) return null;
+                    const pctVal = (count / totalQualityServers) * 100;
+                    return (
+                      <div
+                        key={tier}
+                        title={`${tier}: ${formatNumber(count)} (${pct(count, totalQualityServers)})`}
+                        style={{
+                          width: `${pctVal}%`,
+                          background: TIER_COLORS[tier] || '#94a3b8',
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem 1.2rem', marginTop: '0.65rem', padding: 0 }}>
+                  {Object.entries(stats.qualityTierBreakdown).map(([tier, count]) => (
+                    <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: TIER_COLORS[tier] || '#94a3b8' }} />
+                      <strong>{tier}</strong>: {formatNumber(count)} ({pct(count, totalQualityServers)})
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                  gap: '0.75rem',
+                }}
+              >
+                <div style={{ padding: '0.85rem 1rem', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <ShieldCheck size={16} style={{ color: '#22d3ee' }} />
+                    <strong style={{ fontSize: '0.85rem' }}>Reciprocal Badge Verified</strong>
+                  </div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {formatNumber(stats.reciprocalBadgeCount)} listings
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Displaying an official AllMCPs badge or backlink on their GitHub README or website.
+                  </div>
+                </div>
+
+                <div style={{ padding: '0.85rem 1rem', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <GitCommit size={16} style={{ color: '#34d399' }} />
+                    <strong style={{ fontSize: '0.85rem' }}>Active Codebases (Last 30 Days)</strong>
+                  </div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    {formatNumber(stats.recentCommitCount30d)} listings
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Repositories with active commits or pushes measured by automated health checks.
+                  </div>
+                </div>
+              </div>
+            </Panel>
+
             {stats.dailyTrend30d.length > 0 && (
               <Panel>
                 <SectionLabel
@@ -467,6 +636,27 @@ export default async function TrustPage() {
                   note="Total requests to our API vs. the subset that came from a named AI assistant. Hover or focus the chart for exact daily numbers."
                 />
                 <TrendChart data={stats.dailyTrend30d} />
+              </Panel>
+            )}
+
+            {/* Feature #4: Share of AI Traffic Breakdown */}
+            {totalAiHits30d > 0 && (
+              <Panel>
+                <SectionLabel
+                  tight
+                  icon={PieChart}
+                  title="Share of AI Traffic"
+                  note={`Market share among AI assistants and LLM crawlers hit over the last 30 days (${formatNumber(totalAiHits30d)} total requests).`}
+                />
+                <BarList
+                  items={aiRows.map((r) => ({
+                    key: r.class,
+                    label: r.label,
+                    sublabel: `${pct(r.hits, totalAiHits30d)} of AI traffic`,
+                    value: r.hits,
+                  }))}
+                  colorVar="var(--tv-ai)"
+                />
               </Panel>
             )}
 

@@ -111,7 +111,8 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
 
   return (
     <section
-      style={{ margin: '1.75rem 0 2.5rem 0' }}
+      className="container"
+      style={{ margin: '1.75rem auto 2.5rem auto' }}
       aria-label="Featured and trending MCP servers"
     >
       <div 

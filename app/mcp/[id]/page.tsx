@@ -503,25 +503,39 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 <BadgeCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
               )}
               {typeof server.githubStars === 'number' && server.githubStars > 0 && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.15rem 0.5rem',
-                    borderRadius: '6px',
-                    background: 'rgba(234, 179, 8, 0.12)',
-                    color: '#d97706',
-                    border: '1px solid rgba(234, 179, 8, 0.3)',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    marginLeft: '0.2rem',
-                    lineHeight: 1,
-                  }}
+                <IconTooltip
+                  label={`${server.githubStars.toLocaleString()} GitHub stars`}
+                  asSpan
+                  trigger={
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '6px',
+                        background: 'rgba(234, 179, 8, 0.12)',
+                        color: '#d97706',
+                        border: '1px solid rgba(234, 179, 8, 0.3)',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        marginLeft: '0.2rem',
+                        lineHeight: 1,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Star size={12} fill="#d97706" color="#d97706" />
+                      {server.githubStars >= 1000 ? `${(server.githubStars / 1000).toFixed(1)}k` : server.githubStars.toLocaleString()}
+                    </span>
+                  }
                 >
-                  <Star size={12} fill="#d97706" color="#d97706" />
-                  {server.githubStars >= 1000 ? `${(server.githubStars / 1000).toFixed(1)}k` : server.githubStars.toLocaleString()}
-                </span>
+                  <span className="mcp-icon-tooltip-title">
+                    <Star size={14} fill="#d97706" color="#d97706" /> GitHub Stars
+                  </span>
+                  <span className="mcp-icon-tooltip-body">
+                    Total stargazers on GitHub for the source repository ({server.githubStars.toLocaleString()} stars).
+                  </span>
+                </IconTooltip>
               )}
             </OutboundLink>
 
@@ -641,33 +655,53 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 >
                   <Globe size={14} style={{ color: 'var(--accent-color)' }} /> Also available as a hosted endpoint
                   {server.remoteEndpointHealthy != null && (
-                    <span
-                      title={
-                        formatFullDate(server.remoteEndpointCheckedAt)
-                          ? `Last checked ${formatFullDate(server.remoteEndpointCheckedAt)}`
-                          : undefined
+                    <IconTooltip
+                      label="Hosted endpoint health"
+                      asSpan
+                      trigger={
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            color: server.remoteEndpointHealthy ? '#34d399' : '#f87171',
+                            marginLeft: '0.2rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              background: server.remoteEndpointHealthy ? '#34d399' : '#f87171',
+                            }}
+                          />
+                          {server.remoteEndpointHealthy ? 'Live' : 'Unreachable'}
+                          {formatCommitAge(server.remoteEndpointCheckedAt) ? ` · ${formatCommitAge(server.remoteEndpointCheckedAt)}` : ''}
+                        </span>
                       }
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        color: server.remoteEndpointHealthy ? '#34d399' : '#f87171',
-                        marginLeft: '0.2rem',
-                      }}
                     >
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          background: server.remoteEndpointHealthy ? '#34d399' : '#f87171',
-                        }}
-                      />
-                      {server.remoteEndpointHealthy ? 'Live' : 'Unreachable'}
-                      {formatCommitAge(server.remoteEndpointCheckedAt) ? ` · ${formatCommitAge(server.remoteEndpointCheckedAt)}` : ''}
-                    </span>
+                      <span className="mcp-icon-tooltip-title">
+                        <span
+                          className="mcp-icon-tooltip-dot"
+                          style={{ backgroundColor: server.remoteEndpointHealthy ? '#34d399' : '#f87171' }}
+                        />
+                        {server.remoteEndpointHealthy ? 'Live Remote SSE Endpoint' : 'Remote Endpoint Unreachable'}
+                      </span>
+                      <span className="mcp-icon-tooltip-body">
+                        {server.remoteEndpointHealthy
+                          ? 'Our automated health check connected to this remote SSE endpoint successfully.'
+                          : 'Our automated health check could not connect to this remote SSE endpoint.'}
+                      </span>
+                      <span className="mcp-icon-tooltip-meta">
+                        {server.remoteEndpointCheckedAt
+                          ? `Last checked ${new Date(server.remoteEndpointCheckedAt).toLocaleString()}`
+                          : 'No health check run yet.'}
+                      </span>
+                    </IconTooltip>
                   )}
                 </div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '0 0 0.6rem' }}>
@@ -1111,35 +1145,72 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <ViewTracker serverId={server.id} initialCount={server.views || 0} />
               <InstallsStat count={server.copies || 0} />
               {typeof server.githubStars === 'number' && (
-                <div className="detail-stat-item">
-                  <span className="detail-stat-item-label">
-                    <Star size={12} style={{ color: '#f5c518' }} /> GitHub stars
-                  </span>
-                  <span className="detail-stat-item-value">{server.githubStars.toLocaleString()}</span>
-                </div>
-              )}
-              {formatCommitAge(server.lastCommitAt) && (
-                <div
-                  className="detail-stat-item"
-                  title={
-                    formatFullDate(server.lastCommitAt)
-                      ? `Last commit on ${formatFullDate(server.lastCommitAt)}`
-                      : 'Last time this repo was pushed to, from the GitHub API'
+                <IconTooltip
+                  label="GitHub stars count"
+                  asSpan
+                  trigger={
+                    <div className="detail-stat-item" style={{ cursor: 'pointer' }}>
+                      <span className="detail-stat-item-label">
+                        <Star size={12} style={{ color: '#f5c518' }} /> GitHub stars
+                      </span>
+                      <span className="detail-stat-item-value">{server.githubStars.toLocaleString()}</span>
+                    </div>
                   }
                 >
-                  <span className="detail-stat-item-label">
-                    <Clock size={12} style={{ color: 'var(--accent-color)' }} /> Last commit
+                  <span className="mcp-icon-tooltip-title">
+                    <Star size={14} style={{ color: '#f5c518', fill: '#f5c518' }} /> GitHub Star Count
                   </span>
-                  <span className="detail-stat-item-value">{formatCommitAge(server.lastCommitAt)}</span>
-                </div>
+                  <span className="mcp-icon-tooltip-body">
+                    Total stargazers on GitHub representing community popularity ({server.githubStars.toLocaleString()} stars).
+                  </span>
+                </IconTooltip>
+              )}
+              {formatCommitAge(server.lastCommitAt) && (
+                <IconTooltip
+                  label="Last commit status"
+                  asSpan
+                  trigger={
+                    <div className="detail-stat-item" style={{ cursor: 'pointer' }}>
+                      <span className="detail-stat-item-label">
+                        <Clock size={12} style={{ color: 'var(--accent-color)' }} /> Last commit
+                      </span>
+                      <span className="detail-stat-item-value">{formatCommitAge(server.lastCommitAt)}</span>
+                    </div>
+                  }
+                >
+                  <span className="mcp-icon-tooltip-title">
+                    <Clock size={14} style={{ color: 'var(--accent-color)' }} /> Last Repository Commit
+                  </span>
+                  <span className="mcp-icon-tooltip-body">
+                    The most recent commit or push recorded for this server's GitHub repository.
+                  </span>
+                  <span className="mcp-icon-tooltip-meta">
+                    {formatFullDate(server.lastCommitAt)
+                      ? `Last commit on ${formatFullDate(server.lastCommitAt)}`
+                      : 'Refreshed automatically via GitHub API.'}
+                  </span>
+                </IconTooltip>
               )}
               {typeof server.npmDownloads === 'number' && (
-                <div className="detail-stat-item">
-                  <span className="detail-stat-item-label">
-                    <Download size={12} style={{ color: 'var(--accent-color)' }} /> npm downloads
+                <IconTooltip
+                  label="Monthly npm downloads"
+                  asSpan
+                  trigger={
+                    <div className="detail-stat-item" style={{ cursor: 'pointer' }}>
+                      <span className="detail-stat-item-label">
+                        <Download size={12} style={{ color: 'var(--accent-color)' }} /> npm downloads
+                      </span>
+                      <span className="detail-stat-item-value">{server.npmDownloads.toLocaleString()}/mo</span>
+                    </div>
+                  }
+                >
+                  <span className="mcp-icon-tooltip-title">
+                    <Download size={14} style={{ color: 'var(--accent-color)' }} /> Monthly npm Downloads
                   </span>
-                  <span className="detail-stat-item-value">{server.npmDownloads.toLocaleString()}/mo</span>
-                </div>
+                  <span className="mcp-icon-tooltip-body">
+                    Average monthly package installs recorded from npm registry statistics.
+                  </span>
+                </IconTooltip>
               )}
             </div>
 

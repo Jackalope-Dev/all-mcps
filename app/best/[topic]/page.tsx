@@ -10,6 +10,7 @@ import { engagementScore } from '../../../lib/search';
 import { BEST_TOPICS, bestTopicBySlug, selectServersForTopic } from '../../../lib/bestTopics';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
+import { IconTooltip } from '../../../components/ui/IconTooltip';
 
 const SITE = 'https://allmcps.com';
 const TOP_N = 10;
@@ -175,9 +176,22 @@ export default async function BestTopicPage({
                         <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{displayName}</span>
                         {org && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{org}</span>}
                         {isVerifiedListing(server) && (
-                          <span title="Verified" style={{ display: 'inline-flex' }}>
-                            <BadgeCheck size={15} style={{ color: 'var(--accent-color)' }} />
-                          </span>
+                          <IconTooltip
+                            label="Verified listing"
+                            asSpan
+                            trigger={
+                              <span style={{ display: 'inline-flex', cursor: 'pointer' }}>
+                                <BadgeCheck size={15} style={{ color: 'var(--accent-color)' }} />
+                              </span>
+                            }
+                          >
+                            <span className="mcp-icon-tooltip-title">
+                              <BadgeCheck size={14} color="var(--accent-color)" /> Verified Listing
+                            </span>
+                            <span className="mcp-icon-tooltip-body">
+                              Ownership or active status confirmed on AllMCPs.
+                            </span>
+                          </IconTooltip>
                         )}
                       </div>
                       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--accent-color)', margin: '0.35rem 0', fontWeight: 700 }}>

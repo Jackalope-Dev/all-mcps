@@ -16,10 +16,14 @@ export function IconTooltip({
   trigger,
   label,
   children,
+  asSpan = false,
+  className = '',
 }: {
   trigger: ReactNode;
   label: string;
   children: ReactNode;
+  asSpan?: boolean;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
@@ -41,10 +45,12 @@ export function IconTooltip({
     };
   }, [open]);
 
+  const TriggerTag = asSpan ? 'span' : 'button';
+
   return (
-    <span ref={rootRef} className={`mcp-icon-tooltip${open ? ' is-open' : ''}`}>
-      <button
-        type="button"
+    <span ref={rootRef} className={`mcp-icon-tooltip${open ? ' is-open' : ''} ${className}`}>
+      <TriggerTag
+        {...(asSpan ? {} : { type: 'button' as const })}
         className="mcp-icon-tooltip-trigger"
         aria-label={label}
         aria-expanded={open}
@@ -57,7 +63,7 @@ export function IconTooltip({
         }}
       >
         {trigger}
-      </button>
+      </TriggerTag>
       <span className="mcp-icon-tooltip-bubble" role="tooltip" id={bubbleId}>
         {children}
       </span>
