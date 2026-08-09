@@ -2017,15 +2017,6 @@ optgroup option {
   display: none;
 }
 
-.detail-sidebar-more[open] .detail-sidebar-more-caret {
-  transform: rotate(180deg);
-}
-
-.detail-sidebar-more-caret {
-  transition: transform 0.15s ease;
-  flex-shrink: 0;
-}
-
 /* Compact 2-up stat grid (views, installs, stars, last commit, npm downloads) —
    stacked label/value per cell reads clearly even in the ~320px sidebar column,
    and packing two per row uses noticeably less height than one full-width row each. */
