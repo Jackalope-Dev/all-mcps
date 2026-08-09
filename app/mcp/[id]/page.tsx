@@ -700,7 +700,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       This is an experimental automated check and can have false negatives — missing environment variables, a slow cold install, etc.
                       It doesn&rsquo;t necessarily mean something&rsquo;s wrong.
                       {formatCommitAge(pilotResult.checkedAt) ? ` Last checked ${formatCommitAge(pilotResult.checkedAt)}.` : ''}{' '}
-                      {!isOwner && (
+                      {!isOwner && !server.isOfficial && (
                         <Link href={`/mcp/${server.id}/claim`} style={{ color: 'var(--accent-color)' }}>
                           Own this listing? Claim it to help us verify it.
                         </Link>
@@ -727,9 +727,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <a href="#quick-install" className="detail-next-step">
               <Terminal size={14} aria-hidden="true" /> Install
             </a>
-            <Link href={`/mcp/${server.id}/claim`} className="detail-next-step">
-              <BadgeCheck size={14} aria-hidden="true" /> Claim listing
-            </Link>
+            {!server.isOfficial && (
+              <Link href={`/mcp/${server.id}/claim`} className="detail-next-step">
+                <BadgeCheck size={14} aria-hidden="true" /> Claim listing
+              </Link>
+            )}
             <Link href={`/mcp/${server.id}/alternatives`} className="detail-next-step">
               <Sparkles size={14} aria-hidden="true" /> Alternatives
             </Link>
