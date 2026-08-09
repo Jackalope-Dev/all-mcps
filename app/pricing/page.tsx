@@ -193,6 +193,13 @@ export default async function PricingPage({
           </div>
         </div>
 
+        <p style={{ textAlign: 'center', marginTop: '-2rem', marginBottom: '3rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          Want to inspect our live platform traffic and AI crawler activity?{' '}
+          <Link href="/trust" style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+            View Trust & Traffic Transparency →
+          </Link>
+        </p>
+
         {canceled && (
           <p
             style={{
