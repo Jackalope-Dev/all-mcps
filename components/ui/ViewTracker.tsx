@@ -12,12 +12,9 @@ const viewKey = (serverId: string) => `view_${serverId}`;
 export function ViewTracker({
   serverId,
   initialCount = 0,
-  showBorder = true,
 }: {
   serverId: string;
   initialCount?: number;
-  /** Whether this row shows the divider used between sidebar spec rows (false for the last row). */
-  showBorder?: boolean;
 }) {
   const tracked = useRef(false);
   const [views, setViews] = useState(initialCount || 0);
@@ -85,44 +82,24 @@ export function ViewTracker({
   }, [serverId]);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: showBorder ? '1px solid var(--border-color)' : 'none',
-        paddingBottom: showBorder ? '0.5rem' : 0,
-      }}
-      title="Unique views"
-      aria-label={`${views.toLocaleString()} unique ${views === 1 ? 'view' : 'views'}`}
-    >
-      <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-        <Eye size={14} aria-hidden="true" /> Views
+    <div className="detail-stat-item" title="Unique views" aria-label={`${views.toLocaleString()} unique ${views === 1 ? 'view' : 'views'}`}>
+      <span className="detail-stat-item-label">
+        <Eye size={12} aria-hidden="true" /> Views
       </span>
-      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{views.toLocaleString()}</span>
+      <span className="detail-stat-item-value">{views.toLocaleString()}</span>
     </div>
   );
 }
 
-/** Compact installs row for the sidebar spec card (count is incremented by CopyBlock / AgentPromptButton). */
-export function InstallsStat({ count = 0, showBorder = true }: { count?: number; showBorder?: boolean }) {
+/** Compact installs tile for the sidebar stats grid (count is incremented by CopyBlock / AgentPromptButton). */
+export function InstallsStat({ count = 0 }: { count?: number }) {
   const n = count || 0;
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: showBorder ? '1px solid var(--border-color)' : 'none',
-        paddingBottom: showBorder ? '0.5rem' : 0,
-      }}
-      title="Install / copy actions"
-      aria-label={`${n.toLocaleString()} ${n === 1 ? 'install' : 'installs'}`}
-    >
-      <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-        <Download size={14} aria-hidden="true" /> Installs
+    <div className="detail-stat-item" title="Install / copy actions" aria-label={`${n.toLocaleString()} ${n === 1 ? 'install' : 'installs'}`}>
+      <span className="detail-stat-item-label">
+        <Download size={12} aria-hidden="true" /> Installs
       </span>
-      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{n.toLocaleString()}</span>
+      <span className="detail-stat-item-value">{n.toLocaleString()}</span>
     </div>
   );
 }

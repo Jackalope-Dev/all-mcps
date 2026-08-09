@@ -893,34 +893,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <Terminal size={18} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />
               <span>Technical Specs &amp; Signals</span>
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', minWidth: 0 }}>
-              <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Transport</span>
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
-                  {server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com')) ? 'SSE (Remote)' : 'STDIO'}
-                </span>
-              </div>
-              <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Runtime</span>
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
-                  {(() => {
-                    const cmd = (server.installCommand || '').toLowerCase();
-                    const desc = (server.description || '').toLowerCase();
-                    if (cmd.includes('uvx') || cmd.includes('python') || cmd.includes('pip') || desc.includes('python')) return 'Python';
-                    if (cmd.includes('docker') || desc.includes('docker')) return 'Docker';
-                    if (cmd.includes('go') || desc.includes('golang')) return 'Go';
-                    return 'Node.js';
-                  })()}
-                </span>
-              </div>
-              <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Health Check</span>
-                <span style={{ fontWeight: 600, color: healthUi.color, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textAlign: 'right' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: healthUi.color, display: 'inline-block', flexShrink: 0 }} />
-                  {healthKey === 'active' ? 'Active' : healthKey === 'down' ? 'Issues' : 'Unknown'}
-                </span>
-              </div>
-              <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+
+            {/* Category/pricing stay top-level — everything else is one click away below. */}
+            <div className="detail-spec-list" style={{ fontSize: '0.85rem', minWidth: 0 }}>
+              <div className="detail-spec-row">
                 <span style={{ color: 'var(--text-secondary)' }}>Category</span>
                 <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textAlign: 'right', minWidth: 0 }}>
                   <span aria-hidden="true">{catMeta.emoji}</span>
@@ -928,7 +904,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 </Link>
               </div>
               {server.pricingModel && (
-                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                <div className="detail-spec-row">
                   <span style={{ color: 'var(--text-secondary)' }}>Pricing</span>
                   <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
                     {PRICING_MODEL_LABELS[server.pricingModel as PricingModel] || server.pricingModel}
@@ -940,68 +916,97 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   </span>
                 </div>
               )}
-              {server.authType && (
-                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Auth</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
-                    {AUTH_TYPE_LABELS[server.authType as AuthType] || server.authType}
-                  </span>
-                </div>
-              )}
-              {server.license && (
-                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>License</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>{server.license}</span>
-                </div>
-              )}
-              {server.maintenanceStatus && (
-                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Maintenance</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
-                    {MAINTENANCE_STATUS_LABELS[server.maintenanceStatus as MaintenanceStatus] ||
-                      server.maintenanceStatus}
-                  </span>
-                </div>
-              )}
-              {server.compatibleClients && server.compatibleClients.length > 0 && (
-                <div className="detail-spec-row" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Clients</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
-                    {server.compatibleClients
-                      .map((slug) => MCP_CLIENTS.find((c) => c.slug === slug)?.name || slug)
-                      .join(', ')}
-                  </span>
-                </div>
-              )}
+            </div>
 
+            {/* Less decision-relevant metadata, collapsed by default — health is
+                already shown by the dot next to the listing name up top. */}
+            <details className="detail-sidebar-more">
+              <summary className="detail-manual-config-summary">
+                <span>More technical details</span>
+                <span style={{ fontSize: '0.75rem', opacity: 0.7, flexShrink: 0 }}>Expand ▾</span>
+              </summary>
+              <div className="detail-spec-list" style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                <div className="detail-spec-row">
+                  <span style={{ color: 'var(--text-secondary)' }}>Transport</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                    {server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com')) ? 'SSE (Remote)' : 'STDIO'}
+                  </span>
+                </div>
+                <div className="detail-spec-row">
+                  <span style={{ color: 'var(--text-secondary)' }}>Runtime</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                    {(() => {
+                      const cmd = (server.installCommand || '').toLowerCase();
+                      const desc = (server.description || '').toLowerCase();
+                      if (cmd.includes('uvx') || cmd.includes('python') || cmd.includes('pip') || desc.includes('python')) return 'Python';
+                      if (cmd.includes('docker') || desc.includes('docker')) return 'Docker';
+                      if (cmd.includes('go') || desc.includes('golang')) return 'Go';
+                      return 'Node.js';
+                    })()}
+                  </span>
+                </div>
+                {server.authType && (
+                  <div className="detail-spec-row">
+                    <span style={{ color: 'var(--text-secondary)' }}>Auth</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                      {AUTH_TYPE_LABELS[server.authType as AuthType] || server.authType}
+                    </span>
+                  </div>
+                )}
+                {server.license && (
+                  <div className="detail-spec-row">
+                    <span style={{ color: 'var(--text-secondary)' }}>License</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>{server.license}</span>
+                  </div>
+                )}
+                {server.maintenanceStatus && (
+                  <div className="detail-spec-row">
+                    <span style={{ color: 'var(--text-secondary)' }}>Maintenance</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                      {MAINTENANCE_STATUS_LABELS[server.maintenanceStatus as MaintenanceStatus] ||
+                        server.maintenanceStatus}
+                    </span>
+                  </div>
+                )}
+                {server.compatibleClients && server.compatibleClients.length > 0 && (
+                  <div className="detail-spec-row">
+                    <span style={{ color: 'var(--text-secondary)' }}>Clients</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>
+                      {server.compatibleClients
+                        .map((slug) => MCP_CLIENTS.find((c) => c.slug === slug)?.name || slug)
+                        .join(', ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </details>
+
+            {/* Popularity signals — 2-up grid reads faster and takes less vertical space than one full-width row each. */}
+            <div className="detail-stats-grid">
               <ViewTracker serverId={server.id} initialCount={server.views || 0} />
-              <InstallsStat count={server.copies || 0} showBorder={typeof server.githubStars === 'number' || typeof server.npmDownloads === 'number'} />
-
+              <InstallsStat count={server.copies || 0} />
               {typeof server.githubStars === 'number' && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Star size={14} style={{ color: '#f5c518' }} /> GitHub stars
+                <div className="detail-stat-item">
+                  <span className="detail-stat-item-label">
+                    <Star size={12} style={{ color: '#f5c518' }} /> GitHub stars
                   </span>
-                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.githubStars.toLocaleString()}</span>
+                  <span className="detail-stat-item-value">{server.githubStars.toLocaleString()}</span>
                 </div>
               )}
               {formatCommitAge(server.lastCommitAt) && (
-                <div
-                  title="Last time this repo was pushed to, from the GitHub API"
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: typeof server.npmDownloads === 'number' ? '1px solid var(--border-color)' : 'none', paddingBottom: typeof server.npmDownloads === 'number' ? '0.5rem' : '0' }}
-                >
-                  <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Clock size={14} style={{ color: 'var(--accent-color)' }} /> Last commit
+                <div className="detail-stat-item" title="Last time this repo was pushed to, from the GitHub API">
+                  <span className="detail-stat-item-label">
+                    <Clock size={12} style={{ color: 'var(--accent-color)' }} /> Last commit
                   </span>
-                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{formatCommitAge(server.lastCommitAt)}</span>
+                  <span className="detail-stat-item-value">{formatCommitAge(server.lastCommitAt)}</span>
                 </div>
               )}
               {typeof server.npmDownloads === 'number' && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Download size={14} style={{ color: 'var(--accent-color)' }} /> npm downloads
+                <div className="detail-stat-item">
+                  <span className="detail-stat-item-label">
+                    <Download size={12} style={{ color: 'var(--accent-color)' }} /> npm downloads
                   </span>
-                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{server.npmDownloads.toLocaleString()}/mo</span>
+                  <span className="detail-stat-item-value">{server.npmDownloads.toLocaleString()}/mo</span>
                 </div>
               )}
             </div>

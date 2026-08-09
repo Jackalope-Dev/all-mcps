@@ -1975,6 +1975,20 @@ optgroup option {
   min-width: 0;
 }
 
+/* Wraps a run of .detail-spec-row items; the border-under-row treatment is
+   applied here (not per-row) so conditionally-rendered rows never need to
+   hand-track which one happens to render last. */
+.detail-spec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detail-spec-list > .detail-spec-row:not(:last-child) {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
 .detail-spec-row {
   display: flex;
   justify-content: space-between;
@@ -1990,6 +2004,65 @@ optgroup option {
 .detail-spec-row > :last-child {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* Collapsible "More technical details" in the sidebar specs card — less
+   decision-relevant fields (transport, runtime, auth, license, etc.) hidden
+   behind a toggle so the card leads with category/pricing/popularity signals. */
+.detail-sidebar-more > summary {
+  list-style: none;
+}
+
+.detail-sidebar-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.detail-sidebar-more[open] .detail-sidebar-more-caret {
+  transform: rotate(180deg);
+}
+
+.detail-sidebar-more-caret {
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+/* Compact 2-up stat grid (views, installs, stars, last commit, npm downloads) —
+   stacked label/value per cell reads clearly even in the ~320px sidebar column,
+   and packing two per row uses noticeably less height than one full-width row each. */
+.detail-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.75rem;
+}
+
+.detail-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.detail-stat-item-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-stat-item-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detail-readme-scroll {
