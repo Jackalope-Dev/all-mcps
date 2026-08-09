@@ -624,9 +624,66 @@ export async function fetchServerReadme(url: string): Promise<string | null> {
   }
 }
 
+const COMMON_STOP_WORDS = new Set([
+  'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you',
+  'do', 'at', 'this', 'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her', 'she', 'or', 'an', 'will', 'my', 'one',
+  'all', 'would', 'there', 'their', 'what', 'so', 'up', 'out', 'if', 'about', 'who', 'get', 'which', 'go', 'me', 'when',
+  'make', 'can', 'like', 'time', 'no', 'just', 'him', 'know', 'take', 'people', 'into', 'year', 'your', 'good', 'some',
+  'could', 'them', 'see', 'other', 'than', 'then', 'now', 'look', 'only', 'come', 'its', 'over', 'think', 'also', 'back',
+  'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 'way', 'even', 'new', 'want', 'because', 'any', 'these',
+  'give', 'day', 'most', 'us', 'server', 'mcp', 'model', 'context', 'protocol', 'allow', 'allows', 'provides', 'using',
+  'used', 'support', 'supports', 'client', 'clients', 'tools', 'tool', 'integration', 'official', 'service', 'https',
+  'http', 'com', 'github', 'org', 'repo', 'package', 'npm', 'pypi', 'python', 'typescript', 'javascript'
+]);
+
+function extractSemanticTokens(s: Server): Set<string> {
+  const tokens = new Set<string>();
+  const add = (text?: string | null) => {
+    if (!text) return;
+    const words = text.toLowerCase().replace(/[^a-z0-9_\-\.]/g, ' ').split(/\s+/);
+    for (const w of words) {
+      if (w.length > 2 && !COMMON_STOP_WORDS.has(w)) {
+        tokens.add(w);
+      }
+    }
+  };
+
+  add(s.name);
+  add(s.category);
+  add(s.description);
+  add(s.aiSummary);
+  add(s.aiOverview);
+  if (s.tags) s.tags.forEach(add);
+  if (s.aiUseCases) s.aiUseCases.forEach(add);
+  if (s.aiFeatures) s.aiFeatures.forEach(add);
+  if (s.tools) s.tools.forEach((t) => { add(t.name); add(t.description); });
+
+  return tokens;
+}
+
+/**
+ * Computes semantic Jaccard similarity index (0.0 to 1.0) based on rich server metadata tokens.
+ */
+export function computeServerSemanticSimilarity(a: Server, b: Server): number {
+  const tokensA = extractSemanticTokens(a);
+  const tokensB = extractSemanticTokens(b);
+
+  if (tokensA.size === 0 || tokensB.size === 0) return 0;
+
+  let intersection = 0;
+  for (const t of tokensA) {
+    if (tokensB.has(t)) intersection++;
+  }
+
+  const union = tokensA.size + tokensB.size - intersection;
+  if (union === 0) return 0;
+
+  return intersection / union;
+}
+
 /**
  * Ranking signal for related/similar listings.
- * Engagement + install readiness + tool overlap with the current page.
+ * Engagement + install readiness + tool overlap + semantic text similarity with current page.
  * Exported so category pages stay consistent.
  */
 export function relatedRankingScore(candidate: Server, current?: Server | null): number {
@@ -644,6 +701,10 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
   if (candidate.reciprocalBadgeOk) score += 2;
 
   if (current) {
+    // Semantic vector / text similarity score boost
+    const semanticSim = computeServerSemanticSimilarity(current, candidate);
+    score += semanticSim * 120;
+
     // Tool name overlap
     if (current.tools?.length && candidate.tools?.length) {
       const currentNames = new Set(

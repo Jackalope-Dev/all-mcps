@@ -5,6 +5,7 @@ import { BEST_TOPICS } from '../lib/bestTopics';
 import { MCP_CLIENTS } from '../lib/clients';
 import { WORKFLOW_PROMPTS } from '../lib/prompts';
 import { engagementScore } from '../lib/search';
+import { relatedRankingScore } from '../lib/servers';
 import {
   STATIC_PAGE_LASTMOD,
   getSitemapServers,
@@ -187,9 +188,13 @@ function buildSecondarySitemap(servers: SitemapServer[]): MetadataRoute.Sitemap 
   const compareEntries: MetadataRoute.Sitemap = [];
 
   for (const seed of topSeeds) {
-    const peers = (byCategory.get(seed.category || 'other') || [])
-      .filter((p) => p.id !== seed.id)
-      .slice(0, 3);
+    const candidatePeers = (byCategory.get(seed.category || 'other') || [])
+      .filter((p) => p.id !== seed.id);
+    
+    // Sort peers by semantic similarity & engagement to current seed server
+    candidatePeers.sort((a, b) => relatedRankingScore(b as any, seed as any) - relatedRankingScore(a as any, seed as any));
+    
+    const peers = candidatePeers.slice(0, 3);
     for (const peer of peers) {
       const [a, b] = seed.id < peer.id ? [seed.id, peer.id] : [peer.id, seed.id];
       const key = `${a}|${b}`;
