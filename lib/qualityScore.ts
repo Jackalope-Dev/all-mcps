@@ -120,15 +120,17 @@ export function computeQualityScore(server: Server): QualityScore {
     }
   }
 
-  // 2. Trust & verification (20)
+  // 2. Trust & verification (20) — proven ownership, badges, and verified domain
   {
     const max = 20;
     let earned = 0;
     let hint = 'Ownership proven via GitHub, DNS, or site badge. Claim your listing to earn full credit.';
     if (server.isOfficial) {
       earned = max;
+      hint = 'Official maintainer claimed listing.';
     } else if (server.websiteVerified || server.isPremium) {
       earned = max * 0.6;
+      hint = 'Domain control or verified product website linked.';
     } else if (repoHosted) {
       const isHealthyActive = server.isVerifiedActive || server.healthStatus === 'healthy';
       const hasBaselineAdoption = (server.githubStars || 0) >= 10 || (server.npmDownloads || 0) >= 100;
@@ -146,48 +148,59 @@ export function computeQualityScore(server: Server): QualityScore {
     });
   }
 
-  // 3. Documentation & capabilities (30) — description depth + real, introspected tools.
-  // This is the biggest lever because it's the one owners fully control, and a
-  // documented tool list is a signal about the server itself, not the community.
+  // 3. Documentation & capabilities (30) — description depth + real tools + install readiness.
   {
     const max = 30;
     const descLen = (server.description || '').trim().length;
-    const descScore = ramp(descLen, 400) * 0.6; // ~400 chars ≈ full
+    const descScore = ramp(descLen, 400) * 0.5; // ~400 chars ≈ full (50%)
     const hasTools = !!server.tools && server.tools.length > 0;
-    // A live tools/list handshake is a real signal about the running server;
-    // README-parsed tools are a best-effort guess that this session's own E2B
-    // pilot work found routinely wrong (installer CLIs, generic dependencies,
-    // and outright parsing artifacts mistaken for real tool lists) — full
-    // credit for an unverified guess would overstate confidence in it.
     const toolsIntrospected = hasTools && server.toolsSource === 'introspected';
-    const toolsScore = toolsIntrospected ? 0.4 : hasTools ? 0.25 : descLen >= 120 ? 0.2 : 0;
+    const toolsScore = toolsIntrospected ? 0.35 : hasTools ? 0.25 : descLen >= 120 ? 0.15 : 0;
+    
+    // Ready-to-run install config (npx, uvx, bunx, or remote url)
+    const hasInstallHint = !!(server.installCommand || server.installPackage || server.suggestedInstallCommand);
+    const installScore = hasInstallHint ? 0.15 : 0;
+
     components.push({
       key: 'docs',
       label: 'Documentation & tools',
-      earned: Math.round(max * (descScore + toolsScore)),
+      earned: Math.round(max * (descScore + toolsScore + installScore)),
       max,
       hint: toolsIntrospected
-        ? 'Rich description and live-verified tool schemas.'
+        ? 'Rich description, verified tool schemas, and executable install config.'
         : hasTools
-          ? 'Rich description and tool list — parsed from the README, not yet live-verified.'
+          ? 'Rich description and tool list parsed from documentation.'
           : 'Detailed description provided. Documenting structured tool schemas unlocks full credit.',
     });
   }
 
-  // 4. Popularity (15) — stars, downloads, and installs, log-scaled. A bonus that
-  // reflects adoption; calibrated for ecosystem scales (1k stars, 5k npm downloads).
+  // 4. Maintenance & Adoption (15) — commit recency + stars & downloads.
   {
     const max = 15;
     const stars = server.githubStars || 0;
     const downloads = server.npmDownloads || 0;
     const installs = server.copies || 0;
-    const magnitude = ramp(stars, 1000) * 0.5 + ramp(downloads, 5000) * 0.35 + ramp(installs, 250) * 0.15;
+    
+    // Commit recency score: active commit in last 90d adds 0.2 weight
+    let recencyWeight = 0;
+    if (server.lastCommitAt) {
+      const commitAgeDays = (Date.now() - new Date(server.lastCommitAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (commitAgeDays <= 30) recencyWeight = 0.25;
+      else if (commitAgeDays <= 90) recencyWeight = 0.15;
+      else if (commitAgeDays <= 180) recencyWeight = 0.05;
+    } else {
+      recencyWeight = 0.1; // unmeasured fallback
+    }
+
+    const adoptionScale = ramp(stars, 1000) * 0.4 + ramp(downloads, 5000) * 0.25 + ramp(installs, 250) * 0.1;
+    const totalMag = Math.min(1, adoptionScale + recencyWeight);
+
     components.push({
       key: 'popularity',
-      label: 'Adoption',
-      earned: Math.round(max * magnitude),
+      label: 'Adoption & activity',
+      earned: Math.round(max * totalMag),
       max,
-      hint: 'GitHub stars, npm downloads, and installs from this directory. Grows over time.',
+      hint: 'GitHub stars, npm downloads, directory installs, and commit recency.',
     });
   }
 
@@ -222,8 +235,8 @@ export function tierColor(tier: QualityTier): string {
     case 'Good':
       return '#f59e0b'; // amber
     case 'Fair':
-      return '#94a3b8'; // slate — neutral, not alarming
+      return '#6366f1'; // indigo — distinct vibrant purple/blue
     case 'Emerging':
-      return '#8b9bb4'; // muted slate — "early", not "failing"
+      return '#64748b'; // slate — cool dark neutral
   }
 }

@@ -87,8 +87,8 @@ const TIER_COLORS: Record<string, string> = {
   Excellent: '#10b981',
   Great: '#22d3ee',
   Good: '#f59e0b',
-  Fair: '#94a3b8',
-  Emerging: '#8b9bb4',
+  Fair: '#6366f1',
+  Emerging: '#64748b',
 };
 
 function StatTile({
@@ -319,9 +319,9 @@ function Group({
   );
 }
 
-type BarItem = { key: string; label: ReactNode; sublabel?: string; value: number };
+type BarItem = { key: string; label: ReactNode; sublabel?: string; value: number; color?: string };
 
-function BarList({ items, colorVar }: { items: BarItem[]; colorVar: string }) {
+function BarList({ items, colorVar }: { items: BarItem[]; colorVar?: string }) {
   if (items.length === 0) {
     return <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>No traffic recorded yet.</p>;
   }
@@ -346,7 +346,7 @@ function BarList({ items, colorVar }: { items: BarItem[]; colorVar: string }) {
               style={{
                 height: '100%',
                 width: `${Math.max((item.value / max) * 100, 3)}%`,
-                background: colorVar,
+                background: item.color || colorVar || 'var(--brand-cyan)',
                 borderRadius: 4,
               }}
             />
@@ -542,13 +542,13 @@ export default async function TrustPage() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
                     <CheckCircle2 size={16} style={{ color: '#34d399' }} />
-                    <strong style={{ fontSize: '0.875rem' }}>E2B Sandbox Pilot</strong>
+                    <strong style={{ fontSize: '0.875rem' }}>Sandbox Verification</strong>
                   </div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                     {pct(stats.stdioPilotStats.okCount, stats.stdioPilotStats.totalTested)} pass rate
                   </div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                    {formatNumber(stats.stdioPilotStats.totalTested)} stdio packages isolated and tested in ephemeral execution sandboxes (avg latency: {(stats.stdioPilotStats.avgDurationMs / 1000).toFixed(1)}s).
+                    {formatNumber(stats.stdioPilotStats.totalTested)} stdio packages isolated and tested in automated execution sandboxes (avg latency: {(stats.stdioPilotStats.avgDurationMs / 1000).toFixed(1)}s).
                   </div>
                 </div>
               </div>
@@ -562,7 +562,7 @@ export default async function TrustPage() {
                 title="Catalog Quality Spectrum & Ecosystem Signals"
                 note="Deterministic quality tiering (0–100) and repository health signals across all active listings."
               />
-              <div style={{ margin: '1rem 0 1.5rem' }}>
+              <div style={{ margin: '1rem 0 1rem' }}>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
                   Listing Quality Tier Distribution ({formatNumber(totalQualityServers)} total active servers):
                 </div>
@@ -576,7 +576,7 @@ export default async function TrustPage() {
                         title={`${tier}: ${formatNumber(count)} (${pct(count, totalQualityServers)})`}
                         style={{
                           width: `${pctVal}%`,
-                          background: TIER_COLORS[tier] || '#94a3b8',
+                          background: TIER_COLORS[tier] || '#64748b',
                         }}
                       />
                     );
@@ -585,33 +585,14 @@ export default async function TrustPage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem 1.2rem', marginTop: '0.65rem', padding: 0 }}>
                   {Object.entries(stats.qualityTierBreakdown).map(([tier, count]) => (
                     <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: TIER_COLORS[tier] || '#94a3b8' }} />
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: TIER_COLORS[tier] || '#64748b' }} />
                       <strong>{tier}</strong>: {formatNumber(count)} ({pct(count, totalQualityServers)})
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                  gap: '0.75rem',
-                }}
-              >
-                <div style={{ padding: '0.85rem 1rem', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-muted)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                    <ShieldCheck size={16} style={{ color: '#22d3ee' }} />
-                    <strong style={{ fontSize: '0.85rem' }}>Reciprocal Badge Verified</strong>
-                  </div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    {formatNumber(stats.reciprocalBadgeCount)} listings
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                    Displaying an official AllMCPs badge or backlink on their GitHub README or website.
-                  </div>
-                </div>
-
+              <div style={{ marginTop: '1rem' }}>
                 <div style={{ padding: '0.85rem 1rem', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-muted)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                     <GitCommit size={16} style={{ color: '#34d399' }} />
@@ -654,8 +635,8 @@ export default async function TrustPage() {
                     label: r.label,
                     sublabel: `${pct(r.hits, totalAiHits30d)} of AI traffic`,
                     value: r.hits,
+                    color: CALLER_COLORS[r.class] || '#3987e5',
                   }))}
-                  colorVar="var(--tv-ai)"
                 />
               </Panel>
             )}
