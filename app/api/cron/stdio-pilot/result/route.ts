@@ -3,14 +3,19 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { stdioVerificationPilot } from '../../../../../db/schema';
+import { servers, stdioVerificationPilot } from '../../../../../db/schema';
 import { isAdminAuthorized } from '../../../../../lib/adminAuth';
 
 /**
- * Records E2B stdio-verification pilot outcomes. Deliberately writes to the
- * standalone `stdio_verification_pilot` table, never to servers.tools/
- * tools_source — the pilot is for gathering success-rate/timing/cost data
- * before this feeds anything the public site shows.
+ * Records E2B stdio-verification pilot outcomes to the standalone
+ * `stdio_verification_pilot` table (success-rate/timing/cost history), and —
+ * now that the approach is validated (sendStdin race fixed, uvx bootstrapped,
+ * claim atomicity fixed, sequenced behind the LLM install validator; see the
+ * clean 291-listing run with 0 opaque errors that graduated this) — also
+ * promotes 'ok' results into servers.tools/tools_source, the same
+ * 'introspected' tier the health cron's live remote handshake writes (see
+ * app/api/cron/health/route.ts): a completed stdio tools/list in a real
+ * sandbox is just as authoritative as a live HTTP handshake, not a guess.
  *
  * Finalizes the `pending` claim row /batch inserted for this listing rather
  * than inserting a fresh row — keeps one row per attempt and is what makes
@@ -93,6 +98,18 @@ export async function POST(req: Request) {
           .insert(stdioVerificationPilot)
           .values(values)
           .onConflictDoUpdate({ target: stdioVerificationPilot.serverId, set: values });
+      }
+
+      if (r.status === 'ok' && r.tools && r.tools.length > 0) {
+        await db
+          .update(servers)
+          .set({
+            tools: JSON.stringify(r.tools),
+            toolsSource: 'introspected',
+            toolsCheckedAt: now,
+            toolsError: null,
+          })
+          .where(eq(servers.id, r.serverId));
       }
     }
 
