@@ -85,9 +85,9 @@ Treat descriptions as testable behavior, the same way you'd test handler logic â
 
 Before you publish a server, read every tool description as if you were the model, with no access to the code:
 
-- Could I tell this tool apart from every other tool in the server using only its name and description?
-- Do I know what units, formats, or IDs each parameter expects without guessing?
-- Do I know what happens if I call this without a required precondition?
-- Is there a sentence here that's marketing copy instead of information?
+- [ ] Could I tell this tool apart from every other tool in the server using only its name and description?
+- [ ] Do I know what units, formats, or IDs each parameter expects without guessing?
+- [ ] Do I know what happens if I call this without a required precondition?
+- [ ] Is there a sentence here that's marketing copy instead of information?
 
 If any answer is no, the description isn't done â€” regardless of whether the handler code is.

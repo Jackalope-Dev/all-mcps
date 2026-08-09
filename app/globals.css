@@ -589,7 +589,7 @@ p {
   display: inline-flex;
   gap: 1.5rem;
   align-items: center;
-  animation: badgeMarquee 35s linear infinite;
+  animation: badgeMarquee 90s linear infinite;
 }
 
 .badge-marquee-track:hover {
@@ -1526,13 +1526,93 @@ p {
   text-decoration-color: var(--accent-color);
 }
 
-.markdown-body ul, .markdown-body ol {
-  padding-left: 2rem;
+.markdown-body ul {
+  list-style-type: disc;
+  padding-left: 1.75rem;
   margin-bottom: 1.25rem;
+}
+
+.markdown-body ul ul {
+  list-style-type: circle;
+  margin-bottom: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.markdown-body ul ul ul {
+  list-style-type: square;
+}
+
+.markdown-body ol {
+  list-style-type: decimal;
+  padding-left: 1.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.markdown-body ol ol {
+  list-style-type: lower-alpha;
+  margin-bottom: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.markdown-body ol ol ol {
+  list-style-type: lower-roman;
 }
 
 .markdown-body li {
   margin-bottom: 0.5rem;
+  line-height: 1.65;
+}
+
+/* Task lists (checklists) in markdown */
+.markdown-body ul.contains-task-list {
+  list-style-type: none;
+  padding-left: 0.25rem;
+}
+
+.markdown-body li.task-list-item {
+  list-style-type: none;
+  position: relative;
+  padding-left: 1.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.markdown-body li.task-list-item > input[type="checkbox"] {
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-strong);
+  background-color: var(--bg-elevated);
+  cursor: default;
+  display: inline-grid;
+  place-content: center;
+  margin: 0;
+  transition: all 0.15s ease-in-out;
+}
+
+.markdown-body li.task-list-item > input[type="checkbox"]:checked {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.markdown-body li.task-list-item > input[type="checkbox"]:checked::before {
+  content: "";
+  width: 0.65rem;
+  height: 0.65rem;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  background-color: #020617;
+}
+
+[data-theme="light"] .markdown-body li.task-list-item > input[type="checkbox"]:checked::before {
+  background-color: #ffffff;
+}
+
+.markdown-body li.task-list-item > input[type="checkbox"]:not(:checked)::before {
+  content: "";
 }
 
 .markdown-body code {
@@ -4061,6 +4141,10 @@ nav[aria-label="Table of contents"] {
     padding-left: 1.25rem;
   }
 
+  .markdown-body ul.contains-task-list {
+    padding-left: 0;
+  }
+
   /* Markdown body code blocks: less padding */
   .markdown-body pre {
     padding: 0.85rem;
@@ -6236,7 +6320,7 @@ nav[aria-label="Table of contents"] {
 
 /* Badge marquee: slower with many badges; respect reduced motion */
 .badge-marquee-track {
-  animation-duration: 55s;
+  animation-duration: 90s;
 }
 
 @media (prefers-reduced-motion: reduce) {

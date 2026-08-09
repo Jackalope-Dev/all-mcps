@@ -4,9 +4,21 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { isOutboundHttpUrl, withAllMcpsUtm } from '../../lib/outboundLinks';
 import { CopyBlock } from './CopyBlock';
+
+const customSanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    input: [
+      ...(defaultSchema.attributes?.input || []),
+      'checked',
+      'className',
+    ],
+  },
+};
 
 interface SafeMarkdownProps {
   content: string;
@@ -123,7 +135,7 @@ export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMar
     return (
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, customSanitizeSchema]]}
         components={{
           p: ({ children }) => <span style={{ display: 'inline' }}>{children}</span>,
           a: ({ children }) => <span>{children}</span>,
@@ -140,7 +152,7 @@ export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMar
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw, rehypeSanitize]}
+      rehypePlugins={[rehypeRaw, [rehypeSanitize, customSanitizeSchema]]}
       components={{
         a: ({ href, children, node: _node, ...props }) => (
           <MarkdownLink href={href} utmContent={utmContent} repoUrl={repoUrl} {...props}>

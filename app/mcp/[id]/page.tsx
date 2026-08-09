@@ -1320,7 +1320,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             )
           )}
 
-          {server.status === 'active' && (
+          {isOwner && server.status === 'active' && (
             <PremiumUpgrade
               serverId={server.id}
               listingStatus={server.status}
