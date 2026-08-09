@@ -76,7 +76,11 @@ export async function POST(req: Request) {
         .returning({ id: stdioVerificationPilot.id });
 
       if (updated.length === 0) {
-        await db.insert(stdioVerificationPilot).values({
+        // No pending row found (claim was reclaimed as stale, or this is a
+        // late/duplicate result from an abandoned run) — upsert on the
+        // server_id unique constraint instead of a blind insert, which would
+        // otherwise throw if some row for this listing already exists.
+        const values = {
           serverId: r.serverId,
           status: r.status,
           toolCount: r.tools?.length ?? null,
@@ -84,7 +88,11 @@ export async function POST(req: Request) {
           error: r.error ? r.error.slice(0, 500) : null,
           durationMs: r.durationMs ?? null,
           checkedAt: now,
-        });
+        };
+        await db
+          .insert(stdioVerificationPilot)
+          .values(values)
+          .onConflictDoUpdate({ target: stdioVerificationPilot.serverId, set: values });
       }
     }
 

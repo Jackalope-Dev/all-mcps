@@ -12,14 +12,19 @@ import { parseArgsJson } from '../../../../../lib/installConfig';
  * scope) a batch of stdio listings with a usable cached install hint that
  * haven't been through the pilot yet.
  *
- * Atomically claims what it hands out by inserting a `pending` row per
- * listing before returning — without this, concurrent workers can refetch a
- * page while an earlier worker is still mid-flight on a slow/timing-out
- * listing (nothing in the table excludes it yet) and get handed the same
- * listing twice. Same shape as the atomic-claim pattern in
- * /api/cron/ai-content. /result finalizes the pending row it claimed; a
- * pending row older than PENDING_STALE_MS is treated as an abandoned run
- * (crashed job, killed workflow) and released back into the pool.
+ * Claims what it hands out via INSERT ... ON CONFLICT (server_id) DO NOTHING
+ * RETURNING, relying on the unique index on server_id — not a SELECT-then-
+ * INSERT sequence. That gap was tried first and confirmed broken in practice:
+ * two overlapping requests to this route can both run their SELECT before
+ * either commits an INSERT, so both "claim" the same listing. A DB-level
+ * uniqueness constraint is the only thing that closes that window reliably;
+ * ON CONFLICT DO NOTHING RETURNING tells each request exactly which of the
+ * rows it proposed actually became its own (silently drops the rest, no
+ * error, no separate check needed).
+ *
+ * /result finalizes the pending row it claimed. A pending row older than
+ * PENDING_STALE_MS is treated as an abandoned run (crashed job, killed
+ * workflow) and released back into the pool.
  */
 const DEFAULT_BATCH_SIZE = 20;
 const MAX_BATCH_SIZE = 100;
@@ -54,6 +59,8 @@ export async function POST(req: Request) {
       .delete(stdioVerificationPilot)
       .where(and(eq(stdioVerificationPilot.status, 'pending'), lt(stdioVerificationPilot.checkedAt, new Date(Date.now() - PENDING_STALE_MS))));
 
+    // Overselect a little — some candidates will lose the claim race under
+    // concurrent requests, and we'd rather still return close to batchSize.
     const rows = await db
       .select({
         id: servers.id,
@@ -76,24 +83,30 @@ export async function POST(req: Request) {
         )
       )
       .orderBy(desc(servers.views), desc(servers.upvotes))
-      .limit(batchSize);
+      .limit(Math.min(batchSize * 2, MAX_BATCH_SIZE * 2));
 
     if (rows.length === 0) {
       return NextResponse.json({ success: true, batch: [], count: 0 });
     }
 
     const now = new Date();
-    await db.insert(stdioVerificationPilot).values(
-      rows.map((r) => ({ serverId: r.id, status: 'pending', checkedAt: now }))
-    );
+    const claimed = await db
+      .insert(stdioVerificationPilot)
+      .values(rows.map((r) => ({ serverId: r.id, status: 'pending', checkedAt: now })))
+      .onConflictDoNothing({ target: stdioVerificationPilot.serverId })
+      .returning({ serverId: stdioVerificationPilot.serverId });
 
-    const batch = rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      installCommand: r.installCommand as string,
-      installArgs: parseArgsJson(r.installArgs) ?? [],
-      installPackage: r.installPackage as string,
-    }));
+    const claimedIds = new Set(claimed.map((c) => c.serverId));
+    const batch = rows
+      .filter((r) => claimedIds.has(r.id))
+      .slice(0, batchSize)
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        installCommand: r.installCommand as string,
+        installArgs: parseArgsJson(r.installArgs) ?? [],
+        installPackage: r.installPackage as string,
+      }));
 
     return NextResponse.json({ success: true, batch, count: batch.length });
   } catch (error: any) {

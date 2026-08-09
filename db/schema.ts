@@ -240,7 +240,14 @@ export const impressionLogs = sqliteTable('impression_logs', {
  */
 export const stdioVerificationPilot = sqliteTable('stdio_verification_pilot', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  serverId: text('server_id').notNull(),
+  /**
+   * Unique — one row per listing, mutated pending -> final in place. This is
+   * what makes /batch's claim-by-insert atomic: a SELECT-then-INSERT gap
+   * between two overlapping requests otherwise lets both claim the same
+   * listing (confirmed in practice, not just theoretical) — only a DB-level
+   * constraint closes that window.
+   */
+  serverId: text('server_id').notNull().unique(),
   /** ok | install_failed | handshake_failed | timeout | error */
   status: text('status').notNull(),
   toolCount: integer('tool_count'),
