@@ -91,6 +91,8 @@ export const PUBLIC_SERVER_COLUMNS = {
   tools: serversTable.tools,
   toolsSource: serversTable.toolsSource,
   remoteEndpointUrl: serversTable.remoteEndpointUrl,
+  remoteEndpointHealthy: serversTable.remoteEndpointHealthy,
+  remoteEndpointCheckedAt: serversTable.remoteEndpointCheckedAt,
   aiSummary: serversTable.aiSummary,
   aiOverview: serversTable.aiOverview,
   aiUseCases: serversTable.aiUseCases,
@@ -150,6 +152,9 @@ export type Server = {
   toolsSource?: string | null;
   /** Optional secondary connection method — a hosted endpoint offered alongside the primary install method. See db/schema.ts. */
   remoteEndpointUrl?: string | null;
+  /** Live health of remoteEndpointUrl specifically, from the health cron's handshake. Separate from healthStatus/isVerifiedActive, which track the primary url. Null = never checked. */
+  remoteEndpointHealthy?: boolean | null;
+  remoteEndpointCheckedAt?: string | Date | null;
   /** LLM-generated content layer (see lib/aiContent + /api/cron/ai-content). */
   aiSummary?: string | null;
   aiOverview?: string | null;

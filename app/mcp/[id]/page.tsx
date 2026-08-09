@@ -44,6 +44,8 @@ import { CollapsibleText } from '../../../components/CollapsibleText';
 import { MobileInstallBar } from '../../../components/MobileInstallBar';
 import { ScreenshotViewer } from '../../../components/ui/ScreenshotViewer';
 import { FaqSection } from '../../../components/ui/FaqSection';
+import { FlagshipHeroBanner } from '../../../components/ui/FlagshipHeroBanner';
+import { DirectoryBadgeCard } from '../../../components/ui/DirectoryBadgeCard';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
@@ -190,6 +192,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
       new Date(rawPilotResult.checkedAt).getTime() >= new Date(server.installExtractedAt).getTime())
       ? rawPilotResult
       : null;
+  // Live tools/list handshake (health cron) already confirmed the server itself
+  // works — used to soften the "not yet checked" install-sandbox message below
+  // so it doesn't contradict the verified badge shown elsewhere on the page.
+  const hasIntrospectedTools = server.toolsSource === 'introspected';
   const { displayName, org } = parseServerName(server.name);
   const catMeta = getCategoryMeta(server.category);
 
@@ -573,6 +579,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             />
           )}
 
+          {server.id === 'allmcps-server' && (
+            <FlagshipHeroBanner serverId={server.id} serverName={displayName} />
+          )}
+
           <div className="detail-summary" style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.6' }}>
             <SafeMarkdown content={(server.aiSummary && server.aiSummary.trim()) || server.description} utmContent={server.id} repoUrl={server.url} />
           </div>
@@ -630,6 +640,35 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   }}
                 >
                   <Globe size={14} style={{ color: 'var(--accent-color)' }} /> Also available as a hosted endpoint
+                  {server.remoteEndpointHealthy != null && (
+                    <span
+                      title={
+                        formatFullDate(server.remoteEndpointCheckedAt)
+                          ? `Last checked ${formatFullDate(server.remoteEndpointCheckedAt)}`
+                          : undefined
+                      }
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        color: server.remoteEndpointHealthy ? '#34d399' : '#f87171',
+                        marginLeft: '0.2rem',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: server.remoteEndpointHealthy ? '#34d399' : '#f87171',
+                        }}
+                      />
+                      {server.remoteEndpointHealthy ? 'Live' : 'Unreachable'}
+                      {formatCommitAge(server.remoteEndpointCheckedAt) ? ` · ${formatCommitAge(server.remoteEndpointCheckedAt)}` : ''}
+                    </span>
+                  )}
                 </div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '0 0 0.6rem' }}>
                   Clients with native remote MCP support can connect directly to this URL instead of the {server.installKind === 'stdio' ? 'stdio install' : 'install method'} above.
@@ -727,6 +766,14 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <a href="#quick-install" className="detail-next-step">
               <Terminal size={14} aria-hidden="true" /> Install
             </a>
+            {server.tools && server.tools.length > 0 && (
+              <a href="#tools-schema" className="detail-next-step">
+                <Wrench size={14} aria-hidden="true" /> Tool Schemas ({server.tools.length})
+              </a>
+            )}
+            <a href="#directory-badge" className="detail-next-step">
+              <BadgeCheck size={14} aria-hidden="true" /> Directory Badge
+            </a>
             {!server.isOfficial && (
               <Link href={`/mcp/${server.id}/claim`} className="detail-next-step">
                 <BadgeCheck size={14} aria-hidden="true" /> Claim listing
@@ -792,13 +839,17 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </section>
           )}
 
-          <ToolSchemaInspector
-            tools={server.tools}
-            aiFeatures={server.aiFeatures}
-            aiUseCases={server.aiUseCases}
-            serverName={displayName}
-            toolsSource={server.toolsSource}
-          />
+          <section id="tools-schema" style={{ scrollMarginTop: '5rem' }}>
+            <ToolSchemaInspector
+              tools={server.tools}
+              aiFeatures={server.aiFeatures}
+              aiUseCases={server.aiUseCases}
+              serverName={displayName}
+              toolsSource={server.toolsSource}
+            />
+          </section>
+
+          <DirectoryBadgeCard serverId={server.id} serverName={displayName} />
 
           <section>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Documentation Overview</h2>

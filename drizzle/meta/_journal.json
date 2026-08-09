@@ -183,6 +183,13 @@
       "when": 1786324000000,
       "tag": "0029_install_extracted_at",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1786325000000,
+      "tag": "0030_remote_endpoint_health",
+      "breakpoints": true
     }
   ]
 }

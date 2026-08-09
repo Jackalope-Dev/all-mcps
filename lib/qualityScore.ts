@@ -72,12 +72,28 @@ export function computeQualityScore(server: Server): QualityScore {
   // server, so we don't score GitHub's up/down status — the one exception is a dead
   // project (archived or a deleted/private repo), which is a real negative signal
   // regardless of transport.
+  //
+  // A listing can have a hosted remoteEndpointUrl *in addition to* a repo-hosted
+  // primary url (e.g. a stdio bridge package that proxies to a real server) — that
+  // endpoint's own live handshake is checked first, since it's a genuine signal
+  // about the actual running server that repo-hosted status can never provide.
   {
     const max = 25;
     const status = server.healthStatus;
     const isDeadRepo = status === 'archived' || status === 'offline';
+    const hasRemoteEndpointSignal = !!server.remoteEndpointUrl && server.remoteEndpointHealthy != null;
 
-    if (repoHosted && !isDeadRepo) {
+    if (hasRemoteEndpointSignal) {
+      components.push({
+        key: 'health',
+        label: 'Server availability',
+        earned: server.remoteEndpointHealthy ? max : 0,
+        max,
+        hint: server.remoteEndpointHealthy
+          ? 'A live MCP handshake against the hosted endpoint succeeded recently.'
+          : "The hosted endpoint didn't respond to a live MCP handshake recently.",
+      });
+    } else if (repoHosted && !isDeadRepo) {
       // Not observable — exclude from the score rather than reward/penalize a ping.
       components.push({
         key: 'health',
@@ -137,16 +153,24 @@ export function computeQualityScore(server: Server): QualityScore {
     const max = 30;
     const descLen = (server.description || '').trim().length;
     const descScore = ramp(descLen, 400) * 0.6; // ~400 chars ≈ full
-    const hasTools = server.tools && server.tools.length > 0;
-    const toolsScore = hasTools ? 0.4 : descLen >= 120 ? 0.2 : 0;
+    const hasTools = !!server.tools && server.tools.length > 0;
+    // A live tools/list handshake is a real signal about the running server;
+    // README-parsed tools are a best-effort guess that this session's own E2B
+    // pilot work found routinely wrong (installer CLIs, generic dependencies,
+    // and outright parsing artifacts mistaken for real tool lists) — full
+    // credit for an unverified guess would overstate confidence in it.
+    const toolsIntrospected = hasTools && server.toolsSource === 'introspected';
+    const toolsScore = toolsIntrospected ? 0.4 : hasTools ? 0.25 : descLen >= 120 ? 0.2 : 0;
     components.push({
       key: 'docs',
       label: 'Documentation & tools',
       earned: Math.round(max * (descScore + toolsScore)),
       max,
-      hint: hasTools
-        ? 'Rich description and introspected tool schemas.'
-        : 'Detailed description provided. Documenting structured tool schemas unlocks full credit.',
+      hint: toolsIntrospected
+        ? 'Rich description and live-verified tool schemas.'
+        : hasTools
+          ? 'Rich description and tool list — parsed from the README, not yet live-verified.'
+          : 'Detailed description provided. Documenting structured tool schemas unlocks full credit.',
     });
   }
 

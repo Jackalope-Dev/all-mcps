@@ -115,6 +115,18 @@ export const servers = sqliteTable('servers', {
    * handshake against this URL over README-parsing.
    */
   remoteEndpointUrl: text('remote_endpoint_url'),
+  /**
+   * Live health of remoteEndpointUrl specifically, from the same handshake the
+   * health cron already runs to verify its tools (see the cron's remoteEndpointUrl
+   * block). Deliberately separate from healthStatus/isVerifiedActive, which track
+   * the *primary* url (for allmcps-server that's the GitHub repo, not this
+   * endpoint) — conflating the two would mean a transient remote-endpoint outage
+   * could trip the primary-url unpublish logic, which only makes sense for a
+   * genuinely archived/dead repo. Null = never checked (no remoteEndpointUrl, or
+   * not yet reached by the cron).
+   */
+  remoteEndpointHealthy: integer('remote_endpoint_healthy', { mode: 'boolean' }),
+  remoteEndpointCheckedAt: integer('remote_endpoint_checked_at', { mode: 'timestamp' }),
   /** stdio | remote — cached install transport from README/description parse. */
   installKind: text('install_kind'),
   /** Runner binary for stdio installs (npx, uvx, bunx). */

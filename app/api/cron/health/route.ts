@@ -160,6 +160,8 @@ export async function POST(req: Request) {
       let toolsError: string | null = server.toolsError ?? null;
       let toolsSource: string | null = server.toolsSource ?? null;
       let lastCommitAt: Date | null = server.lastCommitAt ?? null;
+      let remoteEndpointHealthy: boolean | null = server.remoteEndpointHealthy ?? null;
+      let remoteEndpointCheckedAt: Date | null = server.remoteEndpointCheckedAt ?? null;
 
       // Prefer package name from cached install, else listing name
       const npmName = server.installPackage || server.name;
@@ -286,6 +288,15 @@ export async function POST(req: Request) {
         try {
           const remoteIntrospection = await callMcpEndpoint(server.remoteEndpointUrl, { method: 'tools/list' });
           toolsCheckedAt = now;
+          // A successful initialize (part of callMcpEndpoint's handshake) means
+          // the endpoint is up and speaking MCP correctly, regardless of whether
+          // this particular listing has tools to report — genuine uptime signal,
+          // tracked separately from healthStatus/isVerifiedActive (which read the
+          // *primary* url, e.g. the GitHub repo for a stdio+remote listing like
+          // our own — a transient endpoint blip shouldn't trip repo-archival
+          // unpublish logic). See lib/qualityScore.ts for where this feeds scoring.
+          remoteEndpointHealthy = remoteIntrospection.ok;
+          remoteEndpointCheckedAt = now;
           if (remoteIntrospection.ok && remoteIntrospection.tools && remoteIntrospection.tools.length > 0) {
             toolsJson = JSON.stringify(
               remoteIntrospection.tools.map((t) => ({
@@ -304,7 +315,12 @@ export async function POST(req: Request) {
             ).slice(0, 500);
           }
         } catch {
-          /* Leave primary-path tools data as-is on transient remote-endpoint failures. */
+          // A thrown error (network failure, timeout) means the endpoint didn't
+          // respond — unlike the tools data (left as-is so a transient blip
+          // doesn't erase a previously-good tool list), health explicitly
+          // reflects this as down; that's the whole point of tracking it.
+          remoteEndpointHealthy = false;
+          remoteEndpointCheckedAt = now;
         }
       }
 
@@ -372,6 +388,8 @@ export async function POST(req: Request) {
           toolsCheckedAt,
           toolsError,
           toolsSource,
+          remoteEndpointHealthy,
+          remoteEndpointCheckedAt,
           ...(shouldUnpublish ? { status: 'removed' } : {}),
           ...(installFields
             ? {
