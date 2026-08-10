@@ -25152,6 +25152,7 @@
     "isOfficial": true,
     "isPremium": true,
     "websiteVerified": true,
+    "remoteEndpointUrl": "https://allmcps.com/api/mcp",
     "installKind": "stdio",
     "installCommand": "npx",
     "installPackage": "allmcps-server",

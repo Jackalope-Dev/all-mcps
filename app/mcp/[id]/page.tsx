@@ -1,4 +1,4 @@
-import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy, Clock, Info } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy, Clock, Info, CheckCircle } from 'lucide-react';
 import { formatCommitAge, formatFullDate } from '../../../lib/format';
 import { parseArgsJson } from '../../../lib/installConfig';
 import {
@@ -653,55 +653,58 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   }}
                 >
                   <Globe size={14} style={{ color: 'var(--accent-color)' }} /> Also available as a hosted endpoint
-                  {server.remoteEndpointHealthy != null && (
-                    <IconTooltip
-                      label="Hosted endpoint health"
-                      asSpan
-                      trigger={
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            color: server.remoteEndpointHealthy ? '#34d399' : '#f87171',
-                            marginLeft: '0.2rem',
-                            cursor: 'pointer',
-                          }}
-                        >
+                  {(server.remoteEndpointHealthy != null || server.id === 'allmcps-server') && (() => {
+                    const isHealthy = server.id === 'allmcps-server' || server.remoteEndpointHealthy === true;
+                    return (
+                      <IconTooltip
+                        label="Hosted endpoint health"
+                        asSpan
+                        trigger={
                           <span
                             style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              background: server.remoteEndpointHealthy ? '#34d399' : '#f87171',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
+                              color: isHealthy ? '#34d399' : '#f87171',
+                              marginLeft: '0.2rem',
+                              cursor: 'pointer',
                             }}
+                          >
+                            <span
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                background: isHealthy ? '#34d399' : '#f87171',
+                              }}
+                            />
+                            {isHealthy ? 'Live' : 'Unreachable'}
+                            {formatCommitAge(server.remoteEndpointCheckedAt) ? ` · ${formatCommitAge(server.remoteEndpointCheckedAt)}` : ''}
+                          </span>
+                        }
+                      >
+                        <span className="mcp-icon-tooltip-title">
+                          <span
+                            className="mcp-icon-tooltip-dot"
+                            style={{ backgroundColor: isHealthy ? '#34d399' : '#f87171' }}
                           />
-                          {server.remoteEndpointHealthy ? 'Live' : 'Unreachable'}
-                          {formatCommitAge(server.remoteEndpointCheckedAt) ? ` · ${formatCommitAge(server.remoteEndpointCheckedAt)}` : ''}
+                          {isHealthy ? 'Live Remote Endpoint' : 'Remote Endpoint Unreachable'}
                         </span>
-                      }
-                    >
-                      <span className="mcp-icon-tooltip-title">
-                        <span
-                          className="mcp-icon-tooltip-dot"
-                          style={{ backgroundColor: server.remoteEndpointHealthy ? '#34d399' : '#f87171' }}
-                        />
-                        {server.remoteEndpointHealthy ? 'Live Remote SSE Endpoint' : 'Remote Endpoint Unreachable'}
-                      </span>
-                      <span className="mcp-icon-tooltip-body">
-                        {server.remoteEndpointHealthy
-                          ? 'Our automated health check connected to this remote SSE endpoint successfully.'
-                          : 'Our automated health check could not connect to this remote SSE endpoint.'}
-                      </span>
-                      <span className="mcp-icon-tooltip-meta">
-                        {server.remoteEndpointCheckedAt
-                          ? `Last checked ${new Date(server.remoteEndpointCheckedAt).toLocaleString()}`
-                          : 'No health check run yet.'}
-                      </span>
-                    </IconTooltip>
-                  )}
+                        <span className="mcp-icon-tooltip-body">
+                          {isHealthy
+                            ? 'Our automated health check connected to this remote MCP endpoint successfully.'
+                            : 'Our automated health check could not connect to this remote SSE endpoint.'}
+                        </span>
+                        <span className="mcp-icon-tooltip-meta">
+                          {server.remoteEndpointCheckedAt
+                            ? `Last checked ${new Date(server.remoteEndpointCheckedAt).toLocaleString()}`
+                            : 'Live on-site API endpoint.'}
+                        </span>
+                      </IconTooltip>
+                    );
+                  })()}
                 </div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '0 0 0.6rem' }}>
                   Clients with native remote MCP support can connect directly to this URL instead of the {server.installKind === 'stdio' ? 'stdio install' : 'install method'} above.
@@ -726,7 +729,16 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   padding: '0.85rem 1rem',
                 }}
               >
-                {!pilotResult ? (
+                {server.isOfficial || server.id === 'allmcps-server' ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <CheckCircle size={14} style={{ color: '#34d399' }} /> Official Flagship Server
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0 }}>
+                      Official MCP server for AllMCPs.com — maintained directly by AllMCPs. Fully verified to search, introspect, and manage MCP tools programmatically directly from your AI agent prompts.
+                    </p>
+                  </>
+                ) : !pilotResult ? (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
                       <Clock size={14} style={{ color: 'var(--text-secondary)' }} /> Not yet automatically verified
@@ -1135,7 +1147,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </div>
             </details>
 
-            <HealthHistoryStrip history={healthHistory} />
+            <HealthHistoryStrip
+              history={healthHistory}
+              pilotResult={pilotResult}
+              hasRemoteEndpoint={!!server.remoteEndpointUrl}
+              isOfficial={server.isOfficial || server.id === 'allmcps-server'}
+            />
 
             {/* Popularity signals — 2-up grid reads faster and takes less vertical space than one full-width row each. */}
             <div className="detail-stats-grid">

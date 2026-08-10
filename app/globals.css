@@ -3858,7 +3858,8 @@ nav[aria-label="Table of contents"] {
   left: 50%;
   transform: translateX(-50%) translateY(2px);
   width: max-content;
-  max-width: 200px;
+  max-width: 250px;
+  white-space: pre-line;
   background: var(--card-bg);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);

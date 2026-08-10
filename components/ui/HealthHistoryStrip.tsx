@@ -15,7 +15,19 @@ function spanLabel(oldest: string | Date): string {
  * was built from: our own listing showed "Unreachable" from a one-off
  * Worker memory spike, not a real outage).
  */
-export function HealthHistoryStrip({ history }: { history: ServerHealthCheck[] }) {
+interface HealthHistoryStripProps {
+  history: ServerHealthCheck[];
+  pilotResult?: { status?: string | null } | null;
+  hasRemoteEndpoint?: boolean;
+  isOfficial?: boolean;
+}
+
+export function HealthHistoryStrip({
+  history,
+  pilotResult,
+  hasRemoteEndpoint,
+  isOfficial,
+}: HealthHistoryStripProps) {
   // Too little data yet to read as a trend — the single health dot elsewhere
   // on the page already covers "what's the status right now".
   if (history.length < 4) return null;
@@ -30,28 +42,64 @@ export function HealthHistoryStrip({ history }: { history: ServerHealthCheck[] }
         role="img"
         aria-label={`${healthyCount} of ${history.length} recent health checks succeeded, over ${spanLabel(oldest)}.`}
       >
-        {history.map((h, i) => (
-          <span
-            key={i}
-            className="health-dot"
-            tabIndex={0}
-            data-tip={`${h.healthy ? 'Healthy' : `Issue${h.detail ? ` — ${h.detail}` : ''}`} · ${new Date(h.checkedAt).toLocaleString()}`}
-            style={{
-              flex: '1 1 0',
-              minWidth: '2px',
-              maxWidth: '4px',
-              height: '100%',
-              borderRadius: '1px',
-              // Baked into the color as rgba rather than a separate `opacity`
-              // on the element — opacity would also wash out the ::after/
-              // ::before tooltip pseudo-elements below, since they share this
-              // element's compositing (confirmed in practice: made the
-              // tooltip bubble translucent/unreadable, not just the dot).
-              backgroundColor: h.healthy ? 'rgba(16, 185, 129, 0.55)' : 'rgba(248, 113, 113, 0.9)',
-              outline: 'none',
-            }}
-          />
-        ))}
+        {history.map((h, i) => {
+          const isPrimaryPass = h.healthy || isOfficial;
+          const isRemotePass = h.remoteHealthy === true || (isOfficial && hasRemoteEndpoint);
+          const isRemoteFail = h.remoteHealthy === false && !isOfficial;
+
+          const dateStr = new Date(h.checkedAt).toLocaleString(undefined, {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          });
+
+          const lines: string[] = [
+            dateStr,
+            `• Primary URL / Repo: ${isPrimaryPass ? 'Pass' : h.detail ? `Issue (${h.detail})` : 'Issue'}`,
+          ];
+
+          if (hasRemoteEndpoint || h.remoteHealthy != null) {
+            lines.push(
+              `• Remote Endpoint: ${
+                isRemotePass ? 'Pass (Live)' : isRemoteFail ? 'Fail (Unreachable)' : 'Not checked'
+              }`
+            );
+          }
+
+          if (pilotResult) {
+            lines.push(
+              `• Stdio Sandbox: ${
+                pilotResult.status === 'ok'
+                  ? 'Pass'
+                  : pilotResult.status
+                    ? `Issue (${pilotResult.status})`
+                    : 'Pending'
+              }`
+            );
+          }
+
+          const tipText = lines.join('\n');
+          const isOverallHealthy = isPrimaryPass && !isRemoteFail;
+
+          return (
+            <span
+              key={i}
+              className="health-dot"
+              tabIndex={0}
+              data-tip={tipText}
+              style={{
+                flex: '1 1 0',
+                minWidth: '2px',
+                maxWidth: '4px',
+                height: '100%',
+                borderRadius: '1px',
+                backgroundColor: isOverallHealthy
+                  ? 'rgba(16, 185, 129, 0.55)'
+                  : 'rgba(248, 113, 113, 0.9)',
+                outline: 'none',
+              }}
+            />
+          );
+        })}
       </div>
       <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
         {healthyCount}/{history.length} checks healthy over {spanLabel(oldest)}

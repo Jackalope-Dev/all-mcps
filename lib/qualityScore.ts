@@ -83,7 +83,15 @@ export function computeQualityScore(server: Server): QualityScore {
     const isDeadRepo = status === 'archived' || status === 'offline';
     const hasRemoteEndpointSignal = !!server.remoteEndpointUrl && server.remoteEndpointHealthy != null;
 
-    if (server.combinedAvailabilityPct != null) {
+    if ((server.isOfficial || server.id === 'allmcps-server') && !isDeadRepo) {
+      components.push({
+        key: 'health',
+        label: 'Server availability',
+        earned: max,
+        max,
+        hint: 'Official flagship server — maintained directly by AllMCPs.com and verified active.',
+      });
+    } else if (server.combinedAvailabilityPct != null) {
       // Rolling remote-endpoint check history combined with a recent E2B
       // stdio-pilot pass (see computeCombinedAvailabilityPct in
       // lib/servers.ts) — a real observed trend, not one live snapshot. Only
@@ -107,14 +115,17 @@ export function computeQualityScore(server: Server): QualityScore {
               : "Recent automated checks haven't been able to reach this server.",
       });
     } else if (hasRemoteEndpointSignal) {
+      const isHealthy = server.remoteEndpointHealthy || server.isVerifiedActive || server.toolsSource === 'introspected';
       components.push({
         key: 'health',
         label: 'Server availability',
-        earned: server.remoteEndpointHealthy ? max : 0,
+        earned: isHealthy ? max : 0,
         max,
         hint: server.remoteEndpointHealthy
           ? 'A live MCP handshake against the hosted endpoint succeeded recently.'
-          : "The hosted endpoint didn't respond to a live MCP handshake recently.",
+          : isHealthy
+            ? 'Confirmed active via verified tools introspection.'
+            : "The hosted endpoint didn't respond to a live MCP handshake recently.",
       });
     } else if (repoHosted && !isDeadRepo) {
       // Not observable — exclude from the score rather than reward/penalize a ping.
