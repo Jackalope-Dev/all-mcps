@@ -8,7 +8,8 @@ import serversData from '../../data/mcp-servers.json';
 import { CategoryGrid } from '../../components/CategoryGrid';
 import { categorySlug } from '../../lib/categories';
 
-export const dynamic = 'force-dynamic';
+// Hourly ISR keeps category counts current from D1 without querying on every request.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'Browse MCP Servers by Category',
