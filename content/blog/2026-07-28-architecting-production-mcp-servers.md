@@ -1,7 +1,7 @@
 ---
 title: "Architecting Production-Ready MCP Servers: Security, Transports, and Tool Design Patterns"
 excerpt: "A practical engineering guide to building secure, performant Model Context Protocol (MCP) servers with robust transports, token-optimized schemas, and defense-in-depth authorization."
-tags: ["MCP", "Architecture", "Security", "Engineering"]
+tags: ["MCP", "Architecture", "Security"]
 faq:
   - q: "When should I choose Stdio over SSE/HTTP for an MCP transport?"
     a: "Use Stdio when the MCP server runs locally as a subprocess on the user's workstation or within a single isolated container (e.g. desktop AI tools, CLI coding agents). Stdio avoids network overhead and authentication setup. Use SSE/HTTP (Server-Sent Events) when building multi-user remote services, microservices behind API gateways, or centralized enterprise tools that require token-based auth and rate limiting."

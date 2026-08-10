@@ -1,7 +1,7 @@
 ---
 title: "Writing MCP Tool Descriptions That Actually Get Picked"
 excerpt: "The model never reads your code — only your tool's name, description, and schema. A practical guide to writing MCP tool descriptions that get selected correctly, with the arguments filled in right, every time."
-tags: ["MCP", "Tool Descriptions", "Best Practices", "Developer Tools", "Tutorial"]
+tags: ["MCP", "Developer Tools", "Guides"]
 faq:
   - q: "What makes a good MCP tool description?"
     a: "A good description states what the tool does, when to use it (and when not to), what it returns, and any constraints the model needs to respect — units, formats, side effects, and rate limits. It's written for a model deciding whether to call the tool, not for a human reading API docs."

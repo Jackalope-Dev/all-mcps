@@ -1,7 +1,7 @@
 ---
 title: "Deploying Remote MCP Servers: The Complete Production & Cloud Hosting Blueprint"
 excerpt: "A complete guide to deploying remote Model Context Protocol (MCP) servers to production on Cloudflare Workers, Docker, Fly.io, and AWS with SSE transports, CORS, SSL, and secrets management."
-tags: ["MCP", "DevOps", "Cloud", "Deploy", "Tutorial"]
+tags: ["MCP", "Architecture", "Guides"]
 faq:
   - q: "What is the difference between local stdio and remote SSE MCP servers?"
     a: "Local stdio servers run as child processes on the user machine with zero network exposure. Remote SSE servers run on cloud infrastructure over HTTP/SSE, allowing multiple AI agents or team members to access shared tools and APIs securely."

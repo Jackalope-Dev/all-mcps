@@ -1,7 +1,7 @@
 ---
 title: "Testing and Debugging MCP Servers: From Inspector to CI"
 excerpt: "A practical guide to testing Model Context Protocol servers before you ship — the Inspector, unit-testing tool handlers, integration harnesses, structured logging, and a pre-publish checklist."
-tags: ["MCP", "Testing", "Debugging", "Developer Tools", "Tutorial"]
+tags: ["MCP", "Developer Tools", "Guides"]
 faq:
   - q: "How do I test an MCP server before publishing it?"
     a: "Run it through the official MCP Inspector for a manual smoke test, write unit tests against your tool handler functions directly (no protocol involved), then write at least one integration test that spins up a real client and calls tools/list and tools/call over the actual transport. Each layer catches different bugs — schema mismatches, business-logic errors, and transport/serialization issues respectively."

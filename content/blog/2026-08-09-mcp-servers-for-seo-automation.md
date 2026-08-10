@@ -1,7 +1,7 @@
 ---
 title: "MCP Servers for SEO: How AI Agents Can Audit, Track, and Fix Rankings"
 excerpt: "A practical breakdown of what MCP servers for SEO actually do — Search Console data, technical audits, backlink intelligence, and the newer AEO/GEO checks — and how to wire one into Claude, Cursor, or any MCP client."
-tags: ["SEO", "AEO", "Guides", "Marketing"]
+tags: ["MCP", "SEO", "Guides"]
 faq:
   - q: "What can an MCP server actually do for SEO?"
     a: "It gives an AI agent direct, structured access to SEO data and tools instead of you copy-pasting between dashboards — pulling Search Console performance data, running a technical audit on a URL, checking backlink profiles, or tracking SERP positions, all through tool calls the agent can chain together."

@@ -1,7 +1,7 @@
 ---
 title: "How to get a free dofollow backlink for your MCP server on AllMCPs"
 excerpt: "Claim your listing, verify your product site, and place a dofollow AllMCPs badge — reciprocal SEO that helps your product and the directory."
-tags: ["SEO", "Listings", "Growth"]
+tags: ["SEO", "Directory"]
 faq:
   - q: "Is the AllMCPs website backlink really free?"
     a: "Yes. Free listings can earn a dofollow website link by verifying the site and placing a dofollow AllMCPs badge. Premium listings get dofollow without a badge."

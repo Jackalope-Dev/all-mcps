@@ -1,7 +1,7 @@
 ---
 title: "How to Install an MCP Server in Claude, Cursor, Windsurf, and VS Code"
 excerpt: "One reference guide to installing Model Context Protocol servers across every major client — the universal config shape, exact file locations, and how to verify your tools loaded."
-tags: ["MCP", "Guide", "Claude", "Cursor"]
+tags: ["MCP", "Guides"]
 faq:
   - q: "Is the MCP server config the same across clients?"
     a: "Almost. Claude Desktop, Claude Code, Cursor, and Windsurf all nest servers under an 'mcpServers' key using the same command / args / env shape, so a config that works in one usually works in another with only the file location changed. The exception is VS Code, which nests servers under a 'servers' key and adds an 'inputs' array for prompted secrets — copy a config there and you must rename 'mcpServers' to 'servers'."

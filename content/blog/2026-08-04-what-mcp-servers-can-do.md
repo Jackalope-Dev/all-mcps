@@ -1,7 +1,7 @@
 ---
 title: "What Can MCP Servers Do? A Field Guide to the Model Context Protocol Ecosystem"
 excerpt: "What MCP servers actually do, how the 3,000+ available servers break down by category, and how to choose the right Model Context Protocol server for your AI agent."
-tags: ["MCP", "Model Context Protocol", "Guide", "Ecosystem"]
+tags: ["MCP", "Guides"]
 faq:
   - q: "How many MCP servers are there?"
     a: "There is no single official count, but public directories now list thousands. AllMCPs catalogs more than 3,000 Model Context Protocol servers across over 50 categories, and the number grows every week as developers publish new integrations. The largest categories are developer tools, finance, and knowledge and memory."

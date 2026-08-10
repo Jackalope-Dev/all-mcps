@@ -1,7 +1,7 @@
 ---
 title: "MCP Server Not Connecting? A Troubleshooting Guide for Every Client"
 excerpt: "The most common reasons an MCP server fails to connect, shows zero tools, or crashes on startup — and exactly how to fix each one, across Claude Desktop, Claude Code, Cursor, and other MCP clients."
-tags: ["MCP", "Troubleshooting", "Guide"]
+tags: ["MCP", "Guides"]
 faq:
   - q: "Why does my MCP server show up in the client but with zero tools?"
     a: "This almost always means the server process started but crashed or errored before it could respond to the tools/list request — usually from a missing environment variable, an unhandled exception in the server's startup code, or the server writing non-JSON text to stdout and corrupting the message stream. Check the client's MCP log for the specific server, not just the general app log."

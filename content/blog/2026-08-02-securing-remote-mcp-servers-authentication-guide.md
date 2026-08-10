@@ -1,7 +1,7 @@
 ---
 title: "Securing & Authenticating Remote MCP Servers: The Production Guide"
 excerpt: "A complete guide to authenticating and securing remote Model Context Protocol (MCP) servers over HTTP and SSE, featuring OAuth 2.0 PKCE, JWT bearer validation, multi-tenant token propagation, and prompt injection defense."
-tags: ["Security", "Authentication", "Developer", "Architecture", "MCP"]
+tags: ["MCP", "Security", "Architecture"]
 faq:
   - q: "How do you authenticate a remote MCP server?"
     a: "Remote MCP servers running over HTTP/SSE authenticate clients using standard Web security mechanisms, primarily OAuth 2.0 (Authorization Code flow with PKCE) or HTTP Authorization headers (Bearer JWT tokens). The client passes the token during transport initialization or in per-request headers."
