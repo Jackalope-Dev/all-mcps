@@ -123,10 +123,11 @@ export async function callMcpEndpoint(
   url: string,
   opts: { headers?: Record<string, string>; method?: string; params?: unknown } = {}
 ): Promise<McpResult> {
-  if (!url || !/^https?:\/\//i.test(url)) {
+  const targetUrl = url?.trim() || '';
+  if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
     return { ok: false, error: 'Enter a valid http(s) MCP endpoint URL.' };
   }
-  if (!isSafeFetchTarget(url)) {
+  if (!isSafeFetchTarget(targetUrl)) {
     return { ok: false, error: 'That URL is not a permitted public endpoint.' };
   }
 
@@ -138,7 +139,7 @@ export async function callMcpEndpoint(
     let init: Awaited<ReturnType<typeof rpc>>;
     try {
       init = await rpc(
-        url,
+        targetUrl,
         {
           jsonrpc: '2.0',
           id: 1,
@@ -168,7 +169,7 @@ export async function callMcpEndpoint(
 
     // 2. notifications/initialized (best-effort; ignore transport hiccups)
     try {
-      await fetch(url, {
+      await fetch(targetUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +187,7 @@ export async function callMcpEndpoint(
 
     // 3. target method
     const call = await rpc(
-      url,
+      targetUrl,
       { jsonrpc: '2.0', id: 2, method, params: opts.params ?? {} },
       2,
       headers,

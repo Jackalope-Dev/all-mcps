@@ -25118,7 +25118,7 @@
     "name": "TollCalc - Calculate the road toll for trucks in europe",
     "description": "Calculate the road toll for trucks in Europe. Nearly any country is supported.",
     "category": "🚆 Travel & Transportation",
-    "url": "HTTPS://app.tollcalc.eu",
+    "url": "https://app.tollcalc.eu",
     "isOfficial": false,
     "status": "active",
     "createdAt": "2026-08-07T21:44:41.201Z"

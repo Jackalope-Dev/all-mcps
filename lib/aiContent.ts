@@ -13,6 +13,7 @@
 
 import { chatJson } from './openai';
 import { cleanListingDescription } from './description';
+import { DIRECTORY_CATEGORIES } from './categories';
 import {
   isPricingModel,
   isAuthType,
@@ -52,6 +53,14 @@ export type AiListingContent = {
   tags?: string[];
   /** Compatible MCP client slugs (e.g. ['claude-desktop', 'cursor']). */
   compatibleClients?: string[];
+  /**
+   * Best-fit category from the directory's allowed list, or null when the
+   * model isn't confident. Callers should only apply this when the listing's
+   * current category is still the generic default — see the caller-side
+   * DEFAULT_SUBMIT_CATEGORY guard in app/api/cron/ai-content — so a category
+   * a human or a source list already set deliberately is never overwritten.
+   */
+  category?: string | null;
   /**
    * LLM-validated install command, replacing the regex/heuristic README parser
    * as the source of truth (see installExtractedAt in db/schema.ts for why).
@@ -264,6 +273,7 @@ const SYSTEM_PROMPT =
   '"license" (short license name like "MIT", "Apache-2.0", or null), ' +
   '"tags" (2-5 short lowercase keyword slugs like ["github", "developer-tools", "issues"]), ' +
   '"compatibleClients" (array of slugs from ["claude-desktop", "cursor", "windsurf", "cline"] mentioned or compatible), ' +
+  '"category" (the single best-fit category name, copied EXACTLY as written from the "Allowed categories" list provided below — the current category shown may be an unreviewed placeholder, so judge fit from the actual name/description/README rather than assuming it\'s already correct; null only if genuinely none fit reasonably well), ' +
   '"install" (object or null — the command that runs THIS project\'s OWN MCP server, nothing else). ' +
   'This field feeds install instructions AI agents execute directly, so accuracy matters more than coverage — a wrong answer is worse than no answer. ' +
   'Set "install" to null unless you can identify the command with real confidence. Do NOT extract: ' +
@@ -298,11 +308,12 @@ export async function generateListingContent(
 
   const userContent = [
     `Name: ${input.name}`,
-    `Category: ${input.category}`,
+    `Current category (may be an unreviewed default, not necessarily correct): ${input.category}`,
     `Repository/Source: ${input.url}`,
     `Current description: ${cleanedDesc || '(none)'}`,
     toolLines ? `Tools it exposes over MCP:\n${toolLines}` : '',
     input.readme ? `README (excerpt):\n${input.readme.slice(0, README_BUDGET)}` : 'README: (unavailable)',
+    `Allowed categories (pick exactly one, copied verbatim, for the "category" field):\n${DIRECTORY_CATEGORIES.slice(0, 40).join('\n')}`,
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -320,6 +331,7 @@ export async function generateListingContent(
     tags?: unknown;
     compatibleClients?: unknown;
     install?: unknown;
+    category?: unknown;
   }>({
     model: 'gpt-5.6-luna',
     temperature: 0.3,
@@ -354,6 +366,10 @@ export async function generateListingContent(
   const tags = normalizeTags(result.data.tags);
   const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
   const install = clampInstall(result.data.install);
+  // Exact-match only — the model was told to copy verbatim from the allowed list;
+  // anything else is a hallucinated/malformed category name, safer to drop than store.
+  const rawCategory = typeof result.data.category === 'string' ? result.data.category.trim() : '';
+  const category = rawCategory && DIRECTORY_CATEGORIES.includes(rawCategory) ? rawCategory : null;
 
   // A usable summary is the minimum bar — without it the page gains nothing over the raw scrape.
   if (!summary || summary.length < 12) return { status: 'skip', reason: 'empty' };
@@ -373,6 +389,7 @@ export async function generateListingContent(
       tags,
       compatibleClients,
       install,
+      category,
     },
   };
 }

@@ -9,6 +9,7 @@ import { getGithubToken } from '../../../../lib/githubAuth';
 import { cleanListingDescription } from '../../../../lib/description';
 import { parseServerTools } from '../../../../lib/servers';
 import { generateListingContent } from '../../../../lib/aiContent';
+import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 
 /**
  * AI content pass — writes the unique per-listing content layer (summary, overview,
@@ -85,7 +86,12 @@ export async function POST(req: Request) {
                   isNull(servers.aiEnrichedAt),
                   isNull(servers.authType),
                   isNull(servers.pricingModel),
-                  isNull(servers.installExtractedAt)
+                  isNull(servers.installExtractedAt),
+                  // Keeps a defaulted/uncategorized listing eligible for reclaim even
+                  // after aiEnrichedAt is otherwise set (see the category writeback
+                  // below) — the registry-sync ingest has no category signal, so
+                  // every new listing from it lands here needing a real category.
+                  eq(servers.category, DEFAULT_SUBMIT_CATEGORY)
                 )
               )
             )
@@ -209,6 +215,12 @@ export async function POST(req: Request) {
             aiFaq: o.content.faq.length ? JSON.stringify(o.content.faq) : null,
             aiFaqAt: claimTime,
           };
+
+          // Only ever replaces the *generic default* — never overwrites a category a
+          // human submitter, an editor, or a source-list match already set on purpose.
+          if (o.content.category && r.server.category === DEFAULT_SUBMIT_CATEGORY) {
+            updatePayload.category = o.content.category;
+          }
 
           if (o.content.pricingModel) updatePayload.pricingModel = o.content.pricingModel;
           if (o.content.authType) updatePayload.authType = o.content.authType;
