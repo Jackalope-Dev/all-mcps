@@ -1,0 +1,45 @@
+name: 🔄 Registry Sync (weekly)
+
+# Pulls new listings from the official MCP Registry (auto-approved, status='active')
+# and from the community README sources (status='pending', existing admin queue) —
+# see scripts/ingest-sources.mjs and docs/superpowers/specs/2026-08-07-ingest-sources-design.md.
+#
+# Requires a CLOUDFLARE_API_TOKEN repo secret scoped to D1 read/write on the
+# all-mcps database (Account Settings > API Tokens > Create Token > "Edit
+# Cloudflare Workers" template covers D1, or a custom token with the
+# "D1 Edit" permission). Without it this job fails at the wrangler auth step.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch: # Allows manual triggering for testing
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ingest and apply new listings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/ingest-sources.mjs --apply
+
+      - name: Upload generated SQL as a run artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ingest-sql
+          path: drizzle/ingest-*.sql
+          if-no-files-found: ignore
+          retention-days: 90

@@ -12,6 +12,7 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "submit-index": "node scripts/submit-indexnow.mjs",
+    "ingest-sources": "node scripts/ingest-sources.mjs",
     "submit-directories": "node scripts/llm-directory-agent.mjs",
     "capture-screenshots": "node scripts/capture-screenshots.mjs",
     "sync-snapshot": "node scripts/sync-snapshot.mjs"

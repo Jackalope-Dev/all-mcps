@@ -18,6 +18,32 @@ same parser. Broader sources (mcp.so, Smithery, PulseMCP, Glama, …) are delibe
 scope for v1 — each has its own API/HTML shape and its own terms to check before scraping, and
 isn't needed to prove the pipeline out.
 
+## Sources (v2) — the official MCP Registry
+
+Added a third source: the [official MCP Registry](https://registry.modelcontextprotocol.io)
+(`GET /v0.1/servers`, per the [aggregators
+doc](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/registry-aggregators.mdx)).
+It's a paginated JSON API rather than a markdown list, so it has its own fetch/parse function
+(`fetchOfficialRegistryEntries`) instead of reusing `parseServerList`, but feeds into the same
+downstream dedup/id/SQL pipeline via the shared `{name, url, description, category, source}`
+entry shape.
+
+- **Status filter**: only registry entries whose `_meta['io.modelcontextprotocol.registry/official'].status`
+  is `active` are ingested — `deprecated`/`deleted` typically means spam, malware, or a
+  moderation-policy violation, per the aggregators doc.
+- **URL**: `repository.url` when present, else `websiteUrl` for remote-only servers with no repo
+  link. Entries with neither are skipped (our schema requires `url`).
+- **Auto-approve**: unlike the two README sources, official-registry candidates land with
+  `status='active'` instead of `'pending'` — they're already vetted by the registry's own
+  moderation policy, so they skip our admin review queue.
+- **Dedup precedence**: registry entries are placed first in the merged entry list, so when the
+  same repo also appears in one of the README sources, the registry's data (and its
+  auto-approved status) wins the existing first-write-wins dedup in `main()`.
+- **Fetch strategy**: stateless full re-fetch every run, same as the README sources — dedup
+  against live DB state means a re-run only ever picks up what's new. The registry's
+  `updated_since` cursor param exists for incremental sync if the registry grows large enough
+  for a full page-through to matter; not needed yet.
+
 ## Dedup strategy
 
 Dedup key = normalized URL: lowercased, `.git` suffix stripped, trailing slash stripped, query/
@@ -46,7 +72,8 @@ script also pulls existing ids, and on collision appends `-2`, `-3`, … until u
 | `description` | list entry description, run through `cleanListingDescription()` |
 | `category` | list entry category heading, run through `normalizeCategory()` |
 | `isOfficial` | `true` if the URL is under `github.com/modelcontextprotocol/servers` |
-| `status` | `'pending'` — always. Lands in the existing admin review queue; does not affect the public `totalServers` count until approved. |
+| `status` | `'pending'` for the README sources (existing admin review queue; doesn't affect the public `totalServers` count until approved). `'active'` for official-registry candidates — see v2 above. |
+| `website_url` | Only set for official-registry candidates, from `websiteUrl` (when distinct from the primary `url`). README sources have no equivalent signal, so it's left `NULL`. |
 | `createdAt` | `strftime('%s','now')` — seconds, matching `seed-sql.mjs`'s existing convention (not ms) |
 
 Candidates that fail `isSafeSubmissionUrl()` are skipped, same guard `/api/submit` uses.

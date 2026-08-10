@@ -6,18 +6,38 @@ import { execSync } from 'child_process';
  * Pulls newly-added listings from other public MCP server lists and stages them
  * for review — see docs/superpowers/specs/2026-08-07-ingest-sources-design.md.
  *
- * Never writes to the DB itself. Fetches the source READMEs, dedupes against the
- * live catalog, and writes drizzle/ingest-<date>.sql with one INSERT per new
- * candidate (status='pending', same as a normal /api/submit). Review the file,
- * then apply it explicitly:
+ * Fetches the source READMEs plus the official MCP Registry API, dedupes
+ * against the live catalog, and writes drizzle/ingest-<date>.sql with one
+ * INSERT per new candidate.
+ *
+ * By default it only writes the file — review it, then apply explicitly:
  *
  *   npx wrangler d1 execute all-mcps --remote --file=drizzle/ingest-<date>.sql
+ *
+ * Pass --apply (used by the weekly `.github/workflows/registry-sync.yml` cron)
+ * to run that wrangler command automatically right after writing the file —
+ * requires CLOUDFLARE_API_TOKEN in the environment for non-interactive auth.
+ *
+ * Official-registry candidates land with status='active' (no admin review —
+ * they're already vetted by the registry's own moderation policy). The two
+ * README sources still land 'pending', same as a normal /api/submit.
  */
+
+const AUTO_APPLY = process.argv.includes('--apply');
 
 const DB_NAME = 'all-mcps';
 // wrangler.jsonc has no `account_id`, and this Cloudflare login has more than one
 // account, so a non-interactive `wrangler d1` call fails closed (7403) without this.
 const ACCOUNT_ID = '1a04a617cf42aaaba19b44365dd7c882';
+
+// The official MCP Registry (https://registry.modelcontextprotocol.io) — see
+// https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/registry-aggregators.mdx.
+// Stateless full re-fetch each run (mirrors the README sources below): dedup
+// against live DB state means re-running only ever picks up what's new. If the
+// registry grows large enough for that to get slow, switch to the `updated_since`
+// cursor param instead of paging everything every time.
+const OFFICIAL_REGISTRY_BASE = 'https://registry.modelcontextprotocol.io';
+const OFFICIAL_REGISTRY_MAX_PAGES = 50; // 50 * 100 = 5,000 servers, well above current registry size
 
 const SOURCES = [
   {
@@ -215,13 +235,81 @@ function parseServerList(markdown, source) {
       .replace(/[*_~`]/g, '')
       .trim();
 
-    entries.push({ name, url, description, category: currentCategory });
+    entries.push({ name, url, description, category: currentCategory, source: source.name });
   }
 
   return entries;
 }
 
-// --- live DB lookup ------------------------------------------------------
+// --- official MCP Registry (JSON API, not markdown) -----------------------
+
+async function fetchOfficialRegistryEntries() {
+  const entries = [];
+  let cursor;
+  let page = 0;
+  let skippedNoUrl = 0;
+  let skippedInactive = 0;
+
+  do {
+    const url = new URL(`${OFFICIAL_REGISTRY_BASE}/v0.1/servers`);
+    url.searchParams.set('limit', '100');
+    if (cursor) url.searchParams.set('cursor', cursor);
+
+    const res = await fetch(url, { headers: { 'User-Agent': 'AllMCPs-Ingest' } });
+    if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+    const body = await res.json();
+
+    for (const entry of body.servers ?? []) {
+      const server = entry.server;
+      if (!server) continue;
+
+      // Only ingest servers the registry itself currently considers active —
+      // 'deprecated'/'deleted' status typically means spam, malware, or a
+      // moderation-policy violation (per the aggregators doc).
+      const registryStatus = entry._meta?.['io.modelcontextprotocol.registry/official']?.status;
+      if (registryStatus && registryStatus !== 'active') {
+        skippedInactive++;
+        continue;
+      }
+
+      // Our schema requires a primary `url`; prefer the source repo, fall
+      // back to the marketing site for remote-only servers with no repo link.
+      const primaryUrl = server.repository?.url || server.websiteUrl;
+      if (!primaryUrl) {
+        skippedNoUrl++;
+        continue;
+      }
+
+      const name = server.title || server.name?.split('/').pop() || server.name;
+      entries.push({
+        name,
+        url: primaryUrl,
+        description: server.description || '',
+        category: undefined, // no category signal from the registry — falls back to DEFAULT_CATEGORY
+        websiteUrl: server.websiteUrl && server.websiteUrl !== primaryUrl ? server.websiteUrl : undefined,
+        source: 'official-registry',
+      });
+    }
+
+    cursor = body.metadata?.nextCursor;
+    page++;
+  } while (cursor && page < OFFICIAL_REGISTRY_MAX_PAGES);
+
+  if (page >= OFFICIAL_REGISTRY_MAX_PAGES && cursor) {
+    console.warn(`  official-registry: hit the ${OFFICIAL_REGISTRY_MAX_PAGES}-page safety cap with more pages remaining.`);
+  }
+  if (skippedNoUrl) console.log(`  official-registry: skipped ${skippedNoUrl} entries with no usable URL.`);
+  if (skippedInactive) console.log(`  official-registry: skipped ${skippedInactive} non-active entries.`);
+
+  return entries;
+}
+
+// --- live DB lookup / apply ------------------------------------------------
+
+// CLOUDFLARE_API_TOKEN, when present (e.g. in the registry-sync CI workflow),
+// makes wrangler authenticate non-interactively instead of needing a prior
+// `npx wrangler login`. Passed through untouched via `...process.env`.
+const WRANGLER_ENV = { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID };
 
 function queryExisting() {
   const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "SELECT id, url FROM servers"`;
@@ -229,13 +317,13 @@ function queryExisting() {
   try {
     out = execSync(cmd, {
       cwd: process.cwd(),
-      env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID },
+      env: WRANGLER_ENV,
       maxBuffer: 1024 * 1024 * 20,
     }).toString();
   } catch (err) {
     console.error(
       'Failed to query the live database via wrangler. Run `npx wrangler login` for the ' +
-        'AllMCPs Cloudflare account and try again.'
+        'AllMCPs Cloudflare account (or set CLOUDFLARE_API_TOKEN) and try again.'
     );
     throw err;
   }
@@ -243,11 +331,25 @@ function queryExisting() {
   return parsed[0]?.results ?? [];
 }
 
+function applySql(relPath) {
+  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --file=${relPath}`;
+  console.log(`\nApplying via: ${cmd}`);
+  execSync(cmd, { cwd: process.cwd(), env: WRANGLER_ENV, stdio: 'inherit' });
+}
+
 // --- main ------------------------------------------------------------------
 
 async function main() {
   console.log('Fetching source lists...');
-  const allEntries = [];
+
+  // Official-registry entries go first: when the same repo also shows up in
+  // one of the README sources below, the dedup loop keeps whichever entry it
+  // sees first, and registry data (accurate description, auto-approved
+  // status) should win over a possibly-stale awesome-list scrape.
+  const registryEntries = await fetchOfficialRegistryEntries();
+  console.log(`  official-registry: ${registryEntries.length} active entries fetched`);
+  const allEntries = [...registryEntries];
+
   for (const source of SOURCES) {
     const md = await fetchReadme(source.readmeUrl);
     const entries = parseServerList(md, source);
@@ -291,9 +393,14 @@ async function main() {
       id,
       name: c.name,
       url: c.url,
+      websiteUrl: c.websiteUrl,
       description: cleanListingDescription(c.description) || 'No description provided.',
       category: normalizeCategoryLite(c.category),
       isOfficial: c.url.toLowerCase().includes('github.com/modelcontextprotocol/servers'),
+      // Official-registry candidates are already vetted by the registry's own
+      // moderation policy — skip our admin queue and publish them directly.
+      // Everything else keeps going through review, same as /api/submit.
+      status: c.source === 'official-registry' ? 'active' : 'pending',
     });
   }
 
@@ -305,10 +412,11 @@ async function main() {
   for (const r of rows) {
     // created_at is stored in Unix *seconds* (matches scripts/seed-sql.mjs and the
     // Drizzle submit route) — do not multiply by 1000.
+    const websiteUrlSql = r.websiteUrl ? `'${esc(r.websiteUrl)}'` : 'NULL';
     sql +=
-      `INSERT INTO servers (id, name, url, description, category, is_official, status, created_at) ` +
-      `VALUES ('${esc(r.id)}', '${esc(r.name)}', '${esc(r.url)}', '${esc(r.description)}', ` +
-      `'${esc(r.category)}', ${r.isOfficial ? 1 : 0}, 'pending', strftime('%s', 'now')) ` +
+      `INSERT INTO servers (id, name, url, website_url, description, category, is_official, status, created_at) ` +
+      `VALUES ('${esc(r.id)}', '${esc(r.name)}', '${esc(r.url)}', ${websiteUrlSql}, '${esc(r.description)}', ` +
+      `'${esc(r.category)}', ${r.isOfficial ? 1 : 0}, '${esc(r.status)}', strftime('%s', 'now')) ` +
       `ON CONFLICT(id) DO NOTHING;\n`;
   }
 
@@ -316,12 +424,19 @@ async function main() {
   fs.writeFileSync(sqlPath, sql);
 
   const relPath = path.relative(process.cwd(), sqlPath);
-  console.log(`\nWrote ${rows.length} new listings to ${relPath}`);
+  const activeCount = rows.filter((r) => r.status === 'active').length;
+  console.log(`\nWrote ${rows.length} new listings to ${relPath} (${activeCount} auto-active from the official registry, ${rows.length - activeCount} pending review).`);
   console.log('First up to 15 new listings:');
   for (const r of rows.slice(0, 15)) {
-    console.log(`  - ${r.name}  (${r.category})  ${r.url}`);
+    console.log(`  - ${r.name}  (${r.category})  [${r.status}]  ${r.url}`);
   }
-  console.log(`\nReview the file, then apply it with:\n  npx wrangler d1 execute ${DB_NAME} --remote --file=${relPath}`);
+
+  if (AUTO_APPLY) {
+    applySql(relPath);
+    console.log('Applied.');
+  } else {
+    console.log(`\nReview the file, then apply it with:\n  npx wrangler d1 execute ${DB_NAME} --remote --file=${relPath}`);
+  }
 }
 
 main().catch((err) => {
