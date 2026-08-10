@@ -1,4 +1,4 @@
-import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy, Clock, Info, CheckCircle } from 'lucide-react';
+import { FolderGit2, Globe, Terminal, ChevronRight, BadgeCheck, Sparkles, Crown, Star, Download, Wrench, ExternalLink, LifeBuoy, Clock, Info, CheckCircle, AlertTriangle } from 'lucide-react';
 import { formatCommitAge, formatFullDate } from '../../../lib/format';
 import { parseArgsJson } from '../../../lib/installConfig';
 import {
@@ -86,6 +86,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     title,
     description: desc,
     keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
+    // Auto-unpublished (dead/archived source) — already excluded from search, browse,
+    // and the API, but the page itself stays reachable (see the banner below) so an
+    // owner landing on an old link/backlink can claim and fix it. Keep it out of
+    // search-engine indexes while it's in this state.
+    ...(server.status === 'removed' ? { robots: { index: false, follow: false } } : {}),
     alternates: {
       canonical: `https://allmcps.com/mcp/${server.id}`,
       // Expose the agent-readable markdown representation so LLM crawlers and
@@ -376,6 +381,44 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           <li className="breadcrumb-current" aria-current="page">{displayName}</li>
         </ol>
       </nav>
+
+      {server.status === 'removed' && (
+        <div
+          role="alert"
+          className="surface"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.75rem',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.5rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(248, 113, 113, 0.35)',
+            background: 'rgba(248, 113, 113, 0.08)',
+          }}
+        >
+          <AlertTriangle size={20} style={{ color: '#f87171', flexShrink: 0, marginTop: '0.1rem' }} aria-hidden="true" />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>
+              This listing appears offline
+            </p>
+            <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Our automated checks couldn&rsquo;t reach the source repository, so we&rsquo;ve removed it from
+              search, browse, and the API — this page stays reachable at this direct link only.
+              {!server.isOfficial && ' If this is your project, claim it to fix the link and restore visibility.'}
+            </p>
+            {!server.isOfficial && (
+              <Link
+                href={`/mcp/${server.id}/claim`}
+                className="btn btn-secondary"
+                style={{ marginTop: '0.75rem', fontSize: '0.85rem', padding: '0.4rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <BadgeCheck size={14} /> Claim this listing
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="detail-grid">
 

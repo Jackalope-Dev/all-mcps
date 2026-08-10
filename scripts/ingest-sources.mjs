@@ -304,6 +304,63 @@ async function fetchOfficialRegistryEntries() {
   return entries;
 }
 
+// --- liveness pre-check for official-registry candidates -------------------
+// The registry's own moderation doesn't verify submitted repo URLs are still
+// live (confirmed in practice: the first live import included several
+// already-404 entries — see agentbuilders/fulcrum in the 2026-08-10 batch).
+// Since official-registry candidates otherwise skip admin review and publish
+// straight to 'active', give each new one a single lightweight reachability
+// check first — a failure demotes it to 'pending' (the normal review queue)
+// instead of publishing a dead link live. Bounded concurrency so a batch of
+// new candidates doesn't fire hundreds of requests at once.
+const LIVENESS_TIMEOUT_MS = 6000;
+const LIVENESS_CONCURRENCY = 10;
+
+async function checkLive(url) {
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      redirect: 'follow',
+      headers: { 'User-Agent': 'AllMCPs-Ingest' },
+      signal: AbortSignal.timeout(LIVENESS_TIMEOUT_MS),
+    });
+    // Some hosts reject HEAD (405/501) — retry with GET before concluding it's dead.
+    if (res.status === 405 || res.status === 501) {
+      const getRes = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow',
+        headers: { 'User-Agent': 'AllMCPs-Ingest' },
+        signal: AbortSignal.timeout(LIVENESS_TIMEOUT_MS),
+      });
+      return getRes.ok;
+    }
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function checkLivenessOfRegistryCandidates(candidates) {
+  const toCheck = candidates.filter((c) => c.source === 'official-registry');
+  if (toCheck.length === 0) return;
+  console.log(`Live-checking ${toCheck.length} new official-registry candidates...`);
+
+  let deadCount = 0;
+  for (let i = 0; i < toCheck.length; i += LIVENESS_CONCURRENCY) {
+    const chunk = toCheck.slice(i, i + LIVENESS_CONCURRENCY);
+    const results = await Promise.all(chunk.map((c) => checkLive(c.url)));
+    chunk.forEach((c, idx) => {
+      if (!results[idx]) {
+        c.liveCheckFailed = true;
+        deadCount++;
+      }
+    });
+  }
+  if (deadCount > 0) {
+    console.log(`  ${deadCount} of ${toCheck.length} appear dead on arrival — landing as 'pending' for review instead of 'active'.`);
+  }
+}
+
 // --- live DB lookup / apply ------------------------------------------------
 
 // CLOUDFLARE_API_TOKEN, when present (e.g. in the registry-sync CI workflow),
@@ -379,6 +436,8 @@ async function main() {
     return;
   }
 
+  await checkLivenessOfRegistryCandidates(newCandidates);
+
   const rows = [];
   for (const c of newCandidates) {
     const base = slugify(c.name);
@@ -398,9 +457,10 @@ async function main() {
       category: normalizeCategoryLite(c.category),
       isOfficial: c.url.toLowerCase().includes('github.com/modelcontextprotocol/servers'),
       // Official-registry candidates are already vetted by the registry's own
-      // moderation policy — skip our admin queue and publish them directly.
+      // moderation policy — skip our admin queue and publish them directly,
+      // unless the liveness pre-check above found the URL already dead.
       // Everything else keeps going through review, same as /api/submit.
-      status: c.source === 'official-registry' ? 'active' : 'pending',
+      status: c.source === 'official-registry' && !c.liveCheckFailed ? 'active' : 'pending',
     });
   }
 

@@ -43,6 +43,15 @@ entry shape.
   against live DB state means a re-run only ever picks up what's new. The registry's
   `updated_since` cursor param exists for incremental sync if the registry grows large enough
   for a full page-through to matter; not needed yet.
+- **Liveness pre-check**: the registry's own moderation doesn't verify submitted repo URLs are
+  still live — confirmed in practice, the first live import (2026-08-10) included several
+  already-404 entries. Since official-registry candidates otherwise skip admin review, each new
+  one gets one lightweight `HEAD` (falling back to `GET` on 405/501) request before deciding
+  `status` — a failed check demotes it to `'pending'` instead of publishing a dead link as
+  `'active'`. Bounded to `LIVENESS_CONCURRENCY` (10) concurrent requests; only run against *new*
+  candidates (typically low hundreds/week after the initial catch-up), not the full registry
+  fetch. This is a best-effort filter, not a substitute for the health/enrich crons — a URL that
+  passes at ingest time can still die later, which is what those crons are for.
 
 ## Dedup strategy
 
