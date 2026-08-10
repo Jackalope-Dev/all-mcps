@@ -11,6 +11,9 @@ export function cleanText(input: string | null | undefined): string {
     .replace(/<[^>]*>/g, '') // remove HTML tags
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // replace markdown links with label
     .replace(/[*_`~#]/g, '') // strip markdown syntax
+    .replace(/₿/g, 'BTC') // replace Bitcoin symbol (U+20BF) to avoid Satori font fetch
+    .replace(/[\u20A0-\u20CF]/g, '') // strip rare currency symbols that trigger loadGoogleFont
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // strip unsupported pictographs
     .replace(/\s+/g, ' ') // collapse whitespace
     .trim();
 }
