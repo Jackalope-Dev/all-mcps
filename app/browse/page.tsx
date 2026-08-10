@@ -2,6 +2,9 @@ import DirectoryGrid from '../../components/DirectoryGrid';
 import type { Metadata } from 'next';
 import { getCategoryServers, getNewestActiveServers } from '../../lib/servers';
 
+// 5-minute ISR caches default /browse views at the Edge CDN for instant page loads.
+export const revalidate = 300;
+
 function parseCategoryLabel(category: string): string {
   if (typeof Intl !== 'undefined' && Intl.Segmenter) {
     const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
