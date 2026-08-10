@@ -2659,10 +2659,14 @@ nav[aria-label="Table of contents"] {
   flex-direction: column;
   height: 100%;
   min-height: 310px;
+  /* Grid items default to a content-based min-width (min-content), so a long
+     nowrap/clamped title inside would otherwise blow out the grid track
+     instead of truncating. */
+  min-width: 0;
 }
 
 .directory-card-title-block {
-  min-height: 2.75rem;
+  min-height: 3.9rem;
   margin-bottom: 0.5rem;
   display: flex;
   flex-direction: column;
@@ -2672,10 +2676,13 @@ nav[aria-label="Table of contents"] {
 .directory-card-title-text {
   font-size: 1.25rem;
   font-weight: 600;
+  line-height: 1.3;
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
 }
 
 .directory-card-org-text {
