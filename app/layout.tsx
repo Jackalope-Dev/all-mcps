@@ -21,9 +21,14 @@ import "./globals.css";
 // adjustFontFallback MUST stay false: next/font has no size-adjust override metrics
 // for this family ("Failed to find font override values…"). Enabling it only logs
 // that error and still falls back to an unadjusted system font — no CLS win.
+// --font-atkinson (not --font-sans): Tailwind v4 defines its own --font-sans
+// custom property via `@import "tailwindcss"`. Both stylesheets load at the
+// same Next.js Float precedence, so whichever loaded last would win the
+// cascade — an incidental, build-order-dependent outcome that caused an
+// intermittent flash to Tailwind's system-font fallback on some loads.
 const sans = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-atkinson",
   display: "swap",
   adjustFontFallback: false,
 });
