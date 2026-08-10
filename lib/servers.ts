@@ -331,8 +331,23 @@ export const getActiveServers = cache(async (): Promise<Server[]> => {
   return servers.map(normalizeServer);
 });
 
-/** PUBLIC_SERVER_COLUMNS minus aiFaq — never read by relatedRankingScore/engagementScore. */
-const { aiFaq: _omitAiFaq, ...SCORING_SERVER_COLUMNS } = PUBLIC_SERVER_COLUMNS;
+/**
+ * Trims each row's `tools` JSON down to {name, description} inside SQLite
+ * itself, so the full parameter/inputSchema blobs (a few outlier listings
+ * carry hundreds of tools, one has 987) never get pulled into the Worker's
+ * JS heap in the first place. Trimming after the fact in JS was too late —
+ * the OOM happens while D1 hands back and drizzle parses the full rows, not
+ * afterward. json_valid guards malformed `tools` text (parseServerTools()
+ * already tolerates bad JSON) so one bad row can't abort the whole scan.
+ */
+const TRIMMED_TOOLS_SQL = sql<string | null>`CASE WHEN json_valid(${serversTable.tools}) THEN (
+  SELECT json_group_array(json_object('name', json_extract(je.value, '$.name'), 'description', json_extract(je.value, '$.description')))
+  FROM json_each(${serversTable.tools}) AS je
+) ELSE NULL END`;
+
+/** PUBLIC_SERVER_COLUMNS minus aiFaq (never read by relatedRankingScore/engagementScore), tools trimmed at the SQL level. */
+const { aiFaq: _omitAiFaq, tools: _fullTools, ...SCORING_SERVER_COLUMNS_REST } = PUBLIC_SERVER_COLUMNS;
+const SCORING_SERVER_COLUMNS = { ...SCORING_SERVER_COLUMNS_REST, tools: TRIMMED_TOOLS_SQL };
 
 /**
  * Full-catalog scan for the scoring/ranking path only (related servers,
@@ -340,10 +355,10 @@ const { aiFaq: _omitAiFaq, ...SCORING_SERVER_COLUMNS } = PUBLIC_SERVER_COLUMNS;
  * not a transform of it. Calling getActiveServers() internally would still
  * retain the full heavy result for the rest of the request (React's cache()
  * holds a reference for exactly that reuse purpose), on top of a trimmed
- * copy — worse, not better. This fetches its own lighter column set and
- * strips each tool's `parameters`/inputSchema (full JSON Schema objects)
- * right after normalizing, before returning, so the heavy nested objects
- * are never referenced beyond this function's own scope.
+ * copy — worse, not better. This fetches its own lighter column set with
+ * `tools` already trimmed to {name, description} by TRIMMED_TOOLS_SQL, so
+ * the heavy parameter/inputSchema JSON Schema objects never reach the
+ * Worker's JS heap at all.
  *
  * Confirmed as a real cause of Worker OOM crashes in practice: a few
  * outlier listings carry hundreds of tools (one has 987) each with a full
@@ -351,10 +366,13 @@ const { aiFaq: _omitAiFaq, ...SCORING_SERVER_COLUMNS } = PUBLIC_SERVER_COLUMNS;
  * ~3200-row catalog on every single page that computes related/featured
  * servers — not just pages involving those specific outliers, any page,
  * since the whole array is retained for the request regardless of which
- * rows actually get used.
+ * rows actually get used. An earlier version of this function trimmed
+ * `tools` in JS after the fetch, which was too late: the crash happens
+ * while D1 hands back and drizzle parses the full rows, not afterward.
  */
 export const getActiveServersForScoring = cache(async (): Promise<Server[]> => {
   let servers = serversData as unknown as Server[];
+  let fromDb = false;
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -366,12 +384,18 @@ export const getActiveServersForScoring = cache(async (): Promise<Server[]> => {
         .where(eq(serversTable.status, 'active'));
       if (dbServers.length > 0) {
         servers = dbServers as unknown as Server[];
+        fromDb = true;
       }
     }
   } catch (e) {
     // Fall back to static JSON
   }
-  return servers.map(normalizeServer).map((s) => ({
+  const normalized = servers.map(normalizeServer);
+  // The static-JSON fallback still carries full tool schemas (it's the
+  // small dev-time snapshot, not the live catalog) — trim it in JS too.
+  // The D1 path is already trimmed at the SQL level above.
+  if (fromDb) return normalized;
+  return normalized.map((s) => ({
     ...s,
     tools: s.tools?.map((t) => ({ name: t.name, description: t.description })),
   }));
