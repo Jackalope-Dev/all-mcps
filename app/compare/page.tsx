@@ -57,7 +57,7 @@ export default async function CompareIndexPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
             <Link
-              href="/mcp/postgresql-mcp/vs/sqlite-mcp"
+              href="/mcp/crystaldba-postgres-mcp/vs/jparkerweb-mcp-sqlite"
               style={{
                 backgroundColor: 'var(--bg-elevated)',
                 border: '1px solid var(--border-color)',
@@ -72,17 +72,17 @@ export default async function CompareIndexPage() {
             >
               <div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#00e5ff' }}>
-                  PostgreSQL MCP vs. SQLite MCP
+                  Postgres MCP vs. SQLite MCP
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                   Compare relational database tools
                 </div>
               </div>
-              <ArrowRight size={16} style={{ color: '#00e5ff' }} />
+              <ArrowRight size={16} style={{ color: '#00e5ff', flexShrink: 0 }} />
             </Link>
 
             <Link
-              href="/mcp/github-mcp/vs/gitlab-mcp"
+              href="/mcp/github-github-mcp-server/vs/jmrplens-gitlab-mcp-server"
               style={{
                 backgroundColor: 'var(--bg-elevated)',
                 border: '1px solid var(--border-color)',
@@ -103,11 +103,11 @@ export default async function CompareIndexPage() {
                   Compare Git platform tools & APIs
                 </div>
               </div>
-              <ArrowRight size={16} style={{ color: '#a855f7' }} />
+              <ArrowRight size={16} style={{ color: '#a855f7', flexShrink: 0 }} />
             </Link>
 
             <Link
-              href="/mcp/puppeteer-mcp/vs/playwright-mcp"
+              href="/mcp/automatalabs-mcp-server-playwright/vs/microsoft-playwright-mcp"
               style={{
                 backgroundColor: 'var(--bg-elevated)',
                 border: '1px solid var(--border-color)',
@@ -122,13 +122,13 @@ export default async function CompareIndexPage() {
             >
               <div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#34d399' }}>
-                  Puppeteer MCP vs. Playwright MCP
+                  Automata Playwright vs. Microsoft Playwright
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                   Compare browser automation tools
                 </div>
               </div>
-              <ArrowRight size={16} style={{ color: '#34d399' }} />
+              <ArrowRight size={16} style={{ color: '#34d399', flexShrink: 0 }} />
             </Link>
           </div>
         </div>
