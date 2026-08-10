@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { CopyBlock } from '../ui/CopyBlock';
 import { Download, Code2, Sparkles, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { trackFeatureUse } from '../../lib/gtag';
 
 type TargetLanguage = 'typescript' | 'python';
 type AuthType = 'none' | 'bearer' | 'apiKey';
@@ -443,12 +444,14 @@ export function OpenApiToMcpTool() {
     : generatePythonCode(tools, baseUrl, authType, apiKeyHeader);
 
   function loadPreset(preset: SamplePreset) {
+    trackFeatureUse('openapi_converter', { action: 'load_preset', preset: preset.name });
     setSpecInput(preset.spec);
     setBaseUrl(preset.baseUrl);
     setParseError(null);
   }
 
   function handleDownload() {
+    trackFeatureUse('openapi_converter', { action: 'download_code', language: targetLang });
     const ext = targetLang === 'typescript' ? 'ts' : 'py';
     const filename = `mcp-server.${ext}`;
     const blob = new Blob([generatedCode], { type: 'text/plain;charset=utf-8' });

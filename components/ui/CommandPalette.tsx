@@ -8,6 +8,7 @@ import { Badge } from './Badge';
 import { ServerAvatar } from './ServerAvatar';
 import { parseServerName } from '../../lib/displayName';
 import { compileQuery, scoreServerMatch } from '../../lib/search';
+import { trackFeatureUse } from '../../lib/gtag';
 
 interface CommandItem {
   id: string;
@@ -173,6 +174,7 @@ export function CommandPalette() {
   }, [query]);
 
   const handleSelect = (item: CommandItem) => {
+    trackFeatureUse('command_palette', { category: item.categoryType, title: item.title, url: item.url });
     setIsOpen(false);
     router.push(item.url);
   };

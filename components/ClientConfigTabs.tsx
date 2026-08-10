@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { parseArgsJson } from '../lib/installConfig';
 import { CopyBlock } from './ui/CopyBlock';
+import { trackFeatureUse } from '../lib/gtag';
 
 interface ServerConfigProps {
   server: {
@@ -333,7 +334,10 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
             type="button"
             role="tab"
             aria-selected={activeTab === t.id}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => {
+              trackFeatureUse('client_config_tabs', { client: t.id, server_id: server.id });
+              setActiveTab(t.id);
+            }}
             className="client-config-tab"
             style={{
               padding: '0.4rem 0.85rem',

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Plug, Loader2, Wrench, Play, AlertTriangle } from 'lucide-react';
+import { trackFeatureUse } from '../../lib/gtag';
 
 type Tool = { name: string; description?: string; inputSchema?: unknown };
 
@@ -29,6 +30,7 @@ export function LiveMcpInspector() {
   const headers = token.trim() ? { Authorization: `Bearer ${token.trim()}` } : undefined;
 
   const connect = async () => {
+    trackFeatureUse('live_mcp_inspector', { action: 'connect' });
     setConnecting(true);
     setError(null);
     setServerInfo(null);

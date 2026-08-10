@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Play, Copy, Check, Terminal, Sparkles, RefreshCw, Send } from 'lucide-react';
+import { trackFeatureUse } from '../../lib/gtag';
 
 export function McpPlayground() {
   const [endpointUrl, setEndpointUrl] = useState('https://allmcps.com/api/mcp');
@@ -47,7 +48,7 @@ export function McpPlayground() {
           method: 'tools/call',
           params: {
             name: 'get_mcp_install_config',
-            arguments: { id: 'modelcontextprotocol-server-sqlite' },
+            arguments: { server_name: searchQuery || 'postgres', client: 'claude' },
           },
         };
       case 'list_mcp_categories':
@@ -64,6 +65,7 @@ export function McpPlayground() {
   };
 
   const handleExecute = async () => {
+    trackFeatureUse('mcp_playground', { method: selectedMethod });
     setLoading(true);
     setResponseOutput(null);
     try {

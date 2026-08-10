@@ -105,7 +105,6 @@ export default async function Home({
         totalCount={discoveryPool.length}
         siteStats={siteStats}
         fullCategoryCounts={fullCategoryCounts}
-        lazyFeedUrl="/api/directory-feed"
       />
     </main>
   );

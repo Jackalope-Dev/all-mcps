@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Maximize2, X, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { trackFeatureUse } from '../../lib/gtag';
 
 interface ScreenshotViewerProps {
   src: string | string[];
@@ -16,6 +17,11 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
 
   const activeSrc = images[currentIndex] || images[0] || '';
   const hasMultiple = images.length > 1;
+
+  const handleOpen = () => {
+    trackFeatureUse('screenshot_viewer', { title, count: images.length });
+    setIsOpen(true);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -45,7 +51,7 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
   return (
     <>
       <figure
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpen}
         className="screenshot-preview-container"
         style={{
           margin: '0 0 1.5rem',

@@ -20,6 +20,7 @@ import { getStackServerIds, removeServerFromStack, clearStack, buildStackShareUr
 import { resolveInstallConfig } from '@/lib/installConfig';
 import type { Server } from '@/lib/servers';
 import { CopyBlock } from './ui/CopyBlock';
+import { trackFeatureUse } from '@/lib/gtag';
 
 type ClientFormat = 'claude' | 'cursor' | 'cline' | 'windsurf';
 
@@ -352,7 +353,10 @@ export function StackBuilderModal({ allServers = [], isOpen = true, onClose }: S
                     <button
                       key={tab}
                       type="button"
-                      onClick={() => setActiveTab(tab)}
+                      onClick={() => {
+                        trackFeatureUse('stack_builder', { action: 'switch_client', client: tab });
+                        setActiveTab(tab);
+                      }}
                       style={{
                         padding: '0.4rem 0.85rem',
                         borderRadius: '6px',

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Bot, Check } from 'lucide-react';
 import { toast } from './Toast';
+import { trackFeatureUse } from '../../lib/gtag';
 
 export function AgentPromptButton({ serverId, serverName }: { serverId: string; serverName: string }) {
   const [copied, setCopied] = useState(false);
@@ -14,6 +15,7 @@ export function AgentPromptButton({ serverId, serverName }: { serverId: string; 
     try {
       await navigator.clipboard.writeText(prompt);
       setCopied(true);
+      trackFeatureUse('copy_agent_prompt', { server_id: serverId });
       setTimeout(() => setCopied(false), 2000);
       toast.success('Install prompt copied', {
         description: 'Paste it into your AI agent to install this MCP.',

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Sparkles, CheckCircle2, AlertTriangle, XCircle, Code, Eye, Bug, ShieldCheck } from 'lucide-react';
+import { trackFeatureUse } from '../../lib/gtag';
 
 interface PresetPayload {
   name: string;
@@ -333,7 +334,10 @@ export function ProtocolInspectorTool() {
               key={preset.name}
               variant="secondary"
               size="sm"
-              onClick={() => setJsonInput(preset.json)}
+              onClick={() => {
+                trackFeatureUse('protocol_inspector', { action: 'load_preset', preset: preset.name });
+                setJsonInput(preset.json);
+              }}
               style={{ fontSize: '0.85rem' }}
             >
               {preset.name}

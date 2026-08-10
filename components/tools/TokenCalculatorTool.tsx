@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Card } from '../ui/Card';
 import { ServerPicker, DirectoryServerHit } from './ServerPicker';
 import { extractTools, computeToolTokens } from '../../lib/tools/tokenize';
+import { trackFeatureUse } from '../../lib/gtag';
 
 const AVERAGE_TOKENS_PER_SERVER = 600;
 
@@ -29,7 +30,9 @@ export function TokenCalculatorTool() {
             'No tools found — expected a tools/list response ({"result":{"tools":[...]}}) or a bare array of {name, description, inputSchema}.',
         };
       }
-      return computeToolTokens(tools);
+      const res = computeToolTokens(tools);
+      trackFeatureUse('token_calculator', { mode: 'paste', total_tokens: res.total });
+      return res;
     } catch (err) {
       return { error: (err as Error).message };
     }

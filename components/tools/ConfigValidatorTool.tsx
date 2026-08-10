@@ -8,6 +8,7 @@ import {
   detectFormat,
   validateConfig,
 } from '../../lib/tools/configFormats';
+import { trackFeatureUse } from '../../lib/gtag';
 
 export function ConfigValidatorTool() {
   const [raw, setRaw] = useState('');
@@ -20,6 +21,7 @@ export function ConfigValidatorTool() {
     try {
       const parsed = JSON.parse(raw);
       const format = formatOverride === 'auto' ? detectFormat(parsed) : formatOverride;
+      trackFeatureUse('config_validator', { format });
       return { findings: validateConfig(parsed, format), parseError: null as string | null, effectiveFormat: format };
     } catch (err) {
       return { findings: [], parseError: (err as Error).message, effectiveFormat: 'claude' as ClientFormat };

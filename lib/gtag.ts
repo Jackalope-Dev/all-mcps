@@ -237,6 +237,19 @@ export function trackNewsletterSignup(data: { source: 'footer' | 'homepage' | 'm
   trackEvent('newsletter_signup', { method: data.source });
 }
 
+/**
+ * Standardized feature usage event for PostHog & GA4 dashboard analytics.
+ * Logs a `feature_used` event with `feature_name` so PostHog can automatically
+ * display a breakdown of Top Used Features on a single dashboard insight.
+ */
+export function trackFeatureUse(featureName: string, properties?: Record<string, any>) {
+  trackEvent('feature_used', {
+    feature_name: featureName,
+    ...properties,
+  });
+}
+
+
 function getDomain(urlStr: string): string {
   try {
     const parsed = new URL(urlStr);

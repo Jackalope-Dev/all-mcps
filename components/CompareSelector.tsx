@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, Scale, X, Plus, Check } from 'lucide-react';
 import type { Server } from '@/lib/servers';
 import { ServerAvatar } from './ui/ServerAvatar';
+import { trackFeatureUse } from '@/lib/gtag';
 
 interface CompareSelectorProps {
   servers: Server[];
@@ -35,6 +36,7 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
 
   const handleCompare = () => {
     if (selectedIds.length < 2) return;
+    trackFeatureUse('compare_servers', { server_ids: selectedIds, count: selectedIds.length });
     if (selectedIds.length === 2) {
       const [a, b] = selectedIds;
       const [c0, c1] = a < b ? [a, b] : [b, a];

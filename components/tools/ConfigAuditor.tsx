@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Copy, Check, AlertTriangle, AlertCircle, Info, Sparkles, Plus, Search, X } from 'lucide-react';
 import { auditMcpConfig, mergeServerIntoConfig } from '../../lib/configAudit';
+import { trackFeatureUse } from '../../lib/gtag';
 
 const SAMPLE_CONFIG = `{
   "mcpServers": {
@@ -39,6 +40,7 @@ export function ConfigAuditor() {
   const handleCopy = () => {
     navigator.clipboard.writeText(jsonText);
     setCopied(true);
+    trackFeatureUse('config_auditor', { action: 'copy_config' });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -46,6 +48,7 @@ export function ConfigAuditor() {
     const updated = mergeServerIntoConfig(jsonText, s);
     setJsonText(updated);
     setShowModal(false);
+    trackFeatureUse('config_auditor', { action: 'merge_server', server_id: s.id });
   };
 
   const filteredPickerServers = SAMPLE_SERVERS.filter(

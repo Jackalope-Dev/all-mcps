@@ -14,6 +14,7 @@ import {
   CLIENT_CONFIG_PATHS,
   serializeConfig,
 } from '../../lib/tools/configFormats';
+import { trackFeatureUse } from '../../lib/gtag';
 
 const STORAGE_KEY = 'allmcps-config-generator-rows';
 
@@ -50,6 +51,7 @@ export function ConfigGeneratorTool() {
   }, [rows, hydrated]);
 
   function addFromDirectory(server: DirectoryServerHit) {
+    trackFeatureUse('config_generator', { action: 'add_server', server_id: server.id });
     const hint = parseInstallHint(server.description);
     const name = slugify(server.name);
     if (hint && isRemoteHint(hint)) {

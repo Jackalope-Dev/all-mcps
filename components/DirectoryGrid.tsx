@@ -225,14 +225,6 @@ export default function DirectoryGrid({
         const batch = data?.servers ?? [];
         if (batch.length) {
           accumulated.push(...batch);
-          loadedFullRef.current = true;
-          // Merge with initialServers/prev to prevent active category servers from flashing/dropping
-          setServers((prev) => {
-            const map = new Map<string, Server>();
-            for (const s of prev) map.set(s.id, s);
-            for (const s of accumulated) map.set(s.id, s);
-            return Array.from(map.values());
-          });
         }
 
         const next = data?.nextOffset;
@@ -241,6 +233,16 @@ export default function DirectoryGrid({
       }
 
       if (cancelled) return;
+      if (accumulated.length) {
+        loadedFullRef.current = true;
+        // Merge with initialServers/prev once after full feed arrives to prevent stuttering/re-sorting on every chunk
+        setServers((prev) => {
+          const map = new Map<string, Server>();
+          for (const s of prev) map.set(s.id, s);
+          for (const s of accumulated) map.set(s.id, s);
+          return Array.from(map.values());
+        });
+      }
       setFeedStatus(accumulated.length ? 'ready' : 'error');
     })();
 

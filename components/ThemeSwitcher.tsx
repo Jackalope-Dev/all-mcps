@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Monitor, Check } from 'lucide-react';
+import { trackFeatureUse } from '../lib/gtag';
 
 type ThemeMode = 'dark' | 'light' | 'system';
 
@@ -77,6 +78,7 @@ export function ThemeSwitcher() {
     setThemeMode(mode);
     localStorage.setItem('allmcps-theme', mode);
     setIsOpen(false);
+    trackFeatureUse('theme_switcher', { mode });
   };
 
   if (!mounted) return null;

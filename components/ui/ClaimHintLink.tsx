@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { trackFeatureUse } from '../../lib/gtag';
 
 /**
  * Renders the "own this listing?" nudge only for confirmed non-owners. Fetched
@@ -32,7 +33,11 @@ export function ClaimHintLink({ serverId }: { serverId: string }) {
   if (!showHint) return null;
 
   return (
-    <Link href={`/mcp/${serverId}/claim`} style={{ color: 'var(--accent-color)' }}>
+    <Link
+      href={`/mcp/${serverId}/claim`}
+      onClick={() => trackFeatureUse('claim_listing', { server_id: serverId })}
+      style={{ color: 'var(--accent-color)' }}
+    >
       Own this listing? Claim it to help us verify it.
     </Link>
   );
