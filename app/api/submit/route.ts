@@ -3,7 +3,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../db/schema';
 import { z } from 'zod';
-import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
+import { isSafeSubmissionUrl, normalizeUrl } from '../../../lib/urlSafety';
 import { findExistingListingByUrl } from '../../../lib/urlDedup';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../../../lib/categories';
 import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';

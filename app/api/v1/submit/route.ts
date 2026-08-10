@@ -3,7 +3,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../../db/schema';
 import { z } from 'zod';
-import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
+import { isSafeSubmissionUrl, normalizeUrl } from '../../../../lib/urlSafety';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../../../../lib/categories';
 import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../../lib/sequenzy';
 import { sendNotificationEmail, getEmailEnv } from '../../../../lib/notify';
@@ -50,11 +50,11 @@ export async function POST(req: Request) {
     }
 
     const email = result.data.email.trim().toLowerCase();
-    let websiteUrl = result.data.websiteUrl || '';
+    let websiteUrl = normalizeUrl(result.data.websiteUrl || '');
     let name = result.data.name.trim();
     let description = result.data.description || '';
     let category = normalizeCategory(result.data.category);
-    let url = (result.data.url || '').trim();
+    let url = normalizeUrl(result.data.url || '');
 
     const tags = normalizeTags(result.data.tags);
     const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       .filter((a) => typeof a === 'string' && a.trim())
       .map((a) => a.trim())
       .slice(0, 20);
-    let supportUrl = (result.data.supportUrl || '').trim();
+    let supportUrl = normalizeUrl(result.data.supportUrl || '');
     if (supportUrl && !isSafeSubmissionUrl(supportUrl)) supportUrl = '';
 
     if (!url && websiteUrl) {

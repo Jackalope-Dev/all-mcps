@@ -86,12 +86,7 @@ export async function POST(req: Request) {
                   isNull(servers.aiEnrichedAt),
                   isNull(servers.authType),
                   isNull(servers.pricingModel),
-                  isNull(servers.installExtractedAt),
-                  // Keeps a defaulted/uncategorized listing eligible for reclaim even
-                  // after aiEnrichedAt is otherwise set (see the category writeback
-                  // below) — the registry-sync ingest has no category signal, so
-                  // every new listing from it lands here needing a real category.
-                  eq(servers.category, DEFAULT_SUBMIT_CATEGORY)
+                  isNull(servers.installExtractedAt)
                 )
               )
             )
