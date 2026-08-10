@@ -14,6 +14,7 @@ import {
   toCachedInstallFields,
 } from '../../../../lib/installConfig';
 import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
+import { isListingTrulyDead } from '../../../../lib/listingEnrich';
 
 /**
  * Best-effort npm last-month downloads for a package name. Returns null if not on npm.
@@ -388,9 +389,20 @@ export async function POST(req: Request) {
         }
       }
 
-      // Dead/archived GitHub projects: unpublish so the public catalog stays fresh.
+      // Dead/archived GitHub projects: unpublish so the public catalog stays fresh —
+      // but only once the npm/pypi package and remote endpoint are also confirmed
+      // dead (see isListingTrulyDead), so a broken source link alone doesn't take
+      // down a listing that's still installable/reachable another way.
       // Soft-remove only — rows stay for admin recovery (status = removed).
-      const shouldUnpublish = healthStatus === 'archived';
+      const shouldUnpublish =
+        healthStatus === 'archived'
+          ? await isListingTrulyDead({
+              githubDead: true,
+              remoteEndpointHealthy,
+              installCommand: installFields?.installCommand ?? server.installCommand,
+              installPackage: installFields?.installPackage ?? server.installPackage,
+            })
+          : false;
 
       await db
         .update(servers)

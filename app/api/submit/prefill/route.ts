@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { drizzle } from 'drizzle-orm/d1';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
+import { findExistingListingByUrl } from '../../../../lib/urlDedup';
 import { chatJson } from '../../../../lib/openai';
 import { DIRECTORY_CATEGORIES, DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import {
@@ -142,6 +144,24 @@ export async function POST(req: Request) {
     const url = parsed.data.url.trim();
     if (!isSafeSubmissionUrl(url)) {
       return NextResponse.json({ error: 'URL must be a public http(s) address' }, { status: 400 });
+    }
+
+    // Catch duplicates before spending a GitHub/LLM call on them — matches
+    // against any existing listing regardless of status, so resubmitting a
+    // 'removed' (dead-link) listing's URL surfaces a claim CTA instead of
+    // silently piling up a second row for the same server.
+    try {
+      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+      const ctx = await getCloudflareContext();
+      if (ctx?.env && (ctx.env as any).DB) {
+        const db = drizzle((ctx.env as any).DB);
+        const existing = await findExistingListingByUrl(db, url);
+        if (existing) {
+          return NextResponse.json({ duplicate: true, existing });
+        }
+      }
+    } catch (e) {
+      console.error('Duplicate check failed (continuing without it):', e);
     }
 
     // GitHub repo API path

@@ -20,6 +20,7 @@ import {
   pickDescription,
   pickWebsiteUrl,
   resolveInstallFromSignals,
+  isListingTrulyDead,
 } from '../../../../lib/listingEnrich';
 import { cleanListingDescription } from '../../../../lib/description';
 import { getGithubToken } from '../../../../lib/githubAuth';
@@ -150,7 +151,12 @@ export async function POST(req: Request) {
       let githubStars = server.githubStars ?? null;
       let logoUrl = server.logoUrl ?? null;
       let logoSource = (server.logoSource as LogoSource | null) ?? null;
-      let unpublish = false;
+      // Set when the primary GitHub URL is confirmed 404/archived — the actual
+      // unpublish decision (below, after this listing's other signals are known)
+      // additionally requires the npm/pypi package and remote endpoint to also
+      // be dead, so a broken source link alone doesn't take down a listing
+      // that's still installable/reachable another way.
+      let githubDead = false;
 
       // Always persist cleaned description when chrome is present (no GH needed).
       if (descriptionNeedsClean(description)) {
@@ -225,7 +231,7 @@ export async function POST(req: Request) {
           if (repoRes.status === 404) {
             healthStatus = 'offline';
             isVerifiedActive = false;
-            unpublish = true;
+            githubDead = true;
           } else if (repoRes.status === 403 || repoRes.status === 429) {
             // Rate limited — stop early to avoid burning the rest of the batch
             await db
@@ -245,7 +251,7 @@ export async function POST(req: Request) {
           if (data.archived || data.disabled) {
             healthStatus = 'archived';
             isVerifiedActive = false;
-            unpublish = true;
+            githubDead = true;
           } else {
             healthStatus = 'healthy';
             isVerifiedActive = true;
@@ -406,6 +412,15 @@ export async function POST(req: Request) {
       updates.healthStatus = healthStatus;
       updates.isVerifiedActive = isVerifiedActive;
       if (githubStars != null) updates.githubStars = githubStars;
+
+      const unpublish = githubDead
+        ? await isListingTrulyDead({
+            githubDead,
+            remoteEndpointHealthy: server.remoteEndpointHealthy,
+            installCommand: (updates.installCommand as string | undefined) ?? server.installCommand,
+            installPackage: (updates.installPackage as string | undefined) ?? server.installPackage,
+          })
+        : false;
 
       if (unpublish) {
         updates.status = 'removed';

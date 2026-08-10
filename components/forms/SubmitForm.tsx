@@ -25,6 +25,7 @@ export function SubmitForm() {
   const [token, setToken] = useState<string>('');
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [prefillLoading, setPrefillLoading] = useState(false);
+  const [duplicateMatch, setDuplicateMatch] = useState<{ id: string; name: string; status: string } | null>(null);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -72,6 +73,7 @@ export function SubmitForm() {
       return;
     }
     setPrefillLoading(true);
+    setDuplicateMatch(null);
     try {
       const res = await fetch('/api/submit/prefill', {
         method: 'POST',
@@ -80,6 +82,8 @@ export function SubmitForm() {
       });
       const data = (await res.json()) as {
         error?: string;
+        duplicate?: boolean;
+        existing?: { id: string; name: string; status: string };
         name?: string;
         description?: string;
         url?: string;
@@ -93,6 +97,11 @@ export function SubmitForm() {
         llmEnriched?: boolean;
       };
       if (!res.ok) throw new Error(data.error || 'Prefill failed');
+
+      if (data.duplicate && data.existing) {
+        setDuplicateMatch(data.existing);
+        return;
+      }
 
       if (data.name) setName(data.name);
       if (data.description) setDescription(data.description);
@@ -407,7 +416,10 @@ export function SubmitForm() {
             label="GitHub repository or website URL"
             placeholder="https://github.com/username/repo"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setDuplicateMatch(null);
+            }}
             autoComplete="url"
           />
 
@@ -424,6 +436,45 @@ export function SubmitForm() {
               Fills name, description, category, and website from GitHub or page meta tags.
             </p>
           </div>
+
+          {duplicateMatch && (
+            <div
+              role="alert"
+              className="surface"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.75rem',
+                padding: '1rem 1.25rem',
+                marginTop: '0.75rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(234, 179, 8, 0.35)',
+                background: 'rgba(234, 179, 8, 0.08)',
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  This server is already listed
+                </p>
+                <p style={{ margin: '0.3rem 0 0.75rem', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  &ldquo;{duplicateMatch.name}&rdquo; is already in the directory
+                  {duplicateMatch.status === 'removed'
+                    ? ' — our automated checks marked it offline. If this is your project and it works again, claim it to fix the link instead of creating a new listing.'
+                    : duplicateMatch.status === 'pending'
+                      ? ' and is currently awaiting review.'
+                      : '.'}
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <Link href={`/mcp/${duplicateMatch.id}`} className="btn btn-secondary btn-sm">
+                    View listing
+                  </Link>
+                  <Link href={`/mcp/${duplicateMatch.id}/claim`} className="btn btn-primary btn-sm">
+                    Claim this listing
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         <section

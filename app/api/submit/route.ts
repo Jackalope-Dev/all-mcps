@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../../../db/schema';
 import { z } from 'zod';
 import { isSafeSubmissionUrl } from '../../../lib/urlSafety';
+import { findExistingListingByUrl } from '../../../lib/urlDedup';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../../../lib/categories';
 import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';
 import { sendNotificationEmail, getEmailEnv } from '../../../lib/notify';
@@ -182,6 +183,22 @@ export async function POST(req: Request) {
     }
 
     const db = drizzle(env.DB as any);
+
+    // Safety net for whoever skips the prefill step's duplicate check (or edits
+    // the URL afterward) — blocks re-adding a server that's already listed,
+    // including a 'removed' (dead-link) one, in favor of pointing them at the
+    // claim flow for the existing row instead of creating a second one.
+    const existingByUrl = await findExistingListingByUrl(db, url);
+    if (existingByUrl) {
+      return NextResponse.json(
+        {
+          error: `This URL is already listed as "${existingByUrl.name}" (${existingByUrl.status}). Visit /mcp/${existingByUrl.id} to view or claim it instead of submitting a duplicate.`,
+          duplicate: true,
+          existing: existingByUrl,
+        },
+        { status: 409 }
+      );
+    }
 
     const insertResult = await db
       .insert(servers)

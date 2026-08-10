@@ -365,6 +365,61 @@ export async function fetchPackageRegistryMetadata(
   }
 }
 
+/** Best-effort check that a package still resolves on its registry (npm or PyPI, inferred from installCommand). */
+async function isPackageInstallable(installCommand: string | null | undefined, pkg: string | null | undefined): Promise<boolean> {
+  const cleanPkg = (pkg || '').trim();
+  if (!cleanPkg || cleanPkg.startsWith('http') || cleanPkg.includes(' ')) return false;
+  const cmd = (installCommand || '').toLowerCase();
+  const isPython = /uvx|pipx|pip\b|python/.test(cmd);
+
+  try {
+    if (isPython) {
+      const res = await fetch(`https://pypi.org/pypi/${encodeURIComponent(cleanPkg)}/json`, {
+        headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
+        signal: AbortSignal.timeout(6000),
+      });
+      return res.ok;
+    }
+    // Default to npm — covers npx/bunx/npm/pnpm/yarn and any other/unset runner,
+    // since most stdio listings in this catalog are npm packages.
+    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(cleanPkg)}`, {
+      headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
+      signal: AbortSignal.timeout(6000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export type LiveInterfaceSignals = {
+  /** Set once the primary URL (typically the GitHub repo) is confirmed 404/archived/disabled. */
+  githubDead: boolean;
+  /** Cached or freshly-checked remote-endpoint health. null/undefined = no endpoint or not checked — treated as "can't rule out alive", not as a dead signal. */
+  remoteEndpointHealthy?: boolean | null;
+  installCommand?: string | null;
+  installPackage?: string | null;
+};
+
+/**
+ * A listing is only "truly dead" when every interface it exposes is confirmed
+ * unreachable. A broken source-repo link alone isn't enough to unpublish —
+ * the npm/pypi package can still install, or a hosted remote endpoint can
+ * still respond, even after the repo itself is gone/renamed/made private.
+ * Unknown/unchecked signals (no remote endpoint, no install package, a check
+ * that errors) never count as "confirmed dead" — only an explicit failure
+ * does, so this stays conservative rather than trigger-happy.
+ */
+export async function isListingTrulyDead(signals: LiveInterfaceSignals): Promise<boolean> {
+  if (!signals.githubDead) return false;
+  if (signals.remoteEndpointHealthy) return false;
+  if (signals.installPackage) {
+    const installable = await isPackageInstallable(signals.installCommand, signals.installPackage);
+    if (installable) return false;
+  }
+  return true;
+}
+
 /**
  * Uses LLM to pick the official website URL and best logo image URL from candidates.
  * Soft fails to null on missing key, quota, or network error.
