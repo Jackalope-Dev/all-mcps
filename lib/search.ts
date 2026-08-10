@@ -385,6 +385,37 @@ export function rankServers<T extends Searchable & Engagement>(
     scored = rank(false);
   }
 
+  // If still no hits, attempt fuzzy edit-distance match for typos (e.g., 'postgre' -> 'postgresql')
+  if (scored.length === 0) {
+    const fuzzyOut: Array<{ server: T; score: number }> = [];
+    for (const server of servers) {
+      const name = server.name.toLowerCase();
+      const desc = server.description.toLowerCase();
+      const cat = server.category.toLowerCase();
+      let totalFuzzy = 0;
+
+      for (const { term } of terms) {
+        if (term.length < 3) continue;
+        const words = `${name} ${cat} ${desc}`.split(/[^a-z0-9]+/);
+        for (const w of words) {
+          if (w.length < 3) continue;
+          if (Math.abs(w.length - term.length) <= 2) {
+            const dist = levenshteinDistance(term, w);
+            if (dist <= 2) {
+              totalFuzzy += (3 - dist) * 15;
+              break;
+            }
+          }
+        }
+      }
+
+      if (totalFuzzy > 0) {
+        fuzzyOut.push({ server, score: totalFuzzy });
+      }
+    }
+    scored = fuzzyOut;
+  }
+
   scored.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     return engagementScore(b.server) - engagementScore(a.server);
@@ -392,6 +423,91 @@ export function rankServers<T extends Searchable & Engagement>(
 
   const ranked = scored.map((s) => s.server);
   return typeof opts.limit === 'number' ? ranked.slice(0, opts.limit) : ranked;
+}
+
+/** Compute Levenshtein distance between two strings for fuzzy search fallback. */
+export function levenshteinDistance(a: string, b: string): number {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+export type SearchSuggestion = {
+  type: 'server' | 'category' | 'tag' | 'client';
+  label: string;
+  sublabel?: string;
+  url: string;
+  id?: string;
+};
+
+/**
+ * Generate autocomplete suggestions (matching servers, categories, client tools)
+ * as the user types in header search or command palette.
+ */
+export function getSearchSuggestions<T extends Searchable & Engagement & { id: string; logoUrl?: string | null }>(
+  query: string,
+  servers: T[],
+  limit = 8
+): SearchSuggestion[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  const suggestions: SearchSuggestion[] = [];
+  const added = new Set<string>();
+
+  // 1. Client compatibility suggestions
+  const clients = [
+    { name: 'Cursor', slug: 'mcp-for-cursor' },
+    { name: 'Claude Desktop', slug: 'mcp-for-claude-desktop' },
+    { name: 'Windsurf', slug: 'mcp-for-windsurf' },
+    { name: 'Cline', slug: 'mcp-for-cline' },
+  ];
+  for (const c of clients) {
+    if (c.name.toLowerCase().includes(q)) {
+      suggestions.push({
+        type: 'client',
+        label: `${c.name} Setup`,
+        sublabel: `View MCP servers compatible with ${c.name}`,
+        url: `/${c.slug}`,
+      });
+      added.add(`client:${c.name}`);
+    }
+  }
+
+  // 2. Server matches
+  const ranked = rankServers(servers, q, { limit: 5 });
+  for (const s of ranked) {
+    if (suggestions.length >= limit) break;
+    const key = `server:${s.id}`;
+    if (!added.has(key)) {
+      suggestions.push({
+        type: 'server',
+        label: s.name,
+        sublabel: s.category,
+        url: `/mcp/${s.id}`,
+        id: s.id,
+      });
+      added.add(key);
+    }
+  }
+
+  return suggestions.slice(0, limit);
 }
 
 /**
@@ -453,3 +569,4 @@ export function hybridRankServers<T extends Searchable & Engagement & { id: stri
   const ranked = scored.map((s) => s.server);
   return typeof opts.limit === 'number' ? ranked.slice(0, opts.limit) : ranked;
 }
+

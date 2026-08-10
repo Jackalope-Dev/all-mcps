@@ -80,6 +80,9 @@ function buildCoreSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
     staticEntry('/mcp-for-windsurf', 'weekly', 0.9),
     staticEntry('/mcp-for-cline', 'weekly', 0.9),
     staticEntry('/trust', 'weekly', 0.85),
+    staticEntry('/stack', 'weekly', 0.9),
+    staticEntry('/compare', 'weekly', 0.9),
+    staticEntry('/tags', 'weekly', 0.9),
   ];
 
   // Blog posts — real publish dates

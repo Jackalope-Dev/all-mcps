@@ -47,6 +47,7 @@
   --space-16: 4rem;
 
   /* Radius */
+  --radius-btn: 10px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -1709,7 +1710,7 @@ p {
   padding: 0.75rem 1.5rem;
   font-size: 0.875rem;
   font-weight: 600;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   appearance: none;
@@ -1724,7 +1725,7 @@ p {
 .btn-sm {
   padding: 0.4rem 0.85rem;
   font-size: 0.8rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-btn);
 }
 
 .btn-md {
@@ -1735,7 +1736,7 @@ p {
 .btn-lg {
   padding: 0.9rem 1.75rem;
   font-size: 1rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-btn);
 }
 
 .btn-full {
@@ -1779,7 +1780,7 @@ p {
   min-width: 0;
   max-width: 100%;
   padding: 0.7rem 1.1rem;
-  border-radius: 10px;
+  border-radius: var(--radius-btn);
   font-size: 0.85rem;
   font-weight: 700;
   text-decoration: none;
@@ -3550,7 +3551,7 @@ nav[aria-label="Table of contents"] {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  border-radius: 10px;
+  border-radius: var(--radius-btn);
   background: var(--bg-muted);
   border: 1px solid var(--border-strong);
   color: var(--text-primary);
@@ -3587,7 +3588,7 @@ nav[aria-label="Table of contents"] {
   gap: 0.45rem;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 100px;
+  border-radius: var(--radius-btn);
   padding: 0 0.85rem;
   height: 34px;
   box-sizing: border-box;
@@ -3605,6 +3606,7 @@ nav[aria-label="Table of contents"] {
   cursor: pointer;
   font-family: inherit;
   font-size: 0.825rem;
+  border-radius: var(--radius-btn);
   outline: none;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -3624,43 +3626,40 @@ nav[aria-label="Table of contents"] {
   transform: scale(0.98);
 }
 
-/* Upvote Pill Styling & Animations — sized to match the action-button row (Repository /
-   Website / Share) it now sits alongside, with a visibly-tinted resting state so it reads
-   as clickable rather than as a passive stat like the old Views/Installs pills did. */
+/* Upvote Pill Styling & Animations — entirely red gradient with white text & pop of color */
 .listing-metric-pill--upvote {
   height: 42px;
   padding: 0 1.15rem;
   font-size: 0.9rem;
   font-weight: 600;
-  background: rgba(244, 63, 94, 0.1);
-  border-color: rgba(244, 63, 94, 0.35);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
-  /* Idle attention glow: the whole pill breathes between its resting tint and a
-     faintly richer red, slowly — stops once upvoted, respects reduced-motion. */
+  border-radius: var(--radius-btn);
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.35);
   animation: upvote-glow 5s ease-in-out infinite;
 }
 
 .listing-metric-pill--upvote .upvote-heart-icon {
-  color: #f43f5e;
+  color: #ffffff;
   transition: transform 0.2s ease, color 0.2s ease, fill 0.2s ease;
 }
 
 .listing-metric-pill--upvote:hover {
-  background: rgba(244, 63, 94, 0.14);
-  border-color: rgba(244, 63, 94, 0.45);
-  color: var(--text-primary);
-  box-shadow: 0 2px 10px rgba(244, 63, 94, 0.2);
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  box-shadow: 0 6px 22px rgba(244, 63, 94, 0.5);
   animation-play-state: paused;
 }
 
 @keyframes upvote-glow {
   0%,
   100% {
-    background: rgba(244, 63, 94, 0.1);
+    box-shadow: 0 4px 16px rgba(244, 63, 94, 0.35);
   }
   50% {
-    background: rgba(244, 63, 94, 0.2);
+    box-shadow: 0 4px 22px rgba(244, 63, 94, 0.55);
   }
 }
 
@@ -3672,24 +3671,24 @@ nav[aria-label="Table of contents"] {
 
 .listing-metric-pill--upvote:hover .upvote-heart-icon {
   transform: scale(1.18);
-  color: #f43f5e;
-  fill: rgba(244, 63, 94, 0.3);
+  color: #ffffff;
+  fill: rgba(255, 255, 255, 0.8);
 }
 
 .listing-metric-pill--upvoted {
-  background: rgba(244, 63, 94, 0.16) !important;
-  border-color: rgba(244, 63, 94, 0.4) !important;
-  color: #f43f5e !important;
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
   font-weight: 600;
   cursor: default !important;
-  box-shadow: 0 0 12px rgba(244, 63, 94, 0.25);
+  box-shadow: 0 0 16px rgba(225, 29, 72, 0.4);
   transform: none !important;
   animation: none;
 }
 
 .listing-metric-pill--upvoted .upvote-heart-icon {
-  color: #f43f5e !important;
-  fill: #f43f5e !important;
+  color: #ffffff !important;
+  fill: #ffffff !important;
 }
 
 /* Share & Embed Pill Styling */

@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { toast } from './Toast';
 import { trackCopyConfig } from '../../lib/gtag';
 import { resolveInstallConfig, type CachedInstallFields } from '../../lib/installConfig';
+import { isServerInStack, toggleServerInStack } from '../../lib/stackStore';
 
 interface InstallButtonsProps extends CachedInstallFields {
   serverId: string;
@@ -94,6 +95,21 @@ export function InstallButtons({
     );
   };
 
+  const [inStack, setInStack] = React.useState(false);
+
+  React.useEffect(() => {
+    setInStack(isServerInStack(serverId));
+    const handleUpdate = () => setInStack(isServerInStack(serverId));
+    window.addEventListener('mcp_stack_updated', handleUpdate);
+    return () => window.removeEventListener('mcp_stack_updated', handleUpdate);
+  }, [serverId]);
+
+  const handleToggleStack = () => {
+    const nextState = toggleServerInStack(serverId);
+    setInStack(nextState);
+    toast.success(nextState ? `Added ${serverName} to your Stack!` : `Removed ${serverName} from Stack`);
+  };
+
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem', minWidth: 0, maxWidth: '100%' }}>
       <a
@@ -110,6 +126,20 @@ export function InstallButtons({
       >
         Add to VS Code
       </a>
+      <button
+        type="button"
+        onClick={handleToggleStack}
+        className="install-deeplink-btn"
+        style={{
+          background: inStack ? 'rgba(0, 229, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+          border: inStack ? '1px solid #00e5ff' : '1px solid rgba(255, 255, 255, 0.15)',
+          color: inStack ? '#00e5ff' : '#ffffff',
+          cursor: 'pointer',
+        }}
+      >
+        {inStack ? '✓ In Stack' : '+ Add to Stack'}
+      </button>
     </div>
   );
 }
+

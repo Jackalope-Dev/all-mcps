@@ -392,6 +392,38 @@ export function ToolSchemaInspector({
                         {JSON.stringify(tool.parameters, null, 2)}
                       </pre>
                     )}
+
+                    {/* JSON-RPC Request Payload Preview */}
+                    <div style={{ marginTop: '0.85rem', paddingTop: '0.65rem', borderTop: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--accent-color)', fontFamily: 'monospace' }}>
+                          JSON-RPC 2.0 REQUEST PAYLOAD
+                        </span>
+                        <a
+                          href={`/tools/playground`}
+                          style={{ fontSize: '0.68rem', color: 'var(--accent-color)', textDecoration: 'underline' }}
+                        >
+                          Test in Playground &rarr;
+                        </a>
+                      </div>
+                      <pre style={{ margin: 0, padding: '0.5rem', background: 'var(--bg-color)', borderRadius: '6px', fontSize: '0.72rem', color: '#34d399', fontFamily: 'monospace', overflowX: 'auto' }}>
+                        {JSON.stringify(
+                          {
+                            jsonrpc: '2.0',
+                            id: 1,
+                            method: 'tools/call',
+                            params: {
+                              name: tool.name,
+                              arguments: schemaProps
+                                ? Object.fromEntries(schemaProps.map((p) => [p.name, `<${p.type || 'value'}>`]))
+                                : {},
+                            },
+                          },
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
                   </div>
                 )}
               </div>

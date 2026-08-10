@@ -33,6 +33,17 @@ const TOOLS = [
     },
   },
   {
+    name: 'recommend_mcp_stack',
+    description: 'Recommend a curated multi-tool MCP server stack for a specific developer role or workflow (e.g. "fullstack", "data science", "devops").',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        role: { type: 'string', description: 'Developer role or task (e.g. "fullstack", "data", "devops", "browser")' },
+      },
+      required: ['role'],
+    },
+  },
+  {
     name: 'list_mcp_categories',
     description: 'List all categories available in the AllMCPs directory along with server counts.',
     inputSchema: {
@@ -334,6 +345,42 @@ export async function POST(request: Request) {
             id,
             result: {
               content: [{ type: 'text', text: textOutput }],
+            },
+          },
+          { headers: { 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      if (toolName === 'recommend_mcp_stack') {
+        const role = (args.role || '').toLowerCase();
+        let targetKeywords: string[] = ['postgres', 'github', 'memory', 'slack'];
+        if (role.includes('data')) {
+          targetKeywords = ['sqlite', 'bigquery', 'python', 'excel'];
+        } else if (role.includes('devops') || role.includes('infra')) {
+          targetKeywords = ['kubernetes', 'aws', 'docker', 'terminal'];
+        } else if (role.includes('browser') || role.includes('web')) {
+          targetKeywords = ['puppeteer', 'playwright', 'brave', 'fetch'];
+        }
+
+        const servers = await getActiveServers();
+        const matched = servers.filter((s) => {
+          const text = `${s.name} ${s.description} ${s.category}`.toLowerCase();
+          return targetKeywords.some((k) => text.includes(k));
+        }).slice(0, 4);
+
+        let md = `# Recommended MCP Stack for "${args.role}"\n\n`;
+        md += `Here are ${matched.length} top MCP servers recommended for this workflow:\n\n`;
+        for (const s of matched) {
+          md += formatServerAsMarkdown(s) + '\n---\n\n';
+        }
+
+        await logMcp(null, `recommend_mcp_stack role: ${role}`);
+        return Response.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{ type: 'text', text: md }],
             },
           },
           { headers: { 'Access-Control-Allow-Origin': '*' } }

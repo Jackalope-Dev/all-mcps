@@ -23,6 +23,20 @@ export const metadata: Metadata = {
 
 const TOOLS = [
   {
+    href: '/stack',
+    icon: FileJson,
+    title: 'MCP Stack Builder',
+    description:
+      'Select your favorite MCP tools and export a single unified claude_desktop_config.json or Cursor setup in seconds.',
+  },
+  {
+    href: '/compare',
+    icon: ShieldCheck,
+    title: 'Side-by-Side Server Comparison',
+    description:
+      'Compare 2 to 4 MCP servers side-by-side on tool capabilities, installation requirements, GitHub stars, and security.',
+  },
+  {
     href: '/tools/openapi-to-mcp',
     icon: Code2,
     title: 'OpenAPI to MCP Generator',

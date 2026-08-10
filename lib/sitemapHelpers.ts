@@ -125,6 +125,9 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/mcp-for-windsurf': '2026-08-05',
   '/mcp-for-cline': '2026-08-05',
   '/trust': '2026-08-07',
+  '/stack': '2026-08-10',
+  '/compare': '2026-08-10',
+  '/tags': '2026-08-10',
 };
 
 export type SitemapServer = {
