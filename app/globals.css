@@ -2666,7 +2666,7 @@ nav[aria-label="Table of contents"] {
 }
 
 .directory-card-title-block {
-  min-height: 3.9rem;
+  min-height: 4.75rem;
   margin-bottom: 0.5rem;
   display: flex;
   flex-direction: column;
