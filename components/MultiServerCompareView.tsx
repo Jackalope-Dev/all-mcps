@@ -381,7 +381,7 @@ export function MultiServerCompareView({ servers }: MultiServerCompareViewProps)
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
-              {enriched.map(({ server: s, displayName, org, quality, install, tools, categoryLabel, bestFor, singleConfigJson }) => (
+              {enriched.map(({ server: s, displayName, org, install, tools, categoryLabel, bestFor, singleConfigJson }) => (
                 <div
                   key={s.id}
                   style={{
@@ -545,7 +545,7 @@ export function MultiServerCompareView({ servers }: MultiServerCompareViewProps)
       {/* ---------------------------------------------------- */}
       {viewMode === 'grid' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
-          {enriched.map(({ server: s, displayName, org, quality, install, tools, categoryLabel, singleConfigJson }) => (
+          {enriched.map(({ server: s, displayName, org, install, tools, categoryLabel, singleConfigJson }) => (
             <div
               key={s.id}
               style={{

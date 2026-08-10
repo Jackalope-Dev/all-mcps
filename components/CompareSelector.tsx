@@ -28,7 +28,7 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter((i) => i !== id));
     } else {
-      if (selectedIds.length < 4) {
+      if (selectedIds.length < 6) {
         setSelectedIds([...selectedIds, id]);
       }
     }
@@ -63,7 +63,7 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
     >
       <div style={{ marginBottom: '1.25rem' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-          Select Servers to Compare (2 to 4)
+          Select Servers to Compare (2 to 6)
         </h3>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
           Search or pick from popular tools below to generate a comparison matrix.

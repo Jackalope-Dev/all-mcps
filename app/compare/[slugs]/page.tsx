@@ -1,7 +1,5 @@
-import React from 'react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import Link from 'next/link';
 import { PageShell } from '@/components/PageShell';
 import { getServerById, type Server } from '@/lib/servers';
 import { MultiServerCompareView } from '@/components/MultiServerCompareView';
