@@ -41,5 +41,18 @@ export function isSafeSubmissionUrl(urlString: string): boolean {
   return true;
 }
 
+/** Normalizes a URL string by lowercasing scheme and host using URL standard formatting. */
+export function normalizeUrl(urlString: string): string {
+  const trimmed = (urlString || '').trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.href;
+  } catch {
+    return trimmed;
+  }
+}
+
 /** Defense-in-depth check before the health-check cron fetches a stored URL. */
 export const isSafeFetchTarget = isSafeSubmissionUrl;
+
