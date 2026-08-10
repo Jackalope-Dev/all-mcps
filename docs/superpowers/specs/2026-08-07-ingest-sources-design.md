@@ -106,3 +106,30 @@ that happens automatically as a side effect of running the fetch.
 Because dedup is against live DB state (not a static snapshot), running the script again later
 naturally only picks up whatever's been added to the two source READMEs since the last run — no
 extra bookkeeping needed.
+
+## Post-Ingest Hardening & Catalog Lifecycle
+
+### 1. Multi-Interface Liveness Check (`isListingTrulyDead`)
+To prevent unpublishing functional MCP servers whose source repository moved, was renamed, or went private, a listing is only marked `status = 'removed'` when **all** available interfaces are confirmed dead:
+- **GitHub Repository**: Primary URL returns 404 or is archived.
+- **Remote Endpoint**: Remote SSE/HTTP endpoint fails health checks (if present).
+- **Package Registry**: Package installability check (`isPackageInstallable`) fails on both `npm` (`registry.npmjs.org`) and `PyPI` (`pypi.org/pypi/<pkg>/json`).
+
+### 2. Search & Metric Isolation for Removed Listings
+- **Total Platform Counts**: Only listings with `status = 'active'` are included in public server counts (`siteStats.ts`).
+- **Search & Navigation**: `removed` listings are excluded from directory browse, category pages, search indexes, and XML sitemaps.
+- **Direct Link Access**: Direct navigation to `/mcp/[id]` remains accessible for dead listings but carries `<meta name="robots" content="noindex, nofollow" />` and displays a persistent inline alert banner with a direct CTA to claim and fix the listing.
+
+### 3. Submission Prefill Duplicate Detection & Claim CTA
+- `lib/urlDedup.ts` checks incoming submission URLs against existing listings (across all statuses including `removed` and `pending`).
+- If a match is found during `/api/submit/prefill` or `/api/submit`, the API returns a 409 conflict with duplicate details.
+- `SubmitForm.tsx` displays an inline warning card with links to view or claim the existing entry rather than duplicating the record.
+
+### 4. Automated Category Sorting via AI Content Pipeline
+- Ingested listings without pre-assigned categories default to `"Developer Tools"`.
+- The AI content cron (`app/api/cron/ai-content/route.ts` & `lib/aiContent.ts`) re-evaluates defaulted listings using LLM text classification against `DIRECTORY_CATEGORIES` to sort them into their optimal category.
+
+### 5. Bulk Backfill Workflows
+- **Health Checks (`.github/workflows/backfill-health.yml`)**: Manual-trigger GitHub Action loop executing `/api/cron/health` rounds to rapidly drain health verification backlogs after bulk imports.
+- **Catalog Enrich (`.github/workflows/backfill-enrich.yml`)**: Manual-trigger GitHub Action loop executing `/api/cron/enrich` rounds to drain catalog enrichment backlogs (logos, descriptions, install hints, liveness checks).
+
