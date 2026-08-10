@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
-import { getActiveServers } from '@/lib/servers';
+import { getNewestActiveServers } from '@/lib/servers';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
@@ -12,20 +12,20 @@ import { ClientConfigSection } from '@/components/clients/ClientConfigSection';
 import { ServerConfigCopyButton } from '@/components/clients/ServerConfigCopyButton';
 
 export const metadata: Metadata = {
-  title: 'Best MCP Servers for Windsurf Cascade Setup',
+  title: 'Top MCP Servers for Windsurf Cascade — Setup Guide',
   description:
-    'Find Model Context Protocol (MCP) servers compatible with Codeium Windsurf Cascade. Setup instructions for ~/.codeium/windsurf/mcp_config.json.',
+    'Discover top Model Context Protocol (MCP) tools for Codeium Windsurf. Setup guide and configuration for mcp_config.json.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-windsurf' },
   openGraph: {
-    title: 'Best MCP Servers for Windsurf Cascade | AllMCPs',
-    description: 'Connect Windsurf AI Cascade agent to databases, repositories, and developer tools over MCP.',
+    title: 'Top MCP Servers for Windsurf | AllMCPs',
+    description:
+      'Connect Windsurf Cascade agent to databases, APIs, and CLI tools over MCP.',
     url: 'https://allmcps.com/mcp-for-windsurf',
   },
 };
 
 export default async function WindsurfMcpPage() {
-  const allServers = await getActiveServers();
-  const topServers = allServers.slice(0, 12);
+  const topServers = await getNewestActiveServers(12);
   const client = mcpClientBySlug('windsurf');
 
   const jsonLd = {

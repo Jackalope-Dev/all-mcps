@@ -5,8 +5,7 @@ import { ChevronRight, Eye, Heart, Download, BadgeCheck, CheckCircle2, ArrowRigh
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { Badge } from '../../../components/ui/Badge';
-import { getActiveServers, type Server } from '../../../lib/servers';
-import { engagementScore } from '../../../lib/search';
+import { getPopularServers, type Server } from '../../../lib/servers';
 import { isVerifiedListing } from '../../../lib/featuredStatus';
 import { parseServerName } from '../../../lib/displayName';
 import { formatCompactNumber } from '../../../lib/format';
@@ -17,7 +16,7 @@ import { ServerConfigCopyButton } from '../../../components/clients/ServerConfig
 import { ClientFaqAccordion } from '../../../components/clients/ClientFaqAccordion';
 
 const SITE = 'https://allmcps.com';
-const TOP_N = 8;
+const TOP_N = 12;
 
 // ISR instead of force-dynamic: only 9 fixed client slugs, so pre-render all of
 // them and refresh hourly instead of re-scanning and re-parsing the entire
@@ -71,8 +70,7 @@ export default async function ClientPage({
   const c = mcpClientBySlug(client);
   if (!c) notFound();
 
-  const all = await getActiveServers();
-  const popular: Server[] = [...all].sort((a, b) => engagementScore(b) - engagementScore(a)).slice(0, TOP_N);
+  const popular = await getPopularServers(TOP_N);
 
   const url = `${SITE}/clients/${c.slug}`;
   const heading = `How to Install MCP Servers in ${c.name}`;

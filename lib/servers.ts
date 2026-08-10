@@ -304,6 +304,82 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
     .slice(0, limit);
 }
 
+/** Active servers in a single category, bounded at the DB level for category landing pages and search filtering. */
+export async function getCategoryServers(category: string): Promise<Server[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(and(eq(serversTable.status, 'active'), eq(serversTable.category, category)));
+      if (rows.length > 0) {
+        return rows.map((r) => normalizeServer(r as unknown as Server));
+      }
+    }
+  } catch (e) {}
+
+  const all = serversData as unknown as Server[];
+  return all.filter((s) => s.category === category).map(normalizeServer);
+}
+
+/** Category counts computed via lightweight SQL GROUP BY for category sidebar links. */
+export async function getCategoryCounts(): Promise<Record<string, number>> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select({
+          category: serversTable.category,
+          count: sql<number>`count(*)`,
+        })
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'))
+        .groupBy(serversTable.category);
+      const counts: Record<string, number> = {};
+      for (const r of rows) {
+        if (r.category) counts[r.category] = Number(r.count);
+      }
+      if (Object.keys(counts).length > 0) return counts;
+    }
+  } catch (e) {}
+
+  const counts: Record<string, number> = {};
+  for (const s of serversData as unknown as Server[]) {
+    if (s.category) counts[s.category] = (counts[s.category] || 0) + 1;
+  }
+  return counts;
+}
+
+/** Top N active servers sorted by overall popularity (views + installs + upvotes), capped at the DB level. */
+export async function getPopularServers(limit: number): Promise<Server[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'))
+        .orderBy(desc(serversTable.views), desc(serversTable.copies), desc(serversTable.upvotes))
+        .limit(limit);
+      if (rows.length > 0) {
+        return rows.map((r) => normalizeServer(r as unknown as Server));
+      }
+    }
+  } catch (e) {}
+
+  return (serversData as unknown as Server[])
+    .map(normalizeServer)
+    .sort((a, b) => (b.views || 0) + (b.copies || 0) - ((a.views || 0) + (a.copies || 0)))
+    .slice(0, limit);
+}
+
 /**
  * Full active-catalog scan (thousands of rows, every column). Wrapped in React's
  * `cache()` so multiple call sites within the same request/render (e.g. a detail

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
-import { getActiveServers } from '@/lib/servers';
+import { getNewestActiveServers } from '@/lib/servers';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
@@ -25,8 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ClaudeDesktopMcpPage() {
-  const allServers = await getActiveServers();
-  const topServers = allServers.slice(0, 12);
+  const topServers = await getNewestActiveServers(12);
   const client = mcpClientBySlug('claude-desktop');
 
   const jsonLd = {

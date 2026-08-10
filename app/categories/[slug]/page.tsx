@@ -7,7 +7,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { FaqSection } from '../../../components/ui/FaqSection';
-import { getActiveServers, relatedRankingScore, type Server } from '../../../lib/servers';
+import { getCategoryServers, getCategoryCounts, relatedRankingScore, type Server } from '../../../lib/servers';
 import {
   DIRECTORY_CATEGORIES,
   categoryFromSlug,
@@ -83,8 +83,12 @@ export default async function CategoryLandingPage({
 
   const { emoji, label } = parseCategoryLabel(category);
   const meta = getCategoryMeta(category);
-  const all = await getActiveServers();
-  const byScore = all.filter((s) => s.category === category).sort((a, b) => score(b) - score(a));
+
+  const [categoryServers, countsObj] = await Promise.all([
+    getCategoryServers(category),
+    getCategoryCounts(),
+  ]);
+  const byScore = [...categoryServers].sort((a, b) => score(b) - score(a));
 
   // A category_sponsor_7d purchase pins its listing to #1 for the life of the
   // sponsorship — a hard pin ahead of score(), not a score nudge, since the
@@ -107,9 +111,7 @@ export default async function CategoryLandingPage({
   const url = `${SITE}/categories/${slug}`;
 
   // Sibling categories for cross-linking, most-populated first.
-  const counts = new Map<string, number>();
-  for (const s of all) counts.set(s.category, (counts.get(s.category) || 0) + 1);
-  const related = Array.from(counts.entries())
+  const related = Object.entries(countsObj)
     .filter(([name]) => name !== category)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)

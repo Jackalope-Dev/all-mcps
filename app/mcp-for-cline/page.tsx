@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
-import { getActiveServers } from '@/lib/servers';
+import { getNewestActiveServers } from '@/lib/servers';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
@@ -12,20 +12,20 @@ import { ClientConfigSection } from '@/components/clients/ClientConfigSection';
 import { ServerConfigCopyButton } from '@/components/clients/ServerConfigCopyButton';
 
 export const metadata: Metadata = {
-  title: 'Best MCP Servers for Cline & VS Code Setup',
+  title: 'Top MCP Servers for Cline & Roo Code — Setup Guide',
   description:
-    'Find Model Context Protocol (MCP) servers for Cline (formerly Claude Dev) in VS Code. Interactive setup guide for cline_mcp_settings.json.',
+    'Discover top Model Context Protocol (MCP) tools for Cline and Roo Code in VS Code. Setup guide and configuration for cline_mcp_settings.json.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-cline' },
   openGraph: {
-    title: 'Top MCP Servers for Cline & VS Code | AllMCPs',
-    description: 'Connect Cline autonomous coding agent in VS Code to databases, terminal tools, and APIs over MCP.',
+    title: 'Top MCP Servers for Cline | AllMCPs',
+    description:
+      'Supercharge Cline autonomous coding in VS Code with MCP tools for GitHub, databases, and web search.',
     url: 'https://allmcps.com/mcp-for-cline',
   },
 };
 
 export default async function ClineMcpPage() {
-  const allServers = await getActiveServers();
-  const topServers = allServers.slice(0, 12);
+  const topServers = await getNewestActiveServers(12);
   const client = mcpClientBySlug('cline');
 
   const jsonLd = {

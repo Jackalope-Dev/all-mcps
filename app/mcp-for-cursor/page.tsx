@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
-import { getActiveServers } from '@/lib/servers';
+import { getNewestActiveServers } from '@/lib/servers';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
@@ -12,21 +12,20 @@ import { ClientConfigSection } from '@/components/clients/ClientConfigSection';
 import { ServerConfigCopyButton } from '@/components/clients/ServerConfigCopyButton';
 
 export const metadata: Metadata = {
-  title: 'Best MCP Servers for Cursor IDE — Setup Guide',
+  title: 'Top MCP Servers for Cursor IDE — Setup Guide',
   description:
-    'Find and install the best Model Context Protocol (MCP) servers for the Cursor AI editor. Step-by-step setup for database, search, and dev tools.',
+    'Discover top Model Context Protocol (MCP) tools for Cursor IDE. Interactive setup guide for Cursor MCP server configurations on macOS and Windows.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-cursor' },
   openGraph: {
-    title: 'Best MCP Servers for Cursor IDE | AllMCPs',
+    title: 'Top MCP Servers for Cursor | AllMCPs',
     description:
-      'Connect Cursor AI agent to local databases, GitHub, web search, and dev tools using Model Context Protocol.',
+      'Connect Cursor AI editor to databases, APIs, and custom agent tools over MCP.',
     url: 'https://allmcps.com/mcp-for-cursor',
   },
 };
 
 export default async function CursorMcpPage() {
-  const allServers = await getActiveServers();
-  const topServers = allServers.slice(0, 12);
+  const topServers = await getNewestActiveServers(12);
   const client = mcpClientBySlug('cursor');
 
   const jsonLd = {

@@ -1,4 +1,4 @@
-import { getActiveServers } from '@/lib/servers';
+import { getActiveServers, getCategoryServers } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
 import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
@@ -11,11 +11,7 @@ export async function GET(request: Request) {
   const limitParam = parseInt(searchParams.get('limit') || '20', 10);
   const limit = Math.min(Math.max(1, limitParam), 100);
 
-  let servers = await getActiveServers();
-
-  if (category) {
-    servers = servers.filter((s) => s.category.toLowerCase() === category);
-  }
+  let servers = category ? await getCategoryServers(category) : await getActiveServers();
 
   // Rank by relevance when a query is present (falls back to catalog order otherwise).
   if (query) {

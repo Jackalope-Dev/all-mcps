@@ -1,17 +1,6 @@
 import DirectoryGrid from '../../components/DirectoryGrid';
 import type { Metadata } from 'next';
-import { getActiveServers } from '../../lib/servers';
-
-const toTime = (v: unknown): number => {
-  const t = new Date(v as string | number | Date).getTime();
-  return Number.isNaN(t) ? 0 : t;
-};
-
-/** Active listings, sanitized via lib/servers, newest first (matching the prior query order). */
-async function getServers() {
-  const servers = await getActiveServers();
-  return servers.sort((a, b) => toTime(b.createdAt) - toTime(a.createdAt));
-}
+import { getCategoryServers, getNewestActiveServers } from '../../lib/servers';
 
 function parseCategoryLabel(category: string): string {
   if (typeof Intl !== 'undefined' && Intl.Segmenter) {
@@ -84,7 +73,7 @@ export default async function BrowsePage({
   const category = typeof params.category === 'string' ? params.category : null;
   const q = typeof params.q === 'string' ? params.q : '';
 
-  const servers = await getServers();
+  const servers = category ? await getCategoryServers(category) : await getNewestActiveServers(60);
 
   // Structured data reflects the server-rendered initial state. For category
   // views we filter to the matching servers so the ItemList is accurate; search
@@ -96,7 +85,7 @@ export default async function BrowsePage({
     : q
       ? `https://allmcps.com/browse?q=${encodeURIComponent(q)}`
       : 'https://allmcps.com/browse';
-  const relevant = category ? servers.filter((s) => s.category === category) : servers;
+  const relevant = servers;
 
   // Server-render only a small slice for fast HTML + SEO; DirectoryGrid fetches the
   // full catalog from /api/directory-feed on mount so search/sort/filter cover
