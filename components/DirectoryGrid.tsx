@@ -125,6 +125,7 @@ export default function DirectoryGrid({
   );
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
+  const [selectedClient, setSelectedClient] = useState<'all' | 'cursor' | 'claude' | 'windsurf' | 'cline'>('all');
   const [selectedStack, setSelectedStack] = useState<TechStack>('all');
   const [selectedTransport, setSelectedTransport] = useState<TransportKind>('all');
   const [selectedPricing, setSelectedPricing] = useState<'all' | 'free' | 'freemium' | 'paid' | 'byok'>('all');
@@ -324,6 +325,13 @@ export default function DirectoryGrid({
       if (!transportMatch(server)) continue;
       if (!pricingMatch(server)) continue;
       if (!authMatch(server)) continue;
+
+      if (selectedClient !== 'all') {
+        const clients = Array.isArray(server.compatibleClients) ? server.compatibleClients.map((c) => String(c).toLowerCase()) : [];
+        const text = `${server.name} ${server.description} ${server.category}`.toLowerCase();
+        const clientMatch = clients.some((c) => c.includes(selectedClient)) || text.includes(selectedClient);
+        if (!clientMatch) continue;
+      }
 
       const relevance = hasQuery
         ? scoreServerMatch(
@@ -1162,6 +1170,27 @@ export default function DirectoryGrid({
           </div>
 
           <div className="directory-toolbar-controls">
+            <div className="directory-segmented" role="group" aria-label="Client filter">
+              {(
+                [
+                  ['all', 'All Clients'],
+                  ['cursor', 'Cursor'],
+                  ['claude', 'Claude'],
+                  ['windsurf', 'Windsurf'],
+                  ['cline', 'Cline'],
+                ] as const
+              ).map(([c, label]) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setSelectedClient(c)}
+                  className={`directory-segmented-btn ${selectedClient === c ? 'is-active' : ''}`}
+                  aria-pressed={selectedClient === c}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <div className="directory-segmented" role="group" aria-label="Tech stack filter">
               {(
                 [

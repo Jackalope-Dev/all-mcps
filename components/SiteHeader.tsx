@@ -12,6 +12,8 @@ const NAV = [
   { href: '/browse', label: 'Browse' },
   { href: '/best', label: 'Best' },
   { href: '/categories', label: 'Categories' },
+  { href: '/stack', label: 'Stack' },
+  { href: '/compare', label: 'Compare' },
   { href: '/tools', label: 'Tools' },
   { href: '/guides', label: 'Guides' },
   { href: '/blog', label: 'Blog' },

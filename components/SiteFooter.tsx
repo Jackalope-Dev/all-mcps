@@ -87,6 +87,21 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/stack" className="nav-link">
+                Stack Builder
+              </Link>
+            </li>
+            <li>
+              <Link href="/compare" className="nav-link">
+                Compare servers
+              </Link>
+            </li>
+            <li>
+              <Link href="/tags" className="nav-link">
+                Tags index
+              </Link>
+            </li>
+            <li>
               <Link href="/submit" className="nav-link">
                 Submit a server
               </Link>
