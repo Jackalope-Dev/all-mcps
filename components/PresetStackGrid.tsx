@@ -196,6 +196,7 @@ export function PresetStackGrid() {
             <div
               key={preset.id}
               className="preset-card"
+              data-preset-id={preset.id}
               style={{
                 '--preset-accent': preset.accentColor,
                 '--preset-bg': preset.gradientBg,
@@ -205,10 +206,10 @@ export function PresetStackGrid() {
             >
               {/* Header Badge & Icon */}
               <div className="preset-card-top">
-                <div className="preset-card-icon-wrap" style={{ color: preset.accentColor }}>
+                <div className="preset-card-icon-wrap" style={{ color: 'var(--preset-accent)' }}>
                   {preset.icon}
                 </div>
-                <span className="preset-card-badge" style={{ borderColor: preset.borderGlow, color: preset.textColor }}>
+                <span className="preset-card-badge" style={{ borderColor: 'var(--preset-border)', color: 'var(--preset-text)' }}>
                   {preset.badge}
                 </span>
               </div>
