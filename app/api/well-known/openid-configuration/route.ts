@@ -21,10 +21,9 @@ export async function GET() {
       skill: 'https://allmcps.com/auth.md',
       manifest: 'https://allmcps.com/auth.md',
       url: 'https://allmcps.com/auth.md',
-      // Register/claim/revoke return HTTP 501 until token minting ships.
-      // Public search + listing APIs do not require agent tokens today.
-      status: 'public_read_no_token_required',
+      status: 'programmatic_agent_auth_active',
       register_uri: 'https://allmcps.com/api/v1/agent/register',
+      register_confirm_uri: 'https://allmcps.com/api/v1/agent/register/confirm',
       registration_endpoint: 'https://allmcps.com/api/v1/agent/register',
       identity_types_supported: ['ephemeral_session', 'did', 'oauth_client'],
       supported_identity_types: ['ephemeral_session', 'did', 'oauth_client'],

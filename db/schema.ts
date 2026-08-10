@@ -228,6 +228,45 @@ export const verificationTokens = sqliteTable('verification_tokens', {
   pk: primaryKey({ columns: [table.identifier, table.token] }),
 }));
 
+/**
+ * Short-lived email confirmation codes for POST /api/v1/agent/register —
+ * proves the registering agent controls `email`'s inbox before a bearer
+ * token is issued for it. One pending code per email; a fresh /register
+ * call overwrites any unused one. Deliberately separate from Auth.js's own
+ * `verificationTokens` table (a different flow with its own lifecycle
+ * managed by the DrizzleAdapter) so agent auth can't interfere with the
+ * human magic-link login path.
+ */
+export const agentRegistrationCodes = sqliteTable('agent_registration_codes', {
+  email: text('email').primaryKey(),
+  codeHash: text('code_hash').notNull(),
+  agentName: text('agent_name'),
+  attempts: integer('attempts').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+});
+
+/**
+ * Bearer tokens minted by POST /api/v1/agent/register/confirm — let an
+ * unattended AI agent call POST /api/v1/agent/claim (DNS-TXT ownership
+ * proof) without a human OAuth session. Each token is tied to a `users`
+ * row (found-or-created by email at confirm time) so a claimed listing's
+ * `ownerUserId` and notification email are the same regardless of whether
+ * the owner signed in as a human or registered as an agent.
+ */
+export const agentTokens = sqliteTable('agent_tokens', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  tokenHash: text('token_hash').notNull().unique(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  agentName: text('agent_name'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  revokedAt: integer('revoked_at', { mode: 'timestamp' }),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+}, (table) => ({
+  userIdx: index('idx_agent_tokens_user').on(table.userId),
+}));
+
 /** API access logs — tracks which LLMs/agents call our programmatic endpoints. */
 export const apiAccessLogs = sqliteTable('api_access_logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
