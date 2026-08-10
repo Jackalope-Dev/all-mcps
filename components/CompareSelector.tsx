@@ -20,7 +20,7 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
     if (!query.trim()) return servers.slice(0, 12);
     const q = query.toLowerCase();
     return servers.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)
+      (s) => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q) || (s.description && s.description.toLowerCase().includes(q))
     ).slice(0, 12);
   }, [servers, query]);
 
@@ -77,6 +77,8 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap',
             padding: '0.85rem 1rem',
             backgroundColor: 'rgba(168, 85, 247, 0.08)',
             border: '1px solid rgba(168, 85, 247, 0.25)',
@@ -84,7 +86,7 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
             marginBottom: '1.25rem',
           }}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', flex: 1, minWidth: 0 }}>
             {selectedServers.map((s) => (
               <div
                 key={s.id}
@@ -92,21 +94,23 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.4rem',
-                  padding: '0.3rem 0.6rem',
-                  backgroundColor: '#0f172a',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  padding: '0.35rem 0.65rem',
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '16px',
                   fontSize: '0.8rem',
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
+                  fontWeight: 500,
+                  maxWidth: '100%',
                 }}
               >
-                <span>{s.name}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
                 <button
                   type="button"
                   onClick={() => toggleSelect(s.id)}
-                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}
                 >
-                  <X size={12} />
+                  <X size={13} />
                 </button>
               </div>
             ))}
@@ -117,20 +121,23 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
             onClick={handleCompare}
             disabled={selectedIds.length < 2}
             style={{
-              padding: '0.45rem 1rem',
+              padding: '0.5rem 1.25rem',
               borderRadius: '8px',
               border: 'none',
-              background: selectedIds.length >= 2 ? 'linear-gradient(135deg, #a855f7, #6366f1)' : 'rgba(255,255,255,0.1)',
-              color: selectedIds.length >= 2 ? '#ffffff' : '#64748b',
+              background: selectedIds.length >= 2 ? 'linear-gradient(135deg, #a855f7, #6366f1)' : 'rgba(255,255,255,0.08)',
+              color: selectedIds.length >= 2 ? '#ffffff' : 'var(--text-secondary)',
               fontWeight: 600,
               fontSize: '0.85rem',
               cursor: selectedIds.length >= 2 ? 'pointer' : 'not-allowed',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '0.4rem',
+              minWidth: '140px',
+              flexShrink: 0,
             }}
           >
-            <Scale size={14} /> Compare Now ({selectedIds.length})
+            <Scale size={15} style={{ flexShrink: 0 }} /> Compare Now ({selectedIds.length})
           </button>
         </div>
       )}
@@ -139,7 +146,7 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
       <div style={{ position: 'relative', marginBottom: '1.25rem' }}>
         <Search
           size={16}
-          style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}
+          style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', flexShrink: 0 }}
         />
         <input
           type="text"
@@ -149,10 +156,10 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
           style={{
             width: '100%',
             padding: '0.65rem 0.85rem 0.65rem 2.25rem',
-            backgroundColor: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            backgroundColor: 'var(--bg-color)',
+            border: '1px solid var(--border-color)',
             borderRadius: '8px',
-            color: '#ffffff',
+            color: 'var(--text-primary)',
             fontSize: '0.9rem',
             outline: 'none',
           }}
@@ -160,7 +167,7 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
       </div>
 
       {/* Server Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '0.75rem' }}>
         {filtered.map((s) => {
           const isSelected = selectedIds.includes(s.id);
           return (
@@ -168,24 +175,25 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
               key={s.id}
               onClick={() => toggleSelect(s.id)}
               style={{
-                padding: '0.85rem',
-                backgroundColor: isSelected ? 'rgba(168, 85, 247, 0.12)' : 'rgba(255,255,255,0.02)',
-                border: isSelected ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.08)',
+                padding: '0.85rem 1rem',
+                backgroundColor: isSelected ? 'rgba(168, 85, 247, 0.12)' : 'var(--bg-color)',
+                border: isSelected ? '1px solid #a855f7' : '1px solid var(--border-color)',
                 borderRadius: '10px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: '0.6rem',
                 transition: 'all 0.15s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden', minWidth: 0, flex: 1 }}>
                 <ServerAvatar name={s.name} logoUrl={s.logoUrl} size={28} />
-                <div style={{ overflow: 'hidden' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ overflow: 'hidden', minWidth: 0 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {s.name}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {s.category}
                   </div>
                 </div>
@@ -193,17 +201,20 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
 
               <div
                 style={{
-                  width: '22px',
-                  height: '22px',
+                  width: '24px',
+                  height: '24px',
+                  minWidth: '24px',
+                  flexShrink: 0,
                   borderRadius: '50%',
-                  backgroundColor: isSelected ? '#a855f7' : 'rgba(255,255,255,0.1)',
+                  backgroundColor: isSelected ? '#a855f7' : 'rgba(168, 85, 247, 0.15)',
+                  border: isSelected ? 'none' : '1px solid rgba(168, 85, 247, 0.3)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#ffffff',
+                  color: isSelected ? '#ffffff' : '#a855f7',
                 }}
               >
-                {isSelected ? <Check size={13} /> : <Plus size={13} />}
+                {isSelected ? <Check size={13} style={{ flexShrink: 0 }} /> : <Plus size={13} style={{ flexShrink: 0 }} />}
               </div>
             </div>
           );

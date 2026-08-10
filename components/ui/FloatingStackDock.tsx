@@ -116,7 +116,7 @@ export function FloatingStackDock() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#020617',
+            color: '#ffffff',
             fontWeight: 700,
             fontSize: '0.75rem',
           }}
@@ -141,7 +141,7 @@ export function FloatingStackDock() {
             padding: '0.35rem 0.75rem',
             borderRadius: '16px',
             background: 'linear-gradient(135deg, #00e5ff, #007bff)',
-            color: '#020617',
+            color: '#ffffff',
             fontWeight: 700,
             fontSize: '0.78rem',
             border: 'none',

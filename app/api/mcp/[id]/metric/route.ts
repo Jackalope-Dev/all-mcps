@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getClientIp, hashVisitorForServer } from '../../../../../lib/upvoteHash';
 
 const metricSchema = z.object({
-  metric: z.enum(['view', 'copy', 'upvote']),
+  metric: z.enum(['view', 'copy', 'upvote', 'unupvote']),
 });
 
 async function getDb() {
@@ -62,6 +62,31 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       await db
         .update(servers)
         .set({ upvotes: sql`${servers.upvotes} + 1` })
+        .where(eq(servers.id, id));
+
+      return NextResponse.json({ success: true });
+    }
+
+    // --- Unupvote: remove vote for (server, hashed IP) ---
+    if (metric === 'unupvote') {
+      const ip = getClientIp(req);
+      const ipHash = await hashVisitorForServer(ip, id);
+      if (!ipHash) {
+        return NextResponse.json({ error: 'Upvote is not configured' }, { status: 500 });
+      }
+
+      const deleted = await db
+        .delete(upvoteRecords)
+        .where(and(eq(upvoteRecords.serverId, id), eq(upvoteRecords.ipHash, ipHash)))
+        .returning({ serverId: upvoteRecords.serverId });
+
+      if (deleted.length === 0) {
+        return NextResponse.json({ success: false, notVoted: true }, { status: 404 });
+      }
+
+      await db
+        .update(servers)
+        .set({ upvotes: sql`CASE WHEN ${servers.upvotes} > 0 THEN ${servers.upvotes} - 1 ELSE 0 END` })
         .where(eq(servers.id, id));
 
       return NextResponse.json({ success: true });

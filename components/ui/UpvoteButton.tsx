@@ -41,63 +41,105 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
     };
   }, [serverId]);
 
-  const handleUpvote = async () => {
-    if (hasUpvoted) return;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Optimistic UI update
-    setUpvotes(prev => prev + 1);
-    setHasUpvoted(true);
-    localStorage.setItem(`upvote_${serverId}`, 'true');
+  const handleToggleUpvote = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-    try {
-      const res = await fetch(`/api/mcp/${serverId}/metric`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ metric: 'upvote' }),
-      });
-
-      if (res.status === 409) {
-        // Already voted server-side (e.g. a stale/cleared localStorage flag).
-        // Keep hasUpvoted true, but undo the optimistic +1 since this click
-        // didn't register a new vote.
-        setUpvotes((prev) => prev - 1);
-        toast.info('Already upvoted', {
-          description: 'You have already supported this server.',
-        });
-        return;
-      }
-
-      if (!res.ok) {
-        throw new Error(`Upvote request failed with status ${res.status}`);
-      }
-
-      trackUpvote({ serverId });
-
-      toast.success('Upvoted', {
-        description: 'Thanks for supporting this server.',
-      });
-    } catch (e) {
-      console.error('Failed to upvote:', e);
-      // Revert on failure
-      setUpvotes((prev) => prev - 1);
+    if (hasUpvoted) {
+      // Optimistic UI update: Unupvote
+      setUpvotes((prev) => Math.max(0, prev - 1));
       setHasUpvoted(false);
       localStorage.removeItem(`upvote_${serverId}`);
-      toast.error('Could not upvote', {
-        description: 'Something went wrong. Please try again.',
-      });
+
+      try {
+        const res = await fetch(`/api/mcp/${serverId}/metric`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metric: 'unupvote' }),
+        });
+
+        if (res.status === 404) {
+          // Not voted server-side; keep state as unvoted
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(`Unupvote request failed with status ${res.status}`);
+        }
+
+        toast.info('Upvote removed', {
+          description: 'Your upvote has been removed.',
+        });
+      } catch (e) {
+        console.error('Failed to remove upvote:', e);
+        // Revert on failure
+        setUpvotes((prev) => prev + 1);
+        setHasUpvoted(true);
+        localStorage.setItem(`upvote_${serverId}`, 'true');
+        toast.error('Could not remove upvote', {
+          description: 'Something went wrong. Please try again.',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      // Optimistic UI update: Upvote
+      setUpvotes((prev) => prev + 1);
+      setHasUpvoted(true);
+      localStorage.setItem(`upvote_${serverId}`, 'true');
+
+      try {
+        const res = await fetch(`/api/mcp/${serverId}/metric`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metric: 'upvote' }),
+        });
+
+        if (res.status === 409) {
+          // Already voted server-side (e.g. a stale/cleared localStorage flag).
+          setUpvotes((prev) => Math.max(0, prev - 1));
+          toast.info('Already upvoted', {
+            description: 'You have already supported this server.',
+          });
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(`Upvote request failed with status ${res.status}`);
+        }
+
+        trackUpvote({ serverId });
+
+        toast.success('Upvoted', {
+          description: 'Thanks for supporting this server.',
+        });
+      } catch (e) {
+        console.error('Failed to upvote:', e);
+        // Revert on failure
+        setUpvotes((prev) => Math.max(0, prev - 1));
+        setHasUpvoted(false);
+        localStorage.removeItem(`upvote_${serverId}`);
+        toast.error('Could not upvote', {
+          description: 'Something went wrong. Please try again.',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
   return (
     <button
       type="button"
-      onClick={handleUpvote}
+      onClick={handleToggleUpvote}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      disabled={hasUpvoted}
+      disabled={isSubmitting}
       className={`listing-metric-pill listing-metric-pill--button listing-metric-pill--upvote ${hasUpvoted ? 'listing-metric-pill--upvoted' : ''}`}
-      title={hasUpvoted ? 'Upvoted' : 'Click to upvote'}
-      aria-label={`${hasUpvoted ? 'Upvoted' : 'Upvote'}. Current count: ${upvotes}`}
+      title={hasUpvoted ? 'Click to remove upvote' : 'Click to upvote'}
+      aria-label={`${hasUpvoted ? 'Remove upvote' : 'Upvote'}. Current count: ${upvotes}`}
     >
       <Heart 
         size={16} 
