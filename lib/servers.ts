@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable, stdioVerificationPilot, serverHealthChecks } from '../db/schema';
-import { eq, desc, sql, and, ne } from 'drizzle-orm';
+import { eq, desc, sql, and, ne, or, gt } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
@@ -799,7 +799,8 @@ export async function fetchServerReadme(url: string): Promise<string | null> {
     }
 
     if (res.ok) {
-      return await res.text();
+      const text = await res.text();
+      return text.length > 250000 ? `${text.slice(0, 250000)}\n\n*(README truncated for size)*` : text;
     }
     return null;
   } catch (e) {
@@ -842,9 +843,10 @@ function extractSemanticTokens(s: Server): Set<string> {
   const tokens = new Set<string>();
   const add = (text?: string | null) => {
     if (!text) return;
-    const words = text.toLowerCase().replace(/[^a-z0-9_\-\.]/g, ' ').split(/\s+/);
+    const str = text.length > 2000 ? text.slice(0, 2000) : text;
+    const words = str.toLowerCase().replace(/[^a-z0-9_\-\.]/g, ' ').split(/\s+/);
     for (const w of words) {
-      if (w.length > 2 && !COMMON_STOP_WORDS.has(w)) {
+      if (w.length > 2 && w.length < 50 && !COMMON_STOP_WORDS.has(w)) {
         tokens.add(w);
       }
     }
@@ -1103,10 +1105,37 @@ export function formatServerSummaryLine(server: Server): string {
 }
 
 export async function getRelatedServers(currentServer: Server, limit = 4): Promise<Server[]> {
-  const allServers = await getActiveServersForScoring();
-  const sameCategory = allServers.filter(
-    (s) => s.id !== currentServer.id && s.category === currentServer.category
-  );
+  let sameCategory: Server[] = [];
+
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(SCORING_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(
+          and(
+            eq(serversTable.status, 'active'),
+            eq(serversTable.category, currentServer.category),
+            ne(serversTable.id, currentServer.id)
+          )
+        );
+      if (rows.length > 0) {
+        sameCategory = rows.map((r) => normalizeServer(r as unknown as Server));
+      }
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+
+  if (sameCategory.length === 0) {
+    const allServers = serversData as unknown as Server[];
+    sameCategory = allServers
+      .filter((s) => s.id !== currentServer.id && s.category === currentServer.category)
+      .map(normalizeServer);
+  }
 
   sameCategory.sort(
     (a, b) => relatedRankingScore(b, currentServer) - relatedRankingScore(a, currentServer)
@@ -1116,18 +1145,81 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
     return sameCategory.slice(0, limit);
   }
 
-  const otherServers = allServers.filter(
-    (s) => s.id !== currentServer.id && s.category !== currentServer.category
-  );
-  otherServers.sort(
+  // Bounded fallback candidate pool from other categories when same category is small
+  let fallbackCandidates: Server[] = [];
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(SCORING_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(
+          and(
+            eq(serversTable.status, 'active'),
+            ne(serversTable.category, currentServer.category),
+            ne(serversTable.id, currentServer.id)
+          )
+        )
+        .orderBy(desc(serversTable.views), desc(serversTable.copies), desc(serversTable.upvotes))
+        .limit(30);
+      if (rows.length > 0) {
+        fallbackCandidates = rows.map((r) => normalizeServer(r as unknown as Server));
+      }
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+
+  if (fallbackCandidates.length === 0) {
+    const allServers = serversData as unknown as Server[];
+    fallbackCandidates = allServers
+      .filter((s) => s.id !== currentServer.id && s.category !== currentServer.category)
+      .slice(0, 30)
+      .map(normalizeServer);
+  }
+
+  fallbackCandidates.sort(
     (a, b) => relatedRankingScore(b, currentServer) - relatedRankingScore(a, currentServer)
   );
 
-  return [...sameCategory, ...otherServers].slice(0, limit);
+  return [...sameCategory, ...fallbackCandidates].slice(0, limit);
 }
 
 /** Paid/featured listings eligible to rotate into promotional ad slots, excluding the given server. */
 export async function getFeaturedServers(excludeId?: string, limit = 10): Promise<Server[]> {
-  const allServers = await getActiveServersForScoring();
-  return allServers.filter((s) => s.id !== excludeId && isFeaturedListing(s)).slice(0, limit);
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const conditions = [
+        eq(serversTable.status, 'active'),
+        or(
+          eq(serversTable.isPremium, true),
+          gt(serversTable.featuredUntil, sql`CURRENT_TIMESTAMP`)
+        ),
+      ];
+      if (excludeId) {
+        conditions.push(ne(serversTable.id, excludeId));
+      }
+      const rows = await db
+        .select(SCORING_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(and(...conditions))
+        .limit(limit);
+      if (rows.length > 0) {
+        return rows.map((r) => normalizeServer(r as unknown as Server));
+      }
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+
+  const allServers = serversData as unknown as Server[];
+  return allServers
+    .map(normalizeServer)
+    .filter((s) => s.id !== excludeId && isFeaturedListing(s))
+    .slice(0, limit);
 }

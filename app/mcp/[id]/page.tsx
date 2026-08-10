@@ -126,7 +126,8 @@ async function fetchReadme(url: string) {
     }
     
     if (res.ok) {
-      return await res.text();
+      const text = await res.text();
+      return text.length > 250000 ? `${text.slice(0, 250000)}\n\n*(README truncated for size)*` : text;
     }
     return null;
   } catch (e) {
@@ -161,10 +162,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
     notFound();
   }
 
-  // Independent I/O (external README fetch, two catalog-backed lookups, a pilot-check
+  // Independent I/O (external README fetch, two category/featured lookups, a pilot-check
   // query) — run concurrently instead of one big sequential waterfall.
-  // getRelatedServers/getFeaturedServers both hit getActiveServers(), which is
-  // request-memoized (see lib/servers.ts), so this doesn't double the catalog scan.
+  // getRelatedServers and getFeaturedServers use targeted D1 category/featured queries
+  // (see lib/servers.ts) to keep memory footprint < 2MB.
   // Deliberately no session/auth() read here — that would force this page dynamic
   // (uncacheable) on every request. Ownership-gated UI (OwnerZone, ClaimHintLink)
   // fetches its own status client-side instead so this page can be ISR'd.
