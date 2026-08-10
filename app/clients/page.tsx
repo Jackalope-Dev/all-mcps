@@ -67,12 +67,12 @@ export default function ClientsIndexPage() {
           </ol>
         </nav>
 
-        <section style={{ marginBottom: '3rem', maxWidth: '760px' }}>
+        <section style={{ marginBottom: '3rem', maxWidth: '760px', margin: '0 auto 3rem', textAlign: 'center' }}>
           <Badge variant="verified" style={{ marginBottom: '1rem' }}>Canonical Setup Guides</Badge>
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>
             Install MCP Servers in <span className="text-brand-gradient">Any Client</span>
           </h1>
-          <p className="text-lead" style={{ margin: 0 }}>
+          <p className="text-lead" style={{ margin: '0 auto' }}>
             Select your preferred AI client below for step-by-step setup guides, OS config file paths, interactive JSON generators, and troubleshooting tips.
           </p>
         </section>

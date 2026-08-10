@@ -462,14 +462,16 @@ export default async function TrustPage() {
       <main className="page-shell page-shell--tool">
         <div className="page-shell-inner" style={{ maxWidth: 960 }}>
           <div className="surface page-panel">
-            <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
-              Trust &amp; Traffic Transparency
-            </h1>
-            <p className="text-lead" style={{ marginBottom: '2rem' }}>
-              Every number on this page comes from our production database. No vanity
-              metrics, no cherry-picked screenshots. Here&apos;s what&apos;s in the catalog,
-              how people use it, and which AI systems and crawlers actually read it.
-            </p>
+            <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto 2.5rem' }}>
+              <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
+                Trust &amp; Traffic Transparency
+              </h1>
+              <p className="text-lead" style={{ margin: 0 }}>
+                Every number on this page comes from our production database. No vanity
+                metrics, no cherry-picked screenshots. Here&apos;s what&apos;s in the catalog,
+                how people use it, and which AI systems and crawlers actually read it.
+              </p>
+            </div>
 
             <SectionLabel title="The catalog" note="All-time totals across every listed MCP server." />
             <StatGrid>

@@ -61,11 +61,11 @@ export default function PromptsHubPage() {
           </ol>
         </nav>
 
-        <section style={{ maxWidth: '800px', marginBottom: '3rem' }}>
+        <section style={{ maxWidth: '800px', margin: '0 auto 3rem', textAlign: 'center' }}>
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>
             Agent Multi-MCP <span className="text-brand-gradient">Workflow &amp; Prompt Library</span>
           </h1>
-          <p className="text-lead" style={{ margin: 0 }}>
+          <p className="text-lead" style={{ margin: '0 auto' }}>
             Combine multiple Model Context Protocol (MCP) servers into powerful multi-tool agent workflows. Get copyable system prompts and combined configuration JSONs for your favorite AI client.
           </p>
         </section>

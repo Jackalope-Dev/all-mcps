@@ -17,13 +17,21 @@ import {
   CheckCircle2,
   Bot,
 } from 'lucide-react';
-import { getStackServerIds, removeServerFromStack, toggleServerInStack, clearStack, buildStackShareUrl } from '@/lib/stackStore';
+import { getStackServerIds, removeServerFromStack, toggleServerInStack, clearStack, buildStackShareUrl, parseStackFromUrl, saveStackServerIds } from '@/lib/stackStore';
 import { resolveInstallConfig } from '@/lib/installConfig';
 import type { Server } from '@/lib/servers';
 import { CopyBlock } from './ui/CopyBlock';
 import { trackFeatureUse } from '@/lib/gtag';
 
-type ClientFormat = 'claude' | 'cursor' | 'cline' | 'windsurf';
+type ClientFormat = 'claude' | 'cursor' | 'cline' | 'windsurf' | 'prompt';
+
+const CLIENT_TABS: Array<{ id: ClientFormat; label: string }> = [
+  { id: 'claude', label: 'Claude Desktop' },
+  { id: 'cursor', label: 'Cursor' },
+  { id: 'cline', label: 'Cline / Roo Code' },
+  { id: 'windsurf', label: 'Windsurf' },
+  { id: 'prompt', label: 'AI Agent Prompt' },
+];
 
 interface StackBuilderProps {
   allServers?: Server[];
@@ -61,15 +69,35 @@ export function StackBuilderModal({
   const [fetchedCatalog, setFetchedCatalog] = useState<CatalogServerItem[]>([]);
   const fetchedRef = useRef(false);
 
-  const refreshStack = () => {
+  const refreshStack = React.useCallback(() => {
     setServerIds(getStackServerIds());
-  };
+  }, []);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlServers = params.get('servers');
+      if (urlServers) {
+        const parsed = parseStackFromUrl(urlServers);
+        if (parsed.length > 0) {
+          saveStackServerIds(parsed);
+        }
+      }
+    }
+
     refreshStack();
-    window.addEventListener('mcp_stack_updated', refreshStack);
-    return () => window.removeEventListener('mcp_stack_updated', refreshStack);
-  }, []);
+
+    const handleStackUpdate = () => {
+      refreshStack();
+    };
+
+    window.addEventListener('mcp_stack_updated', handleStackUpdate);
+    window.addEventListener('popstate', handleStackUpdate);
+    return () => {
+      window.removeEventListener('mcp_stack_updated', handleStackUpdate);
+      window.removeEventListener('popstate', handleStackUpdate);
+    };
+  }, [refreshStack]);
 
   // Fetch full directory catalog if any stack item is missing from `allServers`
   useEffect(() => {
@@ -107,7 +135,16 @@ export function StackBuilderModal({
       }
     }
     return serverIds
-      .map((id) => map.get(id) || { id, name: id, description: '', category: 'MCP Tool', url: '' })
+      .map((id) => {
+        const found = map.get(id);
+        if (found) return found;
+        const cleanName =
+          id
+            .replace(/-(mcp|server)$/gi, '')
+            .replace(/[-_]/g, ' ')
+            .replace(/\b\w/g, (c) => c.toUpperCase()) + ' MCP';
+        return { id, name: cleanName, description: 'Model Context Protocol Server', category: 'MCP Tool', url: '' };
+      })
       .filter(Boolean);
   }, [allServers, fetchedCatalog, serverIds]);
 
@@ -131,6 +168,68 @@ export function StackBuilderModal({
   }, [allServers, fetchedCatalog, serverIds, selectedServers]);
 
   const mergedConfig = useMemo(() => {
+    if (activeTab === 'prompt') {
+      const serverDetails = selectedServers
+        .map((server, i) => {
+          const cfg = resolveInstallConfig({
+            id: server.id,
+            name: server.name,
+            url: server.url || '',
+            description: server.description,
+            installKind: server.installKind,
+            installCommand: server.installCommand,
+            installArgs: server.installArgs,
+            installPackage: server.installPackage,
+            installConfidence: server.installConfidence,
+            suggestedInstallCommand: server.suggestedInstallCommand,
+            suggestedInstallArgs: server.suggestedInstallArgs,
+          });
+
+          const installStr =
+            cfg.kind === 'remote'
+              ? `URL: ${cfg.url}`
+              : `${cfg.command} ${cfg.args.join(' ')}`;
+
+          return `${i + 1}. **${server.name}** (${server.category || 'MCP Tool'})\n   - Description: ${server.description || 'Model Context Protocol server'}\n   - Install Command: \`${installStr}\``;
+        })
+        .join('\n\n');
+
+      const jsonSnippet: Record<string, unknown> = {};
+      for (const server of selectedServers) {
+        const cfg = resolveInstallConfig({
+          id: server.id,
+          name: server.name,
+          url: server.url || '',
+          description: server.description,
+          installKind: server.installKind,
+          installCommand: server.installCommand,
+          installArgs: server.installArgs,
+          installPackage: server.installPackage,
+          installConfidence: server.installConfidence,
+          suggestedInstallCommand: server.suggestedInstallCommand,
+          suggestedInstallArgs: server.suggestedInstallArgs,
+        });
+
+        const key = server.id.replace(/[^a-z0-9_-]/gi, '_');
+        if (cfg.kind === 'remote') {
+          jsonSnippet[key] = { url: cfg.url };
+        } else {
+          jsonSnippet[key] = { command: cfg.command, args: cfg.args };
+        }
+      }
+
+      return `Please configure the following Model Context Protocol (MCP) servers in my AI client:
+
+${serverDetails}
+
+Merged mcpServers JSON snippet:
+\`\`\`json
+${JSON.stringify({ mcpServers: jsonSnippet }, null, 2)}
+\`\`\`
+
+Please update my configuration file and guide me through setting any required API keys or environment variables.`;
+    }
+
     const mcpServers: Record<string, unknown> = {};
 
     for (const server of selectedServers) {
@@ -151,19 +250,36 @@ export function StackBuilderModal({
       const key = server.id.replace(/[^a-z0-9_-]/gi, '_');
 
       if (cfg.kind === 'remote') {
-        mcpServers[key] = {
-          url: cfg.url,
-        };
+        if (activeTab === 'cline') {
+          mcpServers[key] = {
+            url: cfg.url,
+            disabled: false,
+            autoApprove: [],
+          };
+        } else {
+          mcpServers[key] = {
+            url: cfg.url,
+          };
+        }
       } else {
-        mcpServers[key] = {
-          command: cfg.command,
-          args: cfg.args,
-        };
+        if (activeTab === 'cline') {
+          mcpServers[key] = {
+            command: cfg.command,
+            args: cfg.args,
+            disabled: false,
+            autoApprove: [],
+          };
+        } else {
+          mcpServers[key] = {
+            command: cfg.command,
+            args: cfg.args,
+          };
+        }
       }
     }
 
     return JSON.stringify({ mcpServers }, null, 2);
-  }, [selectedServers]);
+  }, [selectedServers, activeTab]);
 
   const handleCopyLink = () => {
     const shareUrl = buildStackShareUrl(serverIds);
@@ -196,8 +312,14 @@ Please update my client configuration file and help me set any required API keys
   };
 
   const handleDownload = () => {
-    const filename = activeTab === 'cursor' ? 'mcp.json' : 'claude_desktop_config.json';
-    const blob = new Blob([mergedConfig], { type: 'application/json' });
+    let filename = 'claude_desktop_config.json';
+    if (activeTab === 'cursor') filename = 'mcp.json';
+    if (activeTab === 'cline') filename = 'cline_mcp_settings.json';
+    if (activeTab === 'windsurf') filename = 'mcp_config.json';
+    if (activeTab === 'prompt') filename = 'mcp_agent_prompt.md';
+
+    const mimeType = activeTab === 'prompt' ? 'text/markdown' : 'application/json';
+    const blob = new Blob([mergedConfig], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -210,6 +332,7 @@ Please update my client configuration file and help me set any required API keys
 
   const content = (
     <div
+      id="stack-builder"
       style={{
         width: '100%',
         maxWidth: isModal ? '760px' : '100%',
@@ -444,28 +567,19 @@ Please update my client configuration file and help me set any required API keys
 
             {/* Format Selector Tabs */}
             <div>
-              <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                {(['claude', 'cursor', 'cline', 'windsurf'] as const).map((tab) => (
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.65rem' }}>
+                {CLIENT_TABS.map((tab) => (
                   <button
-                    key={tab}
+                    key={tab.id}
                     type="button"
                     onClick={() => {
-                      trackFeatureUse('stack_builder', { action: 'switch_client', client: tab });
-                      setActiveTab(tab);
+                      trackFeatureUse('stack_builder', { action: 'switch_client', client: tab.id });
+                      setActiveTab(tab.id);
                     }}
-                    style={{
-                      padding: '0.4rem 0.85rem',
-                      borderRadius: '6px',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      border: 'none',
-                      cursor: 'pointer',
-                      backgroundColor: activeTab === tab ? 'var(--accent-color)' : 'rgba(255,255,255,0.05)',
-                      color: activeTab === tab ? '#020617' : 'var(--text-secondary)',
-                      textTransform: 'capitalize',
-                    }}
+                    className={`stack-tab-btn ${activeTab === tab.id ? 'is-active' : ''}`}
                   >
-                    {tab === 'claude' ? 'Claude Desktop' : tab}
+                    {tab.id === 'prompt' && <Bot size={13} style={{ marginRight: '0.2rem' }} />}
+                    {tab.label}
                   </button>
                 ))}
               </div>
@@ -473,7 +587,19 @@ Please update my client configuration file and help me set any required API keys
 
             {/* Merged Code Output */}
             <div>
-              <CopyBlock code={mergedConfig} language="json" />
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {activeTab === 'claude' && 'Claude Desktop Config (claude_desktop_config.json)'}
+                  {activeTab === 'cursor' && 'Cursor MCP Config (mcp.json)'}
+                  {activeTab === 'cline' && 'Cline / Roo Code Settings (cline_mcp_settings.json)'}
+                  {activeTab === 'windsurf' && 'Windsurf Config (mcp_config.json)'}
+                  {activeTab === 'prompt' && 'Universal AI Agent Prompt (Natural Language)'}
+                </span>
+                <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>
+                  {activeTab === 'prompt' ? 'Paste into ChatGPT, Claude, or Cursor AI' : 'Save to client settings'}
+                </span>
+              </div>
+              <CopyBlock code={mergedConfig} language={activeTab === 'prompt' ? 'markdown' : 'json'} />
             </div>
           </div>
         )}

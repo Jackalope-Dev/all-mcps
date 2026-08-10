@@ -132,8 +132,8 @@ export default async function ClientPage({
         </nav>
 
         {/* Hero */}
-        <section style={{ marginBottom: '2.5rem', maxWidth: '800px' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
+        <section style={{ marginBottom: '2.5rem', maxWidth: '800px', margin: '0 auto 2.5rem', textAlign: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
             <Badge variant="verified">{c.badgeText}</Badge>
             {hasDedicatedLandingPage && dedicatedLandingSlug && (
               <Link href={`/${dedicatedLandingSlug}`} className="badge badge-link badge-category" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -142,7 +142,7 @@ export default async function ClientPage({
             )}
           </div>
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>{heading}</h1>
-          <p className="text-lead" style={{ margin: 0 }}>{c.lead}</p>
+          <p className="text-lead" style={{ margin: '0 auto' }}>{c.lead}</p>
         </section>
 
         {/* Interactive Config Section */}

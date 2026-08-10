@@ -13,6 +13,14 @@ interface InstallButtonsProps extends CachedInstallFields {
   description?: string | null;
 }
 
+/** btoa() throws on non-Latin1 input (e.g. CJK text in an install arg) — encode as UTF-8 bytes first. */
+function base64EncodeUtf8(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
 /**
  * One-click "Add to Cursor / VS Code" deep-link install buttons.
  * Uses the same install resolution as <McpConfigGenerator>.
@@ -69,7 +77,7 @@ export function InstallButtons({
       : { command: install.command, args: install.args };
   const cursorHref = `cursor://anysphere.cursor-deeplink/mcp/install?name=${encodeURIComponent(
     cleanName
-  )}&config=${encodeURIComponent(btoa(JSON.stringify(cursorConfig)))}`;
+  )}&config=${encodeURIComponent(base64EncodeUtf8(JSON.stringify(cursorConfig)))}`;
 
   const vscodeConfig =
     install.kind === 'remote'

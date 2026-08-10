@@ -145,11 +145,11 @@ export default async function BestTopicPage({
         </nav>
 
         {/* Hero */}
-        <section style={{ marginBottom: '2.5rem', maxWidth: '760px' }}>
+        <section style={{ marginBottom: '2.5rem', maxWidth: '760px', margin: '0 auto 2.5rem', textAlign: 'center' }}>
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>
             {heading} <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>({year})</span>
           </h1>
-          <p className="text-lead" style={{ margin: '0 0 1rem' }}>{t.lead}</p>
+          <p className="text-lead" style={{ margin: '0 auto 1.25rem', textAlign: 'center' }}>{t.lead}</p>
           {t.categorySlug ? (
             <Link href={`/categories/${t.categorySlug}`} className="btn btn-secondary">
               Browse all {t.title} servers →

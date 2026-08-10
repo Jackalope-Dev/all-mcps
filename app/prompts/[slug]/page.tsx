@@ -98,8 +98,8 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
           </ol>
         </nav>
 
-        <section style={{ maxWidth: '800px', marginBottom: '2.5rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <section style={{ maxWidth: '800px', margin: '0 auto 2.5rem', textAlign: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', justifyContent: 'center' }}>
             <Badge variant="category">{workflow.category}</Badge>
           </div>
           <h1 className="text-display" style={{ marginBottom: '0.75rem' }}>
@@ -108,7 +108,7 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
           <p style={{ fontSize: '1.1rem', color: 'var(--accent-color)', fontWeight: 600, marginBottom: '1rem' }}>
             {workflow.subtitle}
           </p>
-          <p className="text-lead" style={{ margin: 0 }}>
+          <p className="text-lead" style={{ margin: '0 auto' }}>
             {workflow.description}
           </p>
         </section>

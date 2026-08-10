@@ -127,10 +127,12 @@ export default function ToolsHubPage() {
       />
       <div className="page-shell-inner">
         <div className="surface page-panel">
-          <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Free MCP Developer Tools</h1>
-          <p className="text-lead" style={{ marginBottom: '2rem' }}>
-            Browser-based utilities for building, inspecting, validating, and optimizing Model Context Protocol (MCP) servers and client configurations. 100% private &mdash; nothing leaves your browser.
-          </p>
+          <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 2.5rem' }}>
+            <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Free MCP Developer Tools</h1>
+            <p className="text-lead" style={{ margin: 0 }}>
+              Browser-based utilities for building, inspecting, validating, and optimizing Model Context Protocol (MCP) servers and client configurations. 100% private &mdash; nothing leaves your browser.
+            </p>
+          </div>
           <ul
             style={{
               listStyle: 'none',

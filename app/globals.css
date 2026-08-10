@@ -7788,3 +7788,282 @@ code.inline-path {
   color: #ffffff !important;
 }
 
+/* ── Featured Preset Stacks Component ── */
+.preset-stacks-wrapper {
+  margin-top: 3.5rem;
+}
+
+.preset-stacks-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.preset-stacks-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  background: var(--brand-gradient-soft);
+  border: 1px solid var(--accent-glow);
+  color: var(--accent-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.preset-stacks-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.preset-stacks-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+.preset-stacks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1.5rem;
+}
+
+.preset-card {
+  position: relative;
+  background: var(--preset-bg, var(--bg-elevated));
+  border: 1px solid var(--preset-border, var(--border-color));
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+}
+
+.preset-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--preset-accent, var(--accent-color));
+  opacity: 0.85;
+}
+
+.preset-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.4), 0 0 20px var(--preset-border);
+  border-color: var(--preset-accent);
+}
+
+.preset-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.preset-card-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preset-card-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.preset-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--preset-text, var(--text-primary));
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.preset-card-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+  flex: 1;
+}
+
+.preset-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1.5rem;
+}
+
+.preset-tool-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  font-size: 0.78rem;
+}
+
+.preset-tool-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.preset-tool-tag {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+.preset-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: auto;
+}
+
+.preset-card-load-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 10px;
+  background: var(--brand-gradient);
+  color: #ffffff !important;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.preset-card-load-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--preset-border);
+  opacity: 0.95;
+}
+
+.preset-card-load-btn:active {
+  transform: translateY(0);
+}
+
+.preset-card-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Light Theme Contrast Overrides for Preset Cards */
+[data-theme="light"] .preset-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .preset-card-icon-wrap {
+  background: var(--bg-muted);
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+[data-theme="light"] .preset-card-badge {
+  background: var(--bg-muted);
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] .preset-card-title {
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .preset-card-desc {
+  color: #475569;
+}
+
+[data-theme="light"] .preset-tool-pill {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .preset-tool-name {
+  color: #0f172a;
+}
+
+[data-theme="light"] .preset-tool-tag {
+  color: #64748b;
+}
+
+[data-theme="light"] .preset-card-footer {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+/* ── Stack Builder Client Format Tabs ── */
+.stack-tab-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.stack-tab-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+.stack-tab-btn.is-active {
+  background: var(--brand-gradient);
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+/* Light Theme Overrides: Enforce White Text on Client Tabs */
+[data-theme="light"] .stack-tab-btn {
+  background-color: #334155; /* Slate 700 dark background */
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .stack-tab-btn:hover {
+  background-color: #1e293b; /* Slate 800 */
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .stack-tab-btn.is-active {
+  background: var(--brand-gradient);
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+}
+
+
+

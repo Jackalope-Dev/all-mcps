@@ -2,9 +2,9 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { getNewestActiveServers } from '@/lib/servers';
 import { StackBuilderModal } from '@/components/StackBuilderModal';
+import { PresetStackGrid } from '@/components/PresetStackGrid';
 import { PageShell } from '@/components/PageShell';
-import Link from 'next/link';
-import { Layers, Sparkles, Plus, ArrowRight } from 'lucide-react';
+import { Layers } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'MCP Stack Builder | Combine Multiple MCP Tools in 1-Click',
@@ -20,7 +20,7 @@ export default async function StackPage() {
 
   return (
     <PageShell>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1rem' }}>
+      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '2rem 1rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <div
             style={{
@@ -50,104 +50,8 @@ export default async function StackPage() {
         {/* Inline Stack Manager (non-modal) */}
         <StackBuilderModal allServers={servers} isOpen={true} isModal={false} />
 
-        {/* Preset Popular Stacks */}
-        <div style={{ marginTop: '3.5rem' }}>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.25rem', textAlign: 'center' }}>
-            Featured Preset Stacks
-          </h2>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-            <div
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '1.25rem',
-              }}
-            >
-              <h3 style={{ fontSize: '1.05rem', color: '#00e5ff', fontWeight: 600, marginBottom: '0.35rem' }}>
-                Fullstack Web Developer Stack
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                GitHub + PostgreSQL + Puppeteer + Memory
-              </p>
-              <Link
-                href="/stack?servers=github-mcp,postgresql-mcp,puppeteer-mcp,memory-mcp"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-primary)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                Load Stack <ArrowRight size={14} />
-              </Link>
-            </div>
-
-            <div
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '1.25rem',
-              }}
-            >
-              <h3 style={{ fontSize: '1.05rem', color: '#a855f7', fontWeight: 600, marginBottom: '0.35rem' }}>
-                Data Scientist & Analytics Stack
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                SQLite + BigQuery + Python Exec + Excel
-              </p>
-              <Link
-                href="/stack?servers=sqlite-mcp,bigquery-mcp,python-mcp,excel-mcp"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-primary)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                Load Stack <ArrowRight size={14} />
-              </Link>
-            </div>
-
-            <div
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '1.25rem',
-              }}
-            >
-              <h3 style={{ fontSize: '1.05rem', color: '#34d399', fontWeight: 600, marginBottom: '0.35rem' }}>
-                DevOps & Infrastructure Stack
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                Kubernetes + AWS S3 + Docker + Terminal
-              </p>
-              <Link
-                href="/stack?servers=kubernetes-mcp,aws-s3-mcp,docker-mcp,terminal-mcp"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-primary)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                Load Stack <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-        </div>
+        {/* Interactive Featured Preset Stacks */}
+        <PresetStackGrid />
       </div>
     </PageShell>
   );

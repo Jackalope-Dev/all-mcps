@@ -85,14 +85,14 @@ export default async function TagDetailPage({ params }: { params: Promise<{ slug
           <span style={{ color: '#ffffff' }}>{rawTag}</span>
         </div>
 
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#00e5ff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem', maxWidth: '700px', margin: '0 auto 2.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#00e5ff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
             <Tag size={16} /> Tag Topic
           </div>
-          <h1 style={{ fontSize: '2.25rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+          <h1 style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             {rawTag} MCP Servers
           </h1>
-          <p style={{ fontSize: '1rem', color: '#94a3b8', marginTop: '0.4rem' }}>
+          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
             Showing {matched.length} Model Context Protocol tools tagged with &ldquo;{rawTag}&rdquo;.
           </p>
         </div>

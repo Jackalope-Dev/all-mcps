@@ -66,7 +66,7 @@ export default function BestIndexPage() {
           </ol>
         </nav>
 
-        <section style={{ marginBottom: '3rem', maxWidth: '760px' }}>
+        <section style={{ marginBottom: '3rem', maxWidth: '760px', margin: '0 auto 3rem', textAlign: 'center' }}>
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>Best MCP Servers by Use Case</h1>
           <p className="text-lead" style={{ margin: 0 }}>
             Hand-picked, usage-ranked guides to the best Model Context Protocol servers for the jobs
@@ -74,7 +74,7 @@ export default function BestIndexPage() {
           </p>
         </section>
 
-        <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 1.25rem' }}>By use case</h2>
+        <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 1.25rem', textAlign: 'center' }}>By use case</h2>
         <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {CATEGORY_TOPICS.map((t) => (
             <li key={t.slug}>
@@ -96,11 +96,13 @@ export default function BestIndexPage() {
         </ul>
 
         <section style={{ marginTop: '3.5rem' }}>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.5rem' }}>By integration</h2>
-          <p className="text-lead" style={{ margin: '0 0 1.5rem', fontSize: '1rem', maxWidth: '760px' }}>
-            Looking for a specific tool? Jump straight to the best MCP servers for the platforms and
-            databases people connect most.
-          </p>
+          <div style={{ textAlign: 'center', maxWidth: '760px', margin: '0 auto 1.5rem' }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.5rem' }}>By integration</h2>
+            <p className="text-lead" style={{ margin: 0, fontSize: '1rem' }}>
+              Looking for a specific tool? Jump straight to the best MCP servers for the platforms and
+              databases people connect most.
+            </p>
+          </div>
           <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {KEYWORD_TOPICS.map((t) => (
               <li key={t.slug}>

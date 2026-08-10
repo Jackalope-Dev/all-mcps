@@ -139,14 +139,16 @@ export default function BuildMCPServerPage() {
               <span style={{ color: 'var(--text-primary)' }}>Build an MCP Server</span>
             </nav>
 
-            <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
-              How to Build an MCP Server
-            </h1>
-            <p className="text-lead" style={{ marginBottom: '2rem' }}>
-              A complete, hands-on developer guide to building, testing, deploying, and publishing custom Model
-              Context Protocol servers in TypeScript and Python. New to MCP itself? Start with{' '}
-              <Link href="/what-is-mcp">What is an MCP?</Link> first.
-            </p>
+            <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 2.5rem' }}>
+              <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
+                How to Build an MCP Server
+              </h1>
+              <p className="text-lead" style={{ margin: 0 }}>
+                A complete, hands-on developer guide to building, testing, deploying, and publishing custom Model
+                Context Protocol servers in TypeScript and Python. New to MCP itself? Start with{' '}
+                <Link href="/what-is-mcp">What is an MCP?</Link> first.
+              </p>
+            </div>
 
             {/* Mobile Table of Contents */}
             <div className="lg:hidden" style={{ marginBottom: '2rem' }}>

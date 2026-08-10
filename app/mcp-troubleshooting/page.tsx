@@ -166,16 +166,18 @@ export default function McpTroubleshootingPage() {
               <span style={{ color: 'var(--text-primary)' }}>MCP Troubleshooting</span>
             </nav>
 
-            <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
-              MCP Troubleshooting: Not Connecting, Zero Tools, Timeouts
-            </h1>
-            <p className="text-lead" style={{ marginBottom: '2rem' }}>
-              A practical fix guide for Model Context Protocol failures in Claude Desktop, Cursor, Claude Code,
-              Windsurf, Cline, and other MCP hosts. Prefer a clean install first? See the{' '}
-              <Link href="/guide">setup guide</Link> or client pages for{' '}
-              <Link href="/mcp-for-cursor">Cursor</Link> and{' '}
-              <Link href="/mcp-for-claude-desktop">Claude Desktop</Link>.
-            </p>
+            <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 2.5rem' }}>
+              <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
+                MCP Troubleshooting: Not Connecting, Zero Tools, Timeouts
+              </h1>
+              <p className="text-lead" style={{ margin: 0 }}>
+                A practical fix guide for Model Context Protocol failures in Claude Desktop, Cursor, Claude Code,
+                Windsurf, Cline, and other MCP hosts. Prefer a clean install first? See the{' '}
+                <Link href="/guide">setup guide</Link> or client pages for{' '}
+                <Link href="/mcp-for-cursor">Cursor</Link> and{' '}
+                <Link href="/mcp-for-claude-desktop">Claude Desktop</Link>.
+              </p>
+            </div>
 
             <div className="lg:hidden">
               <TableOfContents items={tocItems} />
