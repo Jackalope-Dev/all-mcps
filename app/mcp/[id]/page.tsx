@@ -738,15 +738,6 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       Official MCP server for AllMCPs.com — maintained directly by AllMCPs. Fully verified to search, introspect, and manage MCP tools programmatically directly from your AI agent prompts.
                     </p>
                   </>
-                ) : server.isOfficial ? (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
-                      <CheckCircle size={14} style={{ color: '#34d399' }} /> Official Server
-                    </div>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0 }}>
-                      Official MCP server created and maintained directly by the official maintainers of {displayName}.
-                    </p>
-                  </>
                 ) : !pilotResult ? (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
