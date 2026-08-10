@@ -58,77 +58,47 @@ export default async function CompareIndexPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
             <Link
               href="/mcp/crystaldba-postgres-mcp/vs/jparkerweb-mcp-sqlite"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '1.25rem',
-                textDecoration: 'none',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              className="compare-popular-card compare-card-blue"
             >
               <div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#00e5ff' }}>
+                <div className="compare-popular-card-title">
                   Postgres MCP vs. SQLite MCP
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                   Compare relational database tools
                 </div>
               </div>
-              <ArrowRight size={16} style={{ color: '#00e5ff', flexShrink: 0 }} />
+              <ArrowRight size={16} className="compare-popular-card-arrow" />
             </Link>
 
             <Link
               href="/mcp/github-github-mcp-server/vs/jmrplens-gitlab-mcp-server"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '1.25rem',
-                textDecoration: 'none',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              className="compare-popular-card compare-card-purple"
             >
               <div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#a855f7' }}>
+                <div className="compare-popular-card-title">
                   GitHub MCP vs. GitLab MCP
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                   Compare Git platform tools & APIs
                 </div>
               </div>
-              <ArrowRight size={16} style={{ color: '#a855f7', flexShrink: 0 }} />
+              <ArrowRight size={16} className="compare-popular-card-arrow" />
             </Link>
 
             <Link
               href="/mcp/automatalabs-mcp-server-playwright/vs/microsoft-playwright-mcp"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '1.25rem',
-                textDecoration: 'none',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              className="compare-popular-card compare-card-green"
             >
               <div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#34d399' }}>
+                <div className="compare-popular-card-title">
                   Automata Playwright vs. Microsoft Playwright
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                   Compare browser automation tools
                 </div>
               </div>
-              <ArrowRight size={16} style={{ color: '#34d399', flexShrink: 0 }} />
+              <ArrowRight size={16} className="compare-popular-card-arrow" />
             </Link>
           </div>
         </div>

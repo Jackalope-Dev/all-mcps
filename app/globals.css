@@ -21,6 +21,8 @@
   --accent-rgb: 0, 229, 255;
   --accent-secondary-rgb: 0, 123, 255;
   --accent-glow: rgba(0, 229, 255, 0.28);
+  /* Text drawn on top of a solid --accent-color/--brand-cyan fill (e.g. active toggle buttons). */
+  --accent-text: #000000;
   --gold-color: #ffd700;
   --gold-rgb: 255, 215, 0;
   --border-color: rgba(255, 255, 255, 0.1);
@@ -90,6 +92,8 @@
   --accent-rgb: 2, 132, 199;
   --accent-secondary-rgb: 0, 82, 204;
   --accent-glow: rgba(2, 132, 199, 0.15);
+  /* Black-on-medium-blue reads muddy at this saturation — flip to white. */
+  --accent-text: #ffffff;
   --gold-color: #92650a;
   --gold-rgb: 146, 101, 10;
   --border-color: rgba(15, 23, 42, 0.12);
@@ -7981,9 +7985,21 @@ code.inline-path {
 
 /* Light Theme Contrast Overrides for Preset Cards */
 [data-theme="light"] .preset-card {
-  background: #ffffff;
+  /* Keep each card's accent gradient visible, just lightened for a white surface
+     instead of the flat #fff that was hiding it entirely. */
+  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)), var(--preset-bg, #ffffff);
   border-color: rgba(15, 23, 42, 0.12);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* The default cyan (#00e5ff) badge/icon is unreadable on light surfaces —
+   swap to the brand's darker blue stop for light theme only. */
+[data-theme="light"] .preset-card[data-preset-id="fullstack-dev"] {
+  /* !important needed: the component sets these same custom properties inline
+     (per-card accent), which otherwise always wins over an external stylesheet rule. */
+  --preset-text: var(--brand-blue) !important;
+  --preset-accent: var(--brand-blue) !important;
+  --preset-border: rgba(0, 82, 204, 0.3) !important;
 }
 
 [data-theme="light"] .preset-card-icon-wrap {
