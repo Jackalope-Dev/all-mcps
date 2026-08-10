@@ -69,7 +69,7 @@ export function StackBuilderModal({ allServers = [], isOpen = true, onClose }: S
 
     fetch('/api/search-index')
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
+      .then((data: any) => {
         if (data?.servers && Array.isArray(data.servers)) {
           setFetchedCatalog(data.servers);
         }
