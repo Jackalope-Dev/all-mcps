@@ -6,21 +6,31 @@ import { trackFeatureUse } from '../lib/gtag';
 
 type ThemeMode = 'dark' | 'light' | 'system';
 
+// Reads the same source the blocking inline script in app/layout.tsx reads.
+// Used as a lazy useState initializer (not a useEffect) so React's state
+// matches the DOM the script already produced from its very first render —
+// per Next's "Syncing with React state" guidance, a useEffect read runs one
+// tick too late and can let a hydration-triggered client re-render (which
+// rebuilds <html> from JSX, where data-theme isn't set) win the race, leaving
+// the DOM on the CSS default (dark) while this component's state still shows
+// the stored preference.
+function readStoredTheme(): ThemeMode {
+  if (typeof window === 'undefined') return 'system';
+  const stored = localStorage.getItem('allmcps-theme');
+  return stored === 'dark' || stored === 'light' || stored === 'system' ? stored : 'system';
+}
+
 export function ThemeSwitcher() {
-  const [themeMode, setThemeMode] = useState<ThemeMode>('system');
+  const [themeMode, setThemeMode] = useState<ThemeMode>(readStoredTheme);
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Mount effect & initial state read. The blocking inline script in
-  // app/layout.tsx already set data-theme on <html> before paint — just read
-  // the stored preference for the switcher's own UI state, don't touch the DOM.
+  // Defers rendering the toggle until after hydration (SSR always renders
+  // `null` here) — themeMode itself is already correct from the lazy
+  // initializer above.
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem('allmcps-theme') as ThemeMode | null;
-    if (stored === 'dark' || stored === 'light' || stored === 'system') {
-      setThemeMode(stored);
-    }
   }, []);
 
   // Update DOM data-theme attribute only when the mode actually changes here
