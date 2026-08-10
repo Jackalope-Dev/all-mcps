@@ -327,7 +327,7 @@ export async function generateListingContent(
     // fields already used most of that budget, and a truncated response fails
     // JSON parsing entirely (loses every field, not just install).
     maxTokens: 1100,
-    timeoutMs: 20_000,
+    timeoutMs: 30_000,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userContent },

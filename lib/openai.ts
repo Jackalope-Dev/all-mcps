@@ -42,7 +42,7 @@ export type OpenAIChatResult = OpenAIChatSuccess | OpenAIChatFailure;
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const DEFAULT_MODEL = 'gpt-5.6-luna';
-const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 /**
  * GPT-5-family models (confirmed against gpt-5.6-luna in practice: every call
@@ -206,7 +206,7 @@ export async function chatCompletion(options: ChatCompletionOptions): Promise<Op
   } catch (e: any) {
     const name = e?.name || '';
     const isTimeout = name === 'TimeoutError' || name === 'AbortError';
-    console.warn('openai.chat_completion_error', { name, isTimeout });
+    console.warn('openai.chat_completion_error', { name, isTimeout, model });
     return {
       ok: false,
       reason: isTimeout ? 'timeout' : 'upstream',
