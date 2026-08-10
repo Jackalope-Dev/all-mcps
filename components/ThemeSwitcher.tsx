@@ -12,7 +12,9 @@ export function ThemeSwitcher() {
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Mount effect & initial state read
+  // Mount effect & initial state read. The blocking inline script in
+  // app/layout.tsx already set data-theme on <html> before paint — just read
+  // the stored preference for the switcher's own UI state, don't touch the DOM.
   useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem('allmcps-theme') as ThemeMode | null;
@@ -21,7 +23,10 @@ export function ThemeSwitcher() {
     }
   }, []);
 
-  // Update DOM data-theme attribute whenever mode changes or system preference shifts
+  // Update DOM data-theme attribute only when the mode actually changes here
+  // (explicit selection or a live system-preference shift while mode === 'system').
+  // Skips the redundant re-apply-on-mount that duplicated the inline script's work.
+  const didMountRef = useRef(false);
   useEffect(() => {
     if (!mounted) return;
 
@@ -40,7 +45,10 @@ export function ThemeSwitcher() {
       root.setAttribute('data-theme', effectiveTheme);
     };
 
-    applyTheme(themeMode);
+    if (didMountRef.current) {
+      applyTheme(themeMode);
+    }
+    didMountRef.current = true;
 
     if (themeMode === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
