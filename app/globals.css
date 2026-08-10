@@ -8037,6 +8037,67 @@ code.inline-path {
   border-top-color: rgba(15, 23, 42, 0.08);
 }
 
+/* ── Compare Page — Popular Comparisons ── */
+.compare-popular-card {
+  background: var(--compare-card-bg, var(--bg-elevated));
+  border: 1px solid var(--compare-card-border, var(--border-color));
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-decoration: none;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.compare-popular-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--compare-card-accent, var(--accent-color));
+  box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.35);
+}
+
+.compare-popular-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--compare-card-accent, var(--accent-color));
+}
+
+.compare-popular-card-arrow {
+  color: var(--compare-card-accent, var(--accent-color));
+  flex-shrink: 0;
+}
+
+.compare-card-blue {
+  --compare-card-accent: #00e5ff;
+  --compare-card-bg: linear-gradient(135deg, rgba(0, 229, 255, 0.12) 0%, rgba(0, 123, 255, 0.08) 100%);
+  --compare-card-border: rgba(0, 229, 255, 0.25);
+}
+
+.compare-card-purple {
+  --compare-card-accent: #a855f7;
+  --compare-card-bg: linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(124, 58, 237, 0.08) 100%);
+  --compare-card-border: rgba(168, 85, 247, 0.25);
+}
+
+.compare-card-green {
+  --compare-card-accent: #34d399;
+  --compare-card-bg: linear-gradient(135deg, rgba(52, 211, 153, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%);
+  --compare-card-border: rgba(52, 211, 153, 0.25);
+}
+
+[data-theme="light"] .compare-popular-card {
+  /* Keep the accent gradient visible on a light surface instead of flattening to solid --bg-elevated. */
+  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)), var(--compare-card-bg, var(--bg-elevated));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .compare-card-blue {
+  /* The bright cyan is unreadable on light surfaces — use the brand's darker blue stop instead. */
+  --compare-card-accent: var(--brand-blue);
+  --compare-card-border: rgba(0, 82, 204, 0.25);
+}
+
 /* ── Stack Builder Client Format Tabs ── */
 .stack-tab-btn {
   padding: 0.45rem 0.9rem;
