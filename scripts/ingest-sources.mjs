@@ -37,7 +37,7 @@ const ACCOUNT_ID = '1a04a617cf42aaaba19b44365dd7c882';
 // registry grows large enough for that to get slow, switch to the `updated_since`
 // cursor param instead of paging everything every time.
 const OFFICIAL_REGISTRY_BASE = 'https://registry.modelcontextprotocol.io';
-const OFFICIAL_REGISTRY_MAX_PAGES = 50; // 50 * 100 = 5,000 servers, well above current registry size
+const OFFICIAL_REGISTRY_MAX_PAGES = 300; // 300 * 100 = 30,000 servers (registry already exceeds 5,000 as of 2026-08)
 
 const SOURCES = [
   {
