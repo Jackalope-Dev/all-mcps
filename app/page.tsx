@@ -66,6 +66,7 @@ export default async function Home({
     description:
       'Structured export of every active MCP (Model Context Protocol) server on AllMCPs, with categories, descriptions, install identifiers, and directory links.',
     url: 'https://allmcps.com',
+    license: 'https://creativecommons.org/publicdomain/zero/1.0/',
     keywords: ['Model Context Protocol', 'MCP servers', 'AI agents', 'Claude', 'Cursor'],
     creator: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
     isAccessibleForFree: true,
