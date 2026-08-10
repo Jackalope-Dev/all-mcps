@@ -57,7 +57,7 @@ export default async function CompareIndexPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
             <Link
-              href="/compare/postgresql-mcp-vs-sqlite-mcp"
+              href="/mcp/postgresql-mcp/vs/sqlite-mcp"
               style={{
                 backgroundColor: 'var(--bg-elevated)',
                 border: '1px solid var(--border-color)',
@@ -74,7 +74,7 @@ export default async function CompareIndexPage() {
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#00e5ff' }}>
                   PostgreSQL MCP vs. SQLite MCP
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                   Compare relational database tools
                 </div>
               </div>
@@ -82,14 +82,14 @@ export default async function CompareIndexPage() {
             </Link>
 
             <Link
-              href="/compare/github-mcp-vs-gitlab-mcp"
+              href="/mcp/github-mcp/vs/gitlab-mcp"
               style={{
-                backgroundColor: '#0f172a',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '12px',
                 padding: '1.25rem',
                 textDecoration: 'none',
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -99,7 +99,7 @@ export default async function CompareIndexPage() {
                 <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#a855f7' }}>
                   GitHub MCP vs. GitLab MCP
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                   Compare Git platform tools & APIs
                 </div>
               </div>
@@ -107,14 +107,14 @@ export default async function CompareIndexPage() {
             </Link>
 
             <Link
-              href="/compare/puppeteer-mcp-vs-playwright-mcp"
+              href="/mcp/puppeteer-mcp/vs/playwright-mcp"
               style={{
-                backgroundColor: '#0f172a',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '12px',
                 padding: '1.25rem',
                 textDecoration: 'none',
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',

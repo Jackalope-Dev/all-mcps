@@ -35,8 +35,14 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
 
   const handleCompare = () => {
     if (selectedIds.length < 2) return;
-    const path = selectedIds.join('-vs-');
-    router.push(`/compare/${path}`);
+    if (selectedIds.length === 2) {
+      const [a, b] = selectedIds;
+      const [c0, c1] = a < b ? [a, b] : [b, a];
+      router.push(`/mcp/${c0}/vs/${c1}`);
+    } else {
+      const path = selectedIds.join('-vs-');
+      router.push(`/compare/${path}`);
+    }
   };
 
   const selectedServers = useMemo(() => {

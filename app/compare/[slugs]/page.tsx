@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { PageShell } from '@/components/PageShell';
 import { getServerById, type Server, type ServerTool } from '@/lib/servers';
@@ -21,9 +21,22 @@ import {
 } from 'lucide-react';
 import { isVerifiedListing } from '@/lib/featuredStatus';
 
+function canonicalPair(idA: string, idB: string): [string, string] {
+  return idA < idB ? [idA, idB] : [idB, idA];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slugs: string }> }): Promise<Metadata> {
   const { slugs } = await params;
   const ids = slugs.split(/-vs-|,/).map((s) => s.trim()).filter(Boolean);
+
+  if (ids.length === 2) {
+    const [c0, c1] = canonicalPair(ids[0], ids[1]);
+    return {
+      title: 'Redirecting to Comparison',
+      alternates: { canonical: `https://allmcps.com/mcp/${c0}/vs/${c1}` },
+    };
+  }
+
   const servers = (await Promise.all(ids.map((id) => getServerById(id)))).filter(
     (s): s is Server => Boolean(s)
   );
@@ -36,6 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slugs: st
   return {
     title: `${names} Comparison | AllMCPs`,
     description: `Side-by-side comparison of ${names} MCP servers. Evaluate tool features, GitHub stars, installation configs, and specs.`,
+    robots: { index: false, follow: true },
     alternates: {
       canonical: `https://allmcps.com/compare/${slugs}`,
     },
@@ -45,6 +59,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slugs: st
 export default async function CompareMatrixPage({ params }: { params: Promise<{ slugs: string }> }) {
   const { slugs } = await params;
   const ids = slugs.split(/-vs-|,/).map((s) => s.trim()).filter(Boolean);
+
+  if (ids.length === 2) {
+    const [c0, c1] = canonicalPair(ids[0], ids[1]);
+    redirect(`/mcp/${c0}/vs/${c1}`);
+  }
+
   const servers = (await Promise.all(ids.map((id) => getServerById(id)))).filter(
     (s): s is Server => Boolean(s)
   );
