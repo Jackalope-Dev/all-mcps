@@ -8,6 +8,8 @@ import serversData from '../../data/mcp-servers.json';
 import { CategoryGrid } from '../../components/CategoryGrid';
 import { categorySlug } from '../../lib/categories';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Browse MCP Servers by Category',
   description:
@@ -38,7 +40,7 @@ type ServerSlim = {
 async function getServers(): Promise<ServerSlim[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
+    const ctx = await getCloudflareContext({ async: true });
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
