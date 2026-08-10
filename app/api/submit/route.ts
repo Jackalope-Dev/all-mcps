@@ -87,11 +87,11 @@ export async function POST(req: Request) {
     }
 
     const email = result.data.email.trim().toLowerCase();
-    let websiteUrl = result.data.websiteUrl || '';
+    let websiteUrl = normalizeUrl(result.data.websiteUrl || '');
     let name = result.data.name || '';
     let description = result.data.description || '';
     let category = normalizeCategory(result.data.category);
-    let url = (result.data.url || '').trim();
+    let url = normalizeUrl(result.data.url || '');
 
     const tags = normalizeTags(result.data.tags);
     const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
@@ -108,9 +108,9 @@ export async function POST(req: Request) {
       .map((a) => a.trim())
       .slice(0, 20);
     // Supplementary link — drop silently if unsafe/malformed rather than failing the submission over it.
-    let supportUrl = (result.data.supportUrl || '').trim();
+    let supportUrl = normalizeUrl(result.data.supportUrl || '');
     if (supportUrl && !isSafeSubmissionUrl(supportUrl)) supportUrl = '';
-    let remoteEndpointUrl = (result.data.remoteEndpointUrl || '').trim();
+    let remoteEndpointUrl = normalizeUrl(result.data.remoteEndpointUrl || '');
     if (remoteEndpointUrl && !isSafeSubmissionUrl(remoteEndpointUrl)) remoteEndpointUrl = '';
 
     // Website-only: use website as primary url when repo omitted
