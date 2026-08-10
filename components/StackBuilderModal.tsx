@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   Layers,
@@ -24,15 +24,33 @@ import { CopyBlock } from './ui/CopyBlock';
 type ClientFormat = 'claude' | 'cursor' | 'cline' | 'windsurf';
 
 interface StackBuilderProps {
-  allServers: Server[];
+  allServers?: Server[];
   isOpen?: boolean;
   onClose?: () => void;
 }
 
-export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackBuilderProps) {
+type CatalogServerItem = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  url?: string;
+  installKind?: string | null;
+  installCommand?: string | null;
+  installArgs?: string | null;
+  installPackage?: string | null;
+  installConfidence?: any;
+  suggestedInstallCommand?: string | null;
+  suggestedInstallArgs?: string | null;
+  logoUrl?: string | null;
+};
+
+export function StackBuilderModal({ allServers = [], isOpen = true, onClose }: StackBuilderProps) {
   const [serverIds, setServerIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<ClientFormat>('claude');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [fetchedCatalog, setFetchedCatalog] = useState<CatalogServerItem[]>([]);
+  const fetchedRef = useRef(false);
 
   const refreshStack = () => {
     setServerIds(getStackServerIds());
@@ -44,10 +62,45 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
     return () => window.removeEventListener('mcp_stack_updated', refreshStack);
   }, []);
 
+  // Fetch full directory catalog if any stack item is missing from `allServers`
+  useEffect(() => {
+    if (!isOpen || fetchedRef.current) return;
+    fetchedRef.current = true;
+
+    fetch('/api/search-index')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.servers && Array.isArray(data.servers)) {
+          setFetchedCatalog(data.servers);
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const selectedServers = useMemo(() => {
-    const map = new Map(allServers.map((s) => [s.id, s]));
-    return serverIds.map((id) => map.get(id)).filter((s): s is Server => Boolean(s));
-  }, [allServers, serverIds]);
+    const map = new Map<string, CatalogServerItem>();
+    for (const s of allServers) {
+      map.set(s.id, s as unknown as CatalogServerItem);
+    }
+    for (const s of fetchedCatalog) {
+      if (!map.has(s.id)) {
+        map.set(s.id, s);
+      }
+    }
+    return serverIds
+      .map((id) => map.get(id) || { id, name: id, description: '', category: 'MCP Tool', url: '' })
+      .filter(Boolean);
+  }, [allServers, fetchedCatalog, serverIds]);
 
   const mergedConfig = useMemo(() => {
     const mcpServers: Record<string, unknown> = {};
@@ -56,7 +109,7 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
       const cfg = resolveInstallConfig({
         id: server.id,
         name: server.name,
-        url: server.url,
+        url: server.url || '',
         description: server.description,
         installKind: server.installKind,
         installCommand: server.installCommand,
@@ -81,15 +134,8 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
       }
     }
 
-    if (activeTab === 'cursor') {
-      return JSON.stringify({ mcpServers }, null, 2);
-    }
-    if (activeTab === 'cline' || activeTab === 'windsurf') {
-      return JSON.stringify({ mcpServers }, null, 2);
-    }
-    // Claude desktop default
     return JSON.stringify({ mcpServers }, null, 2);
-  }, [selectedServers, activeTab]);
+  }, [selectedServers]);
 
   const handleCopyLink = () => {
     const shareUrl = buildStackShareUrl(serverIds);
@@ -202,10 +248,11 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
               <button
                 type="button"
                 onClick={onClose}
+                aria-label="Close modal"
                 style={{
                   background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: '#94a3b8',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)',
                   borderRadius: '8px',
                   padding: '0.35rem',
                   cursor: 'pointer',
@@ -225,16 +272,16 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
                 textAlign: 'center',
                 padding: '3rem 1.5rem',
                 backgroundColor: 'rgba(255,255,255,0.02)',
-                border: '1px dashed rgba(255,255,255,0.1)',
+                border: '1px dashed var(--border-color)',
                 borderRadius: '12px',
               }}
             >
-              <Wrench size={32} style={{ color: '#00e5ff', margin: '0 auto 1rem', opacity: 0.8 }} />
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#ffffff', marginBottom: '0.5rem' }}>
+              <Wrench size={32} style={{ color: 'var(--accent-color)', margin: '0 auto 1rem', opacity: 0.8 }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                 Your MCP Stack is Empty
               </h3>
-              <p style={{ fontSize: '0.85rem', color: '#94a3b8', maxWidth: '420px', margin: '0 auto 1.5rem' }}>
-                Click "+ Add to Stack" on any MCP server card to build a combined configuration file for your AI client.
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem' }}>
+                Click &ldquo;+ Add to Stack&rdquo; on any MCP server card to build a combined configuration file for your AI client.
               </p>
               <Link
                 href="/browse"
@@ -245,7 +292,7 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
                   gap: '0.5rem',
                   padding: '0.5rem 1.25rem',
                   borderRadius: '8px',
-                  background: 'linear-gradient(135deg, #00e5ff, #007bff)',
+                  background: 'var(--brand-gradient)',
                   color: '#020617',
                   fontWeight: 600,
                   fontSize: '0.85rem',
@@ -259,7 +306,7 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Selected Chips */}
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Selected Tools ({selectedServers.length})
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
@@ -275,7 +322,7 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
                         border: '1px solid rgba(0, 229, 255, 0.25)',
                         borderRadius: '20px',
                         fontSize: '0.8rem',
-                        color: '#00e5ff',
+                        color: 'var(--accent-color)',
                       }}
                     >
                       <span>{s.name}</span>
@@ -285,7 +332,7 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#94a3b8',
+                          color: 'var(--text-secondary)',
                           cursor: 'pointer',
                           padding: 0,
                           display: 'flex',
@@ -300,7 +347,7 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
 
               {/* Format Selector Tabs */}
               <div>
-                <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                   {(['claude', 'cursor', 'cline', 'windsurf'] as const).map((tab) => (
                     <button
                       key={tab}
@@ -313,8 +360,8 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
                         fontWeight: 600,
                         border: 'none',
                         cursor: 'pointer',
-                        backgroundColor: activeTab === tab ? '#00e5ff' : 'rgba(255,255,255,0.05)',
-                        color: activeTab === tab ? '#020617' : '#94a3b8',
+                        backgroundColor: activeTab === tab ? 'var(--accent-color)' : 'rgba(255,255,255,0.05)',
+                        color: activeTab === tab ? '#020617' : 'var(--text-secondary)',
                         textTransform: 'capitalize',
                       }}
                     >
@@ -337,11 +384,11 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
           <div
             style={{
               padding: '1rem 1.5rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              borderTop: '1px solid var(--border-color)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              backgroundColor: 'var(--bg-elevated)',
             }}
           >
             <button
@@ -353,9 +400,9 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
                 gap: '0.4rem',
                 padding: '0.45rem 0.85rem',
                 borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.15)',
+                border: '1px solid var(--border-color)',
                 backgroundColor: 'rgba(255,255,255,0.05)',
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 fontSize: '0.8rem',
                 cursor: 'pointer',
               }}
@@ -374,7 +421,7 @@ export function StackBuilderModal({ allServers, isOpen = true, onClose }: StackB
                 padding: '0.45rem 1rem',
                 borderRadius: '8px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #00e5ff, #007bff)',
+                background: 'var(--brand-gradient)',
                 color: '#020617',
                 fontWeight: 600,
                 fontSize: '0.85rem',

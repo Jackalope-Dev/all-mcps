@@ -12,6 +12,7 @@ import { PurchaseTracker } from "../components/PurchaseTracker";
 import { CommandPaletteLazy } from "../components/CommandPaletteLazy";
 import { PostHogIdentify } from "../components/PostHogIdentify";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
+import { FloatingStackDock } from "../components/ui/FloatingStackDock";
 import "./globals.css";
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
@@ -207,6 +208,7 @@ export default function RootLayout({
         </div>
         <SiteFooter />
         <ThemeSwitcher />
+        <FloatingStackDock />
       </body>
     </html>
   );
