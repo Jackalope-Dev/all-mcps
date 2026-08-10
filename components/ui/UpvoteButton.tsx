@@ -101,9 +101,9 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
     >
       <Heart 
         size={16} 
-        className="upvote-heart-icon"
-        fill={hasUpvoted ? '#ffffff' : (isHovered ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.35)')} 
-        style={{ transition: 'all 0.2s ease' }}
+        className="upvote-heart-icon text-white"
+        fill={hasUpvoted ? '#ffffff' : (isHovered ? 'rgba(255, 255, 255, 0.5)' : 'transparent')} 
+        style={{ transition: 'all 0.2s ease', color: '#ffffff' }}
       />
       <span>{upvotes} {upvotes === 1 ? 'Upvote' : 'Upvotes'}</span>
     </button>

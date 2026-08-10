@@ -73,9 +73,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // Prefer the LLM-written one-liner for the meta description — it's a clean, unique
   // sentence, whereas the raw description is often scraped chrome. Better CTR + no
   // duplicate-snippet penalty against the upstream repo.
-  const metaSource = (server.aiSummary && server.aiSummary.trim()) || server.description;
-  const desc =
-    metaSource.length > 155 ? `${metaSource.slice(0, 152)}...` : metaSource;
+  const metaSource = (server.aiSummary && server.aiSummary.trim()) || server.description || '';
+  let desc = metaSource.length > 155 ? `${metaSource.slice(0, 152)}...` : metaSource;
+  if (desc.length > 0 && desc.length <= 110 && !desc.toLowerCase().includes('claude') && !desc.toLowerCase().includes('cursor')) {
+    desc = `${desc.replace(/\.$/, '')}. Connect to Claude Desktop, Cursor & Windsurf.`;
+  }
 
   const { displayName } = parseServerName(server.name);
   const title = buildDetailTitle(displayName);

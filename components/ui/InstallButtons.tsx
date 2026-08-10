@@ -129,13 +129,7 @@ export function InstallButtons({
       <button
         type="button"
         onClick={handleToggleStack}
-        className="install-deeplink-btn"
-        style={{
-          background: inStack ? 'rgba(0, 229, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-          border: inStack ? '1px solid #00e5ff' : '1px solid rgba(255, 255, 255, 0.15)',
-          color: inStack ? '#00e5ff' : '#ffffff',
-          cursor: 'pointer',
-        }}
+        className={`install-deeplink-btn ${inStack ? 'install-deeplink-btn--instack' : ''}`}
       >
         {inStack ? '✓ In Stack' : '+ Add to Stack'}
       </button>

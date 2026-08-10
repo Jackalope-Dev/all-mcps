@@ -1801,6 +1801,18 @@ p {
   box-shadow: var(--shadow-md);
 }
 
+.install-deeplink-btn--instack {
+  background: rgba(0, 229, 255, 0.15) !important;
+  border-color: var(--accent-color) !important;
+  color: var(--accent-color) !important;
+}
+
+[data-theme="light"] .install-deeplink-btn--instack {
+  background: rgba(2, 132, 199, 0.12) !important;
+  border-color: var(--accent-color) !important;
+  color: var(--accent-color) !important;
+}
+
 .btn-submit-noticeable {
   background: linear-gradient(135deg, rgba(0, 229, 255, 0.18), rgba(0, 123, 255, 0.15));
   border: 1px solid rgba(0, 229, 255, 0.5);
@@ -3633,22 +3645,22 @@ nav[aria-label="Table of contents"] {
   font-size: 0.9rem;
   font-weight: 600;
   border-radius: var(--radius-btn);
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
   box-shadow: 0 4px 16px rgba(244, 63, 94, 0.35);
-  animation: upvote-glow 5s ease-in-out infinite;
+  animation: upvote-glow 4s ease-in-out infinite;
 }
 
 .listing-metric-pill--upvote .upvote-heart-icon {
-  color: #ffffff;
+  color: #ffffff !important;
   transition: transform 0.2s ease, color 0.2s ease, fill 0.2s ease;
 }
 
 .listing-metric-pill--upvote:hover {
-  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #ffffff;
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #ffffff !important;
   box-shadow: 0 6px 22px rgba(244, 63, 94, 0.5);
   animation-play-state: paused;
 }
@@ -3659,7 +3671,7 @@ nav[aria-label="Table of contents"] {
     box-shadow: 0 4px 16px rgba(244, 63, 94, 0.35);
   }
   50% {
-    box-shadow: 0 4px 22px rgba(244, 63, 94, 0.55);
+    box-shadow: 0 4px 24px rgba(244, 63, 94, 0.6);
   }
 }
 
@@ -3671,8 +3683,8 @@ nav[aria-label="Table of contents"] {
 
 .listing-metric-pill--upvote:hover .upvote-heart-icon {
   transform: scale(1.18);
-  color: #ffffff;
-  fill: rgba(255, 255, 255, 0.8);
+  color: #ffffff !important;
+  fill: rgba(255, 255, 255, 0.6);
 }
 
 .listing-metric-pill--upvoted {
@@ -3681,9 +3693,9 @@ nav[aria-label="Table of contents"] {
   color: #ffffff !important;
   font-weight: 600;
   cursor: default !important;
-  box-shadow: 0 0 16px rgba(225, 29, 72, 0.4);
+  box-shadow: 0 2px 10px rgba(225, 29, 72, 0.3) !important;
   transform: none !important;
-  animation: none;
+  animation: none !important;
 }
 
 .listing-metric-pill--upvoted .upvote-heart-icon {
@@ -5289,6 +5301,23 @@ nav[aria-label="Table of contents"] {
   background: rgba(15, 23, 42, 0.05);
   border-color: rgba(15, 23, 42, 0.12);
   color: var(--text-secondary);
+}
+
+[data-theme="light"] .listing-metric-pill--upvote {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .listing-metric-pill--upvote:hover {
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .listing-metric-pill--upvoted {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
 }
 
 [data-theme="light"] .listing-metric-pill--button:hover {
