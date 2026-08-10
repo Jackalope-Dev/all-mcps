@@ -482,6 +482,26 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                     </span>
                   </IconTooltip>
                 )}
+                {!server.aiEnrichedAt && (
+                  <IconTooltip
+                    label="Enrichment pending"
+                    trigger={
+                      <Badge variant="default" className="mcp-trust-badge">
+                        <Clock size={13} />
+                        <span className="mcp-trust-badge-label">Pending</span>
+                      </Badge>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Clock size={14} style={{ color: 'var(--text-secondary)' }} /> Enrichment pending
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      We haven&rsquo;t run our AI enrichment pass on this listing yet, so the overview, use
+                      cases, and FAQ below may be sparse or missing. We work through the catalog over
+                      time — check back soon.
+                    </span>
+                  </IconTooltip>
+                )}
               </div>
             </div>
           </div>
