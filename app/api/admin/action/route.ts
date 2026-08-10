@@ -435,6 +435,16 @@ export async function POST(req: Request) {
           .update(servers)
           .set({ logoUrl: `/logos/${id}`, logoSource: 'manual', pendingLogoKey: null })
           .where(eq(servers.id, id));
+
+        // Purge Cloudflare Edge Cache for the logo URL so new image shows instantly
+        try {
+          const cache = (globalThis as any).caches?.default;
+          if (cache) {
+            await cache.delete(new Request(`${getAppUrl()}/logos/${id}`));
+          }
+        } catch {
+          /* ignore non-worker context */
+        }
       } else {
         await env.LOGOS.delete(server.pendingLogoKey);
         await db.update(servers).set({ pendingLogoKey: null }).where(eq(servers.id, id));
@@ -481,6 +491,16 @@ export async function POST(req: Request) {
           .update(servers)
           .set({ screenshotUrl: `/screenshots/${id}`, pendingScreenshotKey: null })
           .where(eq(servers.id, id));
+
+        // Purge Cloudflare Edge Cache for the screenshot URL so new image shows instantly
+        try {
+          const cache = (globalThis as any).caches?.default;
+          if (cache) {
+            await cache.delete(new Request(`${getAppUrl()}/screenshots/${id}`));
+          }
+        } catch {
+          /* ignore non-worker context */
+        }
       } else {
         await env.LOGOS.delete(server.pendingScreenshotKey);
         await db.update(servers).set({ pendingScreenshotKey: null }).where(eq(servers.id, id));
