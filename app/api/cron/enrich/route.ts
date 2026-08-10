@@ -48,6 +48,22 @@ import { getGithubToken } from '../../../../lib/githubAuth';
 // backlog quickly without the risk.
 const BATCH_SIZE = 15;
 
+/** Safely writes an asset to R2 without throwing when concurrent jobs write to the same key. */
+async function safeR2Put(
+  bucket: any,
+  key: string,
+  value: ArrayBuffer | Uint8Array,
+  options?: any
+): Promise<boolean> {
+  try {
+    await bucket.put(key, value, options);
+    return true;
+  } catch (e: any) {
+    console.warn(`[safeR2Put] R2 put skipped for ${key}: ${e?.message || e}`);
+    return false;
+  }
+}
+
 async function tryUploadLogo(
   url: string,
   serverId: string,
@@ -207,12 +223,14 @@ export async function POST(req: Request) {
             const png = await tryUploadLogo(faviconUrl, server.id, env.LOGOS);
             if (png) {
               const key = `live/${server.id}.png`;
-              await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
-              logoUrl = `/logos/${server.id}`;
-              logoSource = 'website_favicon';
-              updates.logoUrl = logoUrl;
-              updates.logoSource = logoSource;
-              stats.logosSet++;
+              const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+              if (putOk) {
+                logoUrl = `/logos/${server.id}`;
+                logoSource = 'website_favicon';
+                updates.logoUrl = logoUrl;
+                updates.logoSource = logoSource;
+                stats.logosSet++;
+              }
             }
           }
         }
@@ -332,12 +350,14 @@ export async function POST(req: Request) {
                   const png = await tryUploadLogo(candidate, server.id, env.LOGOS);
                   if (png) {
                     const key = `live/${server.id}.png`;
-                    await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
-                    logoUrl = `/logos/${server.id}`;
-                    logoSource = 'readme';
-                    updates.logoUrl = logoUrl;
-                    updates.logoSource = logoSource;
-                    stats.logosSet++;
+                    const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+                    if (putOk) {
+                      logoUrl = `/logos/${server.id}`;
+                      logoSource = 'readme';
+                      updates.logoUrl = logoUrl;
+                      updates.logoSource = logoSource;
+                      stats.logosSet++;
+                    }
                     break;
                   }
                 }
@@ -353,12 +373,14 @@ export async function POST(req: Request) {
               const png = await tryUploadLogo(faviconUrl, server.id, env.LOGOS);
               if (png) {
                 const key = `live/${server.id}.png`;
-                await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
-                logoUrl = `/logos/${server.id}`;
-                logoSource = 'website_favicon';
-                updates.logoUrl = logoUrl;
-                updates.logoSource = logoSource;
-                stats.logosSet++;
+                const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+                if (putOk) {
+                  logoUrl = `/logos/${server.id}`;
+                  logoSource = 'website_favicon';
+                  updates.logoUrl = logoUrl;
+                  updates.logoSource = logoSource;
+                  stats.logosSet++;
+                }
               }
             }
           }
@@ -375,12 +397,14 @@ export async function POST(req: Request) {
             const png = await tryUploadLogo(avatarUrl, server.id, env.LOGOS);
             if (png) {
               const key = `live/${server.id}.png`;
-              await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
-              logoUrl = `/logos/${server.id}`;
-              logoSource = 'github_org';
-              updates.logoUrl = logoUrl;
-              updates.logoSource = logoSource;
-              stats.logosSet++;
+              const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+              if (putOk) {
+                logoUrl = `/logos/${server.id}`;
+                logoSource = 'github_org';
+                updates.logoUrl = logoUrl;
+                updates.logoSource = logoSource;
+                stats.logosSet++;
+              }
             }
           }
 
@@ -395,12 +419,14 @@ export async function POST(req: Request) {
             const png = await tryUploadLogo(avatarUrl, server.id, env.LOGOS);
             if (png) {
               const key = `live/${server.id}.png`;
-              await env.LOGOS.put(key, png, { httpMetadata: { contentType: 'image/png' } });
-              logoUrl = `/logos/${server.id}`;
-              logoSource = 'github_user';
-              updates.logoUrl = logoUrl;
-              updates.logoSource = logoSource;
-              stats.logosSet++;
+              const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+              if (putOk) {
+                logoUrl = `/logos/${server.id}`;
+                logoSource = 'github_user';
+                updates.logoUrl = logoUrl;
+                updates.logoSource = logoSource;
+                stats.logosSet++;
+              }
             }
           }
         }
