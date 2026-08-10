@@ -20,6 +20,8 @@ export const metadata: Metadata = {
       'Find, discover, and install the best Model Context Protocol (MCP) servers. Connect Claude, Cursor, and AI agents to files, databases, and APIs.',
     url: 'https://allmcps.com',
   },
+};
+
 // 5-minute ISR aligns with the 5-min discovery seed rotation while serving
 // sub-15ms Edge CDN response times for root homepage visitors.
 export const revalidate = 300;
