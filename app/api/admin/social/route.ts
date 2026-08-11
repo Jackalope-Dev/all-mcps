@@ -4,7 +4,6 @@ import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { socialPosts, servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
-import { isAdminAuthorized } from '@/lib/adminAuth';
 import { dedupeTweetItems, normalizeTweetForDedup, tweetMcpServer } from '@/lib/twitter';
 
 export async function GET(req: Request) {
@@ -58,11 +57,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    // Admin dashboard authenticates via Cloudflare Access; automation callers
-    // (the Make.com scenario, once Buffer confirms a post went out) can't present
-    // that, so they authenticate with `Authorization: Bearer <ADMIN_SECRET>` instead,
-    // same pattern as the highlight cron.
-    if (!(await getAuthorizedAdminEmail(req.headers)) && !(await isAdminAuthorized(req))) {
+    // This whole path sits behind the Cloudflare Access application that also
+    // guards /admin, so only a browser with a live Access session ever reaches
+    // this code — automation (Make.com, etc.) belongs on /api/cron/* instead,
+    // which is not Access-protected. See app/api/cron/social-mark-sent/route.ts.
+    if (!(await getAuthorizedAdminEmail(req.headers))) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
