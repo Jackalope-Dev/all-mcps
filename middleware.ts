@@ -24,6 +24,25 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
 
+  // `/?category=`/`/?q=` are filtered/search views that live on /browse — this
+  // used to be a redirect inside app/page.tsx's Server Component, but merely
+  // reading `searchParams` there (even to find it empty, true for virtually all
+  // real homepage traffic) forced Next to render the whole homepage dynamically,
+  // defeating its ISR caching for every visitor. Doing the redirect here instead
+  // means the homepage component itself never touches searchParams. 307 to match
+  // next/navigation's `redirect()` default (what this replaced).
+  if (pathname === '/') {
+    const homeCategory = searchParams.get('category');
+    const homeQ = searchParams.get('q');
+    if (homeCategory || homeQ) {
+      const url = new URL('/browse', req.url);
+      url.search = '';
+      if (homeCategory) url.searchParams.set('category', homeCategory);
+      if (homeQ) url.searchParams.set('q', homeQ);
+      return NextResponse.redirect(url, 307);
+    }
+  }
+
   if (
     pathname.startsWith('/server/') ||
     pathname.startsWith('/servers/') ||
@@ -151,19 +170,9 @@ export function middleware(req: NextRequest) {
     "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://www.googletagmanager.com https://*.posthog.com https://p.allmcps.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://*.posthog.com https://us-assets.i.posthog.com https://p.allmcps.com; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://*.posthog.com https://us.posthog.com https://p.allmcps.com;"
   );
 
-  // Force revalidation so HTML never gets served stale-and-unchecked after a
-  // deploy (a cached page could reference now-deleted hashed CSS/JS chunk
-  // URLs). `no-cache` (not `no-store`) gets this: browsers/CDNs may still
-  // store the response, but MUST revalidate with the origin before reusing it
-  // — every fresh navigation still hits this Worker, same as before.
-  // `no-store` additionally disqualifies the page from the browser's
-  // back/forward cache (bfcache), which restores an already-loaded page from
-  // an in-memory snapshot rather than the network — no re-fetch of any asset
-  // happens, so it carries none of the staleness risk this header guards
-  // against. That was forcing a full reload (re-run JS, refetch data) on
-  // every Back button press sitewide for no safety benefit.
+  // Prevent stale HTML from referencing outdated hashed CSS/JS bundles after deploys.
   if (!pathname.startsWith('/api/') && acceptHeader.includes('text/html')) {
-    response.headers.set('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+    response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
   }
 
   return response;

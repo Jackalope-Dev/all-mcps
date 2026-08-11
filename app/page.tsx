@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import DirectoryGrid from '../components/DirectoryGrid';
-import { redirect } from 'next/navigation';
 import { pickDiscoveryServers } from '../lib/featured';
 import { getActiveServersLight, getNewestActiveServers } from '../lib/servers';
 import { getSiteStats } from '../lib/siteStats';
@@ -26,22 +25,14 @@ export const metadata: Metadata = {
 // sub-15ms Edge CDN response times for root homepage visitors.
 export const revalidate = 300;
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ category?: string; q?: string }>;
-}) {
-  const params = await searchParams;
-  // Filtered / search views live on the dedicated browse page
-  const category = typeof params.category === 'string' ? params.category : null;
-  const q = typeof params.q === 'string' ? params.q : '';
-  if (category || q) {
-    const sp = new URLSearchParams();
-    if (category) sp.set('category', category);
-    if (q) sp.set('q', q);
-    redirect(`/browse?${sp.toString()}`);
-  }
-
+// `?category=`/`?q=` on `/` used to be handled by reading `searchParams` here and
+// redirecting to /browse — but merely reading that prop (even to find it empty,
+// which is true for virtually all real homepage traffic) forces Next to render
+// this whole page dynamically, defeating the ISR caching below for every visitor.
+// The redirect now happens in middleware.ts instead, before Next's rendering
+// pipeline is even involved, so this page never touches searchParams and stays
+// eligible for the `revalidate` caching below.
+export default async function Home() {
   // Landing cards (full detail, DB-sorted+capped) and the catalog-wide ranking
   // pool (lightweight columns only — see getActiveServersLight) are independent
   // queries so a homepage hit never has to load every listing's tools/AI-content
