@@ -46,10 +46,19 @@ const CRON_JOBS: CronJob[] = [
   // pairs. Every tick until the backlog is drained, then permanently no-ops. For
   // the initial backlog, drive scripts/backfill-ai-faq.mjs to drain it faster.
   { path: "/api/cron/ai-faq", secretVar: "ADMIN_SECRET" },
-  // Syncs semantic vector embeddings for natural language search into Cloudflare Vectorize.
+  // Syncs semantic vector embeddings into Cloudflare Vectorize for natural language
+  // search. Bounded batch per tick (see BATCH_SIZE in the route) — an earlier
+  // unbounded version processed the whole catalog per tick and blew the scheduled
+  // handler's time/subrequest budget, taking down every job queued after it. Every
+  // tick until the catalog is indexed, then no-ops. For the initial backlog, drive
+  // scripts/sync-vector-index.mjs against this endpoint to drain it faster.
   { path: "/api/cron/vector-index", secretVar: "ADMIN_SECRET" },
   // Rotates the X/Twitter highlight. Fine every 4h (~6 posts/day).
   { path: "/api/cron/highlight", secretVar: "ADMIN_SECRET" },
+  // Purges R2 ISR-cache entries left behind by previous deploys' build IDs,
+  // keeping only the current build's — see route comment for why this exists
+  // alongside the bucket's 7-day lifecycle rule.
+  { path: "/api/cron/isr-cache-cleanup", secretVar: "ADMIN_SECRET" },
   // IndexNow batch for recently approved listings — daily at 00:00 UTC tick.
   // Complements the per-approve ping so fire-and-forget misses still get indexed.
   {

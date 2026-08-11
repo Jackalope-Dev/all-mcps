@@ -106,6 +106,11 @@ export const servers = sqliteTable('servers', {
    * the AI content layer (see lib/aiContent.ts) — used to add env placeholders to
    * generated mcpServers configs instead of silently omitting required secrets. */
   aiEnvVars: text('ai_env_vars'),
+  /** When this listing's semantic embedding was last pushed to Cloudflare Vectorize
+   * (see /api/cron/vector-index, lib/vectorSearch.ts). Null = never indexed. Lets
+   * the cron atomically claim a bounded batch per tick instead of walking the
+   * full catalog every run — same shape as aiFaqAt above. */
+  vectorSyncedAt: integer('vector_synced_at', { mode: 'timestamp' }),
   /**
    * Optional secondary connection method: a live hosted MCP endpoint offered
    * *in addition to* the primary stdio/remote install already described by
