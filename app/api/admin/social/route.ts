@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { socialPosts, servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
+import { isAdminAuthorized } from '@/lib/adminAuth';
 import { dedupeTweetItems, normalizeTweetForDedup, tweetMcpServer } from '@/lib/twitter';
 
 export async function GET(req: Request) {
@@ -57,16 +58,21 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    if (!(await getAuthorizedAdminEmail(req.headers))) {
+    // Admin dashboard authenticates via Cloudflare Access; automation callers
+    // (the Make.com scenario, once Buffer confirms a post went out) can't present
+    // that, so they authenticate with `Authorization: Bearer <ADMIN_SECRET>` instead,
+    // same pattern as the highlight cron.
+    if (!(await getAuthorizedAdminEmail(req.headers)) && !(await isAdminAuthorized(req))) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
     const body = await req.json().catch(() => ({}));
-    const { action, serverId, tweetText, id } = body as {
+    const { action, serverId, tweetText, id, guid } = body as {
       action?: string;
       serverId?: string;
       tweetText?: string;
       id?: number;
+      guid?: string;
     };
 
     let env: any;
@@ -85,15 +91,24 @@ export async function POST(req: Request) {
 
     // Mark a queued post as sent so it drops out of the outbound RSS feed. Use this
     // for a row Buffer already posted successfully (an "identify successful posts and
-    // clear them" action) — the feed only serves status='queued' rows.
+    // clear them" action) — the feed only serves status='queued' rows. Accepts `guid`
+    // (all the Make.com scenario ever sees, from the RSS item) as well as the internal
+    // `id` (used by the admin dashboard) — without this getting marked, the same row
+    // stays in the feed forever and Buffer eventually re-sends it, which X.com rejects
+    // as a duplicate and Make disables the scenario after enough consecutive 400s.
     if (action === 'mark_sent') {
-      if (typeof id !== 'number') {
-        return NextResponse.json({ error: 'id is required.' }, { status: 400 });
+      if (typeof id !== 'number' && !guid) {
+        return NextResponse.json({ error: 'id or guid is required.' }, { status: 400 });
       }
-      await db
+      const where = typeof id === 'number' ? eq(socialPosts.id, id) : eq(socialPosts.guid, guid!);
+      const updated = await db
         .update(socialPosts)
         .set({ status: 'sent', sentAt: new Date() })
-        .where(eq(socialPosts.id, id));
+        .where(where)
+        .returning({ id: socialPosts.id });
+      if (updated.length === 0) {
+        return NextResponse.json({ error: 'No matching queued post found.' }, { status: 404 });
+      }
       return NextResponse.json({ success: true, message: 'Post marked as sent.' });
     }
 
