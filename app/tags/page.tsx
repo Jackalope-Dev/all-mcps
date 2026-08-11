@@ -1,9 +1,10 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Tag, ChevronRight, Hash, Layers, Sparkles, Flame } from 'lucide-react';
 import { getAllTagsWithCounts } from '@/lib/tags';
 import { PageShell } from '@/components/PageShell';
-import Link from 'next/link';
-import { Tag } from 'lucide-react';
+import { TagGridClient } from '@/components/TagGridClient';
 
 export const metadata: Metadata = {
   title: 'Browse MCP Tools by Tag | AllMCPs Directory',
@@ -12,15 +13,87 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://allmcps.com/tags',
   },
+  openGraph: {
+    title: 'Browse MCP Tools by Tag | AllMCPs Directory',
+    description:
+      'Explore Model Context Protocol (MCP) servers by tag topics including database, web-scraping, finance, github, docker, slack, and more.',
+    url: 'https://allmcps.com/tags',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Browse MCP Tools by Tag | AllMCPs Directory',
+    description:
+      'Explore Model Context Protocol (MCP) servers by tag topics including database, web-scraping, finance, github, docker, slack, and more.',
+  },
 };
 
 export default async function TagsIndexPage() {
   const sortedTags = await getAllTagsWithCounts();
 
+  // Compute metrics
+  const totalTagsCount = sortedTags.length;
+  const totalTaggedRefs = sortedTags.reduce((sum, t) => sum + t.count, 0);
+  const topTag = sortedTags[0] ? sortedTags[0] : { label: 'Developer', count: 0 };
+  const featuredTags = sortedTags.slice(0, 10);
+
+  // Structured JSON-LD Data
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        name: 'MCP Server Tags & Topics Index',
+        description: `Browse ${totalTagsCount} tag topics and capabilities across the Model Context Protocol ecosystem.`,
+        url: 'https://allmcps.com/tags',
+        numberOfItems: totalTagsCount,
+        isPartOf: {
+          '@type': 'WebSite',
+          name: 'AllMCPs',
+          url: 'https://allmcps.com',
+        },
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: Math.min(totalTagsCount, 50),
+          itemListElement: sortedTags.slice(0, 50).map((tag, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            name: tag.label,
+            url: `https://allmcps.com/tags/${tag.slug}`,
+          })),
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
+          { '@type': 'ListItem', position: 2, name: 'Tags', item: 'https://allmcps.com/tags' },
+        ],
+      },
+    ],
+  };
+
   return (
     <PageShell>
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2.5rem 1rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="tags-container">
+        {/* Breadcrumbs */}
+        <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
+          <ol className="breadcrumb">
+            <li>
+              <Link href="/">Home</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
+            <li className="breadcrumb-current">Tags</li>
+          </ol>
+        </nav>
+
+        {/* Hero Section */}
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem', maxWidth: '750px', margin: '0 auto 2.5rem' }}>
           <div
             style={{
               display: 'inline-flex',
@@ -38,52 +111,70 @@ export default async function TagsIndexPage() {
           >
             <Tag size={14} /> Taxonomy Index
           </div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+          <h1 className="text-display" style={{ marginBottom: '0.85rem' }}>
             MCP Directory Tags
           </h1>
-          <p style={{ fontSize: '1.05rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-            Browse {sortedTags.length} topics and capabilities across the Model Context Protocol ecosystem.
+          <p className="text-lead" style={{ margin: '0 auto', textAlign: 'center' }}>
+            Browse{' '}
+            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+              {totalTagsCount}
+            </span>{' '}
+            topics and integrations across the Model Context Protocol ecosystem.
           </p>
         </div>
 
-        {/* Tag Cloud */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.85rem' }}>
-          {sortedTags.map(({ slug, label, count }) => (
-            <Link
-              key={slug}
-              href={`/tags/${slug}`}
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
-                textDecoration: 'none',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Tag size={15} style={{ color: 'var(--accent-color)' }} />
-                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</span>
-              </div>
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  backgroundColor: 'var(--bg-muted)',
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '10px',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {count}
-              </span>
-            </Link>
-          ))}
+        {/* Summary Metric Cards */}
+        <div className="tags-stats-grid">
+          <div className="tags-stat-card">
+            <div className="tags-stat-icon">
+              <Hash size={22} />
+            </div>
+            <div>
+              <div className="tags-stat-val">{totalTagsCount}</div>
+              <div className="tags-stat-lbl">Total Topics & Tags</div>
+            </div>
+          </div>
+
+          <div className="tags-stat-card">
+            <div className="tags-stat-icon">
+              <Layers size={22} />
+            </div>
+            <div>
+              <div className="tags-stat-val">{totalTaggedRefs.toLocaleString()}</div>
+              <div className="tags-stat-lbl">Tagged Server References</div>
+            </div>
+          </div>
+
+          <div className="tags-stat-card">
+            <div className="tags-stat-icon">
+              <Sparkles size={22} />
+            </div>
+            <div>
+              <div className="tags-stat-val">{topTag.label}</div>
+              <div className="tags-stat-lbl">Most Popular ({topTag.count} servers)</div>
+            </div>
+          </div>
         </div>
+
+        {/* Featured Tags Section */}
+        {featuredTags.length > 0 && (
+          <div className="featured-tags-section">
+            <div className="featured-tags-header">
+              <Flame size={16} /> Featured & Trending Topics
+            </div>
+            <div className="featured-tags-pills">
+              {featuredTags.map(({ slug, label, count }) => (
+                <Link key={slug} href={`/tags/${slug}`} className="featured-tag-pill">
+                  <span>{label}</span>
+                  <span className="featured-tag-count">{count}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Client-side Search, Filter & Tag Grid */}
+        <TagGridClient tags={sortedTags} />
       </div>
     </PageShell>
   );
