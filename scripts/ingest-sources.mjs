@@ -125,8 +125,116 @@ function stripEmojiLabel(category) {
   return category.replace(/^[^\p{L}\p{N}]+/u, '').trim();
 }
 
-function normalizeCategoryLite(input) {
-  if (!input || !input.trim()) return DEFAULT_CATEGORY;
+const CATEGORY_RULES = [
+  {
+    category: '🗄️ Databases',
+    regex: /\b(postgres|postgresql|mysql|sqlite|mongodb|redis|supabase|neon|clickhouse|cassandra|dynamodb|planetscale|cockroachdb|memcached|duckdb|snowflake|bigquery|couchdb|prisma|drizzle|sql|database|datastore|timescaledb|vectordb)\b/i,
+  },
+  {
+    category: '💬 Communication',
+    regex: /\b(slack|discord|telegram|whatsapp|email|gmail|sendgrid|resend|mailchimp|matrix|teams|twilio|zendesk|intercom|messaging|messenger|outlook)\b/i,
+  },
+  {
+    category: '📂 Browser Automation',
+    regex: /\b(playwright|puppeteer|selenium|browserbase|stagehand|headful|headless-browser|browser-automation|chromedp|web-browser|browser-use)\b/i,
+  },
+  {
+    category: '🔎 Search & Data Extraction',
+    regex: /\b(serper|tavily|brave-search|google-search|bing-search|duckduckgo|web-scraper|scraping|crawling|web-crawler|firecrawl|jina-ai|diffbot|web-extraction|web-search)\b/i,
+  },
+  {
+    category: '🔄 Version Control',
+    regex: /\b(github-api|github-issues|github-pulls|gitlab|bitbucket|gitea|git-repo|git-commit|version-control|subversion|mercurial)\b/i,
+  },
+  {
+    category: '☁️ Cloud Platforms',
+    regex: /\b(aws|amazon-web-services|gcp|google-cloud|azure|cloudflare|terraform|kubernetes|k8s|docker|vercel|netlify|digitalocean|heroku|cloud-infrastructure|aws-lambda|s3-bucket)\b/i,
+  },
+  {
+    category: '📊 Monitoring',
+    regex: /\b(sentry|datadog|prometheus|grafana|opentelemetry|logrocket|newrelic|pagerduty|uptime|logging|observability|metrics|alerting|statuspage)\b/i,
+  },
+  {
+    category: '🏢 Workplace & Productivity',
+    regex: /\b(jira|linear|trello|asana|notion|clickup|confluence|google-calendar|google-docs|todoist|airtable|workplace|google-sheets|excel)\b/i,
+  },
+  {
+    category: '💰 Finance & Fintech',
+    regex: /\b(stripe|shopify|plaid|crypto|solana|ethereum|bitcoin|base-chain|x402|stock-market|finance|financial|accounting|hledger|forex|sec-edgar|wallet|token|defi|fintech|sepa|exchange-rate)\b/i,
+  },
+  {
+    category: '🧠 Knowledge & Memory',
+    regex: /\b(pinecone|weaviate|qdrant|chroma|vector-db|vector-database|rag|memory|knowledge-base|obsidian|roam|logseq|mem0|zotero|notes|note-taking|embeddings)\b/i,
+  },
+  {
+    category: '🔒 Security',
+    regex: /\b(security-scan|vulnerability|vulnerabilities|secrets|vault|snyk|sonar|auth0|okta|pentest|penetration|cve|threat-analysis|cybersecurity|auth-type)\b/i,
+  },
+  {
+    category: '🧬 Biology & Bioinformatics',
+    regex: /\b(ncbi|blast|pubchem|dna|protein|bioinformatics|genomics|chembl|pdb|uniprot|medical|healthcare|biology)\b/i,
+  },
+  {
+    category: '🎮 Gaming',
+    regex: /\b(unity|unreal|minecraft|steam|game-engine|chess|poker|gaming|games)\b/i,
+  },
+  {
+    category: '🎙️ Speech-to-Text',
+    regex: /\b(whisper|speech-to-text|stt|transcription|transcribe|audio-transcription)\b/i,
+  },
+  {
+    category: '🎧 Text-to-Speech',
+    regex: /\b(elevenlabs|text-to-speech|tts|voice-synthesis)\b/i,
+  },
+  {
+    category: '🎥 Multimedia Process',
+    regex: /\b(ffmpeg|video-processing|video-editing|image-processing|opencv|sharp|yt-dlp|youtube-dl|audio-processing|media-processing)\b/i,
+  },
+  {
+    category: '🏠 Home Automation',
+    regex: /\b(home-assistant|homebridge|mqtt|zigbee|smart-home)\b/i,
+  },
+  {
+    category: '🚀 Aerospace & Astrodynamics',
+    regex: /\b(astronomy|nasa|satellite|orbit|celestial|spacetrack)\b/i,
+  },
+  {
+    category: '🛒 E-Commerce',
+    regex: /\b(woocommerce|magento|ecommerce|e-commerce|shopping-cart)\b/i,
+  },
+  {
+    category: '⚖️ Legal',
+    regex: /\b(legal|law|contracts|court|court-listener)\b/i,
+  },
+  {
+    category: '🌐 Social Media',
+    regex: /\b(twitter|x-api|bluesky|mastodon|reddit|linkedin|facebook|instagram|tiktok|social-media)\b/i,
+  },
+  {
+    category: '👨‍💻 Code Execution',
+    regex: /\b(code-execution|python-interpreter|repl|sandbox|e2b|run-code)\b/i,
+  },
+  {
+    category: '📂 File Systems',
+    regex: /\b(filesystem|file-system|local-files|directory-tree|file-search|google-drive|dropbox|onedrive)\b/i,
+  },
+];
+
+function inferCategoryFromSignals(name, description, rawUrl) {
+  const cleanUrl = (rawUrl || '').replace(/^https?:\/\/(www\.)?github\.com\//i, '');
+  const text = `${name || ''} ${description || ''} ${cleanUrl}`;
+  for (const rule of CATEGORY_RULES) {
+    if (rule.regex.test(text)) {
+      return rule.category;
+    }
+  }
+  return undefined; // fallback to DEFAULT_CATEGORY
+}
+
+function normalizeCategoryLite(input, fallbackName, fallbackDesc, fallbackUrl) {
+  if (!input || !input.trim()) {
+    return inferCategoryFromSignals(fallbackName, fallbackDesc, fallbackUrl) || DEFAULT_CATEGORY;
+  }
   const raw = input.trim();
   const lower = raw.toLowerCase();
 
@@ -146,7 +254,7 @@ function normalizeCategoryLite(input) {
   });
   if (partial) return partial;
 
-  return DEFAULT_CATEGORY;
+  return inferCategoryFromSignals(fallbackName, fallbackDesc, fallbackUrl) || DEFAULT_CATEGORY;
 }
 
 // --- dedup key + id slug ----------------------------------------------------
@@ -281,11 +389,12 @@ async function fetchOfficialRegistryEntries() {
       }
 
       const name = server.title || server.name?.split('/').pop() || server.name;
+      const desc = server.description || '';
       entries.push({
         name,
         url: primaryUrl,
-        description: server.description || '',
-        category: undefined, // no category signal from the registry — falls back to DEFAULT_CATEGORY
+        description: desc,
+        category: inferCategoryFromSignals(name, desc, primaryUrl), // Infers specific category or falls back to DEFAULT_CATEGORY
         websiteUrl: server.websiteUrl && server.websiteUrl !== primaryUrl ? server.websiteUrl : undefined,
         source: 'official-registry',
       });
@@ -454,7 +563,7 @@ async function main() {
       url: c.url,
       websiteUrl: c.websiteUrl,
       description: cleanListingDescription(c.description) || 'No description provided.',
-      category: normalizeCategoryLite(c.category),
+      category: normalizeCategoryLite(c.category, c.name, c.description, c.url),
       isOfficial: c.url.toLowerCase().includes('github.com/modelcontextprotocol/servers'),
       // Official-registry candidates are already vetted by the registry's own
       // moderation policy — skip our admin queue and publish them directly,

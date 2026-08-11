@@ -33,10 +33,9 @@ export function ThemeSwitcher() {
     setMounted(true);
   }, []);
 
-  // Update DOM data-theme attribute only when the mode actually changes here
-  // (explicit selection or a live system-preference shift while mode === 'system').
-  // Skips the redundant re-apply-on-mount that duplicated the inline script's work.
-  const didMountRef = useRef(false);
+  // Update DOM data-theme attribute whenever mode changes or system preference shifts.
+  // Re-applies on mount so hydration-triggered client re-renders of <html> don't leave
+  // the DOM on the dark mode CSS default while themeMode is light or system.
   useEffect(() => {
     if (!mounted) return;
 
@@ -55,10 +54,7 @@ export function ThemeSwitcher() {
       root.setAttribute('data-theme', effectiveTheme);
     };
 
-    if (didMountRef.current) {
-      applyTheme(themeMode);
-    }
-    didMountRef.current = true;
+    applyTheme(themeMode);
 
     if (themeMode === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
