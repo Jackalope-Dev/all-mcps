@@ -41,8 +41,13 @@ export function ServerAvatar({
   const radius = size > 40 ? 12 : 10;
   const { displayName, org } = parseServerName(name);
 
-  // Auto-resolve GitHub org avatar if explicit logoUrl is missing
-  const activeLogoUrl = logoUrl || (org ? `https://github.com/${org}.png` : null);
+  // Auto-resolve GitHub org avatar if explicit logoUrl is missing. GitHub's
+  // avatar endpoint honors `?size=`, so ask for a ~2x-density render of the
+  // actual display size instead of downloading its full-resolution default
+  // (typically 460x460) for a 40-48px card icon — this page can render dozens
+  // of these per grid.
+  const activeLogoUrl =
+    logoUrl || (org ? `https://github.com/${org}.png?size=${size * 2}` : null);
 
   if (activeLogoUrl && !imgFailed) {
     return (
@@ -52,6 +57,8 @@ export function ServerAvatar({
         alt={`${displayName} logo`}
         width={size}
         height={size}
+        loading="lazy"
+        decoding="async"
         style={{ borderRadius: radius, flexShrink: 0, objectFit: 'cover', background: 'var(--bg-muted)' }}
         onError={() => setImgFailed(true)}
       />

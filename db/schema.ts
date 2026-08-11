@@ -172,7 +172,24 @@ export const servers = sqliteTable('servers', {
   suggestedInstallCommand: text('suggested_install_command'),
   /** JSON string array of args paired with `suggestedInstallCommand`. */
   suggestedInstallArgs: text('suggested_install_args'),
-});
+}, (table) => ({
+  // `status = 'active'` is the base filter on nearly every catalog read (browse,
+  // category pages, related/featured lookups, sitemap) — at 10k+ rows this was an
+  // unindexed full table scan on every request. The composite indexes below cover
+  // the (status + category) and (status + createdAt) shapes used by
+  // getCategoryServers/getNewestActiveServers so D1 can seek+range-scan instead of
+  // scanning the whole table and sorting in memory; the popularity one similarly
+  // covers getPopularServers' `ORDER BY views DESC, copies DESC, upvotes DESC`.
+  statusIdx: index('idx_servers_status').on(table.status),
+  statusCategoryIdx: index('idx_servers_status_category').on(table.status, table.category),
+  statusCreatedIdx: index('idx_servers_status_created').on(table.status, table.createdAt),
+  statusPopularityIdx: index('idx_servers_status_popularity').on(
+    table.status,
+    table.views,
+    table.copies,
+    table.upvotes
+  ),
+}));
 
 export const upvoteRecords = sqliteTable('upvote_records', {
   serverId: text('server_id').notNull(),

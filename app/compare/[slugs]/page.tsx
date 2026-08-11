@@ -4,6 +4,10 @@ import { PageShell } from '@/components/PageShell';
 import { getServerById, type Server } from '@/lib/servers';
 import { MultiServerCompareView } from '@/components/MultiServerCompareView';
 
+// No session/auth reads on this page — safe to ISR like the other listing pages
+// instead of re-querying every id from D1 on every single visit.
+export const revalidate = 3600;
+
 function canonicalPair(idA: string, idB: string): [string, string] {
   return idA < idB ? [idA, idB] : [idB, idA];
 }

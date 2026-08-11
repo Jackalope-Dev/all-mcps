@@ -146,6 +146,22 @@ export type SitemapServer = {
   upvotes?: number | null;
 };
 
+// Only the columns sitemap.ts (SitemapServer) actually reads — the servers table
+// carries ~70 columns including large AI-generated text blobs (aiSummary,
+// aiOverview, tools JSON, etc.) that a full `db.select()` would otherwise pull
+// across every active row on every sitemap shard request.
+const SITEMAP_SERVER_COLUMNS = {
+  id: serversTable.id,
+  category: serversTable.category,
+  lastCheckedAt: serversTable.lastCheckedAt,
+  createdAt: serversTable.createdAt,
+  githubStars: serversTable.githubStars,
+  npmDownloads: serversTable.npmDownloads,
+  views: serversTable.views,
+  copies: serversTable.copies,
+  upvotes: serversTable.upvotes,
+};
+
 /** Active directory listings for sitemap generation (D1 when available). */
 export async function getSitemapServers(): Promise<SitemapServer[]> {
   let servers = serversData as SitemapServer[];
@@ -155,7 +171,10 @@ export async function getSitemapServers(): Promise<SitemapServer[]> {
     const ctx = await getCloudflareContext({ async: true });
     if (ctx && ctx.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db.select().from(serversTable).where(eq(serversTable.status, 'active'));
+      const dbServers = await db
+        .select(SITEMAP_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'));
       if (dbServers.length > 0) {
         servers = dbServers as SitemapServer[];
       }

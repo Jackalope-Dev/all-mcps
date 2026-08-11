@@ -198,38 +198,58 @@ export default function DirectoryGrid({
 
   // Lazy-load the full catalog on mount, replacing the SSR slice, so client-side
   // search/sort/filter cover everything (browse only). The feed is paged so no
-  // single request has to carry the whole catalog (which could hang/time out);
-  // we walk the pages, growing the working set as each arrives. Partial results
-  // are kept — only a completely empty load surfaces the error state.
+  // single request has to carry the whole catalog (which could hang/time out).
+  // The first page tells us `total`/`limit`, so the remaining pages are known
+  // upfront and fetched concurrently (Promise.all) rather than one-by-one —
+  // at ~10k+ servers / 1000 per page that's the difference between ~1 round
+  // trip and ~11 serialized ones before search/filter/sort cover everything.
+  // Partial results are kept — only a completely empty load surfaces the error state.
   useEffect(() => {
     if (!lazyFeedUrl) return;
     let cancelled = false;
     setFeedStatus('loading');
 
     (async () => {
-      const accumulated: Server[] = [];
-      let offset = 0;
-      // Guard against a misbehaving `nextOffset` looping forever.
-      for (let page = 0; page < 200; page++) {
-        let data: { servers?: Server[]; nextOffset?: number | null } | null = null;
+      const sep = lazyFeedUrl.includes('?') ? '&' : '?';
+      type FeedPage = { servers?: Server[]; total?: number; limit?: number; nextOffset?: number | null };
+      const fetchPage = async (offset: number): Promise<FeedPage | null> => {
         try {
-          const sep = lazyFeedUrl.includes('?') ? '&' : '?';
           const res = await fetch(`${lazyFeedUrl}${sep}offset=${offset}`);
           if (!res.ok) throw new Error(`directory feed ${res.status}`);
-          data = await res.json();
+          return (await res.json()) as FeedPage;
         } catch {
-          break; // Network/HTTP error — keep whatever we've gathered so far.
+          return null; // Network/HTTP error — caller keeps whatever it already has.
         }
-        if (cancelled) return;
+      };
 
-        const batch = data?.servers ?? [];
-        if (batch.length) {
-          accumulated.push(...batch);
+      const accumulated: Server[] = [];
+      const first = await fetchPage(0);
+      if (cancelled) return;
+
+      if (first?.servers?.length) {
+        accumulated.push(...first.servers);
+
+        if (first.total && first.limit && first.servers.length < first.total) {
+          const offsets: number[] = [];
+          for (let offset = first.servers.length; offset < first.total; offset += first.limit) {
+            offsets.push(offset);
+          }
+          const rest = await Promise.all(offsets.map(fetchPage));
+          if (cancelled) return;
+          for (const page of rest) {
+            if (page?.servers?.length) accumulated.push(...page.servers);
+          }
+        } else {
+          // Server didn't report total/limit — fall back to walking nextOffset.
+          let next = first.nextOffset;
+          while (next != null) {
+            const page = await fetchPage(next);
+            if (cancelled) return;
+            if (!page?.servers?.length) break;
+            accumulated.push(...page.servers);
+            next = page.nextOffset ?? null;
+          }
         }
-
-        const next = data?.nextOffset;
-        if (next == null || batch.length === 0) break;
-        offset = next;
       }
 
       if (cancelled) return;

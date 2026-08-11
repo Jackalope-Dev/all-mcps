@@ -7,6 +7,12 @@ import { PageShell } from '@/components/PageShell';
 import DirectoryGrid from '@/components/DirectoryGrid';
 import { Tag, ChevronRight } from 'lucide-react';
 
+// getServersForTag re-derives tags for the whole active catalog via regex extraction
+// (see lib/tags.ts) — expensive to re-run on every request. ISR + the R2-backed
+// incrementalCache (open-next.config.ts) let this persist across requests like the
+// other listing pages (categories/[slug], best/[topic]).
+export const revalidate = 3600;
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const { servers: matched, rawTag } = await getServersForTag(slug);

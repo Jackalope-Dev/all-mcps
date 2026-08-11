@@ -17,6 +17,10 @@ import {
 
 const BASE = 'https://allmcps.com';
 
+// Crawlers re-fetch the sitemap far more often than the catalog actually changes;
+// without this each shard re-scanned D1 from scratch on every single crawl hit.
+export const revalidate = 3600;
+
 /** Named sitemap shards so GSC/Bing can prioritize core + listings first. */
 export async function generateSitemaps() {
   return [{ id: 'core' }, { id: 'listings' }, { id: 'secondary' }];

@@ -143,11 +143,9 @@ async function fetchReadme(url: string) {
 }
 
 // Now safe to mark ISR (no server-side session read left in this page — see
-// OwnerZone/ClaimHintLink, which fetch ownership client-side instead). Note:
-// this project's Cloudflare incremental cache is currently unconfigured
-// ("dummy" — see open-next.config.ts), so pages beyond the 50 covered by
-// generateStaticParams below won't yet get persistent cross-request caching
-// from this alone; that needs an R2/KV-backed incrementalCache override.
+// OwnerZone/ClaimHintLink, which fetch ownership client-side instead). Pages
+// beyond the 50 covered by generateStaticParams below persist cross-request
+// via the R2-backed incrementalCache configured in open-next.config.ts.
 export const revalidate = 3600;
 
 // Generate static params so Next.js can pre-render these pages at build time
