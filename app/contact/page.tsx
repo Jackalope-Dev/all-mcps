@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/contact',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Contact & Support — Listings & Sponsorships | AllMCPs',
     description:
       'Get in touch with the AllMCPs team about listing inquiries, sponsorships, support requests, or general feedback on our MCP directory.',

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     'Test Model Context Protocol (MCP) remote JSON-RPC 2.0 endpoints online. Send initialize, tools/list, and tools/call requests with live response logging.',
   alternates: { canonical: 'https://allmcps.com/tools/playground' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Interactive MCP Server Playground & Console | AllMCPs',
     description:
       'Test and inspect remote Model Context Protocol (MCP) endpoints, run tool calls, and validate JSON-RPC 2.0 responses in your browser.',

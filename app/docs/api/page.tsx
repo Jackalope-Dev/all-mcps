@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations.',
   alternates: { canonical: 'https://allmcps.com/docs/api' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Directory API Documentation for MCP Servers | AllMCPs',
     description:
       'Search MCP servers, fetch markdown docs, and integrate the AllMCPs directory into agents and tools.',

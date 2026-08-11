@@ -7,11 +7,18 @@ import { PageShell } from '@/components/PageShell';
 import { Layers } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'MCP Stack Builder | Combine Multiple MCP Tools in 1-Click',
+  title: 'MCP Stack Builder: Combine Tools in 1-Click',
   description:
     'Build, customize, and export combined MCP server configuration stacks for Claude Desktop, Cursor, Cline, and Windsurf.',
   alternates: {
     canonical: 'https://allmcps.com/stack',
+  },
+  openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    title: 'MCP Stack Builder: Combine Tools in 1-Click | AllMCPs',
+    description:
+      'Build, customize, and export combined MCP server configuration stacks for Claude Desktop, Cursor, Cline, and Windsurf.',
+    url: 'https://allmcps.com/stack',
   },
 };
 

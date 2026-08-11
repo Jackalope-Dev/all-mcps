@@ -33,12 +33,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slugs: st
   }
 
   const names = servers.map((s) => s.name).join(' vs. ');
+  const title = `${names} Comparison`;
+  const description = `Side-by-side comparison of ${names} MCP servers. Evaluate tool features, GitHub stars, installation configs, and specs.`;
+  const url = `https://allmcps.com/compare/${slugs}`;
   return {
-    title: `${names} Comparison | AllMCPs`,
-    description: `Side-by-side comparison of ${names} MCP servers. Evaluate tool features, GitHub stars, installation configs, and specs.`,
+    title,
+    description,
     robots: { index: false, follow: true },
-    alternates: {
-      canonical: `https://allmcps.com/compare/${slugs}`,
+    alternates: { canonical: url },
+    openGraph: {
+      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      title: `${title} | AllMCPs`,
+      description,
+      url,
     },
   };
 }

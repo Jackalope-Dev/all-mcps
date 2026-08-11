@@ -41,11 +41,12 @@ import { TrendChart } from '../../components/TrustCharts';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Trust & Traffic Transparency | AllMCPs',
+  title: 'Trust & Traffic Transparency',
   description:
-    'Live, unfiltered numbers on how people and AI systems actually use AllMCPs: site visits, install activity, and a full breakdown of every AI assistant and crawler that reads the directory.',
+    'Live numbers on how people and AI systems use AllMCPs: site visits, installs, and a breakdown of every AI assistant and crawler that reads the directory.',
   alternates: { canonical: 'https://allmcps.com/trust' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Trust & Traffic Transparency | AllMCPs',
     description:
       'Live, unfiltered numbers on how people and AI systems actually use AllMCPs.',

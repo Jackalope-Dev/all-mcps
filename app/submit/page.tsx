@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/submit',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Submit Your MCP Server for Listing & Review | AllMCPs',
     description:
       'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers and agent users.',

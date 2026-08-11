@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     'Step-by-step setup guides for installing MCP servers in Claude Desktop, Claude Code, Cursor, Windsurf, VS Code, and Cline, with config paths and JSON shape.',
   alternates: { canonical: `${SITE}/clients` },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'How to Install MCP Servers in Every Client | AllMCPs',
     description:
       'Setup guides for MCP servers in Claude Desktop, Claude Code, Cursor, Windsurf, VS Code, and Cline.',

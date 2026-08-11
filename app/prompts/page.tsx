@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     'Curated multi-MCP agent workflows with copyable system prompts and combined claude_desktop_config.json for Full-Stack, Research, DevOps, and Data Science.',
   alternates: { canonical: 'https://allmcps.com/prompts' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Agent Multi-MCP Workflow & System Prompt Library | AllMCPs',
     description:
       'Curated multi-MCP system prompts and combined installer configs for Cursor, Claude Desktop, Windsurf, and VS Code.',

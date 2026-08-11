@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/deploy-mcp-server',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Deploying & Hosting Remote MCP Servers Guide | AllMCPs',
     description:
       'Deploy and host remote MCP servers on Cloudflare Workers, Docker, Fly.io, and AWS with SSE transport, CORS, SSL, and monitoring best practices.',

@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/guides',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
     description:
       'MCP guides: what MCP is, install and setup, build and deploy servers, security, and troubleshooting connection failures, zero tools, and timeouts.',

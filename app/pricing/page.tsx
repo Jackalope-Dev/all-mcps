@@ -7,19 +7,20 @@ import { FaqSection } from '../../components/ui/FaqSection';
 import { Sparkles, Zap, Crown, Check, HelpCircle, ShieldCheck, BarChart3, Link2, TrendingUp, Clock, ArrowRight, X } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Pricing & Sponsorships — Free & Featured MCP Server Listings',
+  title: 'Pricing & Sponsorships — Featured MCP Listings',
   description:
     'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, real-time agent analytics, and priority 24h verification.',
   alternates: { canonical: 'https://allmcps.com/pricing' },
   openGraph: {
-    title: 'Pricing & Sponsorships — Free & Featured MCP Server Listings | AllMCPs',
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    title: 'Pricing & Sponsorships — Featured MCP Listings | AllMCPs',
     description:
       'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, real-time agent analytics, and priority 24h verification.',
     url: 'https://allmcps.com/pricing',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pricing & Sponsorships — Free & Featured MCP Server Listings | AllMCPs',
+    title: 'Pricing & Sponsorships — Featured MCP Listings | AllMCPs',
     description:
       'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, real-time agent analytics, and priority 24h verification.',
   },

@@ -21,11 +21,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Tag Not Found', robots: { index: false } };
   }
 
+  const title = `${rawTag} MCP Servers & Tools`;
+  const description = `Browse ${matched.length} Model Context Protocol (MCP) servers tagged with ${rawTag}. Find and install AI tools for ${rawTag}.`;
+  const url = `https://allmcps.com/tags/${slug}`;
+
   return {
-    title: `${rawTag} MCP Servers & Tools | AllMCPs`,
-    description: `Browse ${matched.length} Model Context Protocol (MCP) servers tagged with ${rawTag}. Find and install AI tools for ${rawTag}.`,
-    alternates: {
-      canonical: `https://allmcps.com/tags/${slug}`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      title: `${title} | AllMCPs`,
+      description,
+      url,
     },
   };
 }

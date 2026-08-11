@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/terms',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Terms of Service | AllMCPs',
     description:
       'Terms of service and usage conditions for the AllMCPs directory, including server submissions and featured listing services.',

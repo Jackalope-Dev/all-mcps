@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/guide',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'LLM Agents Setup & Configuration Guide | AllMCPs',
     description:
       'Step-by-step guide to connecting Claude Desktop, Cursor, and LLM agents to MCP servers with configuration examples and security tips.',

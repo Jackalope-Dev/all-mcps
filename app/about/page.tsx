@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/about',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'About AllMCPs — The MCP Server Directory',
     description:
       'Learn about AllMCPs, our mission to index the Model Context Protocol ecosystem, and how we help developers empower AI agents.',

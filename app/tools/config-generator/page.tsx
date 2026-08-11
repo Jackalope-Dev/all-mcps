@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     'Generate a ready-to-paste claude_desktop_config.json, .cursor/mcp.json, or VS Code MCP config from any server in the AllMCPs directory or your own custom setup.',
   alternates: { canonical: 'https://allmcps.com/tools/config-generator' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Free MCP Config Generator | AllMCPs',
     description:
       'Generate a ready-to-paste MCP client config for Claude Desktop, Cursor, VS Code, or Windsurf.',

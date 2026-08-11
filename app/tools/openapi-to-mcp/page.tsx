@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     'Convert OpenAPI 3.0/3.1 or Swagger specs into runnable Model Context Protocol (MCP) servers. Generates TypeScript SDK or Python FastMCP tool handlers.',
   alternates: { canonical: 'https://allmcps.com/tools/openapi-to-mcp' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Free OpenAPI to MCP Server Code Generator | AllMCPs',
     description:
       'Turn OpenAPI 3.0 specs or cURL REST endpoints into ready-to-run MCP servers for Claude Desktop, Cursor, and Windsurf.',

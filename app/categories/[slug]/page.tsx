@@ -61,7 +61,12 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: url },
-    openGraph: { title: `${title} | AllMCPs`, description, url },
+    openGraph: {
+      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      title: `${title} | AllMCPs`,
+      description,
+      url,
+    },
     twitter: { card: 'summary_large_image', title: `${title} | AllMCPs`, description },
   };
 }

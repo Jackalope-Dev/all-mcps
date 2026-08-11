@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/build-mcp-server',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'How to Build an MCP Server (Developer Guide) | AllMCPs',
     description:
       'Build a Model Context Protocol server from scratch: TypeScript and Python code for tools, resources, and prompts, plus testing, deployment, and publishing.',

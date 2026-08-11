@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     'Test, validate, and debug Model Context Protocol (MCP) JSON-RPC messages, tool outputs, resources, and image base64 blobs with a live client renderer.',
   alternates: { canonical: 'https://allmcps.com/tools/protocol-inspector' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Free MCP Protocol Inspector & Response Debugger | AllMCPs',
     description:
       'Inspect MCP JSON-RPC 2.0 payloads, validate schema compliance, catch protocol errors, and preview client rendering.',

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     'Audit claude_desktop_config.json, Cursor, Windsurf, and Cline MCP configs for syntax errors, missing API key placeholders, and duplicate server keys.',
   alternates: { canonical: 'https://allmcps.com/tools/config-auditor' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'MCP Config Auditor & Merger Tool | AllMCPs',
     description:
       'Audit your Model Context Protocol client configuration JSON for missing keys, unreplaced env vars, and merge new directory servers in 1 click.',

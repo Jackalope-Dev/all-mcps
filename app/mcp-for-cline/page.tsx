@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     'Discover top Model Context Protocol (MCP) tools for Cline and Roo Code in VS Code. Setup guide and configuration for cline_mcp_settings.json.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-cline' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Top MCP Servers for Cline | AllMCPs',
     description:
       'Supercharge Cline autonomous coding in VS Code with MCP tools for GitHub, databases, and web search.',

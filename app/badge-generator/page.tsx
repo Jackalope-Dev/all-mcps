@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description: 'Generate dynamic SVG verification badges and embeddable widgets for your Model Context Protocol (MCP) server GitHub README or website.',
   alternates: { canonical: 'https://allmcps.com/badge-generator' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'MCP Server Badge Generator | AllMCPs',
     description: 'Create dark & light mode SVG badges for your MCP server. Keep the badge dofollow and verify your site to earn a reciprocal dofollow backlink.',
     url: 'https://allmcps.com/badge-generator',

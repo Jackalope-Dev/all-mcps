@@ -34,7 +34,13 @@ function truncateName(name: string, max: number): string {
 
 function buildAltTitle(displayName: string, categoryLabel: string): string {
   const name = truncateName(displayName, 25);
-  const base = `Best Alternatives to ${name} (${categoryLabel})`;
+  return `Best Alternatives to ${name} (${categoryLabel})`;
+}
+
+// openGraph/twitter titles aren't covered by the root layout's title template
+// (that only wraps the top-level `metadata.title`), so they need the "| AllMCPs"
+// suffix appended manually — but only when it still fits the ~60-char budget.
+function withBrandSuffix(base: string): string {
   const withSuffix = `${base} | AllMCPs`;
   return withSuffix.length <= 60 ? withSuffix : base;
 }
@@ -70,8 +76,14 @@ export async function generateMetadata({
       'AI tools',
     ].join(', '),
     alternates: { canonical: url },
-    openGraph: { type: 'article', title, description, url },
-    twitter: { card: 'summary_large_image', title, description },
+    openGraph: {
+      type: 'article',
+      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      title: withBrandSuffix(title),
+      description,
+      url,
+    },
+    twitter: { card: 'summary_large_image', title: withBrandSuffix(title), description },
   };
 }
 

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { getAllPosts, getPostBySlug } from '../../../lib/blog';
 import { extractToc, withHeadingAnchors } from '../../../lib/blogToc';
+import { truncateTitle, truncateDescription } from '../../../lib/ogHelpers';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { Badge } from '../../../components/ui/Badge';
 import { TableOfContents, TocItem } from '../../../components/ui/TableOfContents';
@@ -29,17 +30,23 @@ export async function generateMetadata({
   }
 
   const url = `https://allmcps.com/blog/${post.slug}`;
+  // Frontmatter titles/excerpts are written for readability on the page and
+  // card, not for the <title>/meta-description length budget, so cap them
+  // here rather than in lib/blog.ts (which feeds both). 55 chars leaves room
+  // for the root layout's auto-appended " | AllMCPs" suffix under ~65 total.
+  const metaTitle = truncateTitle(post.title, 55);
+  const metaDescription = truncateDescription(post.excerpt, 155);
 
   return {
-    title: post.title,
-    description: post.excerpt,
+    title: metaTitle,
+    description: metaDescription,
     keywords: [...(Array.isArray(post.tags) ? post.tags : []), 'MCP', 'Model Context Protocol'].join(', '),
     alternates: {
       canonical: url,
     },
     openGraph: {
-      title: `${post.title} | AllMCPs`,
-      description: post.excerpt,
+      title: `${metaTitle} | AllMCPs`,
+      description: metaDescription,
       url,
       type: 'article',
       publishedTime: `${post.date}T12:00:00.000Z`,
@@ -49,8 +56,8 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${post.title} | AllMCPs`,
-      description: post.excerpt,
+      title: `${metaTitle} | AllMCPs`,
+      description: metaDescription,
     },
   };
 }

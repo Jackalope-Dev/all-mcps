@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/categories',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Browse MCP Servers by Category | AllMCPs',
     description:
       'Explore Model Context Protocol servers across 50+ categories. Find AI agent tools for databases, developer workflows, and security.',

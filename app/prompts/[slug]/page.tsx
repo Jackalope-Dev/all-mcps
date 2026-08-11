@@ -32,6 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     description,
     alternates: { canonical: `https://allmcps.com/prompts/${workflow.slug}` },
     openGraph: {
+      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
       title: `${title} | AllMCPs`,
       description,
       url: `https://allmcps.com/prompts/${workflow.slug}`,

@@ -4,7 +4,7 @@ import { PageShell } from '../components/PageShell';
 import { EmptyState } from '../components/EmptyState';
 
 export const metadata: Metadata = {
-  title: '404 - Page Not Found | AllMCPs',
+  title: '404 - Page Not Found',
   robots: {
     index: false,
     follow: true,

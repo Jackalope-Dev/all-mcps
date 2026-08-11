@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     'Discover top Model Context Protocol (MCP) tools for Codeium Windsurf. Setup guide and configuration for mcp_config.json.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-windsurf' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Top MCP Servers for Windsurf | AllMCPs',
     description:
       'Connect Windsurf Cascade agent to databases, APIs, and CLI tools over MCP.',

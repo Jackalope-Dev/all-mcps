@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     'Discover top Model Context Protocol (MCP) tools for Anthropic Claude Desktop. Interactive setup guide for claude_desktop_config.json on macOS and Windows.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-claude-desktop' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Top MCP Servers for Claude Desktop | AllMCPs',
     description:
       'Connect Claude Desktop to local files, SQLite databases, GitHub, and API integrations over MCP.',

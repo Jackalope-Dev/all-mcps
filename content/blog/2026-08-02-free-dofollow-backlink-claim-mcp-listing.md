@@ -1,5 +1,5 @@
 ---
-title: "How to get a free dofollow backlink for your MCP server on AllMCPs"
+title: "How to get a free dofollow backlink for your MCP server"
 excerpt: "Claim your listing, verify your product site, and place a dofollow AllMCPs badge — reciprocal SEO that helps your product and the directory."
 tags: ["SEO", "Directory"]
 faq:

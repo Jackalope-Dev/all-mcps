@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/privacy',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Privacy Policy & Data Rights | AllMCPs',
     description:
       'Privacy policy for the AllMCPs directory, explaining how we handle analytics, cookie consent, and data protection on our website.',

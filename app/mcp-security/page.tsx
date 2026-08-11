@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/mcp-security',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'MCP Security Best Practices: A Complete Guide | AllMCPs',
     description:
       'A comprehensive guide to MCP security: the threat model, prompt injection, tool poisoning, vetting servers, credentials, and a pre-install checklist.',

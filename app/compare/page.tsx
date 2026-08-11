@@ -7,11 +7,18 @@ import { Scale, ArrowRight, Search, Sparkles } from 'lucide-react';
 import { CompareSelector } from '@/components/CompareSelector';
 
 export const metadata: Metadata = {
-  title: 'Compare MCP Servers Side-by-Side | AllMCPs',
+  title: 'Compare MCP Servers Side-by-Side',
   description:
     'Compare Model Context Protocol (MCP) servers side-by-side. Evaluate feature matrices, tools, GitHub stars, authentication models, and install configurations.',
   alternates: {
     canonical: 'https://allmcps.com/compare',
+  },
+  openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    title: 'Compare MCP Servers Side-by-Side | AllMCPs',
+    description:
+      'Compare Model Context Protocol (MCP) servers side-by-side. Evaluate feature matrices, tools, GitHub stars, authentication models, and install configurations.',
+    url: 'https://allmcps.com/compare',
   },
 };
 

@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     'Curated, ranked guides to the best Model Context Protocol (MCP) servers for databases, developers, web search, security, browser automation, and more.',
   alternates: { canonical: `${SITE}/best` },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Best MCP Servers by Use Case | AllMCPs',
     description:
       'Curated, ranked guides to the best MCP servers for databases, developers, web search, security, browser automation, and more.',

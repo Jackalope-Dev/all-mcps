@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     'Paste your Claude Desktop, Cursor, VS Code, or Windsurf MCP config and catch JSON syntax errors and missing fields before you restart your client.',
   alternates: { canonical: 'https://allmcps.com/tools/config-validator' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Free MCP Config Validator | AllMCPs',
     description:
       'Paste your MCP config JSON and catch errors before you restart your client.',

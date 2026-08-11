@@ -59,6 +59,7 @@ export async function generateMetadata({
       canonical: 'https://allmcps.com/browse',
     },
     openGraph: {
+      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
       title: 'Browse MCP Servers | AllMCPs',
       description:
         'Browse and search thousands of Model Context Protocol servers. Filter by category, sort by trending or newest.',

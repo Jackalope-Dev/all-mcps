@@ -7,13 +7,14 @@ import { PageShell } from '@/components/PageShell';
 import { TagGridClient } from '@/components/TagGridClient';
 
 export const metadata: Metadata = {
-  title: 'Browse MCP Tools by Tag | AllMCPs Directory',
+  title: 'Browse MCP Tools by Tag',
   description:
     'Explore Model Context Protocol (MCP) servers by tag topics including database, web-scraping, finance, github, docker, slack, and more.',
   alternates: {
     canonical: 'https://allmcps.com/tags',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Browse MCP Tools by Tag | AllMCPs Directory',
     description:
       'Explore Model Context Protocol (MCP) servers by tag topics including database, web-scraping, finance, github, docker, slack, and more.',

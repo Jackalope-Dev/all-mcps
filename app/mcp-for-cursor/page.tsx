@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     'Discover top Model Context Protocol (MCP) tools for Cursor IDE. Interactive setup guide for Cursor MCP server configurations on macOS and Windows.',
   alternates: { canonical: 'https://allmcps.com/mcp-for-cursor' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Top MCP Servers for Cursor | AllMCPs',
     description:
       'Connect Cursor AI editor to databases, APIs, and custom agent tools over MCP.',

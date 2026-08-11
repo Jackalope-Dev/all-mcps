@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/what-is-mcp',
   },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'What is Model Context Protocol? (MCP Guide) | AllMCPs',
     description:
       'Learn what Model Context Protocol (MCP) is, how it works, local vs remote servers, real-world examples, and how to connect AI agents.',

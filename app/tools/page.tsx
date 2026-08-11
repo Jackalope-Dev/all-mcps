@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     'Free browser-based MCP tools: convert OpenAPI specs to server code, inspect JSON-RPC payloads, validate client configs, and calculate token overhead.',
   alternates: { canonical: 'https://allmcps.com/tools' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'Free MCP Developer Tools — Generators & Validators | AllMCPs',
     description:
       'Free browser-based tools for Model Context Protocol: OpenAPI code generator, JSON-RPC protocol inspector, config validator, and token cost calculator.',

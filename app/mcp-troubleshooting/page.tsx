@@ -4,21 +4,22 @@ import { TableOfContents, TocItem } from '@/components/ui/TableOfContents';
 import { CopyBlock } from '@/components/ui/CopyBlock';
 
 export const metadata: Metadata = {
-  title: 'MCP Troubleshooting: Server Not Connecting, Zero Tools, Timeouts',
+  title: 'MCP Troubleshooting: Connection & Timeout Fixes',
   description:
-    'Fix MCP server not connecting, zero tools, PATH errors, stdout corruption, missing env vars, and timeouts — Claude Desktop, Cursor, Claude Code, Windsurf, and more.',
+    'Fix MCP server not connecting, zero tools, PATH errors, stdout corruption, missing env vars, and timeouts in Claude Desktop, Cursor, and Windsurf.',
   alternates: {
     canonical: 'https://allmcps.com/mcp-troubleshooting',
   },
   openGraph: {
-    title: 'MCP Troubleshooting: Server Not Connecting, Zero Tools, Timeouts | AllMCPs',
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    title: 'MCP Troubleshooting: Connection & Timeout Fixes | AllMCPs',
     description:
       'Fix MCP server not connecting, zero tools, PATH errors, stdout corruption, missing env vars, and timeouts across every major client.',
     url: 'https://allmcps.com/mcp-troubleshooting',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MCP Troubleshooting: Server Not Connecting, Zero Tools, Timeouts | AllMCPs',
+    title: 'MCP Troubleshooting: Connection & Timeout Fixes | AllMCPs',
     description:
       'Fix MCP server not connecting, zero tools, PATH errors, stdout corruption, missing env vars, and timeouts across every major client.',
   },

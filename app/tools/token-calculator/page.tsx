@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     'Estimate how many tokens your MCP servers tool schemas cost against your context window. Paste real tool JSON, or quick-estimate from the directory.',
   alternates: { canonical: 'https://allmcps.com/tools/token-calculator' },
   openGraph: {
+    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'MCP Token Cost Calculator | AllMCPs',
     description: 'Estimate the context-window cost of your installed MCP servers’ tool schemas.',
     url: 'https://allmcps.com/tools/token-calculator',
