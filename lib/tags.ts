@@ -1,5 +1,5 @@
 import { getActiveServersLight, type Server } from './servers';
-import { parseCategoryLabel } from '@/app/browse/page';
+import { parseCategoryLabel } from './categories';
 
 export function slugifyTag(str: string): string {
   return str
@@ -59,7 +59,7 @@ export function extractTagsForServer(server: Server): { slug: string; label: str
 
   // 2. Category tag
   if (server.category) {
-    const cleanCat = parseCategoryLabel(server.category);
+    const cleanCat = parseCategoryLabel(server.category).label;
     const catSlug = slugifyTag(cleanCat);
     if (catSlug && !map.has(catSlug)) {
       map.set(catSlug, cleanCat);
