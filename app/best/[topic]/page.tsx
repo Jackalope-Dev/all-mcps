@@ -5,7 +5,7 @@ import { ChevronRight, Eye, Heart, Download, BadgeCheck } from 'lucide-react';
 import { Badge } from '../../../components/ui/Badge';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
-import { getActiveServers, type Server } from '../../../lib/servers';
+import { getServersForTopic, type Server } from '../../../lib/servers';
 import { engagementScore } from '../../../lib/search';
 import { BEST_TOPICS, bestTopicBySlug, selectServersForTopic } from '../../../lib/bestTopics';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
@@ -81,7 +81,7 @@ export default async function BestTopicPage({
   const t = bestTopicBySlug(topic);
   if (!t) notFound();
 
-  const all = await getActiveServers();
+  const all = await getServersForTopic(t);
   const ranked = selectServersForTopic(t, all)
     .sort((a, b) => engagementScore(b) - engagementScore(a))
     .slice(0, TOP_N);

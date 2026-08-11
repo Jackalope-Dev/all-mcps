@@ -1,4 +1,4 @@
-import { getActiveServers } from '@/lib/servers';
+import { getActiveServersForScoring } from '@/lib/servers';
 import { categorySlug, parseCategoryLabel } from '@/lib/categories';
 
 /**
@@ -10,7 +10,7 @@ import { categorySlug, parseCategoryLabel } from '@/lib/categories';
  * without pulling the full catalog JSON into the client bundle.
  */
 export async function GET() {
-  const servers = await getActiveServers();
+  const servers = await getActiveServersForScoring();
 
   const results = servers.map((s) => ({
     id: s.id,

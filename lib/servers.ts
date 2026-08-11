@@ -8,6 +8,8 @@ import { cleanListingDescription } from './description';
 import { engagementScore, buildAiSearchText } from './search';
 import { resolveInstallConfig, installConfidenceNote } from './installConfig';
 import { parseStringArray, parseFaqArray, type AiFaqItem } from './aiContent';
+import { categoryFromSlug } from './categories';
+import { type BestTopic } from './bestTopics';
 
 export type ServerTool = { name: string; description?: string; parameters?: Record<string, unknown> };
 
@@ -485,6 +487,23 @@ export const getActiveServersForScoring = cache(async (): Promise<Server[]> => {
     tools: s.tools?.map((t) => ({ name: t.name, description: t.description })),
   }));
 });
+
+/**
+ * Efficient candidate fetch for a curated /best/[topic] page.
+ * For category-bound topics, queries ONLY that single category from D1 (tens of rows
+ * instead of ~3,200), preventing Cloudflare Worker OOM memory limit crashes on RSC
+ * requests like /best/version-control. For keyword topics, fetches active servers
+ * with tools trimmed at the SQL level and heavy aiFaq omitted.
+ */
+export async function getServersForTopic(topic: BestTopic): Promise<Server[]> {
+  if (topic.categorySlug) {
+    const category = categoryFromSlug(topic.categorySlug);
+    if (category) {
+      return getCategoryServers(category);
+    }
+  }
+  return getActiveServersForScoring();
+}
 
 /**
  * Slim listing shape powering the /browse client feed. Only the fields the

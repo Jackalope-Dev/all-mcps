@@ -1,4 +1,4 @@
-import { getActiveServers, getServerById, formatServerAsMarkdown } from '@/lib/servers';
+import { getActiveServersForScoring, getCategoryServers, getCategoryCounts, getServerById, formatServerAsMarkdown } from '@/lib/servers';
 import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
 import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
@@ -266,11 +266,7 @@ export async function POST(request: Request) {
         const category = (args.category || '').toLowerCase().trim();
         const limit = Math.min(Math.max(1, args.limit || 10), 50);
 
-        let servers = await getActiveServers();
-
-        if (category) {
-          servers = servers.filter((s) => s.category.toLowerCase() === category);
-        }
+        let servers = category ? await getCategoryServers(category) : await getActiveServersForScoring();
 
         if (query) {
           let vectorMatches: Array<{ id: string; score: number }> = [];
@@ -362,7 +358,7 @@ export async function POST(request: Request) {
           targetKeywords = ['puppeteer', 'playwright', 'brave', 'fetch'];
         }
 
-        const servers = await getActiveServers();
+        const servers = await getActiveServersForScoring();
         const matched = servers.filter((s) => {
           const text = `${s.name} ${s.description} ${s.category}`.toLowerCase();
           return targetKeywords.some((k) => text.includes(k));
@@ -388,11 +384,7 @@ export async function POST(request: Request) {
       }
 
       if (toolName === 'list_mcp_categories') {
-        const servers = await getActiveServers();
-        const counts: Record<string, number> = {};
-        for (const s of servers) {
-          counts[s.category] = (counts[s.category] || 0) + 1;
-        }
+        const counts = await getCategoryCounts();
 
         let md = `# AllMCPs Categories\n\n`;
         for (const [cat, count] of Object.entries(counts)) {

@@ -1,4 +1,4 @@
-import { getActiveServers, getCategoryServers } from '@/lib/servers';
+import { getActiveServersForScoring, getCategoryServers } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
 import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const limitParam = parseInt(searchParams.get('limit') || '20', 10);
   const limit = Math.min(Math.max(1, limitParam), 100);
 
-  let servers = category ? await getCategoryServers(category) : await getActiveServers();
+  let servers = category ? await getCategoryServers(category) : await getActiveServersForScoring();
 
   // Rank by relevance when a query is present (falls back to catalog order otherwise).
   if (query) {
