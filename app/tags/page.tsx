@@ -1,9 +1,9 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { getNewestActiveServers, type Server } from '@/lib/servers';
+import { getAllTagsWithCounts } from '@/lib/tags';
 import { PageShell } from '@/components/PageShell';
 import Link from 'next/link';
-import { Tag, Sparkles, FolderGit2 } from 'lucide-react';
+import { Tag } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Browse MCP Tools by Tag | AllMCPs Directory',
@@ -14,35 +14,8 @@ export const metadata: Metadata = {
   },
 };
 
-function slugifyTag(tag: string): string {
-  return tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
 export default async function TagsIndexPage() {
-  const servers = await getNewestActiveServers(1000);
-
-  const tagCounts = new Map<string, { label: string; count: number }>();
-
-  for (const server of servers) {
-    const tags = Array.isArray(server.tags) ? server.tags : [];
-    for (const rawTag of tags) {
-      if (typeof rawTag !== 'string' || !rawTag.trim()) continue;
-      const label = rawTag.trim();
-      const slug = slugifyTag(label);
-      if (!slug) continue;
-
-      const existing = tagCounts.get(slug);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        tagCounts.set(slug, { label, count: 1 });
-      }
-    }
-  }
-
-  const sortedTags = Array.from(tagCounts.entries())
-    .map(([slug, data]) => ({ slug, ...data }))
-    .sort((a, b) => b.count - a.count);
+  const sortedTags = await getAllTagsWithCounts();
 
   return (
     <PageShell>
@@ -55,9 +28,9 @@ export default async function TagsIndexPage() {
               gap: '0.5rem',
               padding: '0.4rem 0.85rem',
               borderRadius: '20px',
-              backgroundColor: 'rgba(0, 229, 255, 0.1)',
-              border: '1px solid rgba(0, 229, 255, 0.3)',
-              color: '#00e5ff',
+              backgroundColor: 'color-mix(in srgb, var(--accent-color) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent-color) 30%, transparent)',
+              color: 'var(--accent-color)',
               fontSize: '0.8rem',
               fontWeight: 600,
               marginBottom: '1rem',
@@ -93,17 +66,17 @@ export default async function TagsIndexPage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Tag size={15} style={{ color: '#00e5ff' }} />
+                <Tag size={15} style={{ color: 'var(--accent-color)' }} />
                 <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</span>
               </div>
               <span
                 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  backgroundColor: 'var(--bg-muted)',
                   padding: '0.15rem 0.5rem',
                   borderRadius: '10px',
-                  color: '#94a3b8',
+                  color: 'var(--text-secondary)',
                 }}
               >
                 {count}

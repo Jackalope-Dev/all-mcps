@@ -2,31 +2,18 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getNewestActiveServers, type Server } from '@/lib/servers';
+import { getServersForTag } from '@/lib/tags';
 import { PageShell } from '@/components/PageShell';
 import DirectoryGrid from '@/components/DirectoryGrid';
 import { Tag, ChevronRight } from 'lucide-react';
 
-function slugify(str: string): string {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const servers = await getNewestActiveServers(1000);
-
-  const matched = servers.filter((s) => {
-    const tags = Array.isArray(s.tags) ? s.tags : [];
-    return tags.some((t) => typeof t === 'string' && slugify(t) === slug);
-  });
+  const { servers: matched, rawTag } = await getServersForTag(slug);
 
   if (matched.length === 0) {
     return { title: 'Tag Not Found', robots: { index: false } };
   }
-
-  const rawTag = Array.isArray(matched[0]?.tags)
-    ? matched[0].tags.find((t) => typeof t === 'string' && slugify(t) === slug) || slug
-    : slug;
 
   return {
     title: `${rawTag} MCP Servers & Tools | AllMCPs`,
@@ -39,20 +26,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function TagDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const servers = await getNewestActiveServers(1000);
-
-  const matched = servers.filter((s) => {
-    const tags = Array.isArray(s.tags) ? s.tags : [];
-    return tags.some((t) => typeof t === 'string' && slugify(t) === slug);
-  });
+  const { servers: matched, rawTag } = await getServersForTag(slug);
 
   if (matched.length === 0) {
     notFound();
   }
-
-  const rawTag = Array.isArray(matched[0]?.tags)
-    ? matched[0].tags.find((t) => typeof t === 'string' && slugify(t) === slug) || slug
-    : slug;
 
   const itemList = matched.slice(0, 50).map((s, i) => ({
     '@type': 'ListItem',
@@ -77,16 +55,16 @@ export default async function TagDetailPage({ params }: { params: Promise<{ slug
       />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
         {/* Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
-          <Link href="/tags" style={{ color: '#94a3b8', textDecoration: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+          <Link href="/tags" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
             Tags
           </Link>
           <ChevronRight size={14} />
-          <span style={{ color: '#ffffff' }}>{rawTag}</span>
+          <span style={{ color: 'var(--text-primary)' }}>{rawTag}</span>
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '2.5rem', maxWidth: '700px', margin: '0 auto 2.5rem' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#00e5ff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
             <Tag size={16} /> Tag Topic
           </div>
           <h1 style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>

@@ -227,6 +227,8 @@ const DISCOVERY_COLUMNS = {
   views: serversTable.views,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
+  tags: serversTable.tags,
+  aiUseCases: serversTable.aiUseCases,
 } as const;
 
 /**
@@ -250,7 +252,12 @@ export async function getActiveServersLight(): Promise<Server[]> {
         .from(serversTable)
         .where(eq(serversTable.status, 'active'));
       if (rows.length > 0) {
-        return rows.map((r) => ({ ...r, description: cleanListingDescription(r.description) })) as unknown as Server[];
+        return rows.map((r) => ({
+          ...r,
+          description: cleanListingDescription(r.description),
+          tags: parseStringArray(r.tags),
+          aiUseCases: parseStringArray(r.aiUseCases),
+        })) as unknown as Server[];
       }
     }
   } catch (e) {
@@ -271,6 +278,8 @@ export async function getActiveServersLight(): Promise<Server[]> {
     views: s.views ?? 0,
     copies: s.copies ?? 0,
     upvotes: s.upvotes ?? 0,
+    tags: parseStringArray(s.tags),
+    aiUseCases: parseStringArray(s.aiUseCases),
   })) as unknown as Server[];
 }
 
