@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { signIn } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageShell } from '@/components/PageShell';
+import { syncSequenzySubscriber, NEWSLETTER_SUBSCRIBERS_LIST_ID } from '@/lib/sequenzy';
+import { isUserInEU } from '@/lib/consentRegion';
 
 export const metadata: Metadata = {
   title: 'Sign In to Manage Your MCP Server Listings',
@@ -25,6 +28,12 @@ export default async function LoginPage({
   const redirectTo =
     callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : undefined;
 
+  // GDPR/PECR: no pre-ticked opt-in for EU/UK visitors — same signal the
+  // cookie banner uses, read here from the real geo header since this is
+  // server-rendered (searchParams already forces this route dynamic).
+  const reqHeaders = await headers();
+  const inEU = isUserInEU(reqHeaders.get('cf-ipcountry') || undefined);
+
   return (
     <PageShell variant="auth" panel>
       <div style={{ marginBottom: '2rem' }}>
@@ -44,6 +53,7 @@ export default async function LoginPage({
           'use server';
           const email = String(formData.get('email') || '');
           const redirectTo = formData.get('redirectTo');
+          const newsletterOptIn = formData.get('newsletterOptIn') === 'on';
           // Call with redirect: false and redirect to our own /verify-request
           // page ourselves, rather than letting next-auth issue its internal
           // redirect — that one always points at the raw `/api/auth/verify-request`
@@ -56,6 +66,15 @@ export default async function LoginPage({
             redirect: false,
             ...(typeof redirectTo === 'string' && redirectTo ? { redirectTo } : {}),
           });
+          if (newsletterOptIn && email) {
+            await syncSequenzySubscriber({
+              email,
+              tags: ['newsletter-signup'],
+              lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
+              customAttributes: { source: 'login' },
+              enrollInSequences: true,
+            });
+          }
           redirect('/verify-request');
         }}
         className="form-stack"
@@ -76,6 +95,11 @@ export default async function LoginPage({
         </div>
 
         {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
+
+        <label className="form-checkbox-row">
+          <input type="checkbox" name="newsletterOptIn" defaultChecked={!inEU} />
+          <span>Keep me posted with the AllMCPs newsletter (new servers, guides, product updates).</span>
+        </label>
 
         <button type="submit" className="btn btn-primary btn-full" style={{ padding: '0.65rem 1rem', fontSize: '0.95rem' }}>
           Send Magic Link →

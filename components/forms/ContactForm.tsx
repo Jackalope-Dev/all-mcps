@@ -1,15 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { TurnstileWidget } from '../ui/TurnstileWidget';
 import { toast } from '../ui/Toast';
 import { trackContactSubmit } from '../../lib/gtag';
+import { isUserInEU } from '../../lib/consentRegion';
 
 export function ContactForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [token, setToken] = useState<string>('');
+  const [newsletterOptIn, setNewsletterOptIn] = useState(true);
+
+  // Same EU/UK opt-in-only signal as the cookie banner and submit form.
+  useEffect(() => {
+    if (isUserInEU()) setNewsletterOptIn(false);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,9 +29,10 @@ export function ContactForm() {
 
     setStatus('loading');
     const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
+    const data: Record<string, unknown> = Object.fromEntries(formData.entries());
 
     data['cf-turnstile-response'] = token;
+    data.newsletterOptIn = newsletterOptIn;
 
     try {
       const res = await fetch('/api/contact', {
@@ -78,6 +86,16 @@ export function ContactForm() {
         <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Message</label>
         <textarea name="message" className="form-input" rows={5} placeholder="How can we help you?" required></textarea>
       </div>
+
+      <label className="form-checkbox-row">
+        <input
+          type="checkbox"
+          name="newsletterOptIn"
+          checked={newsletterOptIn}
+          onChange={(e) => setNewsletterOptIn(e.target.checked)}
+        />
+        <span>Keep me posted with the AllMCPs newsletter (new servers, guides, product updates).</span>
+      </label>
 
       <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />
 

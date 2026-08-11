@@ -7750,6 +7750,25 @@ code.inline-path {
   gap: 0.85rem;
 }
 
+.form-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.form-checkbox-row input[type='checkbox'] {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
 .submit-client-checks {
   display: flex;
   flex-wrap: wrap;

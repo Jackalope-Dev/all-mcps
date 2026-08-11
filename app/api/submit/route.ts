@@ -6,7 +6,11 @@ import { z } from 'zod';
 import { isSafeSubmissionUrl, normalizeUrl } from '../../../lib/urlSafety';
 import { findExistingListingByUrl } from '../../../lib/urlDedup';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../../../lib/categories';
-import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';
+import {
+  syncSequenzySubscriber,
+  PRODUCT_SUBSCRIBERS_LIST_ID,
+  NEWSLETTER_SUBSCRIBERS_LIST_ID,
+} from '../../../lib/sequenzy';
 import { sendNotificationEmail, getEmailEnv } from '../../../lib/notify';
 import { getAppUrl } from '../../../lib/stripe';
 import {
@@ -46,6 +50,9 @@ const submitSchema = z.object({
   remoteEndpointUrl: z.string().optional().or(z.literal('')),
   suggestedInstallCommand: z.string().optional(),
   suggestedInstallArgs: z.array(z.string()).optional(),
+  // Checkbox on the submit form, pre-checked by default; absent (e.g. older
+  // clients/the agent API) is treated the same as checked.
+  newsletterOptIn: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -241,10 +248,13 @@ export async function POST(req: Request) {
       );
     }
 
+    const newsletterOptIn = result.data.newsletterOptIn !== false;
     await syncSequenzySubscriber({
       email,
-      tags: ['submitted-listing'],
-      lists: [PRODUCT_SUBSCRIBERS_LIST_ID],
+      tags: newsletterOptIn ? ['submitted-listing', 'newsletter-signup'] : ['submitted-listing'],
+      lists: newsletterOptIn
+        ? [PRODUCT_SUBSCRIBERS_LIST_ID, NEWSLETTER_SUBSCRIBERS_LIST_ID]
+        : [PRODUCT_SUBSCRIBERS_LIST_ID],
       customAttributes: { serverId: id, serverName: name },
       enrollInSequences: true,
     });

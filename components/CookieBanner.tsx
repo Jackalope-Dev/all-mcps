@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { isUserInEU } from '../lib/consentRegion';
 
 declare global {
   interface Window {
@@ -33,36 +34,6 @@ function denyAnalyticsConsent() {
   if (window.posthog && typeof window.posthog.opt_out_capturing === 'function') {
     window.posthog.opt_out_capturing();
   }
-}
-
-const EU_COUNTRIES = new Set([
-  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU',
-  'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES',
-  'SE', 'GB', 'UK', 'IS', 'LI', 'NO', 'CH'
-]);
-
-function isUserInEU(countryProp?: string): boolean {
-  if (countryProp) {
-    return EU_COUNTRIES.has(countryProp.toUpperCase());
-  }
-
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    if (
-      tz.startsWith('Europe/') ||
-      tz.startsWith('Atlantic/Reykjavik') ||
-      tz.startsWith('Atlantic/Faroe') ||
-      tz.startsWith('Atlantic/Canary') ||
-      tz.startsWith('Atlantic/Madeira') ||
-      tz.startsWith('Atlantic/Azores')
-    ) {
-      return true;
-    }
-  } catch {
-    // Ignore error
-  }
-
-  return false;
 }
 
 function getStoredConsent(): string | null {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { syncSequenzySubscriber, NEWSLETTER_SUBSCRIBERS_LIST_ID } from '../../../lib/sequenzy';
 
 export async function POST(req: Request) {
   try {
@@ -54,6 +55,16 @@ export async function POST(req: Request) {
     if (data.error) {
       console.error('Resend API error:', data.error);
       return NextResponse.json({ success: false, error: 'Failed to send email' }, { status: 500 });
+    }
+
+    if (body.newsletterOptIn !== false && typeof body.email === 'string' && body.email) {
+      await syncSequenzySubscriber({
+        email: body.email,
+        tags: ['newsletter-signup'],
+        lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
+        customAttributes: { source: 'contact' },
+        enrollInSequences: true,
+      });
     }
 
     return NextResponse.json({ success: true, message: 'Message sent successfully' });

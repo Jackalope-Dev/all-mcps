@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { TurnstileWidget } from '../ui/TurnstileWidget';
 import { toast } from '../ui/Toast';
+import { isUserInEU } from '../../lib/consentRegion';
 import { DEFAULT_SUBMIT_CATEGORY, DIRECTORY_CATEGORIES } from '../../lib/categories';
 import { trackSubmitLead } from '../../lib/gtag';
 import { MCP_CLIENTS } from '../../lib/clients';
@@ -33,6 +34,14 @@ export function SubmitForm() {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(DEFAULT_SUBMIT_CATEGORY);
+  const [newsletterOptIn, setNewsletterOptIn] = useState(true);
+
+  // GDPR/PECR: no pre-ticked opt-in for EU/UK visitors. Same region signal the
+  // cookie banner uses — checked client-side post-mount to avoid a hydration
+  // mismatch (the server doesn't know the visitor's timezone/locale).
+  useEffect(() => {
+    if (isUserInEU()) setNewsletterOptIn(false);
+  }, []);
 
   // Optional enrichment fields — none required, all improve discoverability/trust.
   const [tagsInput, setTagsInput] = useState('');
@@ -163,6 +172,7 @@ export function SubmitForm() {
     data.remoteEndpointUrl = remoteEndpointUrl || undefined;
     data.suggestedInstallCommand = suggestedInstallCommand || undefined;
     data.suggestedInstallArgs = suggestedInstallArgsInput.split(/\s+/).map((a) => a.trim()).filter(Boolean);
+    data.newsletterOptIn = newsletterOptIn;
 
     try {
       const res = await fetch('/api/submit', {
@@ -509,6 +519,16 @@ export function SubmitForm() {
             />
             <p className="submit-hint">Used for review status and your claim link — never sold.</p>
           </div>
+
+          <label className="form-checkbox-row">
+            <input
+              type="checkbox"
+              name="newsletterOptIn"
+              checked={newsletterOptIn}
+              onChange={(e) => setNewsletterOptIn(e.target.checked)}
+            />
+            <span>Keep me posted with the AllMCPs newsletter (new servers, guides, product updates).</span>
+          </label>
 
           <div className="form-field">
             <Input
