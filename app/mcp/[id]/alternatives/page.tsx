@@ -17,7 +17,12 @@ import { Badge } from '../../../../components/ui/Badge';
 import { ServerAvatar } from '../../../../components/ui/ServerAvatar';
 import { SafeMarkdown } from '../../../../components/ui/SafeMarkdown';
 import { FaqSection } from '../../../../components/ui/FaqSection';
-import { getServerById, getRelatedServers, type Server } from '../../../../lib/servers';
+import {
+  getServerById,
+  getRelatedServers,
+  getSameCategoryAlternativesCount,
+  type Server,
+} from '../../../../lib/servers';
 import { isFeaturedListing, isVerifiedListing } from '../../../../lib/featuredStatus';
 import { parseServerName } from '../../../../lib/displayName';
 import { categorySlug, parseCategoryLabel, getCategoryMeta } from '../../../../lib/categories';
@@ -26,6 +31,9 @@ import { AUTH_TYPE_LABELS, PRICING_MODEL_LABELS, type AuthType, type PricingMode
 
 const SITE = 'https://allmcps.com';
 const MAX = 12;
+// Below this, getRelatedServers() pads the page mostly with unrelated-category
+// fallbacks — thin/near-duplicate content not worth spending crawl budget on.
+const MIN_SAME_CATEGORY_FOR_INDEX = 3;
 
 function truncateName(name: string, max: number): string {
   if (name.length <= max) return name;
@@ -63,6 +71,7 @@ export async function generateMetadata({
   const description =
     rawDescription.length > 157 ? `${rawDescription.slice(0, 154)}...` : rawDescription;
   const url = `${SITE}/mcp/${server.id}/alternatives`;
+  const sameCategoryCount = await getSameCategoryAlternativesCount(server);
 
   return {
     title,
@@ -84,6 +93,11 @@ export async function generateMetadata({
       url,
     },
     twitter: { card: 'summary_large_image', title: withBrandSuffix(title), description },
+    // Too few real same-category peers — page exists for navigation but shouldn't
+    // be indexed until the category has enough listings to fill it out.
+    ...(sameCategoryCount < MIN_SAME_CATEGORY_FOR_INDEX
+      ? { robots: { index: false, follow: true } }
+      : {}),
   };
 }
 

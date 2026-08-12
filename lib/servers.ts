@@ -1208,7 +1208,7 @@ export function formatServerSummaryLine(server: Server): string {
   return `- [${server.name}](https://allmcps.com/mcp/${server.id})${meta} — ${server.description}`;
 }
 
-export async function getRelatedServers(currentServer: Server, limit = 4): Promise<Server[]> {
+async function getSameCategoryActiveServers(currentServer: Server): Promise<Server[]> {
   let sameCategory: Server[] = [];
 
   try {
@@ -1240,6 +1240,26 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
       .filter((s) => s.id !== currentServer.id && s.category === currentServer.category)
       .map(normalizeServer);
   }
+
+  return sameCategory;
+}
+
+/**
+ * Same-category peer count only — excludes the cross-category fallback padding
+ * getRelatedServers() uses to fill a list up to `limit`. An /alternatives page
+ * padded mostly with unrelated-category fallbacks is thin/near-duplicate content,
+ * so callers use this count (not getRelatedServers().length, which is nearly always
+ * ~`limit`) to decide whether the page is worth indexing.
+ */
+export const getSameCategoryAlternativesCount = cache(
+  async (currentServer: Server): Promise<number> => {
+    const sameCategory = await getSameCategoryActiveServers(currentServer);
+    return sameCategory.length;
+  }
+);
+
+export async function getRelatedServers(currentServer: Server, limit = 4): Promise<Server[]> {
+  const sameCategory = await getSameCategoryActiveServers(currentServer);
 
   sameCategory.sort(
     (a, b) => relatedRankingScore(b, currentServer) - relatedRankingScore(a, currentServer)
