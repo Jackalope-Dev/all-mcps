@@ -60,6 +60,7 @@ export function PremiumUpgrade({
 
   const visible = (Object.keys(PAID_PRODUCTS) as PaidSku[])
     .filter((sku) => {
+      if (sku === 'category_sponsor_7d') return false;
       if (showAll) return !(sku === 'premium_monthly' && isPremium);
       if (sku === 'priority_review') return listingStatus === 'pending';
       if (sku === 'premium_monthly' && isPremium) return false;

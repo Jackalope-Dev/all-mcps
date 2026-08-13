@@ -93,7 +93,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/': '2026-08-08',
   '/browse': '2026-08-05',
   '/categories': '2026-08-05',
-  '/best': '2026-08-09',
+  '/best': '2026-08-13',
   '/clients': '2026-08-05',
   '/about': '2026-07-27',
   '/docs/api': '2026-08-04',
@@ -130,6 +130,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/tags': '2026-08-10',
   '/best/seo': '2026-08-10',
   '/lucky': '2026-08-13',
+  '/advertise': '2026-08-13',
 };
 
 export type SitemapServer = {
@@ -246,4 +247,5 @@ export const INDEXNOW_CORE_PATHS = [
   '/mcp-for-cline',
   '/best/seo',
   '/lucky',
+  '/advertise',
 ] as const;

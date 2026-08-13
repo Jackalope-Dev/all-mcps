@@ -1,0 +1,166 @@
+import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { drizzle } from 'drizzle-orm/d1';
+import { sponsorAds } from '@/db/schema';
+import { eq, sql } from 'drizzle-orm';
+import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
+import { z } from 'zod';
+
+export const dynamic = 'force-dynamic';
+
+const adAdminActionSchema = z.object({
+  id: z.string().min(1),
+  action: z.enum([
+    'approve',
+    'reject',
+    'pause',
+    'resume',
+    'add_impressions',
+    'update_bid',
+    'edit',
+    'delete',
+  ]),
+  reason: z.string().trim().optional(),
+  bonusImpressions: z.number().int().positive().optional(),
+  bidCpm: z.number().int().positive().optional(),
+  fields: z
+    .object({
+      title: z.string().trim().min(1).max(100).optional(),
+      description: z.string().trim().min(1).max(300).optional(),
+      ctaText: z.string().trim().min(1).max(50).optional(),
+      targetUrl: z.string().trim().url().optional(),
+      logoUrl: z.string().trim().url().optional(),
+      placement: z.enum(['all', 'directory_inline', 'detail_sidebar', 'blog_guide', 'header_banner']).optional(),
+    })
+    .optional(),
+});
+
+export async function POST(request: Request) {
+  try {
+    const reqHeaders = await headers();
+    const adminEmail = await getAuthorizedAdminEmail(reqHeaders);
+    if (!adminEmail) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const parsed = adAdminActionSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid parameters', details: parsed.error.format() }, { status: 400 });
+    }
+
+    const { id, action, reason, bonusImpressions, bidCpm, fields } = parsed.data;
+
+    const ctx = await getCloudflareContext();
+    if (!ctx?.env?.DB) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+    }
+
+    const db = drizzle(ctx.env.DB);
+
+    switch (action) {
+      case 'approve':
+        await db
+          .update(sponsorAds)
+          .set({
+            status: 'active',
+            approvedAt: new Date(),
+            rejectionReason: null,
+          })
+          .where(eq(sponsorAds.id, id));
+        break;
+
+      case 'reject': {
+        const [existingAd] = await db
+          .select()
+          .from(sponsorAds)
+          .where(eq(sponsorAds.id, id))
+          .limit(1);
+
+        // If paid via Stripe, automatically issue 100% full refund
+        if (existingAd?.stripePaymentIntentId && (ctx.env as any)?.STRIPE_SECRET_KEY) {
+          try {
+            const { getStripe } = await import('@/lib/stripe');
+            const stripe = getStripe((ctx.env as any).STRIPE_SECRET_KEY);
+            await stripe.refunds.create({
+              payment_intent: existingAd.stripePaymentIntentId,
+            });
+            console.log(`[admin/ads] Issued 100% refund for ad ${id} (PI: ${existingAd.stripePaymentIntentId})`);
+          } catch (refundErr: any) {
+            console.error('[admin/ads] Stripe refund error:', refundErr?.message);
+          }
+        }
+
+        await db
+          .update(sponsorAds)
+          .set({
+            status: 'rejected',
+            rejectionReason: reason || 'Does not meet sponsorship guidelines',
+          })
+          .where(eq(sponsorAds.id, id));
+        break;
+      }
+
+      case 'pause':
+        await db
+          .update(sponsorAds)
+          .set({ status: 'paused' })
+          .where(eq(sponsorAds.id, id));
+        break;
+
+      case 'resume':
+        await db
+          .update(sponsorAds)
+          .set({ status: 'active' })
+          .where(eq(sponsorAds.id, id));
+        break;
+
+      case 'add_impressions':
+        if (bonusImpressions) {
+          await db
+            .update(sponsorAds)
+            .set({
+              totalImpressionsPurchased: sql`${sponsorAds.totalImpressionsPurchased} + ${bonusImpressions}`,
+              status: 'active',
+            })
+            .where(eq(sponsorAds.id, id));
+        }
+        break;
+
+      case 'update_bid':
+        if (bidCpm) {
+          await db
+            .update(sponsorAds)
+            .set({ bidCpm })
+            .where(eq(sponsorAds.id, id));
+        }
+        break;
+
+      case 'edit':
+        if (fields) {
+          await db
+            .update(sponsorAds)
+            .set({
+              ...(fields.title ? { title: fields.title } : {}),
+              ...(fields.description ? { description: fields.description } : {}),
+              ...(fields.ctaText ? { ctaText: fields.ctaText } : {}),
+              ...(fields.targetUrl ? { targetUrl: fields.targetUrl } : {}),
+              ...(fields.logoUrl ? { logoUrl: fields.logoUrl } : {}),
+              ...(fields.placement ? { placement: fields.placement } : {}),
+            })
+            .where(eq(sponsorAds.id, id));
+        }
+        break;
+
+      case 'delete':
+        await db.delete(sponsorAds).where(eq(sponsorAds.id, id));
+        break;
+    }
+
+    return NextResponse.json({ success: true, action, id });
+  } catch (err: any) {
+    console.error('[admin/ads/action] error:', err?.message);
+    return NextResponse.json({ error: 'Action failed' }, { status: 500 });
+  }
+}

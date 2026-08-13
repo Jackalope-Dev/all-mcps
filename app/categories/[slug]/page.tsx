@@ -20,7 +20,7 @@ import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatu
 import { parseServerName } from '../../../lib/displayName';
 import { formatCompactNumber } from '../../../lib/format';
 import { bestTopicForCategory } from '../../../lib/bestTopics';
-import { CategorySponsorBanner } from '../../../components/CategorySponsorBanner';
+import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 
 const SITE = 'https://allmcps.com';
@@ -252,68 +252,66 @@ export default async function CategoryLandingPage({
           </div>
         </section>
 
-        {/* Category Sponsor Header */}
-        <CategorySponsorBanner
-          categoryName={label}
-          sponsor={
-            sponsor
-              ? {
-                  id: sponsor.id,
-                  name: parseServerName(sponsor.name).displayName,
-                  until: new Date(sponsor.categorySponsorUntil as string | Date).toISOString(),
-                }
-              : null
-          }
-        />
+        {/* Sponsor Ad Header Unit */}
+        <div style={{ marginBottom: '2.5rem' }}>
+          <SponsorAdUnit placement="header_banner" />
+        </div>
 
         {/* Server grid */}
         {cards.length > 0 ? (
           <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-            {cards.map((server) => {
+            {cards.map((server, index) => {
               const { displayName, org } = parseServerName(server.name);
               return (
-                <li key={server.id}>
-                <ImpressionBeacon serverId={server.id} surface="category_page">
-                  <Card
-                    href={`/mcp/${server.id}`}
-                    className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
-                      <div className="directory-card-title-block" style={{ marginBottom: 0 }}>
-                        <h2 className="directory-card-title-text" style={{ fontSize: '1.1rem' }}>
-                          {displayName}
-                        </h2>
-                        {org && <div className="directory-card-org-text">{org}</div>}
-                      </div>
-                    </div>
-                    <div className="directory-card-desc-block">
-                      <SafeMarkdown content={server.description || 'No description provided.'} isInline />
-                    </div>
-                    <div className="directory-card-footer">
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0 }}>
-                        {isFeaturedListing(server) && (
-                          <Badge variant="success" className="badge-featured">
-                            ★ Featured
-                          </Badge>
-                        )}
-                        {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
-                      </div>
-                      <div className="directory-card-stats" style={{ display: 'flex', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.views || 0).toLocaleString()} views`}>
-                          <Eye size={13} /> {formatCompactNumber(server.views || 0)}
-                        </span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.copies || 0).toLocaleString()} installs`}>
-                          <Download size={13} /> {formatCompactNumber(server.copies || 0)}
-                        </span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.upvotes || 0).toLocaleString()} upvotes`}>
-                          <Heart size={13} /> {formatCompactNumber(server.upvotes || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                </ImpressionBeacon>
-                </li>
+                <div key={server.id} style={{ display: 'contents' }}>
+                  {index === adSlotIndex && (
+                    <li style={{ listStyle: 'none', height: '100%' }}>
+                      <SponsorAdUnit placement="directory_inline" />
+                    </li>
+                  )}
+                  <li>
+                    <ImpressionBeacon serverId={server.id} surface="category_page">
+                      <Card
+                        href={`/mcp/${server.id}`}
+                        className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                          <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
+                          <div className="directory-card-title-block" style={{ marginBottom: 0 }}>
+                            <h2 className="directory-card-title-text" style={{ fontSize: '1.1rem' }}>
+                              {displayName}
+                            </h2>
+                            {org && <div className="directory-card-org-text">{org}</div>}
+                          </div>
+                        </div>
+                        <div className="directory-card-desc-block">
+                          <SafeMarkdown content={server.description || 'No description provided.'} isInline />
+                        </div>
+                        <div className="directory-card-footer">
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0 }}>
+                            {isFeaturedListing(server) && (
+                              <Badge variant="success" className="badge-featured">
+                                ★ Featured
+                              </Badge>
+                            )}
+                            {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
+                          </div>
+                          <div className="directory-card-stats" style={{ display: 'flex', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.views || 0).toLocaleString()} views`}>
+                              <Eye size={13} /> {formatCompactNumber(server.views || 0)}
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.copies || 0).toLocaleString()} installs`}>
+                              <Download size={13} /> {formatCompactNumber(server.copies || 0)}
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.upvotes || 0).toLocaleString()} upvotes`}>
+                              <Heart size={13} /> {formatCompactNumber(server.upvotes || 0)}
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    </ImpressionBeacon>
+                  </li>
+                </div>
               );
             })}
           </ul>

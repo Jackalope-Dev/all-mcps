@@ -747,35 +747,37 @@ export async function getDirectoryFeedPage(
         .where(eq(serversTable.status, 'active'));
       const total = Number(totalRow[0]?.c ?? rows.length);
 
-      const items: DirectoryFeedItem[] = rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        url: r.url,
-        description: cleanListingDescription(r.description),
-        category: r.category,
-        logoUrl: r.logoUrl ?? null,
-        isOfficial: !!r.isOfficial,
-        isPremium: !!r.isPremium,
-        featuredUntil: r.featuredUntil ?? null,
-        githubStars: r.githubStars ?? null,
-        npmDownloads: r.npmDownloads ?? null,
-        lastCommitAt: r.lastCommitAt ?? null,
-        installConfidence: r.installConfidence ?? null,
-        toolText: feedToolText(r.tools),
-        toolCount: parseServerTools(r.tools).length,
-        toolsSource: r.toolsSource ?? null,
-        aiText: feedAiTextFromRaw(r.aiSummary, r.aiOverview, r.aiUseCases, r.aiFeatures, r.aiFaq),
-        views: r.views ?? 0,
-        copies: r.copies ?? 0,
-        upvotes: r.upvotes ?? 0,
-        createdAt: r.createdAt ?? null,
-        tags: parseStringArray(r.tags),
-        pricingModel: r.pricingModel ?? null,
-        authType: r.authType ?? null,
-        compatibleClients: parseStringArray(r.compatibleClients),
-      }));
+      if (total > 0) {
+        const items: DirectoryFeedItem[] = rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          url: r.url,
+          description: cleanListingDescription(r.description),
+          category: r.category,
+          logoUrl: r.logoUrl ?? null,
+          isOfficial: !!r.isOfficial,
+          isPremium: !!r.isPremium,
+          featuredUntil: r.featuredUntil ?? null,
+          githubStars: r.githubStars ?? null,
+          npmDownloads: r.npmDownloads ?? null,
+          lastCommitAt: r.lastCommitAt ?? null,
+          installConfidence: r.installConfidence ?? null,
+          toolText: feedToolText(r.tools),
+          toolCount: parseServerTools(r.tools).length,
+          toolsSource: r.toolsSource ?? null,
+          aiText: feedAiTextFromRaw(r.aiSummary, r.aiOverview, r.aiUseCases, r.aiFeatures, r.aiFaq),
+          views: r.views ?? 0,
+          copies: r.copies ?? 0,
+          upvotes: r.upvotes ?? 0,
+          createdAt: r.createdAt ?? null,
+          tags: parseStringArray(r.tags),
+          pricingModel: r.pricingModel ?? null,
+          authType: r.authType ?? null,
+          compatibleClients: parseStringArray(r.compatibleClients),
+        }));
 
-      return { items, total };
+        return { items, total };
+      }
     }
   } catch (e) {
     // Fall back to the static JSON snapshot below.

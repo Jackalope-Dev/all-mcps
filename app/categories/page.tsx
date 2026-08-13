@@ -53,7 +53,9 @@ async function getServers(): Promise<ServerSlim[]> {
         })
         .from(serversTable)
         .where(eq(serversTable.status, 'active'));
-      return rows;
+      if (rows.length > 0) {
+        return rows;
+      }
     }
   } catch {
     // Fallback to local JSON if not running in wrangler / opennext

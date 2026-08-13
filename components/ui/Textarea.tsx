@@ -1,34 +1,34 @@
 import React from 'react';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
-  inputClassName?: string;
+  textareaClassName?: string;
   error?: boolean;
   helperText?: React.ReactNode;
 }
 
-export function Input({
+export function Textarea({
   label,
   id,
   style,
   className = '',
-  inputClassName = '',
+  textareaClassName = '',
   error = false,
   helperText,
   ...props
-}: InputProps) {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+}: TextareaProps) {
+  const textareaId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
     <div className={`form-field ${className}`.trim()} style={style}>
       {label ? (
-        <label htmlFor={inputId} className="form-label">
+        <label htmlFor={textareaId} className="form-label">
           {label}
         </label>
       ) : null}
-      <input
-        id={inputId}
-        className={`form-input ${error ? 'form-input-error' : ''} ${inputClassName}`.trim()}
+      <textarea
+        id={textareaId}
+        className={`form-input ${error ? 'form-input-error' : ''} ${textareaClassName}`.trim()}
         {...props}
       />
       {helperText ? (

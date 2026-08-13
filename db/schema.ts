@@ -496,3 +496,59 @@ export const reports = sqliteTable('reports', {
    * filed recently" without a full table scan. */
   ipCreatedIdx: index('idx_reports_ip_created').on(table.reporterIpHash, table.createdAt),
 }));
+
+/**
+ * Universal sponsor advertisements (logo + copy + CTA link across directory, sidebar, articles).
+ * Sold in 1,000 impression credit blocks with weighted CPM bidding.
+ */
+export const sponsorAds = sqliteTable('sponsor_ads', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  advertiserEmail: text('advertiser_email').notNull(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  ctaText: text('cta_text').notNull().default('Learn More'),
+  targetUrl: text('target_url').notNull(),
+  logoUrl: text('logo_url').notNull(),
+  /** 'all' | 'directory_inline' | 'detail_sidebar' | 'blog_guide' | 'header_banner' */
+  placement: text('placement').notNull().default('all'),
+  /** CPM in cents (e.g. 500 = $5.00 / 1k impressions). Multiplies display weight. */
+  bidCpm: integer('bid_cpm').notNull().default(500),
+  /** Total impressions purchased (e.g. 5000) */
+  totalImpressionsPurchased: integer('total_impressions_purchased').notNull().default(1000),
+  /** Total impressions served so far */
+  impressionsServed: integer('impressions_served').notNull().default(0),
+  /** Total clicks recorded */
+  clicksCount: integer('clicks_count').notNull().default(0),
+  /** 'pending_approval' | 'active' | 'paused' | 'completed' | 'rejected' */
+  status: text('status').notNull().default('pending_approval'),
+  rejectionReason: text('rejection_reason'),
+  stripeSessionId: text('stripe_session_id'),
+  stripePaymentIntentId: text('stripe_payment_intent_id'),
+  amountPaidCents: integer('amount_paid_cents').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  approvedAt: integer('approved_at', { mode: 'timestamp' }),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+}, (table) => ({
+  statusIdx: index('idx_sponsor_ads_status').on(table.status),
+  placementStatusIdx: index('idx_sponsor_ads_placement_status').on(table.placement, table.status),
+  advertiserEmailIdx: index('idx_sponsor_ads_email').on(table.advertiserEmail),
+  createdIdx: index('idx_sponsor_ads_created').on(table.createdAt),
+}));
+
+/**
+ * Event-level ad analytics for impressions and clicks.
+ */
+export const sponsorAdLogs = sqliteTable('sponsor_ad_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  adId: text('ad_id').notNull().references(() => sponsorAds.id, { onDelete: 'cascade' }),
+  /** 'impression' | 'click' */
+  eventType: text('event_type').notNull(),
+  placement: text('placement').notNull(),
+  sessionHash: text('session_hash'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  adIdx: index('idx_ad_logs_ad').on(table.adId),
+  eventIdx: index('idx_ad_logs_event').on(table.eventType),
+  createdIdx: index('idx_ad_logs_created').on(table.createdAt),
+}));
+

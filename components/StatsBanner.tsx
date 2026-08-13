@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bot, Cpu, Copy } from 'lucide-react';
+import { Bot, Cpu, Wrench, Eye } from 'lucide-react';
 import type { SiteStats } from '../lib/siteStats';
 
 function formatCompactNumber(num: number): string {
@@ -40,12 +40,13 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
     };
   }, []);
 
-  // Keep the homepage proof strip to three high-signal metrics; full breakdown lives on /trust.
+  // Keep the homepage proof strip to high-signal metrics; full breakdown lives on /trust.
   const totalServers = stats?.totalServers ?? 0;
   const aiReads = stats?.aiReads30d ?? 0;
-  const totalCopies = stats?.totalCopies ?? 0;
+  const toolsIndexed = stats?.toolsIndexed ?? 0;
+  const totalViews = stats?.totalViews ?? 0;
 
-  if (totalServers <= 0 && totalCopies <= 0 && aiReads <= 0) return null;
+  if (totalServers <= 0 && toolsIndexed <= 0 && totalViews <= 0 && aiReads <= 0) return null;
 
   return (
     <div className="stats-banner" aria-label="Platform statistics">
@@ -57,13 +58,23 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
           </span>
         )}
 
-        {totalCopies > 0 && (
+        {toolsIndexed > 0 && (
           <span className="stats-banner-item">
             <span className="stats-banner-dot" aria-hidden="true">
               •
             </span>
-            <Copy size={13} style={{ color: '#f472b6' }} aria-hidden="true" />
-            <strong>{formatCompactNumber(totalCopies)}</strong> install configs copied
+            <Wrench size={13} style={{ color: '#fbbf24' }} aria-hidden="true" />
+            <strong>{formatCompactNumber(toolsIndexed)}</strong> tools indexed
+          </span>
+        )}
+
+        {totalViews > 0 && (
+          <span className="stats-banner-item">
+            <span className="stats-banner-dot" aria-hidden="true">
+              •
+            </span>
+            <Eye size={13} style={{ color: '#60a5fa' }} aria-hidden="true" />
+            <strong>{formatCompactNumber(totalViews)}</strong> views
           </span>
         )}
 

@@ -10,6 +10,7 @@ import ManageListings, { type ListingFilters } from './ManageListings';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
 import { AdminSocialQueue } from './AdminSocialQueue';
 import { AdminToolsControl } from './AdminCronsControl';
+import { AdminAdsControl } from './AdminAdsControl';
 import {
   LayoutDashboard,
   Clock,
@@ -25,6 +26,7 @@ import {
   ShieldCheck,
   Mail,
   X,
+  Megaphone,
 } from 'lucide-react';
 
 type Server = {
@@ -104,6 +106,7 @@ export default function AdminClient({
   initialOpenReports = [],
   initialPendingReviewComments = [],
   recentlyAdded = [],
+  initialAds = [],
   stats,
 }: {
   initialPending: Server[];
@@ -114,6 +117,7 @@ export default function AdminClient({
   initialOpenReports?: ReportItem[];
   initialPendingReviewComments?: ReviewCommentItem[];
   recentlyAdded?: RecentServer[];
+  initialAds?: any[];
   stats: AdminStats;
 }) {
   const [pending, setPending] = useState<Server[]>(initialPending);
@@ -143,7 +147,7 @@ export default function AdminClient({
     pendingReviewComments.length;
   const defaultTab = totalPending > 0 ? 'moderation' : 'listings';
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'crons' | 'tools'
+    'overview' | 'moderation' | 'listings' | 'ads' | 'analytics' | 'social' | 'crons' | 'tools'
   >(defaultTab);
   const [modSubTab, setModSubTab] = useState<
     'submissions' | 'edits' | 'claims' | 'logos' | 'screenshots' | 'reviews' | 'reports'
@@ -261,6 +265,13 @@ export default function AdminClient({
       badgeColor: '#d97706',
     },
     { id: 'listings', label: 'Listings Directory', icon: List },
+    {
+      id: 'ads',
+      label: 'Ads & Sponsors',
+      icon: Megaphone,
+      badge: initialAds.filter((a) => a.status === 'pending_approval').length || undefined,
+      badgeColor: '#00E5FF',
+    },
     { id: 'analytics', label: 'Analytics & Logs', icon: BarChart3 },
     { id: 'social', label: 'Social & Twitter', icon: Share2 },
     { id: 'tools', label: 'Admin Tools & Actions', icon: Wrench },
@@ -526,6 +537,19 @@ export default function AdminClient({
             </p>
           </div>
           <ManageListings initialFilters={activeListingsFilters} />
+        </section>
+      )}
+
+      {/* TAB: ADS & SPONSORS */}
+      {activeTab === 'ads' && (
+        <section>
+          <div style={{ marginBottom: '1rem' }}>
+            <h2 className="admin-section-title">Sponsor Ads & Placement Network</h2>
+            <p className="admin-section-desc">
+              Review sponsor campaigns, approve submissions, monitor impression delivery, and track click-through performance.
+            </p>
+          </div>
+          <AdminAdsControl initialAds={initialAds} />
         </section>
       )}
 

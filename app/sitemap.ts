@@ -88,6 +88,7 @@ function buildCoreSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
     staticEntry('/compare', 'weekly', 0.9),
     staticEntry('/tags', 'weekly', 0.9),
     staticEntry('/lucky', 'daily', 0.9),
+    staticEntry('/advertise', 'weekly', 0.85),
   ];
 
   // Blog posts — real publish dates

@@ -249,6 +249,40 @@ export function trackFeatureUse(featureName: string, properties?: Record<string,
   });
 }
 
+/**
+ * Track sponsor CTA click in PostHog & GA4 with the specific A/B copy variant.
+ */
+export function trackSponsorCtaClick(params: {
+  placement: string;
+  variantId: string;
+  headline: string;
+  ctaText: string;
+  destination: string;
+}) {
+  trackEvent('sponsor_cta_clicked', {
+    placement: params.placement,
+    variant_id: params.variantId,
+    headline: params.headline,
+    cta_text: params.ctaText,
+    destination: params.destination,
+  });
+}
+
+/**
+ * Track when a sponsor placeholder is viewed in PostHog & GA4 with the variant tested.
+ */
+export function trackSponsorPlaceholderView(params: {
+  placement: string;
+  variantId: string;
+  headline: string;
+}) {
+  trackEvent('sponsor_placeholder_viewed', {
+    placement: params.placement,
+    variant_id: params.variantId,
+    headline: params.headline,
+  });
+}
+
 
 function getDomain(urlStr: string): string {
   try {

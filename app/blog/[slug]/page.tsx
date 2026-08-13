@@ -8,6 +8,7 @@ import { truncateTitle, truncateDescription } from '../../../lib/ogHelpers';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { Badge } from '../../../components/ui/Badge';
 import { TableOfContents, TocItem } from '../../../components/ui/TableOfContents';
+import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 
 export const dynamic = 'force-static';
 export const dynamicParams = true;
@@ -219,6 +220,8 @@ export default async function BlogPostPage({
               <div className="markdown-body">
                 <SafeMarkdown content={contentWithAnchors} />
               </div>
+
+              <SponsorAdUnit placement="blog_guide" />
 
               {post.faq.length > 0 && (
                 <div style={{ marginTop: '2.5rem' }}>

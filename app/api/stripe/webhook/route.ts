@@ -3,7 +3,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
-import { servers } from '../../../../db/schema';
+import { servers, sponsorAds } from '../../../../db/schema';
 import { getStripe } from '../../../../lib/stripe';
 import type { PaidSku } from '../../../../lib/pricing';
 import { syncSequenzySubscriber } from '../../../../lib/sequenzy';
@@ -20,6 +20,27 @@ function addDays(from: Date, days: number): Date {
 }
 
 async function applyCheckoutCompleted(session: Stripe.Checkout.Session, stripe: Stripe) {
+  // Handle Sponsor Ad Campaign Purchases
+  if (session.metadata?.adId) {
+    const adId = session.metadata.adId;
+    const db = await getDb();
+    const paymentIntentId =
+      typeof session.payment_intent === 'string'
+        ? session.payment_intent
+        : session.payment_intent?.id || null;
+
+    await db
+      .update(sponsorAds)
+      .set({
+        amountPaidCents: session.amount_total || undefined,
+        stripePaymentIntentId: paymentIntentId,
+      })
+      .where(eq(sponsorAds.id, adId));
+
+    console.log(`[stripe webhook] Sponsor ad ${adId} payment verified: $${((session.amount_total || 0) / 100).toFixed(2)}`);
+    return;
+  }
+
   const serverId = session.metadata?.serverId || session.client_reference_id;
   const sku = (session.metadata?.sku || '') as PaidSku;
   if (!serverId || !sku) {

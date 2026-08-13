@@ -38,6 +38,7 @@ import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { parseServerName } from '../../../lib/displayName';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
+import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { bestTopicForCategory } from '../../../lib/bestTopics';
 import { categorySlug, getCategoryMeta } from '../../../lib/categories';
 import { ToolSchemaInspector } from '../../../components/ui/ToolSchemaInspector';
@@ -1516,6 +1517,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             featuredUntil={server.featuredUntil}
             categorySponsorUntil={server.categorySponsorUntil}
           />
+
+          <SponsorAdUnit placement="detail_sidebar" />
 
           <div className="surface" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Share & Embed</h3>

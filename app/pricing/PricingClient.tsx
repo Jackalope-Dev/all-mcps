@@ -16,7 +16,7 @@ export function PricingClient({
 }) {
   const [serverId, setServerId] = useState(initialServerId);
   const [selectedSku, setSelectedSku] = useState<PaidSku | null>(
-    initialSku || (initialCategory ? 'category_sponsor_7d' : null)
+    initialSku || (initialCategory ? 'featured_7d' : null)
   );
   const [listingName, setListingName] = useState<string | null>(null);
   const [listingStatus, setListingStatus] = useState<string | null>(null);

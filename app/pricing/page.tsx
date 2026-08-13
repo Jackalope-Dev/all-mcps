@@ -4,7 +4,7 @@ import { PricingClient } from './PricingClient';
 import { PAID_PRODUCTS, FREE_TIER, formatUsd, tieredSavingsPct, type PaidSku } from '../../lib/pricing';
 import { getSiteStats } from '../../lib/siteStats';
 import { FaqSection } from '../../components/ui/FaqSection';
-import { Sparkles, Zap, Crown, Check, HelpCircle, ShieldCheck, BarChart3, Link2, TrendingUp, Clock, ArrowRight, X } from 'lucide-react';
+import { Sparkles, Zap, Crown, Check, HelpCircle, ShieldCheck, BarChart3, Link2, TrendingUp, Clock, ArrowRight, X, Megaphone } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Pricing & Sponsorships — Featured MCP Listings',
@@ -404,23 +404,19 @@ export default async function PricingPage({
               gap: '1.5rem',
             }}
           >
-            {(['priority_review', 'featured_7d', 'category_sponsor_7d'] as const).map((sku) => {
+            {(['priority_review', 'featured_7d'] as const).map((sku) => {
               const p = PAID_PRODUCTS[sku];
-              const isCategorySponsor = sku === 'category_sponsor_7d';
               return (
                 <div
                   key={sku}
-                  id={isCategorySponsor ? 'category_sponsor_7d' : undefined}
                   className="surface"
                   style={{
                     padding: '1.75rem',
                     borderRadius: '18px',
                     display: 'flex',
                     flexDirection: 'column',
-                    border: isCategorySponsor ? '1px solid rgba(var(--gold-rgb),0.4)' : '1px solid var(--border-color)',
-                    background: isCategorySponsor
-                      ? 'linear-gradient(160deg, rgba(var(--gold-rgb),0.08), rgba(255,140,0,0.04), var(--bg-elevated))'
-                      : 'var(--bg-elevated)',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-elevated)',
                     scrollMarginTop: '5rem',
                   }}
                 >
@@ -431,7 +427,7 @@ export default async function PricingPage({
                         fontWeight: 700,
                         letterSpacing: '0.06em',
                         textTransform: 'uppercase',
-                        color: isCategorySponsor ? 'var(--gold-color)' : 'var(--accent-color)',
+                        color: 'var(--accent-color)',
                       }}
                     >
                       One-Time Boost
@@ -443,9 +439,9 @@ export default async function PricingPage({
                           fontWeight: 800,
                           padding: '0.2rem 0.55rem',
                           borderRadius: '6px',
-                          background: isCategorySponsor ? 'rgba(var(--gold-rgb),0.15)' : 'var(--bg-muted)',
-                          color: isCategorySponsor ? 'var(--gold-color)' : 'var(--text-primary)',
-                          border: `1px solid ${isCategorySponsor ? 'rgba(var(--gold-rgb),0.3)' : 'var(--border-color)'}`,
+                          background: 'var(--bg-muted)',
+                          color: 'var(--text-primary)',
+                          border: '1px solid var(--border-color)',
                         }}
                       >
                         {p.badgeText}
@@ -469,14 +465,14 @@ export default async function PricingPage({
                     </p>
                   )}
                   {p.placementHint && (
-                    <p style={{ fontSize: '0.775rem', color: isCategorySponsor ? 'var(--gold-color)' : 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
+                    <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
                       📌 {p.placementHint}
                     </p>
                   )}
                   <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', flex: 1 }}>
                     {p.benefits.map((b) => (
                       <li key={b} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                        <Check size={15} color={isCategorySponsor ? 'var(--gold-color)' : 'var(--accent-color)'} style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+                        <Check size={15} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
                         <span>{b}</span>
                       </li>
                     ))}
@@ -491,6 +487,82 @@ export default async function PricingPage({
                 </div>
               );
             })}
+
+            {/* Universal Sponsor Ads Card */}
+            <div
+              className="surface"
+              style={{
+                padding: '1.75rem',
+                borderRadius: '18px',
+                display: 'flex',
+                flexDirection: 'column',
+                border: '1px solid rgba(0, 229, 255, 0.4)',
+                background: 'linear-gradient(160deg, rgba(0, 229, 255, 0.06), rgba(0, 123, 255, 0.03), var(--bg-elevated))',
+                scrollMarginTop: '5rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: 'var(--accent-color)',
+                  }}
+                >
+                  Universal Ad Network
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '6px',
+                    background: 'rgba(0, 229, 255, 0.15)',
+                    color: 'var(--accent-color)',
+                    border: '1px solid rgba(0, 229, 255, 0.3)',
+                  }}
+                >
+                  Any Product / CPM
+                </span>
+              </div>
+              <h3 style={{ fontSize: '1.3rem', marginBottom: '0.25rem', fontWeight: 800 }}>Sponsor Ad Spaces</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+                Promote any developer tool, API, SaaS, or site across AllMCPs.
+              </p>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '2.25rem', fontWeight: 800 }}>$5.00</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}> / 1k views</span>
+              </div>
+              <p style={{ fontSize: '0.775rem', color: 'var(--verified-green)', fontWeight: 600, marginBottom: '0.85rem' }}>
+                1k to 100k+ impression credit blocks with weighted CPM bidding
+              </p>
+              <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
+                📌 Placed natively across directory cards, listing sidebars, and guides
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', flex: 1 }}>
+                <li style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                  <Check size={15} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+                  <span>Reach active AI developers &amp; software engineers</span>
+                </li>
+                <li style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                  <Check size={15} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+                  <span>Custom copy, logo icon, and direct outbound link</span>
+                </li>
+                <li style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                  <Check size={15} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+                  <span>Real-time impressions &amp; CTR reporting dashboard</span>
+                </li>
+              </ul>
+              <Link
+                href="/advertise"
+                className="btn btn-primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '0.75rem', borderRadius: '10px', fontWeight: 700 }}
+              >
+                Launch Sponsor Ad →
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -509,8 +581,8 @@ export default async function PricingPage({
                   <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 700 }}>Free Listing</th>
                   <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--accent-color)', fontWeight: 700 }}>Priority ($5)</th>
                   <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--accent-color)', fontWeight: 700 }}>Featured ($12/wk)</th>
-                  <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--gold-color)', fontWeight: 700 }}>Category ($18/wk)</th>
                   <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--accent-color)', fontWeight: 800, background: 'rgba(var(--accent-rgb),0.08)' }}>Premium ($19/mo)</th>
+                  <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--accent-color)', fontWeight: 700 }}>Sponsor Ads ($5 CPM)</th>
                 </tr>
               </thead>
               <tbody style={{ color: 'var(--text-secondary)' }}>
@@ -519,60 +591,138 @@ export default async function PricingPage({
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Guaranteed &lt; 24h Review Turnaround</td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>Instant Launch</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Homepage Discovery Grid Spotlight</td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Pinned #1 Spot on Category Page</td>
+                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Native Sidebars & Guide Banners</td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Dofollow SEO Website Backlink</td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>Direct Link</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Live Agent & LLM Access Analytics</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Live Impressions & CTR Analytics</td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Verified Badge & Glowing Card Border</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
+                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Works for Any App, API or Website</td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>MCP Only</td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>MCP Only</td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>MCP Only</td>
+                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}>MCP Only</td>
                   <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Don't have an MCP Server? Universal Advertiser Banner */}
+        <div
+          className="surface"
+          style={{
+            borderRadius: '18px',
+            border: '1px solid rgba(0, 229, 255, 0.35)',
+            background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 123, 255, 0.03), var(--bg-elevated))',
+            padding: '1.75rem 2rem',
+            marginBottom: '4rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1.5rem',
+            boxShadow: '0 8px 32px -4px rgba(0, 229, 255, 0.08)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', flex: 1, minWidth: '300px' }}>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'rgba(0, 229, 255, 0.12)',
+                border: '1px solid rgba(0, 229, 255, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-color)',
+                flexShrink: 0,
+              }}
+            >
+              <Megaphone size={24} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.35rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'var(--accent-color)',
+                    background: 'rgba(0, 229, 255, 0.1)',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                  }}
+                >
+                  No MCP Server Required
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  For Developers, SaaS, Apps &amp; Startups
+                </span>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Want to promote your App, Developer Tool, API, or Website?
+              </h3>
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5, maxWidth: '640px' }}>
+                You don&apos;t need to have an MCP server listed to reach our audience. Sponsor native logo + copy ad units across directory cards, listing sidebars, and guide articles starting at <strong>$5.00 per 1,000 views</strong> with live reporting and weighted CPM bidding.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/advertise"
+            className="btn btn-primary"
+            style={{
+              padding: '0.85rem 1.5rem',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              gap: '8px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Create Sponsor Ad <ArrowRight size={16} />
+          </Link>
         </div>
 
         {/* Step 2 Checkout Selection Component */}

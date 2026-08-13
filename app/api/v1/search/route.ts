@@ -3,6 +3,7 @@ import { computeQualityScore } from '@/lib/qualityScore';
 import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
 import { resolveInstallConfig, toClaudeConfigSnippet, installConfidenceNote } from '@/lib/installConfig';
+import { fetchActiveSponsorAd } from '@/lib/ads';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -116,12 +117,22 @@ export async function GET(request: Request) {
     }
   } catch { /* logging is best-effort */ }
 
+  const activeAd = await fetchActiveSponsorAd('all');
+
   return Response.json(
     {
       total: results.length,
       query: query || null,
       category: category || null,
       servers: results,
+      sponsor: activeAd
+        ? {
+            title: activeAd.title,
+            description: activeAd.description,
+            ctaText: activeAd.ctaText,
+            url: activeAd.targetUrl,
+          }
+        : null,
     },
     {
       headers: {

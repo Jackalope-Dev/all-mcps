@@ -22,6 +22,7 @@ import { trackSearch, trackOutboundClick } from '../lib/gtag';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { OutboundLink } from './ui/OutboundLink';
 import { ImpressionBeacon } from './ImpressionTracker';
+import { SponsorAdUnit } from './ads/SponsorAdUnit';
 import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
 import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel, categorySlug } from '../lib/categories';
@@ -1458,10 +1459,14 @@ export default function DirectoryGrid({
           </div>
         ) : viewMode === 'grid' ? (
           <div className="directory-grid">
-            {visibleServers.map((server) => {
+            {visibleServers.map((server, index) => {
               const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_grid' as const;
               return (
-              <ImpressionBeacon key={server.id} serverId={server.id} surface={surface}>
+              <React.Fragment key={server.id}>
+              {index === 5 && (
+                <SponsorAdUnit placement="directory_inline" />
+              )}
+              <ImpressionBeacon serverId={server.id} surface={surface}>
               <Card
                 href={`/mcp/${server.id}`}
                 className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''} ${isVerifiedListing(server) ? 'directory-card-verified' : ''}`.trim()}
@@ -1512,6 +1517,7 @@ export default function DirectoryGrid({
                 </div>
               </Card>
               </ImpressionBeacon>
+              </React.Fragment>
               );
             })}
           </div>

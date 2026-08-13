@@ -162,8 +162,8 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/tags" className="nav-link">
-                Tags index
+              <Link href="/lucky" className="nav-link">
+                Random discovery <span className="footer-badge footer-badge-new">New</span>
               </Link>
             </li>
             <li>
@@ -173,7 +173,7 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/pricing" className="nav-link">
-                Pricing
+                Pricing &amp; Boost <span className="footer-badge footer-badge-boost">Boost</span>
               </Link>
             </li>
           </ul>
@@ -198,24 +198,29 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/build-mcp-server" className="nav-link">
+                Build an MCP server
+              </Link>
+            </li>
+            <li>
+              <Link href="/deploy-mcp-server" className="nav-link">
+                Deploy an MCP server
+              </Link>
+            </li>
+            <li>
+              <Link href="/mcp-security" className="nav-link">
+                Security guide
+              </Link>
+            </li>
+            <li>
               <Link href="/mcp-troubleshooting" className="nav-link">
                 Troubleshooting
               </Link>
             </li>
             <li>
-              <Link href="/mcp-security" className="nav-link">
-                Security
-              </Link>
-            </li>
-            <li>
               <Link href="/blog" className="nav-link">
-                Blog
+                Blog &amp; updates
               </Link>
-            </li>
-            <li>
-              <a href="/blog/rss.xml" className="nav-link">
-                Blog RSS
-              </a>
             </li>
           </ul>
         </nav>
@@ -225,7 +230,7 @@ export function SiteFooter() {
           <ul className="site-footer-links">
             <li>
               <Link href="/tools" className="nav-link">
-                All tools
+                All developer tools
               </Link>
             </li>
             <li>
@@ -239,8 +244,18 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/tools/config-auditor" className="nav-link">
+                Config auditor
+              </Link>
+            </li>
+            <li>
               <Link href="/tools/playground" className="nav-link">
                 MCP playground
+              </Link>
+            </li>
+            <li>
+              <Link href="/tools/token-calculator" className="nav-link">
+                Token calculator
               </Link>
             </li>
             <li>
@@ -261,13 +276,19 @@ export function SiteFooter() {
           <ul className="site-footer-links">
             <li>
               <Link href="/docs/api" className="nav-link">
-                API docs
+                REST API docs
               </Link>
             </li>
             <li>
               <Link href="/trust" className="nav-link">
-                Trust &amp; traffic
+                Trust &amp; traffic <span className="footer-badge footer-badge-live"><span className="footer-badge-dot"></span>Live</span>
               </Link>
+            </li>
+            <li>
+              <a href="/api/mcp" className="nav-link" target="_blank" rel="noopener noreferrer">
+                Remote MCP server <span className="footer-badge footer-badge-subtle">SSE</span> <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
             </li>
             <li>
               <a href="/llms.txt" className="nav-link" target="_blank" rel="noopener noreferrer">
@@ -281,12 +302,6 @@ export function SiteFooter() {
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
-            <li>
-              <a href="/api/mcp" className="nav-link" target="_blank" rel="noopener noreferrer">
-                Remote MCP <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            </li>
           </ul>
         </nav>
 
@@ -296,6 +311,11 @@ export function SiteFooter() {
             <li>
               <Link href="/about" className="nav-link">
                 About
+              </Link>
+            </li>
+            <li>
+              <Link href="/advertise" className="nav-link">
+                Advertise <span className="footer-badge footer-badge-sponsor">Sponsor</span>
               </Link>
             </li>
             <li>

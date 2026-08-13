@@ -1,36 +1,40 @@
 import React from 'react';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
-  inputClassName?: string;
+  selectClassName?: string;
   error?: boolean;
   helperText?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
-export function Input({
+export function Select({
   label,
   id,
   style,
   className = '',
-  inputClassName = '',
+  selectClassName = '',
   error = false,
   helperText,
+  children,
   ...props
-}: InputProps) {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+}: SelectProps) {
+  const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
     <div className={`form-field ${className}`.trim()} style={style}>
       {label ? (
-        <label htmlFor={inputId} className="form-label">
+        <label htmlFor={selectId} className="form-label">
           {label}
         </label>
       ) : null}
-      <input
-        id={inputId}
-        className={`form-input ${error ? 'form-input-error' : ''} ${inputClassName}`.trim()}
+      <select
+        id={selectId}
+        className={`form-input ${error ? 'form-input-error' : ''} ${selectClassName}`.trim()}
         {...props}
-      />
+      >
+        {children}
+      </select>
       {helperText ? (
         <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
           {helperText}

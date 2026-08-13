@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers, reports, reviews, users } from '../../db/schema';
+import { servers, reports, reviews, users, sponsorAds } from '../../db/schema';
 import { eq, desc, isNotNull } from 'drizzle-orm';
 import { getAuthorizedAdminEmail } from '../../lib/accessAuth';
 import { getAdminStats, type AdminStats } from '../../lib/adminStats';
@@ -116,6 +116,11 @@ async function getAdminData() {
         .orderBy(desc(servers.createdAt))
         .limit(20);
 
+      const ads = await db
+        .select()
+        .from(sponsorAds)
+        .orderBy(desc(sponsorAds.createdAt));
+
       const map = (s: typeof pendingServers[0]) => ({
         ...s,
         createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
@@ -123,6 +128,12 @@ async function getAdminData() {
       const mapRecent = (s: typeof recentlyAdded[0]) => ({
         ...s,
         createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
+      });
+      const mapAd = (a: typeof ads[0]) => ({
+        ...a,
+        createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : String(a.createdAt),
+        approvedAt: a.approvedAt instanceof Date ? a.approvedAt.toISOString() : a.approvedAt ? String(a.approvedAt) : null,
+        completedAt: a.completedAt instanceof Date ? a.completedAt.toISOString() : a.completedAt ? String(a.completedAt) : null,
       });
 
       return {
@@ -140,6 +151,7 @@ async function getAdminData() {
           createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
         })),
         recentlyAdded: recentlyAdded.map(mapRecent),
+        ads: ads.map(mapAd),
         stats: await getAdminStats(db),
       };
     }
@@ -155,6 +167,7 @@ async function getAdminData() {
     openReports: [],
     pendingReviewComments: [],
     recentlyAdded: [],
+    ads: [],
     stats: EMPTY_STATS,
   };
 }
@@ -181,6 +194,7 @@ export default async function AdminPage() {
     openReports,
     pendingReviewComments,
     recentlyAdded,
+    ads,
     stats,
   } = await getAdminData();
 
@@ -203,6 +217,7 @@ export default async function AdminPage() {
           initialOpenReports={openReports as any}
           initialPendingReviewComments={pendingReviewComments as any}
           recentlyAdded={recentlyAdded as any}
+          initialAds={ads as any}
           stats={stats}
         />
       </div>
