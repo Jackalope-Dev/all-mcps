@@ -1,3 +1,4 @@
+import React from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { PageShell, PageHeader } from '../../../../components/PageShell';
@@ -24,6 +25,13 @@ import {
   Activity,
   DollarSign,
   TrendingUp,
+  CalendarDays,
+  Repeat,
+  Trophy,
+  Timer,
+  XCircle,
+  RefreshCw,
+  Target,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -130,7 +138,15 @@ async function getCampaignData(id: string) {
 
     const uniqueReach = allSessions.size > 0 ? allSessions.size : Math.round(ad.impressionsServed * 0.78);
 
-    return { ad, placementStats, dailyTimeline, uniqueReach, hasLogData: logs.length > 0 };
+    // Compute last activity from most recent log
+    const lastActivity = logs.length > 0 && logs[0].createdAt ? new Date(logs[0].createdAt) : null;
+
+    // Find top performing placement by CTR (min 10 impressions)
+    const topPlacement = placementStats
+      .filter((p) => p.impressions >= 10)
+      .sort((a, b) => b.ctr - a.ctr)[0] || null;
+
+    return { ad, placementStats, dailyTimeline, uniqueReach, hasLogData: logs.length > 0, lastActivity, topPlacement };
   } catch (err: any) {
     console.error('[campaign dashboard] error:', err?.message);
   }
@@ -161,7 +177,7 @@ export default async function CampaignDashboardPage({
     );
   }
 
-  const { ad, placementStats, dailyTimeline, uniqueReach, hasLogData } = data;
+  const { ad, placementStats, dailyTimeline, uniqueReach, hasLogData, lastActivity, topPlacement } = data;
   const isSubmittedNotice = search.submitted === '1' || search.payment === 'success';
   const progressPct = Math.min(
     100,
@@ -174,6 +190,27 @@ export default async function CampaignDashboardPage({
       ? ((ad.amountPaidCents / 100) / (ad.impressionsServed / 1000)).toFixed(2)
       : null;
   const maxDailyImp = Math.max(...dailyTimeline.map((d) => d.impressions), 1);
+
+  // Campaign duration in days
+  const campaignStartMs = new Date(ad.createdAt).getTime();
+  const campaignEndMs = ad.completedAt ? new Date(ad.completedAt).getTime() : Date.now();
+  const campaignDurationDays = Math.max(1, Math.round((campaignEndMs - campaignStartMs) / (1000 * 60 * 60 * 24)));
+
+  // Ad frequency: avg impressions per unique developer
+  const adFrequency = uniqueReach > 0 ? (ad.impressionsServed / uniqueReach).toFixed(1) : null;
+
+  // Cost per unique developer reached
+  const costPerDev = uniqueReach > 0 ? (ad.amountPaidCents / 100 / uniqueReach).toFixed(2) : null;
+
+  // Estimated completion date (based on avg daily delivery rate)
+  const remainingImpressions = Math.max(0, ad.totalImpressionsPurchased - ad.impressionsServed);
+  const avgDailyImps = dailyTimeline.length > 0
+    ? dailyTimeline.reduce((s, d) => s + d.impressions, 0) / dailyTimeline.length
+    : 0;
+  const estimatedDaysLeft = avgDailyImps > 0 ? Math.ceil(remainingImpressions / avgDailyImps) : null;
+  const estimatedCompletionDate = estimatedDaysLeft !== null && ad.status === 'active'
+    ? new Date(Date.now() + estimatedDaysLeft * 24 * 60 * 60 * 1000)
+    : null;
 
   const getStatusBadge = (status: string) => {
     const configs: Record<string, { bg: string; border: string; color: string; icon: React.ReactNode; label: string }> = {
@@ -230,6 +267,32 @@ export default async function CampaignDashboardPage({
         </div>
       )}
 
+      {/* Rejection Reason Callout */}
+      {ad.status === 'rejected' && ad.rejectionReason && (
+        <div
+          style={{
+            padding: '1.25rem 1.5rem',
+            borderRadius: '14px',
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '1rem',
+          }}
+        >
+          <XCircle size={22} style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f87171', marginBottom: '0.2rem' }}>
+              Campaign Rejected — Full Refund Issued
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Reason: {ad.rejectionReason}. Your payment has been automatically refunded in full via Stripe.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Campaign Summary Bar */}
       <div
         className="surface"
@@ -239,7 +302,7 @@ export default async function CampaignDashboardPage({
           marginBottom: '2rem',
           border: '1px solid var(--border-color)',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))',
           gap: '1.25rem',
         }}
       >
@@ -263,6 +326,28 @@ export default async function CampaignDashboardPage({
           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Campaign Launched</div>
           <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{new Date(ad.createdAt).toLocaleDateString()}</div>
         </div>
+        <div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Running Duration</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <CalendarDays size={13} style={{ color: 'var(--accent-color)' }} /> {campaignDurationDays} {campaignDurationDays === 1 ? 'day' : 'days'}
+          </div>
+        </div>
+        {estimatedCompletionDate && remainingImpressions > 0 && (
+          <div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Est. Completion</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4ade80', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Timer size={13} /> {estimatedCompletionDate.toLocaleDateString()}
+            </div>
+          </div>
+        )}
+        {lastActivity && (
+          <div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Last Activity</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              {lastActivity.toLocaleString()}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Primary KPI Row */}
@@ -338,40 +423,83 @@ export default async function CampaignDashboardPage({
         </div>
       </div>
 
-      {/* Unit Economics Row */}
-      {(effectiveCpc || deliveredCpm) && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1.25rem',
-            marginBottom: '2rem',
-          }}
-        >
-          {deliveredCpm && (
-            <div className="surface" style={{ borderRadius: '14px', padding: '1.15rem 1.25rem', border: '1px solid var(--border-color)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                <DollarSign size={14} style={{ color: 'var(--accent-color)' }} /> Delivered CPM
-              </div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>${deliveredCpm}</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Actual cost per 1,000 verified impressions</div>
-            </div>
-          )}
-          {effectiveCpc && (
-            <div className="surface" style={{ borderRadius: '14px', padding: '1.15rem 1.25rem', border: '1px solid var(--border-color)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} /> Effective CPC
-              </div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>${effectiveCpc}</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Cost per recorded outbound click</div>
-            </div>
-          )}
+      {/* Unit Economics & Efficiency Row */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))',
+          gap: '1.25rem',
+          marginBottom: '2rem',
+        }}
+      >
+        {deliveredCpm && (
           <div className="surface" style={{ borderRadius: '14px', padding: '1.15rem 1.25rem', border: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-              <Bot size={14} style={{ color: 'var(--accent-color)' }} /> AI Agent Injections
+              <DollarSign size={14} style={{ color: 'var(--accent-color)' }} /> Delivered CPM
             </div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#4ade80' }}>Included Free</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Complimentary context injection in MCP queries</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>${deliveredCpm}</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Actual cost per 1k verified views</div>
+          </div>
+        )}
+        {effectiveCpc && (
+          <div className="surface" style={{ borderRadius: '14px', padding: '1.15rem 1.25rem', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
+              <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} /> Effective CPC
+            </div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>${effectiveCpc}</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Cost per outbound click</div>
+          </div>
+        )}
+        {costPerDev && (
+          <div className="surface" style={{ borderRadius: '14px', padding: '1.15rem 1.25rem', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
+              <Target size={14} style={{ color: 'var(--accent-color)' }} /> Cost / Developer
+            </div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>${costPerDev}</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Per unique developer reached</div>
+          </div>
+        )}
+        {adFrequency && (
+          <div className="surface" style={{ borderRadius: '14px', padding: '1.15rem 1.25rem', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
+              <Repeat size={14} style={{ color: 'var(--accent-color)' }} /> Ad Frequency
+            </div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>{adFrequency}×</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Avg impressions per unique dev</div>
+          </div>
+        )}
+        <div className="surface" style={{ borderRadius: '14px', padding: '1.15rem 1.25rem', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
+            <Bot size={14} style={{ color: 'var(--accent-color)' }} /> AI Agent Injections
+          </div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#4ade80' }}>Included Free</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Complimentary MCP context injection</div>
+        </div>
+      </div>
+
+      {/* Top Performing Placement Highlight */}
+      {topPlacement && topPlacement.clicks > 0 && (
+        <div
+          style={{
+            padding: '1rem 1.5rem',
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.06), rgba(0, 229, 255, 0.06))',
+            border: '1px solid rgba(34, 197, 94, 0.2)',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <Trophy size={20} style={{ color: '#facc15', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+              Top Performing: {topPlacement.label}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+              {topPlacement.ctr}% CTR · {topPlacement.clicks.toLocaleString()} clicks · {topPlacement.impressions.toLocaleString()} impressions
+            </div>
           </div>
         </div>
       )}
@@ -548,6 +676,13 @@ export default async function CampaignDashboardPage({
             logoUrl: ad.logoUrl,
           }}
         />
+      </div>
+
+      {/* Data Freshness Note */}
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+          <RefreshCw size={11} /> Analytics update on each page load. Bookmark this URL for anytime access.
+        </span>
       </div>
 
       {/* CTAs */}

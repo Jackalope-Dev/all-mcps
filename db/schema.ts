@@ -541,7 +541,7 @@ export const sponsorAds = sqliteTable('sponsor_ads', {
 export const sponsorAdLogs = sqliteTable('sponsor_ad_logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   adId: text('ad_id').notNull().references(() => sponsorAds.id, { onDelete: 'cascade' }),
-  /** 'impression' | 'click' */
+  /** 'impression' | 'click' | 'ai_injection' */
   eventType: text('event_type').notNull(),
   placement: text('placement').notNull(),
   sessionHash: text('session_hash'),

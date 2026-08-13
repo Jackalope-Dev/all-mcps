@@ -181,6 +181,7 @@ export default async function CategoryLandingPage({
       },
     ],
   };
+  const adSlotIndex = Math.floor(Math.random() * 10) + 5; // random slot 5–14
 
   return (
     <>

@@ -5,6 +5,8 @@ import { drizzle } from 'drizzle-orm/d1';
 import { sponsorAds } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
+import { sendNotificationEmail } from '@/lib/notify';
+import { getAppUrl } from '@/lib/stripe';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -60,7 +62,24 @@ export async function POST(request: Request) {
     const db = drizzle(ctx.env.DB);
 
     switch (action) {
-      case 'approve':
+      case 'approve': {
+        const [adToApprove] = await db
+          .select({
+            stripePaymentIntentId: sponsorAds.stripePaymentIntentId,
+            advertiserEmail: sponsorAds.advertiserEmail,
+            title: sponsorAds.title,
+          })
+          .from(sponsorAds)
+          .where(eq(sponsorAds.id, id))
+          .limit(1);
+
+        if (!adToApprove?.stripePaymentIntentId) {
+          return NextResponse.json(
+            { error: 'Cannot approve: payment is not yet confirmed for this campaign.' },
+            { status: 409 }
+          );
+        }
+
         await db
           .update(sponsorAds)
           .set({
@@ -69,7 +88,20 @@ export async function POST(request: Request) {
             rejectionReason: null,
           })
           .where(eq(sponsorAds.id, id));
+
+        try {
+          await sendNotificationEmail({
+            to: adToApprove.advertiserEmail,
+            heading: 'Your sponsor campaign is live',
+            message: `Your campaign "${adToApprove.title}" has been approved and is now running across AllMCPs.`,
+            actionText: 'View campaign dashboard',
+            actionUrl: `${getAppUrl()}/advertise/campaign/${id}`,
+          });
+        } catch (emailErr) {
+          console.error('[admin/ads/action] approval email failed:', emailErr);
+        }
         break;
+      }
 
       case 'reject': {
         const [existingAd] = await db
@@ -92,13 +124,31 @@ export async function POST(request: Request) {
           }
         }
 
+        const finalRejectionReason = reason || 'Does not meet sponsorship guidelines';
+
         await db
           .update(sponsorAds)
           .set({
             status: 'rejected',
-            rejectionReason: reason || 'Does not meet sponsorship guidelines',
+            rejectionReason: finalRejectionReason,
           })
           .where(eq(sponsorAds.id, id));
+
+        if (existingAd?.advertiserEmail) {
+          try {
+            await sendNotificationEmail({
+              to: existingAd.advertiserEmail,
+              heading: 'Your sponsor campaign was not approved',
+              message: existingAd.stripePaymentIntentId
+                ? `Your campaign "${existingAd.title}" was not approved: ${finalRejectionReason}. A full refund has been issued to your original payment method.`
+                : `Your campaign "${existingAd.title}" was not approved: ${finalRejectionReason}.`,
+              actionText: 'Submit a new campaign',
+              actionUrl: `${getAppUrl()}/advertise/create`,
+            });
+          } catch (emailErr) {
+            console.error('[admin/ads/action] rejection email failed:', emailErr);
+          }
+        }
         break;
       }
 

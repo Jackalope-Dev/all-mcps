@@ -6557,9 +6557,9 @@ nav[aria-label="Table of contents"] {
   margin: 2rem 0;
   display: flex;
   align-items: center;
-  justifyContent: space-between;
   flex-wrap: wrap;
   gap: 1rem;
+  justify-content: space-between;
   background: linear-gradient(135deg, rgba(0, 229, 255, 0.05), var(--bg-surface));
   box-shadow: 0 4px 16px -2px rgba(0, 229, 255, 0.06);
   transition: all 0.2s ease;

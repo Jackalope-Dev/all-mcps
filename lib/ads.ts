@@ -262,6 +262,33 @@ export function getRandomPlaceholderVariant(seed?: number): PlaceholderVariant {
   return PLACEHOLDER_VARIANTS[idx];
 }
 
+/**
+ * Logs an AI-agent injection of a sponsor ad (e.g. appended to an MCP search response).
+ * These are free placements — they never touch impressionsServed / the purchased credit
+ * balance — but are still logged so advertisers have real data on AI reach.
+ */
+export async function logAiInjectionEvent(adId: string, placement: AdPlacement = 'all'): Promise<void> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (!ctx?.env?.DB) return;
+
+    const { drizzle } = await import('drizzle-orm/d1');
+    const { sponsorAdLogs } = await import('@/db/schema');
+
+    const db = drizzle(ctx.env.DB);
+    await db.insert(sponsorAdLogs).values({
+      adId,
+      eventType: 'ai_injection',
+      placement,
+      sessionHash: null,
+      createdAt: new Date(),
+    });
+  } catch {
+    // best-effort logging only
+  }
+}
+
 /** Fetches a weighted active sponsor ad directly from D1 for API & AI agent queries */
 export async function fetchActiveSponsorAd(placement: AdPlacement = 'all'): Promise<SponsorAd | null> {
   try {

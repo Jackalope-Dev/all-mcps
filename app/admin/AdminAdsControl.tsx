@@ -236,6 +236,24 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       Bid: <strong style={{ color: 'var(--accent-color)' }}>${(ad.bidCpm / 100).toFixed(2)} CPM</strong>
                     </span>
+                    {!ad.stripePaymentIntentId && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          padding: '2px 8px',
+                          borderRadius: '10px',
+                          background: 'rgba(239,68,68,0.15)',
+                          color: '#f87171',
+                        }}
+                      >
+                        <AlertTriangle size={11} /> Payment Unverified
+                      </span>
+                    )}
                   </div>
 
                   <h3 style={{ margin: '0 0 0.35rem', fontSize: '1.15rem', fontWeight: 700 }}>{ad.title}</h3>
@@ -272,9 +290,10 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                       <>
                         <button
                           onClick={() => handleAction(ad.id, 'approve')}
-                          disabled={isLoading}
+                          disabled={isLoading || !ad.stripePaymentIntentId}
                           className="btn btn-sm btn-primary"
                           style={{ gap: '4px' }}
+                          title={!ad.stripePaymentIntentId ? 'Payment not yet confirmed by Stripe webhook' : undefined}
                         >
                           <CheckCircle2 size={13} /> Approve &amp; Run
                         </button>

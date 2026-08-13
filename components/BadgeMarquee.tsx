@@ -179,6 +179,13 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://showmebest.ai',
     imageUrl: 'https://showmebest.ai/badge/feature-badge-white.webp',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'launchzone',
+    name: 'Find us on LaunchZone',
+    href: 'https://launchzone.co/p/allmcps',
+    imageUrl: 'https://launchzone.co/badge.svg',
+    rel: 'noopener'
   }
 ];
 

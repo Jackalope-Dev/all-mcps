@@ -180,6 +180,8 @@ export default function DirectoryGrid({
   // a sort the user explicitly picked. Entering a query switches to relevance;
   // clearing it drops relevance back to trending (any other pick is preserved).
   const prevQueryEmptyRef = useRef(!initialQuery.trim());
+  // Stable random ad slot — picked once on mount, survives filter/sort re-renders
+  const adSlotRef = useRef(Math.floor(Math.random() * 8) + 3); // slot 3–10
   useEffect(() => {
     const empty = !searchQuery.trim();
     if (!empty && prevQueryEmptyRef.current) {
@@ -1463,7 +1465,7 @@ export default function DirectoryGrid({
               const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_grid' as const;
               return (
               <React.Fragment key={server.id}>
-              {index === 5 && (
+              {index === adSlotRef.current && (
                 <SponsorAdUnit placement="directory_inline" />
               )}
               <ImpressionBeacon serverId={server.id} surface={surface}>

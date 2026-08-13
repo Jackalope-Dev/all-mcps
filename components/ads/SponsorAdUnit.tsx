@@ -220,7 +220,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
             </div>
           </div>
 
-          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
             <Link
               href={advertiseHref}
               onClick={handlePlaceholderCtaClick}
@@ -443,7 +443,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
                   borderRadius: '10px',
                   objectFit: 'cover',
                   border: '1px solid var(--border-color)',
-                  background: '#0a0f1d',
+                  background: 'var(--bg-elevated)',
                   flexShrink: 0,
                 }}
                 onError={(e) => {
@@ -479,7 +479,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
           </div>
         </div>
 
-        <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
           <a
             {...linkProps}
             className="btn btn-sm btn-primary"
@@ -523,7 +523,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
                 borderRadius: '8px',
                 objectFit: 'cover',
                 border: '1px solid var(--border-color)',
-                background: '#0a0f1d',
+                background: 'var(--bg-elevated)',
                 flexShrink: 0,
               }}
               onError={(e) => {
@@ -582,7 +582,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
                 borderRadius: '10px',
                 objectFit: 'cover',
                 border: '1px solid var(--border-color)',
-                background: '#0a0f1d',
+                background: 'var(--bg-elevated)',
                 flexShrink: 0,
               }}
               onError={(e) => {
@@ -646,7 +646,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
               borderRadius: '12px',
               objectFit: 'cover',
               border: '1px solid var(--border-color)',
-              background: '#0a0f1d',
+              background: 'var(--bg-elevated)',
               flexShrink: 0,
             }}
             onError={(e) => {

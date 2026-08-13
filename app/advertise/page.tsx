@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { PageShell, PageHeader } from '../../components/PageShell';
-import { SponsorAdUnit } from '../../components/ads/SponsorAdUnit';
+import { PlacementShowcase } from '../../components/ads/PlacementShowcase';
 import { StatsBanner } from '../../components/StatsBanner';
 import { AD_PLACEMENTS, CPM_TIERS, formatUsdAmount } from '../../lib/ads';
 import { FaqSection } from '../../components/ui/FaqSection';
@@ -222,133 +222,7 @@ export default function AdvertiseLandingPage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '1.5rem' }}>
-          {/* Format 1: Directory Native Card */}
-          <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ marginBottom: '0.85rem' }}>
-              <span className="badge badge-cyan" style={{ fontSize: '0.675rem', marginBottom: '0.45rem', display: 'inline-block' }}>
-                High Volume
-              </span>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.25 }}>
-                Directory Native Card
-              </h3>
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.45, minHeight: '2.6rem' }}>
-              Inlined seamlessly inside directory search and browse views every ~12 listings.
-            </p>
-            <div style={{ marginTop: 'auto' }}>
-              <SponsorAdUnit
-                placement="directory_inline"
-                previewAd={{
-                  title: 'Example AI Cloud',
-                  description: 'Deploy serverless LLM backends and MCP tools in under 60 seconds.',
-                  ctaText: 'Start Free',
-                  logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Format 2: Listing Detail Sidebar */}
-          <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ marginBottom: '0.85rem' }}>
-              <span className="badge badge-cyan" style={{ fontSize: '0.675rem', marginBottom: '0.45rem', display: 'inline-block' }}>
-                High Intent
-              </span>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.25 }}>
-                Listing Detail Sidebar
-              </h3>
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.45, minHeight: '2.6rem' }}>
-              Dedicated placement alongside install guides, JSON configs, and tool inspectors.
-            </p>
-            <div style={{ marginTop: 'auto' }}>
-              <SponsorAdUnit
-                placement="detail_sidebar"
-                previewAd={{
-                  title: 'VectorDB Pro',
-                  description: 'Lightning-fast vector search for agents and MCP tools.',
-                  ctaText: 'Try VectorDB',
-                  logoUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&auto=format&fit=crop&q=80',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Format 3: Category Topic Promoted Spot */}
-          <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ marginBottom: '0.85rem' }}>
-              <span className="badge badge-purple" style={{ fontSize: '0.675rem', marginBottom: '0.45rem', display: 'inline-block' }}>
-                Targeted Category
-              </span>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.25 }}>
-                Category Promoted Spot
-              </h3>
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.45, minHeight: '2.6rem' }}>
-              Promoted sponsor listing featured inside specific category hubs like Developer Tools &amp; Cloud.
-            </p>
-            <div style={{ marginTop: 'auto' }}>
-              <SponsorAdUnit
-                placement="directory_inline"
-                previewAd={{
-                  title: 'DevOps Automator',
-                  description: 'Continuous deployment pipelines designed specifically for autonomous coding agents.',
-                  ctaText: 'Deploy Now',
-                  logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Format 4: Category Page Header Banner */}
-          <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-color)', gridColumn: '1 / -1' }}>
-            <div style={{ marginBottom: '0.75rem' }}>
-              <span className="badge badge-cyan" style={{ fontSize: '0.675rem', marginBottom: '0.45rem', display: 'inline-block' }}>
-                Top Spotlight
-              </span>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.25 }}>
-                Category Header Banner
-              </h3>
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.45 }}>
-              Top-of-page spotlight placed above category directories like Developer Tools, Cloud Platforms, Databases, and APIs.
-            </p>
-            <SponsorAdUnit
-              placement="header_banner"
-              previewAd={{
-                title: 'LangGraph Pro Suite',
-                description: 'Build, monitor, and deploy complex multi-agent workflows with automated evaluation.',
-                ctaText: 'Explore Platform',
-                logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
-              }}
-            />
-          </div>
-
-          {/* Format 5: Blog & Guide In-Article Banner */}
-          <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-color)', gridColumn: '1 / -1' }}>
-            <div style={{ marginBottom: '0.75rem' }}>
-              <span className="badge badge-cyan" style={{ fontSize: '0.675rem', marginBottom: '0.45rem', display: 'inline-block' }}>
-                Deep Engagement
-              </span>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.25 }}>
-                Blog &amp; Guide In-Article Banner
-              </h3>
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.45 }}>
-              Embedded in long-form guides, client setups (Cursor, Claude, Windsurf), and technical tutorials.
-            </p>
-            <SponsorAdUnit
-              placement="blog_guide"
-              previewAd={{
-                title: 'AgentOps Monitoring',
-                description: 'Full-stack observability and cost tracking for autonomous LLM agents.',
-                ctaText: 'Explore Docs',
-                logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
-              }}
-            />
-          </div>
-        </div>
+        <PlacementShowcase />
       </div>
 
       {/* AI Agent Native Sponsorships Feature */}
