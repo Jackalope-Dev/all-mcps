@@ -69,6 +69,11 @@ const SLOW_JOBS: CronJob[] = [
   // keeping only the current build's — see route comment for why this exists
   // alongside the bucket's 7-day lifecycle rule.
   { path: "/api/cron/isr-cache-cleanup", secretVar: "ADMIN_SECRET" },
+  // Supply-chain vulnerability signal: OSV.dev existence-check + severity
+  // detail fetch for each listing's install package. Bounded per tick (see
+  // BATCH_SIZE/MAX_DETAIL_FETCHES in the route) so unresolved listings simply
+  // roll to the next tick instead of blowing the scheduled handler's budget.
+  { path: "/api/cron/vuln-scan", secretVar: "ADMIN_SECRET" },
   // IndexNow batch for recently approved listings — daily at 00:00 UTC tick.
   // Complements the per-approve ping so fire-and-forget misses still get indexed.
   {

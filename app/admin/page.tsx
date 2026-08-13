@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers } from '../../db/schema';
+import { servers, reports, reviews, users } from '../../db/schema';
 import { eq, desc, isNotNull } from 'drizzle-orm';
 import { getAuthorizedAdminEmail } from '../../lib/accessAuth';
 import { getAdminStats, type AdminStats } from '../../lib/adminStats';
@@ -70,6 +70,35 @@ async function getAdminData() {
         .from(servers)
         .where(isNotNull(servers.pendingScreenshotKey))
         .orderBy(desc(servers.createdAt));
+      const openReports = await db
+        .select({
+          id: reports.id,
+          serverId: reports.serverId,
+          serverName: servers.name,
+          reason: reports.reason,
+          details: reports.details,
+          status: reports.status,
+          createdAt: reports.createdAt,
+        })
+        .from(reports)
+        .leftJoin(servers, eq(servers.id, reports.serverId))
+        .where(eq(reports.status, 'open'))
+        .orderBy(desc(reports.createdAt));
+      const pendingReviewComments = await db
+        .select({
+          id: reviews.id,
+          serverId: reviews.serverId,
+          serverName: servers.name,
+          reviewerEmail: users.email,
+          rating: reviews.rating,
+          comment: reviews.comment,
+          createdAt: reviews.createdAt,
+        })
+        .from(reviews)
+        .leftJoin(servers, eq(servers.id, reviews.serverId))
+        .leftJoin(users, eq(users.id, reviews.userId))
+        .where(eq(reviews.commentStatus, 'pending'))
+        .orderBy(desc(reviews.createdAt));
       // Most-recently-added live listings, so newly approved MCPs are easy to find again.
       const recentlyAdded = await db
         .select({
@@ -102,6 +131,14 @@ async function getAdminData() {
         pendingClaims: pendingClaims.map(map),
         pendingLogos: pendingLogos.map(map),
         pendingScreenshots: pendingScreenshots.map(map),
+        openReports: openReports.map((r) => ({
+          ...r,
+          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+        })),
+        pendingReviewComments: pendingReviewComments.map((r) => ({
+          ...r,
+          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+        })),
         recentlyAdded: recentlyAdded.map(mapRecent),
         stats: await getAdminStats(db),
       };
@@ -109,7 +146,17 @@ async function getAdminData() {
   } catch (e) {
     // Fallback if not in edge context
   }
-  return { pending: [], pendingEdits: [], pendingClaims: [], pendingLogos: [], pendingScreenshots: [], recentlyAdded: [], stats: EMPTY_STATS };
+  return {
+    pending: [],
+    pendingEdits: [],
+    pendingClaims: [],
+    pendingLogos: [],
+    pendingScreenshots: [],
+    openReports: [],
+    pendingReviewComments: [],
+    recentlyAdded: [],
+    stats: EMPTY_STATS,
+  };
 }
 
 export default async function AdminPage() {
@@ -125,7 +172,17 @@ export default async function AdminPage() {
     );
   }
 
-  const { pending, pendingEdits, pendingClaims, pendingLogos, pendingScreenshots, recentlyAdded, stats } = await getAdminData();
+  const {
+    pending,
+    pendingEdits,
+    pendingClaims,
+    pendingLogos,
+    pendingScreenshots,
+    openReports,
+    pendingReviewComments,
+    recentlyAdded,
+    stats,
+  } = await getAdminData();
 
   return (
     <main className="container animate-fade-in" style={{ padding: '2.5rem 1rem 4rem' }}>
@@ -143,6 +200,8 @@ export default async function AdminPage() {
           initialPendingClaims={pendingClaims as any}
           initialPendingLogos={pendingLogos as any}
           initialPendingScreenshots={pendingScreenshots as any}
+          initialOpenReports={openReports as any}
+          initialPendingReviewComments={pendingReviewComments as any}
           recentlyAdded={recentlyAdded as any}
           stats={stats}
         />

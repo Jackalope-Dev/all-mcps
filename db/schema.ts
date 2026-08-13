@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const servers = sqliteTable('servers', {
   id: text('id').primaryKey(),
@@ -55,6 +55,23 @@ export const servers = sqliteTable('servers', {
   lastCommitAt: integer('last_commit_at', { mode: 'timestamp' }),
   /** npm last-month downloads for the package, refreshed by the health cron. Null = not an npm package or not measured. */
   npmDownloads: integer('npm_downloads'),
+  /** Ecosystem the vuln-scan cron resolved installPackage to for OSV.dev querying —
+   * 'npm' | 'PyPI'. Null = not (yet) mappable to a scannable ecosystem (docker/go/
+   * remote-only listings, or no installPackage yet) — never scanned, never penalized. */
+  vulnEcosystem: text('vuln_ecosystem'),
+  /**
+   * OSV.dev advisory counts by severity for installPackage, queried without a pinned
+   * version (see lib/vulnScan.ts, /api/cron/vuln-scan) — i.e. "advisories ever filed
+   * against any version of this package," not "vulnerable right now." All null until
+   * first scanned; the quality score treats that as neutral, never as a negative
+   * signal (see lib/qualityScore.ts).
+   */
+  vulnCriticalCount: integer('vuln_critical_count'),
+  vulnHighCount: integer('vuln_high_count'),
+  vulnMediumCount: integer('vuln_medium_count'),
+  vulnLowCount: integer('vuln_low_count'),
+  /** Last time the vuln-scan cron resolved this listing's full advisory id set. Null = never scanned. */
+  vulnScannedAt: integer('vuln_scanned_at', { mode: 'timestamp' }),
   /** JSON array of {name, description} captured when a listing exposes a callable MCP endpoint. Null = tools not introspected. */
   tools: text('tools'),
   /** Last time we attempted MCP tool introspection for this listing. */
@@ -404,4 +421,78 @@ export const socialPosts = sqliteTable('social_posts', {
   createdIdx: index('idx_social_posts_created').on(table.createdAt),
   statusCreatedIdx: index('idx_social_posts_status_created').on(table.status, table.createdAt),
   serverIdx: index('idx_social_posts_server').on(table.serverId),
+}));
+
+/**
+ * User-submitted star rating + optional written comment for a listing. The
+ * rating publishes immediately (no approval — it feeds the quality score's
+ * community-engagement component right away, see lib/qualityScore.ts) while
+ * a written comment is held behind `commentStatus` until an admin approves
+ * it (spam/abuse gate) — see the approve_review_comment/reject_review_comment
+ * actions in app/api/admin/action/route.ts. `comment` staying non-null after
+ * rejection (rather than being cleared) is deliberate: it lets an admin who
+ * revisits the queue see what was rejected, and lets a user's own composer
+ * show them their last submission even if it never went public.
+ *
+ * One row per (server, user) — a resubmission upserts in place via
+ * onConflictDoUpdate on idx_reviews_server_user rather than appending a new
+ * row, so a user can revise their own review instead of stacking duplicates.
+ * Autoincrement `id` (rather than a bare composite PK like upvote_records)
+ * exists so a single row can be addressed by the plain `id: string` shape
+ * POST /api/admin/action already uses for every other moderation action.
+ */
+export const reviews = sqliteTable('reviews', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  serverId: text('server_id').notNull(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** 1-5. */
+  rating: integer('rating').notNull(),
+  /** Optional written review. Null = rating-only submission. */
+  comment: text('comment'),
+  /** none (no comment given) | pending | approved | rejected. Only gates the
+   * comment *text* — the rating above always counts regardless of this value. */
+  commentStatus: text('comment_status').notNull().default('none'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  serverUserUnique: uniqueIndex('idx_reviews_server_user').on(table.serverId, table.userId),
+  serverIdx: index('idx_reviews_server').on(table.serverId),
+  commentStatusIdx: index('idx_reviews_comment_status').on(table.commentStatus),
+}));
+
+/**
+ * Anonymous "something's wrong with this listing" flags — admin triage only,
+ * deliberately never a direct input to the public quality score (see
+ * lib/qualityScore.ts) to avoid a mass-report abuse vector; an admin who
+ * confirms a report acts on the listing itself (edit/unpublish) through the
+ * existing tools, and *that* is what actually moves the score. No login
+ * required (lower friction than reviews — the visitor most motivated to
+ * report is mid-frustration with something broken), so abuse resistance is
+ * Turnstile plus a soft rate limit here rather than a DB-level uniqueness
+ * constraint — multiple genuine reports on one listing are a real signal,
+ * not spam, and must not be deduped away.
+ */
+export const reports = sqliteTable('reports', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  serverId: text('server_id').notNull(),
+  /** broken_install | misleading | malicious | dead_link | other */
+  reason: text('reason').notNull(),
+  /** Optional free-text elaboration, length-capped by the route. */
+  details: text('details'),
+  /** Salted hash of the reporter's IP (see lib/upvoteHash.ts), scoped to a
+   * fixed 'report' bucket rather than per-listing — used only for the soft
+   * rate limit below, never displayed. Null if the hashing pepper isn't
+   * configured (fails open, same convention as upvote/view dedup). */
+  reporterIpHash: text('reporter_ip_hash'),
+  /** open | reviewed | dismissed — admin triage state. */
+  status: text('status').notNull().default('open'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
+}, (table) => ({
+  serverIdx: index('idx_reports_server').on(table.serverId),
+  statusIdx: index('idx_reports_status').on(table.status),
+  createdIdx: index('idx_reports_created').on(table.createdAt),
+  /** Powers the soft rate-limit lookup: "how many reports has this hashed IP
+   * filed recently" without a full table scan. */
+  ipCreatedIdx: index('idx_reports_ip_created').on(table.reporterIpHash, table.createdAt),
 }));

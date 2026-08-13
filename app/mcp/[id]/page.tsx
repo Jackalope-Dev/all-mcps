@@ -26,10 +26,13 @@ import serversData from '../../../data/mcp-servers.json';
 import { notFound } from 'next/navigation';
 import { repoLinkRel, websiteLinkRel, supportLinkRel } from '../../../lib/linkRel';
 import { OwnerZone } from '../../../components/ui/OwnerZone';
+import { ReportListingButton } from '../../../components/ui/ReportListingButton';
+import { VulnSignalCard } from '../../../components/ui/VulnSignalCard';
 import { ClaimHintLink } from '../../../components/ui/ClaimHintLink';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
-import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, getServerHealthHistory, computeCombinedAvailabilityPct, type Server } from '../../../lib/servers';
+import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, getServerHealthHistory, getServerReviews, computeCombinedAvailabilityPct, type Server } from '../../../lib/servers';
+import { ReviewsSection } from '../../../components/ui/ReviewsSection';
 import { HealthHistoryStrip } from '../../../components/ui/HealthHistoryStrip';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
@@ -174,12 +177,13 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   // Deliberately no session/auth() read here — that would force this page dynamic
   // (uncacheable) on every request. Ownership-gated UI (OwnerZone, ClaimHintLink)
   // fetches its own status client-side instead so this page can be ISR'd.
-  const [readme, relatedServers, rawPilotResult, featuredPool, healthHistory] = await Promise.all([
+  const [readme, relatedServers, rawPilotResult, featuredPool, healthHistory, reviewSummary] = await Promise.all([
     fetchReadme(server.url),
     getRelatedServers(server as any, 4),
     getStdioPilotResult(server.id),
     getFeaturedServers(server.id, 10),
     getServerHealthHistory(server.id),
+    getServerReviews(server.id),
   ]);
   // A pilot check is only meaningful for the install command it actually
   // tested. install_extracted_at (LLM re-validation) can rewrite that
@@ -195,8 +199,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   // pass — see computeCombinedAvailabilityPct in lib/servers.ts for why this
   // takes priority over a single live snapshot in the quality score.
   const combinedAvailabilityPct = computeCombinedAvailabilityPct(healthHistory, pilotResult?.status === 'ok');
-  const serverForScoring: Server =
-    combinedAvailabilityPct != null ? { ...server, combinedAvailabilityPct } : server;
+  const serverForScoring: Server = {
+    ...server,
+    ...(combinedAvailabilityPct != null ? { combinedAvailabilityPct } : null),
+    reviewCount: reviewSummary.count,
+    avgRating: reviewSummary.avgRating,
+  };
   // Live tools/list handshake (health cron) already confirmed the server itself
   // works — used to soften the "not yet checked" install-sandbox message below
   // so it doesn't contradict the verified badge shown elsewhere on the page.
@@ -635,6 +643,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             )}
 
             <ShareModal serverId={server.id} serverName={server.name} variant="action" />
+            <ReportListingButton serverId={server.id} />
           </div>
 
           {server.tags && server.tags.length > 0 && (
@@ -889,6 +898,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <a href="#directory-badge" className="detail-next-step">
               <BadgeCheck size={14} aria-hidden="true" /> Directory Badge
             </a>
+            {reviewSummary.count > 0 && (
+              <a href="#reviews" className="detail-next-step">
+                <Star size={14} aria-hidden="true" /> Reviews ({reviewSummary.count})
+              </a>
+            )}
             {!server.isOfficial && (
               <Link href={`/mcp/${server.id}/claim`} className="detail-next-step">
                 <BadgeCheck size={14} aria-hidden="true" /> Claim listing
@@ -1097,6 +1111,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             </section>
           )}
 
+          <ReviewsSection serverId={server.id} summary={reviewSummary} />
+
           {/* Query-Forward AEO / FAQ Block */}
           <section style={{ marginTop: '2.5rem' }}>
             <FaqSection
@@ -1295,6 +1311,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <QualityBadge server={serverForScoring} />
             </div>
           </div>
+
+          <VulnSignalCard server={server} />
 
           {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) — rotates between paid
               featured listings and the self-serve upsell */}

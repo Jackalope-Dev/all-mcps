@@ -20,6 +20,7 @@ import {
   normalizeTags,
   normalizeCompatibleClients,
 } from '../../../lib/serverEnums';
+import { verifyTurnstileToken } from '../../../lib/turnstile';
 
 const submitSchema = z.object({
   url: z.string().optional().or(z.literal('')),
@@ -67,25 +68,16 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) as any;
-    const token = body['cf-turnstile-response'];
-
-    if (!token) {
-      return NextResponse.json({ success: false, error: 'Missing Turnstile token' }, { status: 400 });
-    }
-
-    const verifyForm = new URLSearchParams();
-    verifyForm.append('secret', env?.TURNSTILE_SECRET || process.env.TURNSTILE_SECRET || '');
-    verifyForm.append('response', token);
-    verifyForm.append('remoteip', req.headers.get('x-forwarded-for') || '');
-
-    const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      body: verifyForm,
-    });
-
-    const verifyResult = (await verifyRes.json()) as any;
-    if (!verifyResult.success) {
-      return NextResponse.json({ success: false, error: 'Turnstile verification failed' }, { status: 403 });
+    const turnstileResult = await verifyTurnstileToken(
+      body['cf-turnstile-response'],
+      env,
+      req.headers.get('x-forwarded-for') || ''
+    );
+    if (!turnstileResult.ok) {
+      return NextResponse.json(
+        { success: false, error: turnstileResult.error },
+        { status: turnstileResult.status }
+      );
     }
 
     const result = submitSchema.safeParse(body);

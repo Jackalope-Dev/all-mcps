@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers, users, upvoteRecords, viewRecords } from '../../../../db/schema';
+import { servers, users, upvoteRecords, viewRecords, reviews, reports } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
@@ -40,6 +40,11 @@ const actionSchema = z.object({
     'toggle_website_verified',
     'toggle_reciprocal_badge',
     'check_health',
+    'approve_review_comment',
+    'reject_review_comment',
+    'delete_review',
+    'mark_report_reviewed',
+    'dismiss_report',
   ]),
   fields: z
     .object({
@@ -77,6 +82,11 @@ const MESSAGES: Record<string, string> = {
   toggle_website_verified: 'Website verification status updated.',
   toggle_reciprocal_badge: 'Reciprocal badge status updated.',
   check_health: 'Health check completed.',
+  approve_review_comment: 'Review comment approved.',
+  reject_review_comment: 'Review comment rejected.',
+  delete_review: 'Review deleted.',
+  mark_report_reviewed: 'Report marked as reviewed.',
+  dismiss_report: 'Report dismissed.',
 };
 
 export async function POST(req: Request) {
@@ -587,6 +597,70 @@ export async function POST(req: Request) {
         message: `Health check done. Status: ${nextHealth} (Repo HTTP ${repoStatus}${websiteStatus !== null ? `, Site HTTP ${websiteStatus}` : ''})`,
         healthStatus: nextHealth,
       });
+    } else if (
+      action === 'approve_review_comment' ||
+      action === 'reject_review_comment' ||
+      action === 'delete_review'
+    ) {
+      // `id` here addresses a reviews row, not a servers row — reviews.id is a
+      // plain autoincrement integer (see db/schema.ts), unlike every other
+      // action's server id, so it needs its own numeric parse.
+      const reviewId = Number(id);
+      if (!Number.isFinite(reviewId)) {
+        return NextResponse.json({ error: 'Invalid review id.' }, { status: 400 });
+      }
+
+      const rows = await db.select().from(reviews).where(eq(reviews.id, reviewId)).limit(1);
+      const review = rows[0];
+      if (!review) {
+        return NextResponse.json({ error: 'Review not found.' }, { status: 404 });
+      }
+
+      if (action === 'delete_review') {
+        // Hard delete — the only lever for a rating-only abuse case (e.g. a
+        // 1-star rating-bomb with no comment text bypasses comment moderation
+        // entirely, since there's no comment to gate).
+        await db.delete(reviews).where(eq(reviews.id, reviewId));
+      } else {
+        await db
+          .update(reviews)
+          .set({
+            commentStatus: action === 'approve_review_comment' ? 'approved' : 'rejected',
+            updatedAt: new Date(),
+          })
+          .where(eq(reviews.id, reviewId));
+
+        const [serverRow] = await db.select({ name: servers.name }).from(servers).where(eq(servers.id, review.serverId)).limit(1);
+        const [userRow] = await db.select({ email: users.email }).from(users).where(eq(users.id, review.userId)).limit(1);
+        if (userRow?.email && serverRow?.name) {
+          await sendNotificationEmail({
+            to: userRow.email,
+            heading: action === 'approve_review_comment' ? 'Your review is live' : 'Your review comment needs changes',
+            message:
+              action === 'approve_review_comment'
+                ? `Your comment on ${serverRow.name} is now visible to other visitors. Your rating was already counted.`
+                : reason || `Your written comment on ${serverRow.name} wasn't approved for public display. Your star rating still counts as-is — only the comment text was affected.`,
+            actionText: 'View listing',
+            actionUrl: `${getAppUrl()}/mcp/${review.serverId}`,
+          });
+        }
+      }
+    } else if (action === 'mark_report_reviewed' || action === 'dismiss_report') {
+      const reportId = Number(id);
+      if (!Number.isFinite(reportId)) {
+        return NextResponse.json({ error: 'Invalid report id.' }, { status: 400 });
+      }
+
+      const updateResult = await db
+        .update(reports)
+        .set({ status: action === 'mark_report_reviewed' ? 'reviewed' : 'dismissed', reviewedAt: new Date() })
+        .where(eq(reports.id, reportId))
+        .returning();
+
+      if (updateResult.length === 0) {
+        return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
+      }
+      // Reports are anonymous — nothing to notify.
     }
 
     return NextResponse.json({ success: true, message: MESSAGES[action] });

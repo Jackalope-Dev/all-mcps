@@ -67,12 +67,42 @@ type RecentServer = {
   createdAt: string;
 };
 
+type ReportItem = {
+  id: number;
+  serverId: string;
+  serverName?: string | null;
+  reason: string;
+  details?: string | null;
+  status: string;
+  createdAt: string;
+};
+
+const REPORT_REASON_LABELS: Record<string, string> = {
+  broken_install: "Install doesn't work",
+  misleading: 'Misleading or inaccurate info',
+  malicious: 'Malicious or unsafe behavior',
+  dead_link: 'Dead link / repo gone',
+  other: 'Something else',
+};
+
+type ReviewCommentItem = {
+  id: number;
+  serverId: string;
+  serverName?: string | null;
+  reviewerEmail?: string | null;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+};
+
 export default function AdminClient({
   initialPending,
   initialPendingEdits = [],
   initialPendingClaims = [],
   initialPendingLogos = [],
   initialPendingScreenshots = [],
+  initialOpenReports = [],
+  initialPendingReviewComments = [],
   recentlyAdded = [],
   stats,
 }: {
@@ -81,6 +111,8 @@ export default function AdminClient({
   initialPendingClaims?: Server[];
   initialPendingLogos?: Server[];
   initialPendingScreenshots?: Server[];
+  initialOpenReports?: ReportItem[];
+  initialPendingReviewComments?: ReviewCommentItem[];
   recentlyAdded?: RecentServer[];
   stats: AdminStats;
 }) {
@@ -89,13 +121,15 @@ export default function AdminClient({
   const [pendingClaims, setPendingClaims] = useState<Server[]>(initialPendingClaims);
   const [pendingLogos, setPendingLogos] = useState<Server[]>(initialPendingLogos);
   const [pendingScreenshots, setPendingScreenshots] = useState<Server[]>(initialPendingScreenshots);
+  const [openReports, setOpenReports] = useState<ReportItem[]>(initialOpenReports);
+  const [pendingReviewComments, setPendingReviewComments] = useState<ReviewCommentItem[]>(initialPendingReviewComments);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   // Rejection Reason Modal State
   const [rejectingItem, setRejectingItem] = useState<{
     id: string;
     name: string;
-    action: 'reject' | 'reject_edit' | 'reject_claim' | 'reject_logo' | 'reject_screenshot';
+    action: 'reject' | 'reject_edit' | 'reject_claim' | 'reject_logo' | 'reject_screenshot' | 'reject_review_comment';
     submitterEmail?: string | null;
   } | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -105,13 +139,14 @@ export default function AdminClient({
     pendingEdits.length +
     pendingClaims.length +
     pendingLogos.length +
-    pendingScreenshots.length;
+    pendingScreenshots.length +
+    pendingReviewComments.length;
   const defaultTab = totalPending > 0 ? 'moderation' : 'listings';
   const [activeTab, setActiveTab] = useState<
     'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'crons' | 'tools'
   >(defaultTab);
   const [modSubTab, setModSubTab] = useState<
-    'submissions' | 'edits' | 'claims' | 'logos' | 'screenshots'
+    'submissions' | 'edits' | 'claims' | 'logos' | 'screenshots' | 'reviews' | 'reports'
   >('submissions');
   const [activeListingsFilters, setActiveListingsFilters] = useState<ListingFilters | undefined>(undefined);
 
@@ -126,12 +161,14 @@ export default function AdminClient({
   const openRejectModal = (
     id: string,
     name: string,
-    action: 'reject' | 'reject_edit' | 'reject_claim' | 'reject_logo' | 'reject_screenshot',
+    action: 'reject' | 'reject_edit' | 'reject_claim' | 'reject_logo' | 'reject_screenshot' | 'reject_review_comment',
     submitterEmail?: string | null
   ) => {
     setRejectingItem({ id, name, action, submitterEmail });
     setRejectionReason(
-      'Your submission was not approved because the details or repository information were incomplete. You are welcome to update your information and submit again.'
+      action === 'reject_review_comment'
+        ? "Your written comment wasn't approved for public display. Your star rating still counts as-is — only the comment text was affected."
+        : 'Your submission was not approved because the details or repository information were incomplete. You are welcome to update your information and submit again.'
     );
   };
 
@@ -148,7 +185,12 @@ export default function AdminClient({
       | 'reject_logo'
       | 'approve_screenshot'
       | 'reject_screenshot'
-      | 'resend_approval',
+      | 'resend_approval'
+      | 'mark_report_reviewed'
+      | 'dismiss_report'
+      | 'approve_review_comment'
+      | 'reject_review_comment'
+      | 'delete_review',
     extra?: { reason?: string }
   ) => {
     setLoadingId(id);
@@ -181,6 +223,22 @@ export default function AdminClient({
         toast.success(action === 'approve_screenshot' ? 'Screenshot approved' : 'Screenshot rejected');
       } else if (action === 'resend_approval') {
         toast.success(data.message || 'Approval email resent');
+      } else if (action === 'mark_report_reviewed' || action === 'dismiss_report') {
+        setOpenReports((prev) => prev.filter((r) => String(r.id) !== id));
+        toast.success(action === 'mark_report_reviewed' ? 'Report marked reviewed' : 'Report dismissed');
+      } else if (
+        action === 'approve_review_comment' ||
+        action === 'reject_review_comment' ||
+        action === 'delete_review'
+      ) {
+        setPendingReviewComments((prev) => prev.filter((r) => String(r.id) !== id));
+        toast.success(
+          action === 'approve_review_comment'
+            ? 'Comment approved'
+            : action === 'reject_review_comment'
+              ? 'Comment rejected'
+              : 'Review deleted'
+        );
       } else {
         setPendingLogos((prev) => prev.filter((s) => s.id !== id));
         toast.success(action === 'approve_logo' ? 'Logo approved' : 'Logo rejected');
@@ -326,6 +384,28 @@ export default function AdminClient({
             >
               Screenshots ({pendingScreenshots.length})
             </button>
+            <button
+              onClick={() => setModSubTab('reviews')}
+              className={`admin-btn ${modSubTab === 'reviews' ? 'admin-btn-primary' : ''}`}
+              style={{
+                background: modSubTab === 'reviews' ? 'var(--accent-color)' : 'rgba(128, 128, 128, 0.08)',
+                color: modSubTab === 'reviews' ? '#ffffff' : 'var(--text-secondary)',
+                border: modSubTab === 'reviews' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+              }}
+            >
+              Review Comments ({pendingReviewComments.length})
+            </button>
+            <button
+              onClick={() => setModSubTab('reports')}
+              className={`admin-btn ${modSubTab === 'reports' ? 'admin-btn-primary' : ''}`}
+              style={{
+                background: modSubTab === 'reports' ? 'var(--accent-color)' : 'rgba(128, 128, 128, 0.08)',
+                color: modSubTab === 'reports' ? '#ffffff' : 'var(--text-secondary)',
+                border: modSubTab === 'reports' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+              }}
+            >
+              Reports ({openReports.length})
+            </button>
           </div>
 
           {modSubTab === 'submissions' && (
@@ -397,6 +477,39 @@ export default function AdminClient({
                 loadingId={loadingId}
                 onApprove={(id) => handleAction(id, 'approve_screenshot')}
                 onReject={(server) => openRejectModal(server.id, server.name, 'reject_screenshot')}
+              />
+            </section>
+          )}
+
+          {modSubTab === 'reviews' && (
+            <section>
+              <h2 className="admin-section-title">Pending Review Comments ({pendingReviewComments.length})</h2>
+              <p className="admin-section-desc">
+                Star ratings publish immediately and aren&rsquo;t gated here — only the written comment text needs approval before it&rsquo;s shown publicly.
+              </p>
+              <PendingReviewsTable
+                reviews={pendingReviewComments}
+                loadingId={loadingId}
+                onApprove={(id) => handleAction(String(id), 'approve_review_comment')}
+                onReject={(review) =>
+                  openRejectModal(String(review.id), review.serverName || review.serverId, 'reject_review_comment')
+                }
+                onDelete={(id) => handleAction(String(id), 'delete_review')}
+              />
+            </section>
+          )}
+
+          {modSubTab === 'reports' && (
+            <section>
+              <h2 className="admin-section-title">Open Reports ({openReports.length})</h2>
+              <p className="admin-section-desc">
+                Visitor-flagged problems, triage-only — never directly affects a listing&rsquo;s public score. Act on the listing itself (edit/unpublish) via Manage Listings if a report is valid.
+              </p>
+              <PendingReportsTable
+                reports={openReports}
+                loadingId={loadingId}
+                onReviewed={(id) => handleAction(String(id), 'mark_report_reviewed')}
+                onDismiss={(id) => handleAction(String(id), 'dismiss_report')}
               />
             </section>
           )}
@@ -1130,6 +1243,195 @@ function PendingScreenshotsTable({
                       style={{ background: '#b91c1c' }}
                     >
                       Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PendingReportsTable({
+  reports,
+  loadingId,
+  onReviewed,
+  onDismiss,
+}: {
+  reports: ReportItem[];
+  loadingId: string | null;
+  onReviewed: (id: number) => void;
+  onDismiss: (id: number) => void;
+}) {
+  return (
+    <div className="admin-card">
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>Listing</th>
+            <th>Reason</th>
+            <th>Details</th>
+            <th>Reported</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reports.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="admin-table-empty">
+                No open reports!
+              </td>
+            </tr>
+          ) : (
+            reports.map((r) => (
+              <tr key={r.id}>
+                <td data-label="Listing">
+                  {r.serverName ? (
+                    <a
+                      href={`/mcp/${r.serverId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent-color)' }}
+                    >
+                      <strong>{r.serverName}</strong>
+                    </a>
+                  ) : (
+                    <span style={{ fontStyle: 'italic', opacity: 0.8 }}>{r.serverId} (removed)</span>
+                  )}
+                </td>
+                <td data-label="Reason">{REPORT_REASON_LABELS[r.reason] || r.reason}</td>
+                <td data-label="Details" style={{ maxWidth: 280 }}>
+                  {r.details ? (
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{r.details}</span>
+                  ) : (
+                    <span style={{ opacity: 0.6 }}>—</span>
+                  )}
+                </td>
+                <td data-label="Reported">
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </span>
+                </td>
+                <td data-label="Actions">
+                  <div className="admin-actions">
+                    <button
+                      onClick={() => onReviewed(r.id)}
+                      disabled={loadingId === String(r.id)}
+                      className="admin-btn"
+                      style={{ background: '#047857' }}
+                    >
+                      Mark Reviewed
+                    </button>
+                    <button
+                      onClick={() => onDismiss(r.id)}
+                      disabled={loadingId === String(r.id)}
+                      className="admin-btn"
+                      style={{ background: 'rgba(128, 128, 128, 0.3)' }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PendingReviewsTable({
+  reviews,
+  loadingId,
+  onApprove,
+  onReject,
+  onDelete,
+}: {
+  reviews: ReviewCommentItem[];
+  loadingId: string | null;
+  onApprove: (id: number) => void;
+  onReject: (review: ReviewCommentItem) => void;
+  onDelete: (id: number) => void;
+}) {
+  return (
+    <div className="admin-card">
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>Listing</th>
+            <th>Reviewer</th>
+            <th>Rating</th>
+            <th>Comment</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reviews.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="admin-table-empty">
+                No pending review comments!
+              </td>
+            </tr>
+          ) : (
+            reviews.map((r) => (
+              <tr key={r.id}>
+                <td data-label="Listing">
+                  {r.serverName ? (
+                    <a
+                      href={`/mcp/${r.serverId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent-color)' }}
+                    >
+                      <strong>{r.serverName}</strong>
+                    </a>
+                  ) : (
+                    <span style={{ fontStyle: 'italic', opacity: 0.8 }}>{r.serverId} (removed)</span>
+                  )}
+                </td>
+                <td data-label="Reviewer">
+                  <span style={{ fontSize: '0.85rem' }}>{r.reviewerEmail || 'Unknown'}</span>
+                </td>
+                <td data-label="Rating">
+                  <span style={{ fontSize: '0.85rem' }}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                </td>
+                <td data-label="Comment" style={{ maxWidth: 300 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{r.comment}</span>
+                </td>
+                <td data-label="Actions">
+                  <div className="admin-actions">
+                    <button
+                      onClick={() => onApprove(r.id)}
+                      disabled={loadingId === String(r.id)}
+                      className="admin-btn"
+                      style={{ background: '#047857' }}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => onReject(r)}
+                      disabled={loadingId === String(r.id)}
+                      className="admin-btn"
+                      style={{ background: '#b91c1c' }}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Permanently delete this review (rating and comment)? This is for spam/abuse — a normal rejection only hides the comment text.')) {
+                          onDelete(r.id);
+                        }
+                      }}
+                      disabled={loadingId === String(r.id)}
+                      className="admin-btn"
+                      style={{ background: 'rgba(128, 128, 128, 0.3)' }}
+                      title="Delete the whole review (rating + comment) — for spam/abuse"
+                    >
+                      Delete
                     </button>
                   </div>
                 </td>

@@ -258,16 +258,41 @@ export function computeQualityScore(server: Server): QualityScore {
     });
   }
 
-  // 5. Community engagement (10) — upvotes + views on AllMCPs.
+  // 5. Community engagement (10) — upvotes + views + user reviews on AllMCPs.
   {
     const max = 10;
-    const engagement = ramp(server.upvotes || 0, 100) * 0.6 + ramp(server.views || 0, 5000) * 0.4;
+
+    // Bayesian shrinkage toward a neutral 3.5/5 baseline so 1-2 early five-star
+    // reviews can't swing an established listing's score — shrinkage constant
+    // REVIEW_SHRINKAGE_C=5 means a listing needs ~5 reviews before its own
+    // average starts to dominate the blend. reviewCount/avgRating are only
+    // populated where a caller has already paid for the reviews join (see
+    // lib/servers.ts's Server.reviewCount doc) — undefined behaves like 0,
+    // same "just early, not penalized" treatment as every other signal here.
+    const REVIEW_PRIOR = 3.5;
+    const REVIEW_SHRINKAGE_C = 5;
+    const reviewCount = server.reviewCount || 0;
+    const avgRating = server.avgRating || 0;
+    const bayesianAvg =
+      reviewCount > 0
+        ? (reviewCount * avgRating + REVIEW_SHRINKAGE_C * REVIEW_PRIOR) / (reviewCount + REVIEW_SHRINKAGE_C)
+        : 0;
+    const reviewScore = reviewCount > 0 ? Math.max(0, Math.min(1, (bayesianAvg - 1) / 4)) : 0;
+
+    const engagement =
+      ramp(server.upvotes || 0, 100) * 0.45 +
+      ramp(server.views || 0, 5000) * 0.3 +
+      reviewScore * 0.25;
+
     components.push({
       key: 'engagement',
       label: 'Community engagement',
       earned: Math.round(max * engagement),
       max,
-      hint: 'Upvotes and page views on AllMCPs. Grows over time.',
+      hint:
+        reviewCount > 0
+          ? `Upvotes, page views, and ${reviewCount} user review${reviewCount === 1 ? '' : 's'} on AllMCPs.`
+          : 'Upvotes and page views on AllMCPs. User reviews add to this once the listing has some.',
     });
   }
 

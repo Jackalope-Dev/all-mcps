@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ExternalLink, Copy, Cloud, CheckCircle2, AlertCircle, ShieldCheck, Globe, Terminal, Sparkles, HelpCircle, ArrowRight, Lock } from 'lucide-react';
 import { toast } from '../../../../components/ui/Toast';
 import { CopyBlock } from '../../../../components/ui/CopyBlock';
+import { SignInGate } from '../../../../components/ui/SignInGate';
 import { getClaimVerificationToken } from '../../../../lib/verificationTokens';
 import { getApexDomain, getDnsProviderLinks } from '../../../../lib/dnsProviders';
 
@@ -1270,28 +1271,6 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function SignInGate({ href }: { href: string }) {
-  return (
-    <div
-      style={{
-        padding: '1.75rem',
-        textAlign: 'center',
-        border: '1px dashed var(--border-color)',
-        borderRadius: '12px',
-        background: 'var(--bg-muted)',
-      }}
-    >
-      <Lock size={28} color="var(--accent-color)" style={{ marginBottom: '0.5rem' }} />
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-        Sign in to generate your account-linked verification token.
-      </p>
-      <a href={href} className="btn btn-primary" style={{ textDecoration: 'none', padding: '0.6rem 1.25rem' }}>
-        Sign In to Continue
-      </a>
     </div>
   );
 }

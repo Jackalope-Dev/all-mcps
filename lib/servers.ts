@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable, stdioVerificationPilot, serverHealthChecks } from '../db/schema';
+import { servers as serversTable, stdioVerificationPilot, serverHealthChecks, reviews, users } from '../db/schema';
 import { eq, desc, sql, and, ne, or, gt } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
@@ -109,6 +109,12 @@ export const PUBLIC_SERVER_COLUMNS = {
   installPackage: serversTable.installPackage,
   installConfidence: serversTable.installConfidence,
   installExtractedAt: serversTable.installExtractedAt,
+  vulnEcosystem: serversTable.vulnEcosystem,
+  vulnCriticalCount: serversTable.vulnCriticalCount,
+  vulnHighCount: serversTable.vulnHighCount,
+  vulnMediumCount: serversTable.vulnMediumCount,
+  vulnLowCount: serversTable.vulnLowCount,
+  vulnScannedAt: serversTable.vulnScannedAt,
   views: serversTable.views,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
@@ -169,6 +175,20 @@ export type Server = {
    * computeQualityScore falls back to the live remoteEndpointHealthy snapshot.
    */
   combinedAvailabilityPct?: number | null;
+  /**
+   * Review aggregate for the quality score's community-engagement component
+   * (see lib/qualityScore.ts, getServerReviews below). Not persisted on
+   * `servers` and not populated by getServerById itself — bulk contexts
+   * (search results, category cards, catalog-wide stats) would otherwise pay
+   * for a reviews join on every listing they touch just for a small score
+   * bonus. Undefined everywhere except the detail page (app/mcp/[id]/page.tsx,
+   * which already fetches getServerReviews for the Reviews section and merges
+   * it in), where computeQualityScore treats undefined the same as 0 —
+   * a listing without review data simply forfeits that slice of credit
+   * rather than being penalized or excluded.
+   */
+  reviewCount?: number;
+  avgRating?: number;
   /** LLM-generated content layer (see lib/aiContent + /api/cron/ai-content). */
   aiSummary?: string | null;
   aiOverview?: string | null;
@@ -188,6 +208,13 @@ export type Server = {
   installConfidence?: string | null;
   /** When the LLM last validated/void'd the install fields above. See installExtractedAt in db/schema.ts. */
   installExtractedAt?: string | Date | null;
+  /** Supply-chain vulnerability signal (see /api/cron/vuln-scan, lib/vulnScan.ts). Null/undefined = never scanned — never treated as a negative signal. */
+  vulnEcosystem?: string | null;
+  vulnCriticalCount?: number | null;
+  vulnHighCount?: number | null;
+  vulnMediumCount?: number | null;
+  vulnLowCount?: number | null;
+  vulnScannedAt?: string | Date | null;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -851,6 +878,80 @@ export async function getServerHealthHistory(serverId: string): Promise<ServerHe
     return (rows as ServerHealthCheck[]).reverse();
   } catch {
     return [];
+  }
+}
+
+export type ReviewSummary = {
+  avgRating: number;
+  count: number;
+  distribution: { 1: number; 2: number; 3: number; 4: number; 5: number };
+  comments: { rating: number; comment: string; createdAt: string; reviewerLabel: string }[];
+};
+
+const EMPTY_REVIEW_SUMMARY: ReviewSummary = {
+  avgRating: 0,
+  count: 0,
+  distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  comments: [],
+};
+
+/** First name + last-initial, or a generic fallback — never the raw account name/email verbatim beyond that. */
+function reviewerLabelFromName(name: string | null | undefined): string {
+  if (!name || !name.trim()) return 'AllMCPs user';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+}
+
+/**
+ * Star-rating aggregate + approved written comments for a listing. Every
+ * rated review counts toward the aggregate regardless of `commentStatus` —
+ * only the comment *text* is gated (see db/schema.ts's `reviews` table).
+ * Used both by GET /api/mcp/[id]/reviews and directly here (server-side) by
+ * the /mcp/[id] page's data-loading Promise.all — this is a plain DB read,
+ * not a session call, so it doesn't threaten that page's ISR cache the way
+ * an auth() call would.
+ */
+export async function getServerReviews(serverId: string): Promise<ReviewSummary> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (!ctx?.env || !(ctx.env as any).DB) return EMPTY_REVIEW_SUMMARY;
+    const db = drizzle((ctx.env as any).DB);
+    const rows = await db
+      .select({
+        rating: reviews.rating,
+        comment: reviews.comment,
+        commentStatus: reviews.commentStatus,
+        createdAt: reviews.createdAt,
+        reviewerName: users.name,
+      })
+      .from(reviews)
+      .leftJoin(users, eq(users.id, reviews.userId))
+      .where(eq(reviews.serverId, serverId))
+      .orderBy(desc(reviews.createdAt));
+
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let sum = 0;
+    for (const r of rows) {
+      const rating = Math.min(5, Math.max(1, r.rating)) as 1 | 2 | 3 | 4 | 5;
+      distribution[rating] += 1;
+      sum += rating;
+    }
+    const count = rows.length;
+
+    const comments = rows
+      .filter((r) => r.commentStatus === 'approved' && r.comment)
+      .map((r) => ({
+        rating: r.rating,
+        comment: r.comment as string,
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+        reviewerLabel: reviewerLabelFromName(r.reviewerName),
+      }));
+
+    return { avgRating: count > 0 ? sum / count : 0, count, distribution, comments };
+  } catch {
+    return EMPTY_REVIEW_SUMMARY;
   }
 }
 
