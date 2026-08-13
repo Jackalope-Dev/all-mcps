@@ -564,13 +564,14 @@ p {
 
 .site-footer-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2.25rem 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 
 .site-footer-brand {
   min-width: 0;
-  grid-column: span 2;
+  grid-column: span 1;
+  margin-bottom: 1.5rem;
 }
 
 @media (min-width: 768px) {
@@ -584,6 +585,7 @@ p {
     grid-template-columns: 1.2fr 1fr;
     gap: 2rem;
     align-items: start;
+    margin-bottom: 0;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--border-color);
   }
@@ -641,6 +643,74 @@ p {
 .site-footer-links .nav-link:hover {
   color: var(--accent-color);
   transform: translateX(2px);
+}
+
+/* ── Collapsible footer columns ──
+   Plain, always-open list on desktop; tappable accordion on mobile so phones
+   get a compact footer instead of a long scroll of links. */
+.footer-accordion {
+  min-width: 0;
+}
+
+.footer-accordion-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: default;
+  list-style: none;
+  /* .footer-heading supplies the type styles; keep its bottom spacing here. */
+}
+
+.footer-accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.footer-accordion-summary::marker {
+  content: '';
+}
+
+.footer-accordion-chevron {
+  display: none;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+@media (max-width: 767px) {
+  /* Give each column a divider and make the whole header row a tap target. */
+  .footer-accordion {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  /* Close off the divided list at the top. */
+  .footer-accordion:first-of-type {
+    border-top: 1px solid var(--border-color);
+  }
+
+  .footer-accordion-summary {
+    cursor: pointer;
+    margin: 0;
+    padding: 0.9rem 0;
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .footer-accordion-summary:hover {
+    color: var(--accent-color);
+  }
+
+  .footer-accordion-chevron {
+    display: block;
+  }
+
+  .footer-accordion[open] .footer-accordion-chevron {
+    transform: rotate(180deg);
+  }
+
+  .footer-accordion-body {
+    padding: 0.25rem 0 1.1rem;
+  }
 }
 
 /* Footer Category Badges */
@@ -6494,6 +6564,56 @@ nav[aria-label="Table of contents"] {
   white-space: nowrap;
 }
 
+/* Studio ad-creative two-up field row (CTA + URL) → stack on small phones */
+.advertise-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+/* In-context placement previews (showcase + studio). Fixed multi-column and
+   fixed-sidebar layouts overflow / cramp on phones, so collapse them. */
+.placement-preview-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.placement-preview-sidebar {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .advertise-pricing-hero {
+    padding: 2rem 1.25rem;
+  }
+
+  .advertise-field-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* 3-up listing hint grid → 2-up so preview cards stay legible */
+  .placement-preview-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+
+  /* Detail-page mock + sidebar ad stack vertically instead of overflowing */
+  .placement-preview-sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .placement-preview-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Sponsored Ad Placeholder & Promo Units */
 .ad-promo-inline {
   border-radius: 16px;
@@ -6708,8 +6828,17 @@ nav[aria-label="Table of contents"] {
   color: var(--accent-color);
 }
 
-.site-footer-grid {
-  gap: var(--space-6) var(--space-8);
+@media (min-width: 768px) {
+  .site-footer-grid {
+    gap: var(--space-6) var(--space-8);
+  }
+}
+
+/* Mobile: accordion columns sit flush as a divided list (see .footer-accordion). */
+@media (max-width: 767px) {
+  .site-footer-grid {
+    gap: 0;
+  }
 }
 
 .site-footer-copy {

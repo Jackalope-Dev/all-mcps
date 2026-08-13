@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { BrandLogo } from './BrandLogo';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { BadgeMarquee } from './BadgeMarquee';
+import { FooterNavSection } from './FooterNavSection';
 
 /**
  * Site footer — kept to ~5 columns with concise link sets so mobile users
@@ -123,8 +124,7 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <nav aria-label="Explore">
-          <h2 className="footer-heading">Explore</h2>
+        <FooterNavSection ariaLabel="Explore" heading="Explore">
           <ul className="site-footer-links">
             <li>
               <Link href="/browse" className="nav-link">
@@ -177,10 +177,9 @@ export function SiteFooter() {
               </Link>
             </li>
           </ul>
-        </nav>
+        </FooterNavSection>
 
-        <nav aria-label="Learn">
-          <h2 className="footer-heading">Learn</h2>
+        <FooterNavSection ariaLabel="Learn" heading="Learn">
           <ul className="site-footer-links">
             <li>
               <Link href="/guides" className="nav-link">
@@ -223,10 +222,9 @@ export function SiteFooter() {
               </Link>
             </li>
           </ul>
-        </nav>
+        </FooterNavSection>
 
-        <nav aria-label="Free tools">
-          <h2 className="footer-heading">Tools</h2>
+        <FooterNavSection ariaLabel="Free tools" heading="Tools">
           <ul className="site-footer-links">
             <li>
               <Link href="/tools" className="nav-link">
@@ -269,10 +267,9 @@ export function SiteFooter() {
               </Link>
             </li>
           </ul>
-        </nav>
+        </FooterNavSection>
 
-        <nav aria-label="For AI and agents">
-          <h2 className="footer-heading">For agents</h2>
+        <FooterNavSection ariaLabel="For AI and agents" heading="For agents">
           <ul className="site-footer-links">
             <li>
               <Link href="/docs/api" className="nav-link">
@@ -303,10 +300,9 @@ export function SiteFooter() {
               </a>
             </li>
           </ul>
-        </nav>
+        </FooterNavSection>
 
-        <nav aria-label="Company">
-          <h2 className="footer-heading">Company</h2>
+        <FooterNavSection ariaLabel="Company" heading="Company">
           <ul className="site-footer-links">
             <li>
               <Link href="/about" className="nav-link">
@@ -356,7 +352,7 @@ export function SiteFooter() {
               </Link>
             </li>
           </ul>
-        </nav>
+        </FooterNavSection>
       </div>
       <BadgeMarquee />
       <div className="site-footer-copy">

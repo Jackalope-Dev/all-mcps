@@ -68,7 +68,7 @@ export default function AdvertiseLandingPage() {
     <PageShell variant="default">
       {/* Hero Section */}
       <div style={{ textAlign: 'center', maxWidth: '820px', margin: '1.5rem auto 2rem' }}>
-        <h1 style={{ fontSize: '2.75rem', fontWeight: 800, lineHeight: 1.15, margin: '0 0 1.25rem' }}>
+        <h1 style={{ fontSize: 'clamp(1.9rem, 6vw, 2.75rem)', fontWeight: 800, lineHeight: 1.15, margin: '0 0 1.25rem' }}>
           Put your product in front of <span className="wordmark-all">AI Developers</span>{' '}&amp; Engineers
         </h1>
 

@@ -139,13 +139,7 @@ function DirectoryInlineFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) 
   return (
     <div>
       <ContextLabel>Browse / Category page · inside listing grid</ContextLabel>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="placement-preview-grid-3">
         {cols.map((listing, i) =>
           listing === null ? (
             <SponsorAdUnit key="ad" placement="directory_inline" previewAd={previewAd} />
@@ -163,7 +157,7 @@ function DetailSidebarFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
   return (
     <div>
       <ContextLabel>Server detail page · right-hand sidebar</ContextLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: '1rem', alignItems: 'start' }}>
+      <div className="placement-preview-sidebar">
         {/* Main content mock */}
         <div
           className="surface"
@@ -281,7 +275,7 @@ function HeaderBannerFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
       {/* Real ad */}
       <SponsorAdUnit placement="header_banner" previewAd={previewAd} />
       {/* Hint of grid below */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem', marginTop: '0.75rem', opacity: 0.5, pointerEvents: 'none' }}>
+      <div className="placement-preview-grid-3" style={{ marginTop: '0.75rem', opacity: 0.5, pointerEvents: 'none' }}>
         {FAKE_LISTINGS.slice(0, 3).map((l, i) => (
           <MockListingCard key={i} listing={l} />
         ))}
