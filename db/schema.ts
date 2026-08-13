@@ -504,6 +504,8 @@ export const reports = sqliteTable('reports', {
 export const sponsorAds = sqliteTable('sponsor_ads', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   advertiserEmail: text('advertiser_email').notNull(),
+  /** Set when the creator was signed in — links the campaign into their /dashboard alongside MCP listings. Nullable: ad creation never requires login. */
+  advertiserUserId: text('advertiser_user_id'),
   title: text('title').notNull(),
   description: text('description').notNull(),
   ctaText: text('cta_text').notNull().default('Learn More'),
@@ -525,6 +527,8 @@ export const sponsorAds = sqliteTable('sponsor_ads', {
   stripeSessionId: text('stripe_session_id'),
   stripePaymentIntentId: text('stripe_payment_intent_id'),
   amountPaidCents: integer('amount_paid_cents').notNull().default(0),
+  /** Set once an abandoned-checkout reminder email has gone out, so it's only ever sent once. */
+  abandonedReminderSentAt: integer('abandoned_reminder_sent_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   approvedAt: integer('approved_at', { mode: 'timestamp' }),
   completedAt: integer('completed_at', { mode: 'timestamp' }),
@@ -532,6 +536,7 @@ export const sponsorAds = sqliteTable('sponsor_ads', {
   statusIdx: index('idx_sponsor_ads_status').on(table.status),
   placementStatusIdx: index('idx_sponsor_ads_placement_status').on(table.placement, table.status),
   advertiserEmailIdx: index('idx_sponsor_ads_email').on(table.advertiserEmail),
+  advertiserUserIdx: index('idx_sponsor_ads_user').on(table.advertiserUserId),
   createdIdx: index('idx_sponsor_ads_created').on(table.createdAt),
 }));
 

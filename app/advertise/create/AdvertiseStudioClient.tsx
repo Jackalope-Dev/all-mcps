@@ -603,14 +603,11 @@ export function AdvertiseStudioClient({
       </form>
 
       {/* RIGHT COLUMN: LIVE MULTI-FORMAT PREVIEW */}
-      <div style={{ position: 'sticky', top: '2rem' }}>
+      <div style={{ position: 'sticky', top: 'calc(var(--header-height) + 1rem)' }}>
         <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Eye size={16} style={{ color: 'var(--accent-color)' }} />
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Live Multi-Format Preview</h3>
-            </div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Instant rendering</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
+            <Eye size={16} style={{ color: 'var(--accent-color)' }} />
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Live Multi-Format Preview</h3>
           </div>
 
           {/* Format Switcher Tabs */}

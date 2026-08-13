@@ -22,12 +22,29 @@ interface SponsorAdUnitProps {
 // Page-level registry to prevent rendering duplicate ads on the same page
 const servedAdIdsOnPage = new Set<string>();
 
+/** Small trust line under the ad title, e.g. "example.com" — derived from targetUrl so no schema change is needed. */
+function getDisplayDomain(url?: string | null): string | null {
+  if (!url) return null;
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '');
+    return hostname || null;
+  } catch {
+    return null;
+  }
+}
+
 export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorAdUnitProps) {
   const [ad, setAd] = useState<Partial<SponsorAd> | null>(previewAd ?? null);
   const [loading, setLoading] = useState<boolean>(!previewAd);
   const [impressionSent, setImpressionSent] = useState<boolean>(false);
   const [placeholderVariant, setPlaceholderVariant] = useState<PlaceholderVariant>(() => getRandomPlaceholderVariant());
+  const [logoError, setLogoError] = useState(false);
   const adRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset the broken-image fallback whenever the ad (and thus its logo) changes.
+  useEffect(() => {
+    setLogoError(false);
+  }, [ad?.logoUrl]);
 
   // If in preview mode, update immediately when prop changes
   useEffect(() => {
@@ -387,6 +404,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
   const linkProps = isPreview
     ? { onClick: (e: React.MouseEvent) => e.preventDefault(), href: '#' }
     : { href: ad.targetUrl || '#', target: '_blank', rel: 'noopener sponsored nofollow', onClick: handleAdClick };
+  const displayDomain = getDisplayDomain(ad.targetUrl);
 
   if (placement === 'directory_inline') {
     return (
@@ -400,7 +418,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
           padding: '1.5rem',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           gap: '1.25rem',
           height: '100%',
           minHeight: '310px',
@@ -410,7 +428,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+          <div style={{ marginBottom: '0.85rem' }}>
             <span
               style={{
                 fontSize: '0.65rem',
@@ -428,11 +446,10 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
             >
               <Sparkles size={10} /> Sponsored Partner
             </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Ad</span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.85rem', marginBottom: '0.75rem' }}>
-            {ad.logoUrl ? (
+            {ad.logoUrl && !logoError ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={ad.logoUrl}
@@ -446,9 +463,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
                   background: 'var(--bg-elevated)',
                   flexShrink: 0,
                 }}
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
+                onError={() => setLogoError(true)}
               />
             ) : (
               <div
@@ -472,14 +487,17 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
               <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {ad.title || 'Sponsor Title'}
               </h4>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+              {displayDomain && (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{displayDomain}</div>
+              )}
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                 {ad.description || 'Sponsored advertisement description.'}
               </p>
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
           <a
             {...linkProps}
             className="btn btn-sm btn-primary"
@@ -535,6 +553,9 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
             <div style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               {ad.title || 'Sponsor Title'}
             </div>
+            {displayDomain && (
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '1px 0 0' }}>{displayDomain}</div>
+            )}
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
               {ad.description || 'Sponsored advertisement copy.'}
             </p>
@@ -599,6 +620,9 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
             <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               {ad.title || 'Sponsor Title'}
             </div>
+            {displayDomain && (
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '1px 0 0' }}>{displayDomain}</div>
+            )}
             <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
               {ad.description || 'Sponsored advertisement description.'}
             </p>
@@ -635,7 +659,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '280px' }}>
-        {ad.logoUrl ? (
+        {ad.logoUrl && !logoError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={ad.logoUrl}
@@ -649,9 +673,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
               background: 'var(--bg-elevated)',
               flexShrink: 0,
             }}
-            onError={(e) => {
-              (e.target as HTMLElement).style.display = 'none';
-            }}
+            onError={() => setLogoError(true)}
           />
         ) : (
           <div
@@ -694,6 +716,9 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
           <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
             {ad.title}
           </div>
+          {displayDomain && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '1px 0 0' }}>{displayDomain}</div>
+          )}
           <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
             {ad.description}
           </p>

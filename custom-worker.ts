@@ -88,6 +88,15 @@ const SLOW_JOBS: CronJob[] = [
     secretVar: "ADMIN_SECRET",
     shouldRun: (now) => now.getUTCDay() === 1 && now.getUTCHours() === 12,
   },
+  // One-time "complete your purchase" email for sponsor-ad checkouts abandoned
+  // 2+ days ago. Daily (not every 4h) so a given ad's reminder window doesn't
+  // get scanned repeatedly the same day — the route is idempotent regardless
+  // (abandonedReminderSentAt gates re-sends), this just avoids the extra work.
+  {
+    path: "/api/cron/ad-checkout-reminder",
+    secretVar: "ADMIN_SECRET",
+    shouldRun: (now) => now.getUTCHours() === 8,
+  },
 ];
 
 async function runCronJob(
