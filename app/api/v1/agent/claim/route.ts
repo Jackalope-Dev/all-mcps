@@ -127,6 +127,10 @@ export async function POST(req: Request) {
 
     // GitHub README claim -> Auto-approve
     if (method === 'github') {
+      // Already claimed & verified by this same owner — a repeat agent call
+      // (retry, re-run) shouldn't re-fire claim notifications.
+      const alreadyClaimedByUser = server.isOfficial && server.ownerUserId === agent.userId;
+
       await db
         .update(servers)
         .set({
@@ -136,24 +140,26 @@ export async function POST(req: Request) {
         })
         .where(eq(servers.id, id));
 
-      if (notificationEmail) {
-        await sendNotificationEmail({
-          to: notificationEmail,
-          heading: `Listing Verified & Claimed via Agent: ${server.name}`,
-          message: `Congratulations! Your agent successfully verified ownership for "${server.name}" via GitHub README. Your listing now features the Verified badge on AllMCPs.`,
-          actionText: 'View Listing',
-          actionUrl: `${getAppUrl()}/mcp/${id}`,
-        });
-      }
+      if (!alreadyClaimedByUser) {
+        if (notificationEmail) {
+          await sendNotificationEmail({
+            to: notificationEmail,
+            heading: `Listing Verified & Claimed via Agent: ${server.name}`,
+            message: `Congratulations! Your agent successfully verified ownership for "${server.name}" via GitHub README. Your listing now features the Verified badge on AllMCPs.`,
+            actionText: 'View Listing',
+            actionUrl: `${getAppUrl()}/mcp/${id}`,
+          });
+        }
 
-      if (adminEmail) {
-        await sendNotificationEmail({
-          to: adminEmail,
-          heading: `Agent Claimed Listing: ${server.name}`,
-          message: `"${server.name}" was successfully claimed and verified via GitHub README by Agent (user: ${notificationEmail || agent.userId}).`,
-          actionText: 'View Listing',
-          actionUrl: `${getAppUrl()}/mcp/${id}`,
-        });
+        if (adminEmail) {
+          await sendNotificationEmail({
+            to: adminEmail,
+            heading: `Agent Claimed Listing: ${server.name}`,
+            message: `"${server.name}" was successfully claimed and verified via GitHub README by Agent (user: ${notificationEmail || agent.userId}).`,
+            actionText: 'View Listing',
+            actionUrl: `${getAppUrl()}/mcp/${id}`,
+          });
+        }
       }
 
       return NextResponse.json(
@@ -172,6 +178,11 @@ export async function POST(req: Request) {
     const isExistingWebsite = !!existingWebsite && existingWebsite === provenWebsite;
 
     if (isExistingWebsite) {
+      // Already claimed & this exact website already verified by this owner —
+      // a repeat agent call shouldn't re-fire claim notifications.
+      const alreadyClaimedByUser =
+        server.isOfficial && server.ownerUserId === agent.userId && !!server.websiteVerified;
+
       await db
         .update(servers)
         .set({
@@ -183,24 +194,26 @@ export async function POST(req: Request) {
         })
         .where(eq(servers.id, id));
 
-      if (notificationEmail) {
-        await sendNotificationEmail({
-          to: notificationEmail,
-          heading: `Listing Verified & Claimed via Agent: ${server.name}`,
-          message: `Congratulations! Your agent successfully verified ownership for "${server.name}" via ${method === 'dns' ? 'DNS TXT record' : 'site badge'}. Your listing now features the Verified badge on AllMCPs.`,
-          actionText: 'View Listing',
-          actionUrl: `${getAppUrl()}/mcp/${id}`,
-        });
-      }
+      if (!alreadyClaimedByUser) {
+        if (notificationEmail) {
+          await sendNotificationEmail({
+            to: notificationEmail,
+            heading: `Listing Verified & Claimed via Agent: ${server.name}`,
+            message: `Congratulations! Your agent successfully verified ownership for "${server.name}" via ${method === 'dns' ? 'DNS TXT record' : 'site badge'}. Your listing now features the Verified badge on AllMCPs.`,
+            actionText: 'View Listing',
+            actionUrl: `${getAppUrl()}/mcp/${id}`,
+          });
+        }
 
-      if (adminEmail) {
-        await sendNotificationEmail({
-          to: adminEmail,
-          heading: `Agent Claimed Listing: ${server.name}`,
-          message: `"${server.name}" was successfully claimed via ${method} by Agent (user: ${notificationEmail || agent.userId}).`,
-          actionText: 'View Listing',
-          actionUrl: `${getAppUrl()}/mcp/${id}`,
-        });
+        if (adminEmail) {
+          await sendNotificationEmail({
+            to: adminEmail,
+            heading: `Agent Claimed Listing: ${server.name}`,
+            message: `"${server.name}" was successfully claimed via ${method} by Agent (user: ${notificationEmail || agent.userId}).`,
+            actionText: 'View Listing',
+            actionUrl: `${getAppUrl()}/mcp/${id}`,
+          });
+        }
       }
 
       return NextResponse.json(
@@ -215,13 +228,18 @@ export async function POST(req: Request) {
       );
     }
 
+    // Same agent user re-submitting the same not-yet-reviewed website
+    // shouldn't re-fire the "pending review" notifications.
+    const alreadyPendingSameClaim =
+      server.pendingClaimUserId === agent.userId && server.pendingClaimWebsiteUrl === websiteUrl;
+
     // New website URL needs quick admin check
     await db
       .update(servers)
       .set({ pendingClaimUserId: agent.userId, pendingClaimWebsiteUrl: websiteUrl })
       .where(eq(servers.id, id));
 
-    if (notificationEmail) {
+    if (!alreadyPendingSameClaim && notificationEmail) {
       await sendNotificationEmail({
         to: notificationEmail,
         heading: `Agent Claim Pending Review: ${server.name}`,
@@ -231,7 +249,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (adminEmail) {
+    if (!alreadyPendingSameClaim && adminEmail) {
       await sendNotificationEmail({
         to: adminEmail,
         heading: `New Pending Agent Claim: ${server.name}`,
