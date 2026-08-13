@@ -12,6 +12,7 @@ export type AdStatus = 'pending_approval' | 'active' | 'paused' | 'completed' | 
 export type SponsorAd = {
   id: string;
   advertiserEmail: string;
+  advertiserUserId?: string | null;
   title: string;
   description: string;
   ctaText: string;

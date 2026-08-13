@@ -5,6 +5,7 @@ import { sponsorAds } from '@/db/schema';
 import { validateAdPayload, calculateAdCostCents, type AdPlacement } from '@/lib/ads';
 import { isStripeConfigured } from '@/lib/pricing';
 import { getStripe, getAppUrl } from '@/lib/stripe';
+import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,17 @@ export async function POST(request: Request) {
 
     const costCents = calculateAdCostCents(Number(impressions), Number(bidCpm));
     const adId = crypto.randomUUID();
+
+    // Best-effort account link: not required to create an ad, but if the
+    // advertiser is signed in, this is what lets the campaign show up in
+    // their /dashboard alongside their MCP listings.
+    let advertiserUserId: string | null = null;
+    try {
+      const session = await auth();
+      advertiserUserId = session?.user?.id || null;
+    } catch {
+      // no-op — ad creation shouldn't fail just because session lookup did
+    }
 
     const ctx = await getCloudflareContext();
     if (!ctx?.env?.DB) {
