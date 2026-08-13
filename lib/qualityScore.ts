@@ -178,6 +178,26 @@ export function computeQualityScore(server: Server): QualityScore {
         hint = 'Valid open-source community repository. Claim your listing to earn full verification credit.';
       }
     }
+
+    // Supply-chain modifier — deliberately small and weighted toward high/
+    // critical advisories only (see lib/vulnScan.ts, /api/cron/vuln-scan):
+    // most advisories in a typical dependency tree are low-severity/transitive
+    // and not exploitable in context, so this must never read as a blanket
+    // per-advisory penalty — medium/low counts contribute nothing at all.
+    // Unscanned listings (vulnScannedAt == null, true for nearly the entire
+    // catalog until the cron catches up) get zero penalty, not exclusion from
+    // the denominator — the latter would change what "100%" means catalog-wide
+    // during rollout, which is worse than a temporary zero-penalty gap.
+    if (server.vulnScannedAt != null) {
+      const critical = server.vulnCriticalCount || 0;
+      const high = server.vulnHighCount || 0;
+      const vulnPenalty = Math.min(max * 0.3, critical * 3 + high * 1.5);
+      if (vulnPenalty > 0) {
+        earned = Math.max(0, earned - vulnPenalty);
+        hint += ` (−${Math.round(vulnPenalty)} for ${critical + high} high-severity supply-chain advisor${critical + high === 1 ? 'y' : 'ies'} on record.)`;
+      }
+    }
+
     components.push({
       key: 'trust',
       label: 'Verified ownership',
