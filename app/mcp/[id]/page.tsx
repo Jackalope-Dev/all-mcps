@@ -475,6 +475,31 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 </h1>
               </div>
               <div className="detail-title-badges">
+                <a href="#reviews" style={{ textDecoration: 'none' }}>
+                  <IconTooltip
+                    label={reviewSummary.count > 0 ? `${reviewSummary.avgRating.toFixed(1)} stars out of 5 (${reviewSummary.count} ${reviewSummary.count === 1 ? 'review' : 'reviews'})` : 'No ratings yet — click to review'}
+                    trigger={
+                      <Badge variant="default" className="mcp-trust-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
+                        <Star size={13} fill={reviewSummary.count > 0 ? '#fbbf24' : 'none'} color={reviewSummary.count > 0 ? '#fbbf24' : 'var(--text-secondary)'} />
+                        <span className="mcp-trust-badge-label" style={{ fontWeight: 600 }}>
+                          {reviewSummary.count > 0 ? `${reviewSummary.avgRating.toFixed(1)}` : 'No ratings'}
+                        </span>
+                        {reviewSummary.count > 0 && (
+                          <span style={{ opacity: 0.75, fontSize: '0.75rem', fontWeight: 400 }}>({reviewSummary.count})</span>
+                        )}
+                      </Badge>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Star size={14} fill="#fbbf24" color="#fbbf24" /> User Ratings
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      {reviewSummary.count > 0
+                        ? `Rated ${reviewSummary.avgRating.toFixed(1)} / 5.0 across ${reviewSummary.count} user ${reviewSummary.count === 1 ? 'review' : 'reviews'}. Click to view or leave a rating.`
+                        : 'Be the first to rate and review this MCP server!'}
+                    </span>
+                  </IconTooltip>
+                </a>
                 {server.isPremium && (
                   <IconTooltip
                     label="Premium listing"

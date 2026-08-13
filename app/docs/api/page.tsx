@@ -56,8 +56,15 @@ const ENDPOINTS = [
     method: 'POST',
     path: '/api/v1/submit',
     title: 'Agent submission',
-    desc: 'Submit a new MCP listing programmatically (requires email). Human form is /submit.',
+    desc: 'Submit a new MCP listing programmatically (requires email). Accepts the same optional enrichment fields as the /api/mcp submit_mcp_server tool (tags, license, authType, pricingModel, maintenanceStatus, compatibleClients, supportUrl, suggested install command/args). Human form is /submit.',
     example: 'POST https://allmcps.com/api/v1/submit',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/categories',
+    title: 'List categories',
+    desc: 'Every category AllMCPs accepts, with label, emoji, slug, and group — use to pick a valid "category" value before submitting.',
+    example: 'https://allmcps.com/api/v1/categories',
   },
   {
     method: 'POST',
@@ -98,7 +105,7 @@ const ENDPOINTS = [
     method: 'GET',
     path: '/api/mcp',
     title: 'Remote MCP server',
-    desc: 'AllMCPs itself as a remote MCP server for agent discovery of the directory.',
+    desc: 'AllMCPs itself as a remote MCP server: search, install configs, categories, boosting, and a fully schema\'d submit_mcp_server tool (call tools/list for the exact category/pricing/auth/maintenance enum values). Also available as the allmcps-server npm package (stdio bridge to this same endpoint).',
     example: 'https://allmcps.com/api/mcp',
   },
 ] as const;

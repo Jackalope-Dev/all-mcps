@@ -2,10 +2,12 @@ import { getActiveServersForScoring, getCategoryServers, getCategoryCounts, getS
 import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
 import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
 import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
+import { DIRECTORY_CATEGORIES } from '@/lib/categories';
+import { PRICING_MODELS, AUTH_TYPES, MAINTENANCE_STATUSES, COMPATIBLE_CLIENT_SLUGS, TAG_LIMITS } from '@/lib/serverEnums';
 
 const SERVER_INFO = {
   name: 'AllMCPs Directory Server',
-  version: '1.3.0',
+  version: '1.4.0',
 };
 
 const TOOLS = [
@@ -89,16 +91,56 @@ const TOOLS = [
   },
   {
     name: 'submit_mcp_server',
-    description: 'Programmatically submit a new MCP server repository to AllMCPs.com for indexing and review.',
+    description:
+      'Programmatically submit a new MCP server repository to AllMCPs.com for indexing and review. Supports the same optional enrichment fields as the human submission form — fill in whichever you can confidently determine from the repository (README, package.json, code) to produce a fully flushed-out listing. Omit anything you are not confident about rather than guessing; all enrichment fields are optional and unrecognized enum values are simply dropped, not rejected.',
     inputSchema: {
       type: 'object',
       properties: {
         name: { type: 'string', description: 'Server name (e.g., "PostgreSQL MCP")' },
         url: { type: 'string', description: 'GitHub repository or website URL' },
         description: { type: 'string', description: 'Short summary of what this MCP server does' },
-        category: { type: 'string', description: 'Category (e.g., "Databases", "Developer Tools")' },
+        category: {
+          type: 'string',
+          enum: DIRECTORY_CATEGORIES,
+          description: 'Best-matching category from the AllMCPs directory. Must be one of the exact enum values.',
+        },
         email: { type: 'string', description: 'Contact email for listing verification & status updates' },
         websiteUrl: { type: 'string', description: 'Optional official website URL' },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: TAG_LIMITS.maxTags,
+          description: `Up to ${TAG_LIMITS.maxTags} short lowercase keywords describing the server (e.g. ["postgres", "sql", "database"]).`,
+        },
+        pricingModel: {
+          type: 'string',
+          enum: [...PRICING_MODELS],
+          description: 'How this server is priced/licensed to use.',
+        },
+        pricingNotes: { type: 'string', description: 'Short free-text pricing detail, e.g. "Free tier up to 1k requests/mo".' },
+        authType: {
+          type: 'string',
+          enum: [...AUTH_TYPES],
+          description: 'What authentication the server requires to connect.',
+        },
+        license: { type: 'string', description: 'SPDX license identifier or name, e.g. "MIT", "Apache-2.0".' },
+        compatibleClients: {
+          type: 'array',
+          items: { type: 'string', enum: [...COMPATIBLE_CLIENT_SLUGS] },
+          description: 'MCP clients this server is confirmed to work with, from the fixed client slug list.',
+        },
+        maintenanceStatus: {
+          type: 'string',
+          enum: [...MAINTENANCE_STATUSES],
+          description: 'Repository maintenance status, inferred from recent commit/release activity.',
+        },
+        supportUrl: { type: 'string', description: 'Optional issues/discussions/docs URL for getting help.' },
+        suggestedInstallCommand: { type: 'string', description: 'Command to run the server, e.g. "npx".' },
+        suggestedInstallArgs: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Args for the install command, e.g. ["-y", "@scope/mcp-server-name"].',
+        },
       },
       required: ['name', 'url', 'email'],
     },
@@ -540,23 +582,44 @@ To complete activation, open the checkout URL or trigger autonomous agent paymen
       }
 
       if (toolName === 'submit_mcp_server') {
-        const { name, url, description, category, email, websiteUrl } = args;
+        const {
+          name, url, description, category, email, websiteUrl,
+          tags, pricingModel, pricingNotes, authType, license,
+          compatibleClients, maintenanceStatus, supportUrl,
+          suggestedInstallCommand, suggestedInstallArgs,
+        } = args;
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
         const submitRes = await fetch(`${appUrl}/api/v1/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, url, description, category, email, websiteUrl }),
+          body: JSON.stringify({
+            name, url, description, category, email, websiteUrl,
+            tags, pricingModel, pricingNotes, authType, license,
+            compatibleClients, maintenanceStatus, supportUrl,
+            suggestedInstallCommand, suggestedInstallArgs,
+          }),
         });
 
         if (submitRes.ok) {
           const data = (await submitRes.json()) as any;
+          const enrichedFields = [
+            tags?.length && `tags: ${tags.join(', ')}`,
+            pricingModel && `pricing: ${pricingModel}`,
+            authType && `auth: ${authType}`,
+            license && `license: ${license}`,
+            maintenanceStatus && `status: ${maintenanceStatus}`,
+            compatibleClients?.length && `clients: ${compatibleClients.join(', ')}`,
+            supportUrl && `support: ${supportUrl}`,
+            suggestedInstallCommand && `install: ${suggestedInstallCommand}`,
+          ].filter(Boolean);
+
           const md = `# MCP Server "${data.name}" Submitted Successfully! 🎉
 
 - **Server ID**: ${data.id}
 - **Status**: ${data.status} (Pending Manual Review & Verification)
 - **Claim & Verify URL**: [Verify Listing](${data.claim_url})
-
+${enrichedFields.length ? `- **Enrichment captured**: ${enrichedFields.join(' · ')}\n` : ''}
 ### Add Verification Badge to your README.md
 To verify your listing automatically and trigger immediate indexing, embed this markdown badge in your GitHub repository:
 

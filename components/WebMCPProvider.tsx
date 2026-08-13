@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { DIRECTORY_CATEGORIES } from '../lib/categories';
+import { PRICING_MODELS, AUTH_TYPES, MAINTENANCE_STATUSES, COMPATIBLE_CLIENT_SLUGS, TAG_LIMITS } from '../lib/serverEnums';
 
 declare global {
   interface Window {
@@ -46,16 +48,14 @@ export function WebMCPProvider() {
       },
       {
         name: 'list_categories',
-        description: 'Get all active MCP server categories.',
+        description: 'Get every category AllMCPs accepts, with the exact string to pass as "category" when submitting.',
         inputSchema: {
           type: 'object',
           properties: {},
         },
         execute: async () => {
-          const res = await fetch('/api/v1/search?limit=100');
-          const data = (await res.json()) as any;
-          const categories = Array.from(new Set((data.servers || []).map((s: any) => s.category)));
-          return { categories };
+          const res = await fetch('/api/v1/categories');
+          return await res.json();
         },
       },
       {
@@ -93,19 +93,40 @@ export function WebMCPProvider() {
       },
       {
         name: 'submit_mcp_server',
-        description: 'Programmatically submit a new MCP server repository to AllMCPs.com for indexing.',
+        description:
+          'Programmatically submit a new MCP server repository to AllMCPs.com for indexing. Fill in whichever optional enrichment fields you can confidently determine to produce a fully flushed-out listing; omit anything uncertain.',
         inputSchema: {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Server name' },
             url: { type: 'string', description: 'Repository URL' },
             description: { type: 'string', description: 'Server description' },
-            category: { type: 'string', description: 'Category' },
+            category: { type: 'string', enum: DIRECTORY_CATEGORIES, description: 'Best-matching category — must be one of the exact enum values' },
             email: { type: 'string', description: 'Submitter email' },
+            websiteUrl: { type: 'string', description: 'Optional official website URL' },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              maxItems: TAG_LIMITS.maxTags,
+              description: `Up to ${TAG_LIMITS.maxTags} short lowercase keywords`,
+            },
+            pricingModel: { type: 'string', enum: [...PRICING_MODELS], description: 'How this server is priced' },
+            pricingNotes: { type: 'string', description: 'Short free-text pricing detail' },
+            authType: { type: 'string', enum: [...AUTH_TYPES], description: 'Authentication the server requires' },
+            license: { type: 'string', description: 'SPDX license identifier, e.g. "MIT"' },
+            compatibleClients: {
+              type: 'array',
+              items: { type: 'string', enum: [...COMPATIBLE_CLIENT_SLUGS] },
+              description: 'MCP clients this server is confirmed to work with',
+            },
+            maintenanceStatus: { type: 'string', enum: [...MAINTENANCE_STATUSES], description: 'Repository maintenance status' },
+            supportUrl: { type: 'string', description: 'Optional issues/discussions/docs URL' },
+            suggestedInstallCommand: { type: 'string', description: 'Command to run the server, e.g. "npx"' },
+            suggestedInstallArgs: { type: 'array', items: { type: 'string' }, description: 'Args for the install command' },
           },
           required: ['name', 'url', 'email'],
         },
-        execute: async (payload: { name: string; url: string; email: string; description?: string; category?: string }) => {
+        execute: async (payload: Record<string, unknown>) => {
           const res = await fetch('/api/v1/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -148,7 +169,7 @@ export function WebMCPProvider() {
 
     window.webMCP = {
       name: 'AllMCPs Web Client Provider',
-      version: '1.3.0',
+      version: '1.4.0',
       tools,
     };
 

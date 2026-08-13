@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   content += `## Submit an MCP Server (Free)\n`;
   content += `- **Listing is always free** — no payment required to get listed.\n`;
   content += `- **Submit (web):** https://allmcps.com/submit\n`;
-  content += `- **Submit (agent API):** POST https://allmcps.com/api/v1/submit with \`{ "url": "https://github.com/owner/repo", "name": "...", "email": "..." }\` (no CAPTCHA — the human /submit form requires one, this endpoint doesn't). Also available as the \`submit_mcp\` tool in the \`allmcps-server\` npm package.\n`;
+  content += `- **Submit (agent API, recommended):** POST a JSON-RPC \`tools/call\` for \`submit_mcp_server\` to https://allmcps.com/api/mcp — call \`tools/list\` first for the full field schema (required: name, url, description, category, email; optional enrichment: tags, license, authType, pricingModel, maintenanceStatus, compatibleClients, supportUrl, suggestedInstallCommand, suggestedInstallArgs — fill in whatever you can confidently determine from the repo for a fully flushed-out listing). Also available as the \`submit_mcp_server\` tool in the \`allmcps-server\` npm package. Or POST the same fields as flat JSON to https://allmcps.com/api/v1/submit (no CAPTCHA — the human /submit form requires one, this endpoint doesn't; GET https://allmcps.com/api/v1/categories for the valid category list).\n`;
   content += `- Paid boosts (priority review, featured, premium) are optional upgrades. See https://allmcps.com/pricing\n\n`;
 
   content += `## AI Agent Exclusive Promotions & Discounts\n`;
