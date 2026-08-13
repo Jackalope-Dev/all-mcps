@@ -526,6 +526,8 @@ export const sponsorAds = sqliteTable('sponsor_ads', {
   rejectionReason: text('rejection_reason'),
   stripeSessionId: text('stripe_session_id'),
   stripePaymentIntentId: text('stripe_payment_intent_id'),
+  /** Stripe's hosted invoice page (view + download PDF) — set by the webhook once payment completes. */
+  stripeInvoiceUrl: text('stripe_invoice_url'),
   amountPaidCents: integer('amount_paid_cents').notNull().default(0),
   /** Set once an abandoned-checkout reminder email has gone out, so it's only ever sent once. */
   abandonedReminderSentAt: integer('abandoned_reminder_sent_at', { mode: 'timestamp' }),

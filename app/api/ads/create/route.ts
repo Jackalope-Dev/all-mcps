@@ -91,6 +91,7 @@ export async function POST(request: Request) {
             impressions: String(impressions),
             bidCpm: String(bidCpm),
           },
+          invoice_creation: { enabled: true },
           success_url: `${appUrl}/advertise/campaign/${adId}?payment=success`,
           cancel_url: `${appUrl}/advertise/create?canceled=1`,
         });
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
         await db.insert(sponsorAds).values({
           id: adId,
           advertiserEmail: String(advertiserEmail).trim().toLowerCase(),
+          advertiserUserId,
           title: String(title).trim(),
           description: String(description).trim(),
           ctaText: String(ctaText).trim() || 'Learn More',
@@ -130,6 +132,7 @@ export async function POST(request: Request) {
     await db.insert(sponsorAds).values({
       id: adId,
       advertiserEmail: String(advertiserEmail).trim().toLowerCase(),
+      advertiserUserId,
       title: String(title).trim(),
       description: String(description).trim(),
       ctaText: String(ctaText).trim() || 'Learn More',

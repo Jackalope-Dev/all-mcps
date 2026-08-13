@@ -27,6 +27,7 @@ export type SponsorAd = {
   rejectionReason?: string | null;
   stripeSessionId?: string | null;
   stripePaymentIntentId?: string | null;
+  stripeInvoiceUrl?: string | null;
   amountPaidCents: number;
   createdAt: Date | string;
   approvedAt?: Date | string | null;

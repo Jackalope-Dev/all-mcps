@@ -14,6 +14,7 @@ import {
   BarChart3, Search, Globe, Lock, Activity, Zap, Sparkles,
   Crown, MousePointerClick, CheckCircle2, AlertCircle, Edit3, Image as ImageIcon,
   Percent, MapPin, Award, ExternalLink, HelpCircle, ShieldCheck, X,
+  Megaphone, PauseCircle, Clock, XCircle, CreditCard,
 } from 'lucide-react';
 import { DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { PremiumUpgrade } from '@/components/PremiumUpgrade';
@@ -101,6 +102,21 @@ const emptyEditForm = (): EditFormState => ({
   suggestedInstallArgsInput: '',
 });
 
+type Ad = {
+  id: string;
+  title: string;
+  description: string;
+  placement: string;
+  status: string;
+  bidCpm: number;
+  totalImpressionsPurchased: number;
+  impressionsServed: number;
+  clicksCount: number;
+  stripePaymentIntentId: string | null;
+  stripeInvoiceUrl: string | null;
+  createdAt: string | Date;
+};
+
 type Props = {
   initialServers: Server[];
   initialAnalytics?: Record<string, AnalyticsSummary>;
@@ -108,6 +124,8 @@ type Props = {
   isPremium?: boolean;
   /** Deep-links from a listing's "Manage listing" button (`/dashboard?edit=<id>`) straight into that listing's edit form. */
   initialEditId?: string | null;
+  /** Sponsor ad campaigns linked to this account (by advertiserUserId, or by matching account email). */
+  initialAds?: Ad[];
 };
 
 type TabType = 'overview' | 'seo' | 'boost' | 'edit';
@@ -118,8 +136,10 @@ export default function DashboardClient({
   categoryRanks = {},
   isPremium = false,
   initialEditId = null,
+  initialAds = [],
 }: Props) {
   const [servers, setServers] = useState(initialServers);
+  const [ads] = useState(initialAds);
   const [analytics, setAnalytics] = useState(initialAnalytics);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTabMap, setActiveTabMap] = useState<Record<string, TabType>>({});
@@ -323,47 +343,51 @@ export default function DashboardClient({
     setActiveTabMap((prev) => ({ ...prev, [serverId]: tab }));
   };
 
+  const needsBacklinkHelp = servers.some((s) => !s.isPremium && !s.reciprocalBadgeOk);
+
   if (servers.length === 0) {
     return (
-      <div className="dashboard-empty">
-        <div className="dashboard-empty-hero">
-          <h2>No listings yet</h2>
-          <p>
-            Submit a new MCP server or claim one you already published. Once claimed, you get analytics,
-            logo uploads, and free dofollow backlink setup.
-          </p>
+      <div className="dashboard-workspace">
+        {ads.length > 0 && <AdCampaignsSection ads={ads} />}
+        <div className="dashboard-empty">
+          <div className="dashboard-empty-hero">
+            <h2>No listings yet</h2>
+            <p>
+              Submit a new MCP server or claim one you already published. Once claimed, you get analytics,
+              logo uploads, and free dofollow backlink setup.
+            </p>
+          </div>
+          <ul className="dashboard-empty-grid" role="list">
+            <li className="dashboard-empty-card">
+              <h3>Submit a server</h3>
+              <p>List a new repository or product site for free review.</p>
+              <Link href="/submit" className="btn btn-primary">
+                + Submit server
+              </Link>
+            </li>
+            <li className="dashboard-empty-card">
+              <h3>Claim an existing listing</h3>
+              <p>Find your server in the directory and verify ownership via badge or DNS.</p>
+              <Link href="/browse" className="btn btn-secondary">
+                Browse directory
+              </Link>
+            </li>
+            <li className="dashboard-empty-card">
+              <h3>Get a badge</h3>
+              <p>Generate README or site badges for verification and SEO.</p>
+              <Link href="/badge-generator" className="btn btn-secondary">
+                Badge generator
+              </Link>
+            </li>
+          </ul>
         </div>
-        <ul className="dashboard-empty-grid" role="list">
-          <li className="dashboard-empty-card">
-            <h3>Submit a server</h3>
-            <p>List a new repository or product site for free review.</p>
-            <Link href="/submit" className="btn btn-primary">
-              + Submit server
-            </Link>
-          </li>
-          <li className="dashboard-empty-card">
-            <h3>Claim an existing listing</h3>
-            <p>Find your server in the directory and verify ownership via badge or DNS.</p>
-            <Link href="/browse" className="btn btn-secondary">
-              Browse directory
-            </Link>
-          </li>
-          <li className="dashboard-empty-card">
-            <h3>Get a badge</h3>
-            <p>Generate README or site badges for verification and SEO.</p>
-            <Link href="/badge-generator" className="btn btn-secondary">
-              Badge generator
-            </Link>
-          </li>
-        </ul>
       </div>
     );
   }
 
-  const needsBacklinkHelp = servers.some((s) => !s.isPremium && !s.reciprocalBadgeOk);
-
   return (
     <div className="dashboard-workspace">
+      {ads.length > 0 && <AdCampaignsSection ads={ads} />}
       <ul className="dashboard-metrics" role="list" aria-label="Portfolio summary">
         <li className="dashboard-metric">
           <span className="dashboard-metric-label">Listings</span>
@@ -739,6 +763,13 @@ export default function DashboardClient({
                   compact
                   showAll
                 />
+                <p style={{ marginTop: '1rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  Promoting something else — your own product, a client&apos;s site, anything?{' '}
+                  <Link href="/advertise/create" style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+                    Create a standalone sponsor ad →
+                  </Link>{' '}
+                  Ads run across the directory and aren&apos;t limited to MCP servers.
+                </p>
               </div>
             )}
 
@@ -962,6 +993,132 @@ export default function DashboardClient({
       })}
       </ul>
     </div>
+  );
+}
+
+const AD_STATUS_META: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
+  active: { label: 'Active', color: '#4ade80', bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', icon: <CheckCircle2 size={12} /> },
+  pending_approval: { label: 'Pending review', color: '#facc15', bg: 'rgba(234,179,8,0.15)', border: 'rgba(234,179,8,0.3)', icon: <Clock size={12} /> },
+  paused: { label: 'Paused', color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.3)', icon: <PauseCircle size={12} /> },
+  completed: { label: 'Completed', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)', border: 'rgba(96,165,250,0.3)', icon: <CheckCircle2 size={12} /> },
+  rejected: { label: 'Rejected', color: '#f87171', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', icon: <XCircle size={12} /> },
+};
+
+/**
+ * Sponsor-ad campaigns linked to this account (by advertiserUserId, or by
+ * matching account email — see app/dashboard/page.tsx getOwnedAds). Every
+ * campaign the account has ever run shows here, not just active ones, each
+ * with its own status. The full campaign dashboard (analytics, daily chart,
+ * placement breakdown) still lives at /advertise/campaign/[id] — this is an
+ * overview/entry point, not a replacement for it.
+ */
+function AdCampaignsSection({ ads }: { ads: Ad[] }) {
+  const sorted = [...ads].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  return (
+    <section aria-label="Your sponsor ad campaigns" style={{ marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Megaphone size={18} style={{ color: 'var(--accent-color)' }} />
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+            Your ad campaigns
+          </h2>
+        </div>
+        <Link href="/advertise/create" className="btn btn-secondary btn-sm">
+          + New ad
+        </Link>
+      </div>
+
+      <ul className="dashboard-listing-list" role="list" style={{ marginBottom: '1.75rem' }}>
+        {sorted.map((ad) => {
+          const meta = AD_STATUS_META[ad.status] || AD_STATUS_META.pending_approval;
+          const progress = Math.min(
+            100,
+            Number(((ad.impressionsServed / Math.max(1, ad.totalImpressionsPurchased)) * 100).toFixed(1))
+          );
+          const ctr = ad.impressionsServed > 0 ? ((ad.clicksCount / ad.impressionsServed) * 100).toFixed(2) : '0.00';
+          const awaitingPayment = ad.status === 'pending_approval' && !ad.stripePaymentIntentId;
+
+          return (
+            <li key={ad.id} className="dashboard-listing-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                    <span
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
+                        padding: '2px 8px', borderRadius: '10px',
+                        background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`,
+                      }}
+                    >
+                      {meta.icon} {meta.label}
+                    </span>
+                    {awaitingPayment && (
+                      <span
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
+                          padding: '2px 8px', borderRadius: '10px',
+                          background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)',
+                        }}
+                      >
+                        <CreditCard size={12} /> Payment needed
+                      </span>
+                    )}
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      {ad.placement.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{ad.title}</h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4, maxWidth: '48ch' }}>
+                    {ad.description}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem', flexShrink: 0 }}>
+                  {awaitingPayment ? (
+                    <a href={`/advertise/resume/${ad.id}`} className="btn btn-primary btn-sm" style={{ gap: '4px' }}>
+                      Complete purchase <ExternalLink size={12} />
+                    </a>
+                  ) : (
+                    <Link href={`/advertise/campaign/${ad.id}`} className="btn btn-secondary btn-sm" style={{ gap: '4px' }}>
+                      View campaign <ExternalLink size={12} />
+                    </Link>
+                  )}
+                  {ad.stripeInvoiceUrl && (
+                    <a
+                      href={ad.stripeInvoiceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                    >
+                      <CreditCard size={12} /> Invoice
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {!awaitingPayment && (
+                <div style={{ marginTop: '0.9rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    <span>
+                      {ad.impressionsServed.toLocaleString()} / {ad.totalImpressionsPurchased.toLocaleString()} impressions
+                    </span>
+                    <span>{ad.clicksCount.toLocaleString()} clicks · {ctr}% CTR</span>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.08)', height: '6px', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{ background: 'var(--brand-gradient)', width: `${progress}%`, height: '100%' }} />
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

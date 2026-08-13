@@ -321,6 +321,16 @@ export default async function CampaignDashboardPage({
         <div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Total Investment</div>
           <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>{formatUsdAmount(ad.amountPaidCents)}</div>
+          {ad.stripeInvoiceUrl && (
+            <a
+              href={ad.stripeInvoiceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 600 }}
+            >
+              View invoice →
+            </a>
+          )}
         </div>
         <div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Campaign Launched</div>

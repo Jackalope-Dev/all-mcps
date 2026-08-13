@@ -1343,6 +1343,7 @@ p {
 /* Brand logo mark — icon sits in a soft gradient “tile” so it reads larger */
 .brand-logo {
   transition: opacity 0.2s ease, transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .brand-logo:hover {
@@ -1389,6 +1390,8 @@ p {
   align-items: baseline;
   letter-spacing: -0.01em;
   font-feature-settings: "kern" 1;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .wordmark-all {

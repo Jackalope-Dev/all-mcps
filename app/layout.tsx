@@ -95,7 +95,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={sans.variable} suppressHydrationWarning>
       <head>
-        <script
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {

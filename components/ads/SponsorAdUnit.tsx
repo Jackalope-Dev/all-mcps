@@ -487,9 +487,6 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
               <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {ad.title || 'Sponsor Title'}
               </h4>
-              {displayDomain && (
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{displayDomain}</div>
-              )}
               <p style={{ margin: '0.35rem 0 0', fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                 {ad.description || 'Sponsored advertisement description.'}
               </p>
@@ -497,7 +494,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
           </div>
         </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
           <a
             {...linkProps}
             className="btn btn-sm btn-primary"
@@ -505,6 +502,9 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
           >
             {ad.ctaText || 'Learn More'} <ExternalLink size={13} />
           </a>
+          {displayDomain && (
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{displayDomain}</span>
+          )}
         </div>
       </div>
     );
@@ -553,22 +553,24 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
             <div style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               {ad.title || 'Sponsor Title'}
             </div>
-            {displayDomain && (
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '1px 0 0' }}>{displayDomain}</div>
-            )}
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
               {ad.description || 'Sponsored advertisement copy.'}
             </p>
           </div>
         </div>
 
-        <a
-          {...linkProps}
-          className="btn btn-sm btn-primary"
-          style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', gap: '5px' }}
-        >
-          {ad.ctaText || 'Visit Sponsor'} <ExternalLink size={12} />
-        </a>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+          <a
+            {...linkProps}
+            className="btn btn-sm btn-primary"
+            style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', gap: '5px' }}
+          >
+            {ad.ctaText || 'Visit Sponsor'} <ExternalLink size={12} />
+          </a>
+          {displayDomain && (
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{displayDomain}</span>
+          )}
+        </div>
       </div>
     );
   }
@@ -620,22 +622,24 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
             <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               {ad.title || 'Sponsor Title'}
             </div>
-            {displayDomain && (
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '1px 0 0' }}>{displayDomain}</div>
-            )}
             <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
               {ad.description || 'Sponsored advertisement description.'}
             </p>
           </div>
         </div>
 
-        <a
-          {...linkProps}
-          className="btn btn-sm btn-primary"
-          style={{ whiteSpace: 'nowrap', gap: '6px' }}
-        >
-          {ad.ctaText || 'Learn More'} <ExternalLink size={13} />
-        </a>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+          <a
+            {...linkProps}
+            className="btn btn-sm btn-primary"
+            style={{ whiteSpace: 'nowrap', gap: '6px' }}
+          >
+            {ad.ctaText || 'Learn More'} <ExternalLink size={13} />
+          </a>
+          {displayDomain && (
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{displayDomain}</span>
+          )}
+        </div>
       </div>
     );
   }
@@ -649,97 +653,97 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
         borderRadius: '16px',
         border: '1px solid rgba(0, 229, 255, 0.35)',
         padding: '1.25rem 1.75rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1.25rem',
         background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 123, 255, 0.04), var(--bg-elevated))',
         boxShadow: '0 4px 20px -2px rgba(0, 229, 255, 0.08)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '280px' }}>
-        {ad.logoUrl && !logoError ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={ad.logoUrl}
-            alt={ad.title || 'Sponsor'}
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              objectFit: 'cover',
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-elevated)',
-              flexShrink: 0,
-            }}
-            onError={() => setLogoError(true)}
-          />
-        ) : (
-          <div
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              background: 'var(--brand-gradient)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              color: '#fff',
-              flexShrink: 0,
-            }}
-          >
-            {(ad.title || 'A').slice(0, 2).toUpperCase()}
-          </div>
-        )}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.2rem' }}>
-            <span
-              style={{
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'var(--accent-color)',
-                background: 'rgba(0, 229, 255, 0.12)',
-                padding: '2px 8px',
-                borderRadius: '10px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <Sparkles size={10} /> Sponsored Partner
-            </span>
-          </div>
-          <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
-            {ad.title}
-          </div>
-          {displayDomain && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '1px 0 0' }}>{displayDomain}</div>
-          )}
-          <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
-            {ad.description}
-          </p>
-        </div>
+      <div style={{ marginBottom: '0.85rem' }}>
+        <span
+          style={{
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'var(--accent-color)',
+            background: 'rgba(0, 229, 255, 0.12)',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <Sparkles size={10} /> Sponsored Partner
+        </span>
       </div>
 
-      <a
-        {...linkProps}
-        className="btn btn-primary"
-        style={{
-          padding: '0.65rem 1.25rem',
-          borderRadius: '10px',
-          fontSize: '0.85rem',
-          fontWeight: 700,
-          whiteSpace: 'nowrap',
-          gap: '6px',
-          boxShadow: '0 2px 10px rgba(0, 229, 255, 0.2)',
-        }}
-      >
-        {ad.ctaText || 'Learn More'} <ExternalLink size={14} />
-      </a>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '280px' }}>
+          {ad.logoUrl && !logoError ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={ad.logoUrl}
+              alt={ad.title || 'Sponsor'}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                objectFit: 'cover',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-elevated)',
+                flexShrink: 0,
+              }}
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: 'var(--brand-gradient)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                color: '#fff',
+                flexShrink: 0,
+              }}
+            >
+              {(ad.title || 'A').slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+              {ad.title}
+            </div>
+            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
+              {ad.description}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+          <a
+            {...linkProps}
+            className="btn btn-primary"
+            style={{
+              padding: '0.65rem 1.25rem',
+              borderRadius: '10px',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              gap: '6px',
+              boxShadow: '0 2px 10px rgba(0, 229, 255, 0.2)',
+            }}
+          >
+            {ad.ctaText || 'Learn More'} <ExternalLink size={14} />
+          </a>
+          {displayDomain && (
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{displayDomain}</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

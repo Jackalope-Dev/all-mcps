@@ -29,11 +29,26 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session, stripe: 
         ? session.payment_intent
         : session.payment_intent?.id || null;
 
+    // invoice_creation was enabled on the ad checkout session (see
+    // app/api/ads/create/route.ts and app/advertise/resume/[id]/route.ts) so
+    // advertisers have a real downloadable invoice, not just a dashboard summary.
+    const invoiceId = typeof session.invoice === 'string' ? session.invoice : session.invoice?.id || null;
+    let invoiceUrl: string | null = null;
+    if (invoiceId) {
+      try {
+        const invoice = await stripe.invoices.retrieve(invoiceId);
+        invoiceUrl = invoice.hosted_invoice_url || null;
+      } catch (err) {
+        console.error(`Failed to retrieve invoice ${invoiceId} for ad ${adId}:`, err);
+      }
+    }
+
     await db
       .update(sponsorAds)
       .set({
         amountPaidCents: session.amount_total || undefined,
         stripePaymentIntentId: paymentIntentId,
+        ...(invoiceUrl ? { stripeInvoiceUrl: invoiceUrl } : {}),
       })
       .where(eq(sponsorAds.id, adId));
 

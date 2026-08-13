@@ -65,6 +65,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         impressions: String(ad.totalImpressionsPurchased),
         bidCpm: String(ad.bidCpm),
       },
+      invoice_creation: { enabled: true },
       success_url: `${appUrl}/advertise/campaign/${ad.id}?payment=success`,
       cancel_url: `${appUrl}/advertise/create?canceled=1`,
     });

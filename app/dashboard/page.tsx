@@ -1,12 +1,27 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { drizzle } from 'drizzle-orm/d1';
-import { eq } from 'drizzle-orm';
-import { servers } from '@/db/schema';
+import { eq, or } from 'drizzle-orm';
+import { servers, sponsorAds } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { getServerAnalyticsBatch, type AnalyticsSummary } from '@/lib/analytics';
 import { parseStringArray } from '@/lib/aiContent';
 import DashboardClient from './DashboardClient';
+
+export type OwnedAd = {
+  id: string;
+  title: string;
+  description: string;
+  placement: string;
+  status: string;
+  bidCpm: number;
+  totalImpressionsPurchased: number;
+  impressionsServed: number;
+  clicksCount: number;
+  stripePaymentIntentId: string | null;
+  stripeInvoiceUrl: string | null;
+  createdAt: Date;
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -164,6 +179,43 @@ async function getOwnedServers(userId: string): Promise<{
   return { servers: [], analytics: {}, categoryRanks: {}, isPremium: false };
 }
 
+async function getOwnedAds(userId: string, email: string | null | undefined): Promise<OwnedAd[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (!ctx?.env || !(ctx.env as any).DB) return [];
+
+    const db = drizzle((ctx.env as any).DB);
+    const normalizedEmail = email ? email.trim().toLowerCase() : null;
+
+    const rows = await db
+      .select({
+        id: sponsorAds.id,
+        title: sponsorAds.title,
+        description: sponsorAds.description,
+        placement: sponsorAds.placement,
+        status: sponsorAds.status,
+        bidCpm: sponsorAds.bidCpm,
+        totalImpressionsPurchased: sponsorAds.totalImpressionsPurchased,
+        impressionsServed: sponsorAds.impressionsServed,
+        clicksCount: sponsorAds.clicksCount,
+        stripePaymentIntentId: sponsorAds.stripePaymentIntentId,
+        stripeInvoiceUrl: sponsorAds.stripeInvoiceUrl,
+        createdAt: sponsorAds.createdAt,
+      })
+      .from(sponsorAds)
+      .where(
+        normalizedEmail
+          ? or(eq(sponsorAds.advertiserUserId, userId), eq(sponsorAds.advertiserEmail, normalizedEmail))
+          : eq(sponsorAds.advertiserUserId, userId)
+      );
+
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -174,7 +226,10 @@ export default async function DashboardPage({
     redirect('/login?callbackUrl=/dashboard');
   }
 
-  const { servers: ownedServers, analytics, categoryRanks, isPremium } = await getOwnedServers(session.user.id);
+  const [{ servers: ownedServers, analytics, categoryRanks, isPremium }, ownedAds] = await Promise.all([
+    getOwnedServers(session.user.id),
+    getOwnedAds(session.user.id, session.user.email),
+  ]);
   const { edit } = await searchParams;
 
   return (
@@ -184,7 +239,9 @@ export default async function DashboardPage({
           <div className="dashboard-page-header-text">
             <h1 className="text-page-title">Manage listings</h1>
             <p className="text-lead dashboard-page-lead">
-              Track installs, finish setup for free dofollow links, and boost discovery when you&apos;re ready.
+              {ownedAds.length > 0
+                ? "Track installs, finish setup for free dofollow links, boost discovery, and manage your sponsor ad campaigns — all in one place."
+                : "Track installs, finish setup for free dofollow links, and boost discovery when you're ready."}
             </p>
           </div>
           <div className="dashboard-page-header-actions">
@@ -202,6 +259,7 @@ export default async function DashboardPage({
           categoryRanks={categoryRanks}
           isPremium={isPremium}
           initialEditId={edit ?? null}
+          initialAds={ownedAds}
         />
       </div>
     </main>
