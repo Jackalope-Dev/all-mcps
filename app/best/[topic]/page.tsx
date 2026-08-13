@@ -234,10 +234,16 @@ export default async function BestTopicPage({
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>
             Which {t.title} MCP server should you use?
           </h2>
-          <div className="surface" style={{ padding: '1.5rem', borderRadius: '12px', marginBottom: '2.5rem' }}>
-            <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              When choosing a Model Context Protocol server for <strong>{t.title}</strong>, select verified or official listings if you need strict API security guarantees. For rapid local dev testing with Claude or Cursor, community-maintained tools offer zero-setup configuration blocks ready to copy-paste.
-            </p>
+          <div className="surface" style={{ padding: '1.5rem', borderRadius: '12px', marginBottom: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {t.guidance && t.guidance.length > 0 ? (
+              t.guidance.map((p, i) => (
+                <p key={i} style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{p}</p>
+              ))
+            ) : (
+              <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                When choosing a Model Context Protocol server for <strong>{t.title}</strong>, select verified or official listings if you need strict API security guarantees. For rapid local dev testing with Claude or Cursor, community-maintained tools offer zero-setup configuration blocks ready to copy-paste.
+              </p>
+            )}
           </div>
 
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.25rem' }}>

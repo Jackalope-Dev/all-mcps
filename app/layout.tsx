@@ -187,7 +187,7 @@ export default function RootLayout({
                   name: "AllMCPs",
                   url: "https://allmcps.com",
                   logo: "https://allmcps.com/logo-icon.svg",
-                  sameAs: ["https://x.com/AllMCPs"],
+                  sameAs: ["https://x.com/AllMCPs", "https://github.com/Jackalope-Dev"],
                   description:
                     "The definitive directory for discovering and installing Model Context Protocol servers.",
                 },

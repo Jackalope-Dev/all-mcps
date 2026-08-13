@@ -26,6 +26,14 @@ export type BestTopic = {
   title: string;
   /** One-line meta/intro summary. */
   lead: string;
+  /**
+   * Optional 2-3 paragraph "which one should you use" guidance, specific to this
+   * topic's real decision factors (official vs. community, read vs. write access,
+   * self-hosted vs. managed, etc.) — grounded in how the protocol/ecosystem works,
+   * not claims about any single listing's quality we can't verify. Falls back to a
+   * generic paragraph on /best/[topic] when omitted.
+   */
+  guidance?: string[];
   faq: { q: string; a: string }[];
 };
 
@@ -35,6 +43,11 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     categorySlug: 'databases',
     title: 'Databases',
     lead: 'The best MCP servers for connecting AI agents to SQL and NoSQL databases — query, inspect schemas, and safely read or write real records from Claude, Cursor, and other clients.',
+    guidance: [
+      'Start with the engine-specific page for your database (Postgres, MySQL, MongoDB, SQLite) rather than a generic multi-database server — a purpose-built server usually has better schema introspection and fewer surprises than a lowest-common-denominator wrapper.',
+      'The single biggest decision is read vs. write access. Most database MCP servers default to read-only, which is the right starting point: connect with a database role that can only SELECT, watch how the agent actually uses it for a while, and only grant write access to specific tables once you trust the workflow.',
+      'Never point one of these at a database credential with admin/superuser rights. Create a dedicated, least-privilege user for the MCP server — most engines support scoping a role to specific schemas or tables, which limits the blast radius if a prompt goes wrong.',
+    ],
     faq: [
       { q: 'What is the best MCP server for databases?', a: 'It depends on your database. For Postgres, the official modelcontextprotocol/server-postgres and crystaldba/postgres-mcp are the most widely installed. The ranking on this page is ordered by real usage across the AllMCPs directory.' },
       { q: 'Can an MCP server write to my database, or only read?', a: 'Most database MCP servers default to read-only access for safety; several offer an opt-in write mode. Always check the server’s README and connect with a least-privilege, scoped database credential.' },
@@ -46,6 +59,11 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     categorySlug: 'developer-tools',
     title: 'Developers',
     lead: 'The best developer-focused MCP servers — run code, manage repositories, query build systems, and automate the everyday engineering tasks AI agents can take off your plate.',
+    guidance: [
+      'For source control and CI (GitHub, GitLab, Docker, Terraform), prefer the official vendor-maintained server when one exists — it tracks that platform\'s API as it evolves, so you get new endpoints without waiting on a community maintainer. Fall back to a community server when the official one lacks a feature you need.',
+      'Anything that can execute code, run containers, or push commits needs a scoped credential, not your main account token. Use a fine-grained personal access token limited to the specific repositories or resources the agent should touch, and treat write-capable dev tools the same way you\'d treat CI secrets.',
+      'For local, zero-network tasks (running a script, reading files, inspecting a build), a lightweight community server is often simpler to set up than an enterprise-oriented one — you don\'t need OAuth or a hosted account just to shell out to a linter.',
+    ],
     faq: [
       { q: 'What are the best MCP servers for developers?', a: 'The most-installed developer MCP servers cover source control, code execution, and CI. This page ranks them by usage across the AllMCPs directory so you can start with what the community relies on.' },
       { q: 'Do these MCP servers work with Cursor and Claude Code?', a: 'Yes. MCP is a shared protocol, so any server listed here works with any MCP-compatible client — Claude Desktop, Claude Code, Cursor, Windsurf, and others.' },
@@ -79,6 +97,11 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     categorySlug: 'browser-automation',
     title: 'Browser Automation',
     lead: 'The best MCP servers for browser automation — drive a real browser from an AI agent to navigate, click, fill forms, and extract page content.',
+    guidance: [
+      'Microsoft\'s official playwright-mcp is the most widely used starting point — it exposes Playwright\'s accessibility-tree snapshot to the agent instead of raw screenshots, which tends to make click/fill actions more reliable than vision-based automation.',
+      'Run browser automation servers headless by default; switch to a headed/visible browser only when you\'re debugging a flow that isn\'t working, since watching the browser act is the fastest way to see where a selector or step is failing.',
+      'If a workflow needs to log into a site, use a scoped or disposable test account wherever the site supports one — an agent driving a real browser session has the same access a logged-in human would.',
+    ],
     faq: [
       { q: 'What is the best MCP server for browser automation?', a: 'Servers wrapping Playwright, Puppeteer, and browser-use are the most installed. This page ranks browser automation servers by real usage.' },
       { q: 'Do browser automation MCP servers run headless?', a: 'Most support both headless and headed modes. Headless is typical for servers and CI; headed is useful for debugging or when a site needs a visible session.' },
@@ -90,6 +113,10 @@ export const CATEGORY_TOPICS: BestTopic[] = [
     categorySlug: 'communication',
     title: 'Slack & Communication',
     lead: 'The best MCP servers for team communication — let AI agents read, post, and analyze across Slack, Discord, email, and other messaging platforms.',
+    guidance: [
+      'For Slack specifically, check whether a server uses a bot token (`xoxb-`) or a user token (`xoxp-`) before installing — a bot token posts as a visible "App" and only sees channels it\'s invited to, which is usually the safer and more auditable choice for an AI agent than a token that acts as your own user.',
+      'Scope the token to the channels the agent actually needs to read or post in rather than a workspace-wide token, and start with read-only (search/read) permissions before granting post/write scopes.',
+    ],
     faq: [
       { q: 'What is the best MCP server for Slack?', a: 'Community Slack MCP servers are the most installed for reading and posting messages. This page ranks communication servers by real usage.' },
       { q: 'Can MCP servers send messages on my behalf?', a: 'Yes, with a token you provide. Scope the token to the channels and actions you actually want the agent to have.' },
@@ -354,6 +381,11 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     match: ['postgres', 'postgresql'],
     title: 'PostgreSQL',
     lead: 'The best MCP servers for PostgreSQL — let AI agents run queries, inspect schemas, and read or write records in your Postgres database from Claude, Cursor, and other MCP clients.',
+    guidance: [
+      'The official modelcontextprotocol/server-postgres and crystaldba/postgres-mcp are the two most widely deployed Postgres servers — both cover schema introspection and querying, and crystaldba/postgres-mcp additionally ships EXPLAIN-based query analysis, which is useful if you want the agent to help diagnose slow queries rather than just run them.',
+      'Connect with a read-only role first (`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ...`). If you later want the agent to write, most Postgres servers gate that behind an explicit flag or a separate write-capable connection string — treat that as a deliberate opt-in, not the default.',
+      'For managed Postgres (Supabase, Neon, RDS), use the connection string your provider issues for a scoped/read replica role if one is available, rather than the primary admin connection string.',
+    ],
     faq: [
       { q: 'What is the best Postgres MCP server?', a: 'The official modelcontextprotocol/server-postgres and crystaldba/postgres-mcp are the most widely installed. This page ranks Postgres MCP servers by real usage across the AllMCPs directory so you can start with a proven one.' },
       { q: 'Can a Postgres MCP server write to my database?', a: 'Some support writes, but most default to read-only for safety. Connect with a least-privilege role scoped to only the tables the agent needs, and enable write mode explicitly if the server offers it.' },
@@ -365,6 +397,10 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     match: ['sqlite'],
     title: 'SQLite',
     lead: 'The best MCP servers for SQLite — give AI agents direct access to a local SQLite database file to query tables, inspect schemas, and analyze data without a separate database server.',
+    guidance: [
+      'SQLite is file-based, so there\'s no network access or connection string to scope — the entire security model comes down to which .db file path you point the server at and whether that file is writable. Copy the file to a scratch location first if you want the agent to experiment without risk to the original.',
+      'The official modelcontextprotocol/server-sqlite is a reasonable default for straightforward query/inspect workflows; reach for a community alternative only if you need something it doesn\'t support, like full-text search extensions.',
+    ],
     faq: [
       { q: 'What is the best SQLite MCP server?', a: 'The official modelcontextprotocol/server-sqlite is the most widely installed. This page ranks SQLite MCP servers by real usage so you can pick a maintained option.' },
       { q: 'Do I need a running database server to use SQLite over MCP?', a: 'No — SQLite is file-based, so the MCP server reads a .db/.sqlite file on disk directly. You just point it at the file path in your client config.' },
@@ -376,6 +412,10 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     match: ['mysql', 'mariadb'],
     title: 'MySQL',
     lead: 'The best MCP servers for MySQL and MariaDB — connect AI agents to your relational database to run queries, explore schemas, and safely read or update records.',
+    guidance: [
+      'MariaDB is wire-compatible with MySQL, so almost any MySQL MCP server connects to a MariaDB instance without modification — check the listing\'s README for an explicit MariaDB callout only if you\'re relying on MariaDB-specific features.',
+      'As with any relational database, create a dedicated MySQL user for the MCP server with grants limited to the schemas it needs (`GRANT SELECT ON yourdb.* TO ...`), rather than reusing an application or root credential.',
+    ],
     faq: [
       { q: 'What is the best MySQL MCP server?', a: 'Several community MySQL/MariaDB servers are widely used. This page ranks them by real usage across the AllMCPs directory.' },
       { q: 'Is it safe to give an agent MySQL access?', a: 'Use a dedicated database user with least-privilege grants, and prefer read-only access until you trust the workflow. MCP servers act with exactly the credentials you provide.' },
@@ -387,6 +427,10 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     match: ['mongodb', 'mongo'],
     title: 'MongoDB',
     lead: 'The best MCP servers for MongoDB — let AI agents query collections, inspect documents, and work with your NoSQL data through the Model Context Protocol.',
+    guidance: [
+      'Unlike a fixed SQL schema, MongoDB collections can hold documents with varying shapes — so a server\'s "inspect schema" tool is really sampling documents to infer structure. If your collections are inconsistent, expect the agent to occasionally miss a field that only exists on some documents.',
+      'Use a MongoDB user scoped to specific databases via role-based access control (`db.grantRolesToUser`) rather than an atlasAdmin/root role, and prefer a read-only role until you\'ve seen how the agent behaves with the collections in question.',
+    ],
     faq: [
       { q: 'What is the best MongoDB MCP server?', a: 'This page ranks MongoDB MCP servers by real usage across the AllMCPs directory so you can start with a maintained, popular option.' },
       { q: 'Can an agent run aggregation pipelines over MCP?', a: 'Many MongoDB servers expose find and aggregate operations, so an agent can run pipelines and return results. Check each listing for the exact operations supported.' },
@@ -398,6 +442,11 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     match: ['github'],
     title: 'GitHub',
     lead: 'The best MCP servers for GitHub — let AI agents read repositories, search code, manage issues and pull requests, and drive GitHub Actions right from your client.',
+    guidance: [
+      'The official github/github-mcp-server is maintained by GitHub itself and is the safest default — it tracks the GitHub API directly, supports both repository-scoped and org-scoped tokens, and is the one most other MCP clients document by name.',
+      'Use a fine-grained personal access token scoped to the specific repositories you want the agent working in, not a classic token with account-wide access. If you only need the agent to read code and open PRs for review (not merge them), a token without admin/merge scopes is enough.',
+      'For read-heavy workflows — searching code, reading issues, summarizing PRs — a token with only `contents:read` and `issues:read` is sufficient and meaningfully lower-risk than a full read/write token.',
+    ],
     faq: [
       { q: 'What is the best GitHub MCP server?', a: 'The official GitHub MCP server is the most widely installed — it covers issues, pull requests, code search, and Actions. This page ranks GitHub MCP servers by real usage.' },
       { q: 'Can a GitHub MCP server open pull requests?', a: 'Yes, when you supply a token with write scope it can create branches, commit files, and open PRs. Use a fine-grained token limited to the specific repositories the agent should touch.' },
@@ -409,6 +458,10 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     match: ['gitlab'],
     title: 'GitLab',
     lead: 'The best MCP servers for GitLab — connect AI agents to your GitLab projects to browse code, manage issues and merge requests, and inspect pipelines.',
+    guidance: [
+      'If you run self-hosted GitLab, confirm the server accepts a custom instance base URL before installing — most do, but a few are hardcoded to gitlab.com and won\'t work against a private instance.',
+      'Prefer a project- or group-access token over a personal access token when the agent should only touch specific projects — it\'s revocable independently of your account and doesn\'t carry your full personal permissions.',
+    ],
     faq: [
       { q: 'What is the best GitLab MCP server?', a: 'This page ranks GitLab MCP servers by real usage across the AllMCPs directory so you can pick a maintained option.' },
       { q: 'Does it work with self-hosted GitLab?', a: 'Many GitLab MCP servers accept a custom instance URL, so they work with self-hosted and gitlab.com alike. Check the listing for a base-URL setting.' },
@@ -420,6 +473,10 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     match: ['docker'],
     title: 'Docker',
     lead: 'The best MCP servers for Docker — let AI agents list containers, inspect logs, run images, and manage your local or remote Docker environment.',
+    guidance: [
+      'Docker access is effectively host access — a container can mount volumes and reach the network, so treat the Docker socket the MCP server connects to with the same caution as SSH access to that machine. Run it against a disposable dev host or VM rather than a machine with production containers on it.',
+      'Start with a server limited to read/inspect operations (list containers, read logs, inspect images) while you evaluate it, and only move to a lifecycle-management server (start/stop/run) once you\'re comfortable with what the agent does with the read-only tools.',
+    ],
     faq: [
       { q: 'What is the best Docker MCP server?', a: 'This page ranks Docker MCP servers by real usage across the AllMCPs directory so you can start with a proven integration.' },
       { q: 'Can an agent start and stop containers?', a: 'Yes — most Docker MCP servers expose container lifecycle tools. Run them against a non-production Docker host and review what they can do before granting access.' },
