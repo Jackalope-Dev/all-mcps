@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Bot, Cpu, Copy } from 'lucide-react';
 import type { SiteStats } from '../lib/siteStats';
@@ -21,7 +21,25 @@ function formatExactNumber(num: number): string {
   return num.toLocaleString();
 }
 
-export function StatsBanner({ stats }: { stats?: SiteStats }) {
+export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
+  const [stats, setStats] = useState(initialStats);
+
+  // The homepage shell is ISR-cached (see app/page.tsx), so these numbers can
+  // be frozen to a stale/zeroed build-time snapshot — see app/api/site-stats.
+  // Refetch live on mount so the banner self-corrects instead of staying stuck.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/site-stats')
+      .then((res) => (res.ok ? (res.json() as Promise<SiteStats>) : null))
+      .then((fresh) => {
+        if (fresh && !cancelled) setStats(fresh);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Keep the homepage proof strip to three high-signal metrics; full breakdown lives on /trust.
   const totalServers = stats?.totalServers ?? 0;
   const aiReads = stats?.aiReads30d ?? 0;

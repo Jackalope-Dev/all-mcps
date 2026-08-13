@@ -45,7 +45,12 @@ export function pickDiscoveryServers<T extends FeaturedCandidate>(
     const engagement = (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
     const boost =
       (isFeaturedListing(s) ? 2000 : 0) +
-      (s.isOfficial ? 800 : 0) +
+      // A flat 800 previously let the catalog's ~1 non-premium `isOfficial`
+      // listing (a protocol reference/test server, not a typical install
+      // pick) outrank virtually all real engagement and occupy a featured
+      // slot almost every rotation. Keep a modest nudge for official
+      // listings without letting it dominate over genuine upvotes/copies/views.
+      (s.isOfficial ? 150 : 0) +
       rand() * 120;
     return { s, score: engagement + boost };
   });

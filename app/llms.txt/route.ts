@@ -95,6 +95,7 @@ export async function GET(request: Request) {
   content += `- Pricing & Boosting: https://allmcps.com/pricing\n`;
   content += `- Free Developer Tools (Config Auditor, MCP Playground, OpenAPI-to-MCP, Protocol Inspector, Config Generator, Config Validator, Token Calculator): https://allmcps.com/tools\n`;
   content += `- Badge Generator: https://allmcps.com/badge-generator\n`;
+  content += `- Feeling Lucky Arcade (Random MCP Discovery): https://allmcps.com/lucky\n`;
   content += `- Structured Catalog Dataset (JSON): https://allmcps.com/data.json\n`;
   content += `- Sitemap index: https://allmcps.com/sitemap.xml (shards: /sitemap/core.xml, /sitemap/listings.xml, /sitemap/secondary.xml)\n`;
 

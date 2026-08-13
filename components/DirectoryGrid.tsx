@@ -8,7 +8,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid, ShieldCheck, Terminal, Zap, CheckCircle2, ArrowRight, Copy, Check, Wrench, Clock } from 'lucide-react';
+import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid, ShieldCheck, Zap, CheckCircle2, ArrowRight, Copy, Check, Wrench, Clock, Dices } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -980,6 +980,61 @@ export default function DirectoryGrid({
       {/* Featured & Trending Cards (below search, hidden when filtering) */}
       {showDiscovery && <FeaturedCards servers={featuredCards} />}
 
+      {/* AllMCPs' own MCP server — self-promo callout, homepage landing only */}
+      {showDiscovery && (
+        <section className="container mcp-promo-section" style={{ margin: '1.5rem auto 2.5rem' }}>
+          <div className="mcp-promo-card">
+            <ServerAvatar name="AllMCPs Server" logoUrl="/logos/allmcps-server" size={44} />
+            <div className="mcp-promo-content">
+              <h3 className="mcp-promo-title">
+                AllMCPs has its own MCP server
+                <span className="mcp-promo-official-badge">
+                  <BadgeCheck size={13} aria-hidden="true" /> Official
+                </span>
+              </h3>
+              <p className="mcp-promo-desc">
+                Search the directory, get install configs, submit servers, and check boost pricing —
+                directly from Claude, Cursor, or any MCP client.
+              </p>
+              <ul className="mcp-promo-features">
+                <li>
+                  <CheckCircle2 size={14} aria-hidden="true" /> Search &amp; browse listings
+                </li>
+                <li>
+                  <CheckCircle2 size={14} aria-hidden="true" /> Ready-to-paste install configs
+                </li>
+                <li>
+                  <CheckCircle2 size={14} aria-hidden="true" /> Submit &amp; verify servers
+                </li>
+                <li>
+                  <CheckCircle2 size={14} aria-hidden="true" /> Check boost pricing
+                </li>
+              </ul>
+            </div>
+            <div className="mcp-promo-actions">
+              <code className="mcp-promo-install">
+                <Zap size={12} aria-hidden="true" /> npx -y allmcps-server
+              </code>
+              <div className="mcp-promo-buttons">
+                <Link href="/mcp/allmcps-server" className="btn btn-primary btn-sm">
+                  View listing <ArrowRight size={14} aria-hidden="true" />
+                </Link>
+                <OutboundLink
+                  href="https://github.com/Jackalope-Dev/allmcps-server"
+                  destinationType="github"
+                  serverId="allmcps-server"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                >
+                  GitHub
+                </OutboundLink>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Category Showcase Section (mcp.so vibe) — homepage landing only when not filtered */}
       {!isBrowse && !selectedCategory && !searchQuery && (
         <section className="container animate-fade-in delay-2" style={{ margin: '0 auto 2.5rem' }}>
@@ -1080,59 +1135,28 @@ export default function DirectoryGrid({
       {/* Featured Marquee near top of the discovery section */}
       {showDiscovery && <FeaturedMarquee servers={marqueeServers} />}
 
-      {/* AllMCPs' own MCP server — self-promo callout, homepage landing only */}
+      {/* Feeling Lucky Arcade Callout Banner */}
       {showDiscovery && (
-        <section className="container mcp-promo-section">
-          <div className="mcp-promo-card">
-            <div className="mcp-promo-icon" aria-hidden="true">
-              <Terminal size={22} />
-            </div>
-            <div className="mcp-promo-content">
-              <h3 className="mcp-promo-title">
-                AllMCPs has its own MCP server
-                <span className="mcp-promo-official-badge">
-                  <BadgeCheck size={13} aria-hidden="true" /> Official
-                </span>
-              </h3>
-              <p className="mcp-promo-desc">
-                Search the directory, get install configs, submit servers, and check boost pricing —
-                directly from Claude, Cursor, or any MCP client.
-              </p>
-              <ul className="mcp-promo-features">
-                <li>
-                  <CheckCircle2 size={14} aria-hidden="true" /> Search &amp; browse listings
-                </li>
-                <li>
-                  <CheckCircle2 size={14} aria-hidden="true" /> Ready-to-paste install configs
-                </li>
-                <li>
-                  <CheckCircle2 size={14} aria-hidden="true" /> Submit &amp; verify servers
-                </li>
-                <li>
-                  <CheckCircle2 size={14} aria-hidden="true" /> Check boost pricing
-                </li>
-              </ul>
-            </div>
-            <div className="mcp-promo-actions">
-              <code className="mcp-promo-install">
-                <Zap size={12} aria-hidden="true" /> npx -y allmcps-server
-              </code>
-              <div className="mcp-promo-buttons">
-                <Link href="/mcp/allmcps-server" className="btn btn-primary btn-sm">
-                  View listing <ArrowRight size={14} aria-hidden="true" />
-                </Link>
-                <OutboundLink
-                  href="https://github.com/Jackalope-Dev/allmcps-server"
-                  destinationType="github"
-                  serverId="allmcps-server"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary btn-sm"
-                >
-                  GitHub
-                </OutboundLink>
+        <section className="container animate-fade-in delay-2" style={{ margin: '0 auto 2.5rem' }}>
+          <div className="feeling-lucky-home-banner">
+            <div className="lucky-banner-left">
+              <div className="lucky-banner-icon-box">
+                <Dices size={32} />
+              </div>
+              <div className="lucky-banner-text-box">
+                <h3 className="lucky-banner-heading">
+                  Feeling Lucky? Spin the Arcade Slot Machine
+                </h3>
+                <p className="lucky-banner-subtext">
+                  Roll pure random MCPs, discover underrated sleeper gems, or roll instant triple stacks with 8-bit retro sound FX!
+                </p>
               </div>
             </div>
+            <Link href="/lucky" className="lucky-banner-btn">
+              <Dices size={18} />
+              <span>SPIN NOW</span>
+              <ArrowRight size={16} />
+            </Link>
           </div>
         </section>
       )}

@@ -129,6 +129,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/compare': '2026-08-10',
   '/tags': '2026-08-10',
   '/best/seo': '2026-08-10',
+  '/lucky': '2026-08-13',
 };
 
 export type SitemapServer = {
@@ -244,4 +245,5 @@ export const INDEXNOW_CORE_PATHS = [
   '/mcp-for-windsurf',
   '/mcp-for-cline',
   '/best/seo',
+  '/lucky',
 ] as const;
