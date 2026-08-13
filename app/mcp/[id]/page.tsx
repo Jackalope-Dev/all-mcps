@@ -56,11 +56,12 @@ const getServer = getServerById;
 // within ~60 chars even for the longest real listing names, which can run 40+
 // chars once the org/scope prefix is stripped off by parseServerName.
 function buildDetailTitle(displayName: string): string {
-  const suffix = /mcp\s*server$/i.test(displayName) ? '' : ' MCP Server';
+  // Don't append "MCP Server" when the display name already mentions MCP, and
+  // never write an ellipsis into <title> (it wastes the SERP snippet).
+  const suffix = /mcp/i.test(displayName) ? '' : ' MCP Server';
   const budget = 50 - suffix.length;
   if (displayName.length <= budget) return `${displayName}${suffix}`;
-  const truncated = displayName.slice(0, Math.max(10, budget - 1)).trimEnd();
-  return `${truncated}…${suffix}`;
+  return `${displayName.slice(0, budget).trimEnd()}${suffix}`;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -82,7 +83,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     desc = `${desc.replace(/\.$/, '')}. Connect to Claude Desktop, Cursor & Windsurf.`;
   }
 
-  const { displayName } = parseServerName(server.name);
+  const { displayName } = parseServerName(server.name, server.url);
   const title = buildDetailTitle(displayName);
 
   return {
@@ -209,8 +210,10 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
   // works — used to soften the "not yet checked" install-sandbox message below
   // so it doesn't contradict the verified badge shown elsewhere on the page.
   const hasIntrospectedTools = server.toolsSource === 'introspected';
-  const { displayName, org } = parseServerName(server.name);
+  const { displayName, org } = parseServerName(server.name, server.url);
   const catMeta = getCategoryMeta(server.category);
+  const catSlug = categorySlug(server.category);
+  const categoryLabel = catMeta.label;
 
   // Drives the health dot by the display name — replaces both the old "Verified Active"
   // row badge and the big sidebar Status card with one tooltip-bearing indicator.
@@ -357,8 +360,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           {
             '@type': 'ListItem',
             position: 2,
-            name: server.category,
-            item: `https://allmcps.com/browse?category=${encodeURIComponent(server.category)}`,
+            name: categoryLabel,
+            item: `https://allmcps.com/categories/${catSlug}`,
           },
           {
             '@type': 'ListItem',
@@ -382,7 +385,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
         <ol className="breadcrumb">
           <li><Link href="/">Home</Link></li>
           <li className="breadcrumb-separator" aria-hidden="true"><ChevronRight size={12} aria-hidden="true" /></li>
-          <li><Link href={`/browse?category=${encodeURIComponent(server.category)}`}>{server.category}</Link></li>
+          <li><Link href={`/categories/${catSlug}`}>{categoryLabel}</Link></li>
           <li className="breadcrumb-separator" aria-hidden="true"><ChevronRight size={12} aria-hidden="true" /></li>
           <li className="breadcrumb-current" aria-current="page">{displayName}</li>
         </ol>
@@ -911,7 +914,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <Link href={`/mcp/${server.id}/alternatives`} className="detail-next-step">
               <Sparkles size={14} aria-hidden="true" /> Alternatives
             </Link>
-            <Link href={`/browse?category=${encodeURIComponent(server.category)}`} className="detail-next-step">
+            <Link href={`/categories/${catSlug}`} className="detail-next-step">
               <span aria-hidden="true">{catMeta.emoji}</span> More in {catMeta.label}
             </Link>
           </nav>
@@ -1116,6 +1119,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           {/* Query-Forward AEO / FAQ Block */}
           <section style={{ marginTop: '2.5rem' }}>
             <FaqSection
+              renderJsonLd={false}
               title={`Frequently Asked Questions about ${displayName}`}
               items={faqItems.map((item) => ({ question: item.q, answer: item.a }))}
             />
@@ -1143,7 +1147,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <div className="detail-spec-list" style={{ fontSize: '0.85rem', minWidth: 0 }}>
               <div className="detail-spec-row">
                 <span style={{ color: 'var(--text-secondary)' }}>Category</span>
-                <Link href={`/browse?category=${encodeURIComponent(server.category)}`} style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textAlign: 'right', minWidth: 0 }}>
+                <Link href={`/categories/${catSlug}`} style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textAlign: 'right', minWidth: 0 }}>
                   <span aria-hidden="true">{catMeta.emoji}</span>
                   <span style={{ overflowWrap: 'anywhere' }}>{catMeta.label}</span>
                 </Link>

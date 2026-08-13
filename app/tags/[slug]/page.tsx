@@ -24,12 +24,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const title = `${rawTag} MCP Servers & Tools`;
   const description = `Browse ${matched.length} Model Context Protocol (MCP) servers tagged with ${rawTag}. Find and install AI tools for ${rawTag}.`;
   const url = `https://allmcps.com/tags/${slug}`;
+  // Huge tag pages are mostly a filtered dump of the catalog; keep them
+  // crawlable via follow but don't spend index budget on 5MB HTML templates.
+  const noindexHuge = matched.length > 200;
 
   return {
     title,
     description,
+    ...(noindexHuge ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: url },
     openGraph: {
+      type: 'website',
       images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
       title: `${title} | AllMCPs`,
       description,
@@ -89,7 +94,7 @@ export default async function TagDetailPage({ params }: { params: Promise<{ slug
           </p>
         </div>
 
-        <DirectoryGrid initialServers={matched} variant="browse" />
+        <DirectoryGrid initialServers={matched.slice(0, 48)} variant="browse" />
       </div>
     </PageShell>
   );

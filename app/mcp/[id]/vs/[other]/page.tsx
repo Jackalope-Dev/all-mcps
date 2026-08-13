@@ -948,6 +948,7 @@ export default async function ComparePage({
                 <HelpCircle size={20} color="var(--brand-cyan)" /> Frequently Asked Questions
               </span>
             }
+            renderJsonLd={false}
             items={[
               {
                 question: `What is the main functional difference between ${nameL} and ${nameR}?`,

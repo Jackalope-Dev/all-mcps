@@ -4,6 +4,7 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   experimental: {
     useTypeScriptCli: true,
   },
@@ -16,7 +17,11 @@ const nextConfig: NextConfig = {
   // app/sitemap.ts metadata convention's reserved slot), so the sitemap index
   // route lives at /sitemap-index.xml and is rewritten to the public URL here.
   async rewrites() {
-    return [{ source: '/sitemap.xml', destination: '/sitemap-index.xml' }];
+    return [
+      { source: '/sitemap.xml', destination: '/sitemap-index.xml' },
+      { source: '/apple-touch-icon.png', destination: '/logo-icon.png' },
+      { source: '/apple-touch-icon-precomposed.png', destination: '/logo-icon.png' },
+    ];
   },
 };
 

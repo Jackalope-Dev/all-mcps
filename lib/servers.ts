@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers as serversTable, stdioVerificationPilot, serverHealthChecks, reviews, users } from '../db/schema';
-import { eq, desc, sql, and, ne, or, gt } from 'drizzle-orm';
+import { eq, desc, sql, and, ne, or, gt, inArray } from 'drizzle-orm';
 import serversData from '../data/mcp-servers.json';
 import { isFeaturedListing } from './featuredStatus';
 import { cleanListingDescription } from './description';
@@ -317,6 +317,40 @@ export async function getActiveServersLight(): Promise<Server[]> {
  * hints) — sorted and capped at the DB level so we never have to pull and
  * parse the entire catalog in the Worker just to keep the first 48.
  */
+/**
+ * Active servers matching the given ids, in the order requested (curated
+ * "starter stack" lists — client landers, etc.) — not sorted by recency.
+ * Any id with no active match is silently dropped, so callers should backfill
+ * (e.g. with getNewestActiveServers) if they need an exact count.
+ */
+export async function getServersByIds(ids: string[]): Promise<Server[]> {
+  if (ids.length === 0) return [];
+  let found: Server[] = [];
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx && ctx.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(and(inArray(serversTable.id, ids), eq(serversTable.status, 'active')));
+      found = rows.map((r) => normalizeServer(r as unknown as Server));
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+  if (found.length === 0) {
+    const all = serversData as unknown as Server[];
+    found = ids
+      .map((id) => all.find((s) => s.id === id))
+      .filter((s): s is Server => Boolean(s))
+      .map(normalizeServer);
+  }
+  const byId = new Map(found.map((s) => [s.id, s]));
+  return ids.map((id) => byId.get(id)).filter((s): s is Server => Boolean(s));
+}
+
 export async function getNewestActiveServers(limit: number): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');

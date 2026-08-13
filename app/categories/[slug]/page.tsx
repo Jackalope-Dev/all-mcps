@@ -362,6 +362,7 @@ export default async function CategoryLandingPage({
         <section style={{ marginTop: '4rem', paddingTop: '2.5rem', borderTop: '1px solid var(--border-color)' }}>
           <FaqSection
             title={`Frequently Asked Questions about ${label} MCP Servers`}
+            renderJsonLd={false}
             items={[
               {
                 question: `What are ${label} Model Context Protocol (MCP) servers?`,

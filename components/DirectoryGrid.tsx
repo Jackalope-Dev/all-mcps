@@ -24,7 +24,7 @@ import { OutboundLink } from './ui/OutboundLink';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
-import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel } from '../lib/categories';
+import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel, categorySlug } from '../lib/categories';
 import { compileQuery, scoreServerMatch, engagementScore, trendingScore } from '../lib/search';
 import { formatCommitAge, formatFullDate, formatCompactNumber } from '../lib/format';
 
@@ -140,7 +140,7 @@ export default function DirectoryGrid({
 
   const SEARCH_PLACEHOLDERS = useMemo(
     () => [
-      'Search 1,000+ MCP tools (e.g. GitHub, Postgres, Slack)...',
+      `Search ${typeof totalCount === 'number' && totalCount > 0 ? totalCount.toLocaleString() + '+' : '10,000+'} MCP tools (e.g. GitHub, Postgres, Slack)...`,
       'Try searching: "find latest btc prices"...',
       'Try searching: "check transit times & train schedules"...',
       'Try searching: "query postgres database"...',
@@ -148,7 +148,7 @@ export default function DirectoryGrid({
       'Try searching: "send slack notifications with AI"...',
       'Try searching: "fetch github pull requests & issues"...',
     ],
-    []
+    [totalCount]
   );
 
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -1035,7 +1035,7 @@ export default function DirectoryGrid({
               return (
                 <Link
                   key={catName}
-                  href={`/browse?category=${encodeURIComponent(catName)}`}
+                  href={`/categories/${categorySlug(catName)}`}
                   className={`category-card surface-interactive ${isSelected ? 'category-card-selected' : ''}`}
                   style={{
                     textAlign: 'left',

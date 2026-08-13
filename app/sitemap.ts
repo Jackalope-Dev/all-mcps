@@ -161,11 +161,6 @@ function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
   }));
 }
 
-// Mirrors MIN_SAME_CATEGORY_FOR_INDEX in app/mcp/[id]/alternatives/page.tsx: below
-// this many same-category peers, generateMetadata noindexes the page, so don't
-// spend crawl budget submitting it via the sitemap either.
-const MIN_SAME_CATEGORY_FOR_INDEX = 3;
-
 function buildSecondarySitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
   const byCategory = new Map<string, SitemapServer[]>();
   for (const s of servers) {
@@ -174,20 +169,9 @@ function buildSecondarySitemap(servers: SitemapServer[]): MetadataRoute.Sitemap 
     byCategory.get(cat)!.push(s);
   }
 
-  // Alternatives: indexable but lower priority — don't compete with core + listings.
-  // Skip servers in categories too small to give them enough real peers (see noindex
-  // guard in the alternatives page itself).
-  const alternatives: MetadataRoute.Sitemap = servers
-    .filter((server) => {
-      const peerCount = (byCategory.get(server.category || 'other')?.length ?? 1) - 1;
-      return peerCount >= MIN_SAME_CATEGORY_FOR_INDEX;
-    })
-    .map((server) => ({
-      url: `${BASE}/mcp/${server.id}/alternatives`,
-      lastModified: listingLastMod(server),
-      changeFrequency: 'weekly' as const,
-      priority: 0.45,
-    }));
+  // Alternatives pages are templated near-duplicates of the parent listing.
+  // They stay navigable but are noindexed (see alternatives/page.tsx) and are
+  // not submitted here — they were ~half of all sitemap URLs.
 
   // Compare pages: top engagement seeds × peers (capped).
   const engagement = (s: SitemapServer) =>
@@ -233,7 +217,7 @@ function buildSecondarySitemap(servers: SitemapServer[]): MetadataRoute.Sitemap 
     if (compareEntries.length >= 400) break;
   }
 
-  return [...alternatives, ...compareEntries];
+  return compareEntries;
 }
 
 export default async function sitemap(props: {

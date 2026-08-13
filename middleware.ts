@@ -119,6 +119,7 @@ export function middleware(req: NextRequest) {
       const url = req.nextUrl.clone();
       url.pathname = `/api/v1/mcp/${serverId}/markdown`;
       response = NextResponse.rewrite(url);
+      response.headers.set('X-Robots-Tag', 'noindex, follow');
     } else {
       response = NextResponse.next();
     }
@@ -170,8 +171,15 @@ export function middleware(req: NextRequest) {
     "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://www.googletagmanager.com https://*.posthog.com https://p.allmcps.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://*.posthog.com https://us-assets.i.posthog.com https://p.allmcps.com; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://*.posthog.com https://us.posthog.com https://p.allmcps.com;"
   );
 
-  // Prevent stale HTML from referencing outdated hashed CSS/JS bundles after deploys.
-  if (!pathname.startsWith('/api/') && acceptHeader.includes('text/html')) {
+  // Private app routes must not be cached. Public HTML should keep ISR /
+  // CDN s-maxage — Googlebot sends Accept: text/html, and a blanket no-store
+  // here was preventing cached listing/marketing pages from being reused.
+  const isPrivate =
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/verify-request');
+  if (isPrivate) {
     response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
   }
 

@@ -10,13 +10,11 @@ Disallow: /admin
 Disallow: /dashboard
 Disallow: /login
 Disallow: /verify-request
+Disallow: /browse?
 
-User-agent: GPTBot
 User-agent: ClaudeBot
 User-agent: PerplexityBot
-User-agent: Google-Extended
 User-agent: Amazonbot
-User-agent: Bytespider
 Allow: /
 Allow: /llms.txt
 Allow: /llms-full.txt
@@ -26,6 +24,15 @@ Allow: /api/mcp
 Disallow: /admin
 Disallow: /dashboard
 Disallow: /login
+
+# GPTBot, Google-Extended, and Bytespider are training-corpus crawlers first —
+# allowing them here would contradict the Content-Signal ai-train=no below.
+# (OpenAI/Google/ByteDance's separate retrieval agents — OAI-SearchBot,
+# Google-CloudVertexBot's search use, etc. — are not blocked by this rule.)
+User-agent: GPTBot
+User-agent: Google-Extended
+User-agent: Bytespider
+Disallow: /
 
 # Content Signals (https://contentsignals.org/ / draft-romm-aipref-contentsignals)
 # ai-input=yes: answer engines may ground/cite AllMCPs in generated responses.

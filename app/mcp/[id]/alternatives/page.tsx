@@ -20,7 +20,6 @@ import { FaqSection } from '../../../../components/ui/FaqSection';
 import {
   getServerById,
   getRelatedServers,
-  getSameCategoryAlternativesCount,
   type Server,
 } from '../../../../lib/servers';
 import { isFeaturedListing, isVerifiedListing } from '../../../../lib/featuredStatus';
@@ -31,9 +30,6 @@ import { AUTH_TYPE_LABELS, PRICING_MODEL_LABELS, type AuthType, type PricingMode
 
 const SITE = 'https://allmcps.com';
 const MAX = 12;
-// Below this, getRelatedServers() pads the page mostly with unrelated-category
-// fallbacks — thin/near-duplicate content not worth spending crawl budget on.
-const MIN_SAME_CATEGORY_FOR_INDEX = 3;
 
 function truncateName(name: string, max: number): string {
   if (name.length <= max) return name;
@@ -71,11 +67,12 @@ export async function generateMetadata({
   const description =
     rawDescription.length > 157 ? `${rawDescription.slice(0, 154)}...` : rawDescription;
   const url = `${SITE}/mcp/${server.id}/alternatives`;
-  const sameCategoryCount = await getSameCategoryAlternativesCount(server);
+  const parentUrl = `${SITE}/mcp/${server.id}`;
 
   return {
     title,
     description,
+    robots: { index: false, follow: true },
     keywords: [
       `alternatives to ${displayName}`,
       `${displayName} competitors`,
@@ -84,7 +81,7 @@ export async function generateMetadata({
       'Model Context Protocol',
       'AI tools',
     ].join(', '),
-    alternates: { canonical: url },
+    alternates: { canonical: parentUrl },
     openGraph: {
       type: 'article',
       images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
@@ -93,11 +90,6 @@ export async function generateMetadata({
       url,
     },
     twitter: { card: 'summary_large_image', title: withBrandSuffix(title), description },
-    // Too few real same-category peers — page exists for navigation but shouldn't
-    // be indexed until the category has enough listings to fill it out.
-    ...(sameCategoryCount < MIN_SAME_CATEGORY_FOR_INDEX
-      ? { robots: { index: false, follow: true } }
-      : {}),
   };
 }
 
@@ -495,6 +487,7 @@ export default async function AlternativesPage({
           <FaqSection
             items={faqItems}
             title={`Frequently Asked Questions: ${displayName} Alternatives`}
+            renderJsonLd={false}
           />
         </section>
       </main>
