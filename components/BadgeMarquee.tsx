@@ -172,6 +172,13 @@ const BADGES: DirectoryBadge[] = [
     name: 'Launched on Tiny Startups',
     href: 'https://www.tinystartups.com/startup/all-mcps',
     rel: 'noopener noreferrer'
+  },
+  {
+    id: 'showmebest',
+    name: 'Featured on ShowMeBestAI',
+    href: 'https://showmebest.ai',
+    imageUrl: 'https://showmebest.ai/badge/feature-badge-white.webp',
+    rel: 'noopener noreferrer'
   }
 ];
 
