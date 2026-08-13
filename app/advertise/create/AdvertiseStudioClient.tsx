@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
+import { PlacementContextPreview, type PlacementFrameType } from '../../../components/ads/PlacementContextPreview';
 import {
   AD_PLACEMENTS,
   CPM_TIERS,
@@ -30,7 +30,33 @@ import {
   Loader2,
   Trash2,
   Image as ImageIcon,
+  LayoutGrid,
+  PanelRight,
+  Rows3,
+  FileText,
 } from 'lucide-react';
+
+// Same 4 in-context frames PlacementShowcase renders on /advertise — kept in
+// sync with AD_PLACEMENTS' copy so the studio preview and the marketing page
+// describe each placement identically.
+const PREVIEW_FORMATS: { id: PlacementFrameType; icon: typeof LayoutGrid; tabLabel: string }[] = [
+  { id: 'directory_inline', icon: LayoutGrid, tabLabel: 'Directory Card' },
+  { id: 'detail_sidebar', icon: PanelRight, tabLabel: 'Sidebar Box' },
+  { id: 'header_banner', icon: Rows3, tabLabel: 'Category Banner' },
+  { id: 'blog_guide', icon: FileText, tabLabel: 'Article Banner' },
+];
+
+const CTA_PRESETS = [
+  'Learn More',
+  'Try Free',
+  'Get Started',
+  'Sign Up Free',
+  'Start Free Trial',
+  'Install Now',
+  'View Docs',
+  'Download Now',
+  'Explore Platform',
+];
 
 export function AdvertiseStudioClient({
   initialTier,
@@ -53,7 +79,10 @@ export function AdvertiseStudioClient({
   const [logoUrl, setLogoUrl] = useState('');
   const [logoFileName, setLogoFileName] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [ctaText, setCtaText] = useState('');
+  // Optional, so it starts on the same "Learn More" default SponsorAdUnit
+  // falls back to when no CTA is set (see previewAdData/handleSubmit below).
+  const [ctaText, setCtaText] = useState('Learn More');
+  const [isCustomCta, setIsCustomCta] = useState(false);
   const [advertiserEmail, setAdvertiserEmail] = useState('');
 
   // Volume & Bidding State
@@ -66,8 +95,8 @@ export function AdvertiseStudioClient({
   );
 
   // Live Preview Formats
-  const [activePreviewFormat, setActivePreviewFormat] = useState<AdPlacement>(
-    placement === 'all' ? 'directory_inline' : placement
+  const [activePreviewFormat, setActivePreviewFormat] = useState<PlacementFrameType>(
+    placement === 'all' ? 'directory_inline' : (placement as PlacementFrameType)
   );
 
   const [submitting, setSubmitting] = useState(false);
@@ -182,25 +211,97 @@ export function AdvertiseStudioClient({
     }
   };
 
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2.5rem', alignItems: 'start' }}>
-      {/* LEFT COLUMN: CREATION CONTROLS */}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-        {canceled && (
-          <div
-            style={{
-              padding: '0.75rem 1rem',
-              borderRadius: '10px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              color: '#f87171',
-              fontSize: '0.85rem',
-            }}
-          >
-            Checkout was canceled. You can adjust your campaign below and try again.
-          </div>
-        )}
+  const activeFormatMeta = AD_PLACEMENTS[activePreviewFormat];
 
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+      {canceled && (
+        <div
+          style={{
+            padding: '0.75rem 1rem',
+            borderRadius: '10px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            color: '#f87171',
+            fontSize: '0.85rem',
+          }}
+        >
+          Checkout was canceled. You can adjust your campaign below and try again.
+        </div>
+      )}
+
+      {/* LIVE MULTI-FORMAT PREVIEW — same in-context frames as /advertise's
+          placement showcase, fed with this campaign's live form data. */}
+      <div>
+        <div
+          className="directory-segmented"
+          style={{ justifyContent: 'center', margin: '0 auto 1rem', width: 'fit-content', flexWrap: 'wrap' }}
+          role="tablist"
+          aria-label="Ad placement formats"
+        >
+          {PREVIEW_FORMATS.map((format) => {
+            const Icon = format.icon;
+            const isActive = format.id === activePreviewFormat;
+            return (
+              <button
+                key={format.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`directory-segmented-btn ${isActive ? 'is-active' : ''}`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                onClick={() => setActivePreviewFormat(format.id)}
+              >
+                <Icon size={14} /> {format.tabLabel}
+              </button>
+            );
+          })}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            marginBottom: '1rem',
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          <Info size={14} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Every campaign already includes all 4 placements — this switcher just previews how your ad will look in each spot.
+          </span>
+        </div>
+
+        <div className="surface" style={{ borderRadius: '16px', padding: '1.75rem', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.35rem' }}>
+            <Eye size={16} style={{ color: 'var(--accent-color)' }} />
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{activeFormatMeta.name}</h3>
+          </div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem', lineHeight: 1.45 }}>
+            {activeFormatMeta.description}
+          </p>
+          <PlacementContextPreview placement={activePreviewFormat} previewAd={previewAdData} />
+
+          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              <ShieldCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
+              <span>
+                All ads clearly display a <strong>Sponsored</strong> label to maintain community trust and high engagement.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+        {/* Ad Creative & Volume/Bidding side by side */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', alignItems: 'start' }}>
         {/* Step 1: Ad Creative Details */}
         <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.25rem' }}>
@@ -247,15 +348,42 @@ export function AdvertiseStudioClient({
               style={{ resize: 'none' }}
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <Input
-                label="CTA Button Text"
-                type="text"
-                maxLength={25}
-                value={ctaText}
-                onChange={(e) => setCtaText(e.target.value)}
-                placeholder="e.g. Try Free"
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start' }}>
+              <div>
+                <Select
+                  label="CTA Button Text"
+                  value={isCustomCta ? 'Other' : ctaText}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'Other') {
+                      setIsCustomCta(true);
+                      setCtaText('');
+                    } else {
+                      setIsCustomCta(false);
+                      setCtaText(val);
+                    }
+                  }}
+                >
+                  {CTA_PRESETS.map((preset) => (
+                    <option key={preset} value={preset}>
+                      {preset}
+                    </option>
+                  ))}
+                  <option value="Other">Other (custom)</option>
+                </Select>
+
+                {isCustomCta && (
+                  <Input
+                    type="text"
+                    maxLength={25}
+                    value={ctaText}
+                    onChange={(e) => setCtaText(e.target.value)}
+                    placeholder="Enter custom CTA text"
+                    style={{ marginTop: '0.5rem' }}
+                    autoFocus
+                  />
+                )}
+              </div>
               <Input
                 label="Target Destination URL *"
                 type="url"
@@ -553,6 +681,7 @@ export function AdvertiseStudioClient({
             />
           </div>
         </div>
+        </div>
 
         {/* Step 3: Checkout Summary */}
         <div
@@ -601,60 +730,6 @@ export function AdvertiseStudioClient({
           </button>
         </div>
       </form>
-
-      {/* RIGHT COLUMN: LIVE MULTI-FORMAT PREVIEW */}
-      <div style={{ position: 'sticky', top: 'calc(var(--header-height) + 1rem)' }}>
-        <div className="surface" style={{ borderRadius: '16px', padding: '1.5rem', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
-            <Eye size={16} style={{ color: 'var(--accent-color)' }} />
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Live Multi-Format Preview</h3>
-          </div>
-
-          {/* Format Switcher Tabs */}
-          <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1.25rem', overflowX: 'auto', paddingBottom: '4px' }}>
-            {(['directory_inline', 'detail_sidebar', 'header_banner', 'blog_guide'] as AdPlacement[]).map((fmt) => (
-              <button
-                key={fmt}
-                type="button"
-                onClick={() => setActivePreviewFormat(fmt)}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  background: activePreviewFormat === fmt ? 'rgba(0, 229, 255, 0.15)' : 'transparent',
-                  border: activePreviewFormat === fmt ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                  color: activePreviewFormat === fmt ? 'var(--accent-color)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                }}
-              >
-                {fmt === 'directory_inline'
-                  ? 'Directory Card'
-                  : fmt === 'detail_sidebar'
-                  ? 'Sidebar Box'
-                  : fmt === 'header_banner'
-                  ? 'Category Banner'
-                  : 'Article Banner'}
-              </button>
-            ))}
-          </div>
-
-          {/* Active Preview Render */}
-          <div style={{ minHeight: '240px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <SponsorAdUnit placement={activePreviewFormat} previewAd={previewAdData} />
-          </div>
-
-          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              <ShieldCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
-              <span>
-                All ads clearly display a <strong>Sponsored</strong> label to maintain community trust and high engagement.
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

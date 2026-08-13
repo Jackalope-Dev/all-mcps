@@ -3477,6 +3477,15 @@ nav[aria-label="Table of contents"] {
   color: #ffffff;
 }
 
+/* Explicit is-active + hover combo (higher specificity than either alone)
+   so the gradient never fades toward the plain :hover background — that
+   left white text with too little contrast. */
+.directory-segmented-btn.is-active:hover {
+  background: var(--brand-gradient);
+  filter: brightness(0.9);
+  color: #ffffff;
+}
+
 .directory-segmented-icon {
   display: inline-flex;
   align-items: center;
@@ -5310,6 +5319,18 @@ nav[aria-label="Table of contents"] {
   color: #ffffff;
 }
 
+/* [data-theme="light"] .directory-segmented-btn:hover above has the same
+   specificity as the plain .is-active:hover rule and sits later in the
+   cascade, so it was winning and fading the active tab's gradient back to
+   the faint hover tint on light theme — same white-text-on-light-background
+   contrast bug reported for hover. This attribute-qualified rule has one
+   more selector than either, so it wins in both themes unconditionally. */
+[data-theme="light"] .directory-segmented-btn.is-active:hover {
+  background: var(--brand-gradient);
+  filter: brightness(0.92);
+  color: #ffffff;
+}
+
 [data-theme="light"] .btn-submit-noticeable {
   background: linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(0, 82, 204, 0.08));
   border: 1px solid rgba(2, 132, 199, 0.4);
@@ -6402,7 +6423,7 @@ nav[aria-label="Table of contents"] {
 .advertise-pricing-hero {
   border-radius: var(--radius-xl, 20px);
   padding: 3rem 2.25rem;
-  margin-bottom: 4.5rem;
+  margin-bottom: 3rem;
   border: 1px solid var(--border-color);
   background: radial-gradient(ellipse at top center, rgba(0, 229, 255, 0.08) 0%, rgba(99, 102, 241, 0.06) 45%, var(--bg-elevated) 100%);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);

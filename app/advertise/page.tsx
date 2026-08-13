@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 const AD_FAQS = [
   {
     q: 'Do I need to buy each placement separately?',
-    a: 'No! All 5 website placements and AI agent query feeds are included automatically with every campaign. Your ad rotates seamlessly across directory listings, tool inspector sidebars, category headers, guide tutorials, and MCP protocol responses — you simply choose how many impressions you want.',
+    a: 'No! All 4 website placements and AI agent query feeds are included automatically with every campaign. Your ad rotates seamlessly across directory listings, tool inspector sidebars, category headers, guide tutorials, and MCP protocol responses — you simply choose how many impressions you want.',
   },
   {
     q: 'Who visits AllMCPs?',
@@ -67,13 +67,13 @@ export default function AdvertiseLandingPage() {
   return (
     <PageShell variant="default">
       {/* Hero Section */}
-      <div style={{ textAlign: 'center', maxWidth: '820px', margin: '1.5rem auto 3.5rem' }}>
+      <div style={{ textAlign: 'center', maxWidth: '820px', margin: '1.5rem auto 2rem' }}>
         <h1 style={{ fontSize: '2.75rem', fontWeight: 800, lineHeight: 1.15, margin: '0 0 1.25rem' }}>
-          Put your product in front of <span className="wordmark-all">AI Developers</span> &amp; Engineers
+          Put your product in front of <span className="wordmark-all">AI Developers</span>{' '}&amp; Engineers
         </h1>
 
         <p style={{ fontSize: '1.15rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 2rem' }}>
-          AllMCPs is the definitive directory for Model Context Protocol servers. Every campaign automatically runs across <strong>all 5 website placements and AI agent query feeds</strong> — simply choose your impression volume with a 100% delivery guarantee.
+          AllMCPs is the definitive directory for Model Context Protocol servers. Every campaign automatically runs across <strong>all 4 website placements and AI agent query feeds</strong> — simply choose your impression volume with a 100% delivery guarantee.
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
@@ -105,7 +105,7 @@ export default function AdvertiseLandingPage() {
         style={{
           borderRadius: '18px',
           padding: '2.25rem 2rem',
-          marginBottom: '1.5rem',
+          marginBottom: '1.15rem',
           border: '1px solid var(--border-color)',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -168,7 +168,7 @@ export default function AdvertiseLandingPage() {
         style={{
           borderRadius: '16px',
           padding: '1.25rem 1.75rem',
-          marginBottom: '4.5rem',
+          marginBottom: '3rem',
           border: '1px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
@@ -214,7 +214,7 @@ export default function AdvertiseLandingPage() {
       </div>
 
       {/* Placements Showcase */}
-      <div id="placements" style={{ marginBottom: '4.5rem' }}>
+      <div id="placements" style={{ marginBottom: '3rem' }}>
         <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 2.5rem' }}>
           <h2 style={{ fontSize: '1.85rem', fontWeight: 800, margin: '0 0 0.5rem' }}>All Placements Included Automatically</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0, lineHeight: 1.55 }}>
@@ -231,7 +231,7 @@ export default function AdvertiseLandingPage() {
         style={{
           borderRadius: '18px',
           padding: '2.5rem 2rem',
-          marginBottom: '4.5rem',
+          marginBottom: '3rem',
           border: '1px solid var(--border-color)',
           background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.04), rgba(99, 102, 241, 0.04))',
         }}
@@ -302,7 +302,7 @@ export default function AdvertiseLandingPage() {
             Choose Your Delivery Speed &amp; Priority
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.975rem', margin: 0, lineHeight: 1.55 }}>
-            Purchase impression blocks starting at just 1,000 impressions. Every tier automatically includes all 5 website placements and AI agent query feeds — choose your CPM tier based on delivery priority.
+            Purchase impression blocks starting at just 1,000 impressions. Every tier automatically includes all 4 website placements and AI agent query feeds — choose your CPM tier based on delivery priority.
           </p>
         </div>
 
@@ -347,7 +347,7 @@ export default function AdvertiseLandingPage() {
                   <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <CheckCircle2 size={15} style={{ color: '#34d399', flexShrink: 0 }} /> All 5 placements &amp; AI queries included
+                        <CheckCircle2 size={15} style={{ color: '#34d399', flexShrink: 0 }} /> All 4 placements &amp; AI queries included
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <CheckCircle2 size={15} style={{ color: '#34d399', flexShrink: 0 }} /> 1,000 impression minimum

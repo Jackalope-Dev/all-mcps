@@ -312,7 +312,7 @@ export default async function CampaignDashboardPage({
         </div>
         <div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Distribution</div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>All 5 Placements + AI</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>All 4 Placements + AI</div>
         </div>
         <div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>CPM Bid Priority</div>

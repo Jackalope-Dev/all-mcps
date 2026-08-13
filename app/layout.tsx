@@ -95,9 +95,21 @@ export default function RootLayout({
   return (
     <html lang="en" className={sans.variable} suppressHydrationWarning>
       <head>
-        <Script
+        {/*
+          A plain <script> tag (not next/script) on purpose: this Next.js version's
+          own docs (node_modules/next/dist/docs/.../script.md) say beforeInteractive
+          scripts are "preloaded and fetched before any first-party code, but their
+          execution does not block page hydration" — internally they're inserted via
+          appBootstrap's loadScriptsInSequence (client JS creating a <script> element
+          and appending it to <head>), not a literal blocking tag in the served HTML.
+          That let the browser paint the CSS-default dark theme (see :root in
+          globals.css) before this ran and flipped data-theme, causing a flash.
+          A raw <script> written directly into the SSR'd HTML has none of that
+          indirection — the browser executes it synchronously while parsing <head>,
+          before body content paints.
+        */}
+        <script
           id="theme-init"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
