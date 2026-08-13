@@ -477,17 +477,41 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               <div className="detail-title-badges">
                 <a href="#reviews" style={{ textDecoration: 'none' }}>
                   <IconTooltip
-                    label={reviewSummary.count > 0 ? `${reviewSummary.avgRating.toFixed(1)} stars out of 5 (${reviewSummary.count} ${reviewSummary.count === 1 ? 'review' : 'reviews'})` : 'No ratings yet — click to review'}
+                    label={
+                      reviewSummary.count > 0
+                        ? `${reviewSummary.avgRating.toFixed(1)} stars out of 5 (${reviewSummary.count} ${reviewSummary.count === 1 ? 'rating' : 'ratings'})`
+                        : 'No ratings yet — click to review'
+                    }
                     trigger={
-                      <Badge variant="default" className="mcp-trust-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                        <Star size={13} fill={reviewSummary.count > 0 ? '#fbbf24' : 'none'} color={reviewSummary.count > 0 ? '#fbbf24' : 'var(--text-secondary)'} />
-                        <span className="mcp-trust-badge-label" style={{ fontWeight: 600 }}>
-                          {reviewSummary.count > 0 ? `${reviewSummary.avgRating.toFixed(1)}` : 'No ratings'}
+                      <span className="mcp-rating-header-badge">
+                        <span style={{ display: 'inline-flex', gap: '2px', alignItems: 'center' }}>
+                          {[1, 2, 3, 4, 5].map((n) => {
+                            const isFilled = reviewSummary.count > 0 && n <= Math.round(reviewSummary.avgRating);
+                            return (
+                              <Star
+                                key={n}
+                                size={12}
+                                fill={isFilled ? '#fbbf24' : 'none'}
+                                color={isFilled ? '#fbbf24' : 'var(--border-strong)'}
+                              />
+                            );
+                          })}
                         </span>
-                        {reviewSummary.count > 0 && (
-                          <span style={{ opacity: 0.75, fontSize: '0.75rem', fontWeight: 400 }}>({reviewSummary.count})</span>
+                        {reviewSummary.count > 0 ? (
+                          <>
+                            <span style={{ fontWeight: 700, marginLeft: '0.15rem' }}>
+                              {reviewSummary.avgRating.toFixed(1)}
+                            </span>
+                            <span style={{ opacity: 0.7, fontSize: '0.76rem', fontWeight: 500 }}>
+                              ({reviewSummary.count})
+                            </span>
+                          </>
+                        ) : (
+                          <span style={{ opacity: 0.7, fontSize: '0.78rem', fontWeight: 500, marginLeft: '0.15rem' }}>
+                            No ratings
+                          </span>
                         )}
-                      </Badge>
+                      </span>
                     }
                   >
                     <span className="mcp-icon-tooltip-title">

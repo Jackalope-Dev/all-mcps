@@ -5128,6 +5128,33 @@ nav[aria-label="Table of contents"] {
   font-weight: 500;
 }
 
+.mcp-rating-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+  background: #000000;
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.mcp-rating-header-badge:hover {
+  border-color: #fbbf24;
+}
+
+[data-theme="light"] .mcp-rating-header-badge {
+  background: #ffffff;
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
 [data-theme="light"] .nl-chip:hover {
   background: rgba(2, 132, 199, 0.12);
   color: #0369a1;
