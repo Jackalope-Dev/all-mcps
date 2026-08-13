@@ -166,6 +166,12 @@ const BADGES: DirectoryBadge[] = [
     href: 'https://buildlist.io',
     imageUrl: 'https://buildlist.io/badge.svg',
     rel: 'noopener'
+  },
+  {
+    id: 'tinystartups',
+    name: 'Launched on Tiny Startups',
+    href: 'https://www.tinystartups.com/startup/all-mcps',
+    rel: 'noopener noreferrer'
   }
 ];
 

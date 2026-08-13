@@ -313,7 +313,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
     '@graph': [
       {
         '@type': 'SoftwareApplication',
-        name: server.name,
+        name: displayName,
         description: server.description,
         url: canonicalUrl,
         mainEntityOfPage: canonicalUrl,

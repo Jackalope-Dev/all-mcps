@@ -56,6 +56,65 @@ export function SiteFooter() {
               </svg>
             </a>
           </div>
+          <div style={{ marginTop: '1.25rem' }}>
+            {/* tinystartups · Launched on Tiny Startups (solid) */}
+            <a
+              href="https://www.tinystartups.com/startup/all-mcps"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '14px',
+                padding: '16px 24px 16px 20px',
+                borderRadius: '14px',
+                textDecoration: 'none',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                background: 'linear-gradient(135deg, #3525E6, #D81FE0, #22B8F0)',
+                color: '#fff',
+              }}
+            >
+              <svg width="56" height="56" viewBox="0 0 100 100">
+                <path
+                  d="M50 6C52 32 68 48 94 50C68 52 52 68 50 94C48 68 32 52 6 50C32 48 48 32 50 6Z"
+                  fill="#ffffff"
+                />
+              </svg>
+              <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+                <span
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.75)',
+                  }}
+                >
+                  Launched on
+                </span>
+                <span
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    letterSpacing: '-0.025em',
+                    color: '#fff',
+                  }}
+                >
+                  Tiny Startups
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: 'rgba(255,255,255,0.75)',
+                    marginTop: '4px',
+                  }}
+                >
+                  tinystartups.com
+                </span>
+              </span>
+            </a>
+          </div>
         </div>
 
         <nav aria-label="Explore">

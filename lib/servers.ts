@@ -318,6 +318,46 @@ export async function getActiveServersLight(): Promise<Server[]> {
  * parse the entire catalog in the Worker just to keep the first 48.
  */
 /**
+ * The general-purpose "install these first" stack shown on client landers
+ * (/mcp-for-cursor, /mcp-for-claude-desktop, etc.) — real, well-known servers
+ * people actually search for, not whatever was submitted most recently.
+ * Ordered roughly by how often a new MCP setup reaches for it.
+ */
+export const CURATED_STARTER_STACK_IDS: string[] = [
+  'github-github-mcp-server', // GitHub, official
+  'filesystem', // Filesystem
+  'crystaldba-postgres-mcp', // Postgres
+  'microsoft-playwright-mcp', // Playwright, official (Microsoft)
+  'upstash-context7', // Context7
+  'fetch', // Fetch
+  'korotovsky-slack-mcp-server', // Slack
+  'hashicorp-terraform-mcp-server', // Terraform, official
+  'firecrawl-firecrawl-mcp-server', // Firecrawl, official
+  'mcp-121', // Notion, official (makenotion/notion-next)
+  'tacticlaunch-mcp-linear', // Linear
+  'getsentry-sentry-mcp', // Sentry, official
+];
+
+/**
+ * Curated starter stack, backfilled with the newest active listings if any
+ * curated id is missing/inactive so callers always get `limit` servers.
+ */
+export async function getCuratedStarterServers(limit = 12): Promise<Server[]> {
+  const curated = await getServersByIds(CURATED_STARTER_STACK_IDS.slice(0, limit));
+  if (curated.length >= limit) return curated.slice(0, limit);
+  const seen = new Set(curated.map((s) => s.id));
+  const fill = await getNewestActiveServers(limit - curated.length + seen.size);
+  for (const s of fill) {
+    if (curated.length >= limit) break;
+    if (!seen.has(s.id)) {
+      curated.push(s);
+      seen.add(s.id);
+    }
+  }
+  return curated;
+}
+
+/**
  * Active servers matching the given ids, in the order requested (curated
  * "starter stack" lists — client landers, etc.) — not sorted by recency.
  * Any id with no active match is silently dropped, so callers should backfill

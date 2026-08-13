@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronRight, Sparkles, BookOpen } from 'lucide-react';
-import { getNewestActiveServers } from '@/lib/servers';
+import { getCuratedStarterServers } from '@/lib/servers';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ClineMcpPage() {
-  const topServers = await getNewestActiveServers(12);
+  const topServers = await getCuratedStarterServers(12);
   const client = mcpClientBySlug('cline');
 
   const jsonLd = {
