@@ -2,10 +2,11 @@ name: 🩺 Backfill Health Checks
 
 # Manual-only. Drains the health-check backlog (GitHub reachability/archived
 # status, remote-endpoint probing, install hints) by looping the
-# /api/cron/health endpoint. The Cloudflare Worker cron already runs this
-# every 15 min via health-check.yml — this workflow is for catching up fast
-# after a large import (e.g. the weekly registry-sync) instead of waiting
-# days for the passive 15-min cadence to cycle through every listing once.
+# /api/cron/health endpoint. The Cloudflare Worker already runs this every
+# 15 min via its own "*/15 * * * *" cron trigger (see custom-worker.ts
+# FAST_JOBS) — this workflow is for catching up fast after a large import
+# (e.g. the weekly registry-sync) instead of waiting days for the passive
+# 15-min cadence to cycle through every listing once.
 #
 # Unlike backfill-ai-content.yml, this endpoint has no "backlog empty" signal
 # to stop on — it's a continuous freshness-refresh cron (orderBy lastCheckedAt

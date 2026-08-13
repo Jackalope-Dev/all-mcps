@@ -1,10 +1,11 @@
 // Custom Worker entrypoint.
 //
 // OpenNext generates `.open-next/worker.js`, which only exports a `fetch`
-// handler. Our `wrangler.jsonc` also declares a cron trigger ("0 */4 * * *"),
-// and Cloudflare invokes cron triggers through a `scheduled()` handler. Because
-// the generated worker has no `scheduled()` export, every cron tick failed with
-// "Handler does not export a scheduled() function".
+// handler. Our `wrangler.jsonc` also declares two cron triggers
+// ("0 */4 * * *" and "*/15 * * * *"), and Cloudflare invokes cron triggers
+// through a `scheduled()` handler. Because the generated worker has no
+// `scheduled()` export, every cron tick failed with "Handler does not
+// export a scheduled() function".
 //
 // This wrapper re-exports OpenNext's `fetch` unchanged and adds a `scheduled()`
 // handler that re-dispatches each cron job back through the same in-process
@@ -26,18 +27,27 @@ type CronJob = {
    */
   secretVar: "ADMIN_SECRET";
   /**
-   * Optional gate. The cron fires every 4 hours; jobs without a gate run on
-   * every tick. Jobs with a gate only run on ticks where it returns true.
+   * Optional gate. Jobs without a gate run on every tick of whichever
+   * schedule they belong to (FAST_JOBS or SLOW_JOBS below). Jobs with a gate
+   * only run on ticks where it also returns true.
    */
   shouldRun?: (now: Date) => boolean;
 };
 
-const CRON_JOBS: CronJob[] = [
-  // Rechecks listing health, badges, stars and npm downloads. Fine every 4h.
+// Runs every 15 min (wrangler.jsonc "*/15 * * * *") — these two used to be
+// driven by a GitHub Actions workflow on the same cadence (health-check.yml,
+// removed) until GH Actions usage limits forced everything cron-shaped onto
+// this Worker instead.
+const FAST_JOBS: CronJob[] = [
+  // Rechecks listing health, badges, stars and npm downloads.
   { path: "/api/cron/health", secretVar: "ADMIN_SECRET" },
   // Catalog quality: website/homepage, logos, install hints, clean scrape chrome,
   // unpublish archived/404 GitHub repos. Every tick until the catalog is enriched.
   { path: "/api/cron/enrich", secretVar: "ADMIN_SECRET" },
+];
+
+// Runs every 4h (wrangler.jsonc "0 */4 * * *").
+const SLOW_JOBS: CronJob[] = [
   // AI content layer: unique summary/overview/use-cases/features per listing. Every
   // tick until the catalog is enriched, then no-ops. For the initial backlog, drive
   // scripts/backfill-ai-content.mjs against this endpoint to drain it faster.
@@ -122,9 +132,15 @@ export default {
   ): Promise<void> {
     const now = new Date(controller.scheduledTime);
 
+    // `controller.cron` is the pattern (from wrangler.jsonc) that fired this
+    // tick, so each schedule only runs its own job list — otherwise the two
+    // triggers would double-run health/enrich every 4h (both patterns match
+    // at :00 past the hour on 4h boundaries).
+    const jobs = controller.cron === "*/15 * * * *" ? FAST_JOBS : SLOW_JOBS;
+
     // Run sequentially so overlapping D1 writes / third-party rate limits stay
     // predictable, and so one failing job never blocks the others.
-    for (const job of CRON_JOBS) {
+    for (const job of jobs) {
       if (job.shouldRun && !job.shouldRun(now)) continue;
       await runCronJob(job, env, ctx);
     }

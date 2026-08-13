@@ -34,7 +34,11 @@
     }
   ],
   "triggers": {
-    "crons": ["0 */4 * * *"]
+    // "0 */4 * * *" drives the slow jobs (ai-content, ai-faq, vector-index,
+    // highlight, isr-cache-cleanup, indexnow, newsletter-digest).
+    // "*/15 * * * *" drives health + enrich at the faster cadence they need —
+    // see custom-worker.ts for how the two schedules are split.
+    "crons": ["0 */4 * * *", "*/15 * * * *"]
   },
   "d1_databases": [
     {

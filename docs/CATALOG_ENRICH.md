@@ -14,10 +14,12 @@ Both require `Authorization: Bearer <ADMIN_SECRET>`.
 
 ## Triggers
 
-1. **Cloudflare Worker cron** (`custom-worker.ts`, every 4 hours) — health + enrich (+ highlight, etc.).
-2. **GitHub Actions** `.github/workflows/health-check.yml` (every 15 minutes) — curls health, then enrich.
-
-Actions only authenticate **to AllMCPs** with the repo secret `ADMIN_SECRET`. They do not call the GitHub API themselves.
+Both routes are driven entirely by the Cloudflare Worker's own cron triggers (`custom-worker.ts`,
+`FAST_JOBS`) on the `*/15 * * * *` schedule declared in `wrangler.jsonc` — no GitHub Actions
+involved. (They used to also be pinged every 15 min by `.github/workflows/health-check.yml`, until
+that was retired in favor of the Worker's own faster trigger to cut GitHub Actions usage.) Manual
+backfill of a large backlog still goes through GitHub Actions — see `backfill-health.yml` /
+`backfill-enrich.yml`, which loop these same endpoints on demand.
 
 ## `GITHUB_TOKEN` (Cloudflare Worker only)
 

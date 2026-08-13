@@ -70,9 +70,9 @@ const BATCH_SIZE = 50;
 const POPULAR_STALE_MS = 3 * 24 * 60 * 60 * 1000;
 /**
  * Bounds server_health_checks per listing — see db/schema.ts for why. The
- * cron runs every 15min (.github/workflows/health-check.yml), so 96 covers a
- * full day of history — enough to actually show a trend, not just the last
- * few hours.
+ * cron runs every 15min (custom-worker.ts FAST_JOBS), so 96 covers a full
+ * day of history — enough to actually show a trend, not just the last few
+ * hours.
  */
 const HEALTH_HISTORY_LIMIT = 96;
 

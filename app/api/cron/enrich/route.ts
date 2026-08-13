@@ -43,9 +43,9 @@ import { getGithubToken } from '../../../../lib/githubAuth';
 // decode/resize/encode passes (README image → favicon → org/user avatar
 // cascade); a large batch risks exceeding the Worker's per-request CPU
 // budget and getting killed with a bare 503 before any response body is
-// written. GitHub Actions now pings this every 15 min (see
-// .github/workflows/health-check.yml), so a smaller batch still drains the
-// backlog quickly without the risk.
+// written. The Worker's own cron now pings this every 15 min (see
+// custom-worker.ts FAST_JOBS), so a smaller batch still drains the backlog
+// quickly without the risk.
 const BATCH_SIZE = 15;
 
 /** Safely writes an asset to R2 without throwing when concurrent jobs write to the same key. */

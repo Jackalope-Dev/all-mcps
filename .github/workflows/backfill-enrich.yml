@@ -2,10 +2,11 @@ name: 🧹 Backfill Catalog Enrich
 
 # Manual-only. Drains the catalog-quality backlog (websites, logos, install
 # hints, description cleanup, unpublish offline-404/archived GitHub repos) by
-# looping the /api/cron/enrich endpoint. The Cloudflare Worker cron already
-# runs this every 15 min via health-check.yml — this workflow is for catching
-# up fast after a large import instead of waiting days for the passive
-# 15-min cadence. See backfill-health.yml for why this loops a fixed number
+# looping the /api/cron/enrich endpoint. The Cloudflare Worker already runs
+# this every 15 min via its own "*/15 * * * *" cron trigger (see
+# custom-worker.ts FAST_JOBS) — this workflow is for catching up fast after a
+# large import instead of waiting days for the passive 15-min cadence. See
+# backfill-health.yml for why this loops a fixed number
 # of rounds rather than waiting for a "backlog empty" signal (this endpoint
 # doesn't have one — it's a continuous freshness-refresh cron). Uses the
 # existing ADMIN_SECRET repo secret.
