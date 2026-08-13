@@ -62,6 +62,7 @@ export function SiteFooter() {
               href="https://www.tinystartups.com/startup/all-mcps"
               target="_blank"
               rel="noopener noreferrer"
+              className="tinystartups-badge"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -72,15 +73,17 @@ export function SiteFooter() {
                 fontFamily: "'Inter', system-ui, sans-serif",
                 background: 'linear-gradient(135deg, #3525E6, #D81FE0, #22B8F0)',
                 color: '#fff',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
               }}
             >
-              <svg width="56" height="56" viewBox="0 0 100 100">
+              <svg width="56" height="56" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
                 <path
                   d="M50 6C52 32 68 48 94 50C68 52 52 68 50 94C48 68 32 52 6 50C32 48 48 32 50 6Z"
                   fill="#ffffff"
                 />
               </svg>
-              <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+              <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, whiteSpace: 'nowrap' }}>
                 <span
                   style={{
                     fontFamily: 'monospace',
@@ -89,6 +92,7 @@ export function SiteFooter() {
                     letterSpacing: '0.18em',
                     textTransform: 'uppercase',
                     color: 'rgba(255,255,255,0.75)',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   Launched on
@@ -99,6 +103,7 @@ export function SiteFooter() {
                     fontWeight: 800,
                     letterSpacing: '-0.025em',
                     color: '#fff',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   Tiny Startups
@@ -108,6 +113,7 @@ export function SiteFooter() {
                     fontSize: '11px',
                     color: 'rgba(255,255,255,0.75)',
                     marginTop: '4px',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   tinystartups.com
