@@ -93,7 +93,14 @@ export async function POST(request: Request) {
           invoice_creation: { enabled: true },
           success_url: `${appUrl}/advertise/campaign/${adId}?payment=success`,
           cancel_url: `${appUrl}/advertise/create?canceled=1`,
-        });
+          // Managed Payments (on by default) requires a tax_code on every product,
+          // but this line item's product is generated fresh per-campaign with no
+          // Stripe Dashboard config to attach one to. Disabling it here (Stripe's
+          // own suggested fix) reverts this session to standard checkout instead of
+          // guessing a tax classification. Only affects ad checkout — other flows
+          // use pre-configured Stripe Prices, not ad-hoc price_data.
+          managed_payments: { enabled: false },
+        } as any);
 
         // Insert pending ad row linked to Stripe session
         await db.insert(sponsorAds).values({

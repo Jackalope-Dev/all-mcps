@@ -67,7 +67,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       invoice_creation: { enabled: true },
       success_url: `${appUrl}/advertise/campaign/${ad.id}?payment=success`,
       cancel_url: `${appUrl}/advertise/create?canceled=1`,
-    });
+      // See app/api/ads/create/route.ts — Managed Payments requires a tax_code
+      // on every product, but this ad-hoc per-campaign product has none to attach
+      // one to. Disabling it here is Stripe's own suggested remediation.
+      managed_payments: { enabled: false },
+    } as any);
 
     await db
       .update(sponsorAds)
