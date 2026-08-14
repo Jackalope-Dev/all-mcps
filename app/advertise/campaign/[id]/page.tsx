@@ -28,7 +28,6 @@ import {
   CalendarDays,
   Repeat,
   Trophy,
-  Timer,
   XCircle,
   RefreshCw,
   Target,
