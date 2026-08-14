@@ -254,6 +254,17 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'mcp-server';
 
+  // Whether this listing carries a real, supplied description rather than the
+  // insert-time sentinel (submit routes default an omitted description to
+  // 'No description provided.'). There's no stored provenance flag distinguishing
+  // a submitter-typed description from a scraped GitHub one — both land in the same
+  // column — so a substantive, non-sentinel value is the best available signal that
+  // the summary above is genuine listing content. When it is, we drop the apologetic
+  // "we couldn't pull a README, so this comes from listing details" chrome below.
+  const hasSuppliedDescription =
+    server.description.trim().length > 0 &&
+    server.description.trim() !== 'No description provided.';
+
   // Human-readable repo host (e.g. "GitHub", "GitLab") for the no-README fallback copy.
   const repoHost = (() => {
     try {
@@ -1043,22 +1054,26 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                       {displayName} is a {server.category} MCP server{org ? ` from ${org}` : ''} listed on
                       AllMCPs. {server.description}
                     </p>
-                    <p>
-                      We couldn&rsquo;t automatically pull a README for this listing
-                      {repoHost ? ` from ${repoHost}` : ''}, so the summary above comes from its listing
-                      details. To install it, use the one-click buttons or copy the config from the{' '}
-                      <a href="#quick-install">Quick Install</a> section above, then open the{' '}
-                      <OutboundLink
-                        href={server.url}
-                        destinationType="github"
-                        serverId={server.id}
-                        target="_blank"
-                        rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
-                      >
-                        source repository
-                      </OutboundLink>{' '}
-                      for full setup instructions, configuration options, and the tools it exposes over MCP.
-                    </p>
+                    {/* When the listing already has a supplied description, this apologetic
+                        "no README" chrome is redundant with the sentence above — hide it. */}
+                    {!hasSuppliedDescription && (
+                      <p>
+                        We couldn&rsquo;t automatically pull a README for this listing
+                        {repoHost ? ` from ${repoHost}` : ''}, so the summary above comes from its listing
+                        details. To install it, use the one-click buttons or copy the config from the{' '}
+                        <a href="#quick-install">Quick Install</a> section above, then open the{' '}
+                        <OutboundLink
+                          href={server.url}
+                          destinationType="github"
+                          serverId={server.id}
+                          target="_blank"
+                          rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+                        >
+                          source repository
+                        </OutboundLink>{' '}
+                        for full setup instructions, configuration options, and the tools it exposes over MCP.
+                      </p>
+                    )}
                   </>
                 )}
               </div>
