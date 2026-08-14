@@ -1,9 +1,16 @@
 name: Submit Pages to IndexNow
 
+# Manual-only, on purpose. This job submits the ENTIRE site to IndexNow, which
+# is a one-time bootstrap operation (new site, key rotation, or a fresh
+# re-crawl request) — NOT something to run on a schedule.
+#
+# IndexNow is a "this URL just changed" signal. Resubmitting every URL on a
+# daily cron makes Bing Webmaster classify the key as "batch mode", which Bing
+# explicitly recommends against because it drowns out the real change signal.
+# Day-to-day discovery is handled by real-time pings on approve/republish
+# (lib/indexnow.ts) plus the change-scoped daily cron (app/api/cron/indexnow).
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * *' # Runs daily at 3 AM UTC
 
 jobs:
   indexnow:

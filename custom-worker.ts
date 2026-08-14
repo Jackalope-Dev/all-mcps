@@ -74,8 +74,10 @@ const SLOW_JOBS: CronJob[] = [
   // BATCH_SIZE/MAX_DETAIL_FETCHES in the route) so unresolved listings simply
   // roll to the next tick instead of blowing the scheduled handler's budget.
   { path: "/api/cron/vuln-scan", secretVar: "ADMIN_SECRET" },
-  // IndexNow batch for recently approved listings — daily at 00:00 UTC tick.
-  // Complements the per-approve ping so fire-and-forget misses still get indexed.
+  // IndexNow catch-up for recently changed URLs — daily at 00:00 UTC tick.
+  // Change-scoped (submits nothing on a quiet day) so the key stays out of
+  // Bing's "batch mode". Complements the per-approve ping so fire-and-forget
+  // misses still get indexed.
   {
     path: "/api/cron/indexnow",
     secretVar: "ADMIN_SECRET",
