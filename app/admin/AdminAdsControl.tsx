@@ -313,7 +313,10 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
 
                     {ad.status === 'active' && (
                       <button
-                        onClick={() => handleAction(ad.id, 'pause')}
+                        onClick={() => {
+                          const reason = prompt('Reason for pausing (optional — included in the advertiser email):');
+                          if (reason !== null) handleAction(ad.id, 'pause', reason ? { reason } : undefined);
+                        }}
                         disabled={isLoading}
                         className="btn btn-sm btn-secondary"
                         style={{ gap: '4px' }}

@@ -152,24 +152,74 @@ export async function POST(request: Request) {
         break;
       }
 
-      case 'pause':
+      case 'pause': {
+        const [adToPause] = await db
+          .select({ advertiserEmail: sponsorAds.advertiserEmail, title: sponsorAds.title })
+          .from(sponsorAds)
+          .where(eq(sponsorAds.id, id))
+          .limit(1);
+
         await db
           .update(sponsorAds)
           .set({ status: 'paused' })
           .where(eq(sponsorAds.id, id));
-        break;
 
-      case 'resume':
+        if (adToPause?.advertiserEmail) {
+          try {
+            await sendNotificationEmail({
+              to: adToPause.advertiserEmail,
+              heading: 'Your sponsor campaign has been paused',
+              message: reason
+                ? `Your campaign "${adToPause.title}" has been paused: ${reason}. Delivery has stopped and will resume once this is resolved.`
+                : `Your campaign "${adToPause.title}" has been paused by AllMCPs staff. Delivery has stopped for now — contact us if you have questions.`,
+              actionText: 'View campaign dashboard',
+              actionUrl: `${getAppUrl()}/advertise/campaign/${id}`,
+            });
+          } catch (emailErr) {
+            console.error('[admin/ads/action] pause email failed:', emailErr);
+          }
+        }
+        break;
+      }
+
+      case 'resume': {
+        const [adToResume] = await db
+          .select({ advertiserEmail: sponsorAds.advertiserEmail, title: sponsorAds.title })
+          .from(sponsorAds)
+          .where(eq(sponsorAds.id, id))
+          .limit(1);
+
         await db
           .update(sponsorAds)
           .set({ status: 'active' })
           .where(eq(sponsorAds.id, id));
+
+        if (adToResume?.advertiserEmail) {
+          try {
+            await sendNotificationEmail({
+              to: adToResume.advertiserEmail,
+              heading: 'Your sponsor campaign has resumed',
+              message: `Your campaign "${adToResume.title}" is active again and delivering across AllMCPs.`,
+              actionText: 'View campaign dashboard',
+              actionUrl: `${getAppUrl()}/advertise/campaign/${id}`,
+            });
+          } catch (emailErr) {
+            console.error('[admin/ads/action] resume email failed:', emailErr);
+          }
+        }
         break;
+      }
 
       case 'add_impressions': {
         if (bonusImpressions) {
           const [adToBonus] = await db
-            .select({ status: sponsorAds.status, stripePaymentIntentId: sponsorAds.stripePaymentIntentId })
+            .select({
+              status: sponsorAds.status,
+              stripePaymentIntentId: sponsorAds.stripePaymentIntentId,
+              advertiserEmail: sponsorAds.advertiserEmail,
+              title: sponsorAds.title,
+              totalImpressionsPurchased: sponsorAds.totalImpressionsPurchased,
+            })
             .from(sponsorAds)
             .where(eq(sponsorAds.id, id))
             .limit(1);
@@ -191,6 +241,18 @@ export async function POST(request: Request) {
               status: 'active',
             })
             .where(eq(sponsorAds.id, id));
+
+          try {
+            await sendNotificationEmail({
+              to: adToBonus.advertiserEmail,
+              heading: 'Bonus impressions added to your campaign',
+              message: `We've added ${bonusImpressions.toLocaleString()} bonus impressions to your campaign "${adToBonus.title}" — new total: ${(adToBonus.totalImpressionsPurchased + bonusImpressions).toLocaleString()}. It's running again if it had finished delivering.`,
+              actionText: 'View campaign dashboard',
+              actionUrl: `${getAppUrl()}/advertise/campaign/${id}`,
+            });
+          } catch (emailErr) {
+            console.error('[admin/ads/action] bonus impressions email failed:', emailErr);
+          }
         }
         break;
       }

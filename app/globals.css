@@ -54,6 +54,14 @@
   --status-rejected-bg: rgba(239, 68, 68, 0.15);
   --status-rejected-border: rgba(239, 68, 68, 0.3);
 
+  /* Chart categorical series — fixed hue order, assigned by data identity
+     (never by rank/position). CVD-validated adjacent pairs for bar/line marks. */
+  --chart-series-1: #3987e5;
+  --chart-series-2: #d95926;
+  --chart-series-3: #199e70;
+  --chart-series-4: #c98500;
+  --chart-series-5: #d55181;
+
   /* Space (4px base) */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -142,6 +150,13 @@
   --status-rejected: #b91c1c;
   --status-rejected-bg: rgba(239, 68, 68, 0.14);
   --status-rejected-border: rgba(239, 68, 68, 0.35);
+
+  /* Chart categorical series — light-mode steps of the same hues above. */
+  --chart-series-1: #2a78d6;
+  --chart-series-2: #eb6834;
+  --chart-series-3: #1baf7a;
+  --chart-series-4: #eda100;
+  --chart-series-5: #e87ba4;
 
   /* Elevation */
   --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.05);

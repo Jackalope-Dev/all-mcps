@@ -1,9 +1,10 @@
 import * as React from "react";
-import { Text, Section, Row, Column, Hr } from "@react-email/components";
+import { Text, Section, Row, Column, Hr, Button } from "@react-email/components";
 import {
   BaseLayout,
   textStyle,
   highlightTextStyle,
+  buttonStyle,
 } from "./BaseLayout";
 
 interface ReceiptEmailProps {
@@ -11,6 +12,8 @@ interface ReceiptEmailProps {
   date: string;
   amount: string;
   description: string;
+  actionText?: string;
+  actionUrl?: string;
 }
 
 export const ReceiptEmail = ({
@@ -18,6 +21,8 @@ export const ReceiptEmail = ({
   date = "July 27, 2026",
   amount = "$49.00",
   description = "AllMCPs Listing Fee",
+  actionText,
+  actionUrl,
 }: ReceiptEmailProps) => {
   return (
     <BaseLayout
@@ -48,7 +53,13 @@ export const ReceiptEmail = ({
           <Column style={totalValueColumn}>{amount}</Column>
         </Row>
       </Section>
-      
+
+      {actionText && actionUrl && (
+        <Button href={actionUrl} style={buttonStyle}>
+          {actionText}
+        </Button>
+      )}
+
       <Text style={{ ...textStyle, marginTop: "32px", fontSize: "14px" }}>
         If you have any questions about this receipt, please reply to this email.
       </Text>

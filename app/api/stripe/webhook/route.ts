@@ -4,9 +4,11 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { servers, sponsorAds } from '../../../../db/schema';
-import { getStripe } from '../../../../lib/stripe';
+import { getStripe, getAppUrl } from '../../../../lib/stripe';
 import type { PaidSku } from '../../../../lib/pricing';
 import { syncSequenzySubscriber } from '../../../../lib/sequenzy';
+import { sendReceiptEmail } from '../../../../lib/notify';
+import { formatUsdAmount } from '../../../../lib/ads';
 
 async function getDb() {
   const ctx = await getCloudflareContext();
@@ -53,6 +55,32 @@ async function applyCheckoutCompleted(session: Stripe.Checkout.Session, stripe: 
       .where(eq(sponsorAds.id, adId));
 
     console.log(`[stripe webhook] Sponsor ad ${adId} payment verified: $${((session.amount_total || 0) / 100).toFixed(2)}`);
+
+    // Advertisers otherwise get nothing confirming payment succeeded until an
+    // admin approves or rejects the campaign — the abandoned-checkout reminder
+    // only ever targets *unpaid* ads, so a paid-but-pending-review advertiser
+    // was previously invisible to the email system.
+    const [adForReceipt] = await db
+      .select({ title: sponsorAds.title })
+      .from(sponsorAds)
+      .where(eq(sponsorAds.id, adId))
+      .limit(1);
+    const advertiserEmail = session.metadata?.advertiserEmail || session.customer_details?.email;
+    if (advertiserEmail) {
+      try {
+        await sendReceiptEmail({
+          to: advertiserEmail,
+          receiptId: paymentIntentId || session.id,
+          date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+          amount: formatUsdAmount(session.amount_total || 0),
+          description: `AllMCPs Sponsor Campaign: ${adForReceipt?.title || 'Ad Campaign'}`,
+          actionText: 'View campaign dashboard',
+          actionUrl: `${getAppUrl()}/advertise/campaign/${adId}`,
+        });
+      } catch (emailErr) {
+        console.error('[stripe webhook] receipt email failed:', emailErr);
+      }
+    }
     return;
   }
 

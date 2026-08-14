@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { NotificationEmail } from '@/components/emails/NotificationEmail';
 import { ListingStatusEmail } from '@/components/emails/ListingStatusEmail';
+import { ReceiptEmail } from '@/components/emails/ReceiptEmail';
 
 export async function getEmailEnv() {
   let apiKey = process.env.RESEND_API_KEY;
@@ -61,6 +62,48 @@ export async function sendNotificationEmail(params: {
 
   if (error) {
     console.error('sendNotificationEmail error:', error);
+  }
+}
+
+/**
+ * Branded payment receipt via Resend — supplements (doesn't replace) Stripe's
+ * own default receipt email, since disabling that is an account-level Stripe
+ * setting this app doesn't own. No-ops the same way as the other senders when
+ * RESEND_API_KEY is missing.
+ */
+export async function sendReceiptEmail(params: {
+  to: string;
+  receiptId: string;
+  date: string;
+  amount: string;
+  description: string;
+  actionText?: string;
+  actionUrl?: string;
+}): Promise<void> {
+  const env = await getEmailEnv();
+  if (!env.apiKey) {
+    console.warn('sendReceiptEmail skipped: RESEND_API_KEY is missing.');
+    return;
+  }
+
+  const resend = new Resend(env.apiKey);
+
+  const { error } = await resend.emails.send({
+    from: env.fromEmail,
+    to: params.to,
+    subject: `Receipt: ${params.description}`,
+    react: ReceiptEmail({
+      receiptId: params.receiptId,
+      date: params.date,
+      amount: params.amount,
+      description: params.description,
+      actionText: params.actionText,
+      actionUrl: params.actionUrl,
+    }) as React.ReactElement,
+  });
+
+  if (error) {
+    console.error('sendReceiptEmail error:', error);
   }
 }
 

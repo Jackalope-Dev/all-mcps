@@ -89,6 +89,7 @@ async function getCampaignData(id: string) {
     const placementMap: Record<string, { impressions: number; clicks: number; visitors: Set<string> }> = {};
     const dailyMap: Record<string, { impressions: number; clicks: number }> = {};
     const allSessions = new Set<string>();
+    let aiInjectionCount = 0;
 
     for (const log of logs) {
       const p = log.placement || 'directory_inline';
@@ -100,6 +101,8 @@ async function getCampaignData(id: string) {
         placementMap[p].impressions++;
       } else if (log.eventType === 'click') {
         placementMap[p].clicks++;
+      } else if (log.eventType === 'ai_injection') {
+        aiInjectionCount++;
       }
 
       if (log.sessionHash) {
@@ -146,7 +149,7 @@ async function getCampaignData(id: string) {
       .filter((p) => p.impressions >= 10)
       .sort((a, b) => b.ctr - a.ctr)[0] || null;
 
-    return { ad, placementStats, dailyTimeline, uniqueReach, hasLogData: logs.length > 0, lastActivity, topPlacement };
+    return { ad, placementStats, dailyTimeline, uniqueReach, hasLogData: logs.length > 0, lastActivity, topPlacement, aiInjectionCount };
   } catch (err: any) {
     console.error('[campaign dashboard] error:', err?.message);
   }
@@ -177,7 +180,7 @@ export default async function CampaignDashboardPage({
     );
   }
 
-  const { ad, placementStats, dailyTimeline, uniqueReach, hasLogData, lastActivity, topPlacement } = data;
+  const { ad, placementStats, dailyTimeline, uniqueReach, hasLogData, lastActivity, topPlacement, aiInjectionCount } = data;
   const awaitingPayment = ad.status === 'pending_approval' && !ad.stripePaymentIntentId;
   const isSubmittedNotice = (search.submitted === '1' || search.payment === 'success') && !awaitingPayment;
   const paymentErrorNotice = search.error === 'payment_unavailable';
@@ -192,6 +195,23 @@ export default async function CampaignDashboardPage({
       ? ((ad.amountPaidCents / 100) / (ad.impressionsServed / 1000)).toFixed(2)
       : null;
   const maxDailyImp = Math.max(...dailyTimeline.map((d) => d.impressions), 1);
+
+  // Fixed categorical color per placement identity (never reassigned by rank/share).
+  const PLACEMENT_COLOR_VAR: Record<string, string> = {
+    directory_inline: 'var(--chart-series-1)',
+    detail_sidebar: 'var(--chart-series-2)',
+    header_banner: 'var(--chart-series-3)',
+    blog_guide: 'var(--chart-series-4)',
+    all: 'var(--chart-series-5)',
+  };
+  const maxPlacementImpressions = Math.max(...placementStats.map((p) => p.impressions), 1);
+
+  // Daily CTR trend (independent unit from the impressions/clicks count axis above).
+  const dailyCtr = dailyTimeline.map((d) => ({
+    date: d.date,
+    ctr: d.impressions > 0 ? (d.clicks / d.impressions) * 100 : 0,
+  }));
+  const maxDailyCtr = Math.max(...dailyCtr.map((d) => d.ctr), 0.1);
 
   // Campaign duration in days
   const campaignStartMs = new Date(ad.createdAt).getTime();
@@ -406,7 +426,7 @@ export default async function CampaignDashboardPage({
         {estimatedCompletionDate && remainingImpressions > 0 && (
           <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Est. Completion</div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#4ade80', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--verified-green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Timer size={13} /> {estimatedCompletionDate.toLocaleDateString()}
             </div>
           </div>
@@ -543,8 +563,8 @@ export default async function CampaignDashboardPage({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
             <Bot size={14} style={{ color: 'var(--accent-color)' }} /> AI Agent Injections
           </div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#4ade80' }}>Included Free</div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Complimentary MCP context injection</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--verified-green)' }}>{aiInjectionCount.toLocaleString()}</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>Complimentary MCP context injections, free</div>
         </div>
       </div>
 
@@ -589,6 +609,45 @@ export default async function CampaignDashboardPage({
             </div>
           </div>
 
+          {/* Placement share bar chart */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.5rem' }}>
+            {placementStats.map((p) => {
+              const share = ad.impressionsServed > 0 ? (p.impressions / ad.impressionsServed) * 100 : 0;
+              const widthPct = Math.max(2, Math.round((p.impressions / maxPlacementImpressions) * 100));
+              const seriesColor = PLACEMENT_COLOR_VAR[p.placement] || 'var(--chart-series-5)';
+              return (
+                <div key={p.placement} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div
+                    style={{
+                      width: '150px',
+                      flexShrink: 0,
+                      fontSize: '0.78rem',
+                      color: 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: seriesColor, flexShrink: 0 }} />
+                    {p.label}
+                  </div>
+                  <div
+                    style={{ flex: 1, height: '16px', background: 'var(--bg-muted)', borderRadius: '4px', overflow: 'hidden' }}
+                    title={`${p.label}: ${p.impressions.toLocaleString()} impressions, ${p.clicks.toLocaleString()} clicks, ${p.ctr}% CTR, ${p.uniqueVisitors.toLocaleString()} unique visitors`}
+                  >
+                    <div style={{ width: `${widthPct}%`, height: '100%', background: seriesColor, borderRadius: '4px', transition: 'width 0.4s ease' }} />
+                  </div>
+                  <div style={{ width: '58px', flexShrink: 0, textAlign: 'right', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {share.toFixed(1)}%
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
@@ -615,19 +674,36 @@ export default async function CampaignDashboardPage({
                     </tr>
                   );
                 })}
-                {/* Complimentary AI row */}
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(0,229,255,0.02)' }}>
-                  <td style={{ padding: '0.8rem 0.5rem', fontWeight: 600, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Bot size={14} /> AI Agent Context Injections
-                  </td>
-                  <td style={{ padding: '0.8rem 0.5rem', textAlign: 'right', color: 'var(--accent-color)', fontWeight: 700 }}>Active</td>
-                  <td style={{ padding: '0.8rem 0.5rem', textAlign: 'right', color: 'var(--text-secondary)' }}>Free Bonus</td>
-                  <td style={{ padding: '0.8rem 0.5rem', textAlign: 'right', color: 'var(--text-secondary)' }}>Protocol-Direct</td>
-                  <td style={{ padding: '0.8rem 0.5rem', textAlign: 'right', fontWeight: 700, color: '#4ade80' }}>Included</td>
-                  <td style={{ padding: '0.8rem 0.5rem', textAlign: 'right', color: 'var(--text-secondary)' }}>—</td>
-                </tr>
               </tbody>
             </table>
+          </div>
+
+          {/* AI agent / MCP context injection panel — a separate free bonus surface,
+              not a placement row (it doesn't share the impressions/clicks/CTR columns above). */}
+          <div
+            style={{
+              marginTop: '1.5rem',
+              padding: '1rem 1.25rem',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(0, 123, 255, 0.1))',
+              border: '1px solid rgba(0, 229, 255, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <Bot size={22} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: '220px' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                AI Agent &amp; MCP Context Injections
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                Your ad has been surfaced directly inside AI agent / MCP protocol responses{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>{aiInjectionCount.toLocaleString()} {aiInjectionCount === 1 ? 'time' : 'times'}</strong>{' '}
+                — a complimentary bonus placement that never draws down your purchased impression credits.
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -671,6 +747,45 @@ export default async function CampaignDashboardPage({
             })}
           </div>
 
+          {/* Daily CTR trend — a distinct unit (%) from the impressions/clicks bars above, so it gets its own axis. */}
+          <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.6rem' }}>
+              Daily CTR Trend
+            </div>
+            <svg
+              viewBox="0 0 600 70"
+              preserveAspectRatio="none"
+              style={{ width: '100%', height: '70px', overflow: 'visible' }}
+              role="img"
+              aria-label="Daily click-through rate trend"
+            >
+              <line x1="0" y1="60" x2="600" y2="60" stroke="var(--border-color)" strokeWidth="1" />
+              <polyline
+                fill="none"
+                stroke="var(--accent-color)"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                points={dailyCtr
+                  .map((d, i) => {
+                    const x = dailyCtr.length > 1 ? (i / (dailyCtr.length - 1)) * 600 : 300;
+                    const y = 60 - (d.ctr / maxDailyCtr) * 50;
+                    return `${x},${y}`;
+                  })
+                  .join(' ')}
+              />
+              {dailyCtr.map((d, i) => {
+                const x = dailyCtr.length > 1 ? (i / (dailyCtr.length - 1)) * 600 : 300;
+                const y = 60 - (d.ctr / maxDailyCtr) * 50;
+                return (
+                  <circle key={d.date} cx={x} cy={y} r="4" fill="var(--accent-color)" stroke="var(--card-bg)" strokeWidth="2">
+                    <title>{`${d.date}: ${d.ctr.toFixed(2)}% CTR`}</title>
+                  </circle>
+                );
+              })}
+            </svg>
+          </div>
+
           {/* Daily totals summary */}
           <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -704,7 +819,7 @@ export default async function CampaignDashboardPage({
         }}
       >
         <h4 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ShieldCheck size={17} style={{ color: '#4ade80' }} /> Transparency &amp; Quality Guarantees
+          <ShieldCheck size={17} style={{ color: 'var(--verified-green)' }} /> Transparency &amp; Quality Guarantees
         </h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.25rem' }}>
           <div>
