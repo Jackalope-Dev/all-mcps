@@ -333,25 +333,32 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                       </button>
                     )}
 
-                    <button
-                      onClick={() => {
-                        const bonus = prompt('Enter bonus impressions to add (e.g. 5000):', '5000');
-                        if (bonus) handleAction(ad.id, 'add_impressions', { bonusImpressions: parseInt(bonus, 10) });
-                      }}
-                      disabled={isLoading}
-                      className="btn btn-sm btn-secondary"
-                      style={{ gap: '4px' }}
-                    >
-                      <Plus size={13} /> Add Impressions
-                    </button>
+                    {!!ad.stripePaymentIntentId && ad.status !== 'pending_approval' && ad.status !== 'rejected' && (
+                      <button
+                        onClick={() => {
+                          const bonus = prompt('Enter bonus impressions to add (e.g. 5000):', '5000');
+                          if (bonus) handleAction(ad.id, 'add_impressions', { bonusImpressions: parseInt(bonus, 10) });
+                        }}
+                        disabled={isLoading}
+                        className="btn btn-sm btn-secondary"
+                        style={{ gap: '4px' }}
+                      >
+                        <Plus size={13} /> Add Impressions
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {
                         if (confirm('Delete this ad campaign entirely?')) handleAction(ad.id, 'delete');
                       }}
-                      disabled={isLoading}
+                      disabled={isLoading || (!!ad.stripePaymentIntentId && (ad.status === 'active' || ad.status === 'paused'))}
                       className="btn btn-sm btn-secondary"
                       style={{ color: '#94a3b8' }}
+                      title={
+                        ad.stripePaymentIntentId && (ad.status === 'active' || ad.status === 'paused')
+                          ? 'Paid and still running — reject it first to issue a refund, then delete'
+                          : undefined
+                      }
                     >
                       <Trash2 size={13} />
                     </button>

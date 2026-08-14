@@ -166,8 +166,24 @@ export async function POST(request: Request) {
           .where(eq(sponsorAds.id, id));
         break;
 
-      case 'add_impressions':
+      case 'add_impressions': {
         if (bonusImpressions) {
+          const [adToBonus] = await db
+            .select({ status: sponsorAds.status, stripePaymentIntentId: sponsorAds.stripePaymentIntentId })
+            .from(sponsorAds)
+            .where(eq(sponsorAds.id, id))
+            .limit(1);
+
+          // Bonus impressions reactivate the campaign, so this must never fire
+          // on an ad that hasn't cleared the same payment gate `approve` enforces
+          // (still pending_approval / unpaid) or one that was rejected & refunded.
+          if (!adToBonus?.stripePaymentIntentId || adToBonus.status === 'pending_approval' || adToBonus.status === 'rejected') {
+            return NextResponse.json(
+              { error: 'Cannot add impressions: this campaign was never an approved, paid campaign.' },
+              { status: 409 }
+            );
+          }
+
           await db
             .update(sponsorAds)
             .set({
@@ -177,6 +193,7 @@ export async function POST(request: Request) {
             .where(eq(sponsorAds.id, id));
         }
         break;
+      }
 
       case 'update_bid':
         if (bidCpm) {
@@ -203,9 +220,27 @@ export async function POST(request: Request) {
         }
         break;
 
-      case 'delete':
+      case 'delete': {
+        const [adToDelete] = await db
+          .select({ status: sponsorAds.status, stripePaymentIntentId: sponsorAds.stripePaymentIntentId })
+          .from(sponsorAds)
+          .where(eq(sponsorAds.id, id))
+          .limit(1);
+
+        // A paid campaign that's still running (or paused mid-run) hasn't been
+        // refunded — deleting it here would erase the ad with no refund and no
+        // advertiser notice. Route those through `reject` instead, which refunds
+        // and emails the advertiser before the row is safe to delete.
+        if (adToDelete?.stripePaymentIntentId && (adToDelete.status === 'active' || adToDelete.status === 'paused')) {
+          return NextResponse.json(
+            { error: 'This campaign is paid and still active/paused. Reject it first to issue a refund, then delete.' },
+            { status: 409 }
+          );
+        }
+
         await db.delete(sponsorAds).where(eq(sponsorAds.id, id));
         break;
+      }
     }
 
     return NextResponse.json({ success: true, action, id });
