@@ -177,7 +177,7 @@ export default async function CampaignDashboardPage({
     );
   }
 
-  const { ad, placementStats, dailyTimeline, uniqueReach, hasLogData, lastActivity, topPlacement, aiInjectionCount } = data;
+  const { ad, placementStats, dailyTimeline, uniqueReach, hasLogData, topPlacement, aiInjectionCount } = data;
   const awaitingPayment = ad.status === 'pending_approval' && !ad.stripePaymentIntentId;
   const isSubmittedNotice = (search.submitted === '1' || search.payment === 'success') && !awaitingPayment;
   const paymentErrorNotice = search.error === 'payment_unavailable';
@@ -220,16 +220,6 @@ export default async function CampaignDashboardPage({
 
   // Cost per unique developer reached
   const costPerDev = uniqueReach > 0 ? (ad.amountPaidCents / 100 / uniqueReach).toFixed(2) : null;
-
-  // Estimated completion date (based on avg daily delivery rate)
-  const remainingImpressions = Math.max(0, ad.totalImpressionsPurchased - ad.impressionsServed);
-  const avgDailyImps = dailyTimeline.length > 0
-    ? dailyTimeline.reduce((s, d) => s + d.impressions, 0) / dailyTimeline.length
-    : 0;
-  const estimatedDaysLeft = avgDailyImps > 0 ? Math.ceil(remainingImpressions / avgDailyImps) : null;
-  const estimatedCompletionDate = estimatedDaysLeft !== null && ad.status === 'active'
-    ? new Date(Date.now() + estimatedDaysLeft * 24 * 60 * 60 * 1000)
-    : null;
 
   const getStatusBadge = (status: string) => {
     const configs: Record<string, { bg: string; border: string; color: string; icon: React.ReactNode; label: string }> = {
