@@ -35,6 +35,7 @@ function getDisplayDomain(url?: string | null): string | null {
 
 export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorAdUnitProps) {
   const [ad, setAd] = useState<Partial<SponsorAd> | null>(previewAd ?? null);
+  const [eventToken, setEventToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(!previewAd);
   const [impressionSent, setImpressionSent] = useState<boolean>(false);
   const [placeholderVariant, setPlaceholderVariant] = useState<PlaceholderVariant>(() => getRandomPlaceholderVariant());
@@ -64,12 +65,13 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
         const excludeParam = servedAdIdsOnPage.size > 0 ? `&exclude=${Array.from(servedAdIdsOnPage).join(',')}` : '';
         const res = await fetch(`/api/ads/serve?placement=${placement}${excludeParam}`);
         if (res.ok) {
-          const data = (await res.json()) as { ad?: Partial<SponsorAd> | null };
+          const data = (await res.json()) as { ad?: Partial<SponsorAd> | null; eventToken?: string | null };
           if (isMounted) {
             if (data.ad?.id) {
               servedAdIdsOnPage.add(data.ad.id);
             }
             setAd(data.ad || null);
+            setEventToken(data.eventToken || null);
           }
         }
       } catch {
@@ -97,16 +99,14 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
           if (ad?.id) {
             // Track active ad impression
             try {
+              const payload = JSON.stringify({ adId: ad.id, placement, eventType: 'impression', eventToken });
               if (navigator.sendBeacon) {
-                navigator.sendBeacon(
-                  '/api/ads/event',
-                  JSON.stringify({ adId: ad.id, placement, eventType: 'impression' })
-                );
+                navigator.sendBeacon('/api/ads/event', payload);
               } else {
                 fetch('/api/ads/event', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ adId: ad.id, placement, eventType: 'impression' }),
+                  body: payload,
                   keepalive: true,
                 }).catch(() => {});
               }
@@ -131,21 +131,19 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
     }
 
     return () => observer.disconnect();
-  }, [ad, placement, previewAd, impressionSent, loading, placeholderVariant]);
+  }, [ad, placement, previewAd, impressionSent, loading, placeholderVariant, eventToken]);
 
   const handleAdClick = () => {
     if (previewAd !== undefined || !ad?.id) return;
     try {
+      const payload = JSON.stringify({ adId: ad.id, placement, eventType: 'click', eventToken });
       if (navigator.sendBeacon) {
-        navigator.sendBeacon(
-          '/api/ads/event',
-          JSON.stringify({ adId: ad.id, placement, eventType: 'click' })
-        );
+        navigator.sendBeacon('/api/ads/event', payload);
       } else {
         fetch('/api/ads/event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adId: ad.id, placement, eventType: 'click' }),
+          body: payload,
           keepalive: true,
         }).catch(() => {});
       }

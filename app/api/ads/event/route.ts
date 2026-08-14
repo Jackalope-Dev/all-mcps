@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { sponsorAds, sponsorAdLogs } from '@/db/schema';
-import { eq, and, gt, sql } from 'drizzle-orm';
+import { eq, and, gt, count, sql } from 'drizzle-orm';
 import { hashVisitorForServer, getClientIp } from '@/lib/upvoteHash';
 import { sendNotificationEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
+import { verifyAdEventToken } from '@/lib/adEventToken';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,13 @@ export const dynamic = 'force-dynamic';
 // an advertiser's purchased credits or inflate CTR.
 const IMPRESSION_DEDUP_WINDOW_MS = 10 * 60 * 1000;
 const CLICK_DEDUP_WINDOW_MS = 30 * 1000;
+
+// Backstop against a single leaked/replayed event token being hammered
+// rapidly — generous enough to never trip on real traffic for one ad, tight
+// enough to blunt a scripted replay burst. Independent of the per-visitor
+// dedup above, which only limits repeats from one IP.
+const AD_BURST_WINDOW_MS = 60 * 1000;
+const AD_BURST_MAX_EVENTS = 300;
 
 export async function POST(request: Request) {
   try {
@@ -40,7 +48,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // Rejects events that don't carry a valid token minted by /api/ads/serve
+    // for this exact adId — someone POSTing a scraped adId directly (e.g. a
+    // competitor trying to burn through another advertiser's impression
+    // credits) never receives a token to begin with.
+    const tokenValid = await verifyAdEventToken(adId, body.eventToken, ctx.env as any);
+    if (!tokenValid) {
+      return NextResponse.json({ error: 'Invalid or expired event token' }, { status: 403 });
+    }
+
     const db = drizzle(ctx.env.DB);
+
+    // Backstop against a single valid token being replayed rapidly — caps
+    // total event volume for one ad regardless of visitor/IP diversity.
+    const [burst] = await db
+      .select({ n: count() })
+      .from(sponsorAdLogs)
+      .where(and(eq(sponsorAdLogs.adId, adId), gt(sponsorAdLogs.createdAt, new Date(Date.now() - AD_BURST_WINDOW_MS))));
+    if ((burst?.n ?? 0) >= AD_BURST_MAX_EVENTS) {
+      return NextResponse.json({ error: 'Too many events for this ad recently' }, { status: 429 });
+    }
+
     const ip = getClientIp(request);
     const sessionHash = ip ? await hashVisitorForServer(ip, adId) : null;
 

@@ -26,6 +26,7 @@ Stripe and Sequenzy secrets have their own setup docs — see `docs/STRIPE_SETUP
 | --- | --- | --- |
 | `TURNSTILE_SECRET` | `app/api/submit/route.ts`, `app/api/newsletter/subscribe/route.ts`, `app/api/contact/route.ts` | Fails **closed**: an empty secret POSTed to Cloudflare's siteverify returns `success:false`, so the contact form, newsletter signup, and human `/submit` form all start returning 403 on every request — with nothing telling you why. Doesn't affect `/api/v1/submit` (the agent-facing endpoint), which never required Turnstile. |
 | `UPVOTE_HASH_SECRET` | `lib/upvoteHash.ts` | Fails open/gracefully (`return null`) — upvote/view dedup silently disables instead of erroring, so this one is lower-severity but still worth setting. |
+| `AD_EVENT_TOKEN_SECRET` | `lib/adEventToken.ts` (`app/api/ads/serve/route.ts` mints, `app/api/ads/event/route.ts` verifies) | Fails **open** (logs an error, then accepts the event) — without it, ad impression/click beacons aren't cryptographically tied to a real `/api/ads/serve` response, so the per-adId burst rate limit becomes the only defense against someone POSTing a scraped `adId` directly to inflate/burn through a campaign's purchased impressions. Not set yet as of this writing — see below. |
 
 ## AI content
 
