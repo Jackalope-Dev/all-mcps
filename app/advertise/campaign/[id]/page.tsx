@@ -141,15 +141,12 @@ async function getCampaignData(id: string) {
 
     const uniqueReach = allSessions.size > 0 ? allSessions.size : Math.round(ad.impressionsServed * 0.78);
 
-    // Compute last activity from most recent log
-    const lastActivity = logs.length > 0 && logs[0].createdAt ? new Date(logs[0].createdAt) : null;
-
     // Find top performing placement by CTR (min 10 impressions)
     const topPlacement = placementStats
       .filter((p) => p.impressions >= 10)
       .sort((a, b) => b.ctr - a.ctr)[0] || null;
 
-    return { ad, placementStats, dailyTimeline, uniqueReach, hasLogData: logs.length > 0, lastActivity, topPlacement, aiInjectionCount };
+    return { ad, placementStats, dailyTimeline, uniqueReach, hasLogData: logs.length > 0, topPlacement, aiInjectionCount };
   } catch (err: any) {
     console.error('[campaign dashboard] error:', err?.message);
   }
@@ -423,22 +420,6 @@ export default async function CampaignDashboardPage({
             <CalendarDays size={13} style={{ color: 'var(--accent-color)' }} /> {campaignDurationDays} {campaignDurationDays === 1 ? 'day' : 'days'}
           </div>
         </div>
-        {estimatedCompletionDate && remainingImpressions > 0 && (
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Est. Completion</div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--verified-green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Timer size={13} /> {estimatedCompletionDate.toLocaleDateString()}
-            </div>
-          </div>
-        )}
-        {lastActivity && (
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', letterSpacing: '0.03em' }}>Last Activity</div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              {lastActivity.toLocaleString()}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Primary KPI Row */}
