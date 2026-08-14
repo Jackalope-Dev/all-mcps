@@ -36,13 +36,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   if (!isStripeConfigured(ctx.env)) {
-    return NextResponse.redirect(`${appUrl}/advertise/create`);
+    return NextResponse.redirect(`${appUrl}/advertise/campaign/${id}?error=payment_unavailable`);
   }
 
   try {
     const stripe = getStripe((ctx.env as any)?.STRIPE_SECRET_KEY);
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
       mode: 'payment',
       customer_email: ad.advertiserEmail,
       line_items: [
@@ -76,12 +75,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .where(eq(sponsorAds.id, id));
 
     if (!session.url) {
-      return NextResponse.redirect(`${appUrl}/advertise/create`);
+      return NextResponse.redirect(`${appUrl}/advertise/campaign/${id}?error=payment_unavailable`);
     }
 
     return NextResponse.redirect(session.url);
   } catch (err: any) {
     console.error('[advertise/resume] error:', err?.message);
-    return NextResponse.redirect(`${appUrl}/advertise/create`);
+    return NextResponse.redirect(`${appUrl}/advertise/campaign/${id}?error=payment_unavailable`);
   }
 }

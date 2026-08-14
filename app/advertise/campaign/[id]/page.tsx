@@ -158,7 +158,7 @@ export default async function CampaignDashboardPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ submitted?: string; payment?: string }>;
+  searchParams: Promise<{ submitted?: string; payment?: string; error?: string }>;
 }) {
   const { id } = await params;
   const search = await searchParams;
@@ -178,7 +178,9 @@ export default async function CampaignDashboardPage({
   }
 
   const { ad, placementStats, dailyTimeline, uniqueReach, hasLogData, lastActivity, topPlacement } = data;
-  const isSubmittedNotice = search.submitted === '1' || search.payment === 'success';
+  const awaitingPayment = ad.status === 'pending_approval' && !ad.stripePaymentIntentId;
+  const isSubmittedNotice = (search.submitted === '1' || search.payment === 'success') && !awaitingPayment;
+  const paymentErrorNotice = search.error === 'payment_unavailable';
   const progressPct = Math.min(
     100,
     Number(((ad.impressionsServed / Math.max(1, ad.totalImpressionsPurchased)) * 100).toFixed(1))
@@ -214,11 +216,11 @@ export default async function CampaignDashboardPage({
 
   const getStatusBadge = (status: string) => {
     const configs: Record<string, { bg: string; border: string; color: string; icon: React.ReactNode; label: string }> = {
-      active: { bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', color: '#4ade80', icon: <CheckCircle2 size={13} />, label: 'Active & Serving' },
-      pending_approval: { bg: 'rgba(234,179,8,0.15)', border: 'rgba(234,179,8,0.3)', color: '#facc15', icon: <Clock size={13} />, label: 'Pending Review' },
-      completed: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', color: '#60a5fa', icon: <CheckCircle2 size={13} />, label: 'Completed (100% Delivered)' },
-      paused: { bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.3)', color: '#94a3b8', icon: <PauseCircle size={13} />, label: 'Paused' },
-      rejected: { bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', color: '#f87171', icon: <AlertTriangle size={13} />, label: 'Rejected (Fully Refunded)' },
+      active: { bg: 'var(--status-active-bg)', border: 'var(--status-active-border)', color: 'var(--status-active)', icon: <CheckCircle2 size={13} />, label: 'Active & Serving' },
+      pending_approval: { bg: 'var(--status-pending-bg)', border: 'var(--status-pending-border)', color: 'var(--status-pending)', icon: <Clock size={13} />, label: 'Pending Review' },
+      completed: { bg: 'var(--status-completed-bg)', border: 'var(--status-completed-border)', color: 'var(--status-completed)', icon: <CheckCircle2 size={13} />, label: 'Completed (100% Delivered)' },
+      paused: { bg: 'var(--status-paused-bg)', border: 'var(--status-paused-border)', color: 'var(--status-paused)', icon: <PauseCircle size={13} />, label: 'Paused' },
+      rejected: { bg: 'var(--status-rejected-bg)', border: 'var(--status-rejected-border)', color: 'var(--status-rejected)', icon: <AlertTriangle size={13} />, label: 'Rejected (Fully Refunded)' },
     };
     const c = configs[status];
     if (!c) return null;
@@ -240,6 +242,65 @@ export default async function CampaignDashboardPage({
           </>
         }
       />
+
+      {awaitingPayment && (
+        <div
+          style={{
+            padding: '1.25rem 1.5rem',
+            borderRadius: '14px',
+            background: 'rgba(234, 179, 8, 0.08)',
+            border: '1px solid rgba(234, 179, 8, 0.35)',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.25rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <DollarSign size={24} style={{ color: 'var(--status-pending)', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: '220px' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+              Payment Required
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              This campaign hasn&apos;t been paid for yet, so it won&apos;t enter the moderation queue until checkout is
+              complete. Nothing is charged or reviewed until then.
+            </div>
+          </div>
+          <a href={`/advertise/resume/${ad.id}`} className="btn btn-primary" style={{ gap: '6px', flexShrink: 0 }}>
+            Complete Payment <ArrowRight size={14} />
+          </a>
+        </div>
+      )}
+
+      {paymentErrorNotice && (
+        <div
+          style={{
+            padding: '1.25rem 1.5rem',
+            borderRadius: '14px',
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+          }}
+        >
+          <AlertTriangle size={22} style={{ color: 'var(--status-rejected)', flexShrink: 0 }} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--status-rejected)', marginBottom: '0.2rem' }}>
+              We couldn&apos;t start checkout
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Something went wrong setting up payment. Please try the button above again, or contact{' '}
+              <a href="mailto:support@allmcps.com" style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+                support@allmcps.com
+              </a>{' '}
+              if it keeps happening.
+            </div>
+          </div>
+        </div>
+      )}
 
       {isSubmittedNotice && (
         <div

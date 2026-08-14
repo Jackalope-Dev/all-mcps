@@ -68,7 +68,6 @@ export async function POST(request: Request) {
         const appUrl = getAppUrl();
 
         const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
           mode: 'payment',
           customer_email: String(advertiserEmail).trim(),
           line_items: [
@@ -124,7 +123,15 @@ export async function POST(request: Request) {
           redirectUrl: session.url,
         });
       } catch (stripeErr: any) {
-        console.error('[ads/create] Stripe error, falling back to direct creation:', stripeErr?.message);
+        // Stripe is configured but the API call itself failed (bad key, account
+        // config issue, etc.) — surface this instead of silently falling through
+        // to the unpaid-creation path below, which would leave an ad stuck in
+        // pending_approval with no way to ever pay for it.
+        console.error('[ads/create] Stripe checkout session creation failed:', stripeErr?.message);
+        return NextResponse.json(
+          { error: 'Payment setup failed. Please try again in a moment or contact support@allmcps.com.' },
+          { status: 502 }
+        );
       }
     }
 

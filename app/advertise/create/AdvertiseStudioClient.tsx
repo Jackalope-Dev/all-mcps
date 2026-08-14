@@ -84,11 +84,12 @@ export function AdvertiseStudioClient({
   const [ctaText, setCtaText] = useState('Learn More');
   const [isCustomCta, setIsCustomCta] = useState(false);
   const [advertiserEmail, setAdvertiserEmail] = useState('');
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
 
-  // Volume & Bidding State
-  const [placement, setPlacement] = useState<AdPlacement>(
-    (initialPlacement as AdPlacement) || 'all'
-  );
+  // Every campaign already runs across all placements — 'all' is the only
+  // value this ever submits. initialPlacement is kept only to seed which
+  // format tab the live preview below opens on.
+  const placement: AdPlacement = 'all';
   const [impressions, setImpressions] = useState<number>(10000);
   const [bidCpmCents, setBidCpmCents] = useState<number>(
     initialTier === 'blitz' ? 2000 : initialTier === 'growth' ? 1000 : 500
@@ -100,6 +101,27 @@ export function AdvertiseStudioClient({
   );
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Signed-in advertisers shouldn't retype an email we already know — prefill
+  // and lock the field, with a "Not you?" escape hatch to sign out instead.
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = res.ok ? ((await res.json()) as { user?: { email?: string } }) : null;
+        if (!cancelled && data?.user?.email) {
+          setSessionEmail(data.user.email);
+          setAdvertiserEmail(data.user.email);
+        }
+      } catch {
+        // Network error — leave the field editable as the logged-out default.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Computed Pricing
   const totalCostCents = calculateAdCostCents(impressions, bidCpmCents);
@@ -558,22 +580,29 @@ export function AdvertiseStudioClient({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
-            {/* Placement Selection */}
-            <Select
-              label="Target Placement"
-              value={placement}
-              onChange={(e) => {
-                const p = e.target.value as AdPlacement;
-                setPlacement(p);
-                if (p !== 'all') setActivePreviewFormat(p);
-              }}
-            >
-              {Object.values(AD_PLACEMENTS).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} — {p.tagline}
-                </option>
-              ))}
-            </Select>
+            {/* Placement — every campaign runs across all 4 placements automatically,
+                so there's nothing to choose here (see the format switcher above). */}
+            <div>
+              <label className="form-label" style={{ margin: '0 0 0.45rem', display: 'block' }}>
+                Target Placement
+              </label>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '0.65rem 0.9rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  background: 'rgba(255,255,255,0.03)',
+                  fontSize: '0.85rem',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <Layers size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
+                All Placements (Max Reach) — included on every campaign
+              </div>
+            </div>
 
             {/* Impression Blocks */}
             <div>
@@ -671,14 +700,43 @@ export function AdvertiseStudioClient({
             </div>
 
             {/* Advertiser Email */}
-            <Input
-              label="Your Email Address (for tracking dashboard & updates) *"
-              type="email"
-              value={advertiserEmail}
-              onChange={(e) => setAdvertiserEmail(e.target.value)}
-              placeholder="you@company.com"
-              required
-            />
+            {sessionEmail ? (
+              <div className="form-field">
+                <label className="form-label">Your Email Address</label>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                    padding: '0.65rem 0.9rem',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    background: 'rgba(255,255,255,0.03)',
+                    fontSize: '0.85rem',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <span>{sessionEmail}</span>
+                  <a
+                    href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/advertise/create')}`}
+                    style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}
+                  >
+                    Not you? Log out
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <Input
+                label="Your Email Address (for tracking dashboard & updates) *"
+                type="email"
+                value={advertiserEmail}
+                onChange={(e) => setAdvertiserEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+              />
+            )}
           </div>
         </div>
         </div>

@@ -997,11 +997,19 @@ export default function DashboardClient({
 }
 
 const AD_STATUS_META: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
-  active: { label: 'Active', color: '#4ade80', bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', icon: <CheckCircle2 size={12} /> },
-  pending_approval: { label: 'Pending review', color: '#facc15', bg: 'rgba(234,179,8,0.15)', border: 'rgba(234,179,8,0.3)', icon: <Clock size={12} /> },
-  paused: { label: 'Paused', color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.3)', icon: <PauseCircle size={12} /> },
-  completed: { label: 'Completed', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)', border: 'rgba(96,165,250,0.3)', icon: <CheckCircle2 size={12} /> },
-  rejected: { label: 'Rejected', color: '#f87171', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', icon: <XCircle size={12} /> },
+  active: { label: 'Active', color: 'var(--status-active)', bg: 'var(--status-active-bg)', border: 'var(--status-active-border)', icon: <CheckCircle2 size={12} /> },
+  pending_approval: { label: 'Pending review', color: 'var(--status-pending)', bg: 'var(--status-pending-bg)', border: 'var(--status-pending-border)', icon: <Clock size={12} /> },
+  paused: { label: 'Paused', color: 'var(--status-paused)', bg: 'var(--status-paused-bg)', border: 'var(--status-paused-border)', icon: <PauseCircle size={12} /> },
+  completed: { label: 'Completed', color: 'var(--status-completed)', bg: 'var(--status-completed-bg)', border: 'var(--status-completed-border)', icon: <CheckCircle2 size={12} /> },
+  rejected: { label: 'Rejected', color: 'var(--status-rejected)', bg: 'var(--status-rejected-bg)', border: 'var(--status-rejected-border)', icon: <XCircle size={12} /> },
+};
+
+const PLACEMENT_LABELS: Record<string, string> = {
+  all: 'All placements',
+  directory_inline: 'Directory card',
+  detail_sidebar: 'Sidebar box',
+  header_banner: 'Category banner',
+  blog_guide: 'Article banner',
 };
 
 /**
@@ -1062,14 +1070,14 @@ function AdCampaignsSection({ ads }: { ads: Ad[] }) {
                           display: 'inline-flex', alignItems: 'center', gap: '4px',
                           fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
                           padding: '2px 8px', borderRadius: '10px',
-                          background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)',
+                          background: 'var(--status-rejected-bg)', color: 'var(--status-rejected)', border: '1px solid var(--status-rejected-border)',
                         }}
                       >
                         <CreditCard size={12} /> Payment needed
                       </span>
                     )}
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {ad.placement.replace('_', ' ')}
+                      {PLACEMENT_LABELS[ad.placement] || ad.placement.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{ad.title}</h3>

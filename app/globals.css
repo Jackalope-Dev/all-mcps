@@ -36,6 +36,24 @@
   --verified-green-bg: rgba(16, 185, 129, 0.1);
   --verified-green-border: rgba(16, 185, 129, 0.25);
 
+  /* Status badges (sponsor ad lifecycle, etc.) — themed via var() so text
+     stays readable in light mode without a separate light-mode component fork. */
+  --status-active: #4ade80;
+  --status-active-bg: rgba(34, 197, 94, 0.15);
+  --status-active-border: rgba(34, 197, 94, 0.3);
+  --status-pending: #facc15;
+  --status-pending-bg: rgba(234, 179, 8, 0.15);
+  --status-pending-border: rgba(234, 179, 8, 0.3);
+  --status-paused: #94a3b8;
+  --status-paused-bg: rgba(148, 163, 184, 0.15);
+  --status-paused-border: rgba(148, 163, 184, 0.3);
+  --status-completed: #60a5fa;
+  --status-completed-bg: rgba(96, 165, 250, 0.15);
+  --status-completed-border: rgba(96, 165, 250, 0.3);
+  --status-rejected: #f87171;
+  --status-rejected-bg: rgba(239, 68, 68, 0.15);
+  --status-rejected-border: rgba(239, 68, 68, 0.3);
+
   /* Space (4px base) */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -105,6 +123,25 @@
   --verified-green: #047857;
   --verified-green-bg: rgba(16, 185, 129, 0.14);
   --verified-green-border: rgba(16, 185, 129, 0.35);
+
+  /* Darker than the dark-mode status colors above for the same reason —
+     e.g. #facc15 "Pending review" text on a near-white badge background
+     failed WCAG AA contrast. */
+  --status-active: #15803d;
+  --status-active-bg: rgba(34, 197, 94, 0.14);
+  --status-active-border: rgba(34, 197, 94, 0.35);
+  --status-pending: #92400e;
+  --status-pending-bg: rgba(217, 119, 6, 0.14);
+  --status-pending-border: rgba(217, 119, 6, 0.35);
+  --status-paused: #475569;
+  --status-paused-bg: rgba(100, 116, 139, 0.14);
+  --status-paused-border: rgba(100, 116, 139, 0.35);
+  --status-completed: #1d4ed8;
+  --status-completed-bg: rgba(59, 130, 246, 0.14);
+  --status-completed-border: rgba(59, 130, 246, 0.35);
+  --status-rejected: #b91c1c;
+  --status-rejected-bg: rgba(239, 68, 68, 0.14);
+  --status-rejected-border: rgba(239, 68, 68, 0.35);
 
   /* Elevation */
   --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.05);
