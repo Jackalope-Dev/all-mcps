@@ -5,6 +5,14 @@
  *   3) secondary (alternatives + compare)
  *
  * Core goes first so Bing/Yandex crawl high-ROI URLs before the long tail.
+ *
+ * ⚠️  MANUAL / BOOTSTRAP USE ONLY. This submits the whole site. Run it once for
+ * a new site, after a key rotation, or when Bing asks for a fresh re-crawl —
+ * never on a schedule. Resubmitting every URL daily is what puts an IndexNow
+ * key into "batch mode", which Bing recommends against. Routine change signals
+ * come from the real-time approve/republish pings (lib/indexnow.ts) and the
+ * change-scoped daily cron (app/api/cron/indexnow/route.ts).
+ *
  * Usage: npm run submit-index
  */
 
