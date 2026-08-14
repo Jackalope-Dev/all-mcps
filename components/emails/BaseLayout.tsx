@@ -28,6 +28,12 @@ export const BaseLayout = ({
   return (
     <Html>
       <Head>
+        {/* Tells dark-mode-aware clients (Gmail, Apple/iOS Mail, Outlook.com) this
+            email already handles its own colors, so they don't "smart" auto-invert
+            an already-dark header to a light background — which is what made the
+            white wordmark unreadable (white-on-white) in at least one client. */}
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
         <style>
           {`
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;800;900&display=swap');
@@ -37,14 +43,20 @@ export const BaseLayout = ({
       <Preview>{previewText}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Section style={header}>
-            {/* 
-              Since email clients require absolute URLs for images, 
-              we construct the URL using the baseUrl. 
-              The logo-full-light.png should be added to the public folder.
+          {/* bgcolor (not just the inline style) because classic Outlook's Word
+              rendering engine largely ignores CSS background-color on tables. Belt
+              and suspenders with the baked-in background below. */}
+          <Section style={header} bgcolor="#020617">
+            {/*
+              Since email clients require absolute URLs for images,
+              we construct the URL using the baseUrl.
+              logo-email-header.png (unlike logo-full-light.png) bakes the dark
+              header background directly into the PNG, so the white wordmark stays
+              legible even if a client ignores/overrides the surrounding cell's
+              background — the image no longer depends on it.
             */}
             <Img
-              src={`${baseUrl}/logo-full-light.png`}
+              src={`${baseUrl}/logo-email-header.png`}
               width="150"
               alt="AllMCPs"
               style={logo}
