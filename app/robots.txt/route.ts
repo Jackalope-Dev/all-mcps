@@ -11,6 +11,12 @@ Disallow: /dashboard
 Disallow: /login
 Disallow: /verify-request
 Disallow: /browse?
+# Non-page resources — crawling these only burned budget and filled the
+# "Crawled - currently not indexed" report (logo/badge images, JSON/markdown
+# API responses). None are meant to rank; keep Googlebot off them so budget
+# goes to real listings. (AI crawlers keep their /api allowances below.)
+Disallow: /logos/
+Disallow: /api/
 
 User-agent: ClaudeBot
 User-agent: PerplexityBot
