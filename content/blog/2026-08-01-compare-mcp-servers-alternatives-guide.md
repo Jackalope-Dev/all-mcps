@@ -33,7 +33,7 @@ That sentence maps to a **category** and a shortlist. On AllMCPs you can jump st
 - Category landings under [Browse categories](https://allmcps.com/categories)
 - Client setup guides under [Install by client](https://allmcps.com/clients)
 
-If you only search by package name, you often miss a better-maintained alternative in the same category.
+If you only search by package name, you often miss a better-maintained alternative in the same category. (A curated directory is also a different tool from the [official MCP registry](/blog/mcp-registry-vs-directory-publish-official-registry) — the registry is the machine-readable source of truth clients read from, while a directory adds the comparison and evaluation signals this guide is about.)
 
 ## The five comparison dimensions that matter
 
