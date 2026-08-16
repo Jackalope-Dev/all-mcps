@@ -1270,6 +1270,78 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
   return score;
 }
 
+/**
+ * Rewrites relative links and image sources inside a fetched GitHub README to
+ * absolute URLs, so the mirrored markdown doesn't carry links that resolve
+ * against allmcps.com. A bare `docs/x.md` link in a README, served at
+ * `/mcp/<id>.md`, otherwise resolves to `/mcp/docs/x.md` and 404s (crawlers
+ * followed hundreds of these). Uses the `HEAD` ref so it works whether the
+ * repo's default branch is `main` or `master`. Fenced code blocks are skipped
+ * so install-example placeholders (e.g. `/path/to/your/config`) are untouched.
+ */
+export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
+  if (!md || !repoUrl) return md;
+  const m = repoUrl.match(/github\.com\/([^/]+)\/([^/#?]+)/);
+  if (!m) return md;
+  const owner = m[1];
+  const repo = m[2].endsWith('.git') ? m[2].slice(0, -4) : m[2];
+
+  const SKIP = /^(https?:|\/\/|#|mailto:|tel:|data:|\?)/i;
+  const toAbs = (target: string, isImage: boolean): string => {
+    const t = target.trim();
+    if (!t || SKIP.test(t)) return target;
+    const clean = t.replace(/^\.\//, '').replace(/^\//, '');
+    return isImage
+      ? `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${clean}`
+      : `https://github.com/${owner}/${repo}/blob/HEAD/${clean}`;
+  };
+
+  const lines = md.split('\n');
+  let inFence = false;
+  let fenceMarker = '';
+  for (let i = 0; i < lines.length; i++) {
+    const fence = lines[i].match(/^\s*(```+|~~~+)/);
+    if (fence) {
+      const c = fence[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceMarker = c;
+      } else if (c === fenceMarker) {
+        inFence = false;
+        fenceMarker = '';
+      }
+      continue;
+    }
+    if (inFence) continue;
+
+    // Inline links and images: [text](target) / ![alt](target)
+    lines[i] = lines[i].replace(
+      /(!?)\[([^\]]*)\]\(\s*(<)?([^)\s>]+)(>)?(\s+"[^"]*"|\s+'[^']*')?\s*\)/g,
+      (full, bang, text, _lt, target, _gt, title) => {
+        const abs = toAbs(target, bang === '!');
+        return abs === target ? full : `${bang}[${text}](${abs}${title || ''})`;
+      }
+    );
+    // Reference-style link definitions: [label]: target
+    lines[i] = lines[i].replace(
+      /^(\s*\[[^\]]+\]:\s*)(<)?([^\s>]+)(>)?(.*)$/,
+      (full, pre, _lt, target, _gt, post) => {
+        const abs = toAbs(target, false);
+        return abs === target ? full : `${pre}${abs}${post}`;
+      }
+    );
+    // Raw HTML href/src attributes (READMEs often use <img src="assets/…">)
+    lines[i] = lines[i].replace(
+      /\b(href|src)=("|')([^"']+)\2/gi,
+      (full, attr, q, target) => {
+        const abs = toAbs(target, attr.toLowerCase() === 'src');
+        return abs === target ? full : `${attr}=${q}${abs}${q}`;
+      }
+    );
+  }
+  return lines.join('\n');
+}
+
 export function formatServerAsMarkdown(server: Server, readme?: string | null): string {
   // The mcpServers object key just needs to be a readable identifier, not a real
   // package name, so it's safe to slugify.
@@ -1350,7 +1422,7 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
   );
 
   if (readme) {
-    md += `## Documentation & README\n\n${readme}\n`;
+    md += `## Documentation & README\n\n${absolutizeReadmeMarkdown(readme, server.url)}\n`;
   } else if (hasAiContent) {
     md += `## Documentation\n`;
     if (server.aiOverview) md += `${server.aiOverview}\n\n`;
