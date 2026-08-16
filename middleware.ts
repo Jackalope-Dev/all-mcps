@@ -119,7 +119,9 @@ export function middleware(req: NextRequest) {
       const url = req.nextUrl.clone();
       url.pathname = `/api/v1/mcp/${serverId}/markdown`;
       response = NextResponse.rewrite(url);
-      response.headers.set('X-Robots-Tag', 'noindex, follow');
+      // nofollow: the mirrored README's relative links would otherwise be
+      // crawled and resolved against allmcps.com (/mcp/<id>.md), 404ing.
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow');
     } else {
       response = NextResponse.next();
     }

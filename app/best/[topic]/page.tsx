@@ -161,7 +161,7 @@ export default async function BestTopicPage({
               Browse all {t.title} servers →
             </Link>
           ) : (
-            <Link href={`/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`} className="btn btn-secondary">
+            <Link href={`/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`} className="btn btn-secondary" rel="nofollow">
               Browse all {t.title} servers →
             </Link>
           )}

@@ -50,7 +50,10 @@ export async function GET(
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
       'Cache-Control': 'public, max-age=3600, s-maxage=86400',
-      'X-Robots-Tag': 'noindex, follow',
+      // nofollow: this alternate markdown mirrors an upstream README whose
+      // relative links would otherwise be crawled and resolved against
+      // allmcps.com (/mcp/<id>.md + "docs/x.md" -> /mcp/docs/x.md, a 404).
+      'X-Robots-Tag': 'noindex, nofollow',
     },
   });
 }

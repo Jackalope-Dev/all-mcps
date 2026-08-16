@@ -239,7 +239,7 @@ export default async function CategoryLandingPage({
             {intro}
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
-            <Link href={`/browse?category=${encodeURIComponent(category)}`} className="btn btn-secondary">
+            <Link href={`/browse?category=${encodeURIComponent(category)}`} className="btn btn-secondary" rel="nofollow">
               Open in interactive directory
             </Link>
             {(() => {
@@ -327,7 +327,7 @@ export default async function CategoryLandingPage({
 
         {total > cards.length && (
           <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-            <Link href={`/browse?category=${encodeURIComponent(category)}`} className="btn btn-primary">
+            <Link href={`/browse?category=${encodeURIComponent(category)}`} className="btn btn-primary" rel="nofollow">
               Browse all {total.toLocaleString()} {label} servers →
             </Link>
           </div>
