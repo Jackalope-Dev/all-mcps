@@ -13,6 +13,8 @@ faq:
 
 If you ship a Model Context Protocol (MCP) server, discovery is half the product. Developers need to find you, trust you, and install you in Claude, Cursor, or whatever client they use. AllMCPs is built for that — and once your listing is live, there is a free SEO path that helps *you* while making the directory more useful for everyone.
 
+A directory listing isn't the only place your server should live. Publishing to the [official MCP registry](/blog/mcp-registry-vs-directory-publish-official-registry) makes you discoverable to clients and aggregators programmatically, while a claimed directory listing makes you discoverable — and evaluable — to humans searching the open web. They're complementary; this post covers the directory half.
+
 ## What you get when you list
 
 After your submission is approved, your MCP appears in browse, search, category pages, and agent-facing APIs (`/api/v1/search`, markdown negotiation, `llms.txt`). You also get:

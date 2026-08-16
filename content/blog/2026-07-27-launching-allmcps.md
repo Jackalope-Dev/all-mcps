@@ -25,7 +25,7 @@ Because the protocol is simple and open, the number of available servers explode
 
 ## What AllMCPs actually does
 
-AllMCPs is a directory built specifically for this problem, not a general software catalog with MCP support bolted on.
+AllMCPs is a directory built specifically for this problem, not a general software catalog with MCP support bolted on. (It's also a different thing from the [official MCP registry](/blog/mcp-registry-vs-directory-publish-official-registry) — the registry is a machine-readable metadata catalog clients read from, while a directory is the human-facing, curated layer you browse, search, and compare on.)
 
 - [Browse](/browse) by category or search across every listing's name and description.
 - Every listing page pulls the live README straight from GitHub and shows the exact install snippet your agent needs — no digging through a repo to find the right JSON block.
