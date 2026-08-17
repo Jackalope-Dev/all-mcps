@@ -32,6 +32,7 @@ import { ClaimHintLink } from '../../../components/ui/ClaimHintLink';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
 import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, getServerHealthHistory, getServerReviews, computeCombinedAvailabilityPct, truncateReadmeExcerpt, type Server } from '../../../lib/servers';
+import { slugifyTag } from '../../../lib/tags';
 import { ReviewsSection } from '../../../components/ui/ReviewsSection';
 import { HealthHistoryStrip } from '../../../components/ui/HealthHistoryStrip';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
@@ -356,6 +357,32 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           },
         ];
 
+  // Real, user-submitted ratings → schema.org AggregateRating for ★ rich
+  // snippets. Gated on a minimum count so a single rating can't manufacture
+  // stars, and only ever from genuine reviews that are also shown on-page (the
+  // rating block above) — never fabricated. Below the floor we stay with
+  // InteractionCounter only.
+  const REVIEW_SNIPPET_MIN = 5;
+  const aggregateRating =
+    reviewSummary.count >= REVIEW_SNIPPET_MIN && reviewSummary.avgRating > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: Number(reviewSummary.avgRating.toFixed(1)),
+            reviewCount: reviewSummary.count,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {};
+
+  // Only emit FAQPage structured data when the FAQ is real (ai-generated, unique
+  // per listing). The boilerplate fallback is identical across thousands of
+  // un-enriched listings — duplicated FAQ schema at that scale is a thin-content
+  // signal with no upside (FAQ rich results are deprecated for non-authority
+  // sites), so the visible fallback FAQ stays for users but carries no schema.
+  const hasRealFaq = Boolean(server.aiFaq && server.aiFaq.length > 0);
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -387,15 +414,20 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           priceCurrency: 'USD',
         },
         ...(interactionStatistic.length ? { interactionStatistic } : {}),
+        ...aggregateRating,
       },
-      {
-        '@type': 'FAQPage',
-        mainEntity: faqItems.map((item) => ({
-          '@type': 'Question',
-          name: item.q,
-          acceptedAnswer: { '@type': 'Answer', text: item.a },
-        })),
-      },
+      ...(hasRealFaq
+        ? [
+            {
+              '@type': 'FAQPage',
+              mainEntity: faqItems.map((item) => ({
+                '@type': 'Question',
+                name: item.q,
+                acceptedAnswer: { '@type': 'Answer', text: item.a },
+              })),
+            },
+          ]
+        : []),
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
@@ -748,11 +780,26 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
           {server.tags && server.tags.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
-              {server.tags.map((tag) => (
-                <Badge key={tag} variant="category" style={{ fontSize: '0.72rem' }}>
-                  {tag}
-                </Badge>
-              ))}
+              {server.tags.map((tag) => {
+                // Link each tag to its hub so listings interlink through the tag
+                // taxonomy — this routes crawl equity to the (now sitemap'd) tag
+                // pages and on to the long tail of each category, easing
+                // "Discovered - currently not indexed". slugifyTag matches the
+                // /tags/[slug] route (extractTagsForServer includes server.tags),
+                // so these targets always resolve — no risk of new 404s.
+                const slug = slugifyTag(tag);
+                return slug ? (
+                  <Link key={tag} href={`/tags/${slug}`} style={{ textDecoration: 'none' }}>
+                    <Badge variant="category" style={{ fontSize: '0.72rem', cursor: 'pointer' }}>
+                      {tag}
+                    </Badge>
+                  </Link>
+                ) : (
+                  <Badge key={tag} variant="category" style={{ fontSize: '0.72rem' }}>
+                    {tag}
+                  </Badge>
+                );
+              })}
             </div>
           )}
 

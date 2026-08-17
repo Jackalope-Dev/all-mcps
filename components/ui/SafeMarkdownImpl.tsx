@@ -84,6 +84,8 @@ function MarkdownImage({
     <img
       src={resolvedSrc}
       alt={alt || ''}
+      loading="lazy"
+      decoding="async"
       onError={() => setHasError(true)}
       style={{
         maxWidth: '100%',
