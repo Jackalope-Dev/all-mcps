@@ -279,6 +279,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     headers: {
       'Content-Type': 'image/svg+xml',
       'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400',
+      // Embeddable badge image — crawlers discover it via external embeds. Mark
+      // noindex so it isn't filed as a "Crawled - currently not indexed" page.
+      'X-Robots-Tag': 'noindex',
     },
   });
 }

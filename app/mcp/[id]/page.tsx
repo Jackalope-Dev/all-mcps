@@ -972,7 +972,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 <BadgeCheck size={14} aria-hidden="true" /> Claim listing
               </Link>
             )}
-            <Link href={`/mcp/${server.id}/alternatives`} className="detail-next-step">
+            <Link href={`/mcp/${server.id}/alternatives`} className="detail-next-step" rel="nofollow">
               <Sparkles size={14} aria-hidden="true" /> Alternatives
             </Link>
             <Link href={`/categories/${catSlug}`} className="detail-next-step">
@@ -1097,6 +1097,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   </Link>
                   <Link
                     href={`/mcp/${server.id}/alternatives`}
+                    rel="nofollow"
                     style={{ fontSize: '0.85rem', color: 'var(--accent-color)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}
                   >
                     View all alternatives <ChevronRight size={14} />
@@ -1161,6 +1162,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   </Link>
                   <Link
                     href={`/mcp/${server.id}/vs/${rel.id}`}
+                    rel="nofollow"
                     style={{
                       fontSize: '0.8rem',
                       fontWeight: 700,
@@ -1575,6 +1577,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   )}
                   <Link
                     href={`/mcp/${server.id}/alternatives`}
+                    rel="nofollow"
                     style={{ fontSize: '0.85rem', color: 'var(--accent-color)', fontWeight: 600 }}
                   >
                     Alternatives to {displayName} →
