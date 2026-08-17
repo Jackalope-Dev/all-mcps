@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { servers } from '@/db/schema';
 import { isAdminAuthorized } from '@/lib/adminAuth';
-import { upsertServerEmbedding } from '@/lib/vectorSearch';
+import { upsertServerEmbeddingsBatch } from '@/lib/vectorSearch';
 
 /**
  * Vector-embedding sync — pushes each listing's semantic text into Cloudflare
@@ -101,27 +101,18 @@ export async function POST(req: Request) {
         maintenanceStatus: servers.maintenanceStatus,
       })) as ClaimedRow[];
 
-    let indexed = 0;
-    let failed = 0;
-    const toRelease: string[] = [];
-
-    for (let i = 0; i < claimed.length; i += CONCURRENCY) {
-      const chunk = claimed.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map((server) => upsertServerEmbedding(server, env)));
-      results.forEach((ok, idx) => {
-        if (ok) {
-          indexed++;
-        } else {
-          failed++;
-          toRelease.push(chunk[idx].id);
-        }
-      });
-    }
+    const { successfulIds, failedIds } = await upsertServerEmbeddingsBatch(
+      claimed,
+      env,
+      CONCURRENCY
+    );
+    const indexed = successfulIds.length;
+    const failed = failedIds.length;
 
     // Release claims that failed (transient AI/Vectorize error) so they're retried
     // next tick instead of stuck "claimed" forever.
-    if (toRelease.length > 0) {
-      await db.update(servers).set({ vectorSyncedAt: null }).where(inArray(servers.id, toRelease));
+    if (failedIds.length > 0) {
+      await db.update(servers).set({ vectorSyncedAt: null }).where(inArray(servers.id, failedIds));
     }
 
     const [{ remaining }] = await db

@@ -78,12 +78,14 @@ function calcQualityTiers(serverList: any[]): { Excellent: number; Great: number
   return breakdown;
 }
 
-/**
- * Retrieves 100% real aggregate platform statistics.
- * Queries D1 database tables (api_access_logs, servers) in production,
- * and derives exact metrics from the static catalog snapshot in dev mode.
- */
-export async function getSiteStats(): Promise<SiteStats> {
+let cachedSiteStats: { data: SiteStats; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60 * 1000; // 60s memory cache to protect Worker memory & D1 budget
+
+let memoizedSnapshotFallback: SiteStats | null = null;
+
+function getSnapshotFallback(): SiteStats {
+  if (memoizedSnapshotFallback) return memoizedSnapshotFallback;
+
   const snapshotServers = serversData as any[];
   const snapshotTotal = snapshotServers.length;
   const snapshotCategories = new Set(snapshotServers.map((s) => s.category)).size;
@@ -114,6 +116,44 @@ export async function getSiteStats(): Promise<SiteStats> {
   const snapshotRecentCommits = snapshotServers.filter((s) => s.lastCommitAt && new Date(s.lastCommitAt).getTime() >= snapshotCutoff30d).length;
   const snapshotQualityTiers = calcQualityTiers(snapshotServers);
 
+  memoizedSnapshotFallback = {
+    totalServers: snapshotTotal,
+    categoryCount: snapshotCategories,
+    aiReads30d: 0,
+    aiSystemCount: 0,
+    activeAiSystems: [],
+    botCrawlerReads30d: 0,
+    callerBreakdown30d: [],
+    dailyTrend30d: [],
+    endpointBreakdown30d: [],
+    topCountries30d: [],
+    countryCount: 0,
+    totalViews: snapshotViews,
+    totalCopies: snapshotCopies,
+    totalUpvotes: snapshotUpvotes,
+    toolsIndexed: snapshotTools,
+    verifiedCount: snapshotVerified,
+    toolsSourceBreakdown: { introspected: snapshotIntrospected, readme: snapshotReadme, unparsed: snapshotUnparsed },
+    stdioPilotStats: { totalTested: 124, okCount: 98, avgDurationMs: 3420 },
+    qualityTierBreakdown: snapshotQualityTiers,
+    reciprocalBadgeCount: snapshotReciprocalBadges,
+    recentCommitCount30d: snapshotRecentCommits,
+  };
+
+  return memoizedSnapshotFallback;
+}
+
+/**
+ * Retrieves 100% real aggregate platform statistics.
+ * Queries D1 database tables (api_access_logs, servers) in production,
+ * and derives exact metrics from the static catalog snapshot in dev mode.
+ */
+export async function getSiteStats(): Promise<SiteStats> {
+  const now = Date.now();
+  if (cachedSiteStats && now - cachedSiteStats.timestamp < CACHE_TTL_MS) {
+    return cachedSiteStats.data;
+  }
+
   let db: any = null;
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
@@ -126,33 +166,11 @@ export async function getSiteStats(): Promise<SiteStats> {
   }
 
   if (!db) {
-    return {
-      totalServers: snapshotTotal,
-      categoryCount: snapshotCategories,
-      aiReads30d: 0,
-      aiSystemCount: 0,
-      activeAiSystems: [],
-      botCrawlerReads30d: 0,
-      callerBreakdown30d: [],
-      dailyTrend30d: [],
-      endpointBreakdown30d: [],
-      topCountries30d: [],
-      countryCount: 0,
-      totalViews: snapshotViews,
-      totalCopies: snapshotCopies,
-      totalUpvotes: snapshotUpvotes,
-      toolsIndexed: snapshotTools,
-      verifiedCount: snapshotVerified,
-      toolsSourceBreakdown: { introspected: snapshotIntrospected, readme: snapshotReadme, unparsed: snapshotUnparsed },
-      stdioPilotStats: { totalTested: 124, okCount: 98, avgDurationMs: 3420 },
-      qualityTierBreakdown: snapshotQualityTiers,
-      reciprocalBadgeCount: snapshotReciprocalBadges,
-      recentCommitCount30d: snapshotRecentCommits,
-    };
+    return getSnapshotFallback();
   }
 
   try {
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const cutoff = new Date(now - 30 * 24 * 60 * 60 * 1000);
 
     const [countryRows, callerClassRows, serverStatsRows, dailyRows, endpointRows, topCountryRows, serverExtraRows, stdioPilotRows, activeServersRows] = await Promise.all([
       db
@@ -248,13 +266,42 @@ export async function getSiteStats(): Promise<SiteStats> {
         .from(stdioVerificationPilot)
         .catch(() => []),
 
+      // Only select lightweight columns needed for computeQualityScore — avoids loading heavy text columns (readme, aiOverview, etc.) into worker heap
       db
-        .select()
+        .select({
+          id: servers.id,
+          url: servers.url,
+          healthStatus: servers.healthStatus,
+          remoteEndpointUrl: servers.remoteEndpointUrl,
+          remoteEndpointHealthy: servers.remoteEndpointHealthy,
+          isOfficial: servers.isOfficial,
+          isVerifiedActive: servers.isVerifiedActive,
+          toolsSource: servers.toolsSource,
+          websiteVerified: servers.websiteVerified,
+          isPremium: servers.isPremium,
+          reciprocalBadgeOk: servers.reciprocalBadgeOk,
+          authType: servers.authType,
+          githubStars: servers.githubStars,
+          npmDownloads: servers.npmDownloads,
+          copies: servers.copies,
+          upvotes: servers.upvotes,
+          views: servers.views,
+          lastCommitAt: servers.lastCommitAt,
+          description: servers.description,
+          tools: servers.tools,
+          installCommand: servers.installCommand,
+          installPackage: servers.installPackage,
+          suggestedInstallCommand: servers.suggestedInstallCommand,
+          vulnScannedAt: servers.vulnScannedAt,
+          vulnCriticalCount: servers.vulnCriticalCount,
+          vulnHighCount: servers.vulnHighCount,
+        })
         .from(servers)
         .where(eq(servers.status, 'active'))
         .catch(() => []),
     ]);
 
+    const fallback = getSnapshotFallback();
     const countries = Number(countryRows[0]?.uniqueCountries ?? 0);
 
     const callerRows = (callerClassRows as { callerClass: CallerClass; hits: number }[]) || [];
@@ -317,16 +364,16 @@ export async function getSiteStats(): Promise<SiteStats> {
       .filter((r) => r.country)
       .map((r) => ({ country: r.country as string, hits: Number(r.hits || 0) }));
 
-    const dbTotal = Number(serverStatsRows[0]?.totalServers ?? snapshotTotal);
-    const dbViews = Number(serverStatsRows[0]?.totalViews ?? snapshotViews);
-    const dbCopies = Number(serverStatsRows[0]?.totalCopies ?? snapshotCopies);
-    const dbUpvotes = Number(serverStatsRows[0]?.totalUpvotes ?? snapshotUpvotes);
-    const dbCategories = Number(serverStatsRows[0]?.categories ?? snapshotCategories);
+    const dbTotal = Number(serverStatsRows[0]?.totalServers ?? fallback.totalServers);
+    const dbViews = Number(serverStatsRows[0]?.totalViews ?? fallback.totalViews);
+    const dbCopies = Number(serverStatsRows[0]?.totalCopies ?? fallback.totalCopies);
+    const dbUpvotes = Number(serverStatsRows[0]?.totalUpvotes ?? fallback.totalUpvotes);
+    const dbCategories = Number(serverStatsRows[0]?.categories ?? fallback.categoryCount);
     const dbTools = Number(serverStatsRows[0]?.totalTools ?? 0);
 
-    const introspectedCount = Number(serverExtraRows[0]?.introspected ?? snapshotIntrospected);
-    const readmeCount = Number(serverExtraRows[0]?.readme ?? snapshotReadme);
-    const unparsedCount = Math.max(0, (dbTotal || snapshotTotal) - introspectedCount - readmeCount);
+    const introspectedCount = Number(serverExtraRows[0]?.introspected ?? fallback.toolsSourceBreakdown.introspected);
+    const readmeCount = Number(serverExtraRows[0]?.readme ?? fallback.toolsSourceBreakdown.readme);
+    const unparsedCount = Math.max(0, (dbTotal || fallback.totalServers) - introspectedCount - readmeCount);
 
     const pilotTotal = Number(stdioPilotRows[0]?.totalTested ?? 0);
     const pilotOk = Number(stdioPilotRows[0]?.okCount ?? 0);
@@ -334,15 +381,15 @@ export async function getSiteStats(): Promise<SiteStats> {
 
     const dbQualityTiers = (activeServersRows && activeServersRows.length > 0)
       ? calcQualityTiers(activeServersRows)
-      : snapshotQualityTiers;
+      : fallback.qualityTierBreakdown;
 
-    const dbReciprocalBadges = Number(serverExtraRows[0]?.reciprocalBadges ?? snapshotReciprocalBadges);
-    const dbRecentCommits = Number(serverExtraRows[0]?.recentCommits ?? snapshotRecentCommits);
-    const dbVerified = Number(serverExtraRows[0]?.verified ?? snapshotVerified);
+    const dbReciprocalBadges = Number(serverExtraRows[0]?.reciprocalBadges ?? fallback.reciprocalBadgeCount);
+    const dbRecentCommits = Number(serverExtraRows[0]?.recentCommits ?? fallback.recentCommitCount30d);
+    const dbVerified = Number(serverExtraRows[0]?.verified ?? fallback.verifiedCount);
 
-    return {
-      totalServers: dbTotal > 0 ? dbTotal : snapshotTotal,
-      categoryCount: dbCategories > 0 ? dbCategories : snapshotCategories,
+    const result: SiteStats = {
+      totalServers: dbTotal > 0 ? dbTotal : fallback.totalServers,
+      categoryCount: dbCategories > 0 ? dbCategories : fallback.categoryCount,
       aiReads30d: hits,
       aiSystemCount: callersCount,
       activeAiSystems: activeCallers,
@@ -355,7 +402,7 @@ export async function getSiteStats(): Promise<SiteStats> {
       totalViews: dbViews,
       totalCopies: dbCopies,
       totalUpvotes: dbUpvotes,
-      toolsIndexed: dbTools > 0 ? dbTools : snapshotTools,
+      toolsIndexed: dbTools > 0 ? dbTools : fallback.toolsIndexed,
       verifiedCount: dbVerified,
       toolsSourceBreakdown: {
         introspected: introspectedCount,
@@ -371,30 +418,11 @@ export async function getSiteStats(): Promise<SiteStats> {
       reciprocalBadgeCount: dbReciprocalBadges,
       recentCommitCount30d: dbRecentCommits,
     };
+
+    cachedSiteStats = { data: result, timestamp: Date.now() };
+    return result;
   } catch (err) {
     console.error('[getSiteStats] Error querying D1:', err);
-    return {
-      totalServers: snapshotTotal,
-      categoryCount: snapshotCategories,
-      aiReads30d: 0,
-      aiSystemCount: 0,
-      activeAiSystems: [],
-      botCrawlerReads30d: 0,
-      callerBreakdown30d: [],
-      dailyTrend30d: [],
-      endpointBreakdown30d: [],
-      topCountries30d: [],
-      countryCount: 0,
-      totalViews: snapshotViews,
-      totalCopies: snapshotCopies,
-      totalUpvotes: snapshotUpvotes,
-      toolsIndexed: snapshotTools,
-      verifiedCount: snapshotVerified,
-      toolsSourceBreakdown: { introspected: snapshotIntrospected, readme: snapshotReadme, unparsed: snapshotUnparsed },
-      stdioPilotStats: { totalTested: 124, okCount: 98, avgDurationMs: 3420 },
-      qualityTierBreakdown: snapshotQualityTiers,
-      reciprocalBadgeCount: snapshotReciprocalBadges,
-      recentCommitCount30d: snapshotRecentCommits,
-    };
+    return getSnapshotFallback();
   }
 }

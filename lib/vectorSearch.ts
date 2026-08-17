@@ -187,11 +187,11 @@ export async function upsertServerEmbedding(
   try {
     await env.VECTOR_INDEX.upsert([
       {
-        id: server.id,
+        id: String(server.id),
         values: embedding,
         metadata: {
-          name: server.name,
-          category: server.category,
+          name: String(server.name || '').slice(0, 256),
+          category: String(server.category || '').slice(0, 100),
         },
       },
     ]);
@@ -201,3 +201,80 @@ export async function upsertServerEmbedding(
     return false;
   }
 }
+
+/**
+ * Upsert a batch of server embeddings into Cloudflare Vectorize.
+ * Generates embeddings in bounded concurrent chunks and pushes all vectors in a batch upsert.
+ */
+export async function upsertServerEmbeddingsBatch(
+  serverList: Array<Parameters<typeof buildServerVectorText>[0] & { id: string }>,
+  env: CloudflareEnv,
+  concurrency = 5
+): Promise<{ successfulIds: string[]; failedIds: string[] }> {
+  if (!env?.VECTOR_INDEX || !env?.AI) {
+    return { successfulIds: [], failedIds: serverList.map((s) => s.id) };
+  }
+
+  const successfulIds: string[] = [];
+  const failedIds: string[] = [];
+  const vectorsToUpsert: Array<{
+    id: string;
+    values: number[];
+    metadata: { name: string; category: string };
+  }> = [];
+
+  // Generate embeddings in concurrency-limited chunks
+  for (let i = 0; i < serverList.length; i += concurrency) {
+    const chunk = serverList.slice(i, i + concurrency);
+    const results = await Promise.all(
+      chunk.map(async (server) => {
+        const text = buildServerVectorText(server);
+        const embedding = await generateEmbedding(text, env);
+        if (embedding) {
+          return {
+            id: String(server.id),
+            values: embedding,
+            metadata: {
+              name: String(server.name || '').slice(0, 256),
+              category: String(server.category || '').slice(0, 100),
+            },
+          };
+        }
+        return null;
+      })
+    );
+
+    results.forEach((item, idx) => {
+      if (item) {
+        vectorsToUpsert.push(item);
+      } else {
+        failedIds.push(chunk[idx].id);
+      }
+    });
+  }
+
+  if (vectorsToUpsert.length === 0) {
+    return { successfulIds: [], failedIds };
+  }
+
+  try {
+    // Vectorize supports batch upserts up to 1,000 vectors in a single call
+    await env.VECTOR_INDEX.upsert(vectorsToUpsert);
+    successfulIds.push(...vectorsToUpsert.map((v) => v.id));
+  } catch (batchError) {
+    console.error('[vectorSearch] Batch upsert failed, attempting individual fallbacks:', batchError);
+    // Fall back to individual upserts to isolate any problematic vector
+    for (const vec of vectorsToUpsert) {
+      try {
+        await env.VECTOR_INDEX.upsert([vec]);
+        successfulIds.push(vec.id);
+      } catch (indError) {
+        console.error(`[vectorSearch] Failed to upsert vector for server ${vec.id}:`, indError);
+        failedIds.push(vec.id);
+      }
+    }
+  }
+
+  return { successfulIds, failedIds };
+}
+
