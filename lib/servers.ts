@@ -1342,6 +1342,42 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
   return lines.join('\n');
 }
 
+/**
+ * Max rendered README length on a listing page. Upstream READMEs mirror content
+ * Google already indexed at the source and can run to hundreds of KB — shipping
+ * all of it server-side both bloats the HTML (LCP/CWV) and dilutes the page's
+ * unique-content ratio. Typical READMEs are well under this, so only the long
+ * tail of giant docs is trimmed (with a "read the full README" link to source).
+ */
+export const README_EXCERPT_CHARS = 10000;
+
+/**
+ * Returns a render-safe excerpt of a README. Cuts at a paragraph (or line)
+ * boundary at/before `maxChars`, and re-balances code fences so a cut inside a
+ * ``` / ~~~ block can't swallow the rest of the page. `truncated` tells the
+ * caller to show a link to the full upstream README.
+ */
+export function truncateReadmeExcerpt(
+  md: string | null | undefined,
+  maxChars: number = README_EXCERPT_CHARS
+): { excerpt: string | null | undefined; truncated: boolean } {
+  if (typeof md !== 'string' || md.length <= maxChars) {
+    return { excerpt: md, truncated: false };
+  }
+  let cut = md.lastIndexOf('\n\n', maxChars);
+  if (cut < maxChars * 0.5) {
+    const nl = md.lastIndexOf('\n', maxChars);
+    cut = nl > maxChars * 0.5 ? nl : maxChars;
+  }
+  let excerpt = md.slice(0, cut).trimEnd();
+  const fences = excerpt.match(/^[ \t]*(```+|~~~+)/gm) || [];
+  if (fences.length % 2 !== 0) {
+    const marker = fences[fences.length - 1].trim().charAt(0);
+    excerpt += `\n\n${marker.repeat(3)}`;
+  }
+  return { excerpt, truncated: true };
+}
+
 export function formatServerAsMarkdown(server: Server, readme?: string | null): string {
   // The mcpServers object key just needs to be a readable identifier, not a real
   // package name, so it's safe to slugify.

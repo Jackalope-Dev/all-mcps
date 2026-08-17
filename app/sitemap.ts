@@ -4,6 +4,7 @@ import { DIRECTORY_CATEGORIES, categorySlug } from '../lib/categories';
 import { BEST_TOPICS } from '../lib/bestTopics';
 import { MCP_CLIENTS } from '../lib/clients';
 import { WORKFLOW_PROMPTS } from '../lib/prompts';
+import { getAllTagsWithCounts } from '../lib/tags';
 import { engagementScore } from '../lib/search';
 import { relatedRankingScore } from '../lib/servers';
 import {
@@ -40,7 +41,7 @@ function staticEntry(
   };
 }
 
-function buildCoreSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
+async function buildCoreSitemap(servers: SitemapServer[]): Promise<MetadataRoute.Sitemap> {
   const byCategory = new Map<string, SitemapServer[]>();
   for (const s of servers) {
     const cat = s.category || 'other';
@@ -151,6 +152,29 @@ function buildCoreSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
     });
   }
 
+  // Curated tag hubs — indexable /tags/[slug] pages with enough servers to carry
+  // real value. Without these they were only reachable via the /tags hub and sat
+  // in "Discovered - currently not indexed". A floor keeps near-empty tag dumps
+  // out; the ceiling must stay <= the noindex threshold in app/tags/[slug]/page.tsx
+  // (currently >200 → noindex) so we never submit a noindexed URL.
+  try {
+    const TAG_MIN_COUNT = 15;
+    const TAG_MAX_COUNT = 200;
+    const tagLastMod = safeDateISO(STATIC_PAGE_LASTMOD['/tags']);
+    const tags = await getAllTagsWithCounts();
+    for (const t of tags) {
+      if (t.count < TAG_MIN_COUNT || t.count > TAG_MAX_COUNT) continue;
+      entries.push({
+        url: `${BASE}/tags/${t.slug}`,
+        lastModified: tagLastMod,
+        changeFrequency: 'weekly',
+        priority: 0.6,
+      });
+    }
+  } catch (e) {
+    console.error('Failed to build tag sitemap entries', e);
+  }
+
   return entries;
 }
 
@@ -228,7 +252,7 @@ export default async function sitemap(props: {
   const id = await props.id;
   const servers = await getSitemapServers();
 
-  if (id === 'core') return buildCoreSitemap(servers);
+  if (id === 'core') return await buildCoreSitemap(servers);
   if (id === 'listings') return buildListingsSitemap(servers);
   if (id === 'secondary') return buildSecondarySitemap(servers);
 
