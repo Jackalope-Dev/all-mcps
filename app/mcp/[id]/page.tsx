@@ -31,7 +31,7 @@ import { VulnSignalCard } from '../../../components/ui/VulnSignalCard';
 import { ClaimHintLink } from '../../../components/ui/ClaimHintLink';
 import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
-import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, getServerHealthHistory, getServerReviews, computeCombinedAvailabilityPct, type Server } from '../../../lib/servers';
+import { getRelatedServers, getFeaturedServers, getServerById, getStdioPilotResult, getServerHealthHistory, getServerReviews, computeCombinedAvailabilityPct, truncateReadmeExcerpt, type Server } from '../../../lib/servers';
 import { ReviewsSection } from '../../../components/ui/ReviewsSection';
 import { HealthHistoryStrip } from '../../../components/ui/HealthHistoryStrip';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
@@ -87,15 +87,51 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { displayName } = parseServerName(server.name, server.url);
   const title = buildDetailTitle(displayName);
 
+  // Quality gate: a listing with no AI enrichment, no introspected/parsed tools,
+  // a thin description, AND no fetchable README has nothing unique for Google to
+  // index — such pages just sit in "Crawled - currently not indexed" and dilute
+  // sitewide quality signals. noindex (follow) them until the enrichment pipeline
+  // gives them real content; aiEnrichedAt/aiSummary then flips them back to
+  // indexable automatically, so this self-heals and never permanently buries a
+  // listing. The README probe (the one network call) runs ONLY for the already-
+  // barren minority — the cheap stored signals short-circuit everyone else — and
+  // reuses fetchReadme's cache, shared with the page render below.
+  const hasEnrichment =
+    Boolean(server.aiEnrichedAt) ||
+    Boolean(server.aiSummary && server.aiSummary.trim()) ||
+    Boolean(server.aiOverview && server.aiOverview.trim()) ||
+    (Array.isArray(server.tools) && server.tools.length > 0);
+  const hasSubstantialDescription = (server.description ?? '').trim().length >= 120;
+  // Real-world popularity is its own proof a listing matters — never noindex one
+  // just because its content fields happen to be empty (e.g. a transient README
+  // fetch miss). Belt-and-suspenders against over-gating.
+  const hasTraction = (server.githubStars ?? 0) >= 25 || (server.npmDownloads ?? 0) >= 100;
+  let isThinListing = false;
+  if (
+    !hasEnrichment &&
+    !hasTraction &&
+    !hasSubstantialDescription &&
+    server.status !== 'removed'
+  ) {
+    const probeReadme = await fetchReadme(server.url).catch(() => null);
+    isThinListing = !(probeReadme && probeReadme.trim().length >= 200);
+  }
+
+  const robotsOverride =
+    server.status === 'removed'
+      ? { robots: { index: false, follow: false } as const }
+      : isThinListing
+        ? { robots: { index: false, follow: true } as const }
+        : {};
+
   return {
     title,
     description: desc,
     keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
-    // Auto-unpublished (dead/archived source) — already excluded from search, browse,
-    // and the API, but the page itself stays reachable (see the banner below) so an
-    // owner landing on an old link/backlink can claim and fix it. Keep it out of
-    // search-engine indexes while it's in this state.
-    ...(server.status === 'removed' ? { robots: { index: false, follow: false } } : {}),
+    // Auto-unpublished (dead/archived source) → noindex,nofollow (removed);
+    // barren stub with no unique content → noindex,follow (thin, self-heals on
+    // enrichment); everything else indexes normally. See robotsOverride above.
+    ...robotsOverride,
     alternates: {
       canonical: `https://allmcps.com/mcp/${server.id}`,
       // Expose the agent-readable markdown representation so LLM crawlers and
@@ -1047,7 +1083,31 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             <div className="detail-readme-scroll">
               <div className="markdown-body">
                 {readme ? (
-                  <SafeMarkdown content={readme} utmContent={server.id} repoUrl={server.url} />
+                  (() => {
+                    // Only the long tail of giant READMEs is trimmed here — most
+                    // render in full. Keeps the mirrored upstream content from
+                    // bloating the HTML (CWV) and out-weighting this page's own
+                    // unique content, while still linking to the full source.
+                    const { excerpt, truncated } = truncateReadmeExcerpt(readme);
+                    return (
+                      <>
+                        <SafeMarkdown content={excerpt ?? readme} utmContent={server.id} repoUrl={server.url} />
+                        {truncated && (
+                          <p style={{ marginTop: '1.25rem' }}>
+                            <OutboundLink
+                              href={server.url}
+                              destinationType="github"
+                              serverId={server.id}
+                              target="_blank"
+                              rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+                            >
+                              Read the full README on {repoHost || 'the source repository'} →
+                            </OutboundLink>
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()
                 ) : (
                   <>
                     <p>
