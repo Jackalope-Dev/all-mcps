@@ -121,7 +121,7 @@ export async function POST(req: Request) {
     // older duplicates.
     if (action === 'dedupe_queue') {
       const queued = await db
-        .select({ id: socialPosts.id, tweetText: socialPosts.tweetText })
+        .select({ id: socialPosts.id, tweetText: socialPosts.tweetText, serverId: socialPosts.serverId })
         .from(socialPosts)
         .where(and(eq(socialPosts.channel, 'twitter'), eq(socialPosts.status, 'queued')))
         .orderBy(desc(socialPosts.createdAt));
@@ -167,6 +167,13 @@ export async function POST(req: Request) {
           { source: 'admin_manual' }
         );
 
+        if (!tweetResult.success || !tweetResult.queued) {
+          return NextResponse.json({
+            error: tweetResult.error || 'Server is already queued or was tweeted recently.',
+            result: tweetResult,
+          }, { status: 409 });
+        }
+
         // Match the cron/approval enqueue paths so a manually-queued tweet also counts
         // toward the repost cooldown — otherwise an admin queuing a listing today doesn't
         // stop the highlight cron from picking the same listing again tomorrow.
@@ -180,16 +187,18 @@ export async function POST(req: Request) {
           result: tweetResult,
         });
       } else if (tweetText) {
-        // Refuse to queue a body identical to one already waiting in the feed —
+        // Refuse to queue a body identical to one already in the feed or recently posted —
         // Buffer would post the first and X.com would reject the second as a repeat.
         const normalized = normalizeTweetForDedup(tweetText);
-        const existingQueued = await db
+        const recentPosts = await db
           .select({ tweetText: socialPosts.tweetText })
           .from(socialPosts)
-          .where(and(eq(socialPosts.channel, 'twitter'), eq(socialPosts.status, 'queued')));
-        if (existingQueued.some((row) => normalizeTweetForDedup(row.tweetText) === normalized)) {
+          .where(eq(socialPosts.channel, 'twitter'))
+          .orderBy(desc(socialPosts.createdAt))
+          .limit(150);
+        if (recentPosts.some((row: any) => normalizeTweetForDedup(row.tweetText) === normalized)) {
           return NextResponse.json(
-            { error: 'An identical tweet is already queued.' },
+            { error: 'An identical tweet has already been queued or posted recently.' },
             { status: 409 },
           );
         }

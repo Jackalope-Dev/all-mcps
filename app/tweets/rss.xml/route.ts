@@ -1,10 +1,13 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gt } from 'drizzle-orm';
 import { socialPosts } from '../../../db/schema';
 import { dedupeTweetItems, escapeForXml, truncateToTwitterLimit, TWITTER_SAFE_CHAR_LIMIT } from '../../../lib/twitter';
 
 export const dynamic = 'force-dynamic';
+
+// Queued items older than this (in days) are considered stale and excluded from the active feed
+const MAX_FEED_AGE_DAYS = 14;
 
 function toCdataSafe(value: string): string {
   return value.replace(/]]>/g, ']]]]><![CDATA[>');
@@ -23,6 +26,7 @@ export async function GET() {
     const ctx = await getCloudflareContext();
     if (ctx?.env?.DB) {
       const db = drizzle((ctx.env as any).DB);
+      const staleCutoff = new Date(Date.now() - MAX_FEED_AGE_DAYS * 24 * 60 * 60 * 1000);
       items = await db
         .select({
           guid: socialPosts.guid,
@@ -31,19 +35,22 @@ export async function GET() {
           serverId: socialPosts.serverId,
         })
         .from(socialPosts)
-        .where(and(eq(socialPosts.channel, 'twitter'), eq(socialPosts.status, 'queued')))
+        .where(
+          and(
+            eq(socialPosts.channel, 'twitter'),
+            eq(socialPosts.status, 'queued'),
+            gt(socialPosts.createdAt, staleCutoff)
+          )
+        )
         .orderBy(desc(socialPosts.createdAt))
-        .limit(250);
+        .limit(100);
     }
   } catch (error) {
     console.warn('Tweets RSS feed DB fetch failed.', error);
   }
 
-  // Collapse duplicate bodies before rendering. Nothing marks a queued row as sent,
-  // so every queued row stays in this feed; two rows with identical text each carry
-  // a distinct <guid>, so Buffer treats the second as new and X.com rejects it with
-  // "you've posted that one recently", stalling the make.com scenario. Items arrive
-  // newest-first, so this keeps the most recent copy of each unique tweet.
+  // Collapse duplicate bodies and duplicate servers before rendering.
+  // Items arrive newest-first, keeping the most recent copy of each unique tweet and server.
   const dedupedItems = dedupeTweetItems(items);
 
   const rssItems = dedupedItems

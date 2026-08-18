@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers, socialPosts } from '../../../../db/schema';
-import { eq, lt } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { tweetMcpServer } from '../../../../lib/twitter';
 import serversData from '../../../../data/mcp-servers.json';
@@ -58,6 +58,17 @@ export async function POST(req: Request) {
           const newCutoff = new Date(now.getTime() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
           const cooldownCutoff = new Date(now.getTime() - REPOST_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
 
+          // Find all servers currently waiting in the queue so we never select a server
+          // that is already queued (which would cause duplicate tweets to hit Make.com / Buffer)
+          const queuedSocial = await db
+            .select({ serverId: socialPosts.serverId })
+            .from(socialPosts)
+            .where(and(eq(socialPosts.channel, 'twitter'), eq(socialPosts.status, 'queued')))
+            .catch(() => []);
+          const queuedServerIds = new Set(
+            queuedSocial.map((r: any) => r.serverId).filter(Boolean)
+          );
+
           type Row = (typeof activeServers)[number];
           const isFeatured = (s: Row) =>
             Boolean(
@@ -78,16 +89,18 @@ export async function POST(req: Request) {
             return ta - tb;
           };
 
-          // A listing is eligible only if it has never been tweeted, or was last
-          // tweeted before the cooldown window — this is the guard that stops the
-          // same server (especially a lone paid listing) from being reposted.
+          // A listing is eligible only if it is NOT currently queued, and either has never
+          // been tweeted or was last tweeted before the cooldown window.
           const isEligible = (s: Row) =>
-            !s.lastTweetedAt || new Date(s.lastTweetedAt) <= cooldownCutoff;
+            !queuedServerIds.has(s.id) &&
+            (!s.lastTweetedAt || new Date(s.lastTweetedAt) <= cooldownCutoff);
 
           // Full tiers (for the relaxed fallback below), least-recently-tweeted first.
-          const featuredAll = activeServers.filter(isFeatured).sort(leastRecentlyTweeted);
-          const newAll = activeServers.filter(isNewServer).sort(leastRecentlyTweeted);
-          const restAll = activeServers
+          // Filter out any server already waiting in the queue.
+          const unqueuedServers = activeServers.filter((s) => !queuedServerIds.has(s.id));
+          const featuredAll = unqueuedServers.filter(isFeatured).sort(leastRecentlyTweeted);
+          const newAll = unqueuedServers.filter(isNewServer).sort(leastRecentlyTweeted);
+          const restAll = unqueuedServers
             .filter((s) => !isFeatured(s) && !isNewServer(s))
             .sort(leastRecentlyTweeted);
 
@@ -102,9 +115,6 @@ export async function POST(req: Request) {
           // guarantees nothing repeats until it ages out of the window.
           const roll = Math.random();
           let pool: Row[];
-          // True while we're drawing from the cooldown-filtered eligible pools (pick at
-          // random); false only in the relaxed fallback below (every listing is inside
-          // the cooldown, so take the one tweeted longest ago instead).
           let eligible = true;
           if (featuredPool.length && roll < FEATURED_SHARE) {
             pool = featuredPool;
@@ -117,27 +127,25 @@ export async function POST(req: Request) {
           } else if (newPool.length) {
             pool = newPool;
           } else {
-            // Every listing has been tweeted within the cooldown window. Rather than
-            // stay silent, relax the cooldown and repost the one tweeted longest ago,
-            // still giving featured/paid listings priority.
+            // Every unqueued listing has been tweeted within the cooldown window.
+            // Relax the cooldown and pick the one tweeted longest ago among unqueued listings.
             pool = featuredAll.length ? featuredAll : newAll.length ? newAll : restAll;
             eligible = false;
           }
 
-          // Random pick among eligible listings gives real variety between posts; the
-          // cooldown filter already guarantees none of them repeat. In the relaxed
-          // fallback we deterministically take the least-recently-tweeted (pool[0]).
-          const item = eligible ? pool[Math.floor(Math.random() * pool.length)] : pool[0];
-          const featuredFlag = isFeatured(item);
+          if (pool && pool.length > 0) {
+            const item = eligible ? pool[Math.floor(Math.random() * pool.length)] : pool[0];
+            const featuredFlag = isFeatured(item);
 
-          selectedServer = {
-            id: item.id,
-            name: item.name,
-            description: item.description,
-            category: item.category,
-            isFeatured: featuredFlag,
-            isNew: !featuredFlag && isNewServer(item),
-          };
+            selectedServer = {
+              id: item.id,
+              name: item.name,
+              description: item.description,
+              category: item.category,
+              isFeatured: featuredFlag,
+              isNew: !featuredFlag && isNewServer(item),
+            };
+          }
         }
       }
     } catch (e) {

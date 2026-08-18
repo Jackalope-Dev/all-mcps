@@ -100,10 +100,23 @@ assert(
 
 // 9. A list with no duplicates is returned intact.
 const unique = dedupeTweetItems([
-  { tweetText: 'one' },
-  { tweetText: 'two' },
-  { tweetText: 'three' },
+  { tweetText: 'one', serverId: 'server-1' },
+  { tweetText: 'two', serverId: 'server-2' },
+  { tweetText: 'three', serverId: 'server-3' },
 ]);
 assert(unique.length === 3, 'dedupeTweetItems should leave unique lists unchanged');
 
-console.log('All twitter char-limit tests passed ✔');
+// 10. dedupeTweetItems drops duplicate serverId even if tweet text differs slightly.
+const dedupedServer = dedupeTweetItems([
+  { id: 4, serverId: 'server-alpha', tweetText: '🚀 Server Alpha now on AllMCPs!' },
+  { id: 3, serverId: 'server-alpha', tweetText: '🔥 Check out Server Alpha on AllMCPs!' },
+  { id: 2, serverId: 'server-beta', tweetText: '⭐ Server Beta spotlight!' },
+]);
+assert(dedupedServer.length === 2, 'dedupeTweetItems should drop duplicate serverId');
+assert(
+  (dedupedServer[0] as any).id === 4 && (dedupedServer[1] as any).id === 2,
+  'dedupeTweetItems should keep the newest tweet for each serverId',
+);
+
+console.log('All twitter deduplication and char-limit tests passed ✔');
+

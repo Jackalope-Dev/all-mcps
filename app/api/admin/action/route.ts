@@ -155,6 +155,7 @@ export async function POST(req: Request) {
           isNew: true,
         }, {
           source: 'approval',
+          dedupeKey: `approval:${approvedServer.id}`,
         });
         // Stamp the rotation clock so the highlight cron doesn't immediately
         // re-post a server we just announced.

@@ -1,3 +1,4 @@
+import { and, desc, eq } from 'drizzle-orm';
 import { socialPosts } from '../db/schema';
 
 export interface McpServerTweetPayload {
@@ -64,18 +65,26 @@ export function normalizeTweetForDedup(text: string): string {
 }
 
 /**
- * Collapse a list of queued items down to one per unique tweet body. Callers pass
- * items already ordered newest-first, so the first occurrence of each normalized
- * body is kept and later (older) duplicates are dropped — this is what stops the
- * RSS feed from ever handing Buffer two posts X.com would reject as identical.
+ * Collapse a list of queued items down to one per unique tweet body AND server ID.
+ * Callers pass items already ordered newest-first, so the first occurrence of each
+ * unique normalized body (and unique serverId) is kept and later (older) duplicates
+ * are dropped — this is what stops the RSS feed from ever handing Buffer two posts
+ * X.com would reject as duplicate content.
  */
-export function dedupeTweetItems<T extends { tweetText: string }>(items: T[]): T[] {
-  const seen = new Set<string>();
+export function dedupeTweetItems<T extends { tweetText: string; serverId?: string | null }>(items: T[]): T[] {
+  const seenTexts = new Set<string>();
+  const seenServers = new Set<string>();
   const out: T[] = [];
   for (const item of items) {
-    const key = normalizeTweetForDedup(item.tweetText);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const textKey = normalizeTweetForDedup(item.tweetText);
+    if (seenTexts.has(textKey)) continue;
+
+    if (item.serverId) {
+      if (seenServers.has(item.serverId)) continue;
+      seenServers.add(item.serverId);
+    }
+
+    seenTexts.add(textKey);
     out.push(item);
   }
   return out;
@@ -363,6 +372,10 @@ export function buildMcpServerTweetText(server: McpServerTweetPayload): string {
 
 /**
  * Queue a tweet item into D1-backed social_posts (later consumed by RSS pollers).
+ * Enforces strict multi-layer deduplication:
+ * 1. Server deduplication: Rejects if the server is already waiting in the queue (status = 'queued').
+ * 2. Content deduplication: Rejects if identical normalized text was already queued or sent recently.
+ * 3. Stable dedupe keys: Auto-assigns idempotent keys for approval and crons.
  */
 export async function tweetMcpServer(
   db: any,
@@ -370,10 +383,64 @@ export async function tweetMcpServer(
   options: TweetQueueOptions = {},
 ): Promise<TweetQueueResult> {
   const text = buildMcpServerTweetText(server);
-  const guid = toTweetQueueGuid(options.dedupeKey);
+  const normalized = normalizeTweetForDedup(text);
+
+  // Auto-generate stable dedupe key if not provided for approval
+  let dedupeKey = options.dedupeKey;
+  if (!dedupeKey && options.source === 'approval' && server.id) {
+    dedupeKey = `approval:${server.id}`;
+  }
+
+  const guid = toTweetQueueGuid(dedupeKey);
   const createdAt = options.now ?? new Date();
 
   try {
+    // 1. Guard against queuing the same server multiple times while one is still waiting in queue
+    if (server.id && db?.select) {
+      const existingQueued = await db
+        .select({ id: socialPosts.id, guid: socialPosts.guid })
+        .from(socialPosts)
+        .where(and(eq(socialPosts.serverId, server.id), eq(socialPosts.status, 'queued')))
+        .limit(1)
+        .catch(() => []);
+
+      if (existingQueued && existingQueued.length > 0) {
+        return {
+          success: true,
+          queued: false,
+          duplicate: true,
+          guid: existingQueued[0].guid,
+          text,
+          error: `Server "${server.id}" already has an active tweet in the queue.`,
+        };
+      }
+
+      // 2. Guard against duplicate tweet body (queued OR sent recently)
+      const recentPosts = await db
+        .select({ id: socialPosts.id, tweetText: socialPosts.tweetText })
+        .from(socialPosts)
+        .where(eq(socialPosts.channel, 'twitter'))
+        .orderBy(desc(socialPosts.createdAt))
+        .limit(100)
+        .catch(() => []);
+
+      if (recentPosts && recentPosts.length > 0) {
+        const hasDuplicateText = recentPosts.some(
+          (row: any) => normalizeTweetForDedup(row.tweetText) === normalized
+        );
+        if (hasDuplicateText) {
+          return {
+            success: true,
+            queued: false,
+            duplicate: true,
+            guid,
+            text,
+            error: 'An identical tweet has already been queued or posted recently.',
+          };
+        }
+      }
+    }
+
     await db.insert(socialPosts).values({
       guid,
       channel: 'twitter',
@@ -381,14 +448,14 @@ export async function tweetMcpServer(
       serverId: server.id,
       tweetText: text,
       source: options.source ?? null,
-      dedupeKey: options.dedupeKey ?? null,
+      dedupeKey: dedupeKey ?? null,
       createdAt,
     });
 
     return { success: true, queued: true, guid, text };
   } catch (error: any) {
     const message = String(error?.message || error || '');
-    if (options.dedupeKey && /UNIQUE constraint failed:\s*social_posts\.dedupe_key/i.test(message)) {
+    if (/UNIQUE constraint failed/i.test(message)) {
       return { success: true, queued: false, duplicate: true, guid, text };
     }
     return {
