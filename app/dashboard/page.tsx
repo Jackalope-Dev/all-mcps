@@ -72,6 +72,7 @@ type OwnedServer = {
   suggestedInstallCommand?: string | null;
   suggestedInstallArgs?: string[] | null;
   lastTweetedAt?: Date | string | null;
+  lastFeaturedAt?: Date | string | null;
 };
 
 async function getOwnedServers(userId: string): Promise<{
@@ -124,6 +125,7 @@ async function getOwnedServers(userId: string): Promise<{
           screenshotUrl: servers.screenshotUrl,
           pendingScreenshotKey: servers.pendingScreenshotKey,
           lastTweetedAt: servers.lastTweetedAt,
+          lastFeaturedAt: servers.lastFeaturedAt,
         })
         .from(servers)
         .where(eq(servers.ownerUserId, userId));

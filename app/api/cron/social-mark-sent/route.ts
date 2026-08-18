@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
-import { socialPosts } from '@/db/schema';
+import { servers, socialPosts } from '@/db/schema';
 import { isAdminAuthorized } from '@/lib/adminAuth';
 
 /**
@@ -41,15 +41,25 @@ export async function POST(req: Request) {
 
     const db = drizzle(env.DB as any);
     const where = typeof id === 'number' ? eq(socialPosts.id, id) : eq(socialPosts.guid, guid!);
+    const sentAt = new Date();
     const updated = await db
       .update(socialPosts)
-      .set({ status: 'sent', sentAt: new Date() })
+      .set({ status: 'sent', sentAt })
       .where(where)
-      .returning({ id: socialPosts.id });
+      .returning({ id: socialPosts.id, serverId: socialPosts.serverId });
 
     if (updated.length === 0) {
       return NextResponse.json({ error: 'No matching queued post found.' }, { status: 404 });
     }
+
+    // Stamp the honest "actually posted" signal now that X has confirmed it — distinct
+    // from lastTweetedAt, which was already set at enqueue time and drives the rotation
+    // cooldown regardless of whether this callback ever fires.
+    const serverId = updated[0]?.serverId;
+    if (serverId) {
+      await db.update(servers).set({ lastFeaturedAt: sentAt }).where(eq(servers.id, serverId));
+    }
+
     return NextResponse.json({ success: true, message: 'Post marked as sent.' });
   } catch (error: any) {
     console.error('Social mark-sent error:', error);

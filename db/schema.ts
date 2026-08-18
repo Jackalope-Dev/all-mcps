@@ -162,8 +162,10 @@ export const servers = sqliteTable('servers', {
   views: integer('views').notNull().default(0),
   copies: integer('copies').notNull().default(0),
   upvotes: integer('upvotes').notNull().default(0),
-  /** Last time this listing was posted to X/Twitter (highlight cron or new-listing announce). Drives least-recently-posted rotation so highlights don't repeat. */
+  /** Last time this listing was *queued* for X/Twitter (highlight cron, new-listing announce, or admin manual queue) — stamped at enqueue, before Buffer/X ever confirms the post. Drives least-recently-queued rotation so the same listing isn't re-queued before we even know the prior post went out. Not proof a tweet was actually published — see lastFeaturedAt for that. */
   lastTweetedAt: integer('last_tweeted_at', { mode: 'timestamp' }),
+  /** Last time a queued tweet for this listing was *confirmed* sent (social_posts.status flipped to 'sent' via the mark-sent callback). This is the honest "actually posted on X" signal — use it for owner-facing copy ("✓ Highlighted on @AllMCPs") instead of lastTweetedAt. Null if never confirmed, even if lastTweetedAt is set. */
+  lastFeaturedAt: integer('last_featured_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   /** JSON string array of freeform submitter-chosen keywords (max 5, ≤30 chars each). Distinct from the single curated `category`. */
   tags: text('tags'),

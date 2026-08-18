@@ -42,7 +42,9 @@ export async function POST(req: Request) {
     let selectedServer:
       | { id: string; name: string; description: string; category?: string; isFeatured?: boolean; isNew?: boolean }
       | null = null;
-    // Held so we can stamp `lastTweetedAt` only after a successful post (D1 path only).
+    // Held so we can stamp `lastTweetedAt` only after a successful enqueue (D1 path only).
+    // This is an enqueue-time stamp, not confirmation the tweet was actually posted — see
+    // lastFeaturedAt (stamped by /api/cron/social-mark-sent) for that.
     let db: ReturnType<typeof drizzle> | null = null;
 
     try {

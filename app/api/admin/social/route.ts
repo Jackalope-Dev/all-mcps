@@ -100,13 +100,18 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'id or guid is required.' }, { status: 400 });
       }
       const where = typeof id === 'number' ? eq(socialPosts.id, id) : eq(socialPosts.guid, guid!);
+      const sentAt = new Date();
       const updated = await db
         .update(socialPosts)
-        .set({ status: 'sent', sentAt: new Date() })
+        .set({ status: 'sent', sentAt })
         .where(where)
-        .returning({ id: socialPosts.id });
+        .returning({ id: socialPosts.id, serverId: socialPosts.serverId });
       if (updated.length === 0) {
         return NextResponse.json({ error: 'No matching queued post found.' }, { status: 404 });
+      }
+      const sentServerId = updated[0]?.serverId;
+      if (sentServerId) {
+        await db.update(servers).set({ lastFeaturedAt: sentAt }).where(eq(servers.id, sentServerId));
       }
       return NextResponse.json({ success: true, message: 'Post marked as sent.' });
     }
@@ -161,6 +166,13 @@ export async function POST(req: Request) {
           },
           { source: 'admin_manual' }
         );
+
+        // Match the cron/approval enqueue paths so a manually-queued tweet also counts
+        // toward the repost cooldown — otherwise an admin queuing a listing today doesn't
+        // stop the highlight cron from picking the same listing again tomorrow.
+        if (tweetResult.success && tweetResult.queued) {
+          await db.update(servers).set({ lastTweetedAt: new Date() }).where(eq(servers.id, server.id));
+        }
 
         return NextResponse.json({
           success: true,

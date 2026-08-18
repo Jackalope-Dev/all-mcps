@@ -56,6 +56,7 @@ type Server = {
   tools?: string | null;
   url?: string;
   lastTweetedAt?: string | Date | null;
+  lastFeaturedAt?: string | Date | null;
   tags?: string[] | null;
   pricingModel?: string | null;
   pricingNotes?: string | null;
@@ -719,7 +720,7 @@ export default function DashboardClient({
                           </Link>
                         </div>
                       ) : (
-                        <AnalyticsPanel detail={detail} lastTweetedAt={server.lastTweetedAt} />
+                        <AnalyticsPanel detail={detail} lastFeaturedAt={server.lastFeaturedAt} />
                       )}
                     </>
                   ) : (
@@ -1546,7 +1547,7 @@ function PremiumTeaser() {
   );
 }
 
-function AnalyticsPanel({ detail, lastTweetedAt }: { detail: ServerAnalytics; lastTweetedAt?: string | Date | null }) {
+function AnalyticsPanel({ detail, lastFeaturedAt }: { detail: ServerAnalytics; lastFeaturedAt?: string | Date | null }) {
   return (
     <div style={{
       display: 'grid', gap: '1.25rem',
@@ -1675,10 +1676,10 @@ function AnalyticsPanel({ detail, lastTweetedAt }: { detail: ServerAnalytics; la
               </a>
             </div>
           </div>
-        ) : lastTweetedAt ? (
+        ) : lastFeaturedAt ? (
           <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
             <p style={{ margin: '0 0 0.5rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-              ✓ Highlighted on @AllMCPs on {new Date(lastTweetedAt).toLocaleDateString()}
+              ✓ Highlighted on @AllMCPs on {new Date(lastFeaturedAt).toLocaleDateString()}
             </p>
             <a href="https://x.com/AllMCPs" target="_blank" rel="noopener noreferrer" style={{ color: '#1DA1F2', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: 600 }}>
               View on @AllMCPs X feed → <ExternalLink size={12} />
