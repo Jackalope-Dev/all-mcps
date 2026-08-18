@@ -1525,10 +1525,14 @@ export default function DirectoryGrid({
           </div>
         ) : (
           <div className="directory-list">
-            {visibleServers.map((server) => {
+            {visibleServers.map((server, index) => {
               const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_list' as const;
               return (
-              <ImpressionBeacon key={server.id} serverId={server.id} surface={surface}>
+              <React.Fragment key={server.id}>
+              {index === adSlotRef.current && (
+                <SponsorAdUnit placement="directory_inline" layout="row" />
+              )}
+              <ImpressionBeacon serverId={server.id} surface={surface}>
               <Link
                 href={`/mcp/${server.id}`}
                 className={`directory-list-row surface-interactive${isFeaturedListing(server) ? ' directory-list-row-featured' : ''}`}
@@ -1577,6 +1581,7 @@ export default function DirectoryGrid({
                 <Stats server={server} />
               </Link>
               </ImpressionBeacon>
+              </React.Fragment>
               );
             })}
           </div>

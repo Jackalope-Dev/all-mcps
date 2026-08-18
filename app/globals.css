@@ -4255,11 +4255,14 @@ nav[aria-label="Table of contents"] {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .directory-list-row {
+  .directory-list-row,
+  .ad-promo-row,
+  .ad-unit-row {
     flex-wrap: wrap;
   }
 
-  .directory-stats {
+  .directory-stats,
+  .ad-promo-row-action {
     width: 100%;
     padding-left: calc(44px + 1rem);
   }
@@ -6695,6 +6698,66 @@ nav[aria-label="Table of contents"] {
 [data-theme="light"] .ad-promo-inline:hover {
   border-color: #0369a1;
   box-shadow: 0 8px 24px -2px rgba(2, 132, 199, 0.2);
+}
+
+.ad-promo-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  min-height: 104px;
+  border: 1.5px dashed rgba(0, 229, 255, 0.45);
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.06), rgba(0, 112, 243, 0.04), var(--bg-surface));
+  box-shadow: 0 4px 20px -2px rgba(0, 229, 255, 0.08);
+  transition: all 0.2s ease;
+}
+.ad-promo-row:hover {
+  border-color: #00e5ff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px -2px rgba(0, 229, 255, 0.16);
+}
+[data-theme="light"] .ad-promo-row {
+  border: 1.5px dashed #0284c7;
+  background: linear-gradient(135deg, #f0f9ff, #f8fafc);
+  box-shadow: 0 4px 18px -2px rgba(2, 132, 199, 0.12);
+}
+[data-theme="light"] .ad-promo-row:hover {
+  border-color: #0369a1;
+  box-shadow: 0 8px 24px -2px rgba(2, 132, 199, 0.2);
+}
+
+.ad-unit-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  min-height: 104px;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 123, 255, 0.03), var(--bg-surface));
+  box-shadow: 0 4px 20px -2px rgba(0, 229, 255, 0.08);
+  transition: all 0.2s ease;
+}
+.ad-unit-row:hover {
+  border-color: rgba(0, 229, 255, 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px -2px rgba(0, 229, 255, 0.16);
+}
+[data-theme="light"] .ad-unit-row {
+  border: 1px solid rgba(2, 132, 199, 0.35);
+  background: linear-gradient(135deg, #f0f9ff, #ffffff);
+  box-shadow: 0 4px 18px -2px rgba(2, 132, 199, 0.1);
+}
+[data-theme="light"] .ad-unit-row:hover {
+  border-color: #0369a1;
+  box-shadow: 0 8px 24px -2px rgba(2, 132, 199, 0.18);
+}
+
+.ad-promo-row-action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .ad-promo-sidebar {

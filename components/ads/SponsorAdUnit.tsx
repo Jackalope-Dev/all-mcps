@@ -17,6 +17,8 @@ interface SponsorAdUnitProps {
   previewAd?: Partial<SponsorAd> | null;
   /** Optional custom CSS className */
   className?: string;
+  /** Optional layout mode: 'card' (default) or 'row' */
+  layout?: 'card' | 'row';
 }
 
 // Page-level registry to prevent rendering duplicate ads on the same page
@@ -33,7 +35,7 @@ function getDisplayDomain(url?: string | null): string | null {
   }
 }
 
-export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorAdUnitProps) {
+export function SponsorAdUnit({ placement, previewAd, className = '', layout = 'card' }: SponsorAdUnitProps) {
   const [ad, setAd] = useState<Partial<SponsorAd> | null>(previewAd ?? null);
   const [eventToken, setEventToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(!previewAd);
@@ -162,6 +164,19 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
   };
 
   if (loading) {
+    if (layout === 'row') {
+      return (
+        <div
+          className={`surface animate-pulse ${className}`}
+          style={{
+            borderRadius: '14px',
+            border: '1px solid var(--border-color)',
+            minHeight: '104px',
+            opacity: 0.5,
+          }}
+        />
+      );
+    }
     return (
       <div
         className={`surface animate-pulse ${className}`}
@@ -181,6 +196,73 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
     const advertiseHref = `/advertise?placement=${placement}&variant=${placeholderVariant.id}`;
 
     if (placement === 'directory_inline') {
+      if (layout === 'row') {
+        return (
+          <div
+            ref={adRef}
+            className={`surface ad-promo-row ${className}`}
+          >
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'var(--brand-gradient-soft)',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-color)',
+                flexShrink: 0,
+              }}
+            >
+              <Megaphone size={20} />
+            </div>
+
+            <div className="directory-list-body">
+              <div className="directory-list-title-row">
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'var(--accent-color)',
+                    background: 'rgba(0, 229, 255, 0.12)',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Sparkles size={10} /> {placeholderVariant.badgeText}
+                </span>
+                <div className="directory-list-name-col">
+                  <h4 className="directory-list-name" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {placeholderVariant.headline}
+                  </h4>
+                </div>
+              </div>
+              <div className="directory-list-desc">
+                {placeholderVariant.body}
+              </div>
+            </div>
+
+            <div className="ad-promo-row-action">
+              <Link
+                href={advertiseHref}
+                onClick={handlePlaceholderCtaClick}
+                className="btn btn-sm btn-primary"
+                style={{ whiteSpace: 'nowrap', gap: '6px', fontSize: '0.825rem' }}
+              >
+                {placeholderVariant.ctaText} <ArrowRight size={13} />
+              </Link>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div
           ref={adRef}
@@ -405,6 +487,95 @@ export function SponsorAdUnit({ placement, previewAd, className = '' }: SponsorA
   const displayDomain = getDisplayDomain(ad.targetUrl);
 
   if (placement === 'directory_inline') {
+    if (layout === 'row') {
+      return (
+        <div
+          ref={adRef}
+          className={`surface ad-unit-row ${className}`}
+        >
+          {ad.logoUrl && !logoError ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={ad.logoUrl}
+              alt={ad.title || 'Sponsor'}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                objectFit: 'cover',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-elevated)',
+                flexShrink: 0,
+              }}
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'var(--brand-gradient)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                color: '#fff',
+                flexShrink: 0,
+              }}
+            >
+              {(ad.title || 'A').slice(0, 2).toUpperCase()}
+            </div>
+          )}
+
+          <div className="directory-list-body">
+            <div className="directory-list-title-row">
+              <span
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-color)',
+                  background: 'rgba(0, 229, 255, 0.12)',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <Sparkles size={10} /> Sponsored Partner
+              </span>
+              <div className="directory-list-name-col">
+                <h4 className="directory-list-name" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {ad.title || 'Sponsor Title'}
+                </h4>
+                {displayDomain && (
+                  <span className="directory-list-org" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    {displayDomain}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="directory-list-desc">
+              {ad.description || 'Sponsored advertisement description.'}
+            </div>
+          </div>
+
+          <div className="ad-promo-row-action">
+            <a
+              {...linkProps}
+              className="btn btn-sm btn-primary"
+              style={{ whiteSpace: 'nowrap', gap: '6px', fontSize: '0.825rem' }}
+            >
+              {ad.ctaText || 'Learn More'} <ExternalLink size={13} />
+            </a>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         ref={adRef}
