@@ -28,7 +28,8 @@ export default function ClaimClient({
   repoUrl,
   websiteUrl: initialWebsite,
   isOfficial,
-  websiteVerified,
+  reciprocalBadgeOk,
+  hasPendingClaim,
   userId,
 }: {
   serverId: string;
@@ -36,7 +37,8 @@ export default function ClaimClient({
   repoUrl: string;
   websiteUrl?: string | null;
   isOfficial?: boolean;
-  websiteVerified?: boolean;
+  reciprocalBadgeOk?: boolean;
+  hasPendingClaim?: boolean;
   userId: string | null;
 }) {
   const isSignedIn = !!userId;
@@ -51,9 +53,15 @@ export default function ClaimClient({
   const [cfToken, setCfToken] = useState('');
   const [showCfToken, setShowCfToken] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [claimed, setClaimed] = useState(!!isOfficial);
-  const [siteVerified, setSiteVerified] = useState(!!websiteVerified);
+  // Official status is admin-approved, so a successful submit doesn't flip it
+  // client-side — it queues a pending claim instead. `outcome` reflects what
+  // the last submit actually did.
+  const [outcome, setOutcome] = useState<'pending' | 'already-official' | null>(null);
+  const claimed = !!isOfficial;
+  const pendingReview = !!hasPendingClaim || outcome === 'pending';
+  // "Verified" (the reciprocal badge) is a separate, automatic signal — it's
+  // never set by this form, only ever reflected from the server.
+  const badgeVerified = !!reciprocalBadgeOk;
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
   const [badgeStyle, setBadgeStyle] = useState<BadgeStyle>(
     hasGithub ? 'shield' : 'directory'
@@ -96,7 +104,7 @@ export default function ClaimClient({
     }
   };
 
-  const alreadyVerifiedForMethod = method === 'github' ? claimed : siteVerified;
+  const alreadyOfficial = claimed;
 
   const copyText = async (text: string, label: string) => {
     try {
@@ -143,19 +151,15 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         }),
       });
 
-      const data = (await res.json()) as { error?: string; message?: string };
+      const data = (await res.json()) as { error?: string; message?: string; pending?: boolean };
 
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Verification failed');
       }
 
-      setSuccess(true);
-      setClaimed(true);
-      if (method === 'website_badge' || method === 'dns') {
-        setSiteVerified(true);
-      }
-      toast.success('Claim successful', {
-        description: data.message || 'Your listing is now verified.',
+      setOutcome(data.pending ? 'pending' : 'already-official');
+      toast.success(data.pending ? 'Submitted for review' : 'Already confirmed', {
+        description: data.message,
       });
     } catch (err: any) {
       const message = err?.message || 'Verification failed';
@@ -187,13 +191,12 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           websiteUrl: websiteUrl.trim(),
         }),
       });
-      const data = (await res.json()) as { error?: string; message?: string; websiteVerified?: boolean };
+      const data = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Could not save website');
       }
-      setSiteVerified(!!data.websiteVerified);
       toast.success('Website saved', {
-        description: data.message || 'Verify with badge or DNS when ready.',
+        description: data.message || 'The reciprocal-badge check will pick it up automatically.',
       });
     } catch (err: any) {
       const message = err?.message || 'Could not save website';
@@ -255,7 +258,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
     }
   };
 
-  if (success) {
+  if (outcome === 'already-official') {
     return (
       <div
         style={{
@@ -267,10 +270,45 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
         }}
       >
-        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>🎉</div>
-        <h2 style={{ marginBottom: '1rem', color: '#10b981', fontSize: '1.75rem', fontWeight: 800 }}>Claim Successful!</h2>
+        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>✅</div>
+        <h2 style={{ marginBottom: '1rem', color: '#10b981', fontSize: '1.75rem', fontWeight: 800 }}>Already confirmed</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 1.5rem' }}>
-          Your listing is now marked as <strong>Verified</strong> on AllMCPs. {siteVerified ? 'Your product website is verified as well!' : ''}
+          You're already the confirmed <strong>Official</strong> owner of this listing — nothing to review.
+        </p>
+        <Link
+          href={`/mcp/${serverId}`}
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: 'var(--brand-gradient, var(--accent-color))',
+            color: '#ffffff',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+          }}
+        >
+          View listing
+        </Link>
+      </div>
+    );
+  }
+
+  if (outcome === 'pending' || (pendingReview && !claimed)) {
+    return (
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '3.5rem 2rem',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+        }}
+      >
+        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>⏳</div>
+        <h2 style={{ marginBottom: '1rem', color: '#f59e0b', fontSize: '1.75rem', fontWeight: 800 }}>Pending admin review</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 1.5rem' }}>
+          Your ownership proof was verified and is now waiting on a quick review from our team before the <strong>Official</strong> badge
+          and edit access go live. We'll email you as soon as it's approved.
         </p>
         <div
           style={{
