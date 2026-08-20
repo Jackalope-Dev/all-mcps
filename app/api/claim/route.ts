@@ -9,6 +9,7 @@ import {
   verifyDnsTxt,
   verifyGithubReadme,
   verifyWebsiteHtml,
+  websiteHasReciprocalBadge,
 } from '../../../lib/verification';
 import { auth } from '../../../lib/auth';
 import { sendNotificationEmail, getEmailEnv } from '../../../lib/notify';
@@ -131,68 +132,76 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: verification.reason || 'Verification failed' }, { status: 400 });
     }
 
+    const resolvedWebsiteUrl = method === 'github' ? null : websiteUrl;
+
+    // Check if the site or repo carries a reciprocal badge for instant dofollow credit
+    let earnedReciprocal = server.reciprocalBadgeOk;
+    if (method === 'github' && server.url.includes('github.com')) {
+      earnedReciprocal = true;
+    } else if (resolvedWebsiteUrl && (method === 'website_badge' || method === 'dns')) {
+      try {
+        const siteRes = await fetch(resolvedWebsiteUrl, {
+          method: 'GET',
+          headers: { 'User-Agent': 'AllMCPs-Verification/1.0 (+https://allmcps.com)' },
+          signal: AbortSignal.timeout(6000),
+        });
+        if (siteRes.ok) {
+          earnedReciprocal = websiteHasReciprocalBadge(await siteRes.text(), id);
+        }
+      } catch {
+        // Fall back to current reciprocal status
+      }
+    }
+
+    const claimUpdates: Record<string, unknown> = {
+      isOfficial: true,
+      ownerUserId: userId,
+      claimedAt: server.claimedAt || new Date(),
+      pendingClaimUserId: null,
+      pendingClaimWebsiteUrl: null,
+      reciprocalBadgeOk: earnedReciprocal,
+    };
+    if (resolvedWebsiteUrl) {
+      claimUpdates.websiteUrl = resolvedWebsiteUrl;
+    }
+
+    await db.update(servers).set(claimUpdates).where(eq(servers.id, id));
+
+    const methodLabel = method === 'github' ? 'GitHub README' : method === 'dns' ? 'DNS TXT record' : 'site badge / meta tag';
     const emailEnv = await getEmailEnv();
     const userEmail = session?.user?.email || server.submitterEmail;
     const adminEmail = emailEnv.adminEmail;
 
-    // Every method proves *control* (of the repo, or of a specific URL), but
-    // "Official" is a moderation decision, not just a technical proof — it
-    // grants edit rights and a public trust badge — so it always goes through
-    // admin review now (see approve_claim/reject_claim in /api/admin/action),
-    // regardless of method. The separate "Verified" badge (reciprocal badge
-    // presence) is unrelated to this and is checked automatically by cron —
-    // see app/api/cron/health/route.ts.
-    const resolvedWebsiteUrl = method === 'github' ? null : websiteUrl;
-    const prevWebsite = (server.websiteUrl || '').replace(/\/$/, '').toLowerCase();
-    const nextWebsite = (resolvedWebsiteUrl || '').replace(/\/$/, '').toLowerCase();
-    const domainUnchanged = method === 'github' || prevWebsite === nextWebsite;
+    if (userEmail) {
+      const dofollowNote = earnedReciprocal
+        ? 'Your reciprocal AllMCPs badge was also detected, so your website backlink is active as dofollow!'
+        : 'Note: To get a free reciprocal dofollow backlink to your website, place the official AllMCPs badge on your website or README. Our automated health checker will detect it and upgrade your link to dofollow automatically.';
 
-    // Already the confirmed owner via this exact proof — re-verifying (e.g. a
-    // "Re-verify" button) shouldn't queue a redundant claim or re-notify anyone.
-    if (server.isOfficial && server.ownerUserId === userId && domainUnchanged) {
-      return NextResponse.json({
-        success: true,
-        message: 'Ownership already confirmed for this account — nothing to review.',
+      await sendNotificationEmail({
+        to: userEmail,
+        heading: `Listing Verified: ${server.name}`,
+        message: `Congratulations! Your ownership of "${server.name}" has been verified via ${methodLabel} and is now official. You have full edit access in your dashboard.\n\n${dofollowNote}`,
+        actionText: 'Manage in Dashboard',
+        actionUrl: `${getAppUrl()}/dashboard`,
       });
     }
 
-    // Same user re-submitting the same not-yet-reviewed proof shouldn't re-fire
-    // the "pending review" notifications on every click.
-    const alreadyPendingSameClaim =
-      server.pendingClaimUserId === userId &&
-      (server.pendingClaimWebsiteUrl || null) === resolvedWebsiteUrl;
-
-    await db
-      .update(servers)
-      .set({ pendingClaimUserId: userId, pendingClaimWebsiteUrl: resolvedWebsiteUrl })
-      .where(eq(servers.id, id));
-
-    const methodLabel = method === 'github' ? 'GitHub README' : method === 'dns' ? 'DNS TXT record' : 'site badge';
-
-    if (!alreadyPendingSameClaim && userEmail) {
+    if (adminEmail) {
       await sendNotificationEmail({
-        to: userEmail,
-        heading: `Claim Under Review: ${server.name}`,
-        message: `Your ownership proof for "${server.name}" was verified via ${methodLabel}! An admin will review it shortly — we'll email you as soon as it's approved.`,
+        to: adminEmail,
+        heading: `Listing Claim Auto-Approved: ${server.name}`,
+        message: `${server.name} was automatically verified and claimed by ${userEmail || userId} via ${methodLabel}${resolvedWebsiteUrl ? ` (website: ${resolvedWebsiteUrl})` : ''}.${earnedReciprocal ? ' Reciprocal badge detected (dofollow active).' : ''}`,
         actionText: 'View Listing',
         actionUrl: `${getAppUrl()}/mcp/${id}`,
       });
     }
 
-    if (!alreadyPendingSameClaim && adminEmail) {
-      await sendNotificationEmail({
-        to: adminEmail,
-        heading: `New Pending Claim: ${server.name}`,
-        message: `${server.name} has a claim awaiting review by ${userEmail || userId}, proven via ${methodLabel}${resolvedWebsiteUrl ? ` (website: ${resolvedWebsiteUrl})` : ''}.`,
-        actionText: 'Review in Admin Panel',
-        actionUrl: `${getAppUrl()}/admin`,
-      });
-    }
-
     return NextResponse.json({
       success: true,
-      pending: true,
-      message: "Ownership proof verified — pending a quick admin review before it goes live. We'll email you once it's approved.",
+      pending: false,
+      isOfficial: true,
+      reciprocalBadgeOk: earnedReciprocal,
+      message: 'Ownership verified! Your listing is now official and you have full management access.',
     });
   } catch (error) {
     console.error('Claim error:', error);

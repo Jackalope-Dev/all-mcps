@@ -53,12 +53,10 @@ export default function ClaimClient({
   const [cfToken, setCfToken] = useState('');
   const [showCfToken, setShowCfToken] = useState(false);
   const [error, setError] = useState('');
-  // Official status is admin-approved, so a successful submit doesn't flip it
-  // client-side — it queues a pending claim instead. `outcome` reflects what
-  // the last submit actually did.
-  const [outcome, setOutcome] = useState<'pending' | 'already-official' | null>(null);
-  const claimed = !!isOfficial;
-  const pendingReview = !!hasPendingClaim || outcome === 'pending';
+  // Outcome reflects what the last verification attempt did
+  const [outcome, setOutcome] = useState<'official' | 'already-official' | 'pending' | null>(null);
+  const claimed = !!isOfficial || outcome === 'official';
+  const pendingReview = (!!hasPendingClaim || outcome === 'pending') && !claimed;
   // "Verified" (the reciprocal badge) is a separate, automatic signal — it's
   // never set by this form, only ever reflected from the server.
   const badgeVerified = !!reciprocalBadgeOk;
@@ -161,8 +159,9 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         throw new Error(typeof data.error === 'string' ? data.error : 'Verification failed');
       }
 
-      setOutcome(data.pending ? 'pending' : 'already-official');
-      toast.success(data.pending ? 'Submitted for review' : 'Already confirmed', {
+      const nextOutcome = data.pending ? 'pending' : 'official';
+      setOutcome(nextOutcome);
+      toast.success(data.pending ? 'Submitted for review' : 'Ownership verified!', {
         description: data.message,
       });
     } catch (err: any) {
@@ -262,7 +261,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
     }
   };
 
-  if (outcome === 'already-official') {
+  if (outcome === 'official' || outcome === 'already-official') {
     return (
       <div
         style={{
@@ -275,23 +274,78 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         }}
       >
         <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>✅</div>
-        <h2 style={{ marginBottom: '1rem', color: '#10b981', fontSize: '1.75rem', fontWeight: 800 }}>Already confirmed</h2>
+        <h2 style={{ marginBottom: '1rem', color: '#10b981', fontSize: '1.75rem', fontWeight: 800 }}>
+          {outcome === 'official' ? 'Ownership Verified & Active!' : 'Already confirmed'}
+        </h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 1.5rem' }}>
-          You're already the confirmed <strong>Official</strong> owner of this listing — nothing to review.
+          {outcome === 'official'
+            ? 'Your ownership proof was verified successfully. The listing is now officially claimed under your account with full editing access.'
+            : "You're already the confirmed Official owner of this listing — nothing to review."}
         </p>
-        <Link
-          href={`/mcp/${serverId}`}
+
+        <div
           style={{
-            padding: '0.75rem 1.5rem',
-            background: 'var(--brand-gradient, var(--accent-color))',
-            color: '#ffffff',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontWeight: 'bold',
+            color: 'var(--text-secondary)',
+            marginBottom: '2rem',
+            lineHeight: 1.6,
+            fontSize: '0.9rem',
+            padding: '1rem 1.25rem',
+            borderRadius: 12,
+            background: 'rgba(16,185,129,0.08)',
+            border: '1px solid rgba(16,185,129,0.25)',
+            textAlign: 'left',
+            maxWidth: '560px',
+            margin: '0 auto 2rem',
           }}
         >
-          View listing
-        </Link>
+          <strong style={{ color: '#34d399', display: 'block', marginBottom: '0.25rem' }}>✨ Free Reciprocal Dofollow Backlinks:</strong>
+          To activate a dofollow backlink to your website, simply add the official AllMCPs badge to your website or README. Our automated background health checker detects it automatically!
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+          <Link
+            href="/dashboard"
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'var(--brand-gradient, var(--accent-color))',
+              color: '#ffffff',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 14px rgba(0, 229, 255, 0.25)',
+            }}
+          >
+            Manage in Dashboard
+          </Link>
+          <Link
+            href={`/mcp/${serverId}`}
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-muted)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
+            View listing
+          </Link>
+          <Link
+            href="/badge-generator"
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-muted)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Get badge code
+          </Link>
+        </div>
       </div>
     );
   }

@@ -10,6 +10,7 @@ import {
   verifyDnsTxt,
   verifyGithubReadme,
   verifyWebsiteHtml,
+  websiteHasReciprocalBadge,
 } from '@/lib/verification';
 import { getClaimVerificationToken } from '@/lib/verificationTokens';
 import { sendNotificationEmail, getEmailEnv } from '@/lib/notify';
@@ -121,67 +122,77 @@ export async function POST(req: Request) {
       );
     }
 
+    const resolvedWebsiteUrl = method === 'github' ? null : websiteUrl;
+
+    // Check if the site or repo carries a reciprocal badge for instant dofollow credit
+    let earnedReciprocal = server.reciprocalBadgeOk;
+    if (method === 'github' && server.url.includes('github.com')) {
+      earnedReciprocal = true;
+    } else if (resolvedWebsiteUrl && (method === 'website_badge' || method === 'dns')) {
+      try {
+        const siteRes = await fetch(resolvedWebsiteUrl, {
+          method: 'GET',
+          headers: { 'User-Agent': 'AllMCPs-Verification/1.0 (+https://allmcps.com)' },
+          signal: AbortSignal.timeout(6000),
+        });
+        if (siteRes.ok) {
+          earnedReciprocal = websiteHasReciprocalBadge(await siteRes.text(), id);
+        }
+      } catch {
+        // Fall back to current reciprocal status
+      }
+    }
+
+    const claimUpdates: Record<string, unknown> = {
+      isOfficial: true,
+      ownerUserId: agent.userId,
+      claimedAt: server.claimedAt || new Date(),
+      pendingClaimUserId: null,
+      pendingClaimWebsiteUrl: null,
+      reciprocalBadgeOk: earnedReciprocal,
+    };
+    if (resolvedWebsiteUrl) {
+      claimUpdates.websiteUrl = resolvedWebsiteUrl;
+    }
+
+    await db.update(servers).set(claimUpdates).where(eq(servers.id, id));
+
+    const methodLabel = method === 'github' ? 'GitHub README' : method === 'dns' ? 'DNS TXT record' : 'site badge';
     const emailEnv = await getEmailEnv();
     const notificationEmail = agent.email || server.submitterEmail;
     const adminEmail = emailEnv.adminEmail;
 
-    // Every method proves *control*, but "Official" is a moderation decision
-    // (edit rights + a public trust badge), so it always goes through admin
-    // review now, regardless of method. "Verified" (reciprocal badge presence)
-    // is unrelated and is checked automatically by cron — see
-    // app/api/cron/health/route.ts.
-    const resolvedWebsiteUrl = method === 'github' ? null : websiteUrl;
-    const prevWebsite = (server.websiteUrl || '').replace(/\/$/, '').toLowerCase();
-    const nextWebsite = (resolvedWebsiteUrl || '').replace(/\/$/, '').toLowerCase();
-    const domainUnchanged = method === 'github' || prevWebsite === nextWebsite;
+    if (notificationEmail) {
+      const dofollowNote = earnedReciprocal
+        ? 'Your reciprocal AllMCPs badge was also detected, so your website backlink is active as dofollow!'
+        : 'Note: To get a free reciprocal dofollow backlink to your website, place the official AllMCPs badge on your website or README. Our automated health checker will detect it and upgrade your link to dofollow automatically.';
 
-    // Already the confirmed owner via this exact proof — a repeat agent call
-    // shouldn't queue a redundant claim or re-notify anyone.
-    if (server.isOfficial && server.ownerUserId === agent.userId && domainUnchanged) {
-      return NextResponse.json(
-        { success: true, message: 'Ownership already confirmed for this account — nothing to review.' },
-        { status: 200, headers: CORS_HEADERS }
-      );
-    }
-
-    // Same agent user re-submitting the same not-yet-reviewed proof shouldn't
-    // re-fire the "pending review" notifications.
-    const alreadyPendingSameClaim =
-      server.pendingClaimUserId === agent.userId &&
-      (server.pendingClaimWebsiteUrl || null) === resolvedWebsiteUrl;
-
-    await db
-      .update(servers)
-      .set({ pendingClaimUserId: agent.userId, pendingClaimWebsiteUrl: resolvedWebsiteUrl })
-      .where(eq(servers.id, id));
-
-    const methodLabel = method === 'github' ? 'GitHub README' : method === 'dns' ? 'DNS TXT record' : 'site badge';
-
-    if (!alreadyPendingSameClaim && notificationEmail) {
       await sendNotificationEmail({
         to: notificationEmail,
-        heading: `Agent Claim Pending Review: ${server.name}`,
-        message: `Ownership proof for "${server.name}" was verified via ${methodLabel}! An admin will review it shortly.`,
+        heading: `Agent Claim Approved: ${server.name}`,
+        message: `Ownership proof for "${server.name}" was verified via ${methodLabel} and is now official. You have full edit access.\n\n${dofollowNote}`,
         actionText: 'View Listing',
         actionUrl: `${getAppUrl()}/mcp/${id}`,
       });
     }
 
-    if (!alreadyPendingSameClaim && adminEmail) {
+    if (adminEmail) {
       await sendNotificationEmail({
         to: adminEmail,
-        heading: `New Pending Agent Claim: ${server.name}`,
-        message: `${server.name} has an agent claim awaiting review by ${notificationEmail || agent.userId}, proven via ${methodLabel}${resolvedWebsiteUrl ? ` (website: ${resolvedWebsiteUrl})` : ''}.`,
-        actionText: 'Review in Admin Panel',
-        actionUrl: `${getAppUrl()}/admin`,
+        heading: `Agent Claim Auto-Approved: ${server.name}`,
+        message: `${server.name} was automatically claimed by agent user ${notificationEmail || agent.userId} via ${methodLabel}${resolvedWebsiteUrl ? ` (website: ${resolvedWebsiteUrl})` : ''}.${earnedReciprocal ? ' Reciprocal badge detected (dofollow active).' : ''}`,
+        actionText: 'View Listing',
+        actionUrl: `${getAppUrl()}/mcp/${id}`,
       });
     }
 
     return NextResponse.json(
       {
         success: true,
-        pending: true,
-        message: "Ownership proof verified. An admin check will complete approval — you'll be notified once it's live.",
+        pending: false,
+        isOfficial: true,
+        reciprocalBadgeOk: earnedReciprocal,
+        message: 'Ownership proof verified and claim approved! The listing is now official.',
       },
       { status: 200, headers: CORS_HEADERS }
     );
