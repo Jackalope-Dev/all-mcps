@@ -392,13 +392,13 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
         }}
       >
-        {/* GitHub Ownership Card */}
+        {/* Official Status Card — admin-approved ownership */}
         <div
           style={{
             padding: '1rem 1.15rem',
             borderRadius: '12px',
-            background: claimed ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-muted)',
-            border: claimed ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color)',
+            background: claimed ? 'rgba(16, 185, 129, 0.08)' : pendingReview ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
+            border: claimed ? '1px solid rgba(16, 185, 129, 0.3)' : pendingReview ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '0.85rem',
@@ -409,7 +409,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               width: '38px',
               height: '38px',
               borderRadius: '10px',
-              background: claimed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              background: claimed ? 'rgba(16, 185, 129, 0.2)' : pendingReview ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -417,28 +417,32 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               flexShrink: 0,
             }}
           >
-            🐙
+            🛡️
           </div>
           <div>
             <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              GitHub Repo Control
+              Official Status
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: claimed ? '#10b981' : 'var(--text-primary)' }}>
-              {claimed ? '✓ Verified & Claimed' : 'Unverified'}
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: claimed ? '#10b981' : pendingReview ? '#f59e0b' : 'var(--text-primary)' }}>
+              {claimed ? '✓ Official' : pendingReview ? 'Pending admin review' : 'Not claimed'}
             </div>
             <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              {claimed ? 'Codebase ownership confirmed via README badge.' : 'Add README badge to claim official project.'}
+              {claimed
+                ? 'Ownership confirmed and approved — you have edit access.'
+                : pendingReview
+                  ? "Proof submitted, waiting on our team's review."
+                  : 'Prove ownership below to unlock edit access.'}
             </p>
           </div>
         </div>
 
-        {/* Website Verification Card */}
+        {/* Verified Card — automatic reciprocal-badge detection */}
         <div
           style={{
             padding: '1rem 1.15rem',
             borderRadius: '12px',
-            background: siteVerified ? 'rgba(16, 185, 129, 0.08)' : websiteUrl ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
-            border: siteVerified ? '1px solid rgba(16, 185, 129, 0.3)' : websiteUrl ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
+            background: badgeVerified ? 'rgba(16, 185, 129, 0.08)' : websiteUrl ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
+            border: badgeVerified ? '1px solid rgba(16, 185, 129, 0.3)' : websiteUrl ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '0.85rem',
@@ -449,7 +453,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               width: '38px',
               height: '38px',
               borderRadius: '10px',
-              background: siteVerified ? 'rgba(16, 185, 129, 0.2)' : websiteUrl ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              background: badgeVerified ? 'rgba(16, 185, 129, 0.2)' : websiteUrl ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -461,13 +465,17 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           </div>
           <div>
             <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Product Website Link
+              Verified (reciprocal badge)
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: siteVerified ? '#10b981' : websiteUrl ? '#f59e0b' : 'var(--text-secondary)' }}>
-              {siteVerified ? '✓ Domain Confirmed' : websiteUrl ? 'Needs Verification' : 'No Website Attached'}
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: badgeVerified ? '#10b981' : websiteUrl ? '#f59e0b' : 'var(--text-secondary)' }}>
+              {badgeVerified ? '✓ Badge detected' : websiteUrl ? 'Badge not detected yet' : 'No Website Attached'}
             </div>
             <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              {siteVerified ? `Domain verified for ${websiteUrl}.` : websiteUrl ? `Verify site for dofollow backlink.` : 'Attach site to qualify for reciprocal link.'}
+              {badgeVerified
+                ? `Badge live on ${websiteUrl} — automatically rechecked.`
+                : websiteUrl
+                  ? 'Place the badge below for a dofollow backlink. No claim needed.'
+                  : 'Attach a site below to qualify for a reciprocal link.'}
             </p>
           </div>
         </div>
@@ -537,12 +545,12 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                   </span>
                   {claimed && (
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
-                      ✓ Verified
+                      ✓ Official
                     </span>
                   )}
                 </div>
                 <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  Claims repo ownership &amp; grants Official status badge on AllMCPs.
+                  Proves repo ownership — grants the Official badge &amp; edit access after a quick admin review.
                 </p>
               </button>
             )}
@@ -564,14 +572,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   🌐 Website Badge / Tag
                 </span>
-                {siteVerified && method === 'website_badge' && (
+                {claimed && method === 'website_badge' && (
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
-                    ✓ Verified
+                    ✓ Official
                   </span>
                 )}
               </div>
               <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                Embed badge or meta tag on website for a reciprocal dofollow link.
+                Add a personalized meta tag to your site to prove ownership — grants the Official badge after admin review.
               </p>
             </button>
 
@@ -592,14 +600,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   ⚡ DNS TXT Record
                 </span>
-                {siteVerified && method === 'dns' && (
+                {claimed && method === 'dns' && (
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
-                    ✓ Verified
+                    ✓ Official
                   </span>
                 )}
               </div>
               <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                Publish TXT record on domain DNS for instant owner proof.
+                Publish a TXT record on your domain DNS to prove ownership — reviewed by our team.
               </p>
             </button>
           </div>
