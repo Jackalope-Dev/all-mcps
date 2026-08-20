@@ -12,16 +12,20 @@ export const servers = sqliteTable('servers', {
   submitterEmail: text('submitter_email'),
   /** Paid/premium listings get dofollow website backlinks; free listings use nofollow. */
   isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
-  /** True when the owner proved control of `websiteUrl` (DNS TXT or site badge). */
+  /**
+   * Legacy — no longer written by the claim flow (kept for backward-compat reads
+   * of old rows only). "Verified" now means `reciprocalBadgeOk`; "Official"
+   * ownership is `isOfficial`. Do not use this column for new logic.
+   */
   websiteVerified: integer('website_verified', { mode: 'boolean' }).notNull().default(false),
-  /** Claimed/verified ownership (GitHub README, site badge, or DNS). */
+  /** "Official" — admin-approved ownership claim (proof via GitHub README, site badge, or DNS, but the grant itself always goes through admin review; see approve_claim/reject_claim). Grants edit rights and the Official badge. */
   isOfficial: integer('is_official', { mode: 'boolean' }).notNull().default(false),
   claimedAt: integer('claimed_at', { mode: 'timestamp' }),
   /** Auth.js user id after claim (optional until owners sign in). */
   ownerUserId: text('owner_user_id'),
-  /** Set when a website/DNS claim proves control of a *new* site (not already on file) — awaits admin approval before ownerUserId/isOfficial/websiteUrl take effect. */
+  /** Set whenever a claim proof (GitHub README, site badge, or DNS) succeeds — every method awaits admin approval before ownerUserId/isOfficial/websiteUrl take effect (see approve_claim/reject_claim). */
   pendingClaimUserId: text('pending_claim_user_id'),
-  /** The site the pending claimant proved control of. */
+  /** The site the pending claimant proved control of. Null for a GitHub-proven claim (no website was part of that proof). */
   pendingClaimWebsiteUrl: text('pending_claim_website_url'),
   /** Timed featured placement (e.g. 7-day boost). */
   featuredUntil: integer('featured_until', { mode: 'timestamp' }),
@@ -45,7 +49,7 @@ export const servers = sqliteTable('servers', {
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   isVerifiedActive: integer('is_verified_active', { mode: 'boolean' }).notNull().default(false),
   healthStatus: text('health_status').notNull().default('unknown'),
-  /** Whether the periodic recheck last found our badge/link still live (README or site). Drives dofollow for non-premium claimed listings. */
+  /** "Verified" badge shown across the site. Whether the periodic health-cron recheck last found our badge/link live on the repo README or website — fully automatic, independent of claim/Official status. Also drives dofollow eligibility for non-premium listings (see lib/linkRel.ts). */
   reciprocalBadgeOk: integer('reciprocal_badge_ok', { mode: 'boolean' }).notNull().default(false),
   /** Last time the reciprocal-badge recheck ran for this listing (set alongside lastCheckedAt by the health cron). */
   badgeLastCheckedAt: integer('badge_last_checked_at', { mode: 'timestamp' }),

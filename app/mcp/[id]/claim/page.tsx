@@ -80,7 +80,9 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
           websiteUrl={(server as any).websiteUrl}
           isOfficial={(server as any).isOfficial}
           reciprocalBadgeOk={(server as any).reciprocalBadgeOk}
-          hasPendingClaim={!!(server as any).pendingClaimUserId}
+          hasPendingClaim={
+            !!session?.user?.id && (server as any).pendingClaimUserId === session.user.id
+          }
           userId={session?.user?.id ?? null}
         />
       </div>

@@ -637,8 +637,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             </h2>
           </div>
 
-          {/* Already Verified Banner */}
-          {alreadyVerifiedForMethod && (
+          {/* Already Official Banner */}
+          {alreadyOfficial && (
             <div
               style={{
                 padding: '1rem 1.15rem',
@@ -654,10 +654,10 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               <CheckCircle2 size={22} color="#10b981" />
               <div>
                 <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>
-                  {method === 'github' ? 'GitHub README Ownership Confirmed' : 'Website Verification Active'}
+                  Official ownership already confirmed
                 </strong>
                 <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.785rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  This method is verified and active. You don't need to repeat this unless your repository or DNS settings change.
+                  You don't need to repeat this unless your repository or DNS settings change.
                 </p>
               </div>
             </div>
@@ -1244,7 +1244,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
               }}
             >
-              <Lock size={18} /> Sign In to Verify &amp; Claim Listing
+              <Lock size={18} /> Sign In to Submit Ownership Proof
             </a>
           ) : (
             <button
@@ -1274,15 +1274,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               ) : (
                 <>
                   <ShieldCheck size={20} />
-                  {alreadyVerifiedForMethod
-                    ? method === 'github'
-                      ? 'Re-verify Repo Ownership'
-                      : 'Re-verify Website'
-                    : claimed
-                      ? method === 'github'
-                        ? 'Verify Repo Ownership'
-                        : 'Verify Website Domain'
-                      : 'Verify & Claim Listing'}
+                  {alreadyOfficial ? 'Re-verify Ownership' : 'Submit Ownership Proof'}
                 </>
               )}
             </button>
