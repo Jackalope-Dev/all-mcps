@@ -211,7 +211,7 @@ export async function POST(req: Request) {
           if (pkgMeta?.websiteUrl) {
             websiteUrl = pkgMeta.websiteUrl;
             updates.websiteUrl = websiteUrl;
-            updates.websiteVerified = false;
+            updates.reciprocalBadgeOk = false;
             stats.websitesSet++;
           }
         }
@@ -287,7 +287,7 @@ export async function POST(req: Request) {
           if (nextWebsite && nextWebsite !== websiteUrl) {
             websiteUrl = nextWebsite;
             updates.websiteUrl = websiteUrl;
-            updates.websiteVerified = false;
+            updates.reciprocalBadgeOk = false;
             stats.websitesSet++;
           }
 
@@ -314,7 +314,7 @@ export async function POST(req: Request) {
             if (derivedWebsite && (!websiteUrl || /github\.com/i.test(websiteUrl))) {
               websiteUrl = derivedWebsite;
               updates.websiteUrl = websiteUrl;
-              updates.websiteVerified = false;
+              updates.reciprocalBadgeOk = false;
               stats.websitesSet++;
             }
 

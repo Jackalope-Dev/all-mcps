@@ -143,26 +143,20 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         }),
       });
 
-      const data = (await res.json()) as { error?: string; message?: string; pending?: boolean };
+      const data = (await res.json()) as { error?: string; message?: string };
 
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Verification failed');
       }
 
-      if (data.pending) {
-        toast.success('Submitted for review', {
-          description: data.message || "We'll email you once an admin approves it.",
-        });
-      } else {
-        setSuccess(true);
-        setClaimed(true);
-        if (method === 'website_badge' || method === 'dns') {
-          setSiteVerified(true);
-        }
-        toast.success('Claim successful', {
-          description: data.message || 'Your listing is now verified.',
-        });
+      setSuccess(true);
+      setClaimed(true);
+      if (method === 'website_badge' || method === 'dns') {
+        setSiteVerified(true);
       }
+      toast.success('Claim successful', {
+        description: data.message || 'Your listing is now verified.',
+      });
     } catch (err: any) {
       const message = err?.message || 'Verification failed';
       setError(message);

@@ -5,6 +5,7 @@ import { PlacementShowcase } from '../../components/ads/PlacementShowcase';
 import { StatsBanner } from '../../components/StatsBanner';
 import { AD_PLACEMENTS, CPM_TIERS, formatUsdAmount } from '../../lib/ads';
 import { FaqSection } from '../../components/ui/FaqSection';
+import { getSiteStats } from '../../lib/siteStats';
 import {
   Sparkles,
   Megaphone,
@@ -20,6 +21,12 @@ import {
   Cpu,
   Bot,
 } from 'lucide-react';
+
+// Same root cause app/trust/page.tsx documents (see lib/siteStats.ts's getSiteStats):
+// D1 isn't reachable during build, so baking live stats into an ISR/static page
+// freezes them to a zeroed build-time fallback. This page advertises "verifiable
+// metrics" to paying sponsors, so it renders per-request against live D1 instead.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Advertise & Sponsor on AllMCPs — Reach AI Developers & Builders',
@@ -63,7 +70,10 @@ const AD_FAQS = [
   },
 ];
 
-export default function AdvertiseLandingPage() {
+export default async function AdvertiseLandingPage() {
+  const stats = await getSiteStats();
+  const monthlyApiRequests = stats.endpointBreakdown30d.reduce((acc, e) => acc + e.hits, 0);
+
   return (
     <PageShell variant="default">
       {/* Hero Section */}
@@ -115,19 +125,19 @@ export default function AdvertiseLandingPage() {
       >
         <div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent-color)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <Cpu size={22} style={{ color: '#34d399' }} /> 10,460+
+            <Cpu size={22} style={{ color: '#34d399' }} /> {stats.totalServers.toLocaleString()}+
           </div>
           <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
             Active MCP Servers
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Across 56 technical categories
+            Across {stats.categoryCount} technical categories
           </div>
         </div>
 
         <div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <Zap size={22} style={{ color: '#fbbf24' }} /> 34,000+
+            <Zap size={22} style={{ color: '#fbbf24' }} /> {monthlyApiRequests.toLocaleString()}+
           </div>
           <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
             Monthly API Requests
@@ -139,7 +149,7 @@ export default function AdvertiseLandingPage() {
 
         <div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent-color)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <Bot size={22} style={{ color: 'var(--brand-cyan)' }} /> 15,490+
+            <Bot size={22} style={{ color: 'var(--brand-cyan)' }} /> {stats.aiReads30d.toLocaleString()}+
           </div>
           <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
             AI Assistant Reads

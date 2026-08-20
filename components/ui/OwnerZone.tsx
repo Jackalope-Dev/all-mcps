@@ -9,7 +9,6 @@ type Props = {
   serverId: string;
   isOfficial: boolean;
   websiteUrl?: string | null;
-  websiteVerified?: boolean;
   isPremium?: boolean;
   reciprocalBadgeOk?: boolean;
   status: string;
@@ -28,7 +27,6 @@ export function OwnerZone({
   serverId,
   isOfficial,
   websiteUrl,
-  websiteVerified,
   isPremium,
   reciprocalBadgeOk,
   status,
@@ -64,10 +62,10 @@ export function OwnerZone({
           </h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
             {websiteUrl
-              ? websiteVerified
-                ? 'Website is attached and verified. You can re-verify or change it anytime.'
-                : 'Website is attached but not verified yet — prove control for a stronger listing.'
-              : 'Add your product site, then verify with a badge or DNS TXT.'}
+              ? reciprocalBadgeOk
+                ? 'Website is attached and Verified — the AllMCPs badge is live and detected automatically.'
+                : 'Website is attached. Place the AllMCPs badge on it to get Verified automatically — no submission needed, we detect it on our next check.'
+              : 'Add your product site, then place the AllMCPs badge to get Verified automatically.'}
           </p>
 
           {websiteUrl && (

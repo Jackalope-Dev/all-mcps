@@ -344,10 +344,13 @@ export async function POST(req: Request) {
         }
       }
 
+      // "Verified" (reciprocalBadgeOk) is purely a public content check — does this
+      // URL currently show our badge/link — so it applies to any listing with a
+      // website, independent of Official/claim status (premium is skipped since
+      // it's already dofollow regardless, see websiteLinkRel).
       if (
         !server.isPremium &&
         server.websiteUrl &&
-        server.websiteVerified &&
         isSafeFetchTarget(server.websiteUrl)
       ) {
         try {

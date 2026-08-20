@@ -92,17 +92,17 @@ export async function POST(req: Request) {
         .update(servers)
         .set({
           websiteUrl: websiteInput,
-          // New domain needs re-verification
-          websiteVerified: domainChanged ? false : server.websiteVerified,
+          // Any reciprocal-badge/dofollow credit earned so far was proven
+          // against the old domain, not this one.
+          reciprocalBadgeOk: domainChanged ? false : server.reciprocalBadgeOk,
         })
         .where(eq(servers.id, id));
 
       return NextResponse.json({
         success: true,
         message: domainChanged
-          ? 'Website updated. Verify it with a site badge or DNS TXT when ready.'
+          ? 'Website updated. The reciprocal-badge check will pick it up automatically.'
           : 'Website saved.',
-        websiteVerified: domainChanged ? false : !!server.websiteVerified,
       });
     }
 
@@ -135,122 +135,45 @@ export async function POST(req: Request) {
     const userEmail = session?.user?.email || server.submitterEmail;
     const adminEmail = emailEnv.adminEmail;
 
-    // GitHub proof is tied to real repo write access — always auto-approve.
-    if (method === 'github') {
-      // Already claimed & verified by this same owner — re-verification (e.g. the
-      // "Re-verify Repo Ownership" button) shouldn't re-fire claim notifications.
-      const alreadyClaimedByUser = server.isOfficial && server.ownerUserId === userId;
+    // Every method proves *control* (of the repo, or of a specific URL), but
+    // "Official" is a moderation decision, not just a technical proof — it
+    // grants edit rights and a public trust badge — so it always goes through
+    // admin review now (see approve_claim/reject_claim in /api/admin/action),
+    // regardless of method. The separate "Verified" badge (reciprocal badge
+    // presence) is unrelated to this and is checked automatically by cron —
+    // see app/api/cron/health/route.ts.
+    const resolvedWebsiteUrl = method === 'github' ? null : websiteUrl;
+    const prevWebsite = (server.websiteUrl || '').replace(/\/$/, '').toLowerCase();
+    const nextWebsite = (resolvedWebsiteUrl || '').replace(/\/$/, '').toLowerCase();
+    const domainUnchanged = method === 'github' || prevWebsite === nextWebsite;
 
-      await db
-        .update(servers)
-        .set({
-          isOfficial: true,
-          claimedAt: server.claimedAt || new Date(),
-          ownerUserId: userId,
-        })
-        .where(eq(servers.id, id));
-
-      if (!alreadyClaimedByUser) {
-        if (userEmail) {
-          await sendNotificationEmail({
-            to: userEmail,
-            heading: `Listing Verified & Claimed: ${server.name}`,
-            message: `Congratulations! Your ownership proof for "${server.name}" was successfully verified via GitHub README. Your listing now features the Verified badge on AllMCPs.`,
-            actionText: 'View Listing',
-            actionUrl: `${getAppUrl()}/mcp/${id}`,
-          });
-        }
-
-        if (adminEmail) {
-          await sendNotificationEmail({
-            to: adminEmail,
-            heading: `Listing Claimed: ${server.name}`,
-            message: `"${server.name}" was successfully claimed and verified via GitHub README by ${userEmail || userId}.`,
-            actionText: 'View Listing',
-            actionUrl: `${getAppUrl()}/mcp/${id}`,
-          });
-        }
-      }
-
+    // Already the confirmed owner via this exact proof — re-verifying (e.g. a
+    // "Re-verify" button) shouldn't queue a redundant claim or re-notify anyone.
+    if (server.isOfficial && server.ownerUserId === userId && domainUnchanged) {
       return NextResponse.json({
         success: true,
-        message: 'Successfully claimed via GitHub README. Your listing is now verified.',
-        websiteVerified: false,
+        message: 'Ownership already confirmed for this account — nothing to review.',
       });
     }
 
-    // Website/DNS proof only shows this user controls *some* site — reconfirming
-    // the site already on file is auto-approved (unchanged from today), but a
-    // new/different site doesn't establish any relationship to the actual
-    // project, so it queues for a human check instead of granting ownership.
-    const existingWebsite = (server.websiteUrl || '').replace(/\/$/, '').toLowerCase();
-    const provenWebsite = websiteUrl.replace(/\/$/, '').toLowerCase();
-    const isExistingWebsite = !!existingWebsite && existingWebsite === provenWebsite;
-
-    if (isExistingWebsite) {
-      // Already claimed & this exact website already verified by this owner —
-      // re-verification shouldn't re-fire claim notifications.
-      const alreadyClaimedByUser =
-        server.isOfficial && server.ownerUserId === userId && !!server.websiteVerified;
-
-      await db
-        .update(servers)
-        .set({
-          isOfficial: true,
-          claimedAt: server.claimedAt || new Date(),
-          ownerUserId: userId,
-          websiteUrl,
-          websiteVerified: true,
-        })
-        .where(eq(servers.id, id));
-
-      if (!alreadyClaimedByUser) {
-        if (userEmail) {
-          await sendNotificationEmail({
-            to: userEmail,
-            heading: `Listing Verified & Claimed: ${server.name}`,
-            message: `Congratulations! Your ownership proof for "${server.name}" was successfully verified via ${method === 'dns' ? 'DNS TXT record' : 'site badge'}. Your listing now features the Verified badge on AllMCPs.`,
-            actionText: 'View Listing',
-            actionUrl: `${getAppUrl()}/mcp/${id}`,
-          });
-        }
-
-        if (adminEmail) {
-          await sendNotificationEmail({
-            to: adminEmail,
-            heading: `Listing Claimed: ${server.name}`,
-            message: `"${server.name}" was successfully claimed and verified via ${method} by ${userEmail || userId}.`,
-            actionText: 'View Listing',
-            actionUrl: `${getAppUrl()}/mcp/${id}`,
-          });
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        message:
-          method === 'dns'
-            ? 'Successfully claimed via DNS. Website verified and listing claimed.'
-            : 'Successfully claimed via site badge. Website verified and listing claimed.',
-        websiteVerified: true,
-      });
-    }
-
-    // Same user re-submitting the same not-yet-reviewed website shouldn't
-    // re-fire the "pending review" notifications.
+    // Same user re-submitting the same not-yet-reviewed proof shouldn't re-fire
+    // the "pending review" notifications on every click.
     const alreadyPendingSameClaim =
-      server.pendingClaimUserId === userId && server.pendingClaimWebsiteUrl === websiteUrl;
+      server.pendingClaimUserId === userId &&
+      (server.pendingClaimWebsiteUrl || null) === resolvedWebsiteUrl;
 
     await db
       .update(servers)
-      .set({ pendingClaimUserId: userId, pendingClaimWebsiteUrl: websiteUrl })
+      .set({ pendingClaimUserId: userId, pendingClaimWebsiteUrl: resolvedWebsiteUrl })
       .where(eq(servers.id, id));
+
+    const methodLabel = method === 'github' ? 'GitHub README' : method === 'dns' ? 'DNS TXT record' : 'site badge';
 
     if (!alreadyPendingSameClaim && userEmail) {
       await sendNotificationEmail({
         to: userEmail,
         heading: `Claim Under Review: ${server.name}`,
-        message: `Your ownership proof for "${server.name}" was received! Because this claim includes a new website URL (${websiteUrl}), an admin will perform a quick review before approving it. We'll notify you as soon as it's approved.`,
+        message: `Your ownership proof for "${server.name}" was verified via ${methodLabel}! An admin will review it shortly — we'll email you as soon as it's approved.`,
         actionText: 'View Listing',
         actionUrl: `${getAppUrl()}/mcp/${id}`,
       });
@@ -260,7 +183,7 @@ export async function POST(req: Request) {
       await sendNotificationEmail({
         to: adminEmail,
         heading: `New Pending Claim: ${server.name}`,
-        message: `${server.name} has a claim awaiting review by ${userEmail || userId} (new website: ${websiteUrl}).`,
+        message: `${server.name} has a claim awaiting review by ${userEmail || userId}, proven via ${methodLabel}${resolvedWebsiteUrl ? ` (website: ${resolvedWebsiteUrl})` : ''}.`,
         actionText: 'Review in Admin Panel',
         actionUrl: `${getAppUrl()}/admin`,
       });
@@ -269,9 +192,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       pending: true,
-      message:
-        "Ownership proof verified — since this is a new website for this listing, it needs a quick admin check before it goes live. We'll email you once it's approved.",
-      websiteVerified: false,
+      message: "Ownership proof verified — pending a quick admin review before it goes live. We'll email you once it's approved.",
     });
   } catch (error) {
     console.error('Claim error:', error);

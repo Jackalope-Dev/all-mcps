@@ -1224,7 +1224,6 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
   else if (conf === 'low') score += 1;
 
   if (candidate.isOfficial || candidate.isPremium) score += 5;
-  if (candidate.websiteVerified) score += 2;
   if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy') score += 3;
   if (candidate.reciprocalBadgeOk) score += 2;
 

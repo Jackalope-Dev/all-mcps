@@ -162,12 +162,12 @@ export function computeQualityScore(server: Server): QualityScore {
     if (server.isOfficial) {
       earned = max;
       hint = 'Official maintainer claimed listing.';
-    } else if (server.websiteVerified || server.isPremium) {
+    } else if (server.isPremium) {
       earned = max * 0.7;
-      hint = 'Domain control or verified product website linked.';
+      hint = 'Premium listing.';
     } else if (server.reciprocalBadgeOk) {
       earned = max * 0.6;
-      hint = 'Verified maintainer reciprocal badge detected on repository or website.';
+      hint = 'Verified — AllMCPs reciprocal badge detected on repository or website.';
     } else if (repoHosted) {
       const isHealthyActive = server.isVerifiedActive || server.healthStatus === 'healthy';
       if (isHealthyActive) {
