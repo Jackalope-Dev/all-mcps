@@ -115,9 +115,13 @@ export default function ClaimClient({
     }
   };
 
+  // Must be the *personalized* badge (githubVerifyMarkdown carries this signed-in
+  // user's verify=<userId> token) — readmeContainsClaimBadge requires that exact
+  // token to match the claimant, so the generic badgeMarkdown here would silently
+  // fail verification even after the agent pushes it.
   const agentClaimPromptText = `Read this repository's README.md. Embed the following AllMCPs verification badge into README.md:
 
-${badgeMarkdown}
+${githubVerifyMarkdown ?? badgeMarkdown}
 
 Then commit and push your changes to GitHub. Once pushed, call the verification API to claim ownership of "${serverId}" on AllMCPs.com!`;
 
@@ -714,29 +718,51 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                     <Sparkles size={18} />
                     <span>Have an AI Agent claim &amp; verify this for you!</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={copyAgentClaimPrompt}
-                    style={{
-                      background: 'var(--accent-color)',
-                      color: 'var(--bg-color)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.45rem 0.85rem',
-                      fontSize: '0.825rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.2)',
-                    }}
-                  >
-                    📋 Copy AI Agent Prompt
-                  </button>
+                  {isSignedIn ? (
+                    <button
+                      type="button"
+                      onClick={copyAgentClaimPrompt}
+                      style={{
+                        background: 'var(--accent-color)',
+                        color: 'var(--bg-color)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '0.45rem 0.85rem',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.2)',
+                      }}
+                    >
+                      📋 Copy AI Agent Prompt
+                    </button>
+                  ) : (
+                    <a
+                      href={signInHref}
+                      style={{
+                        color: 'var(--accent-color)',
+                        border: '1px solid rgba(var(--accent-rgb), 0.4)',
+                        borderRadius: '6px',
+                        padding: '0.45rem 0.85rem',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      🔒 Sign in to get your prompt
+                    </a>
+                  )}
                 </div>
                 <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  Copy this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your codebase. The agent will add the badge and push it automatically.
+                  {isSignedIn
+                    ? <>Copy this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your codebase. The agent will add your personalized badge and push it automatically.</>
+                    : <>Sign in first — the prompt embeds a verification token tied to your account, so it only works once you&apos;re signed in.</>}
                 </p>
               </div>
 
