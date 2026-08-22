@@ -15,10 +15,10 @@ import {
   renderCompareMarkdown,
 } from '@/lib/agentMarkdown';
 
-// This route is always reached via proxy.ts rewriting many different client
+// This route is always reached via middleware.ts rewriting many different client
 // paths (e.g. /blog, /pricing, /categories/{slug}) onto this SAME destination
 // pathname, distinguished by the x-agent-markdown-path request header middleware
-// sets on the rewrite (see proxy.ts for why — a query param on the rewrite
+// sets on the rewrite (see middleware.ts for why — a query param on the rewrite
 // target doesn't reach this handler). Force fully dynamic, uncached execution so
 // Next never serves a cached response for one path in place of another.
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  // proxy.ts passes the target path via this header (see the comment there for
+  // middleware.ts passes the target path via this header (see the comment there for
   // why a query param on the rewrite target doesn't reach this handler); the query
   // param fallback just keeps direct/manual calls to this route convenient.
   const path = req.headers.get('x-agent-markdown-path') || searchParams.get('path') || '/';

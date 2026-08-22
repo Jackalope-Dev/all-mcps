@@ -14,7 +14,7 @@ const checks = [
   { name: 'Health check route', path: 'app/api/v1/health/route.ts' },
   { name: 'Markdown renderer route', path: 'app/api/v1/markdown-renderer/route.ts' },
   { name: 'WebMCPProvider component', path: 'components/WebMCPProvider.tsx' },
-  { name: 'Proxy with RFC 8288 Link headers', path: 'proxy.ts' },
+  { name: 'Middleware with RFC 8288 Link headers', path: 'middleware.ts' },
   { name: 'DNS-AID Zone config', path: 'public/dns-aid.zone' },
   { name: 'Public auth.md', path: 'public/auth.md' },
   { name: 'Public mcp-search SKILL.md', path: 'public/.well-known/agent-skills/mcp-search/SKILL.md' },

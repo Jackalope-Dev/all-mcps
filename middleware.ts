@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
   const acceptHeader = req.headers.get('accept') || '';
 
