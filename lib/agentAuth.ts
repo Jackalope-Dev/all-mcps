@@ -13,6 +13,15 @@ export type AgentScope = (typeof AGENT_SCOPES)[number];
 /** Legacy tokens/registrations minted before scopes existed carry this — the exact capability set they always had. */
 export const DEFAULT_AGENT_SCOPES: AgentScope[] = ['listings:claim'];
 
+/** Single source of truth for scope descriptions — reused by /.well-known/oauth-protected-resource, the OpenAPI spec, and /docs/api so they can't drift out of sync. */
+export const AGENT_SCOPE_DETAILS: Record<AgentScope, { description: string; requiredBy: string[] }> = {
+  'listings:claim': {
+    description:
+      'Claim ownership of an existing MCP server listing via DNS TXT record, site verification badge, or GitHub README badge proof. Grants no other write access.',
+    requiredBy: ['POST /api/v1/agent/claim'],
+  },
+};
+
 export function isValidAgentScope(scope: unknown): scope is AgentScope {
   return typeof scope === 'string' && (AGENT_SCOPES as readonly string[]).includes(scope);
 }

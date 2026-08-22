@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { AGENT_SCOPE_DETAILS } from '@/lib/agentAuth';
 
 // Shared 4xx/5xx error shape returned by every AllMCPs API route — see the
 // `{ error, message }` convention used throughout app/api/**/route.ts. Kept
@@ -27,6 +28,39 @@ function errorResponse(description: string) {
   return {
     description,
     content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+  };
+}
+
+// Reusable, machine-declared versioning/deprecation signal (see info.description
+// for the written policy). Attached as an optional response header below rather
+// than only described in prose, since nothing in v1 is deprecated yet — these
+// document the *shape* a deprecated response will carry, not a claim that
+// every response carries them today.
+const DEPRECATION_HEADERS = {
+  Deprecation: {
+    description:
+      'RFC 8594 style. Present (value "true") only once this specific operation is deprecated; absent otherwise. Not present on any current v1 operation.',
+    schema: { type: 'string', enum: ['true'] },
+  },
+  Sunset: {
+    description:
+      'RFC 8594 style. Present only once a removal date has been set for a deprecated operation, at least 90 days out. Absent otherwise.',
+    schema: { type: 'string', format: 'date-time' },
+  },
+} as const;
+
+function jsonResponse(description: string, schema: Record<string, unknown>, includeDeprecationHeaders = true) {
+  return {
+    description,
+    ...(includeDeprecationHeaders
+      ? {
+          headers: {
+            Deprecation: { $ref: '#/components/headers/Deprecation' },
+            Sunset: { $ref: '#/components/headers/Sunset' },
+          },
+        }
+      : {}),
+    content: { 'application/json': { schema } },
   };
 }
 
@@ -66,9 +100,12 @@ export async function GET() {
           flows: {
             clientCredentials: {
               tokenUrl: 'https://allmcps.com/api/v1/agent/register/confirm',
-              scopes: {
-                'listings:claim': 'Claim ownership of an existing MCP server listing via DNS TXT, site badge, or GitHub README proof.',
-              },
+              scopes: Object.fromEntries(
+                Object.entries(AGENT_SCOPE_DETAILS).map(([scope, detail]) => [
+                  scope,
+                  `${detail.description} Required by: ${detail.requiredBy.join(', ')}.`,
+                ])
+              ),
             },
           },
         },
@@ -76,6 +113,7 @@ export async function GET() {
       schemas: {
         Error: ErrorSchema,
       },
+      headers: DEPRECATION_HEADERS,
     },
     paths: {
       '/api/v1/search': {
@@ -109,6 +147,13 @@ export async function GET() {
           responses: {
             '200': {
               description: 'Successful search results',
+              headers: {
+                Deprecation: { $ref: '#/components/headers/Deprecation' },
+                Sunset: { $ref: '#/components/headers/Sunset' },
+                'RateLimit-Limit': { schema: { type: 'integer' }, description: 'Requests allowed per window (see rate-limit docs at /docs/api).' },
+                'RateLimit-Remaining': { schema: { type: 'integer' }, description: 'Requests remaining in the current window.' },
+                'RateLimit-Reset': { schema: { type: 'integer' }, description: 'Seconds until the window resets.' },
+              },
               content: {
                 'application/json': {
                   schema: {
@@ -156,6 +201,13 @@ export async function GET() {
           responses: {
             '200': {
               description: 'Listing detail',
+              headers: {
+                Deprecation: { $ref: '#/components/headers/Deprecation' },
+                Sunset: { $ref: '#/components/headers/Sunset' },
+                'RateLimit-Limit': { schema: { type: 'integer' } },
+                'RateLimit-Remaining': { schema: { type: 'integer' } },
+                'RateLimit-Reset': { schema: { type: 'integer' } },
+              },
               content: { 'application/json': { schema: { type: 'object' } } },
             },
             '404': errorResponse('No listing exists with this ID.'),
@@ -170,6 +222,13 @@ export async function GET() {
           responses: {
             '200': {
               description: 'Category list',
+              headers: {
+                Deprecation: { $ref: '#/components/headers/Deprecation' },
+                Sunset: { $ref: '#/components/headers/Sunset' },
+                'RateLimit-Limit': { schema: { type: 'integer' } },
+                'RateLimit-Remaining': { schema: { type: 'integer' } },
+                'RateLimit-Reset': { schema: { type: 'integer' } },
+              },
               content: {
                 'application/json': {
                   schema: {
@@ -271,7 +330,20 @@ export async function GET() {
             },
           },
           responses: {
-            '200': { description: 'Listing accepted / queued for review' },
+            '200': jsonResponse('Listing accepted; queued for review (status "pending" until claimed or manually approved).', {
+              type: 'object',
+              properties: {
+                success: { type: 'boolean' },
+                message: { type: 'string' },
+                id: { type: 'string', description: 'Assigned listing ID.' },
+                name: { type: 'string' },
+                url: { type: 'string', format: 'uri' },
+                category: { type: 'string' },
+                status: { type: 'string', enum: ['pending'] },
+                claim_url: { type: 'string', format: 'uri', description: 'Human ownership-verification page — verifying auto-approves the listing.' },
+                badge_markdown: { type: 'string', description: 'Ready-to-paste README badge; placing it also earns a dofollow backlink once detected.' },
+              },
+            }),
             '400': errorResponse('Missing or invalid required fields.'),
           },
         },
@@ -302,7 +374,17 @@ export async function GET() {
             },
           },
           responses: {
-            '200': { description: 'Confirmation code sent to email.' },
+            '200': jsonResponse('Confirmation code sent to email.', {
+              type: 'object',
+              properties: {
+                success: { type: 'boolean' },
+                message: { type: 'string' },
+                email: { type: 'string', format: 'email' },
+                scopes: { type: 'array', items: { type: 'string', enum: ['listings:claim'] } },
+                expiresAt: { type: 'string', format: 'date-time' },
+                confirm_url: { type: 'string', format: 'uri' },
+              },
+            }),
             '400': errorResponse('Invalid email/payload, or an unsupported scope was requested.'),
           },
         },
@@ -325,7 +407,25 @@ export async function GET() {
             },
           },
           responses: {
-            '200': { description: 'Bearer token minted.' },
+            '200': jsonResponse('Bearer token minted.', {
+              type: 'object',
+              properties: {
+                success: { type: 'boolean' },
+                message: { type: 'string' },
+                token: { type: 'string', description: 'Opaque `amcp_...` bearer token — shown once, store it securely.' },
+                tokenType: { type: 'string', enum: ['Bearer'] },
+                scopes: { type: 'array', items: { type: 'string', enum: ['listings:claim'] } },
+                expiresAt: { type: 'string', format: 'date-time' },
+                docs: {
+                  type: 'object',
+                  properties: {
+                    claim: { type: 'string', format: 'uri' },
+                    revoke: { type: 'string', format: 'uri' },
+                    authSpec: { type: 'string', format: 'uri' },
+                  },
+                },
+              },
+            }),
             '400': errorResponse('Missing/expired/incorrect code, or too many attempts.'),
           },
         },
@@ -353,7 +453,16 @@ export async function GET() {
             },
           },
           responses: {
-            '200': { description: 'Ownership proof verified; claim approved.' },
+            '200': jsonResponse('Ownership proof verified; claim approved.', {
+              type: 'object',
+              properties: {
+                success: { type: 'boolean' },
+                pending: { type: 'boolean', enum: [false] },
+                isOfficial: { type: 'boolean', enum: [true] },
+                reciprocalBadgeOk: { type: 'boolean', description: 'true if a reciprocal AllMCPs badge was detected (grants a dofollow backlink).' },
+                message: { type: 'string' },
+              },
+            }),
             '400': errorResponse('Invalid payload or failed ownership verification.'),
             '401': errorResponse('Missing or invalid Bearer token.'),
             '403': errorResponse('Token is valid but lacks the required `listings:claim` scope.'),
@@ -368,7 +477,13 @@ export async function GET() {
           operationId: 'revokeAgentToken',
           security: [{ agentBearerAuth: [] }],
           responses: {
-            '200': { description: 'Token revoked.' },
+            '200': jsonResponse('Token revoked.', {
+              type: 'object',
+              properties: {
+                success: { type: 'boolean' },
+                message: { type: 'string' },
+              },
+            }),
             '401': errorResponse('Missing or invalid Bearer token.'),
           },
         },

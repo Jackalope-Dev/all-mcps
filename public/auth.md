@@ -11,7 +11,7 @@ credential_types_supported:
 claim_url: "https://allmcps.com/api/v1/agent/claim"
 revocation_url: "https://allmcps.com/api/v1/agent/revoke"
 scopes_supported:
-  - "listings:claim"
+  listings:claim: "Claim ownership of an existing MCP server listing via DNS TXT, site badge, or GitHub README proof. Required by POST /api/v1/agent/claim. No other write access."
 status: "programmatic_agent_auth_active"
 ---
 

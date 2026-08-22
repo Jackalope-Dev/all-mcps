@@ -1,10 +1,14 @@
 import { getServerById, fetchServerReadme, formatServerAsMarkdown } from '@/lib/servers';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
+import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '@/lib/rateLimit';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rateLimit = checkRateLimit(`v1_markdown:${clientKey(request)}`, 60, 60);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit);
+
   let { id } = await params;
 
   // Strip .md extension if present in id parameter
@@ -54,6 +58,7 @@ export async function GET(
       // relative links would otherwise be crawled and resolved against
       // allmcps.com (/mcp/<id>.md + "docs/x.md" -> /mcp/docs/x.md, a 404).
       'X-Robots-Tag': 'noindex, nofollow',
+      ...rateLimitHeaders(rateLimit),
     },
   });
 }

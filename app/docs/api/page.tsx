@@ -262,17 +262,54 @@ export default function ApiDocsPage() {
 
             <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Scoped agent auth</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
-              Endpoints that mutate a listing (currently: claiming ownership) require a scoped
-              Bearer token instead of an API key — register via{' '}
+              Read endpoints (search, servers, categories, markdown, health) need no auth at all.
+              Endpoints that mutate a listing require a scoped Bearer token — register via{' '}
               <code>POST /api/v1/agent/register</code>, requesting only the scopes you need in an
-              optional <code>scopes</code> array (defaults to the full set). See{' '}
+              optional <code>scopes</code> array (omit it to receive the full set below). A token
+              used against an endpoint it wasn&apos;t granted a scope for gets back{' '}
+              <code>403 {'{'}"error":"insufficient_scope","requiredScope":"...","grantedScopes":[...]{'}'} </code>{' '}
+              — never a silent failure or a downgraded response.
+            </p>
+            <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>Scope</th>
+                    <th style={{ padding: '0.5rem 0.75rem' }}>Grants</th>
+                    <th style={{ padding: '0.5rem 0' }}>Required by</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>
+                      <code>listings:claim</code>
+                    </td>
+                    <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-secondary)' }}>
+                      Claim ownership of an existing listing via DNS TXT, site badge, or GitHub
+                      README proof. No other write access.
+                    </td>
+                    <td style={{ padding: '0.5rem 0' }}>
+                      <code>POST /api/v1/agent/claim</code>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '0.5rem 0.75rem 0.5rem 0', color: 'var(--text-secondary)' }} colSpan={3}>
+                      <code>POST /api/v1/agent/revoke</code> needs a valid (unrevoked) Bearer token
+                      but no specific scope — any token can always revoke itself.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
+              Machine-readable copies of this table:{' '}
               <Link href="/.well-known/oauth-protected-resource">
                 /.well-known/oauth-protected-resource
               </Link>{' '}
-              for the supported scope list and{' '}
-              <a href="/auth.md">/auth.md</a> for the full registration → claim flow. A token used
-              against an endpoint it wasn&apos;t granted a scope for gets back
-              <code> 403 {'{'}"error":"insufficient_scope"{'}'} </code>, not a silent failure.
+              (<code>scopes_supported</code>), the <code>components.securitySchemes.agentBearerAuth.flows.clientCredentials.scopes</code>{' '}
+              map in the <Link href="/api/v1/openapi.json">OpenAPI spec</Link>, and{' '}
+              <a href="/auth.md">/auth.md</a>&apos;s frontmatter, for the full registration → claim
+              flow with example requests.
             </p>
 
             <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Versioning &amp; deprecation policy</h2>

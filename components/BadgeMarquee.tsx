@@ -217,6 +217,8 @@ export function BadgeMarquee() {
                   src={badge.imageUrl}
                   alt={badge.name}
                   className="badge-marquee-icon-thumb"
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <span className="badge-marquee-dot" />
