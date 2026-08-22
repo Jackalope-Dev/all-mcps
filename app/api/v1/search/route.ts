@@ -4,8 +4,12 @@ import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search'
 import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
 import { resolveInstallConfig, toClaudeConfigSnippet, installConfidenceNote } from '@/lib/installConfig';
 import { fetchActiveSponsorAd } from '@/lib/ads';
+import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '@/lib/rateLimit';
 
 export async function GET(request: Request) {
+  const rateLimit = checkRateLimit(`v1_search:${clientKey(request)}`, 60, 60);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit);
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q')?.toLowerCase().trim() || '';
   const category = searchParams.get('category')?.toLowerCase().trim() || '';
@@ -139,6 +143,7 @@ export async function GET(request: Request) {
         'Cache-Control': 'public, max-age=300, s-maxage=3600',
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json; charset=utf-8',
+        ...rateLimitHeaders(rateLimit),
       },
     }
   );

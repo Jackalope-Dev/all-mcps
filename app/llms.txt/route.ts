@@ -31,6 +31,14 @@ export async function GET(request: Request) {
   content += `- **Side-by-side Compare:** https://allmcps.com/mcp/{id}/vs/{otherId}\n`;
   content += `- **Agent auth & claim API:** https://allmcps.com/auth.md (register via POST /api/v1/agent/register, confirm code at /confirm, and claim listings via POST /api/v1/agent/claim with DNS TXT / site badge / GitHub README)\n\n`;
 
+  content += `## AllMCPs Developer Resources\n`;
+  content += `- **AllMCPs API Documentation:** https://allmcps.com/docs/api\n`;
+  content += `- **AllMCPs OpenAPI Spec:** https://allmcps.com/api/v1/openapi.json (RFC 9457-style typed errors, OAuth-style scoped Bearer auth documented under components.securitySchemes)\n`;
+  content += `- **AllMCPs OAuth Scopes / Protected Resource Metadata:** https://allmcps.com/.well-known/oauth-protected-resource\n`;
+  content += `- **AllMCPs MCP Server (remote, JSON-RPC):** https://allmcps.com/api/mcp — also live at the well-known handshake URL https://allmcps.com/.well-known/mcp (POST an \`initialize\` request)\n`;
+  content += `- **AllMCPs CLI / MCP Server (npm package):** \`npx allmcps-server\` — https://www.npmjs.com/package/allmcps-server (run with no args for the stdio MCP server, or a subcommand like \`allmcps-server search <query>\` for direct CLI output)\n`;
+  content += `- **AllMCPs API Versioning & Deprecation Policy:** URL-versioned (\`/api/v1\`); deprecations get a \`Deprecation\`/\`Sunset\` header ≥90 days ahead — see https://allmcps.com/docs/api\n\n`;
+
   content += `## Submit an MCP Server (Free)\n`;
   content += `- **Listing is always free** — no payment required to get listed.\n`;
   content += `- **Submit (web):** https://allmcps.com/submit\n`;

@@ -9,6 +9,7 @@ import {
   sha256Hex,
   AGENT_TOKEN_TTL_MS,
   MAX_CODE_ATTEMPTS,
+  parseAgentScopes,
 } from '@/lib/agentAuth';
 
 const confirmSchema = z.object({
@@ -109,10 +110,11 @@ export async function POST(req: Request) {
       });
     }
 
-    // Mint bearer token
+    // Mint bearer token, carrying over the scopes requested at registration
     const rawToken = generateAgentToken();
     const tokenHash = await sha256Hex(rawToken);
     const expiresAt = new Date(Date.now() + AGENT_TOKEN_TTL_MS);
+    const scopes = parseAgentScopes(reg.scopes);
 
     await db.insert(agentTokens).values({
       tokenHash,
@@ -120,6 +122,7 @@ export async function POST(req: Request) {
       agentName: reg.agentName || null,
       createdAt: new Date(),
       expiresAt,
+      scopes: JSON.stringify(scopes),
     });
 
     // Delete used registration code
@@ -131,6 +134,7 @@ export async function POST(req: Request) {
         message: 'Agent registered successfully. Use this token in the Authorization header: Authorization: Bearer <token>',
         token: rawToken,
         tokenType: 'Bearer',
+        scopes,
         expiresAt: expiresAt.toISOString(),
         docs: {
           claim: 'https://allmcps.com/api/v1/agent/claim',

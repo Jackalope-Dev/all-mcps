@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { servers } from '@/db/schema';
-import { resolveAgentAuth } from '@/lib/agentAuth';
+import { resolveAgentAuth, hasAgentScope } from '@/lib/agentAuth';
 import { isSafeSubmissionUrl } from '@/lib/urlSafety';
 import {
   verifyDnsTxt,
@@ -56,6 +56,19 @@ export async function POST(req: Request) {
           docs: 'https://allmcps.com/auth.md',
         },
         { status: 401, headers: CORS_HEADERS }
+      );
+    }
+
+    if (!hasAgentScope(agent, 'listings:claim')) {
+      return NextResponse.json(
+        {
+          error: 'insufficient_scope',
+          message: 'This token was not granted the "listings:claim" scope required to claim a listing.',
+          requiredScope: 'listings:claim',
+          grantedScopes: agent.scopes,
+          docs: 'https://allmcps.com/auth.md',
+        },
+        { status: 403, headers: CORS_HEADERS }
       );
     }
 

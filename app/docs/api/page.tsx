@@ -3,16 +3,17 @@ import Link from 'next/link';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 
 export const metadata: Metadata = {
-  title: 'Directory API Documentation for MCP Servers',
+  title: 'AllMCPs API Documentation',
   description:
-    'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations.',
+    'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations. Includes the AllMCPs OpenAPI spec, CLI, and MCP server.',
   alternates: { canonical: 'https://allmcps.com/docs/api' },
   openGraph: {
     images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
-    title: 'Directory API Documentation for MCP Servers | AllMCPs',
+    title: 'AllMCPs API Documentation',
     description:
       'Search MCP servers, fetch markdown docs, and integrate the AllMCPs directory into agents and tools.',
     url: 'https://allmcps.com/docs/api',
+    type: 'website',
   },
 };
 
@@ -145,11 +146,14 @@ export default function ApiDocsPage() {
               Developers &amp; agents
             </p>
             <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
-              Directory API
+              AllMCPs API Documentation
             </h1>
             <p className="text-lead" style={{ marginBottom: '1.5rem' }}>
               Public, CORS-friendly endpoints for searching MCP servers, embedding badges, and
-              plugging AllMCPs into AI agents. No API key required for read endpoints.
+              plugging the AllMCPs directory into AI agents. No API key required for read
+              endpoints. Also available as the official{' '}
+              <code>allmcps-server</code> CLI / MCP server on npm, and as a full{' '}
+              <Link href="/api/v1/openapi.json">AllMCPs OpenAPI spec</Link>.
             </p>
 
             <div
@@ -169,6 +173,17 @@ export default function ApiDocsPage() {
               <Link href="/.well-known/api-catalog" className="btn btn-secondary" target="_blank">
                 API catalog ↗
               </Link>
+              <Link href="/.well-known/oauth-protected-resource" className="btn btn-secondary" target="_blank">
+                OAuth scopes ↗
+              </Link>
+              <a
+                href="https://www.npmjs.com/package/allmcps-server"
+                className="btn btn-secondary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                allmcps-server CLI on npm ↗
+              </a>
             </div>
 
             <h2 style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>Quick start</h2>
@@ -244,6 +259,30 @@ export default function ApiDocsPage() {
                 </li>
               ))}
             </ul>
+
+            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Scoped agent auth</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+              Endpoints that mutate a listing (currently: claiming ownership) require a scoped
+              Bearer token instead of an API key — register via{' '}
+              <code>POST /api/v1/agent/register</code>, requesting only the scopes you need in an
+              optional <code>scopes</code> array (defaults to the full set). See{' '}
+              <Link href="/.well-known/oauth-protected-resource">
+                /.well-known/oauth-protected-resource
+              </Link>{' '}
+              for the supported scope list and{' '}
+              <a href="/auth.md">/auth.md</a> for the full registration → claim flow. A token used
+              against an endpoint it wasn&apos;t granted a scope for gets back
+              <code> 403 {'{'}"error":"insufficient_scope"{'}'} </code>, not a silent failure.
+            </p>
+
+            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Versioning &amp; deprecation policy</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+              The API is URL-versioned (<code>/api/v1/...</code>); fields are added, not removed
+              or repurposed, within a version. If an endpoint is ever deprecated it will carry a{' '}
+              <code>Deprecation: true</code> response header and, once a removal date is set, a{' '}
+              <code>Sunset</code> header, for at least 90 days before removal — announced on the{' '}
+              <Link href="/blog">blog</Link>. Nothing in v1 is currently deprecated.
+            </p>
 
             <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Agent discovery</h2>
             <ul

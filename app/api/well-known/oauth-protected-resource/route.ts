@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
+import { AGENT_SCOPES } from '@/lib/agentAuth';
 
 export async function GET() {
   const protectedResource = {
     resource: 'https://allmcps.com/api/v1',
     authorization_servers: ['https://allmcps.com'],
-    scopes_supported: ['mcp:read', 'mcp:write', 'mcp:search'],
+    // Kept in sync with lib/agentAuth.ts AGENT_SCOPES — the scopes an agent
+    // token can actually be minted with and be checked against. Read
+    // endpoints (search, servers, categories, markdown) are unscoped/public;
+    // only listing-mutating actions require a scoped Bearer token.
+    scopes_supported: AGENT_SCOPES,
     bearer_methods_supported: ['header'],
     resource_documentation: 'https://allmcps.com/docs/api',
+    registration_endpoint: 'https://allmcps.com/api/v1/agent/register',
   };
 
   return new NextResponse(JSON.stringify(protectedResource, null, 2), {

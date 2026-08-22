@@ -289,6 +289,8 @@ export const agentRegistrationCodes = sqliteTable('agent_registration_codes', {
   attempts: integer('attempts').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  /** JSON string array of scopes requested at registration (see lib/agentAuth.ts AGENT_SCOPES) — carried onto the minted agent_tokens row at confirm. Null = pre-scopes registration, defaults to the legacy scope set. */
+  scopes: text('scopes'),
 });
 
 /**
@@ -308,6 +310,8 @@ export const agentTokens = sqliteTable('agent_tokens', {
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   revokedAt: integer('revoked_at', { mode: 'timestamp' }),
   lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+  /** JSON string array of granted OAuth-style scopes (see lib/agentAuth.ts AGENT_SCOPES). Null = minted before scopes existed — resolveAgentAuth treats that the same as the legacy default scope set so old tokens keep working. */
+  scopes: text('scopes'),
 }, (table) => ({
   userIdx: index('idx_agent_tokens_user').on(table.userId),
 }));
