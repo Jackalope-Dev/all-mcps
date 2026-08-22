@@ -69,6 +69,7 @@ async function buildCoreSitemap(servers: SitemapServer[]): Promise<MetadataRoute
     staticEntry('/mcp-security', 'monthly', 0.9),
     staticEntry('/deploy-mcp-server', 'monthly', 0.9),
     staticEntry('/mcp-troubleshooting', 'monthly', 0.9),
+    staticEntry('/mcp-protocol-versioning', 'monthly', 0.9),
     staticEntry('/pricing', 'monthly', 0.7),
     staticEntry('/tools', 'monthly', 0.9),
     staticEntry('/tools/openapi-to-mcp', 'monthly', 0.9),
