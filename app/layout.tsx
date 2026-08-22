@@ -267,6 +267,14 @@ export default function RootLayout({
                     url: "https://allmcps.com/contact",
                     availableLanguage: ["English"],
                   },
+                  address: {
+                    "@type": "PostalAddress",
+                    streetAddress: "1500 N Grant St # 7225",
+                    addressLocality: "Denver",
+                    addressRegion: "CO",
+                    postalCode: "80203",
+                    addressCountry: "US",
+                  },
                 },
                 {
                   "@type": "WebSite",
