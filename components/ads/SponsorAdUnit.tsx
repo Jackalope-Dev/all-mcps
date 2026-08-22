@@ -171,7 +171,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
           style={{
             borderRadius: '14px',
             border: '1px solid var(--border-color)',
-            minHeight: '104px',
+            minHeight: '124px',
             opacity: 0.5,
           }}
         />
@@ -220,7 +220,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             </div>
 
             <div className="directory-list-body">
-              <div className="directory-list-title-row">
+              <div className="directory-list-badge-row">
                 <span
                   style={{
                     fontSize: '0.65rem',
@@ -238,6 +238,8 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
                 >
                   <Sparkles size={10} /> {placeholderVariant.badgeText}
                 </span>
+              </div>
+              <div className="directory-list-title-row">
                 <div className="directory-list-name-col">
                   <h4 className="directory-list-name" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {placeholderVariant.headline}
@@ -529,7 +531,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
           )}
 
           <div className="directory-list-body">
-            <div className="directory-list-title-row">
+            <div className="directory-list-badge-row">
               <span
                 style={{
                   fontSize: '0.65rem',
@@ -547,6 +549,8 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
               >
                 <Sparkles size={10} /> Sponsored Partner
               </span>
+            </div>
+            <div className="directory-list-title-row">
               <div className="directory-list-name-col">
                 <h4 className="directory-list-name" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {ad.title || 'Sponsor Title'}
