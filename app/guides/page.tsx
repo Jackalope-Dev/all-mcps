@@ -12,6 +12,7 @@ import {
   Server,
   Wrench,
   Bug,
+  Search,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
@@ -162,6 +163,24 @@ const guidesList = [
       'Where to find Claude / Cursor / Claude Code logs',
       'PATH, config JSON, env vars, and stdio hygiene',
       'Checklist + links to validator & deep-dive posts',
+    ],
+  },
+  {
+    slug: 'mcp-for-seo',
+    href: '/mcp-for-seo',
+    title: 'MCP for SEO & AEO Automation',
+    subtitle: 'Search & AI Optimization Guide',
+    description:
+      'Automate Google Search Console, Bing Webmaster, IndexNow, technical site audits, and AEO/GEO llms.txt readiness using MCP servers and AI agents.',
+    level: 'SEO & AEO',
+    readTime: '11 min read',
+    icon: Search,
+    badgeVariant: 'verified' as const,
+    highlights: [
+      'GSC & Bing Webmaster API automation',
+      'Instant indexing via IndexNow protocol',
+      'AEO, GEO & llms.txt readiness checks',
+      'Technical site crawler & audit blueprints',
     ],
   },
 ];

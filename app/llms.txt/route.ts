@@ -91,6 +91,7 @@ export async function GET(request: Request) {
   content += `- Deploy Remote MCP Server: https://allmcps.com/deploy-mcp-server\n`;
   content += `- MCP Security Best Practices: https://allmcps.com/mcp-security\n`;
   content += `- MCP Troubleshooting (not connecting, zero tools, timeouts): https://allmcps.com/mcp-troubleshooting\n`;
+  content += `- MCP for SEO & AEO Automation Guide: https://allmcps.com/mcp-for-seo\n`;
   content += `- Trust & Traffic Transparency: https://allmcps.com/trust\n`;
   content += `- Pricing & Boosting: https://allmcps.com/pricing\n`;
   content += `- Free Developer Tools (Config Auditor, MCP Playground, OpenAPI-to-MCP, Protocol Inspector, Config Generator, Config Validator, Token Calculator): https://allmcps.com/tools\n`;

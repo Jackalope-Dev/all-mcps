@@ -129,6 +129,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/compare': '2026-08-10',
   '/tags': '2026-08-10',
   '/best/seo': '2026-08-10',
+  '/mcp-for-seo': '2026-08-23',
   '/lucky': '2026-08-13',
   '/advertise': '2026-08-13',
 };
@@ -245,6 +246,7 @@ export const INDEXNOW_CORE_PATHS = [
   '/mcp-for-claude-desktop',
   '/mcp-for-windsurf',
   '/mcp-for-cline',
+  '/mcp-for-seo',
   '/best/seo',
   '/lucky',
   '/advertise',

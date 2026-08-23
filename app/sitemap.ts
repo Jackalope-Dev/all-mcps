@@ -84,6 +84,7 @@ async function buildCoreSitemap(servers: SitemapServer[]): Promise<MetadataRoute
     staticEntry('/mcp-for-claude-desktop', 'weekly', 0.9),
     staticEntry('/mcp-for-windsurf', 'weekly', 0.9),
     staticEntry('/mcp-for-cline', 'weekly', 0.9),
+    staticEntry('/mcp-for-seo', 'weekly', 0.9),
     staticEntry('/trust', 'weekly', 0.85),
     staticEntry('/stack', 'weekly', 0.9),
     staticEntry('/compare', 'weekly', 0.9),

@@ -217,6 +217,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/mcp-for-seo" className="nav-link">
+                MCP for SEO &amp; AEO
+              </Link>
+            </li>
+            <li>
               <Link href="/blog" className="nav-link">
                 Blog &amp; updates
               </Link>
