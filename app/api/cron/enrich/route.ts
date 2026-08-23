@@ -211,7 +211,10 @@ export async function POST(req: Request) {
           if (pkgMeta?.websiteUrl) {
             websiteUrl = pkgMeta.websiteUrl;
             updates.websiteUrl = websiteUrl;
-            updates.reciprocalBadgeOk = false;
+            // New website domain — the old domain's backlink proof doesn't carry
+            // over. The repo README badge is independent, so keep it in the aggregate.
+            updates.websiteBacklinkOk = false;
+            updates.reciprocalBadgeOk = server.readmeBadgeOk;
             stats.websitesSet++;
           }
         }
@@ -287,7 +290,9 @@ export async function POST(req: Request) {
           if (nextWebsite && nextWebsite !== websiteUrl) {
             websiteUrl = nextWebsite;
             updates.websiteUrl = websiteUrl;
-            updates.reciprocalBadgeOk = false;
+            // New website domain — reset the website backlink, keep the repo README badge.
+            updates.websiteBacklinkOk = false;
+            updates.reciprocalBadgeOk = server.readmeBadgeOk;
             stats.websitesSet++;
           }
 
@@ -314,7 +319,9 @@ export async function POST(req: Request) {
             if (derivedWebsite && (!websiteUrl || /github\.com/i.test(websiteUrl))) {
               websiteUrl = derivedWebsite;
               updates.websiteUrl = websiteUrl;
-              updates.reciprocalBadgeOk = false;
+              // New website domain — reset the website backlink, keep the repo README badge.
+              updates.websiteBacklinkOk = false;
+              updates.reciprocalBadgeOk = server.readmeBadgeOk;
               stats.websitesSet++;
             }
 
