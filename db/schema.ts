@@ -49,8 +49,34 @@ export const servers = sqliteTable('servers', {
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   isVerifiedActive: integer('is_verified_active', { mode: 'boolean' }).notNull().default(false),
   healthStatus: text('health_status').notNull().default('unknown'),
-  /** "Verified" badge shown across the site. Whether the periodic health-cron recheck last found our badge/link live on the repo README or website — fully automatic, independent of claim/Official status. Also drives dofollow eligibility for non-premium listings (see lib/linkRel.ts). */
+  /**
+   * "Verified" badge shown across the site. Derived aggregate: true when either
+   * the repo README badge (`readmeBadgeOk`) OR the custom-website backlink
+   * (`websiteBacklinkOk`) is currently live. Kept as the single field most
+   * consumers read (quality score, ranking, site stats, admin/dashboard badges).
+   * Fully automatic, independent of claim/Official status. NOTE: this aggregate
+   * does NOT by itself grant website dofollow — that is gated specifically on
+   * `websiteBacklinkOk`, since a repo README badge can't earn ranking credit for
+   * an unrelated marketing site (see lib/linkRel.ts).
+   */
   reciprocalBadgeOk: integer('reciprocal_badge_ok', { mode: 'boolean' }).notNull().default(false),
+  /**
+   * The source repo's README currently carries our AllMCPs badge/link (a
+   * reciprocal backlink from the repo). Tracked separately from the website
+   * backlink so the two verifications never clobber each other on listings that
+   * have both a repo and a custom site. Set by the health cron and on GitHub
+   * claim. Feeds the `reciprocalBadgeOk` aggregate.
+   */
+  readmeBadgeOk: integer('readme_badge_ok', { mode: 'boolean' }).notNull().default(false),
+  /**
+   * The custom website (`websiteUrl`) currently carries a genuine dofollow
+   * backlink to us. This — not the repo README badge — is what earns the
+   * listing's website/support links dofollow (see lib/linkRel.ts). Reset to
+   * false whenever the website is retargeted (old domain's proof doesn't carry
+   * over). Set by the health cron and on website/DNS claim. Feeds the
+   * `reciprocalBadgeOk` aggregate.
+   */
+  websiteBacklinkOk: integer('website_backlink_ok', { mode: 'boolean' }).notNull().default(false),
   /** Last time the reciprocal-badge recheck ran for this listing (set alongside lastCheckedAt by the health cron). */
   badgeLastCheckedAt: integer('badge_last_checked_at', { mode: 'timestamp' }),
   /** GitHub stargazers, refreshed by the health cron. Null = not measured yet. */

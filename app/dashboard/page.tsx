@@ -51,6 +51,7 @@ type OwnedServer = {
   categorySponsorUntil: Date | null;
   isOfficial: boolean;
   reciprocalBadgeOk: boolean;
+  websiteBacklinkOk: boolean;
   views: number;
   copies: number;
   upvotes: number;
@@ -101,6 +102,7 @@ async function getOwnedServers(userId: string): Promise<{
           categorySponsorUntil: servers.categorySponsorUntil,
           isOfficial: servers.isOfficial,
           reciprocalBadgeOk: servers.reciprocalBadgeOk,
+          websiteBacklinkOk: servers.websiteBacklinkOk,
           views: servers.views,
           copies: servers.copies,
           upvotes: servers.upvotes,

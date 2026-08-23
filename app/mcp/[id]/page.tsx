@@ -715,12 +715,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 destinationType="website"
                 serverId={server.id}
                 target="_blank"
-                rel={websiteLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk)}
+                rel={websiteLinkRel(!!server.isPremium, !!server.websiteBacklinkOk)}
                 className="mcp-action-btn mcp-action-btn--accent"
               >
                 <Globe size={18} style={{ color: 'var(--accent-color)' }} />
                 <span className="mcp-action-btn-label">Visit Website</span>
-                {server.reciprocalBadgeOk ? (
+                {server.websiteBacklinkOk ? (
                   <BadgeCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
                 ) : (
                   <ExternalLink size={14} style={{ opacity: 0.85 }} />
@@ -734,7 +734,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 destinationType="website"
                 serverId={server.id}
                 target="_blank"
-                rel={supportLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk, server.supportUrl, server.websiteUrl)}
+                rel={supportLinkRel(!!server.isPremium, !!server.websiteBacklinkOk, server.supportUrl, server.websiteUrl)}
                 className="mcp-action-btn"
               >
                 <LifeBuoy size={18} style={{ color: 'var(--accent-color)' }} />
@@ -1589,7 +1589,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             isOfficial={!!server.isOfficial}
             websiteUrl={server.websiteUrl}
             isPremium={server.isPremium}
-            reciprocalBadgeOk={server.reciprocalBadgeOk}
+            websiteBacklinkOk={server.websiteBacklinkOk}
             status={server.status}
             featuredUntil={server.featuredUntil}
             categorySponsorUntil={server.categorySponsorUntil}

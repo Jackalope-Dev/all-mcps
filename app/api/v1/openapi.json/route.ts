@@ -459,7 +459,7 @@ export async function GET() {
                 success: { type: 'boolean' },
                 pending: { type: 'boolean', enum: [false] },
                 isOfficial: { type: 'boolean', enum: [true] },
-                reciprocalBadgeOk: { type: 'boolean', description: 'true if a reciprocal AllMCPs badge was detected (grants a dofollow backlink).' },
+                reciprocalBadgeOk: { type: 'boolean', description: 'true if a reciprocal AllMCPs badge was detected on the repo README or the website. Website-link dofollow is granted specifically when the badge is on the website (verified separately from the README badge).' },
                 message: { type: 'string' },
               },
             }),

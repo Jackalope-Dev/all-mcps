@@ -93,9 +93,12 @@ export async function POST(req: Request) {
         .update(servers)
         .set({
           websiteUrl: websiteInput,
-          // Any reciprocal-badge/dofollow credit earned so far was proven
-          // against the old domain, not this one.
-          reciprocalBadgeOk: domainChanged ? false : server.reciprocalBadgeOk,
+          // Any website-backlink/dofollow credit earned so far was proven
+          // against the old domain, not this one. The repo README badge is
+          // unaffected by a website change, so the aggregate keeps that signal.
+          ...(domainChanged
+            ? { websiteBacklinkOk: false, reciprocalBadgeOk: server.readmeBadgeOk }
+            : {}),
         })
         .where(eq(servers.id, id));
 
@@ -134,10 +137,17 @@ export async function POST(req: Request) {
 
     const resolvedWebsiteUrl = method === 'github' ? null : websiteUrl;
 
-    // Check if the site or repo carries a reciprocal badge for instant dofollow credit
-    let earnedReciprocal = server.reciprocalBadgeOk;
+    // The README badge and the website backlink are two independent reciprocal
+    // signals — track them separately so a repo proof can't grant the custom
+    // site dofollow (and vice versa).
+    let readmeBadgeOk = server.readmeBadgeOk;
+    let websiteBacklinkOk = server.websiteBacklinkOk;
     if (method === 'github' && server.url.includes('github.com')) {
-      earnedReciprocal = true;
+      // A GitHub claim required the personalized badge in the README, which
+      // links to allmcps.com/mcp/{id} — so the repo demonstrably carries a
+      // reciprocal link. This does NOT earn the custom website dofollow; that
+      // requires the website's own backlink, verified separately below.
+      readmeBadgeOk = true;
     } else if (resolvedWebsiteUrl && (method === 'website_badge' || method === 'dns')) {
       try {
         const siteRes = await fetch(resolvedWebsiteUrl, {
@@ -146,12 +156,13 @@ export async function POST(req: Request) {
           signal: AbortSignal.timeout(6000),
         });
         if (siteRes.ok) {
-          earnedReciprocal = websiteHasReciprocalBadge(await siteRes.text(), id);
+          websiteBacklinkOk = websiteHasReciprocalBadge(await siteRes.text(), id);
         }
       } catch {
-        // Fall back to current reciprocal status
+        // Fall back to current website-backlink status
       }
     }
+    const earnedReciprocal = readmeBadgeOk || websiteBacklinkOk;
 
     const claimUpdates: Record<string, unknown> = {
       isOfficial: true,
@@ -160,6 +171,8 @@ export async function POST(req: Request) {
       pendingClaimUserId: null,
       pendingClaimWebsiteUrl: null,
       reciprocalBadgeOk: earnedReciprocal,
+      readmeBadgeOk,
+      websiteBacklinkOk,
     };
     if (resolvedWebsiteUrl) {
       claimUpdates.websiteUrl = resolvedWebsiteUrl;
@@ -173,9 +186,9 @@ export async function POST(req: Request) {
     const adminEmail = emailEnv.adminEmail;
 
     if (userEmail) {
-      const dofollowNote = earnedReciprocal
-        ? 'Your reciprocal AllMCPs badge was also detected, so your website backlink is active as dofollow!'
-        : 'Note: To get a free reciprocal dofollow backlink to your website, place the official AllMCPs badge on your website or README. Our automated health checker will detect it and upgrade your link to dofollow automatically.';
+      const dofollowNote = websiteBacklinkOk
+        ? 'Your reciprocal AllMCPs badge was also detected on your website, so your website backlink is active as dofollow!'
+        : 'Note: To get a free reciprocal dofollow backlink to your website, place the official AllMCPs badge on your website. Our automated health checker will detect it and upgrade your website link to dofollow automatically.';
 
       await sendNotificationEmail({
         to: userEmail,

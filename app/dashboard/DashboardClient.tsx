@@ -45,6 +45,7 @@ type Server = {
   categorySponsorUntil?: string | null;
   isOfficial?: boolean;
   reciprocalBadgeOk?: boolean;
+  websiteBacklinkOk?: boolean;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -343,7 +344,7 @@ export default function DashboardClient({
     setActiveTabMap((prev) => ({ ...prev, [serverId]: tab }));
   };
 
-  const needsBacklinkHelp = servers.some((s) => !s.isPremium && !s.reciprocalBadgeOk);
+  const needsBacklinkHelp = servers.some((s) => !s.isPremium && !s.websiteBacklinkOk);
 
   if (servers.length === 0) {
     return (
@@ -638,7 +639,7 @@ export default function DashboardClient({
               >
                 <Globe size={15} aria-hidden="true" />
                 SEO
-                {!server.isPremium && !server.reciprocalBadgeOk && (
+                {!server.isPremium && !server.websiteBacklinkOk && (
                   <span className="dashboard-tab-dot" aria-label="Action needed" />
                 )}
               </button>
@@ -1205,20 +1206,20 @@ function ListingSetupSteps({
     },
     {
       id: 'badge',
-      done: Boolean(server.reciprocalBadgeOk || server.isPremium),
+      done: Boolean(server.websiteBacklinkOk || server.isPremium),
       title: server.isPremium
         ? 'Dofollow included (Premium)'
-        : server.reciprocalBadgeOk
+        : server.websiteBacklinkOk
           ? 'AllMCPs badge live'
           : 'Place the AllMCPs badge',
       description: server.isPremium
         ? 'Premium listings get a dofollow website link without a reciprocal badge.'
-        : server.reciprocalBadgeOk
+        : server.websiteBacklinkOk
           ? 'We detected your badge — your website link is dofollow.'
           : 'Embed the free dofollow badge on your site to unlock SEO value.',
       actionLabel:
-        server.reciprocalBadgeOk || server.isPremium ? undefined : 'Get badge code',
-      href: server.reciprocalBadgeOk || server.isPremium ? undefined : '/badge-generator',
+        server.websiteBacklinkOk || server.isPremium ? undefined : 'Get badge code',
+      href: server.websiteBacklinkOk || server.isPremium ? undefined : '/badge-generator',
     },
     {
       id: 'status',
@@ -1348,7 +1349,7 @@ function ListingSetupSteps({
 /** Per-listing SEO backlink checklist — drives free dofollow completion. */
 function BacklinkStatus({ server }: { server: Server }) {
   const hasWebsite = Boolean(server.websiteUrl?.trim());
-  const dofollow = Boolean(server.isPremium || server.reciprocalBadgeOk);
+  const dofollow = Boolean(server.isPremium || server.websiteBacklinkOk);
 
   if (dofollow) {
     return (
@@ -1370,7 +1371,7 @@ function BacklinkStatus({ server }: { server: Server }) {
 
   const steps = [
     { done: hasWebsite, label: 'Website URL added to listing' },
-    { done: Boolean(server.reciprocalBadgeOk), label: 'AllMCPs badge detected on your site (checked automatically)' },
+    { done: Boolean(server.websiteBacklinkOk), label: 'AllMCPs badge detected on your site (checked automatically)' },
   ];
 
   return (
