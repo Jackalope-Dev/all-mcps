@@ -1,23 +1,31 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Sun, Moon, Monitor, Check } from 'lucide-react';
 import { trackFeatureUse } from '../lib/gtag';
 
 type ThemeMode = 'dark' | 'light' | 'system';
 
+declare global {
+  interface Window {
+    __allmcpsTheme?: 'dark' | 'light';
+  }
+}
+
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
 // Reads the same source the blocking inline script in app/layout.tsx reads.
 // Used as a lazy useState initializer (not a useEffect) so React's state
-// matches the DOM the script already produced from its very first render —
-// per Next's "Syncing with React state" guidance, a useEffect read runs one
-// tick too late and can let a hydration-triggered client re-render (which
-// rebuilds <html> from JSX, where data-theme isn't set) win the race, leaving
-// the DOM on the CSS default (dark) while this component's state still shows
-// the stored preference.
+// matches the DOM the script already produced from its very first render.
 function readStoredTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'system';
-  const stored = localStorage.getItem('allmcps-theme');
-  return stored === 'dark' || stored === 'light' || stored === 'system' ? stored : 'system';
+  try {
+    const stored = localStorage.getItem('allmcps-theme');
+    return stored === 'dark' || stored === 'light' || stored === 'system' ? stored : 'system';
+  } catch {
+    return 'system';
+  }
 }
 
 export function ThemeSwitcher() {
@@ -33,12 +41,10 @@ export function ThemeSwitcher() {
     setMounted(true);
   }, []);
 
-  // Update DOM data-theme attribute whenever mode changes or system preference shifts.
-  // Re-applies on mount so hydration-triggered client re-renders of <html> don't leave
-  // the DOM on the dark mode CSS default while themeMode is light or system.
-  useEffect(() => {
-    if (!mounted) return;
-
+  // Synchronously update DOM data-theme attribute whenever mode changes or system preference shifts.
+  // Using layout effect ensures the attribute is applied BEFORE the browser paints any frame,
+  // preventing any hydration-triggered flash of dark mode default styles.
+  useIsomorphicLayoutEffect(() => {
     const applyTheme = (mode: ThemeMode) => {
       const root = document.documentElement;
       let effectiveTheme: 'dark' | 'light' = 'dark';
@@ -51,7 +57,10 @@ export function ThemeSwitcher() {
         effectiveTheme = mode;
       }
 
-      root.setAttribute('data-theme', effectiveTheme);
+      window.__allmcpsTheme = effectiveTheme;
+      if (root.getAttribute('data-theme') !== effectiveTheme) {
+        root.setAttribute('data-theme', effectiveTheme);
+      }
     };
 
     applyTheme(themeMode);
@@ -62,7 +71,7 @@ export function ThemeSwitcher() {
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
-  }, [themeMode, mounted]);
+  }, [themeMode]);
 
   // Click outside & Escape key listeners
   useEffect(() => {
@@ -90,7 +99,9 @@ export function ThemeSwitcher() {
 
   const handleSelectMode = (mode: ThemeMode) => {
     setThemeMode(mode);
-    localStorage.setItem('allmcps-theme', mode);
+    try {
+      localStorage.setItem('allmcps-theme', mode);
+    } catch {}
     setIsOpen(false);
     trackFeatureUse('theme_switcher', { mode });
   };

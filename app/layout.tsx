@@ -120,6 +120,23 @@ export default function RootLayout({
                     effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                   }
                   document.documentElement.setAttribute('data-theme', effectiveTheme);
+                  window.__allmcpsTheme = effectiveTheme;
+
+                  // React 19 hydration diffs documentElement against JSX props and removes
+                  // undeclared attributes like data-theme. This MutationObserver instantly
+                  // catches and restores data-theme in the synchronous microtask phase before
+                  // the browser can paint a dark frame.
+                  var observer = new MutationObserver(function(mutations) {
+                    for (var i = 0; i < mutations.length; i++) {
+                      if (mutations[i].attributeName === 'data-theme') {
+                        var current = document.documentElement.getAttribute('data-theme');
+                        if (!current && window.__allmcpsTheme) {
+                          document.documentElement.setAttribute('data-theme', window.__allmcpsTheme);
+                        }
+                      }
+                    }
+                  });
+                  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
                 } catch (e) {}
               })();
             `,

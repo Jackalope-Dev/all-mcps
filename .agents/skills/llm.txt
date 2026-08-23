@@ -1,0 +1,14 @@
+### Frontend
+- **`awwwards-hero`**: Generate an award-winning hero section from a brief or reference, massive typography, tight palette, cinematic focal point.
+- **`awwwards-sections`**: Craft distinct, high-impact website sections—pricing tables, bento grids, feature highlights, and interactive footers—with Awwwards-grade layout and polish.
+- **`pixel-perfect`**: Hand the agent a screenshot of any website and get back an exact code replica, every font, color, and spacing matched.
+
+### Image Generation
+- **`imagegen-frontend`**: Generate Awwwards-tier images, editorial photography, textures, hero visuals, then feed them straight into your other skills as the reference brief.
+- **`brandkit-gen`**: Generate studio-grade identity boards, logo systems, and visual-world presentations with strict aesthetic standards.
+
+### Animations
+- **`awwwards-motion`**: Turn a static layout into something that moves like it's alive: a pill that expands into a full player and folds back down, scroll reveals, kinetic typography, all tuned frame by frame.
+
+### Redesign
+- **`visual-redesign`**: Give the agent your ugly-but-functional React code and get back something that actually looks designed, without touching a line of JS.

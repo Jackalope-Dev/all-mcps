@@ -481,7 +481,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
         {/* Main Content (Left Column) */}
         <div className="detail-main">
-          <div className="detail-title-row">
+          <div className="surface detail-hero-card">
+            <div className="detail-title-row">
             {/* Prefer approved R2 logo, else GitHub org avatar, else category gradient (ServerAvatar). */}
             <ServerAvatar
               name={server.name}
@@ -744,6 +745,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
 
             <ShareModal serverId={server.id} serverName={server.name} variant="action" />
             <ReportListingButton serverId={server.id} />
+          </div>
           </div>
 
           {server.tags && server.tags.length > 0 && (

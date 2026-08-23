@@ -8,6 +8,8 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { FeaturedMarquee } from './FeaturedMarquee';
 import { FeaturedCards } from './FeaturedCards';
+import { HeroSection } from './HeroSection';
+import { BentoShowcase } from './BentoShowcase';
 import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid, ShieldCheck, Zap, CheckCircle2, ArrowRight, Copy, Check, Wrench, Clock, Dices } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
@@ -726,67 +728,15 @@ export default function DirectoryGrid({
 
   return (
     <>
-      {/* Marketing hero — only on the unfiltered homepage landing.
-          Hierarchy: value prop → primary search (below) → one secondary CTA strip. */}
+      {/* Marketing hero — Goal-oriented discovery and assembly */}
       {!isBrowse && !selectedCategory && (
-        <section className="container animate-fade-in delay-1 landing-hero">
-          <h1 className="text-display">
-            Discover &amp; Install <span className="text-brand-gradient">Model Context Protocol</span> Servers
-          </h1>
-          <p className="text-lead">
-            The open directory for MCP servers. Connect Claude, Cursor, Windsurf, and AI agents to
-            databases, tools, files, and APIs.
-            {typeof totalCount === 'number' && totalCount > 0 ? (
-              <>
-                {' '}
-                Explore{' '}
-                <strong style={{ color: 'var(--text-primary)' }}>{totalCount.toLocaleString()}+</strong>{' '}
-                servers.
-              </>
-            ) : null}
-          </p>
-
-          <div className="landing-hero-actions">
-            <a href="#directory-search" className="btn btn-primary btn-lg">
-              <Search size={16} aria-hidden="true" /> Search servers
-            </a>
-            <Link href="/submit" className="btn btn-lg btn-submit-noticeable">
-              <Sparkles size={16} aria-hidden="true" /> Submit a server
-            </Link>
-          </div>
-
-          <div className="landing-hero-explore" aria-label="Explore AllMCPs">
-            {[
-              { href: '/browse', label: 'Browse all' },
-              { href: '/best', label: 'Best of' },
-              { href: '/categories', label: 'Categories' },
-              { href: '/tools', label: 'Tools' },
-              { href: '/guides', label: 'Guides' },
-            ].map((item) => (
-              <Link key={item.href} href={item.href} className="landing-hero-explore-link">
-                {item.label}
-              </Link>
-            ))}
-          </div>
-
-          <p className="landing-hero-clients">
-            <span className="landing-hero-clients-label">Works with</span>
-            {[
-              { href: '/mcp-for-claude-desktop', label: 'Claude' },
-              { href: '/mcp-for-cursor', label: 'Cursor' },
-              { href: '/mcp-for-windsurf', label: 'Windsurf' },
-              { href: '/mcp-for-cline', label: 'Cline' },
-              { href: '/clients', label: 'All clients' },
-            ].map((client, i, arr) => (
-              <React.Fragment key={client.href}>
-                <Link href={client.href} className="landing-hero-client-link">
-                  {client.label}
-                </Link>
-                {i < arr.length - 1 ? <span className="landing-hero-client-sep" aria-hidden="true">·</span> : null}
-              </React.Fragment>
-            ))}
-          </p>
-        </section>
+        <HeroSection
+          totalCount={totalCount}
+          onSelectSituation={(q, cat) => {
+            setSearchQuery(q);
+            if (cat) setSelectedCategory(cat);
+          }}
+        />
       )}
 
       {/* Trust-signal stats strip — three metrics max; detail on /trust */}
@@ -886,15 +836,17 @@ export default function DirectoryGrid({
             </button>
           </form>
 
-          {/* Intent chips — popular queries that teach how search works */}
+          {/* Intent chips — popular situational queries */}
           {!searchQuery.trim() && (
             <div className="directory-intent-chips" role="group" aria-label="Popular searches">
+              <span className="directory-intent-label">Try searching:</span>
               {[
-                { q: 'postgres', label: 'Postgres' },
-                { q: 'github issues', label: 'GitHub issues' },
-                { q: 'browser automation', label: 'Browser automation' },
-                { q: 'read pdf documents', label: 'PDF documents' },
-                { q: 'slack notifications', label: 'Slack' },
+                { q: 'postgres mysql sqlite', label: '🗄️ Databases & SQL' },
+                { q: 'browser playwright puppeteer scrape', label: '🌐 Web Scraping' },
+                { q: 'github git gitlab repository', label: '💻 GitHub & Git' },
+                { q: 'memory vector embeddings rag', label: '🧠 Agent Memory' },
+                { q: 'aws kubernetes docker cloudflare', label: '☁️ Cloud & DevOps' },
+                { q: 'pdf document markdown excel', label: '📄 PDF & Docs' },
               ].map((chip) => (
                 <button
                   key={chip.q}
@@ -982,6 +934,9 @@ export default function DirectoryGrid({
 
       {/* Featured & Trending Cards (below search, hidden when filtering) */}
       {showDiscovery && <FeaturedCards servers={featuredCards} />}
+
+      {/* Bento Grid Infrastructure Showcase */}
+      {showDiscovery && <BentoShowcase />}
 
       {/* AllMCPs' own MCP server — self-promo callout, homepage landing only */}
       {showDiscovery && (

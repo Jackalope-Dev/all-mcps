@@ -516,3 +516,232 @@ export async function extractWebsiteFaviconUrl(websiteUrl: string): Promise<stri
   }
 }
 
+/**
+ * Bare technical labels ("mcp", "mcp-server", "reference-data") that a
+ * scraped import can leave as `servers.name` instead of an actual product
+ * title — usually because the source was an npm/package name rather than a
+ * human-written title. A name is generic when every one of its words (split
+ * on whitespace/hyphen/underscore) is one of these, and there are few enough
+ * words that it reads as a label rather than a real title — "Kai AGI -
+ * Autonomous AI Agent" has "agent" in the set but enough other words that
+ * it's clearly a real name, not a placeholder.
+ */
+const GENERIC_NAME_WORDS = new Set([
+  'mcp', 'server', 'servers', 'tool', 'tools', 'toolkit', 'toolset',
+  'api', 'client', 'service', 'services', 'app', 'core', 'cli', 'sdk',
+  'docs', 'doc', 'documentation', 'gateway', 'assistant', 'agent', 'agents',
+  'memory', 'registry', 'catalog', 'marketplace', 'monitoring', 'audit',
+  'library', 'libraries', 'reference', 'data', 'hub', 'kit', 'connector',
+  'connectors', 'integration', 'integrations', 'bridge', 'proxy', 'wrapper',
+  'adapter', 'util', 'utils', 'utility', 'utilities', 'backend', 'frontend',
+  'platform', 'system', 'framework', 'plugin', 'plugins', 'extension', 'module',
+]);
+
+/** Words too generic to carry a fetched title/repo-slug/hostname as a listing name. */
+export function isGenericServerName(name: string | null | undefined): boolean {
+  const words = (name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter(Boolean);
+  if (words.length === 0) return true;
+  if (words.length > 3) return false;
+  return words.every((w) => GENERIC_NAME_WORDS.has(w));
+}
+
+const ACRONYMS = new Set([
+  'mcp', 'api', 'ai', 'sdk', 'cli', 'ui', 'ux', 'db', 'sql', 'aws', 'gcp',
+  'http', 'https', 'url', 'uri', 'id', 'ios', 'saas', 'crm', 'erp', 'seo',
+  'llm', 'rag', 'json', 'xml', 'yaml', 'csv', 'pdf', 'html', 'css', 'js',
+  'ts', 'npm', 'cdn', 'dns', 'ip', 'vpn', 'otp', 'jwt', 'oauth', 'rest',
+  'graphql', 'grpc', 'k8s',
+]);
+
+/** Turns a repo/package slug or hostname label into a readable title, keeping known acronyms uppercase. */
+export function humanizeSlug(slug: string): string {
+  const words = slug
+    .replace(/\.git$/i, '')
+    .split(/[-_\s]+/)
+    .flatMap((part) => part.replace(/([a-z0-9])([A-Z])/g, '$1 $2').split(' '))
+    .filter(Boolean);
+  return words
+    .map((w) => {
+      const lower = w.toLowerCase();
+      if (ACRONYMS.has(lower)) return lower.toUpperCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}
+
+function cleanReadmeHeadingText(line: string): string {
+  let s = line.replace(/^#{1,6}\s*/, '');
+  s = s.replace(/!\[[^\]]*\]\([^)]*\)/g, ''); // images
+  s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1'); // links -> visible text
+  s = s.replace(/<[^>]+>/g, ''); // stray html tags
+  s = s.replace(/[`*_~]+/g, ''); // markdown emphasis markers
+  s = s.replace(/[\u{1F1E6}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}]/gu, ''); // emoji/arrows
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
+
+/**
+ * Common doc-section headings that show up as a README's first *markdown*
+ * heading when the real title is instead set in an HTML `<h1>` (common in
+ * badge-heavy READMEs, e.g. `<h1 align="center">Foo</h1>`) — so the naive
+ * "first heading" scan lands on "Quick Start" or "Table of Contents" instead
+ * of the project name. Filtered out so extractReadmeTitle falls through to
+ * the slug/hostname fallback instead of returning one of these verbatim.
+ */
+// Word sequences, not substrings — checked by comparing whole words so a
+// phrase like "skill" can't false-positive-match a real title like
+// "Skillsforge MCP" the way a naive .startsWith() would.
+const NON_TITLE_HEADING_PHRASES = [
+  'quick start', 'quickstart', 'getting started', 'table of contents', 'toc',
+  'installation', 'install', 'one-line install', 'usage', 'features', 'overview',
+  'introduction', 'about', 'prerequisites', 'requirements', 'setup', 'configuration',
+  'license', 'licence', 'contributing', 'contribution', 'faq', 'examples', 'example',
+  'demo', 'documentation', 'docs', 'api reference', 'reference', 'changelog', 'roadmap',
+  'support', 'contact', 'acknowledgements', 'acknowledgments', 'credits', 'try it',
+  'how it works', 'background', 'motivation', 'disclaimer', 'notes', 'todo', 'status',
+  'tools', 'tools available', 'available tools', 'skills', 'skill',
+].map((p) => p.split(' '));
+
+/** First-word filler that marks a heading as prose ("The tools", "Why teams use it") rather than a title. */
+const NON_TITLE_FIRST_WORDS = new Set([
+  'the', 'a', 'an', 'this', 'that', 'these', 'those', 'it', 'here', 'available', 'why', 'what',
+]);
+
+/**
+ * Single-word doc-section nouns pulled from NON_TITLE_HEADING_PHRASES, plus a
+ * few more. On a *short* heading (<=4 words) any of these appearing anywhere
+ * — not just as the first word — is a strong signal the whole heading is a
+ * section label ("Development Status", "SVGator MCP Server — Documentation",
+ * "Quick Setup"), not a product name. Not applied to longer headings, where a
+ * real title could plausibly contain one of these words incidentally.
+ */
+const STRONG_SECTION_NOUNS = new Set([
+  ...NON_TITLE_HEADING_PHRASES.filter((p) => p.length === 1).map((p) => p[0]),
+  'contents', 'documentation',
+]);
+
+function looksLikeSectionHeading(cleaned: string): boolean {
+  const lower = cleaned.toLowerCase();
+  if (lower.endsWith('?')) return true; // "What is Shipeasy?" reads as doc prose, not a title
+  if (/^\d/.test(cleaned)) return true; // "1 — The skill (...)" is a numbered doc step, not a title
+  const words = lower
+    .split(/\s+/)
+    .map((w) => w.replace(/[^a-z0-9]/g, ''))
+    .filter(Boolean); // drop punctuation-only tokens (e.g. a bare em-dash) so they don't inflate the word count
+  if (words.length === 0) return true;
+  if (NON_TITLE_FIRST_WORDS.has(words[0])) return true;
+  if (words.length <= 4 && words.some((w) => STRONG_SECTION_NOUNS.has(w))) return true;
+  return NON_TITLE_HEADING_PHRASES.some(
+    (phrase) => words.length >= phrase.length && phrase.every((pw, i) => words[i] === pw)
+  );
+}
+
+/** Short connector words that don't have to be capitalized for a heading to still read as Title Case. */
+const TITLE_CASE_CONNECTORS = new Set(['of', 'the', 'a', 'an', 'and', 'or', 'for', 'in', 'on', 'to', 'with', 'by', 'at', 'vs', 'via']);
+
+/**
+ * Real project titles are near-universally Title Case ("GrabzIt MCP Server",
+ * "Weather Wizard MCP"). A doc-prose sentence that dodges every other filter
+ * here ("Let your agent install it") is sentence case instead — only its
+ * first word capitalized. Requiring most non-connector words to start
+ * uppercase catches those without needing to enumerate every possible
+ * sentence opener.
+ */
+function looksTitleCased(cleaned: string): boolean {
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  let checkable = 0;
+  let capitalized = 0;
+  for (const w of words) {
+    const bare = w.replace(/[^A-Za-z]/g, '');
+    if (!bare) continue; // punctuation/number-only token
+    if (TITLE_CASE_CONNECTORS.has(bare.toLowerCase())) continue;
+    checkable++;
+    if (/[A-Z]/.test(w[0])) capitalized++;
+  }
+  if (checkable === 0) return true; // nothing to judge (e.g. all connectors/numbers) — don't reject
+  return capitalized / checkable >= 0.7;
+}
+
+/** True when a cleaned heading is usable as a listing title on its own. */
+function isUsableReadmeTitle(cleaned: string): boolean {
+  // Real product names run short; anything longer is more likely a marketing
+  // tagline used as the h1 ("One Engineering Playbook. Synced Everywhere...")
+  // — the humanized-slug fallback makes a cleaner listing name than that.
+  if (cleaned.length < 3 || cleaned.length > 50) return false;
+  if (isGenericServerName(cleaned)) return false;
+  if (looksLikeSectionHeading(cleaned)) return false;
+  // A bare, space-free slug/package-name heading ("@scope/pkg", "foo-mcp-server")
+  // isn't really a title — the humanized-slug fallback reads better than reusing it verbatim.
+  if (!/\s/.test(cleaned)) return false;
+  if (!looksTitleCased(cleaned)) return false;
+  return true;
+}
+
+/** Best-guess project title from a README's first top-level heading (typically the h1). */
+export function extractReadmeTitle(readme: string | null | undefined): string | null {
+  if (!readme) return null;
+
+  // Prefer an HTML <h1> if the README opens with one (common for centered
+  // logo+title blocks) — a markdown `#` heading further down is usually a
+  // doc section, not the title, in that case.
+  const htmlH1 = readme.slice(0, 3000).match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (htmlH1) {
+    const cleaned = cleanReadmeHeadingText(htmlH1[1]);
+    if (isUsableReadmeTitle(cleaned)) return cleaned;
+  }
+
+  const lines = readme.split('\n').slice(0, 40);
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!/^#{1,2}\s+\S/.test(line)) continue;
+    const cleaned = cleanReadmeHeadingText(line);
+    if (isUsableReadmeTitle(cleaned)) return cleaned;
+  }
+  return null;
+}
+
+/**
+ * Replacement title for a listing whose stored `name` is a bare technical
+ * label (see isGenericServerName). Preference order: the repo's own README
+ * title > a humanized repo slug (falling back to the org/owner name when the
+ * repo slug is itself generic, e.g. a repo literally named "mcp") > a
+ * humanized hostname for non-GitHub listings. Returns null when the current
+ * name isn't generic, or no better candidate could be derived.
+ */
+export function deriveServerName(input: {
+  currentName: string;
+  url: string;
+  ghRepo?: { owner: string; repo: string } | null;
+  readme?: string | null;
+}): string | null {
+  if (!isGenericServerName(input.currentName)) return null;
+
+  const fromReadme = extractReadmeTitle(input.readme);
+  if (fromReadme && fromReadme.toLowerCase() !== input.currentName.trim().toLowerCase()) {
+    return fromReadme.slice(0, 80);
+  }
+
+  if (input.ghRepo) {
+    const { owner, repo } = input.ghRepo;
+    const base = isGenericServerName(repo) ? humanizeSlug(owner) : humanizeSlug(repo);
+    if (!base) return null;
+    return /\bmcp\b/i.test(base) ? base : `${base} MCP`;
+  }
+
+  try {
+    const host = new URL(input.url).hostname.replace(/^www\./i, '');
+    const parts = host.split('.').filter(Boolean);
+    const label = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+    if (!label || isGenericServerName(label)) return null;
+    const base = humanizeSlug(label);
+    return /\bmcp\b/i.test(base) ? base : `${base} MCP`;
+  } catch {
+    return null;
+  }
+}
+
