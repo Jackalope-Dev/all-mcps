@@ -530,7 +530,7 @@ const GENERIC_NAME_WORDS = new Set([
   'mcp', 'server', 'servers', 'tool', 'tools', 'toolkit', 'toolset',
   'api', 'client', 'service', 'services', 'app', 'core', 'cli', 'sdk',
   'docs', 'doc', 'documentation', 'gateway', 'assistant', 'agent', 'agents',
-  'memory', 'registry', 'catalog', 'marketplace', 'monitoring', 'audit',
+  'memory', 'registry', 'catalog', 'marketplace', 'monitoring', 'audit', 'booking',
   'library', 'libraries', 'reference', 'data', 'hub', 'kit', 'connector',
   'connectors', 'integration', 'integrations', 'bridge', 'proxy', 'wrapper',
   'adapter', 'util', 'utils', 'utility', 'utilities', 'backend', 'frontend',

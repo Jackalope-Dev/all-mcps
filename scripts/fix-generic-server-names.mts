@@ -6,23 +6,34 @@
  * identical; this script is the fastest path to run it once against the live
  * catalog without shipping unrelated in-progress app changes via a deploy.
  *
- * This script does NOT talk to D1 itself — `wrangler d1 execute --file` uses
- * D1's bulk-import path, which doesn't return real SELECT results and is not
- * something to trust for a production UPDATE without independent
- * verification, and `--command` from inside Node's execFileSync fights
- * Windows .cmd quoting. So the split is:
- *   1. Dump rows with `wrangler d1 execute --command` (works fine from a
- *      normal shell) to a JSON file.
+ * This script does NOT talk to D1 itself — calling `wrangler d1 execute`
+ * from inside Node's execFileSync fights Windows .cmd quoting. So the split
+ * is:
+ *   1. Dump rows with `wrangler d1 execute --command` to a JSON file.
  *   2. This script reads that dump, fetches READMEs, derives new names, and
  *      writes a SQL file of UPDATE statements + a JSON report — no DB access.
- *   3. Apply the SQL file with `wrangler d1 execute --command` in small
- *      batches from a normal shell.
+ *   3. Apply the SQL file with `wrangler d1 execute --file` from a normal shell.
+ *
+ * IMPORTANT, confirmed by hand: `wrangler d1 execute --command "UPDATE ...;
+ * UPDATE ...; ..."` with multiple semicolon-separated statements silently
+ * only executes the FIRST one — despite wrangler's own --help text claiming
+ * "multiple queries separated by ';'" — no error, no warning, `success:
+ * true`. Verified directly against production here: batching 314 renames as
+ * eight 40-statement --command calls left 306 of them unapplied with a
+ * clean-looking response each time; re-verifying with a SELECT was the only
+ * way to catch it. `wrangler d1 execute --file <path>` on the same
+ * statements applies and reports on every one correctly (its JSON response
+ * shape differs from --command's — a bulk-import-style summary with "Total
+ * queries executed"/"Rows written" counts, not per-statement result rows —
+ * but the counts are trustworthy). Always use --file for more than one
+ * statement, and always re-SELECT a sample afterward regardless.
  *
  * Usage:
  *   wrangler d1 execute all-mcps --remote --json --command \
  *     "SELECT id, name, url, is_official FROM servers WHERE status='active'" > rows.json
  *   npx tsx scripts/fix-generic-server-names.mts rows.json out-dir
- *   # review out-dir/proposed-renames.json, then apply out-dir/updates.sql via wrangler
+ *   # review out-dir/proposed-renames.json, then:
+ *   wrangler d1 execute all-mcps --remote --yes --file out-dir/updates.sql
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';

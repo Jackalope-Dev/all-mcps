@@ -67,6 +67,7 @@ assert(isGenericServerName('MCP Server'), '"MCP Server" should be generic');
 assert(isGenericServerName('mcp-server'), '"mcp-server" should be generic');
 assert(isGenericServerName('reference-data'), '"reference-data" should be generic');
 assert(isGenericServerName('docs-mcp'), '"docs-mcp" should be generic');
+assert(isGenericServerName('booking'), '"booking" should be generic');
 assert(!isGenericServerName('Storefront'), '"Storefront" should not be generic (not a generic word)');
 assert(!isGenericServerName('Kai AGI - Autonomous AI Agent'), 'Long descriptive names should not be generic');
 assert(!isGenericServerName('Tavily MCP Server'), '"Tavily MCP Server" has a distinguishing word, not generic');
@@ -105,7 +106,7 @@ assert(
   'Should fall back to owner name when repo slug is itself generic'
 );
 assert(
-  deriveServerName({ currentName: 'mcp', url: 'https://github.com/cueapi/cueapi-mcp', ghRepo: { owner: 'cueapi', repo: 'cueapi-mcp' }, readme: null })?.endsWith('MCP'),
+  !!deriveServerName({ currentName: 'mcp', url: 'https://github.com/cueapi/cueapi-mcp', ghRepo: { owner: 'cueapi', repo: 'cueapi-mcp' }, readme: null })?.endsWith('MCP'),
   'Should humanize a distinguishing repo slug and keep the MCP acronym'
 );
 assert(
