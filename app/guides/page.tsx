@@ -13,6 +13,7 @@ import {
   Wrench,
   Bug,
   Search,
+  GitBranch,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
@@ -181,6 +182,24 @@ const guidesList = [
       'Instant indexing via IndexNow protocol',
       'AEO, GEO & llms.txt readiness checks',
       'Technical site crawler & audit blueprints',
+    ],
+  },
+  {
+    slug: 'mcp-protocol-versioning',
+    href: '/mcp-protocol-versioning',
+    title: 'MCP Protocol Versioning Explained',
+    subtitle: 'The Stateless 2026-07-28 Revision',
+    description:
+      'MCP dropped the initialize handshake for a stateless, per-request protocol. What changed, why, and how servers and clients support both eras, with an interactive walkthrough.',
+    level: 'Protocol',
+    readTime: '13 min read',
+    icon: GitBranch,
+    badgeVariant: 'official' as const,
+    highlights: [
+      'Why MCP moved to a stateless, per-request model',
+      'server/discover & Multi Round-Trip Requests (MRTR)',
+      'What is now deprecated: Roots, Sampling, Logging, HTTP+SSE',
+      'Interactive era-compatibility & MRTR simulator',
     ],
   },
 ];

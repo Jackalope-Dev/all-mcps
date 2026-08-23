@@ -715,12 +715,12 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 destinationType="website"
                 serverId={server.id}
                 target="_blank"
-                rel={websiteLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk)}
+                rel={websiteLinkRel(!!server.isPremium, !!server.websiteBacklinkOk)}
                 className="mcp-action-btn mcp-action-btn--accent"
               >
                 <Globe size={18} style={{ color: 'var(--accent-color)' }} />
                 <span className="mcp-action-btn-label">Visit Website</span>
-                {server.websiteVerified ? (
+                {server.websiteBacklinkOk ? (
                   <BadgeCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0 }} />
                 ) : (
                   <ExternalLink size={14} style={{ opacity: 0.85 }} />
@@ -734,7 +734,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 destinationType="website"
                 serverId={server.id}
                 target="_blank"
-                rel={supportLinkRel(!!server.isPremium, !!server.reciprocalBadgeOk, server.supportUrl, server.websiteUrl)}
+                rel={supportLinkRel(!!server.isPremium, !!server.websiteBacklinkOk, server.supportUrl, server.websiteUrl)}
                 className="mcp-action-btn"
               >
                 <LifeBuoy size={18} style={{ color: 'var(--accent-color)' }} />
@@ -1542,11 +1542,11 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           {!server.isOfficial ? (
             <div className="surface" style={{ padding: '1.5rem', borderColor: 'rgba(0,229,255,0.35)' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <BadgeCheck size={18} color="var(--accent-color)" /> Own this project?
+                <CheckCircle size={18} color="var(--accent-color)" /> Own this project?
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.55 }}>
-                This directory is pre-filled from public sources. Claim via GitHub README, site badge, or DNS TXT to get the verified badge
-                {server.websiteUrl ? '' : ' and attach your website'}.
+                This directory is pre-filled from public sources. Claim via GitHub README, site badge, or DNS TXT to unlock edit access and the Official badge
+                {server.websiteUrl ? '' : ' and attach your website'} — proof is checked automatically, then reviewed by our team.
               </p>
               <p
                 style={{
@@ -1560,8 +1560,9 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                   border: '1px solid rgba(16,185,129,0.25)',
                 }}
               >
-                <strong style={{ color: 'var(--verified-green)' }}>Free dofollow backlink:</strong> after claiming,
-                verify your product site and place a dofollow AllMCPs badge — we recheck it stays live.
+                <strong style={{ color: 'var(--verified-green)' }}>Free dofollow backlink:</strong> add your website
+                and place the AllMCPs badge on it — no claim needed. We detect it automatically and keep it verified
+                as long as the badge stays live.
               </p>
               <Link
                 href={`/mcp/${server.id}/claim`}
@@ -1587,9 +1588,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
             serverId={server.id}
             isOfficial={!!server.isOfficial}
             websiteUrl={server.websiteUrl}
-            websiteVerified={server.websiteVerified}
             isPremium={server.isPremium}
-            reciprocalBadgeOk={server.reciprocalBadgeOk}
+            websiteBacklinkOk={server.websiteBacklinkOk}
             status={server.status}
             featuredUntil={server.featuredUntil}
             categorySponsorUntil={server.categorySponsorUntil}

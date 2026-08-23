@@ -301,6 +301,10 @@ const CURATED_CATEGORY_INTRO: Record<string, string> = {
     'Analytics warehouses, data pipelines, and BI platforms exposed over MCP, so agents can pull metrics and run analysis against your production data stack.',
   'cloud-platforms':
     'Provision, inspect, and manage cloud infrastructure through MCP — giving agents scoped access to the APIs behind your deployments.',
+  'aggregators':
+    'MCP servers that sit in front of other MCP servers — routing, proxying, and merging multiple tool sets into a single connection so an agent can reach dozens of capabilities through one endpoint.',
+  'communication':
+    'MCP servers for email, chat, and messaging platforms — letting agents send, read, and triage conversations across the tools your team already uses.',
 };
 
 /** Builds the one-paragraph intro for a category landing page / markdown export. */

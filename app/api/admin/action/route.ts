@@ -37,7 +37,6 @@ const actionSchema = z.object({
     'reject_screenshot',
     'resend_approval',
     'toggle_official',
-    'toggle_website_verified',
     'toggle_reciprocal_badge',
     'check_health',
     'approve_review_comment',
@@ -79,8 +78,7 @@ const MESSAGES: Record<string, string> = {
   reject_screenshot: 'Screenshot rejected.',
   resend_approval: 'Approval email resent.',
   toggle_official: 'Official status updated.',
-  toggle_website_verified: 'Website verification status updated.',
-  toggle_reciprocal_badge: 'Reciprocal badge status updated.',
+  toggle_reciprocal_badge: 'Verified (reciprocal badge) status updated.',
   check_health: 'Health check completed.',
   approve_review_comment: 'Review comment approved.',
   reject_review_comment: 'Review comment rejected.',
@@ -256,9 +254,16 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Website URL must be a public http(s) address." }, { status: 400 });
         }
         updates.websiteUrl = fields.websiteUrl || null;
-        // Admin retargeted the website — it hasn't been re-proven, so drop verification
-        // (matches the behavior of the owner-edit approval path and the claim flow).
-        updates.websiteVerified = false;
+        // Admin retargeted the website — the old domain's backlink proof doesn't
+        // carry over. The repo README badge is independent, so keep it in the
+        // aggregate.
+        const badgeRows = await db
+          .select({ readmeBadgeOk: servers.readmeBadgeOk })
+          .from(servers)
+          .where(eq(servers.id, id))
+          .limit(1);
+        updates.websiteBacklinkOk = false;
+        updates.reciprocalBadgeOk = badgeRows[0]?.readmeBadgeOk ?? false;
       }
 
       if (Object.keys(updates).length === 0) {
@@ -360,7 +365,9 @@ export async function POST(req: Request) {
           pendingRevision: null,
         };
         if ('websiteUrl' in pending.proposed) {
-          fieldUpdates.websiteVerified = false;
+          // Website changed — reset the website backlink, keep the repo README badge.
+          fieldUpdates.websiteBacklinkOk = false;
+          fieldUpdates.reciprocalBadgeOk = server.readmeBadgeOk;
         }
         await db.update(servers).set(fieldUpdates).where(eq(servers.id, id));
       } else {
@@ -391,18 +398,22 @@ export async function POST(req: Request) {
       }
 
       if (action === 'approve_claim') {
-        await db
-          .update(servers)
-          .set({
-            isOfficial: true,
-            claimedAt: server.claimedAt || new Date(),
-            ownerUserId: server.pendingClaimUserId,
-            websiteUrl: server.pendingClaimWebsiteUrl,
-            websiteVerified: true,
-            pendingClaimUserId: null,
-            pendingClaimWebsiteUrl: null,
-          })
-          .where(eq(servers.id, id));
+        // pendingClaimWebsiteUrl is null for a GitHub-proven claim (no website
+        // was part of that proof) — only overwrite websiteUrl when the claim
+        // actually proposed one, so approving a GitHub claim can't null out an
+        // existing website. "Verified" (reciprocalBadgeOk) is a separate,
+        // cron-managed signal and is intentionally left untouched here.
+        const claimUpdates: Record<string, unknown> = {
+          isOfficial: true,
+          claimedAt: server.claimedAt || new Date(),
+          ownerUserId: server.pendingClaimUserId,
+          pendingClaimUserId: null,
+          pendingClaimWebsiteUrl: null,
+        };
+        if (server.pendingClaimWebsiteUrl) {
+          claimUpdates.websiteUrl = server.pendingClaimWebsiteUrl;
+        }
+        await db.update(servers).set(claimUpdates).where(eq(servers.id, id));
       } else {
         await db
           .update(servers)
@@ -542,26 +553,26 @@ export async function POST(req: Request) {
       const nextOfficial = !rows[0].isOfficial;
       await db.update(servers).set({ isOfficial: nextOfficial, claimedAt: nextOfficial ? new Date() : null }).where(eq(servers.id, id));
       return NextResponse.json({ success: true, message: `Official badge ${nextOfficial ? 'granted' : 'removed'}.`, isOfficial: nextOfficial });
-    } else if (action === 'toggle_website_verified') {
-      const rows = await db.select({ websiteVerified: servers.websiteVerified, reciprocalBadgeOk: servers.reciprocalBadgeOk }).from(servers).where(eq(servers.id, id)).limit(1);
-      if (rows.length === 0) return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
-      const nextVerified = !rows[0].websiteVerified;
-      await db.update(servers).set({ websiteVerified: nextVerified, reciprocalBadgeOk: nextVerified }).where(eq(servers.id, id));
-      return NextResponse.json({
-        success: true,
-        message: `Website verification ${nextVerified ? 'verified' : 'unverified'} (badge ${nextVerified ? 'granted' : 'removed'}).`,
-        websiteVerified: nextVerified,
-        reciprocalBadgeOk: nextVerified,
-      });
     } else if (action === 'toggle_reciprocal_badge') {
-      const rows = await db.select({ reciprocalBadgeOk: servers.reciprocalBadgeOk }).from(servers).where(eq(servers.id, id)).limit(1);
+      const rows = await db
+        .select({ reciprocalBadgeOk: servers.reciprocalBadgeOk, readmeBadgeOk: servers.readmeBadgeOk })
+        .from(servers)
+        .where(eq(servers.id, id))
+        .limit(1);
       if (rows.length === 0) return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
+      // Manual override targets the website-backlink lever (what grants website
+      // dofollow). The aggregate keeps the independent repo README badge on the
+      // "off" path so a README-verified listing stays Verified.
       const nextBadge = !rows[0].reciprocalBadgeOk;
-      await db.update(servers).set({ reciprocalBadgeOk: nextBadge }).where(eq(servers.id, id));
+      const nextAggregate = nextBadge || rows[0].readmeBadgeOk;
+      await db
+        .update(servers)
+        .set({ websiteBacklinkOk: nextBadge, reciprocalBadgeOk: nextAggregate })
+        .where(eq(servers.id, id));
       return NextResponse.json({
         success: true,
         message: `Reciprocal badge ${nextBadge ? 'marked active' : 'marked inactive'}.`,
-        reciprocalBadgeOk: nextBadge,
+        reciprocalBadgeOk: nextAggregate,
       });
     } else if (action === 'check_health') {
       const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);

@@ -15,6 +15,7 @@ import {
   normalizeTags,
   normalizeCompatibleClients,
 } from '../../../../lib/serverEnums';
+import { checkRateLimit, clientKey, rateLimitedResponse } from '../../../../lib/rateLimit';
 
 const agentSubmitSchema = z.object({
   url: z.string().optional().or(z.literal('')),
@@ -42,6 +43,11 @@ const agentSubmitSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    // No CAPTCHA on this endpoint (unlike the human /submit form) — the one
+    // guard against automated spam submissions is a tight per-IP rate limit.
+    const rateLimit = checkRateLimit(`v1_submit:${clientKey(req)}`, 5, 3600);
+    if (!rateLimit.allowed) return rateLimitedResponse(rateLimit);
+
     const body = (await req.json()) as any;
 
     const result = agentSubmitSchema.safeParse(body);

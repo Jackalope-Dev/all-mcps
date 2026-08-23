@@ -5,6 +5,7 @@ import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
 import { DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { PRICING_MODELS, AUTH_TYPES, MAINTENANCE_STATUSES, COMPATIBLE_CLIENT_SLUGS, TAG_LIMITS } from '@/lib/serverEnums';
 import { fetchActiveSponsorAd, logAiInjectionEvent } from '@/lib/ads';
+import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '@/lib/rateLimit';
 
 const SERVER_INFO = {
   name: 'AllMCPs Directory Server',
@@ -251,6 +252,9 @@ export async function POST(request: Request) {
       /* best-effort */
     }
   }
+
+  const rateLimit = checkRateLimit(`mcp_jsonrpc:${clientKey(request)}`, 120, 60);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit, { 'Access-Control-Allow-Origin': '*' });
 
   try {
     const body = (await request.json()) as any;

@@ -15,7 +15,6 @@ import {
   Edit2,
   Trash2,
   ShieldCheck,
-  Globe,
   Award,
   Activity,
   Sparkles,
@@ -54,7 +53,6 @@ type Listing = {
   createdAt: string;
   isPremium: boolean;
   isOfficial?: boolean;
-  websiteVerified?: boolean;
   reciprocalBadgeOk?: boolean;
   status: string;
   healthStatus: string;
@@ -246,7 +244,6 @@ export default function ManageListings({
       | 'feature'
       | 'resend_approval'
       | 'toggle_official'
-      | 'toggle_website_verified'
       | 'toggle_reciprocal_badge'
       | 'check_health',
     extra?: { fields?: Partial<EditFields>; days?: number }
@@ -263,7 +260,6 @@ export default function ManageListings({
         message?: string;
         featuredUntil?: string;
         isOfficial?: boolean;
-        websiteVerified?: boolean;
         reciprocalBadgeOk?: boolean;
         healthStatus?: string;
       };
@@ -279,18 +275,6 @@ export default function ManageListings({
       } else if (action === 'toggle_official') {
         setItems((prev) =>
           prev.map((s) => (s.id === id ? { ...s, isOfficial: data.isOfficial ?? !s.isOfficial } : s))
-        );
-      } else if (action === 'toggle_website_verified') {
-        setItems((prev) =>
-          prev.map((s) =>
-            s.id === id
-              ? {
-                  ...s,
-                  websiteVerified: data.websiteVerified ?? !s.websiteVerified,
-                  reciprocalBadgeOk: data.reciprocalBadgeOk ?? s.reciprocalBadgeOk,
-                }
-              : s
-          )
         );
       } else if (action === 'toggle_reciprocal_badge') {
         setItems((prev) =>
@@ -625,9 +609,9 @@ export default function ManageListings({
                           ★ OFFICIAL
                         </span>
                       )}
-                      {listing.websiteVerified && (
+                      {listing.reciprocalBadgeOk && (
                         <span className="admin-badge" style={{ color: '#2563eb', background: 'rgba(37, 99, 235, 0.12)' }}>
-                          SITE VERIFIED
+                          ✓ VERIFIED
                         </span>
                       )}
                       {listing.aiSummary && (
@@ -799,25 +783,6 @@ export default function ManageListings({
                     </button>
 
                     <button
-                      onClick={() => runAction(listing.id, 'toggle_website_verified')}
-                      disabled={rowLoading}
-                      className="admin-btn"
-                      style={{
-                        background: listing.websiteVerified ? 'rgba(37, 99, 235, 0.15)' : 'rgba(128,128,128,0.08)',
-                        color: listing.websiteVerified ? '#2563eb' : 'var(--text-secondary)',
-                        border: '1px solid var(--border-color)',
-                        padding: '0.25rem 0.55rem',
-                        fontSize: '0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                      }}
-                      title="Manually toggle Website Verified status"
-                    >
-                      <Globe className="w-3.5 h-3.5" /> {listing.websiteVerified ? 'Verified Site: YES' : 'Verify Site'}
-                    </button>
-
-                    <button
                       onClick={() => runAction(listing.id, 'toggle_reciprocal_badge')}
                       disabled={rowLoading}
                       className="admin-btn"
@@ -831,9 +796,9 @@ export default function ManageListings({
                         alignItems: 'center',
                         gap: '0.3rem',
                       }}
-                      title="Manually toggle Reciprocal Badge status"
+                      title="Manually toggle Verified (reciprocal badge) status"
                     >
-                      <Award className="w-3.5 h-3.5" /> {listing.reciprocalBadgeOk ? 'Badge: OK' : 'Grant Badge'}
+                      <Award className="w-3.5 h-3.5" /> {listing.reciprocalBadgeOk ? 'Verified: YES' : 'Mark Verified'}
                     </button>
 
                     <button
@@ -1122,9 +1087,8 @@ export default function ManageListings({
               <div><strong>ID:</strong> <code style={{ color: 'var(--accent-color)', fontWeight: 700 }}>{inspectListing.id}</code></div>
               <div><strong>Submitter Email:</strong> {inspectListing.submitterEmail || 'Not recorded'}</div>
               <div><strong>Owner User ID:</strong> {inspectListing.ownerUserId || 'Unclaimed'}</div>
-              <div><strong>Official Project Badge:</strong> {inspectListing.isOfficial ? 'Yes (Verified)' : 'No'}</div>
-              <div><strong>Website Verified:</strong> {inspectListing.websiteVerified ? 'Yes (Verified)' : 'No'}</div>
-              <div><strong>Reciprocal Badge (SEO Dofollow):</strong> {inspectListing.reciprocalBadgeOk ? 'Yes (Active dofollow)' : 'No (Pending)'}</div>
+              <div><strong>Official (admin-approved claim):</strong> {inspectListing.isOfficial ? 'Yes' : 'No'}</div>
+              <div><strong>Verified (reciprocal badge, SEO dofollow):</strong> {inspectListing.reciprocalBadgeOk ? 'Yes (Active dofollow)' : 'No (Pending)'}</div>
               <div><strong>Health Status:</strong> {inspectListing.healthStatus}</div>
               <div><strong>Created At:</strong> {new Date(inspectListing.createdAt).toLocaleString()}</div>
               <div><strong>AI Summary:</strong> {inspectListing.aiSummary || 'Not generated yet'}</div>

@@ -263,7 +263,17 @@ export default async function BestTopicPage({
         <section style={{ marginTop: '3.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>More best-of guides</h2>
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            {BEST_TOPICS.filter((o) => o.slug !== t.slug).slice(0, 8).map((o) => (
+            {(() => {
+              // Curated relations first (e.g. marketing <-> seo) — these disambiguate
+              // adjacent-intent topics that would otherwise silently split relevance
+              // signals for the same head term — then backfill to 8 with the rest.
+              const related = (t.relatedTopicSlugs ?? [])
+                .map((slug) => bestTopicBySlug(slug))
+                .filter((o): o is NonNullable<typeof o> => Boolean(o) && o!.slug !== t.slug);
+              const relatedSlugs = new Set(related.map((o) => o.slug));
+              const rest = BEST_TOPICS.filter((o) => o.slug !== t.slug && !relatedSlugs.has(o.slug));
+              return [...related, ...rest].slice(0, 8);
+            })().map((o) => (
               <li key={o.slug}>
                 <Link href={`/best/${o.slug}`} className="badge badge-link badge-category">
                   Best for {o.title}

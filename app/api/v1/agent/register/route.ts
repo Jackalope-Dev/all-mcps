@@ -7,6 +7,10 @@ import {
   generateRegistrationCode,
   sha256Hex,
   REGISTRATION_CODE_TTL_MS,
+  AGENT_SCOPES,
+  DEFAULT_AGENT_SCOPES,
+  isValidAgentScope,
+  serializeAgentScopes,
 } from '@/lib/agentAuth';
 import { sendNotificationEmail } from '@/lib/notify';
 
@@ -14,6 +18,10 @@ const registerSchema = z.object({
   email: z.string().email('Provide a valid email address'),
   agentName: z.string().optional().or(z.literal('')),
   agent_name: z.string().optional().or(z.literal('')),
+  // OAuth-style scoped permissions — request only what you need (see
+  // /.well-known/oauth-protected-resource and auth.md). Omit to receive the
+  // default scope set.
+  scopes: z.array(z.string()).optional(),
 });
 
 const CORS_HEADERS = {
@@ -37,6 +45,25 @@ export async function POST(req: Request) {
     const email = result.data.email.trim().toLowerCase();
     const agentName = (result.data.agentName || result.data.agent_name || '').trim();
 
+    const requestedScopes = result.data.scopes;
+    if (requestedScopes) {
+      const invalid = requestedScopes.filter((s) => !isValidAgentScope(s));
+      if (invalid.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'invalid_scope',
+            message: `Unsupported scope(s): ${invalid.join(', ')}.`,
+            scopesSupported: AGENT_SCOPES,
+          },
+          { status: 400, headers: CORS_HEADERS }
+        );
+      }
+    }
+    const scopes =
+      requestedScopes && requestedScopes.length > 0
+        ? Array.from(new Set(requestedScopes.filter(isValidAgentScope)))
+        : DEFAULT_AGENT_SCOPES;
+
     let env: any;
     try {
       const ctx = await getCloudflareContext();
@@ -55,6 +82,8 @@ export async function POST(req: Request) {
     const codeHash = await sha256Hex(rawCode);
     const expiresAt = new Date(Date.now() + REGISTRATION_CODE_TTL_MS);
 
+    const scopesJson = serializeAgentScopes(scopes);
+
     await db
       .insert(agentRegistrationCodes)
       .values({
@@ -64,6 +93,7 @@ export async function POST(req: Request) {
         attempts: 0,
         createdAt: new Date(),
         expiresAt,
+        scopes: scopesJson,
       })
       .onConflictDoUpdate({
         target: agentRegistrationCodes.email,
@@ -73,6 +103,7 @@ export async function POST(req: Request) {
           attempts: 0,
           createdAt: new Date(),
           expiresAt,
+          scopes: scopesJson,
         },
       });
 
@@ -87,6 +118,7 @@ export async function POST(req: Request) {
         success: true,
         message: 'Confirmation code sent to email. Call POST /api/v1/agent/register/confirm with email and code to receive your bearer token.',
         email,
+        scopes,
         expiresAt: expiresAt.toISOString(),
         confirm_url: 'https://allmcps.com/api/v1/agent/register/confirm',
       },
@@ -101,7 +133,8 @@ export async function POST(req: Request) {
 export async function GET() {
   return NextResponse.json(
     {
-      message: 'Send a POST request with {"email": "your-email@domain.com", "agentName": "YourAgent"} to request a registration confirmation code.',
+      message: 'Send a POST request with {"email": "your-email@domain.com", "agentName": "YourAgent", "scopes": ["listings:claim"]} to request a registration confirmation code. `scopes` is optional and defaults to the full supported set.',
+      scopesSupported: AGENT_SCOPES,
       confirm_endpoint: 'https://allmcps.com/api/v1/agent/register/confirm',
       docs: 'https://allmcps.com/auth.md',
     },

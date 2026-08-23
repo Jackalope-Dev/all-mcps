@@ -161,7 +161,12 @@ export async function POST(req: Request) {
       const now = new Date();
       let isVerifiedActive = false;
       let healthStatus = 'unknown';
-      let reciprocalBadgeOk = server.reciprocalBadgeOk;
+      // Two independent reciprocal-backlink signals, tracked separately so the
+      // repo README badge and the custom-website backlink never overwrite each
+      // other on listings that have both. `reciprocalBadgeOk` below is the
+      // derived aggregate persisted for the rest of the app.
+      let readmeBadgeOk = server.readmeBadgeOk;
+      let websiteBacklinkOk = server.websiteBacklinkOk;
       let githubStars: number | null = server.githubStars ?? null;
       let toolsJson: string | null = server.tools ?? null;
       let toolsCheckedAt: Date | null = server.toolsCheckedAt ?? null;
@@ -208,7 +213,7 @@ export async function POST(req: Request) {
 
               readmeText = await fetchGithubReadme(owner, repo);
               if (readmeText) {
-                reciprocalBadgeOk = websiteHasReciprocalBadge(readmeText, server.id);
+                readmeBadgeOk = websiteHasReciprocalBadge(readmeText, server.id);
               }
 
               // GitHub-linked listings are almost always stdio packages (npx/uvx/pip), not a
@@ -344,10 +349,15 @@ export async function POST(req: Request) {
         }
       }
 
+      // The website backlink is a separate public-content check from the repo
+      // README badge above — does the *custom site* currently show our
+      // badge/link — so it writes its own signal and never overwrites the
+      // README result. Applies to any listing with a website, independent of
+      // Official/claim status (premium is skipped since it's already dofollow
+      // regardless, see websiteLinkRel).
       if (
         !server.isPremium &&
         server.websiteUrl &&
-        server.websiteVerified &&
         isSafeFetchTarget(server.websiteUrl)
       ) {
         try {
@@ -355,12 +365,15 @@ export async function POST(req: Request) {
             method: 'GET',
             signal: AbortSignal.timeout(10000),
           });
-          reciprocalBadgeOk =
+          websiteBacklinkOk =
             siteRes.ok && websiteHasReciprocalBadge(await siteRes.text(), server.id);
         } catch {
-          reciprocalBadgeOk = false;
+          websiteBacklinkOk = false;
         }
       }
+
+      // Aggregate the two independent signals for the rest of the app.
+      const reciprocalBadgeOk = readmeBadgeOk || websiteBacklinkOk;
 
       // Install hint: README first, then description, then deterministic resolve
       let installFields: ReturnType<typeof toCachedInstallFields> | null = null;
@@ -411,6 +424,8 @@ export async function POST(req: Request) {
           isVerifiedActive,
           healthStatus,
           reciprocalBadgeOk,
+          readmeBadgeOk,
+          websiteBacklinkOk,
           badgeLastCheckedAt: now,
           githubStars,
           lastCommitAt,

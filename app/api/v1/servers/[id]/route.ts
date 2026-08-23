@@ -1,18 +1,22 @@
 import { getServerById, fetchServerReadme } from '@/lib/servers';
 import { computeQualityScore } from '@/lib/qualityScore';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
+import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '@/lib/rateLimit';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const rateLimit = checkRateLimit(`v1_server_detail:${clientKey(request)}`, 60, 60);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit);
+
   const { id } = await params;
   const server = await getServerById(id);
 
   if (!server) {
     return Response.json(
-      { error: 'Server not found' },
-      { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } }
+      { error: 'not_found', message: `No listing exists with id "${id}".` },
+      { status: 404, headers: { 'Access-Control-Allow-Origin': '*', ...rateLimitHeaders(rateLimit) } }
     );
   }
 
@@ -64,6 +68,7 @@ export async function GET(
       headers: {
         'Cache-Control': 'public, max-age=600, s-maxage=3600',
         'Access-Control-Allow-Origin': '*',
+        ...rateLimitHeaders(rateLimit),
       },
     }
   );

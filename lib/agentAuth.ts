@@ -1,6 +1,52 @@
 import { eq } from 'drizzle-orm';
 import { agentTokens, users } from '@/db/schema';
 
+/**
+ * OAuth-style scopes an agent token can hold. Each maps to one gated write
+ * action — read endpoints stay open/unscoped (see auth.md's capability
+ * table). Extend this list (and the corresponding `hasScope` check at the
+ * call site) as more agent-authenticated write endpoints are added.
+ */
+export const AGENT_SCOPES = ['listings:claim'] as const;
+export type AgentScope = (typeof AGENT_SCOPES)[number];
+
+/** Legacy tokens/registrations minted before scopes existed carry this — the exact capability set they always had. */
+export const DEFAULT_AGENT_SCOPES: AgentScope[] = ['listings:claim'];
+
+/** Single source of truth for scope descriptions — reused by /.well-known/oauth-protected-resource, the OpenAPI spec, and /docs/api so they can't drift out of sync. */
+export const AGENT_SCOPE_DETAILS: Record<AgentScope, { description: string; requiredBy: string[] }> = {
+  'listings:claim': {
+    description:
+      'Claim ownership of an existing MCP server listing via DNS TXT record, site verification badge, or GitHub README badge proof. Grants no other write access.',
+    requiredBy: ['POST /api/v1/agent/claim'],
+  },
+};
+
+export function isValidAgentScope(scope: unknown): scope is AgentScope {
+  return typeof scope === 'string' && (AGENT_SCOPES as readonly string[]).includes(scope);
+}
+
+/** Parses a stored `scopes` JSON column, falling back to the legacy default for null/malformed values (pre-scopes rows). */
+export function parseAgentScopes(raw: unknown): AgentScope[] {
+  if (typeof raw !== 'string' || !raw.trim()) return DEFAULT_AGENT_SCOPES;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_AGENT_SCOPES;
+    const valid = parsed.filter(isValidAgentScope);
+    return valid.length > 0 ? valid : DEFAULT_AGENT_SCOPES;
+  } catch {
+    return DEFAULT_AGENT_SCOPES;
+  }
+}
+
+export function serializeAgentScopes(scopes: AgentScope[]): string {
+  return JSON.stringify(scopes);
+}
+
+export function hasAgentScope(agent: { scopes: AgentScope[] }, scope: AgentScope): boolean {
+  return agent.scopes.includes(scope);
+}
+
 /** SHA-256 hex digest — used to store tokens/codes at rest without keeping the plaintext. */
 export async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
@@ -25,7 +71,7 @@ export const AGENT_TOKEN_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 export const REGISTRATION_CODE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export const MAX_CODE_ATTEMPTS = 5;
 
-export type AgentIdentity = { userId: string; email: string | null; tokenHash: string };
+export type AgentIdentity = { userId: string; email: string | null; tokenHash: string; scopes: AgentScope[] };
 
 /**
  * Resolves an `Authorization: Bearer <token>` header to the agent's backing
@@ -47,6 +93,7 @@ export async function resolveAgentAuth(
       expiresAt: agentTokens.expiresAt,
       revokedAt: agentTokens.revokedAt,
       email: users.email,
+      scopes: agentTokens.scopes,
     })
     .from(agentTokens)
     .innerJoin(users, eq(users.id, agentTokens.userId))
@@ -57,5 +104,5 @@ export async function resolveAgentAuth(
   if (!row || row.revokedAt) return null;
   if (new Date(row.expiresAt).getTime() < Date.now()) return null;
 
-  return { userId: row.userId, email: row.email ?? null, tokenHash };
+  return { userId: row.userId, email: row.email ?? null, tokenHash, scopes: parseAgentScopes(row.scopes) };
 }

@@ -97,7 +97,13 @@ export function middleware(req: NextRequest) {
   } else if (pathname === '/.well-known/acp.json' || pathname === '/.well-known/acp') {
     response = NextResponse.rewrite(new URL('/api/well-known/acp', req.url));
   } else if (pathname === '/.well-known/mcp.json' || pathname === '/.well-known/mcp') {
-    response = NextResponse.rewrite(new URL('/api/well-known/mcp-json', req.url));
+    // GET returns the descriptive manifest; POST/OPTIONS proxy straight to the
+    // real MCP JSON-RPC endpoint so `initialize` (and every other tool call)
+    // actually works at this well-known URL instead of just describing itself.
+    response =
+      req.method === 'GET'
+        ? NextResponse.rewrite(new URL('/api/well-known/mcp-json', req.url))
+        : NextResponse.rewrite(new URL('/api/mcp', req.url));
   } else if (pathname === '/auth.md') {
     response = NextResponse.rewrite(new URL('/api/well-known/auth-md', req.url));
   } else if (pathname === '/openapi.json') {
@@ -172,6 +178,24 @@ export function middleware(req: NextRequest) {
     'Content-Security-Policy',
     "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://www.googletagmanager.com https://*.posthog.com https://p.allmcps.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://*.posthog.com https://us-assets.i.posthog.com https://p.allmcps.com; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://*.posthog.com https://us.posthog.com https://p.allmcps.com;"
   );
+
+  // CDNs cache by URL alone unless told otherwise. Every non-API path here can
+  // serve either HTML or the markdown-negotiated body depending on the request's
+  // Accept header (see branches 2 & 3 above), so without `Vary: Accept` a CDN can
+  // cache one representation and hand it to a client that asked for the other
+  // (e.g. an HTML page served to an agent that sent `Accept: text/markdown`).
+  // Next already sets its own Vary (RSC routing headers) — append rather than
+  // overwrite so both are honored.
+  const existingVary = response.headers.get('Vary');
+  const varyTokens = new Set(
+    (existingVary || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean)
+  );
+  varyTokens.add('Accept');
+  varyTokens.add('Accept-Encoding');
+  response.headers.set('Vary', Array.from(varyTokens).join(', '));
 
   // Private app routes must not be cached. Public HTML should keep ISR /
   // CDN s-maxage — Googlebot sends Accept: text/html, and a blanket no-store

@@ -260,6 +260,21 @@ export default function RootLayout({
                   sameAs: ["https://x.com/AllMCPs", "https://github.com/Jackalope-Dev"],
                   description:
                     "The definitive directory for discovering and installing Model Context Protocol servers.",
+                  contactPoint: {
+                    "@type": "ContactPoint",
+                    email: "contact@allmcps.com",
+                    contactType: "customer support",
+                    url: "https://allmcps.com/contact",
+                    availableLanguage: ["English"],
+                  },
+                  address: {
+                    "@type": "PostalAddress",
+                    streetAddress: "1500 N Grant St # 7225",
+                    addressLocality: "Denver",
+                    addressRegion: "CO",
+                    postalCode: "80203",
+                    addressCountry: "US",
+                  },
                 },
                 {
                   "@type": "WebSite",

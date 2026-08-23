@@ -12,16 +12,20 @@ export const servers = sqliteTable('servers', {
   submitterEmail: text('submitter_email'),
   /** Paid/premium listings get dofollow website backlinks; free listings use nofollow. */
   isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
-  /** True when the owner proved control of `websiteUrl` (DNS TXT or site badge). */
+  /**
+   * Legacy — no longer written by the claim flow (kept for backward-compat reads
+   * of old rows only). "Verified" now means `reciprocalBadgeOk`; "Official"
+   * ownership is `isOfficial`. Do not use this column for new logic.
+   */
   websiteVerified: integer('website_verified', { mode: 'boolean' }).notNull().default(false),
-  /** Claimed/verified ownership (GitHub README, site badge, or DNS). */
+  /** "Official" — admin-approved ownership claim (proof via GitHub README, site badge, or DNS, but the grant itself always goes through admin review; see approve_claim/reject_claim). Grants edit rights and the Official badge. */
   isOfficial: integer('is_official', { mode: 'boolean' }).notNull().default(false),
   claimedAt: integer('claimed_at', { mode: 'timestamp' }),
   /** Auth.js user id after claim (optional until owners sign in). */
   ownerUserId: text('owner_user_id'),
-  /** Set when a website/DNS claim proves control of a *new* site (not already on file) — awaits admin approval before ownerUserId/isOfficial/websiteUrl take effect. */
+  /** Set whenever a claim proof (GitHub README, site badge, or DNS) succeeds — every method awaits admin approval before ownerUserId/isOfficial/websiteUrl take effect (see approve_claim/reject_claim). */
   pendingClaimUserId: text('pending_claim_user_id'),
-  /** The site the pending claimant proved control of. */
+  /** The site the pending claimant proved control of. Null for a GitHub-proven claim (no website was part of that proof). */
   pendingClaimWebsiteUrl: text('pending_claim_website_url'),
   /** Timed featured placement (e.g. 7-day boost). */
   featuredUntil: integer('featured_until', { mode: 'timestamp' }),
@@ -45,8 +49,34 @@ export const servers = sqliteTable('servers', {
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   isVerifiedActive: integer('is_verified_active', { mode: 'boolean' }).notNull().default(false),
   healthStatus: text('health_status').notNull().default('unknown'),
-  /** Whether the periodic recheck last found our badge/link still live (README or site). Drives dofollow for non-premium claimed listings. */
+  /**
+   * "Verified" badge shown across the site. Derived aggregate: true when either
+   * the repo README badge (`readmeBadgeOk`) OR the custom-website backlink
+   * (`websiteBacklinkOk`) is currently live. Kept as the single field most
+   * consumers read (quality score, ranking, site stats, admin/dashboard badges).
+   * Fully automatic, independent of claim/Official status. NOTE: this aggregate
+   * does NOT by itself grant website dofollow — that is gated specifically on
+   * `websiteBacklinkOk`, since a repo README badge can't earn ranking credit for
+   * an unrelated marketing site (see lib/linkRel.ts).
+   */
   reciprocalBadgeOk: integer('reciprocal_badge_ok', { mode: 'boolean' }).notNull().default(false),
+  /**
+   * The source repo's README currently carries our AllMCPs badge/link (a
+   * reciprocal backlink from the repo). Tracked separately from the website
+   * backlink so the two verifications never clobber each other on listings that
+   * have both a repo and a custom site. Set by the health cron and on GitHub
+   * claim. Feeds the `reciprocalBadgeOk` aggregate.
+   */
+  readmeBadgeOk: integer('readme_badge_ok', { mode: 'boolean' }).notNull().default(false),
+  /**
+   * The custom website (`websiteUrl`) currently carries a genuine dofollow
+   * backlink to us. This — not the repo README badge — is what earns the
+   * listing's website/support links dofollow (see lib/linkRel.ts). Reset to
+   * false whenever the website is retargeted (old domain's proof doesn't carry
+   * over). Set by the health cron and on website/DNS claim. Feeds the
+   * `reciprocalBadgeOk` aggregate.
+   */
+  websiteBacklinkOk: integer('website_backlink_ok', { mode: 'boolean' }).notNull().default(false),
   /** Last time the reciprocal-badge recheck ran for this listing (set alongside lastCheckedAt by the health cron). */
   badgeLastCheckedAt: integer('badge_last_checked_at', { mode: 'timestamp' }),
   /** GitHub stargazers, refreshed by the health cron. Null = not measured yet. */
@@ -285,6 +315,8 @@ export const agentRegistrationCodes = sqliteTable('agent_registration_codes', {
   attempts: integer('attempts').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  /** JSON string array of scopes requested at registration (see lib/agentAuth.ts AGENT_SCOPES) — carried onto the minted agent_tokens row at confirm. Null = pre-scopes registration, defaults to the legacy scope set. */
+  scopes: text('scopes'),
 });
 
 /**
@@ -304,6 +336,8 @@ export const agentTokens = sqliteTable('agent_tokens', {
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   revokedAt: integer('revoked_at', { mode: 'timestamp' }),
   lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+  /** JSON string array of granted OAuth-style scopes (see lib/agentAuth.ts AGENT_SCOPES). Null = minted before scopes existed — resolveAgentAuth treats that the same as the legacy default scope set so old tokens keep working. */
+  scopes: text('scopes'),
 }, (table) => ({
   userIdx: index('idx_agent_tokens_user').on(table.userId),
 }));

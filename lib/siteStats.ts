@@ -93,7 +93,7 @@ function getSnapshotFallback(): SiteStats {
   const snapshotCopies = snapshotServers.reduce((acc, s) => acc + (Number(s.copies) || 0), 0);
   const snapshotUpvotes = snapshotServers.reduce((acc, s) => acc + (Number(s.upvotes) || 0), 0);
   const snapshotVerified = snapshotServers.filter(
-    (s) => s.isOfficial || s.isPremium || s.websiteVerified
+    (s) => s.isOfficial || s.isPremium || s.reciprocalBadgeOk
   ).length;
   const snapshotTools = snapshotServers.reduce((acc, s) => {
     if (Array.isArray(s.tools)) return acc + s.tools.length;
@@ -251,7 +251,7 @@ export async function getSiteStats(): Promise<SiteStats> {
           // this whole multi-column query, silently falling back to stale snapshot values
           // for introspected/readme/reciprocalBadges/verified too, not just this field.
           recentCommits: sql<number>`sum(case when ${gte(servers.lastCommitAt, cutoff)} then 1 else 0 end)`,
-          verified: sql<number>`sum(case when ${servers.isOfficial} = 1 or ${servers.isPremium} = 1 or ${servers.websiteVerified} = 1 then 1 else 0 end)`,
+          verified: sql<number>`sum(case when ${servers.isOfficial} = 1 or ${servers.isPremium} = 1 or ${servers.reciprocalBadgeOk} = 1 then 1 else 0 end)`,
         })
         .from(servers)
         .where(eq(servers.status, 'active'))

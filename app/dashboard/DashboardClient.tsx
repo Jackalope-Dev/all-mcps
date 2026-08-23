@@ -43,9 +43,9 @@ type Server = {
   status?: string;
   featuredUntil?: string | null;
   categorySponsorUntil?: string | null;
-  websiteVerified?: boolean;
   isOfficial?: boolean;
   reciprocalBadgeOk?: boolean;
+  websiteBacklinkOk?: boolean;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -344,7 +344,7 @@ export default function DashboardClient({
     setActiveTabMap((prev) => ({ ...prev, [serverId]: tab }));
   };
 
-  const needsBacklinkHelp = servers.some((s) => !s.isPremium && !s.reciprocalBadgeOk);
+  const needsBacklinkHelp = servers.some((s) => !s.isPremium && !s.websiteBacklinkOk);
 
   if (servers.length === 0) {
     return (
@@ -639,7 +639,7 @@ export default function DashboardClient({
               >
                 <Globe size={15} aria-hidden="true" />
                 SEO
-                {!server.isPremium && !server.reciprocalBadgeOk && (
+                {!server.isPremium && !server.websiteBacklinkOk && (
                   <span className="dashboard-tab-dot" aria-label="Action needed" />
                 )}
               </button>
@@ -1205,31 +1205,21 @@ function ListingSetupSteps({
       onAction: server.websiteUrl?.trim() ? undefined : onEdit,
     },
     {
-      id: 'verify',
-      done: Boolean(server.websiteVerified),
-      title: server.websiteVerified ? 'Website verified' : 'Verify website ownership',
-      description: server.websiteVerified
-        ? 'Ownership is confirmed — badge and DNS checks passed.'
-        : 'Prove you control the site via badge, meta tag, or DNS TXT.',
-      actionLabel: server.websiteVerified ? undefined : 'Verify now',
-      href: server.websiteVerified ? undefined : `/mcp/${server.id}/claim`,
-    },
-    {
       id: 'badge',
-      done: Boolean(server.reciprocalBadgeOk || server.isPremium),
+      done: Boolean(server.websiteBacklinkOk || server.isPremium),
       title: server.isPremium
         ? 'Dofollow included (Premium)'
-        : server.reciprocalBadgeOk
+        : server.websiteBacklinkOk
           ? 'AllMCPs badge live'
           : 'Place the AllMCPs badge',
       description: server.isPremium
         ? 'Premium listings get a dofollow website link without a reciprocal badge.'
-        : server.reciprocalBadgeOk
+        : server.websiteBacklinkOk
           ? 'We detected your badge — your website link is dofollow.'
           : 'Embed the free dofollow badge on your site to unlock SEO value.',
       actionLabel:
-        server.reciprocalBadgeOk || server.isPremium ? undefined : 'Get badge code',
-      href: server.reciprocalBadgeOk || server.isPremium ? undefined : '/badge-generator',
+        server.websiteBacklinkOk || server.isPremium ? undefined : 'Get badge code',
+      href: server.websiteBacklinkOk || server.isPremium ? undefined : '/badge-generator',
     },
     {
       id: 'status',
@@ -1359,8 +1349,7 @@ function ListingSetupSteps({
 /** Per-listing SEO backlink checklist — drives free dofollow completion. */
 function BacklinkStatus({ server }: { server: Server }) {
   const hasWebsite = Boolean(server.websiteUrl?.trim());
-  const verified = Boolean(server.websiteVerified);
-  const dofollow = Boolean(server.isPremium || server.reciprocalBadgeOk);
+  const dofollow = Boolean(server.isPremium || server.websiteBacklinkOk);
 
   if (dofollow) {
     return (
@@ -1382,8 +1371,7 @@ function BacklinkStatus({ server }: { server: Server }) {
 
   const steps = [
     { done: hasWebsite, label: 'Website URL added to listing' },
-    { done: verified, label: 'Website ownership verified (badge, meta tag, or DNS)' },
-    { done: Boolean(server.reciprocalBadgeOk), label: 'Dofollow AllMCPs badge live on your site' },
+    { done: Boolean(server.websiteBacklinkOk), label: 'AllMCPs badge detected on your site (checked automatically)' },
   ];
 
   return (
@@ -1395,7 +1383,7 @@ function BacklinkStatus({ server }: { server: Server }) {
         </span>
       </div>
       <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '0.85rem', lineHeight: 1.5 }}>
-        Complete these 3 steps to convert your listing&apos;s website link into a reciprocal dofollow backlink:
+        Complete these steps to convert your listing&apos;s website link into a reciprocal dofollow backlink — no claim needed:
       </p>
       <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
         {steps.map((s, idx) => (
@@ -1425,7 +1413,7 @@ function BacklinkStatus({ server }: { server: Server }) {
       </ul>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
         <Link href={`/mcp/${server.id}/claim`} className="btn btn-primary" style={{ fontSize: '0.825rem', padding: '0.45rem 0.85rem' }}>
-          Complete verification →
+          Get badge instructions →
         </Link>
         <Link href="/badge-generator" className="btn btn-secondary" style={{ fontSize: '0.825rem', padding: '0.45rem 0.85rem' }}>
           Copy badge snippet
@@ -1808,8 +1796,8 @@ function QualityScoreCard({ server }: { server: Server }) {
 
   // Actionable tips to improve quality score
   const tips: string[] = [];
-  if (!server.isOfficial && !server.websiteVerified && !server.isPremium) {
-    tips.push('Claim ownership or verify your domain (+20 pts)');
+  if (!server.isOfficial && !server.reciprocalBadgeOk && !server.isPremium) {
+    tips.push('Claim ownership or get the reciprocal badge detected (+20 pts)');
   }
   if (!server.tools || server.tools === '[]') {
     tips.push('Document callable MCP tools & schemas (+30 pts)');

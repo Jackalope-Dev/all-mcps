@@ -10,6 +10,8 @@ credential_types_supported:
   - "jwt"
 claim_url: "https://allmcps.com/api/v1/agent/claim"
 revocation_url: "https://allmcps.com/api/v1/agent/revoke"
+scopes_supported:
+  listings:claim: "Claim ownership of an existing MCP server listing via DNS TXT, site badge, or GitHub README proof. Required by POST /api/v1/agent/claim. No other write access."
 status: "programmatic_agent_auth_active"
 ---
 
@@ -49,9 +51,12 @@ Content-Type: application/json
 
 {
   "email": "agent-owner@example.com",
-  "agentName": "MyAutonomousAgent"
+  "agentName": "MyAutonomousAgent",
+  "scopes": ["listings:claim"]
 }
 ```
+
+`scopes` is optional and defaults to the full supported set (`["listings:claim"]` today). Request a narrower list to mint a token that can do less — e.g. omit `listings:claim` for a token that should only ever be used for read access, even though every read endpoint is already unauthenticated. See `scopes_supported` in this document's frontmatter and at [`/.well-known/oauth-protected-resource`](https://allmcps.com/.well-known/oauth-protected-resource).
 
 Response (`200 OK`):
 ```json
@@ -59,6 +64,7 @@ Response (`200 OK`):
   "success": true,
   "message": "Confirmation code sent to email. Call POST /api/v1/agent/register/confirm with email and code to receive your bearer token.",
   "email": "agent-owner@example.com",
+  "scopes": ["listings:claim"],
   "expiresAt": "2026-08-10T12:00:00.000Z",
   "confirm_url": "https://allmcps.com/api/v1/agent/register/confirm"
 }
@@ -84,9 +90,12 @@ Response (`200 OK`):
   "message": "Agent registered successfully.",
   "token": "amcp_0123456789abcdef...",
   "tokenType": "Bearer",
+  "scopes": ["listings:claim"],
   "expiresAt": "2026-11-08T12:00:00.000Z"
 }
 ```
+
+The minted token only carries the scopes requested (and validated) in Step 1. A request to an endpoint that needs a scope the token doesn't have returns `403` with `{"error": "insufficient_scope", "requiredScope": "...", "grantedScopes": [...]}`.
 
 ---
 

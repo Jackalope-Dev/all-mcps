@@ -35,6 +35,13 @@ export type BestTopic = {
    */
   guidance?: string[];
   faq: { q: string; a: string }[];
+  /**
+   * Slugs of other /best/{slug} topics worth cross-linking, for adjacent-intent
+   * topics that would otherwise compete for the same head term (e.g. marketing vs.
+   * seo) — a real anchor-text link disambiguates scope for both users and search
+   * engines instead of leaving two pages to silently split relevance signals.
+   */
+  relatedTopicSlugs?: string[];
 };
 
 export const CATEGORY_TOPICS: BestTopic[] = [
@@ -214,11 +221,17 @@ export const CATEGORY_TOPICS: BestTopic[] = [
   {
     slug: 'marketing',
     categorySlug: 'marketing',
-    title: 'Marketing & SEO',
-    lead: 'The best MCP servers for marketing and SEO — give AI agents access to analytics, ad platforms, SEO data, email tools, and CRMs to research, report, and automate campaigns.',
+    title: 'Marketing',
+    lead: 'The best MCP servers for marketing — give AI agents access to ad platforms, email tools, and CRMs to research, report, and automate campaigns.',
+    guidance: [
+      'Marketing MCP servers split into two groups: campaign tools (ad platforms, email senders, CRMs) that act on live audiences, and analytics/reporting tools that only read data back. Start with read-only analytics servers if you\'re new to a workflow — they carry no risk of touching a real campaign or sending to real recipients.',
+      'Looking specifically for search-ranking, technical-audit, or backlink data? That\'s covered separately below.',
+      'For sending, scope API keys as narrowly as the platform allows (a single list, a single ad account) and keep a human reviewing anything before it goes out to real recipients or spends real budget.',
+    ],
+    relatedTopicSlugs: ['seo'],
     faq: [
-      { q: 'What is the best MCP server for marketing?', a: 'The most popular marketing MCP servers connect analytics, SEO data, and ad or email platforms. This page ranks them by real usage across the AllMCPs directory.' },
-      { q: 'Can MCP servers pull SEO or analytics data?', a: 'Yes — several wrap analytics and search APIs so an agent can fetch traffic, keyword, and ranking data and turn it into reports. You supply the account credentials or API key.' },
+      { q: 'What is the best MCP server for marketing?', a: 'The most popular marketing MCP servers connect analytics and ad or email platforms. This page ranks them by real usage across the AllMCPs directory.' },
+      { q: 'Can MCP servers pull marketing analytics data?', a: 'Yes — several wrap analytics and ad-platform APIs so an agent can fetch campaign, traffic, and spend data and turn it into reports. You supply the account credentials or API key. For search-ranking and technical-audit data specifically, see our best SEO MCP servers page.' },
       { q: 'Can an agent send marketing emails through MCP?', a: 'Some email-platform MCP servers support sending, but treat that access carefully — scope the API key narrowly and keep a human in the loop for anything that reaches real recipients.' },
     ],
   },
@@ -627,6 +640,7 @@ export const KEYWORD_TOPICS: BestTopic[] = [
       { q: 'Can these servers help with AI search visibility (AEO/GEO), not just Google?', a: 'Yes — a growing set of listings specifically score and improve visibility in AI answer engines (ChatGPT, Perplexity, Google AI Overviews): checking llms.txt, structured data, and AI-citation likelihood alongside traditional SEO signals.' },
       { q: 'Is it safe to give an agent write access to Search Console or my CMS?', a: 'Prefer read-only scopes for reporting and audits, and reserve write access (publishing posts, updating meta tags) for servers you trust with a scoped, revocable token — the same least-privilege approach as any other MCP integration.' },
     ],
+    relatedTopicSlugs: ['marketing'],
   },
 ];
 

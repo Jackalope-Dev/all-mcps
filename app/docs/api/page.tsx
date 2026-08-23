@@ -3,16 +3,17 @@ import Link from 'next/link';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 
 export const metadata: Metadata = {
-  title: 'Directory API Documentation for MCP Servers',
+  title: 'AllMCPs API Documentation',
   description:
-    'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations.',
+    'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations. Includes the AllMCPs OpenAPI spec, CLI, and MCP server.',
   alternates: { canonical: 'https://allmcps.com/docs/api' },
   openGraph: {
     images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
-    title: 'Directory API Documentation for MCP Servers | AllMCPs',
+    title: 'AllMCPs API Documentation',
     description:
       'Search MCP servers, fetch markdown docs, and integrate the AllMCPs directory into agents and tools.',
     url: 'https://allmcps.com/docs/api',
+    type: 'website',
   },
 };
 
@@ -145,11 +146,14 @@ export default function ApiDocsPage() {
               Developers &amp; agents
             </p>
             <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
-              Directory API
+              AllMCPs API Documentation
             </h1>
             <p className="text-lead" style={{ marginBottom: '1.5rem' }}>
               Public, CORS-friendly endpoints for searching MCP servers, embedding badges, and
-              plugging AllMCPs into AI agents. No API key required for read endpoints.
+              plugging the AllMCPs directory into AI agents. No API key required for read
+              endpoints. Also available as the official{' '}
+              <code>allmcps-server</code> CLI / MCP server on npm, and as a full{' '}
+              <Link href="/api/v1/openapi.json">AllMCPs OpenAPI spec</Link>.
             </p>
 
             <div
@@ -169,6 +173,17 @@ export default function ApiDocsPage() {
               <Link href="/.well-known/api-catalog" className="btn btn-secondary" target="_blank">
                 API catalog ↗
               </Link>
+              <Link href="/.well-known/oauth-protected-resource" className="btn btn-secondary" target="_blank">
+                OAuth scopes ↗
+              </Link>
+              <a
+                href="https://www.npmjs.com/package/allmcps-server"
+                className="btn btn-secondary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                allmcps-server CLI on npm ↗
+              </a>
             </div>
 
             <h2 style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>Quick start</h2>
@@ -244,6 +259,67 @@ export default function ApiDocsPage() {
                 </li>
               ))}
             </ul>
+
+            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Scoped agent auth</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+              Read endpoints (search, servers, categories, markdown, health) need no auth at all.
+              Endpoints that mutate a listing require a scoped Bearer token — register via{' '}
+              <code>POST /api/v1/agent/register</code>, requesting only the scopes you need in an
+              optional <code>scopes</code> array (omit it to receive the full set below). A token
+              used against an endpoint it wasn&apos;t granted a scope for gets back{' '}
+              <code>403 {'{'}"error":"insufficient_scope","requiredScope":"...","grantedScopes":[...]{'}'} </code>{' '}
+              — never a silent failure or a downgraded response.
+            </p>
+            <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>Scope</th>
+                    <th style={{ padding: '0.5rem 0.75rem' }}>Grants</th>
+                    <th style={{ padding: '0.5rem 0' }}>Required by</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>
+                      <code>listings:claim</code>
+                    </td>
+                    <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-secondary)' }}>
+                      Claim ownership of an existing listing via DNS TXT, site badge, or GitHub
+                      README proof. No other write access.
+                    </td>
+                    <td style={{ padding: '0.5rem 0' }}>
+                      <code>POST /api/v1/agent/claim</code>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '0.5rem 0.75rem 0.5rem 0', color: 'var(--text-secondary)' }} colSpan={3}>
+                      <code>POST /api/v1/agent/revoke</code> needs a valid (unrevoked) Bearer token
+                      but no specific scope — any token can always revoke itself.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
+              Machine-readable copies of this table:{' '}
+              <Link href="/.well-known/oauth-protected-resource">
+                /.well-known/oauth-protected-resource
+              </Link>{' '}
+              (<code>scopes_supported</code>), the <code>components.securitySchemes.agentBearerAuth.flows.clientCredentials.scopes</code>{' '}
+              map in the <Link href="/api/v1/openapi.json">OpenAPI spec</Link>, and{' '}
+              <a href="/auth.md">/auth.md</a>&apos;s frontmatter, for the full registration → claim
+              flow with example requests.
+            </p>
+
+            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Versioning &amp; deprecation policy</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+              The API is URL-versioned (<code>/api/v1/...</code>); fields are added, not removed
+              or repurposed, within a version. If an endpoint is ever deprecated it will carry a{' '}
+              <code>Deprecation: true</code> response header and, once a removal date is set, a{' '}
+              <code>Sunset</code> header, for at least 90 days before removal — announced on the{' '}
+              <Link href="/blog">blog</Link>. Nothing in v1 is currently deprecated.
+            </p>
 
             <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Agent discovery</h2>
             <ul

@@ -222,6 +222,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/mcp-protocol-versioning" className="nav-link">
+                Protocol versioning
+              </Link>
+            </li>
+            <li>
               <Link href="/blog" className="nav-link">
                 Blog &amp; updates
               </Link>

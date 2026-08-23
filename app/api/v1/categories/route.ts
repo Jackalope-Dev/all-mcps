@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { DIRECTORY_CATEGORIES, getCategoryMeta, categorySlug } from '../../../../lib/categories';
+import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '../../../../lib/rateLimit';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimit = checkRateLimit(`v1_categories:${clientKey(request)}`, 60, 60);
+  if (!rateLimit.allowed) return rateLimitedResponse(rateLimit);
+
   const categories = DIRECTORY_CATEGORIES.map((category) => {
     const meta = getCategoryMeta(category);
     return {
@@ -23,6 +27,7 @@ export async function GET() {
       headers: {
         'Cache-Control': 'public, max-age=3600, s-maxage=86400',
         'Access-Control-Allow-Origin': '*',
+        ...rateLimitHeaders(rateLimit),
       },
     }
   );

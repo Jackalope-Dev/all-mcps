@@ -88,6 +88,8 @@ export const PUBLIC_SERVER_COLUMNS = {
   isVerifiedActive: serversTable.isVerifiedActive,
   healthStatus: serversTable.healthStatus,
   reciprocalBadgeOk: serversTable.reciprocalBadgeOk,
+  readmeBadgeOk: serversTable.readmeBadgeOk,
+  websiteBacklinkOk: serversTable.websiteBacklinkOk,
   githubStars: serversTable.githubStars,
   npmDownloads: serversTable.npmDownloads,
   lastCommitAt: serversTable.lastCommitAt,
@@ -150,7 +152,12 @@ export type Server = {
   lastCheckedAt?: string | Date | null;
   isVerifiedActive?: boolean;
   healthStatus?: string;
+  /** Derived aggregate: readmeBadgeOk || websiteBacklinkOk. See db/schema.ts. */
   reciprocalBadgeOk?: boolean;
+  /** Repo README carries our badge/link. See db/schema.ts. */
+  readmeBadgeOk?: boolean;
+  /** Custom website carries a dofollow backlink — gates website-link dofollow. See db/schema.ts. */
+  websiteBacklinkOk?: boolean;
   githubStars?: number | null;
   npmDownloads?: number | null;
   /** Repo `pushed_at` from GitHub, refreshed by the health cron. Null = not a GitHub-linked listing or not measured yet. */
@@ -1224,7 +1231,6 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
   else if (conf === 'low') score += 1;
 
   if (candidate.isOfficial || candidate.isPremium) score += 5;
-  if (candidate.websiteVerified) score += 2;
   if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy') score += 3;
   if (candidate.reciprocalBadgeOk) score += 2;
 

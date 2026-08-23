@@ -989,12 +989,12 @@ export default function DirectoryGrid({
           <div className="mcp-promo-card">
             <ServerAvatar name="AllMCPs Server" logoUrl="/logos/allmcps-server" size={44} />
             <div className="mcp-promo-content">
-              <h3 className="mcp-promo-title">
+              <h2 className="mcp-promo-title">
                 AllMCPs has its own MCP server
                 <span className="mcp-promo-official-badge">
                   <BadgeCheck size={13} aria-hidden="true" /> Official
                 </span>
-              </h3>
+              </h2>
               <p className="mcp-promo-desc">
                 Search the directory, get install configs, submit servers, and check boost pricing —
                 directly from Claude, Cursor, or any MCP client.
@@ -1147,9 +1147,9 @@ export default function DirectoryGrid({
                 <Dices size={32} />
               </div>
               <div className="lucky-banner-text-box">
-                <h3 className="lucky-banner-heading">
+                <h2 className="lucky-banner-heading">
                   Feeling Lucky? Spin the Arcade Slot Machine
-                </h3>
+                </h2>
                 <p className="lucky-banner-subtext">
                   Roll pure random MCPs, discover underrated sleeper gems, or roll instant triple stacks with 8-bit retro sound FX!
                 </p>
@@ -1167,7 +1167,7 @@ export default function DirectoryGrid({
       {showDiscovery && (
         <section className="container newsletter-homepage-section">
           <div>
-            <h3 style={{ margin: '0 0 0.25rem' }}>Get new MCP servers in your inbox</h3>
+            <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.125rem' }}>Get new MCP servers in your inbox</h2>
             <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
               A roundup of new and top submissions — no spam, unsubscribe anytime.
             </p>

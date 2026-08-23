@@ -28,7 +28,8 @@ export default function ClaimClient({
   repoUrl,
   websiteUrl: initialWebsite,
   isOfficial,
-  websiteVerified,
+  reciprocalBadgeOk,
+  hasPendingClaim,
   userId,
 }: {
   serverId: string;
@@ -36,7 +37,8 @@ export default function ClaimClient({
   repoUrl: string;
   websiteUrl?: string | null;
   isOfficial?: boolean;
-  websiteVerified?: boolean;
+  reciprocalBadgeOk?: boolean;
+  hasPendingClaim?: boolean;
   userId: string | null;
 }) {
   const isSignedIn = !!userId;
@@ -51,9 +53,13 @@ export default function ClaimClient({
   const [cfToken, setCfToken] = useState('');
   const [showCfToken, setShowCfToken] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [claimed, setClaimed] = useState(!!isOfficial);
-  const [siteVerified, setSiteVerified] = useState(!!websiteVerified);
+  // Outcome reflects what the last verification attempt did
+  const [outcome, setOutcome] = useState<'official' | 'already-official' | 'pending' | null>(null);
+  const claimed = !!isOfficial || outcome === 'official';
+  const pendingReview = (!!hasPendingClaim || outcome === 'pending') && !claimed;
+  // "Verified" (the reciprocal badge) is a separate, automatic signal — it's
+  // never set by this form, only ever reflected from the server.
+  const badgeVerified = !!reciprocalBadgeOk;
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
   const [badgeStyle, setBadgeStyle] = useState<BadgeStyle>(
     hasGithub ? 'shield' : 'directory'
@@ -96,7 +102,7 @@ export default function ClaimClient({
     }
   };
 
-  const alreadyVerifiedForMethod = method === 'github' ? claimed : siteVerified;
+  const alreadyOfficial = claimed;
 
   const copyText = async (text: string, label: string) => {
     try {
@@ -107,9 +113,13 @@ export default function ClaimClient({
     }
   };
 
+  // Must be the *personalized* badge (githubVerifyMarkdown carries this signed-in
+  // user's verify=<userId> token) — readmeContainsClaimBadge requires that exact
+  // token to match the claimant, so the generic badgeMarkdown here would silently
+  // fail verification even after the agent pushes it.
   const agentClaimPromptText = `Read this repository's README.md. Embed the following AllMCPs verification badge into README.md:
 
-${badgeMarkdown}
+${githubVerifyMarkdown ?? badgeMarkdown}
 
 Then commit and push your changes to GitHub. Once pushed, call the verification API to claim ownership of "${serverId}" on AllMCPs.com!`;
 
@@ -149,20 +159,11 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         throw new Error(typeof data.error === 'string' ? data.error : 'Verification failed');
       }
 
-      if (data.pending) {
-        toast.success('Submitted for review', {
-          description: data.message || "We'll email you once an admin approves it.",
-        });
-      } else {
-        setSuccess(true);
-        setClaimed(true);
-        if (method === 'website_badge' || method === 'dns') {
-          setSiteVerified(true);
-        }
-        toast.success('Claim successful', {
-          description: data.message || 'Your listing is now verified.',
-        });
-      }
+      const nextOutcome = data.pending ? 'pending' : 'official';
+      setOutcome(nextOutcome);
+      toast.success(data.pending ? 'Submitted for review' : 'Ownership verified!', {
+        description: data.message,
+      });
     } catch (err: any) {
       const message = err?.message || 'Verification failed';
       setError(message);
@@ -193,13 +194,12 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           websiteUrl: websiteUrl.trim(),
         }),
       });
-      const data = (await res.json()) as { error?: string; message?: string; websiteVerified?: boolean };
+      const data = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Could not save website');
       }
-      setSiteVerified(!!data.websiteVerified);
       toast.success('Website saved', {
-        description: data.message || 'Verify with badge or DNS when ready.',
+        description: data.message || 'The reciprocal-badge check will pick it up automatically.',
       });
     } catch (err: any) {
       const message = err?.message || 'Could not save website';
@@ -261,7 +261,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
     }
   };
 
-  if (success) {
+  if (outcome === 'official' || outcome === 'already-official') {
     return (
       <div
         style={{
@@ -273,10 +273,100 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
         }}
       >
-        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>🎉</div>
-        <h2 style={{ marginBottom: '1rem', color: '#10b981', fontSize: '1.75rem', fontWeight: 800 }}>Claim Successful!</h2>
+        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>✅</div>
+        <h2 style={{ marginBottom: '1rem', color: '#10b981', fontSize: '1.75rem', fontWeight: 800 }}>
+          {outcome === 'official' ? 'Ownership Verified & Active!' : 'Already confirmed'}
+        </h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 1.5rem' }}>
-          Your listing is now marked as <strong>Verified</strong> on AllMCPs. {siteVerified ? 'Your product website is verified as well!' : ''}
+          {outcome === 'official'
+            ? 'Your ownership proof was verified successfully. The listing is now officially claimed under your account with full editing access.'
+            : "You're already the confirmed Official owner of this listing — nothing to review."}
+        </p>
+
+        <div
+          style={{
+            color: 'var(--text-secondary)',
+            marginBottom: '2rem',
+            lineHeight: 1.6,
+            fontSize: '0.9rem',
+            padding: '1rem 1.25rem',
+            borderRadius: 12,
+            background: 'rgba(16,185,129,0.08)',
+            border: '1px solid rgba(16,185,129,0.25)',
+            textAlign: 'left',
+            maxWidth: '560px',
+            margin: '0 auto 2rem',
+          }}
+        >
+          <strong style={{ color: '#34d399', display: 'block', marginBottom: '0.25rem' }}>✨ Free Reciprocal Dofollow Backlinks:</strong>
+          To activate a dofollow backlink to your website, simply add the official AllMCPs badge to your website or README. Our automated background health checker detects it automatically!
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+          <Link
+            href="/dashboard"
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'var(--brand-gradient, var(--accent-color))',
+              color: '#ffffff',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 14px rgba(0, 229, 255, 0.25)',
+            }}
+          >
+            Manage in Dashboard
+          </Link>
+          <Link
+            href={`/mcp/${serverId}`}
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-muted)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
+            View listing
+          </Link>
+          <Link
+            href="/badge-generator"
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-muted)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Get badge code
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (outcome === 'pending' || (pendingReview && !claimed)) {
+    return (
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '3.5rem 2rem',
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+        }}
+      >
+        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>⏳</div>
+        <h2 style={{ marginBottom: '1rem', color: '#f59e0b', fontSize: '1.75rem', fontWeight: 800 }}>Pending admin review</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 1.5rem' }}>
+          Your ownership proof was verified and is now waiting on a quick review from our team before the <strong>Official</strong> badge
+          and edit access go live. We'll email you as soon as it's approved.
         </p>
         <div
           style={{
@@ -360,13 +450,13 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
         }}
       >
-        {/* GitHub Ownership Card */}
+        {/* Official Status Card — admin-approved ownership */}
         <div
           style={{
             padding: '1rem 1.15rem',
             borderRadius: '12px',
-            background: claimed ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-muted)',
-            border: claimed ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color)',
+            background: claimed ? 'rgba(16, 185, 129, 0.08)' : pendingReview ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
+            border: claimed ? '1px solid rgba(16, 185, 129, 0.3)' : pendingReview ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '0.85rem',
@@ -377,7 +467,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               width: '38px',
               height: '38px',
               borderRadius: '10px',
-              background: claimed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              background: claimed ? 'rgba(16, 185, 129, 0.2)' : pendingReview ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -385,28 +475,32 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               flexShrink: 0,
             }}
           >
-            🐙
+            🛡️
           </div>
           <div>
             <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              GitHub Repo Control
+              Official Status
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: claimed ? '#10b981' : 'var(--text-primary)' }}>
-              {claimed ? '✓ Verified & Claimed' : 'Unverified'}
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: claimed ? '#10b981' : pendingReview ? '#f59e0b' : 'var(--text-primary)' }}>
+              {claimed ? '✓ Official' : pendingReview ? 'Pending admin review' : 'Not claimed'}
             </div>
             <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              {claimed ? 'Codebase ownership confirmed via README badge.' : 'Add README badge to claim official project.'}
+              {claimed
+                ? 'Ownership confirmed and approved — you have edit access.'
+                : pendingReview
+                  ? "Proof submitted, waiting on our team's review."
+                  : 'Prove ownership below to unlock edit access.'}
             </p>
           </div>
         </div>
 
-        {/* Website Verification Card */}
+        {/* Verified Card — automatic reciprocal-badge detection */}
         <div
           style={{
             padding: '1rem 1.15rem',
             borderRadius: '12px',
-            background: siteVerified ? 'rgba(16, 185, 129, 0.08)' : websiteUrl ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
-            border: siteVerified ? '1px solid rgba(16, 185, 129, 0.3)' : websiteUrl ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
+            background: badgeVerified ? 'rgba(16, 185, 129, 0.08)' : websiteUrl ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
+            border: badgeVerified ? '1px solid rgba(16, 185, 129, 0.3)' : websiteUrl ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '0.85rem',
@@ -417,7 +511,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               width: '38px',
               height: '38px',
               borderRadius: '10px',
-              background: siteVerified ? 'rgba(16, 185, 129, 0.2)' : websiteUrl ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              background: badgeVerified ? 'rgba(16, 185, 129, 0.2)' : websiteUrl ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -429,13 +523,17 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           </div>
           <div>
             <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Product Website Link
+              Verified (reciprocal badge)
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: siteVerified ? '#10b981' : websiteUrl ? '#f59e0b' : 'var(--text-secondary)' }}>
-              {siteVerified ? '✓ Domain Confirmed' : websiteUrl ? 'Needs Verification' : 'No Website Attached'}
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: badgeVerified ? '#10b981' : websiteUrl ? '#f59e0b' : 'var(--text-secondary)' }}>
+              {badgeVerified ? '✓ Badge detected' : websiteUrl ? 'Badge not detected yet' : 'No Website Attached'}
             </div>
             <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              {siteVerified ? `Domain verified for ${websiteUrl}.` : websiteUrl ? `Verify site for dofollow backlink.` : 'Attach site to qualify for reciprocal link.'}
+              {badgeVerified
+                ? `Badge live on ${websiteUrl} — automatically rechecked.`
+                : websiteUrl
+                  ? 'Place the badge below for a dofollow backlink. No claim needed.'
+                  : 'Attach a site below to qualify for a reciprocal link.'}
             </p>
           </div>
         </div>
@@ -505,12 +603,12 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                   </span>
                   {claimed && (
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
-                      ✓ Verified
+                      ✓ Official
                     </span>
                   )}
                 </div>
                 <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  Claims repo ownership &amp; grants Official status badge on AllMCPs.
+                  Proves repo ownership — grants the Official badge &amp; edit access after a quick admin review.
                 </p>
               </button>
             )}
@@ -532,14 +630,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   🌐 Website Badge / Tag
                 </span>
-                {siteVerified && method === 'website_badge' && (
+                {claimed && method === 'website_badge' && (
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
-                    ✓ Verified
+                    ✓ Official
                   </span>
                 )}
               </div>
               <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                Embed badge or meta tag on website for a reciprocal dofollow link.
+                Add a personalized meta tag to your site to prove ownership — grants the Official badge after admin review.
               </p>
             </button>
 
@@ -560,14 +658,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   ⚡ DNS TXT Record
                 </span>
-                {siteVerified && method === 'dns' && (
+                {claimed && method === 'dns' && (
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
-                    ✓ Verified
+                    ✓ Official
                   </span>
                 )}
               </div>
               <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                Publish TXT record on domain DNS for instant owner proof.
+                Publish a TXT record on your domain DNS to prove ownership — reviewed by our team.
               </p>
             </button>
           </div>
@@ -597,8 +695,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             </h2>
           </div>
 
-          {/* Already Verified Banner */}
-          {alreadyVerifiedForMethod && (
+          {/* Already Official Banner */}
+          {alreadyOfficial && (
             <div
               style={{
                 padding: '1rem 1.15rem',
@@ -614,10 +712,10 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               <CheckCircle2 size={22} color="#10b981" />
               <div>
                 <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>
-                  {method === 'github' ? 'GitHub README Ownership Confirmed' : 'Website Verification Active'}
+                  Official ownership already confirmed
                 </strong>
                 <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.785rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  This method is verified and active. You don't need to repeat this unless your repository or DNS settings change.
+                  You don't need to repeat this unless your repository or DNS settings change.
                 </p>
               </div>
             </div>
@@ -674,29 +772,51 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                     <Sparkles size={18} />
                     <span>Have an AI Agent claim &amp; verify this for you!</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={copyAgentClaimPrompt}
-                    style={{
-                      background: 'var(--accent-color)',
-                      color: 'var(--bg-color)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.45rem 0.85rem',
-                      fontSize: '0.825rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.2)',
-                    }}
-                  >
-                    📋 Copy AI Agent Prompt
-                  </button>
+                  {isSignedIn ? (
+                    <button
+                      type="button"
+                      onClick={copyAgentClaimPrompt}
+                      style={{
+                        background: 'var(--accent-color)',
+                        color: 'var(--bg-color)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '0.45rem 0.85rem',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.2)',
+                      }}
+                    >
+                      📋 Copy AI Agent Prompt
+                    </button>
+                  ) : (
+                    <a
+                      href={signInHref}
+                      style={{
+                        color: 'var(--accent-color)',
+                        border: '1px solid rgba(var(--accent-rgb), 0.4)',
+                        borderRadius: '6px',
+                        padding: '0.45rem 0.85rem',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      🔒 Sign in to get your prompt
+                    </a>
+                  )}
                 </div>
                 <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  Copy this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your codebase. The agent will add the badge and push it automatically.
+                  {isSignedIn
+                    ? <>Copy this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your codebase. The agent will add your personalized badge and push it automatically.</>
+                    : <>Sign in first — the prompt embeds a verification token tied to your account, so it only works once you&apos;re signed in.</>}
                 </p>
               </div>
 
@@ -1204,7 +1324,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
               }}
             >
-              <Lock size={18} /> Sign In to Verify &amp; Claim Listing
+              <Lock size={18} /> Sign In to Submit Ownership Proof
             </a>
           ) : (
             <button
@@ -1234,15 +1354,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               ) : (
                 <>
                   <ShieldCheck size={20} />
-                  {alreadyVerifiedForMethod
-                    ? method === 'github'
-                      ? 'Re-verify Repo Ownership'
-                      : 'Re-verify Website'
-                    : claimed
-                      ? method === 'github'
-                        ? 'Verify Repo Ownership'
-                        : 'Verify Website Domain'
-                      : 'Verify & Claim Listing'}
+                  {alreadyOfficial ? 'Re-verify Ownership' : 'Submit Ownership Proof'}
                 </>
               )}
             </button>

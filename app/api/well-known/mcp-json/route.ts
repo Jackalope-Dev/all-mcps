@@ -8,8 +8,15 @@ export async function GET() {
     version: '1.3.0',
     websiteUrl: 'https://allmcps.com',
     mcpEndpoint: 'https://allmcps.com/api/mcp',
-    transport: 'http-jsonrpc',
+    // "Streamable HTTP" is the official MCP transport name (spec revision
+    // 2024-11-05+) for a single HTTP endpoint that accepts POSTed JSON-RPC
+    // and returns either a plain JSON response or an SSE stream. This server
+    // returns plain JSON today (no streaming responses yet) — a valid,
+    // spec-compliant degenerate case of Streamable HTTP, not a separate
+    // "http-jsonrpc" transport.
+    transport: 'streamable-http',
     protocolVersion: '2024-11-05',
+    wellKnownHandshake: 'https://allmcps.com/.well-known/mcp',
     capabilities: {
       tools: {
         search_mcp_servers: {
