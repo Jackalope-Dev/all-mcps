@@ -52,7 +52,11 @@ export default async function LoginPage({
         action={async (formData) => {
           'use server';
           const email = String(formData.get('email') || '');
-          const redirectTo = formData.get('redirectTo');
+          const rawRedirect = formData.get('redirectTo');
+          const redirectTo =
+            typeof rawRedirect === 'string' && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+              ? rawRedirect
+              : '/dashboard';
           const newsletterOptIn = formData.get('newsletterOptIn') === 'on';
           // Call with redirect: false and redirect to our own /verify-request
           // page ourselves, rather than letting next-auth issue its internal
@@ -64,7 +68,7 @@ export default async function LoginPage({
           await signIn('resend', {
             email,
             redirect: false,
-            ...(typeof redirectTo === 'string' && redirectTo ? { redirectTo } : {}),
+            redirectTo,
           });
           if (newsletterOptIn && email) {
             await syncSequenzySubscriber({

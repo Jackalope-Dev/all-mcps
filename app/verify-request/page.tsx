@@ -1,7 +1,9 @@
 import { Mail } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
+import { auth } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'Check your email',
@@ -12,7 +14,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function VerifyRequestPage() {
+export default async function VerifyRequestPage() {
+  const session = await auth();
+  if (session?.user) {
+    if ((session.user as any).role === 'admin') {
+      redirect('/admin');
+    }
+    redirect('/dashboard');
+  }
+
   return (
     <PageShell variant="auth" panel>
       <div
