@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { Terminal, Code2, Layers, Check, Plus } from 'lucide-react';
 import { toast } from './Toast';
 import { trackCopyConfig } from '../../lib/gtag';
 import { resolveInstallConfig, type CachedInstallFields } from '../../lib/installConfig';
@@ -124,22 +125,32 @@ export function InstallButtons({
         href={cursorHref}
         onClick={() => handleInstall('cursor')}
         className="install-deeplink-btn"
+        title="1-click install in Cursor IDE"
       >
-        Add to Cursor
+        <Terminal size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+        <span>Add to Cursor</span>
       </a>
       <a
         href={vscodeHref}
         onClick={() => handleInstall('vscode')}
         className="install-deeplink-btn"
+        title="1-click install in VS Code"
       >
-        Add to VS Code
+        <Code2 size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+        <span>Add to VS Code</span>
       </a>
       <button
         type="button"
         onClick={handleToggleStack}
         className={`install-deeplink-btn ${inStack ? 'install-deeplink-btn--instack' : ''}`}
+        title={inStack ? 'Already in your MCP Stack' : 'Save to your MCP Stack'}
       >
-        {inStack ? '✓ In Stack' : '+ Add to Stack'}
+        {inStack ? (
+          <Check size={15} aria-hidden="true" style={{ flexShrink: 0 }} />
+        ) : (
+          <Layers size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+        )}
+        <span>{inStack ? 'In Stack' : 'Add to Stack'}</span>
       </button>
     </div>
   );
