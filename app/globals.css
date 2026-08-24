@@ -4556,6 +4556,13 @@ nav[aria-label="Table of contents"] {
     gap: 0.65rem;
   }
 
+  /* Give the rating badge its own row so every trust badge (Verified /
+     Official / Premium / Featured / Pending) wraps together onto the row
+     beneath it, instead of trailing the rating on a cramped shared line. */
+  .detail-rating-badge-link {
+    flex-basis: 100%;
+  }
+
   .detail-quick-install {
     padding: 1.15rem !important;
   }
