@@ -488,7 +488,7 @@ export default function DirectoryGrid({
     const base = isBrowse ? browseBase : '/';
     const url = new URL(base, window.location.origin);
     if (cat) {
-      url.searchParams.set('category', cat);
+      url.searchParams.set('category', categorySlug(cat));
     }
     if (q.trim()) {
       url.searchParams.set('q', q.trim());
@@ -500,7 +500,7 @@ export default function DirectoryGrid({
   const handleCategorySelect = (cat: string | null) => {
     if (!isBrowse && cat) {
       const url = new URL(browseBase, window.location.origin);
-      url.searchParams.set('category', cat);
+      url.searchParams.set('category', categorySlug(cat));
       if (searchQuery) url.searchParams.set('q', searchQuery.trim());
       window.location.assign(url.pathname + url.search);
       return;
@@ -519,7 +519,7 @@ export default function DirectoryGrid({
     const term = q.trim();
     const url = new URL(browseBase, window.location.origin);
     if (term) url.searchParams.set('q', term);
-    if (selectedCategory) url.searchParams.set('category', selectedCategory);
+    if (selectedCategory) url.searchParams.set('category', categorySlug(selectedCategory));
     window.location.assign(url.pathname + url.search);
   };
 
@@ -529,6 +529,8 @@ export default function DirectoryGrid({
     setVerifiedOnly(false);
     setSelectedStack('all');
     setSelectedTransport('all');
+    setSelectedPricing('all');
+    setSelectedAuth('all');
     if (isBrowse) {
       updateUrl(null, '');
     }
@@ -765,13 +767,7 @@ export default function DirectoryGrid({
     <>
       {/* Marketing hero — Goal-oriented discovery and assembly */}
       {!isBrowse && !selectedCategory && (
-        <HeroSection
-          totalCount={totalCount}
-          onSelectSituation={(q, cat) => {
-            setSearchQuery(q);
-            if (cat) setSelectedCategory(cat);
-          }}
-        />
+        <HeroSection totalCount={totalCount} />
       )}
 
       {/* Trust-signal stats strip — three metrics max; detail on /trust */}

@@ -26,7 +26,6 @@ import { toast } from './ui/Toast';
 
 interface HeroSectionProps {
   totalCount?: number;
-  onSelectSituation?: (query: string, category?: string) => void;
 }
 
 const GOALS = [
