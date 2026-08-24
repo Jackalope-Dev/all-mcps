@@ -4298,6 +4298,35 @@ nav[aria-label="Table of contents"] {
   transform: translateX(-50%) translateY(0);
 }
 
+/* Same viewport-overflow trap as .mcp-icon-tooltip-bubble: an absolutely-
+   positioned, dot-centered bubble (up to 250px wide, centered on a ~3px bar)
+   extends well past the card/viewport edge for the strip's edge-most dots.
+   Because it's only visibility:hidden — not display:none — it still counts
+   toward the page's scroll width and forces a phantom horizontal scrollbar.
+   Detach it into a fixed, near-full-width bottom popover so it always fits. */
+@media (max-width: 640px) {
+  .health-dot::after {
+    position: fixed;
+    top: auto;
+    bottom: 1.25rem;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    max-width: none;
+    transform: translateY(8px);
+  }
+
+  .health-dot:focus-visible::after {
+    transform: translateY(0);
+  }
+
+  /* The caret assumes the bubble sits directly above the dot; it's meaningless
+     once the bubble is a detached bottom popover. */
+  .health-dot::before {
+    display: none;
+  }
+}
+
 .mcp-icon-tooltip-title {
   display: flex;
   align-items: center;
@@ -6118,16 +6147,29 @@ nav[aria-label="Table of contents"] {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-family: monospace;
   font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 600;
 }
 
+/* The title's leading terminal icon must not be squeezed away when the
+   monospace label truncates. */
+.hero-terminal-title svg {
+  flex-shrink: 0;
+}
+
 .hero-terminal-copy-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 0.25rem 0.6rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
@@ -6155,6 +6197,19 @@ nav[aria-label="Table of contents"] {
 
 [data-theme="light"] .hero-terminal-code {
   color: #1e293b;
+}
+
+/* On narrow screens the long monospace snippet title crowds the copy button,
+   so drop its "Copy" label and let it render as a compact icon-only button. */
+@media (max-width: 480px) {
+  .hero-terminal-copy-label {
+    display: none;
+  }
+
+  .hero-terminal-copy-btn {
+    gap: 0;
+    padding: 0.3rem 0.4rem;
+  }
 }
 
 /* Situational Matrix */

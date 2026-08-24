@@ -192,7 +192,7 @@ export function HeroSection({ totalCount, onSelectSituation }: HeroSectionProps)
                 aria-label="Copy snippet"
               >
                 {copied ? <Check size={13} style={{ color: 'var(--verified-green)' }} /> : <Copy size={13} />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
+                <span className="hero-terminal-copy-label">{copied ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
             <pre className="hero-terminal-code">
