@@ -524,7 +524,7 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
                 </h1>
               </div>
               <div className="detail-title-badges">
-                <a href="#reviews" style={{ textDecoration: 'none' }}>
+                <a href="#reviews" className="detail-rating-badge-link" style={{ textDecoration: 'none' }}>
                   <IconTooltip
                     label={
                       reviewSummary.count > 0
