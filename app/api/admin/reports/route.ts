@@ -3,7 +3,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { and, count, desc, eq } from 'drizzle-orm';
 import { reports, servers } from '@/db/schema';
-import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
+import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 25;
@@ -17,7 +17,7 @@ const DEFAULT_LIMIT = 25;
  */
 export async function GET(req: Request) {
   try {
-    if (!(await getAuthorizedAdminEmail(req.headers))) {
+    if (!(await getAuthorizedAdminEmail())) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 

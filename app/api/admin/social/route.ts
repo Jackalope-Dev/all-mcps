@@ -3,12 +3,12 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { socialPosts, servers } from '@/db/schema';
-import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
+import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import { dedupeTweetItems, normalizeTweetForDedup, tweetMcpServer } from '@/lib/twitter';
 
 export async function GET(req: Request) {
   try {
-    if (!(await getAuthorizedAdminEmail(req.headers))) {
+    if (!(await getAuthorizedAdminEmail())) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
@@ -57,11 +57,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    // This whole path sits behind the Cloudflare Access application that also
-    // guards /admin, so only a browser with a live Access session ever reaches
-    // this code — automation (Make.com, etc.) belongs on /api/cron/* instead,
-    // which is not Access-protected. See app/api/cron/social-mark-sent/route.ts.
-    if (!(await getAuthorizedAdminEmail(req.headers))) {
+    // This whole path requires a signed-in admin session, so only a browser
+    // with a live login ever reaches this code — automation (Make.com, etc.)
+    // belongs on /api/cron/* instead, which is auth'd separately. See
+    // app/api/cron/social-mark-sent/route.ts.
+    if (!(await getAuthorizedAdminEmail())) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 

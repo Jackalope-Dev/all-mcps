@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { drizzle } from 'drizzle-orm/d1';
 import { servers, reports, reviews, users, sponsorAds } from '../../db/schema';
 import { eq, desc, isNotNull } from 'drizzle-orm';
-import { getAuthorizedAdminEmail } from '../../lib/accessAuth';
+import { auth } from '../../lib/auth';
 import { getAdminStats, type AdminStats } from '../../lib/adminStats';
 import AdminClient from './AdminClient';
 
@@ -173,14 +173,17 @@ async function getAdminData() {
 }
 
 export default async function AdminPage() {
-  const reqHeaders = await headers();
-  const email = await getAuthorizedAdminEmail(reqHeaders);
+  const session = await auth();
 
-  if (!email) {
+  if (!session?.user) {
+    redirect('/login?callbackUrl=%2Fadmin');
+  }
+
+  if ((session.user as any).role !== 'admin') {
     return (
       <main className="container animate-fade-in" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
         <h1 style={{ marginBottom: '1rem' }}>Unauthorized</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>This page is only accessible through Cloudflare Access.</p>
+        <p style={{ color: 'var(--text-secondary)' }}>This account doesn&apos;t have admin access.</p>
       </main>
     );
   }

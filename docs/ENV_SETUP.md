@@ -7,8 +7,20 @@ redeploy, environment recreation, or new teammate doesn't have to rediscover tha
 watching something silently break.
 
 Plaintext (non-secret) vars live in `wrangler.jsonc`'s `vars` block instead — see that
-file for `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `ADMIN_EMAIL`, `RESEND_TO_EMAIL`,
-`RESEND_FROM_EMAIL`.
+file for `RESEND_TO_EMAIL`, `RESEND_FROM_EMAIL`.
+
+## Admin access
+
+`/admin` and `/api/admin/*` are gated by the `role` column on `users` (see
+`lib/adminAuth.ts`), not Cloudflare Access — a signed-in user needs `role = 'admin'`
+in D1 to reach them. There's no self-serve upgrade path; grant it by hand:
+
+```bash
+npx wrangler d1 execute <DB_NAME> --remote --command "UPDATE users SET role = 'admin' WHERE email = 'someone@example.com'"
+```
+
+(The user must have signed in at least once — via the magic-link flow at `/login` —
+before a row exists to update.)
 
 Stripe and Sequenzy secrets have their own setup docs — see `docs/STRIPE_SETUP.md` and
 `docs/SEQUENZY_SETUP.md`. This file covers everything else.

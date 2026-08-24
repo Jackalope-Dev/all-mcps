@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
 import { sponsorAds } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
-import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
+import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import { sendNotificationEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
 import { z } from 'zod';
@@ -40,8 +39,7 @@ const adAdminActionSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const reqHeaders = await headers();
-    const adminEmail = await getAuthorizedAdminEmail(reqHeaders);
+    const adminEmail = await getAuthorizedAdminEmail();
     if (!adminEmail) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

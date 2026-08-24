@@ -267,6 +267,8 @@ export const users = sqliteTable('users', {
   email: text('email').unique(),
   emailVerified: integer('email_verified', { mode: 'timestamp_ms' }),
   image: text('image'),
+  /** 'user' | 'admin' — gates /admin and /api/admin/* (see lib/adminAuth.ts). Granted manually in the DB; there is no self-serve upgrade path. */
+  role: text('role').notNull().default('user'),
 });
 
 export const accounts = sqliteTable('accounts', {

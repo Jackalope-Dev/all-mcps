@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { getAuthorizedAdminEmail } from '@/lib/accessAuth';
+import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import { getAdminStats } from '@/lib/adminStats';
 
 export async function GET(req: Request) {
   try {
-    if (!(await getAuthorizedAdminEmail(req.headers))) {
+    if (!(await getAuthorizedAdminEmail())) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 

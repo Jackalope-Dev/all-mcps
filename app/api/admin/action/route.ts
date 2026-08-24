@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { servers, users, upvoteRecords, viewRecords, reviews, reports } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { getAuthorizedAdminEmail } from '../../../../lib/accessAuth';
+import { getAuthorizedAdminEmail } from '../../../../lib/adminAuth';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
 import { parsePendingRevision, pendingRevisionToDbPatch } from '../../../../lib/pendingRevision';
@@ -89,7 +89,7 @@ const MESSAGES: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
-    if (!(await getAuthorizedAdminEmail(req.headers))) {
+    if (!(await getAuthorizedAdminEmail())) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 

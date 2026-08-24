@@ -52,9 +52,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
       strategy: "jwt",
     },
     callbacks: {
+      jwt({ token, user }) {
+        // Only present on the initial sign-in call (`user` comes straight from
+        // the adapter); every later call just re-decodes the existing JWT, so
+        // the role is cached in the token rather than re-queried from D1 on
+        // every request. A role change (see drizzle/0046_admin_role.sql) takes
+        // effect on that user's next sign-in.
+        if (user) {
+          token.role = (user as any).role ?? 'user';
+        }
+        return token;
+      },
       session({ session, token }) {
         if (session.user && token.sub) {
           session.user.id = token.sub;
+        }
+        if (session.user) {
+          (session.user as any).role = (token as any).role ?? 'user';
         }
         return session;
       },
