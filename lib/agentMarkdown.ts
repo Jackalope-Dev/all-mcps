@@ -1,6 +1,7 @@
 import { getAllPosts, getPostBySlug, type BlogPost } from './blog';
 import {
-  getActiveServers,
+  getActiveServersForScoring,
+  getServersForTopic,
   getServerById,
   getRelatedServers,
   formatServerSummaryLine,
@@ -106,13 +107,13 @@ export async function renderBlogIndexMarkdown(): Promise<string> {
 export async function renderCategoryMarkdown(slug: string): Promise<string | null> {
   const category = categoryFromSlug(slug);
   if (!category) return null;
-  const servers = await getActiveServers();
+  const servers = await getActiveServersForScoring();
   const inCategory = servers.filter((s) => s.category === category);
   return formatCategoryMarkdown(category, inCategory);
 }
 
 export async function renderCategoryIndexMarkdown(): Promise<string> {
-  const servers = await getActiveServers();
+  const servers = await getActiveServersForScoring();
   const counts = DIRECTORY_CATEGORIES.map((category) => ({
     category,
     count: servers.filter((s) => s.category === category).length,
@@ -343,7 +344,7 @@ export function formatCompareMarkdown(left: Server, right: Server): string {
 export async function renderBestTopicMarkdown(slug: string): Promise<string | null> {
   const topic = bestTopicBySlug(slug);
   if (!topic) return null;
-  const servers = await getActiveServers();
+  const servers = await getServersForTopic(topic);
   const selected = selectServersForTopic(topic, servers);
   return formatBestTopicMarkdown(topic, selected);
 }

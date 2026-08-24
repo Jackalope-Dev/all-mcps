@@ -1,4 +1,4 @@
-import { getActiveServers } from '@/lib/servers';
+import { getActiveServersForScoring } from '@/lib/servers';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 import { categorySlug } from '@/lib/categories';
 import { BEST_TOPICS } from '@/lib/bestTopics';
@@ -6,7 +6,7 @@ import { MCP_CLIENTS } from '@/lib/clients';
 import { WORKFLOW_PROMPTS } from '@/lib/prompts';
 
 export async function GET(request: Request) {
-  const servers = await getActiveServers();
+  const servers = await getActiveServersForScoring();
 
   // Group servers by category
   const categoriesMap: Record<string, typeof servers> = {};

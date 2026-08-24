@@ -1,8 +1,8 @@
-import { getActiveServers, formatServerAsMarkdown } from '@/lib/servers';
+import { getActiveServersForScoring, formatServerAsMarkdown } from '@/lib/servers';
 import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
 
 export async function GET(request: Request) {
-  const servers = await getActiveServers();
+  const servers = await getActiveServersForScoring();
 
   let content = `# AllMCPs - Complete Catalog Export (LLM Format)\n\n`;
   content += `> Full database snapshot of all Model Context Protocol (MCP) servers listed on https://allmcps.com.\n`;
