@@ -27,7 +27,7 @@ import { ImpressionBeacon } from './ImpressionTracker';
 import { SponsorAdUnit } from './ads/SponsorAdUnit';
 import { StatsBanner } from './StatsBanner';
 import type { SiteStats } from '../lib/siteStats';
-import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel, categorySlug } from '../lib/categories';
+import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel, categorySlug, normalizeCategory } from '../lib/categories';
 import { compileQuery, scoreServerMatch, engagementScore, trendingScore } from '../lib/search';
 import { formatCommitAge, formatFullDate, formatCompactNumber } from '../lib/format';
 
@@ -345,23 +345,55 @@ export default function DirectoryGrid({
 
     // Score once, filter on non-search facets, and drop query non-matches.
     const scored: Array<{ server: Server; relevance: number }> = [];
-    for (const server of servers) {
-      if (selectedCategory && server.category !== selectedCategory) continue;
-      if (verifiedOnly && !isVerifiedListing(server)) continue;
-      if (!stackMatch(server)) continue;
-      if (!transportMatch(server)) continue;
-      if (!pricingMatch(server)) continue;
-      if (!authMatch(server)) continue;
+    const baseFiltered = servers.filter((server) => {
+      if (selectedCategory) {
+        if (server.category !== selectedCategory && normalizeCategory(server.category) !== normalizeCategory(selectedCategory)) {
+          return false;
+        }
+      }
+      if (verifiedOnly && !isVerifiedListing(server)) return false;
+      if (!stackMatch(server)) return false;
+      if (!transportMatch(server)) return false;
+      if (!pricingMatch(server)) return false;
+      if (!authMatch(server)) return false;
 
       if (selectedClient !== 'all') {
         const clients = Array.isArray(server.compatibleClients) ? server.compatibleClients.map((c) => String(c).toLowerCase()) : [];
         const text = `${server.name} ${server.description} ${server.category}`.toLowerCase();
         const clientMatch = clients.some((c) => c.includes(selectedClient)) || text.includes(selectedClient);
-        if (!clientMatch) continue;
+        if (!clientMatch) return false;
+      }
+      return true;
+    });
+
+    if (!hasQuery) {
+      for (const server of baseFiltered) {
+        scored.push({ server, relevance: 0 });
+      }
+    } else {
+      // 1. Strict AND matching first (highest precision)
+      for (const server of baseFiltered) {
+        const relevance = scoreServerMatch(
+          {
+            name: server.name,
+            description: server.description,
+            category: server.category,
+            toolText: server.toolText,
+            extraText: server.aiText,
+          },
+          queryTerms,
+          fullQuery,
+          true
+        );
+        if (relevance > 0) {
+          scored.push({ server, relevance });
+        }
       }
 
-      const relevance = hasQuery
-        ? scoreServerMatch(
+      // 2. If strict AND produced no matches and query has 2+ terms, fall back to relaxed OR pass
+      if (scored.length === 0 && queryTerms.length >= 2) {
+        for (const server of baseFiltered) {
+          const relevance = scoreServerMatch(
             {
               name: server.name,
               description: server.description,
@@ -370,11 +402,14 @@ export default function DirectoryGrid({
               extraText: server.aiText,
             },
             queryTerms,
-            fullQuery
-          )
-        : 0;
-      if (hasQuery && relevance <= 0) continue;
-      scored.push({ server, relevance });
+            fullQuery,
+            false
+          );
+          if (relevance > 0) {
+            scored.push({ server, relevance });
+          }
+        }
+      }
     }
 
     // With a query, relevance is meaningful; fall back to trending when the user

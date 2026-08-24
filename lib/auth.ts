@@ -72,6 +72,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         }
         return session;
       },
+      redirect({ url, baseUrl }) {
+        // Allows relative callback URLs
+        if (url.startsWith("/")) {
+          if (url.startsWith("/login") || url.startsWith("/verify-request")) {
+            return `${baseUrl}/dashboard`;
+          }
+          return `${baseUrl}${url}`;
+        }
+        // Allows callback URLs on the same origin
+        try {
+          const parsedUrl = new URL(url);
+          if (parsedUrl.origin === baseUrl) {
+            if (parsedUrl.pathname.startsWith("/login") || parsedUrl.pathname.startsWith("/verify-request")) {
+              return `${baseUrl}/dashboard`;
+            }
+            return url;
+          }
+        } catch {
+          // fallback on parsing failure
+        }
+        return `${baseUrl}/dashboard`;
+      },
     },
   };
 });

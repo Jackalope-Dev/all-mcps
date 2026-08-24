@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { signIn } from '@/lib/auth';
+import { auth, signIn } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageShell } from '@/components/PageShell';
 import { syncSequenzySubscriber, NEWSLETTER_SUBSCRIBERS_LIST_ID } from '@/lib/sequenzy';
@@ -22,11 +22,24 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ callbackUrl?: string }>;
 }) {
+  const session = await auth();
   const { callbackUrl } = await searchParams;
   // Must be a same-app relative path: reject absolute/protocol-relative URLs
-  // (e.g. "//evil.com" starts with "/" but browsers treat it as external).
-  const redirectTo =
-    callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : undefined;
+  // (e.g. "//evil.com" starts with "/" but browsers treat it as external),
+  // and avoid loops to login/verify-request.
+  const isValidRedirect =
+    callbackUrl &&
+    callbackUrl.startsWith('/') &&
+    !callbackUrl.startsWith('//') &&
+    !callbackUrl.startsWith('/login') &&
+    !callbackUrl.startsWith('/verify-request');
+
+  const defaultDestination = (session?.user as any)?.role === 'admin' ? '/admin' : '/dashboard';
+  const targetRedirect = isValidRedirect ? callbackUrl : defaultDestination;
+
+  if (session?.user) {
+    redirect(targetRedirect);
+  }
 
   // GDPR/PECR: no pre-ticked opt-in for EU/UK visitors — same signal the
   // cookie banner uses, read here from the real geo header since this is
@@ -53,10 +66,13 @@ export default async function LoginPage({
           'use server';
           const email = String(formData.get('email') || '');
           const rawRedirect = formData.get('redirectTo');
-          const redirectTo =
-            typeof rawRedirect === 'string' && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
-              ? rawRedirect
-              : '/dashboard';
+          const isValidRedirect =
+            typeof rawRedirect === 'string' &&
+            rawRedirect.startsWith('/') &&
+            !rawRedirect.startsWith('//') &&
+            !rawRedirect.startsWith('/login') &&
+            !rawRedirect.startsWith('/verify-request');
+          const redirectTo = isValidRedirect ? rawRedirect : '/dashboard';
           const newsletterOptIn = formData.get('newsletterOptIn') === 'on';
           // Call with redirect: false and redirect to our own /verify-request
           // page ourselves, rather than letting next-auth issue its internal
@@ -98,7 +114,7 @@ export default async function LoginPage({
           />
         </div>
 
-        {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
+        <input type="hidden" name="redirectTo" value={targetRedirect} />
 
         <label className="form-checkbox-row">
           <input type="checkbox" name="newsletterOptIn" defaultChecked={!inEU} />

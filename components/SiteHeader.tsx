@@ -76,8 +76,14 @@ export function SiteHeader() {
   const ctaHref = isSignedIn ? '/dashboard' : '/submit';
   const ctaLabel = isSignedIn ? 'Manage' : 'Submit MCP';
   const mobileCtaLabel = isSignedIn ? 'Manage Your Listings' : 'Submit MCP Server';
-  const loginHref = `/login?callbackUrl=${encodeURIComponent(pathname)}`;
-  const logoutHref = `/api/auth/signout?callbackUrl=${encodeURIComponent(pathname)}`;
+  const loginHref =
+    pathname === '/login' || pathname === '/verify-request'
+      ? '/login'
+      : `/login?callbackUrl=${encodeURIComponent(pathname)}`;
+  const logoutHref =
+    pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
+      ? '/api/auth/signout?callbackUrl=%2F'
+      : `/api/auth/signout?callbackUrl=${encodeURIComponent(pathname)}`;
 
   // Close mobile menu on route change
   useEffect(() => {
