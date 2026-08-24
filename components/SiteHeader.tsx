@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Sparkles, Search, LogIn } from 'lucide-react';
+import { Menu, X, Sparkles, Search, LogIn, LogOut } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { Button } from './ui/Button';
 
@@ -77,6 +77,7 @@ export function SiteHeader() {
   const ctaLabel = isSignedIn ? 'Manage' : 'Submit MCP';
   const mobileCtaLabel = isSignedIn ? 'Manage Your Listings' : 'Submit MCP Server';
   const loginHref = `/login?callbackUrl=${encodeURIComponent(pathname)}`;
+  const logoutHref = `/api/auth/signout?callbackUrl=${encodeURIComponent(pathname)}`;
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -205,6 +206,16 @@ export function SiteHeader() {
             <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
               <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
             </Button>
+            {isSignedIn && (
+              <a
+                href={logoutHref}
+                className="header-search-btn"
+                title="Log out"
+                aria-label="Log out"
+              >
+                <LogOut size={13} aria-hidden="true" />
+              </a>
+            )}
           </nav>
 
           {/* Mobile Menu Toggle Button */}
@@ -293,6 +304,17 @@ export function SiteHeader() {
                 >
                   <Sparkles size={16} aria-hidden="true" /> {mobileCtaLabel}
                 </Button>
+                {isSignedIn && (
+                  <Button
+                    href={logoutHref}
+                    variant="secondary"
+                    size="md"
+                    className="mobile-nav-cta-btn"
+                    onClick={closeMobileMenu}
+                  >
+                    <LogOut size={16} aria-hidden="true" /> Log out
+                  </Button>
+                )}
               </div>
             </nav>
           </div>

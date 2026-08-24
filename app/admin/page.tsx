@@ -184,6 +184,13 @@ export default async function AdminPage() {
       <main className="container animate-fade-in" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
         <h1 style={{ marginBottom: '1rem' }}>Unauthorized</h1>
         <p style={{ color: 'var(--text-secondary)' }}>This account doesn&apos;t have admin access.</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '1.5rem' }}>
+          Just been granted access? Roles are cached at sign-in, so a stale session won&apos;t pick it up.{' '}
+          <a href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/login?callbackUrl=%2Fadmin')}`}>
+            Log out and sign in again
+          </a>
+          .
+        </p>
       </main>
     );
   }
@@ -204,11 +211,19 @@ export default async function AdminPage() {
   return (
     <main className="container animate-fade-in" style={{ padding: '2.5rem 1rem 4rem' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto 2rem' }}>
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800 }}>Admin Console</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-            Control center for directory moderation, catalog management, social automation, and admin tools.
-          </p>
+        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+          <div>
+            <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800 }}>Admin Console</h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+              Control center for directory moderation, catalog management, social automation, and admin tools.
+            </p>
+          </div>
+          <a
+            href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/')}`}
+            style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}
+          >
+            Log out
+          </a>
         </div>
 
         <AdminClient
