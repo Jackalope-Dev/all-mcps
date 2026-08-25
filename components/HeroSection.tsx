@@ -110,36 +110,27 @@ const SITUATIONS = [
   },
 ];
 
+const PUBLISH_CURL_SNIPPET = `curl -X POST https://allmcps.com/api/v1/submit \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "My MCP Server",
+    "url": "https://github.com/your-org/your-mcp-server",
+    "email": "dev@example.com",
+    "category": "Developer Tools"
+  }'`;
+
 export function HeroSection({ totalCount }: HeroSectionProps) {
   const [activeGoal, setActiveGoal] = useState<'discover' | 'stack' | 'tools' | 'publish'>('discover');
   const [copied, setCopied] = useState(false);
 
-  const goalCodeSnippets: Record<string, { title: string; code: string }> = {
-    discover: {
-      title: '1-Click Deep Install (Cursor / Windsurf)',
-      code: `cursor://anysphere.cursor-deeplink/mcp/install?name=postgres&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBtb2RlbGNvbnRleHRwcm90b2NvbC9zZXJ2ZXItcG9zdGdyZXMiXX0=`,
-    },
-    stack: {
-      title: 'claude_desktop_config.json (Combined Stack)',
-      code: `{\n  "mcpServers": {\n    "github": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"] },\n    "postgres": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-postgres"] },\n    "memory": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"] }\n  }\n}`,
-    },
-    tools: {
-      title: 'Live Tool Schema Call (~140 tokens overhead)',
-      code: `// tools/list -> execute_sql\n{\n  "name": "execute_sql",\n  "description": "Execute raw SQL query against connected PostgreSQL database",\n  "inputSchema": { "type": "object", "properties": { "sql": { "type": "string" } }, "required": ["sql"] }\n}`,
-    },
-    publish: {
-      title: 'Register Server via Catalog API',
-      code: `curl -X POST https://allmcps.com/api/v1/submit \\\n  -H "Content-Type: application/json" \\\n  -d '{"url": "https://github.com/your-org/your-mcp-server", "category": "Developer Tools"}'`,
-    },
-  };
-
   const handleCopy = () => {
-    const snippet = goalCodeSnippets[activeGoal].code;
-    navigator.clipboard.writeText(snippet);
+    navigator.clipboard.writeText(PUBLISH_CURL_SNIPPET);
     setCopied(true);
-    toast.success('Copied snippet to clipboard!');
+    toast.success('Copied API curl command to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const currentGoal = GOALS.find((g) => g.id === activeGoal);
 
   return (
     <section className="container landing-hero-modern animate-fade-in">
@@ -181,18 +172,18 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
         <div className="hero-goal-body">
           <div className="hero-goal-header-row">
             <div>
-              <span className="hero-goal-badge" style={{ color: GOALS.find((g) => g.id === activeGoal)?.color }}>
-                {GOALS.find((g) => g.id === activeGoal)?.title}
+              <span className="hero-goal-badge" style={{ color: currentGoal?.color }}>
+                {currentGoal?.title}
               </span>
               <p className="hero-goal-tagline">
-                {GOALS.find((g) => g.id === activeGoal)?.tagline}
+                {currentGoal?.tagline}
               </p>
             </div>
 
             <div className="hero-goal-action-btn-wrap">
               {activeGoal === 'discover' && (
                 <Link href="/browse" className="btn btn-primary btn-sm">
-                  <Search size={14} /> Search 10,000+ Tools
+                  <Search size={14} /> Search 10,000+ Tools <ArrowRight size={14} />
                 </Link>
               )}
               {activeGoal === 'stack' && (
@@ -213,33 +204,207 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Interactive Code / Output Preview */}
-          <div className="hero-terminal-container">
-            <div className="hero-terminal-header">
-              <div className="hero-terminal-dots">
-                <span className="dot dot-red" />
-                <span className="dot dot-yellow" />
-                <span className="dot dot-green" />
+          {/* Goal Content: Feature Explanations or Real API Terminal */}
+          {activeGoal === 'discover' && (
+            <>
+              <div className="hero-goal-features-grid">
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Search size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">10,000+ Index Entries</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Search across thousands of Model Context Protocol servers by capability, keyword, and category.
+                  </p>
+                </div>
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Zap size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">1-Click Deep Installs</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Direct install triggers for Cursor, Claude Desktop, Windsurf, and Cline without editing JSON by hand.
+                  </p>
+                </div>
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Shield size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">Safety & Schema Audited</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Live health checks, token consumption metrics, and license compliance indicators on every listing.
+                  </p>
+                </div>
               </div>
-              <span className="hero-terminal-title">
-                <Terminal size={12} style={{ color: 'var(--accent-color)' }} />
-                {goalCodeSnippets[activeGoal].title}
-              </span>
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="hero-terminal-copy-btn"
-                title="Copy snippet"
-                aria-label="Copy snippet"
-              >
-                {copied ? <Check size={13} style={{ color: 'var(--verified-green)' }} /> : <Copy size={13} />}
-                <span className="hero-terminal-copy-label">{copied ? 'Copied' : 'Copy'}</span>
-              </button>
-            </div>
-            <pre className="hero-terminal-code">
-              <code>{goalCodeSnippets[activeGoal].code}</code>
-            </pre>
-          </div>
+              <div className="hero-goal-footer-row">
+                <span className="hero-goal-footer-label">Explore more:</span>
+                <div className="hero-goal-quick-links">
+                  <Link href="/categories" className="hero-goal-quick-link">
+                    Browse 20+ Categories
+                  </Link>
+                  <Link href="/compare" className="hero-goal-quick-link">
+                    Compare Servers
+                  </Link>
+                  <Link href="/what-is-mcp" className="hero-goal-quick-link">
+                    Guide: What is MCP?
+                  </Link>
+                  <Link href="/clients" className="hero-goal-quick-link">
+                    Supported Clients
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeGoal === 'stack' && (
+            <>
+              <div className="hero-goal-features-grid">
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Layers size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">Multi-Server Combiner</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Bundle database, browser, GitHub, and context memory tools into a unified agent workspace.
+                  </p>
+                </div>
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Cpu size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">Turnkey Config Export</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Generate clean, conflict-free configuration files ready to paste directly into your AI client.
+                  </p>
+                </div>
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Brain size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">Context Budget Estimator</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Calculate combined schema token overhead across all servers before deploying to agent prompts.
+                  </p>
+                </div>
+              </div>
+              <div className="hero-goal-footer-row">
+                <span className="hero-goal-footer-label">Related guides & tools:</span>
+                <div className="hero-goal-quick-links">
+                  <Link href="/tools/config-generator" className="hero-goal-quick-link">
+                    Config Generator
+                  </Link>
+                  <Link href="/mcp-for-claude-desktop" className="hero-goal-quick-link">
+                    Claude Desktop Guide
+                  </Link>
+                  <Link href="/mcp-for-cursor" className="hero-goal-quick-link">
+                    Cursor Setup Guide
+                  </Link>
+                  <Link href="/mcp-for-windsurf" className="hero-goal-quick-link">
+                    Windsurf Setup Guide
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeGoal === 'tools' && (
+            <>
+              <div className="hero-goal-features-grid">
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Wrench size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">JSON-RPC Schema Inspector</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Interactively inspect MCP tool parameters, schemas, and return formats in real time.
+                  </p>
+                </div>
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Cpu size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">Token Overhead Calculator</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Accurately measure prompt token consumption for any individual server or complete toolset.
+                  </p>
+                </div>
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Shield size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">Config Auditor & Validator</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Validate client configs, detect syntax errors, and fix broken server arguments automatically.
+                  </p>
+                </div>
+              </div>
+              <div className="hero-goal-footer-row">
+                <span className="hero-goal-footer-label">Developer utilities:</span>
+                <div className="hero-goal-quick-links">
+                  <Link href="/tools/config-validator" className="hero-goal-quick-link">
+                    Config Validator
+                  </Link>
+                  <Link href="/tools/config-auditor" className="hero-goal-quick-link">
+                    Config Auditor
+                  </Link>
+                  <Link href="/tools/openapi-to-mcp" className="hero-goal-quick-link">
+                    OpenAPI to MCP
+                  </Link>
+                  <Link href="/mcp-troubleshooting" className="hero-goal-quick-link">
+                    Troubleshooting Guide
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeGoal === 'publish' && (
+            <>
+              <div className="hero-terminal-container" style={{ marginTop: '0.5rem' }}>
+                <div className="hero-terminal-header">
+                  <div className="hero-terminal-dots">
+                    <span className="dot dot-red" />
+                    <span className="dot dot-yellow" />
+                    <span className="dot dot-green" />
+                  </div>
+                  <span className="hero-terminal-title">
+                    <Terminal size={12} style={{ color: 'var(--accent-color)' }} />
+                    Register Server via Catalog API (Agentic / CI/CD)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="hero-terminal-copy-btn"
+                    title="Copy snippet"
+                    aria-label="Copy snippet"
+                  >
+                    {copied ? <Check size={13} style={{ color: 'var(--verified-green)' }} /> : <Copy size={13} />}
+                    <span className="hero-terminal-copy-label">{copied ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+                <pre className="hero-terminal-code">
+                  <code>{PUBLISH_CURL_SNIPPET}</code>
+                </pre>
+              </div>
+              <div className="hero-goal-footer-row">
+                <span className="hero-goal-footer-label">Developer resources:</span>
+                <div className="hero-goal-quick-links">
+                  <Link href="/docs/api" className="hero-goal-quick-link">
+                    REST API Docs
+                  </Link>
+                  <Link href="/build-mcp-server" className="hero-goal-quick-link">
+                    Build an MCP Server
+                  </Link>
+                  <Link href="/deploy-mcp-server" className="hero-goal-quick-link">
+                    Deploy & Hosting Guide
+                  </Link>
+                  <Link href="/badge-generator" className="hero-goal-quick-link">
+                    Badge Generator
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
