@@ -107,7 +107,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/guide': '2026-08-04',
   '/build-mcp-server': '2026-08-04',
   '/mcp-security': '2026-08-04',
-  '/deploy-mcp-server': '2026-08-05',
+  '/deploy-mcp-server': '2026-08-25',
   '/mcp-troubleshooting': '2026-08-07',
   '/mcp-protocol-versioning': '2026-08-22',
   '/pricing': '2026-08-08',

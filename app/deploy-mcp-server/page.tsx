@@ -584,6 +584,15 @@ app.listen(PORT, () => {
                   <Link href="/submit">Submit your MCP server to AllMCPs</Link> or check out our{' '}
                   <Link href="/tools">Free Developer Tools</Link>.
                 </li>
+                <li>
+                  If your deployed server is powering a paid AI agent product, <a
+                    href="https://agentmrr.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    AgentMRR
+                  </a> tracks provider-verified MRR for AI-native products, a way to show real revenue instead of just traffic numbers.
+                </li>
               </ul>
             </div>
           </div>
