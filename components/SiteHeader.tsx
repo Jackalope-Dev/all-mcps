@@ -204,23 +204,29 @@ export function SiteHeader() {
                 {searchModKey === '⌘' ? '⌘K' : 'Ctrl+K'}
               </kbd>
             </button>
-            {!isSignedIn && (
-              <Button href={loginHref} variant="secondary" size="sm" className="site-nav-login">
-                <LogIn size={13} aria-hidden="true" /> Log in
-              </Button>
-            )}
-            <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
-              <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
-            </Button>
-            {isSignedIn && (
-              <a
-                href={logoutHref}
-                className="header-search-btn"
-                title="Log out"
-                aria-label="Log out"
-              >
-                <LogOut size={13} aria-hidden="true" />
-              </a>
+            {isSignedIn ? (
+              <div className="site-nav-manage-group">
+                <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
+                  <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
+                </Button>
+                <a
+                  href={logoutHref}
+                  className="header-search-btn site-nav-logout"
+                  title="Log out"
+                  aria-label="Log out"
+                >
+                  <LogOut size={13} aria-hidden="true" />
+                </a>
+              </div>
+            ) : (
+              <>
+                <Button href={loginHref} variant="secondary" size="sm" className="site-nav-login">
+                  <LogIn size={13} aria-hidden="true" /> Log in
+                </Button>
+                <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
+                  <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
+                </Button>
+              </>
             )}
           </nav>
 

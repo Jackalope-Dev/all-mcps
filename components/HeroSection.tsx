@@ -229,7 +229,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
           {activeGoal === 'discover' && (
             <>
               <div className="hero-goal-features-grid">
-                <div className="hero-goal-feature-card">
+                <Link href="/browse" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Search size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">10,000+ Index Entries</span>
@@ -237,8 +237,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Search across thousands of Model Context Protocol servers by capability, keyword, and category.
                   </p>
-                </div>
-                <div className="hero-goal-feature-card">
+                </Link>
+                <Link href="/clients" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Zap size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">1-Click Deep Installs</span>
@@ -246,8 +246,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Direct install triggers for Cursor, Claude Desktop, Windsurf, and Cline without editing JSON by hand.
                   </p>
-                </div>
-                <div className="hero-goal-feature-card">
+                </Link>
+                <Link href="/mcp-security" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Shield size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">Safety & Schema Audited</span>
@@ -255,7 +255,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Live health checks, token consumption metrics, and license compliance indicators on every listing.
                   </p>
-                </div>
+                </Link>
               </div>
               <div className="hero-goal-footer-row">
                 <span className="hero-goal-footer-label">Explore more:</span>
@@ -280,7 +280,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
           {activeGoal === 'stack' && (
             <>
               <div className="hero-goal-features-grid">
-                <div className="hero-goal-feature-card">
+                <Link href="/stack" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Layers size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">Multi-Server Combiner</span>
@@ -288,8 +288,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Bundle database, browser, GitHub, and context memory tools into a unified agent workspace.
                   </p>
-                </div>
-                <div className="hero-goal-feature-card">
+                </Link>
+                <Link href="/tools/config-generator" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Cpu size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">Turnkey Config Export</span>
@@ -297,8 +297,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Generate clean, conflict-free configuration files ready to paste directly into your AI client.
                   </p>
-                </div>
-                <div className="hero-goal-feature-card">
+                </Link>
+                <Link href="/tools/token-calculator" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Brain size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">Context Budget Estimator</span>
@@ -306,7 +306,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Calculate combined schema token overhead across all servers before deploying to agent prompts.
                   </p>
-                </div>
+                </Link>
               </div>
               <div className="hero-goal-footer-row">
                 <span className="hero-goal-footer-label">Related guides & tools:</span>
@@ -331,7 +331,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
           {activeGoal === 'tools' && (
             <>
               <div className="hero-goal-features-grid">
-                <div className="hero-goal-feature-card">
+                <Link href="/tools/protocol-inspector" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Wrench size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">JSON-RPC Schema Inspector</span>
@@ -339,8 +339,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Interactively inspect MCP tool parameters, schemas, and return formats in real time.
                   </p>
-                </div>
-                <div className="hero-goal-feature-card">
+                </Link>
+                <Link href="/tools/token-calculator" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Cpu size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">Token Overhead Calculator</span>
@@ -348,8 +348,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Accurately measure prompt token consumption for any individual server or complete toolset.
                   </p>
-                </div>
-                <div className="hero-goal-feature-card">
+                </Link>
+                <Link href="/tools/config-auditor" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Shield size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">Config Auditor & Validator</span>
@@ -357,7 +357,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Validate client configs, detect syntax errors, and fix broken server arguments automatically.
                   </p>
-                </div>
+                </Link>
               </div>
               <div className="hero-goal-footer-row">
                 <span className="hero-goal-footer-label">Developer utilities:</span>
@@ -382,7 +382,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
           {activeGoal === 'publish' && (
             <>
               <div className="hero-goal-features-grid">
-                <div className="hero-goal-feature-card">
+                <Link href="/submit" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Globe size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">Instant Registry Discovery</span>
@@ -390,8 +390,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Reach thousands of AI developers, Claude Desktop users, and autonomous coding agents worldwide.
                   </p>
-                </div>
-                <div className="hero-goal-feature-card">
+                </Link>
+                <Link href="/badge-generator" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Shield size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">Automated Health & Badges</span>
@@ -399,8 +399,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Continuous uptime monitoring, schema analysis, and dynamic embeddable shields for your repo README.
                   </p>
-                </div>
-                <div className="hero-goal-feature-card">
+                </Link>
+                <Link href="/docs/api" className="hero-goal-feature-card">
                   <div className="hero-goal-feature-header">
                     <Brain size={16} className="hero-goal-feature-icon" />
                     <span className="hero-goal-feature-title">1-Click Agent Handoff</span>
@@ -408,7 +408,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                   <p className="hero-goal-feature-desc">
                     Copy the prompt below into Cursor, Claude, or your coding agent to submit automatically.
                   </p>
-                </div>
+                </Link>
               </div>
 
               {/* Friendly AI Agent Prompt Box / cURL Toggle */}
