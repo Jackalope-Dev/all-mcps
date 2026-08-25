@@ -143,25 +143,10 @@ export default function RootLayout({
           }}
         />
         {/*
-          Service worker kill-switch. This site ships NO service worker, but an
-          earlier version of the site registered an aggressive, cache-first
-          worker. On devices that still hold that old registration — iOS WebKit
-          (Safari, Arc, and every other iOS browser) is the worst offender — a
-          stale app shell keeps getting served from the SW cache: it references
-          hashed JS chunks that no longer exist, those chunks 404, React never
-          hydrates, and every interactive control (mobile menu, theme switcher,
-          live stats, share/command modals) silently dies while the static HTML
-          still paints. See public/sw.js for the companion self-destroying worker
-          that recovers cache-first-stuck devices via the browser's SW update
-          check; this page-side script recovers any device the moment it receives
-          fresh HTML from the network, without waiting on that update check.
-
-          Runs on every load, is scope/path-independent (unregisters ALL
-          registrations, not just one at /sw.js), and clears the Cache Storage the
-          old worker populated. The one-time reload (guarded by sessionStorage so
-          it can never loop) drops the now-orphaned old shell and pulls the
-          current app fresh. On a device that never had a worker this is a couple
-          of no-op async calls and nothing else happens.
+          Service worker cleanup. This site ships NO service worker.
+          Runs on load, is scope/path-independent (unregisters all registrations),
+          and clears any stale Cache Storage silently in the background without
+          forcing a page reload or screen flash.
         */}
         <script
           id="sw-killswitch"
@@ -181,15 +166,6 @@ export default function RootLayout({
                             return caches.delete(k).catch(function() {});
                           }));
                         }).catch(function() {});
-                      }
-                    }).then(function() {
-                      // Only reload a page that an old worker is still controlling
-                      // (its shell may reference dead chunks). Guarded so it fires
-                      // at most once per tab and can never loop.
-                      if (navigator.serviceWorker.controller &&
-                          !sessionStorage.getItem('allmcps-sw-recovered')) {
-                        sessionStorage.setItem('allmcps-sw-recovered', '1');
-                        location.reload();
                       }
                     }).catch(function() {});
                   }).catch(function() {});

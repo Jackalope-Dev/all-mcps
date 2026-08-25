@@ -49,23 +49,6 @@ self.addEventListener('activate', (event) => {
       } catch (e) {
         /* Already gone; nothing to do. */
       }
-
-      // Reload open tabs so the now-orphaned stale shell is replaced by a fresh
-      // network fetch. Best-effort per client — one failure must not block others.
-      try {
-        const clients = await self.clients.matchAll({ type: 'window' });
-        await Promise.all(
-          clients.map((client) => {
-            try {
-              return client.navigate(client.url).catch(() => undefined);
-            } catch (e) {
-              return undefined;
-            }
-          })
-        );
-      } catch (e) {
-        /* No controllable window clients; the page-side script will finish up. */
-      }
     })()
   );
 });

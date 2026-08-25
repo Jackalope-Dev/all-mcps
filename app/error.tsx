@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { PageShell } from '../components/PageShell';
 import { EmptyState } from '../components/EmptyState';
-import { attemptAutoReload } from '../lib/errorRecovery';
+import { attemptAutoReload, isLikelyTransientLoadError } from '../lib/errorRecovery';
 
 export default function Error({
   error,
@@ -14,13 +14,13 @@ export default function Error({
   reset: () => void;
 }) {
   // Most errors here are transient post-deploy chunk/asset load failures that a
-  // refresh fixes. Recover automatically (one guarded reload per URL) instead of
-  // stranding the user on a dead-end error page.
-  const [recovering, setRecovering] = useState(true);
+  // refresh fixes. Recover automatically (one guarded reload per URL) only when
+  // the error actually matches a network/chunk failure.
+  const [recovering, setRecovering] = useState(() => isLikelyTransientLoadError(error));
 
   useEffect(() => {
     console.error('Unhandled app error:', error);
-    if (attemptAutoReload()) {
+    if (isLikelyTransientLoadError(error) && attemptAutoReload()) {
       // Reload triggered. Reveal the fallback UI if navigation somehow doesn't
       // happen within a few seconds, so we never strand the user on a blank page.
       const t = setTimeout(() => setRecovering(false), 4000);

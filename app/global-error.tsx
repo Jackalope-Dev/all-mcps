@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { attemptAutoReload } from '../lib/errorRecovery';
+import { attemptAutoReload, isLikelyTransientLoadError } from '../lib/errorRecovery';
 
 export default function GlobalError({
   error,
@@ -11,12 +11,12 @@ export default function GlobalError({
   reset: () => void;
 }) {
   // Recover automatically from transient post-deploy load failures (one guarded
-  // reload per URL) rather than stranding the user on the error screen.
-  const [recovering, setRecovering] = useState(true);
+  // reload per URL) only when the error matches a network/chunk failure.
+  const [recovering, setRecovering] = useState(() => isLikelyTransientLoadError(error));
 
   useEffect(() => {
     console.error('Unhandled root layout error:', error);
-    if (attemptAutoReload()) {
+    if (isLikelyTransientLoadError(error) && attemptAutoReload()) {
       const t = setTimeout(() => setRecovering(false), 4000);
       return () => clearTimeout(t);
     }
