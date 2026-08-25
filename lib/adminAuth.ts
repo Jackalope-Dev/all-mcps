@@ -20,7 +20,7 @@ export async function isAdminAuthorized(request?: Request): Promise<boolean> {
   if (email) return true;
   if (request) {
     const authHeader = request.headers.get('authorization') || request.headers.get('x-cron-secret');
-    const secret = process.env.CRON_SECRET;
+    const secret = process.env.ADMIN_SECRET;
     if (secret && authHeader && (authHeader === secret || authHeader === `Bearer ${secret}`)) {
       return true;
     }
