@@ -6241,6 +6241,116 @@ nav[aria-label="Table of contents"] {
   color: var(--accent-color);
 }
 
+/* AI Prompt Card for Publish Tab */
+.hero-prompt-card {
+  margin-top: 0.85rem;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface, rgba(15, 23, 42, 0.5));
+  overflow: hidden;
+}
+
+[data-theme="light"] .hero-prompt-card {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.hero-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(15, 23, 42, 0.4);
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+[data-theme="light"] .hero-prompt-header {
+  background: #e2e8f0;
+}
+
+.hero-prompt-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.hero-prompt-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px;
+  border-radius: 6px;
+}
+
+[data-theme="light"] .hero-prompt-toggle-wrap {
+  background: #cbd5e1;
+}
+
+.hero-prompt-toggle-btn {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hero-prompt-toggle-btn.is-active {
+  background: var(--bg-elevated, #1e293b);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .hero-prompt-toggle-btn.is-active {
+  background: #ffffff;
+}
+
+.hero-prompt-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent-color);
+  background: var(--accent-color);
+  color: #000000;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hero-prompt-copy-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.hero-prompt-content {
+  padding: 0.85rem 1rem;
+  margin: 0;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+[data-theme="light"] .hero-prompt-content {
+  color: #334155;
+}
+
 .hero-terminal-container {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);

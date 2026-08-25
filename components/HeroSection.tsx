@@ -110,6 +110,19 @@ const SITUATIONS = [
   },
 ];
 
+const AI_SUBMISSION_PROMPT = `Please submit my Model Context Protocol server to the AllMCPs directory (https://allmcps.com):
+
+1. Inspect this workspace/repository to extract the server name, repo URL, tool descriptions, and primary category.
+2. Send a POST request to https://allmcps.com/api/v1/submit with JSON:
+{
+  "name": "<Server Name>",
+  "url": "<GitHub Repository or Website URL>",
+  "email": "<Your Contact Email>",
+  "description": "<Description of tools and capabilities>",
+  "category": "Developer Tools"
+}
+3. Report back with the confirmation response and claim link.`;
+
 const PUBLISH_CURL_SNIPPET = `curl -X POST https://allmcps.com/api/v1/submit \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -121,12 +134,20 @@ const PUBLISH_CURL_SNIPPET = `curl -X POST https://allmcps.com/api/v1/submit \\
 
 export function HeroSection({ totalCount }: HeroSectionProps) {
   const [activeGoal, setActiveGoal] = useState<'discover' | 'stack' | 'tools' | 'publish'>('discover');
+  const [publishMode, setPublishMode] = useState<'prompt' | 'curl'>('prompt');
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(AI_SUBMISSION_PROMPT);
+    setCopied(true);
+    toast.success('Copied AI submission prompt to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyCurl = () => {
     navigator.clipboard.writeText(PUBLISH_CURL_SNIPPET);
     setCopied(true);
-    toast.success('Copied API curl command to clipboard!');
+    toast.success('Copied API cURL command to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -360,32 +381,79 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
 
           {activeGoal === 'publish' && (
             <>
-              <div className="hero-terminal-container" style={{ marginTop: '0.5rem' }}>
-                <div className="hero-terminal-header">
-                  <div className="hero-terminal-dots">
-                    <span className="dot dot-red" />
-                    <span className="dot dot-yellow" />
-                    <span className="dot dot-green" />
+              <div className="hero-goal-features-grid">
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Globe size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">Instant Registry Discovery</span>
                   </div>
-                  <span className="hero-terminal-title">
-                    <Terminal size={12} style={{ color: 'var(--accent-color)' }} />
-                    Register Server via Catalog API (Agentic / CI/CD)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="hero-terminal-copy-btn"
-                    title="Copy snippet"
-                    aria-label="Copy snippet"
-                  >
-                    {copied ? <Check size={13} style={{ color: 'var(--verified-green)' }} /> : <Copy size={13} />}
-                    <span className="hero-terminal-copy-label">{copied ? 'Copied' : 'Copy'}</span>
-                  </button>
+                  <p className="hero-goal-feature-desc">
+                    Reach thousands of AI developers, Claude Desktop users, and autonomous coding agents worldwide.
+                  </p>
                 </div>
-                <pre className="hero-terminal-code">
-                  <code>{PUBLISH_CURL_SNIPPET}</code>
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Shield size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">Automated Health & Badges</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Continuous uptime monitoring, schema analysis, and dynamic embeddable shields for your repo README.
+                  </p>
+                </div>
+                <div className="hero-goal-feature-card">
+                  <div className="hero-goal-feature-header">
+                    <Brain size={16} className="hero-goal-feature-icon" />
+                    <span className="hero-goal-feature-title">1-Click Agent Handoff</span>
+                  </div>
+                  <p className="hero-goal-feature-desc">
+                    Copy the prompt below into Cursor, Claude, or your coding agent to submit automatically.
+                  </p>
+                </div>
+              </div>
+
+              {/* Friendly AI Agent Prompt Box / cURL Toggle */}
+              <div className="hero-prompt-card">
+                <div className="hero-prompt-header">
+                  <div className="hero-prompt-title">
+                    <Sparkles size={14} style={{ color: 'var(--gold-color, #d97706)' }} />
+                    <span>{publishMode === 'prompt' ? 'AI Agent Submission Prompt' : 'REST Catalog API Endpoint'}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div className="hero-prompt-toggle-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setPublishMode('prompt')}
+                        className={`hero-prompt-toggle-btn ${publishMode === 'prompt' ? 'is-active' : ''}`}
+                      >
+                        Prompt for AI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPublishMode('curl')}
+                        className={`hero-prompt-toggle-btn ${publishMode === 'curl' ? 'is-active' : ''}`}
+                      >
+                        cURL API
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={publishMode === 'prompt' ? handleCopyPrompt : handleCopyCurl}
+                      className="hero-prompt-copy-btn"
+                      title={publishMode === 'prompt' ? 'Copy prompt for your AI agent' : 'Copy cURL command'}
+                    >
+                      {copied ? <Check size={13} /> : <Copy size={13} />}
+                      <span>{copied ? 'Copied!' : publishMode === 'prompt' ? 'Copy Prompt for AI' : 'Copy cURL'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <pre className="hero-prompt-content">
+                  <code>{publishMode === 'prompt' ? AI_SUBMISSION_PROMPT : PUBLISH_CURL_SNIPPET}</code>
                 </pre>
               </div>
+
               <div className="hero-goal-footer-row">
                 <span className="hero-goal-footer-label">Developer resources:</span>
                 <div className="hero-goal-quick-links">
