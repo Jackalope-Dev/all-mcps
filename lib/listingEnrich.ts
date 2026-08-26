@@ -367,7 +367,7 @@ export async function fetchPackageRegistryMetadata(
 }
 
 /** Best-effort check that a package still resolves on its registry (npm or PyPI, inferred from installCommand). */
-async function isPackageInstallable(installCommand: string | null | undefined, pkg: string | null | undefined): Promise<boolean> {
+export async function isPackageInstallable(installCommand: string | null | undefined, pkg: string | null | undefined): Promise<boolean> {
   const cleanPkg = (pkg || '').trim();
   if (!cleanPkg || cleanPkg.startsWith('http') || cleanPkg.includes(' ')) return false;
   const cmd = (installCommand || '').toLowerCase();

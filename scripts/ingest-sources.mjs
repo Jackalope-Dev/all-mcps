@@ -54,7 +54,10 @@ const ACCOUNT_ID = '1a04a617cf42aaaba19b44365dd7c882';
 // registry grows large enough for that to get slow, switch to the `updated_since`
 // cursor param instead of paging everything every time.
 const OFFICIAL_REGISTRY_BASE = 'https://registry.modelcontextprotocol.io';
-const OFFICIAL_REGISTRY_MAX_PAGES = 300; // 300 * 100 = 30,000 servers (registry already exceeds 5,000 as of 2026-08)
+// Confirmed live 2026-08-26: the registry has grown past 27,000 active entries and
+// was hitting this cap when it was still 300 (30,000) — raised with headroom so the
+// weekly cron doesn't silently start missing the tail again as it keeps growing.
+const OFFICIAL_REGISTRY_MAX_PAGES = 2000; // 2000 * 100 = 200,000 servers
 
 // PulseMCP (https://www.pulsemcp.com) — third-party MCP directory with a public,
 // paginated JSON API (confirmed live 2026-08-26: GET .../v0beta/servers returns

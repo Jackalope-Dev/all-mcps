@@ -99,6 +99,15 @@ const SLOW_JOBS: CronJob[] = [
     secretVar: "ADMIN_SECRET",
     shouldRun: (now) => now.getUTCHours() === 8,
   },
+  // Promotes ingested (never human-submitted) pending listings to active once
+  // they've sat untouched for a week and a fresh liveness check still finds
+  // them alive — see the route for the full policy. Daily is plenty; the
+  // dwell window is measured in days, not hours.
+  {
+    path: "/api/cron/auto-promote",
+    secretVar: "ADMIN_SECRET",
+    shouldRun: (now) => now.getUTCHours() === 5,
+  },
 ];
 
 async function runCronJob(
