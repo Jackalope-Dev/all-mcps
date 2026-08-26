@@ -354,6 +354,13 @@ function domainOf(url) {
   }
 }
 
+/** Like domainOf, but never resolves to a code-hosting domain — those identify the repo host, not the project's own site, and must never count as a "website" match. */
+function websiteDomainOf(url) {
+  const d = domainOf(url);
+  if (!d) return null;
+  return /(^|\.)github\.com$|(^|\.)github\.io$|(^|\.)gitlab\.com$/i.test(d) ? null : d;
+}
+
 /** Bare package name for cross-ecosystem name comparison — excludes remote-install URLs (installPackage there is a URL, not a name). */
 function barePackageName(installKind, installPackage) {
   if (installKind !== 'stdio' || !installPackage) return null;
@@ -844,6 +851,16 @@ async function main() {
   // GitHub owner, the same package name, or the same website domain.
   const existingByOwner = new Map(); // github owner -> [{id, url, nameKey}]
   const existingByNameKey = new Map(); // nameKey -> [{id, url, websiteDomain, packageName}]
+  // How many *distinct* existing listings already use a given website domain —
+  // confirmed live (2026-08-26) that generic reference links get stored as
+  // website_url across many unrelated servers (docs.astral.sh/uv: 36 listings;
+  // registry.modelcontextprotocol.io: 32; nodejs.org: 28; python.org: 22) and,
+  // more subtly, many independent wrappers around the same third-party service
+  // legitimately cite that service's own site (e.g. weather.gov, sui.io) as
+  // their "website" — same domain there means "wraps the same API," not "same
+  // author." A domain this common carries no identity signal, so it must be
+  // near-unique in the catalog before it's allowed to corroborate a name match.
+  const domainUsageCount = new Map();
   for (const r of existing) {
     const nameKey = normalizeNameKey(r.name);
     const gh = parseGithubOwnerRepo(r.url);
@@ -851,16 +868,24 @@ async function main() {
       if (!existingByOwner.has(gh.owner)) existingByOwner.set(gh.owner, []);
       existingByOwner.get(gh.owner).push({ id: r.id, url: r.url, nameKey });
     }
+
+    const websiteDomain = domainOf(r.website_url);
+    if (websiteDomain) domainUsageCount.set(websiteDomain, (domainUsageCount.get(websiteDomain) || 0) + 1);
+
     if (nameKey) {
       if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
       existingByNameKey.get(nameKey).push({
         id: r.id,
         url: r.url,
-        websiteDomain: domainOf(r.website_url),
+        websiteDomain,
         packageName: barePackageName(r.install_kind, r.install_package),
       });
     }
   }
+  // A domain only corroborates identity when it's exclusive to the one
+  // existing listing being compared against — not shared by any other
+  // unrelated entry already in the catalog.
+  const isDistinctiveDomain = (domain) => !!domain && (domainUsageCount.get(domain) || 0) <= 1;
 
   function findPossibleDuplicate(candidate) {
     const nameKey = normalizeNameKey(candidate.name);
@@ -876,10 +901,11 @@ async function main() {
     const sameName = existingByNameKey.get(nameKey) || [];
     if (sameName.length === 0) return null;
 
-    const candidateDomain = domainOf(candidate.websiteUrl) || domainOf(candidate.url);
+    const candidateDomain = domainOf(candidate.websiteUrl) || websiteDomainOf(candidate.url);
     const candidatePackage = barePackageName(candidate.installKind, candidate.installPackage);
 
-    const domainMatch = candidateDomain && sameName.find((e) => e.websiteDomain === candidateDomain);
+    const domainMatch =
+      isDistinctiveDomain(candidateDomain) && sameName.find((e) => e.websiteDomain === candidateDomain);
     if (domainMatch) return { id: domainMatch.id, url: domainMatch.url, reason: 'same name + same website domain' };
 
     const packageMatch = candidatePackage && sameName.find((e) => e.packageName === candidatePackage);
@@ -972,12 +998,14 @@ async function main() {
       if (!existingByOwner.has(gh.owner)) existingByOwner.set(gh.owner, []);
       existingByOwner.get(gh.owner).push({ id, url: c.url, nameKey });
     }
+    const acceptedDomain = domainOf(c.websiteUrl) || domainOf(c.url);
+    if (acceptedDomain) domainUsageCount.set(acceptedDomain, (domainUsageCount.get(acceptedDomain) || 0) + 1);
     if (nameKey) {
       if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
       existingByNameKey.get(nameKey).push({
         id,
         url: c.url,
-        websiteDomain: domainOf(c.websiteUrl) || domainOf(c.url),
+        websiteDomain: acceptedDomain,
         packageName: barePackageName(c.installKind, c.installPackage),
       });
     }
