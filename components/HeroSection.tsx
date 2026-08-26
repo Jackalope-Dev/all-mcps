@@ -23,6 +23,7 @@ import {
   Cpu,
 } from 'lucide-react';
 import { toast } from './ui/Toast';
+import { AmbientCodeBackground } from './ui/AmbientCodeBackground';
 
 interface HeroSectionProps {
   totalCount?: number;
@@ -155,6 +156,8 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
 
   return (
     <section className="container landing-hero-modern animate-fade-in">
+      <AmbientCodeBackground />
+
       {/* Viewport-Scale Value Proposition */}
       <h1 className="hero-headline">
         Find the exact MCP tools <br className="hidden sm:inline" />
