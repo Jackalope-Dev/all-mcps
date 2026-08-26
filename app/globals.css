@@ -13,6 +13,7 @@
   --brand-cyan: #00e5ff;
   --brand-blue: #007bff;
   --brand-gradient: linear-gradient(135deg, #00e5ff, #007bff);
+  --brand-gradient-hover: linear-gradient(135deg, #38bdf8, #0284c7);
   --brand-gradient-soft: linear-gradient(135deg, rgba(0, 229, 255, 0.12), rgba(0, 123, 255, 0.08));
 
   /* Interactive accent — brand cyan for active/focus; gradient for primary CTAs */
@@ -78,10 +79,24 @@
   --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* Elevation */
+  /* Elevation — "lift off the page" scale used by .surface-interactive/.card-hoverable
+     and any elevated hero/marketing panel. Larger blur + lower opacity than a typical
+     dark-UI shadow so surfaces read as elevated paper, not a glow. */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.22);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 10px 32px -4px rgba(0, 0, 0, 0.45);
   --shadow-glow: 0 0 24px var(--accent-glow);
+  --shadow-glow-soft: 0 0 32px rgba(var(--accent-rgb), 0.06);
+  --shadow-elevated: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 44px -14px rgba(0, 0, 0, 0.55);
+  --shadow-elevated-hover: 0 1px 2px rgba(0, 0, 0, 0.35), 0 26px 60px -16px rgba(0, 0, 0, 0.6), var(--shadow-glow);
+
+  /* Motion — canonical easing/duration scale. cubic-bezier(0.16,1,0.3,1) ("ease-out-expo")
+     is already the majority hover-lift curve in this file; new motion should use these
+     tokens instead of ad-hoc bezier values. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 420ms;
 
   /* Layout */
   --header-height: 4.5rem;
@@ -106,6 +121,7 @@
   --brand-cyan: #0284c7;
   --brand-blue: #0052cc;
   --brand-gradient: linear-gradient(135deg, #0284c7, #0052cc);
+  --brand-gradient-hover: linear-gradient(135deg, #0369a1, #0043a8);
   --brand-gradient-soft: linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(0, 82, 204, 0.05));
 
   /* Interactive accent */
@@ -148,9 +164,13 @@
   --chart-series-5: #e87ba4;
 
   /* Elevation */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.035);
   --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 10px 28px -4px rgba(15, 23, 42, 0.08);
   --shadow-glow: 0 0 20px rgba(2, 132, 199, 0.12);
+  --shadow-glow-soft: 0 0 28px rgba(var(--accent-rgb), 0.05);
+  --shadow-elevated: 0 1px 2px rgba(15, 23, 42, 0.04), 0 18px 38px -16px rgba(15, 23, 42, 0.14);
+  --shadow-elevated-hover: 0 1px 2px rgba(15, 23, 42, 0.05), 0 26px 52px -18px rgba(15, 23, 42, 0.18), var(--shadow-glow);
 }
 
 * {
@@ -261,6 +281,21 @@ body {
     radial-gradient(circle at 50% 100%, rgba(0, 82, 204, 0.02), transparent 50%);
 }
 
+/* Subtle dot-grid texture for hero/decorative surfaces — fades out at the edges via
+   mask rather than a hard-edged tile, so it reads as ambient texture, not a pattern. */
+.bg-grid-fade {
+  background-image: radial-gradient(circle, rgba(var(--accent-rgb), 0.6) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 0%, #000 45%, transparent 100%);
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 0%, #000 45%, transparent 100%);
+  opacity: 0.16;
+}
+
+[data-theme="light"] .bg-grid-fade {
+  background-image: radial-gradient(circle, rgba(var(--accent-rgb), 0.8) 1px, transparent 1px);
+  opacity: 0.22;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -357,7 +392,7 @@ p {
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-elevated);
 }
 
 .surface-muted {
@@ -378,36 +413,43 @@ p {
   background: rgba(255, 255, 255, 0.85);
 }
 
-.surface-interactive {
+/* Canonical hover-lift primitive. .card-hoverable used to duplicate this with a
+   different lift distance/easing even though Card.tsx applies both classes together —
+   it's now a thin alias so any existing .card-hoverable callers stay in sync for free. */
+.surface-interactive,
+.card-hoverable {
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-elevated);
+  transition: border-color var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
   cursor: pointer;
 }
 
-.surface-interactive:hover {
+.surface-interactive:hover,
+.card-hoverable:hover {
   border-color: var(--border-strong);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md), var(--shadow-glow);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-elevated-hover);
 }
 
-/* Legacy aliases → solid surface */
-.glass-panel,
-.glass-panel-static {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+/* Card.tsx padding/accent variants — a single source of truth so pages stop
+   hand-rolling their own padding/border-top-color per "card" (see .preset-card,
+   .guide-card, .category-card, and pricing's inline-styled tier cards). */
+.card-padding-sm { padding: var(--space-4); }
+.card-padding-md { padding: var(--space-6); }
+.card-padding-lg { padding: clamp(1.5rem, 3vw, 2.25rem); }
+
+.card-accent {
+  border-top: 2px solid var(--card-accent, var(--accent-color));
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
 }
 
-.glass-panel:hover,
-.glass-panel-static:hover {
-  border-color: var(--border-strong);
+.card-accent:hover {
+  box-shadow: var(--shadow-elevated-hover), 0 0 0 1px color-mix(in srgb, var(--card-accent, var(--accent-color)) 35%, transparent);
 }
 
 /* Layout */
@@ -2016,29 +2058,18 @@ p {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #00e5ff 0%, #007bff 100%);
-  color: #030712;
+  background: var(--brand-gradient);
+  color: var(--accent-text);
   font-weight: 700;
-  box-shadow: 0 2px 12px rgba(0, 229, 255, 0.3);
+  box-shadow: var(--shadow-sm), 0 2px 12px rgba(var(--accent-rgb), 0.3);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  background: var(--brand-gradient-hover);
   color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4);
-}
-
-[data-theme="light"] .btn-primary {
-  background: linear-gradient(135deg, #0284c7 0%, #0052cc 100%);
-  color: #ffffff;
-  box-shadow: 0 2px 12px rgba(2, 132, 199, 0.25);
-}
-
-[data-theme="light"] .btn-primary:hover {
-  background: linear-gradient(135deg, #0369a1 0%, #0043a8 100%);
-  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.35);
+  box-shadow: var(--shadow-md), 0 6px 20px rgba(var(--accent-rgb), 0.4);
 }
 
 .btn-secondary {
@@ -2052,7 +2083,8 @@ p {
   background: rgba(255, 255, 255, 0.1);
   border-color: var(--accent-color);
   color: var(--text-primary);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 [data-theme="light"] .btn-secondary {
@@ -2118,26 +2150,18 @@ p {
 }
 
 .btn-submit-noticeable {
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 123, 255, 0.12));
-  border: 1px solid rgba(0, 229, 255, 0.4);
-  color: #00e5ff;
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.15);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.15), rgba(var(--accent-secondary-rgb), 0.12));
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  color: var(--accent-color);
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.15);
   font-weight: 700;
 }
 
 .btn-submit-noticeable:hover {
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(0, 123, 255, 0.2));
-  border-color: #00e5ff;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.3), rgba(var(--accent-secondary-rgb), 0.25));
+  border-color: var(--accent-color);
   color: #ffffff;
-  box-shadow: 0 0 24px rgba(0, 229, 255, 0.35);
-  transform: translateY(-2px);
-}
-
-.btn-submit-noticeable:hover {
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(0, 123, 255, 0.25));
-  border-color: #00e5ff;
-  color: #ffffff;
-  box-shadow: 0 0 25px rgba(0, 229, 255, 0.4);
+  box-shadow: 0 0 25px rgba(var(--accent-rgb), 0.4);
   transform: translateY(-2px);
 }
 
@@ -2217,17 +2241,8 @@ optgroup option {
   box-sizing: border-box;
 }
 
-.card-hoverable {
-  cursor: pointer;
-  transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-hoverable:hover {
-  border-color: var(--border-strong);
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md), var(--shadow-glow);
-}
+/* .card-hoverable itself now lives with .surface-interactive above (app/globals.css:~381)
+   — kept as a single canonical hover-lift rule instead of two competing definitions. */
 
 /* Accessibility Focus States */
 *:focus-visible {
@@ -5710,12 +5725,9 @@ nav[aria-label="Table of contents"] {
   border-color: rgba(15, 23, 42, 0.12);
 }
 
-[data-theme="light"] .btn-primary,
-[data-theme="light"] .btn-primary:hover,
-[data-theme="light"] .btn-primary:focus,
-[data-theme="light"] .btn-primary:active {
-  color: #ffffff;
-}
+/* .btn-primary text color now comes from the --accent-text token (app/globals.css
+   base .btn-primary rule), which already resolves to #ffffff in light theme — no
+   per-state override needed here anymore. */
 
 [data-theme="light"] .guide-card {
   background: #ffffff;
