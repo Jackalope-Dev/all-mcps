@@ -54,7 +54,7 @@ export function ConfigValidatorTool() {
       <textarea
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
-        placeholder={'{\n  "mcpServers": {\n    "example": {\n      "command": "npx",\n      "args": ["-y", "@example/mcp-server"]\n    }\n  }\n}'}
+        placeholder={'{\n  "mcpServers": {\n    "github": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-github"]\n    }\n  }\n}'}
         rows={14}
         className="form-input"
         style={{ fontFamily: 'monospace', fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }}

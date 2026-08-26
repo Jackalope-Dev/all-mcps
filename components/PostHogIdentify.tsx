@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { fetchBrowserSession } from '../lib/clientSession';
 
 /**
  * Attaches signed-in users to PostHog person profiles (person_profiles: identified_only).
@@ -11,11 +12,8 @@ export function PostHogIdentify() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/auth/session');
-        if (!res.ok || cancelled) return;
-        const data = (await res.json()) as {
-          user?: { id?: string; email?: string | null; name?: string | null };
-        };
+        const data = await fetchBrowserSession();
+        if (cancelled) return;
         const user = data?.user;
         if (!user?.id && !user?.email) return;
         const ph = (window as any).posthog;

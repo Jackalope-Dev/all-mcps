@@ -107,7 +107,7 @@ Everything above applies to local stdio servers. Remote servers add a few more:
 4. Confirm nothing in the server writes to stdout on a stdio transport.
 5. Check the server's own repository for open issues matching your error text — a fast-moving ecosystem means today's bug might already have a fix merged since the version you installed.
 
-If the server is listed on [AllMCPs](/browse), its listing page shows when it was last checked and whether other users have reported it as broken — a quick way to tell whether the problem is on your end or the server's before you spend an hour debugging a bug that's already been reported upstream. And if you're building a server yourself rather than just installing one, our [guide to architecting production MCP servers](/blog/2026-07-28-architecting-production-mcp-servers) covers the stdout/stderr and error-boundary conventions that prevent most of these failures in the first place.
+If the server is listed on [AllMCPs](/browse), its listing page shows when it was last checked and whether other users have reported it as broken — a quick way to tell whether the problem is on your end or the server's before you spend an hour debugging a bug that's already been reported upstream. And if you're building a server yourself rather than just installing one, our [guide to architecting production MCP servers](/blog/architecting-production-mcp-servers) covers the stdout/stderr and error-boundary conventions that prevent most of these failures in the first place.
 
 Built by [Jackalope Digital](https://jackalope.digital). Give your AI agents superpowers.
 </content>

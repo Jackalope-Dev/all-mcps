@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getAllPosts, getAllTags } from '../../lib/blog';
 import { BlogListClient } from '../../components/BlogListClient';
+import { PageShell, PageHeader } from '../../components/PageShell';
 
 export const dynamic = 'force-static';
 
@@ -54,16 +55,15 @@ export default function BlogPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <main className="page-shell page-shell--content">
-        <div className="page-shell-inner">
-          <header className="page-header">
-            <h1 className="text-page-title">Blog</h1>
-            <p className="text-lead">Notes on MCP, agents, and the AllMCPs directory.</p>
-          </header>
+      <PageShell variant="default">
+        <PageHeader
+          kicker="[ 01 / 02 ] · Editorial & Technical Guides //"
+          title="AllMCPs Blog & Guides"
+          description="In-depth tutorials, protocol deep dives, and production architecture notes for Model Context Protocol builders."
+        />
 
-          <BlogListClient posts={posts} tags={tags} />
-        </div>
-      </main>
+        <BlogListClient posts={posts} tags={tags} />
+      </PageShell>
     </>
   );
 }

@@ -10,8 +10,22 @@ import { CopyBlock } from './CopyBlock';
 
 const customSanitizeSchema = {
   ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames || []), 'iframe'],
   attributes: {
     ...defaultSchema.attributes,
+    iframe: [
+      'src',
+      'width',
+      'height',
+      'title',
+      'frameborder',
+      'allow',
+      'allowfullscreen',
+      'style',
+      'className',
+      'loading',
+      'referrerpolicy',
+    ],
     input: [
       ...(defaultSchema.attributes?.input || []),
       'checked',
@@ -162,6 +176,36 @@ export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMar
         img: ({ src, alt, node: _node, style, ...props }) => (
           <MarkdownImage src={src} alt={alt} repoUrl={repoUrl} style={style} {...props} />
         ),
+        iframe: ({ src, title, node: _node, ...props }) => {
+          const isAllowedVideo =
+            typeof src === 'string' &&
+            (src.startsWith('https://www.youtube.com/embed/') ||
+              src.startsWith('https://www.youtube-nocookie.com/embed/'));
+          if (!isAllowedVideo) return null;
+          return (
+            <div
+              className="my-6 w-full overflow-hidden rounded-xl border border-[var(--border-color)] bg-black/5 shadow-sm dark:bg-white/5"
+              style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0 }}
+            >
+              <iframe
+                src={src}
+                title={title || 'Embedded video'}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+                {...props}
+              />
+            </div>
+          );
+        },
         pre: ({ children }) => {
           const codeEl = React.isValidElement(children)
             ? (children as React.ReactElement<{ className?: string; children?: React.ReactNode }>)

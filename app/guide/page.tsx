@@ -197,11 +197,8 @@ Windows:  %APPDATA%\\Claude\\claude_desktop_config.json`}
                 language="json"
                 code={`{
   "mcpServers": {
-    "example-remote": {
-      "url": "https://example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
-      }
+    "allmcps": {
+      "url": "https://allmcps.com/api/mcp"
     }
   }
 }`}

@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X, Sparkles, Search, LogIn, LogOut } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { Button } from './ui/Button';
+import { fetchBrowserSession } from '../lib/clientSession';
 
 const NAV = [
   { href: '/browse', label: 'Browse' },
@@ -59,15 +60,9 @@ export function SiteHeader() {
   // swaps to "Manage" rather than blocking render on a server session check.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/auth/session');
-        const data = res.ok ? ((await res.json()) as { user?: unknown }) : null;
-        if (!cancelled) setIsSignedIn(Boolean(data?.user));
-      } catch {
-        // Network error — leave the logged-out default in place.
-      }
-    })();
+    fetchBrowserSession().then((data) => {
+      if (!cancelled) setIsSignedIn(Boolean(data?.user));
+    });
     return () => {
       cancelled = true;
     };
@@ -178,7 +173,7 @@ export function SiteHeader() {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="site-nav desktop-only-nav animate-fade-in delay-1" aria-label="Main">
+          <nav className="site-nav desktop-only-nav" aria-label="Main">
             {NAV.map(({ href, label }) => (
               <Link
                 key={href}

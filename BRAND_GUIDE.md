@@ -35,7 +35,8 @@ Used in the logo mark, primary buttons, nav hairline, hero “superpowers”, an
 ## 3. Typography
 - **Primary Font:** [Atkinson Hyperlegible Next](https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next) (sans-serif) — designed so easily confused characters stay distinct (`l` vs `I` vs `1`, `O` vs `0`). Lowercase **`l` has a clear tail**, not a plain vertical bar, so **AllMCPs** does not read as `A11` / `AII`.
 - **Fallbacks:** system UI stack (`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, sans-serif).
-- Use moderately tight letter spacing on large headings (`letter-spacing: -0.01em` to `-0.03em`) and heavy font weights (`700`–`800`) for hero text and logos. Avoid ultra-tight tracking on the wordmark — it collapses the double-`l`.
+- Use moderately tight letter spacing on large headings (`letter-spacing: -0.01em` to `-0.03em`) and weights `600`–`700` for hero text (Firecrawl uses 500; we keep slightly heavier so Atkinson still reads at display size). Avoid ultra-tight tracking on the wordmark — it collapses the double-`l`.
+- **Mono:** Geist Mono (`--font-geist-mono` / `--font-mono`) for ASCII, section kickers, terminal chrome, and tabular figures. Never for UI labels.
 - Use `400` or `500` font weights for body text to ensure readability.
 - Wordmark markup: split as `All` (gradient) + `MCPs` (solid), via the `.wordmark-all` / `.wordmark-mcps` classes.
 
@@ -56,9 +57,10 @@ Our UI language takes direct inspiration from modern high-performance dev tools 
 
 ### ASCII Code Canvas & Atmosphere
 - **Component:** `components/ui/AsciiCodeCanvas.tsx`
-- Renders an undulating interactive matrix wave of JSON-RPC / MCP characters (`{ } [ ] / * $ > # 0 1 mcp rpc`) in cyan/blue/slate tones.
-- Automatically throttles/pauses when out of view and honors `prefers-reduced-motion`.
-- Paired with `components/ui/AmbientCodeBackground.tsx` for hero/marketing section backdrops.
+- Classic ASCII fire, remapped onto brand cyan: heat seeds at the floor, averages upward, and maps onto a density ramp plus slate → blue → cyan → white.
+- Frame rate is ~85ms (Firecrawl's flame cadence), not 60fps. Pointer proximity adds a local heat bloom. Pauses off-screen. `prefers-reduced-motion` gets a single static frame.
+- Paired with `components/ui/AmbientCodeBackground.tsx` (graph-paper grid + `[ TAG ]` labels) for hero/marketing section backdrops.
+- Section kickers use the Firecrawl index form: `[ 01 / 06 ] · Discovery //`.
 
 ### Shared UI Components
 Always use canonical shared components instead of hand-rolling one-off styles:

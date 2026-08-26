@@ -45,6 +45,8 @@ export function ThemeSwitcher() {
   // Using layout effect ensures the attribute is applied BEFORE the browser paints any frame,
   // preventing any hydration-triggered flash of dark mode default styles.
   useIsomorphicLayoutEffect(() => {
+    document.documentElement.setAttribute('data-hydrated', 'true');
+
     const applyTheme = (mode: ThemeMode) => {
       const root = document.documentElement;
       let effectiveTheme: 'dark' | 'light' = 'dark';

@@ -272,12 +272,9 @@ export default function McpTroubleshootingPage() {
               <CopyBlock
                 code={`{
   "mcpServers": {
-    "example": {
+    "sqlite": {
       "command": "npx",
-      "args": ["-y", "some-mcp-package"],
-      "env": {
-        "API_KEY": "your-key"
-      }
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "/path/to/database.db"]
     }
   }
 }`}

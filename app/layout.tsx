@@ -1,18 +1,16 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Atkinson_Hyperlegible_Next } from "next/font/google";
+import { Atkinson_Hyperlegible_Next, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
-import { WebMCPProvider } from "../components/WebMCPProvider";
 import { CookieBanner } from "../components/CookieBanner";
-import { NewsletterModal } from "../components/NewsletterModal";
 import { ToastProvider } from "../components/ui/Toast";
 import { PurchaseTracker } from "../components/PurchaseTracker";
 import { CommandPaletteLazy } from "../components/CommandPaletteLazy";
 import { PostHogIdentify } from "../components/PostHogIdentify";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
-import { FloatingStackDock } from "../components/ui/FloatingStackDock";
+import { DeferredChrome } from "../components/DeferredChrome";
 import "./globals.css";
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
@@ -31,6 +29,15 @@ const sans = Atkinson_Hyperlegible_Next({
   variable: "--font-atkinson",
   display: "swap",
   adjustFontFallback: false,
+});
+
+// Geist Mono is Firecrawl's code/data face — used here for ASCII motifs,
+// section kickers, terminal chrome, and tabular figures. Atkinson stays
+// on all UI and prose (see BRAND_GUIDE.md).
+const mono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -93,7 +100,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={sans.variable} suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`} data-theme="dark" suppressHydrationWarning>
       <head>
         {/*
           A plain <script> tag (not next/script) on purpose: this Next.js version's
@@ -121,69 +128,57 @@ export default function RootLayout({
                   }
                   document.documentElement.setAttribute('data-theme', effectiveTheme);
                   window.__allmcpsTheme = effectiveTheme;
-
-                  // React 19 hydration diffs documentElement against JSX props and removes
-                  // undeclared attributes like data-theme. This MutationObserver instantly
-                  // catches and restores data-theme in the synchronous microtask phase before
-                  // the browser can paint a dark frame.
-                  var observer = new MutationObserver(function(mutations) {
-                    for (var i = 0; i < mutations.length; i++) {
-                      if (mutations[i].attributeName === 'data-theme') {
-                        var current = document.documentElement.getAttribute('data-theme');
-                        if (!current && window.__allmcpsTheme) {
-                          document.documentElement.setAttribute('data-theme', window.__allmcpsTheme);
-                        }
-                      }
-                    }
-                  });
-                  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
                 } catch (e) {}
               })();
             `,
           }}
         />
         {/*
-          Service worker cleanup. This site ships NO service worker.
-          Runs on load, is scope/path-independent (unregisters all registrations),
-          and clears any stale Cache Storage silently in the background without
-          forcing a page reload or screen flash.
+          Consent defaults must run before GTM. A raw <script> in SSR HTML executes
+          while parsing <head>; next/script beforeInteractive is injected later via
+          client JS and does not actually block hydration in this Next.js version.
         */}
         <script
-          id="sw-killswitch"
+          id="google-consent-mode"
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
-                try {
-                  if (!('serviceWorker' in navigator)) return;
-                  navigator.serviceWorker.getRegistrations().then(function(regs) {
-                    if (!regs || regs.length === 0) return;
-                    Promise.all(regs.map(function(r) {
-                      return r.unregister().catch(function() {});
-                    })).then(function() {
-                      if (window.caches && caches.keys) {
-                        return caches.keys().then(function(keys) {
-                          return Promise.all(keys.map(function(k) {
-                            return caches.delete(k).catch(function() {});
-                          }));
-                        }).catch(function() {});
-                      }
-                    }).catch(function() {});
-                  }).catch(function() {});
-                } catch (e) {}
-              })();
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('consent', 'default', {
+                'analytics_storage': 'denied',
+                'ad_storage': 'denied',
+                'ad_user_data': 'denied',
+                'ad_personalization': 'denied'
+              });
             `,
           }}
         />
-        <Script id="google-consent-mode" strategy="beforeInteractive">
+        {/*
+          Service worker cleanup. This site ships NO service worker.
+          Off the critical path — unregistering after first paint is enough and
+          avoids competing with hydration.
+        */}
+        <Script id="sw-killswitch" strategy="lazyOnload">
           {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('consent', 'default', {
-              'analytics_storage': 'denied',
-              'ad_storage': 'denied',
-              'ad_user_data': 'denied',
-              'ad_personalization': 'denied'
-            });
+            (function() {
+              try {
+                if (!('serviceWorker' in navigator)) return;
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  if (!regs || regs.length === 0) return;
+                  Promise.all(regs.map(function(r) {
+                    return r.unregister().catch(function() {});
+                  })).then(function() {
+                    if (window.caches && caches.keys) {
+                      return caches.keys().then(function(keys) {
+                        return Promise.all(keys.map(function(k) {
+                          return caches.delete(k).catch(function() {});
+                        }));
+                      }).catch(function() {});
+                    }
+                  }).catch(function() {});
+                }).catch(function() {});
+              } catch (e) {}
+            })();
           `}
         </Script>
         {/*
@@ -233,12 +228,11 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <PurchaseTracker />
         </Suspense>
-        <WebMCPProvider />
         <PostHogIdentify />
         <CommandPaletteLazy />
         <CookieBanner />
-        <NewsletterModal />
         <ToastProvider />
+        <DeferredChrome />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -291,7 +285,6 @@ export default function RootLayout({
         </div>
         <SiteFooter />
         <ThemeSwitcher />
-        <FloatingStackDock />
       </body>
     </html>
   );

@@ -52,6 +52,9 @@ const guidesList = [
     level: 'Beginner',
     readTime: '5 min read',
     icon: BookOpen,
+    accent: '#00e5ff',
+    lightAccent: '#0284c7',
+    bentoSize: 'hero' as const,
     badgeVariant: 'official' as const,
     highlights: [
       'Core architecture & USB-C analogy',
@@ -70,6 +73,9 @@ const guidesList = [
     level: 'Setup & Config',
     readTime: '8 min read',
     icon: Terminal,
+    accent: '#34d399',
+    lightAccent: '#047857',
+    bentoSize: 'standard' as const,
     badgeVariant: 'verified' as const,
     highlights: [
       'Configuring claude_desktop_config.json',
@@ -88,6 +94,9 @@ const guidesList = [
     level: 'Developer',
     readTime: '15 min read',
     icon: Cpu,
+    accent: '#c084fc',
+    lightAccent: '#7e22ce',
+    bentoSize: 'standard' as const,
     badgeVariant: 'premium' as const,
     highlights: [
       'TypeScript SDK & FastMCP for Python',
@@ -106,6 +115,9 @@ const guidesList = [
     level: 'DevOps',
     readTime: '14 min read',
     icon: Server,
+    accent: '#fb923c',
+    lightAccent: '#c2410c',
+    bentoSize: 'wide' as const,
     badgeVariant: 'premium' as const,
     highlights: [
       'Cloudflare Workers, Docker & Fly.io blueprints',
@@ -124,6 +136,9 @@ const guidesList = [
     level: 'Enterprise',
     readTime: '12 min read',
     icon: Key,
+    accent: '#fb7185',
+    lightAccent: '#be123c',
+    bentoSize: 'standard' as const,
     badgeVariant: 'official' as const,
     highlights: [
       'stdio vs Remote HTTP/SSE security boundary',
@@ -142,6 +157,9 @@ const guidesList = [
     level: 'Security',
     readTime: '10 min read',
     icon: ShieldCheck,
+    accent: '#f43f5e',
+    lightAccent: '#9f1239',
+    bentoSize: 'wide' as const,
     badgeVariant: 'verified' as const,
     highlights: [
       'The MCP threat model, plainly explained',
@@ -160,6 +178,9 @@ const guidesList = [
     level: 'Troubleshooting',
     readTime: '12 min read',
     icon: Wrench,
+    accent: '#fbbf24',
+    lightAccent: '#b45309',
+    bentoSize: 'standard' as const,
     badgeVariant: 'verified' as const,
     highlights: [
       'Symptom → cause map for common failures',
@@ -178,6 +199,9 @@ const guidesList = [
     level: 'SEO & AEO',
     readTime: '11 min read',
     icon: Search,
+    accent: '#38bdf8',
+    lightAccent: '#0369a1',
+    bentoSize: 'standard' as const,
     badgeVariant: 'verified' as const,
     highlights: [
       'GSC & Bing Webmaster API automation',
@@ -196,6 +220,9 @@ const guidesList = [
     level: 'Protocol',
     readTime: '13 min read',
     icon: GitBranch,
+    accent: '#a78bfa',
+    lightAccent: '#6d28d9',
+    bentoSize: 'standard' as const,
     badgeVariant: 'official' as const,
     highlights: [
       'Why MCP moved to a stateless, per-request model',
@@ -247,62 +274,80 @@ export default function GuidesLandingPage() {
       />
       <PageShell variant="default">
         <PageHeader
-          centered
+          kicker="[ 01 / 04 ] · Comprehensive Documentation & Tutorials //"
           title="Model Context Protocol Guides"
           description="Master MCP from the ground up: understand the protocol, connect your favorite AI client, build production-ready servers, or fix connection failures when something breaks."
         />
 
-          {/* Featured Pillar Guides Grid */}
-          <div className="guides-grid">
-            {guidesList.map((guide) => {
-              const Icon = guide.icon;
-              return (
-                <Card key={guide.slug} padding="lg" hoverable className="guide-card group">
-                  <div>
-                    <div className="guide-card-header">
-                      <div className="guide-card-icon">
-                        <Icon size={22} />
-                      </div>
+        {/* Featured Pillar Guides Bento Grid */}
+        <div className="guides-bento-grid">
+          {guidesList.map((guide) => {
+            const Icon = guide.icon;
+            const bentoClass = `guide-card--${guide.bentoSize}`;
+
+            return (
+              <div
+                key={guide.slug}
+                className={`guide-card surface grid-crosshair grid-crosshair-tl grid-crosshair-br ${bentoClass}`}
+                style={
+                  {
+                    '--guide-accent': guide.accent,
+                    '--guide-light-accent': guide.lightAccent,
+                  } as React.CSSProperties
+                }
+              >
+                <div>
+                  <div className="guide-card-header">
+                    <div className="guide-card-icon">
+                      <Icon size={20} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className="guide-card-time">{guide.readTime}</span>
                       <Badge variant={guide.badgeVariant}>{guide.level}</Badge>
-                    </div>
-
-                    <h2 className="guide-card-title">
-                      {guide.title}
-                    </h2>
-                    <div className="guide-card-meta">
-                      {guide.subtitle} &middot; {guide.readTime}
-                    </div>
-                    <p className="guide-card-description">
-                      {guide.description}
-                    </p>
-
-                    <div className="guide-card-highlights">
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>
-                        What you&rsquo;ll learn:
-                      </span>
-                      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {guide.highlights.map((highlight) => (
-                          <li key={highlight} className="guide-card-highlight-item">
-                            <CheckCircle2 size={15} style={{ color: 'var(--accent-color)', flexShrink: 0, marginTop: '2px' }} />
-                            <span>{highlight}</span>
-                          </li>
-                        ))}
-                      </ul>
                     </div>
                   </div>
 
-                  <Link
-                    href={guide.href}
-                    className="btn btn-primary"
-                    style={{ width: '100%', justifyContent: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
-                  >
-                    <span>Read Guide</span>
-                    <ArrowRight size={16} />
-                  </Link>
-                </Card>
-              );
-            })}
-          </div>
+                  <h2 className="guide-card-title">
+                    <Link href={guide.href} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      {guide.title}
+                    </Link>
+                  </h2>
+
+                  <div className="guide-card-meta">
+                    <span className="guide-card-dot" />
+                    <span>{guide.subtitle}</span>
+                  </div>
+
+                  <p className="guide-card-description">
+                    {guide.description}
+                  </p>
+
+                  <div className="guide-card-highlights">
+                    <span className="guide-card-highlights-label">
+                      Key Takeaways:
+                    </span>
+                    <ul className="guide-card-highlights-list">
+                      {guide.highlights.map((highlight) => (
+                        <li key={highlight} className="guide-card-highlight-item">
+                          <CheckCircle2 size={14} className="guide-card-check" />
+                          <span>{highlight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <Link
+                  href={guide.href}
+                  className="guide-card-cta-btn"
+                >
+                  <span>Read Guide</span>
+                  <ArrowRight size={15} />
+                </Link>
+              </div>
+            );
+          })}
+        </div>
 
           {/* Troubleshooting deep dives — long-tail SEO posts linked from the hub */}
           <section style={{ marginTop: '3.5rem', marginBottom: '1rem' }}>

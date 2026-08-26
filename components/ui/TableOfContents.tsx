@@ -141,25 +141,27 @@ export function TableOfContents({
         </button>
 
         {isOpen && (
-          <ul className="toc-sidebar-list mt-3 pt-3 border-t border-slate-800 max-h-[60vh] overflow-y-auto">
-            {items.map((item) => {
-              const isActive = item.id === activeId;
-              const isH3 = item.level === 3;
-              return (
-                <li key={item.id}>
-                  <a
-                    href={`#${item.id}`}
-                    onClick={(e) => handleLinkClick(e, item.id)}
-                    className={`toc-link ${isH3 ? 'toc-link--h3' : ''} ${
-                      isActive ? 'is-active' : ''
-                    }`}
-                  >
-                    {item.text}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="mt-3 pt-3 border-t border-[var(--border-color)] max-h-[60vh] overflow-y-auto">
+            <ul className="toc-sidebar-list">
+              {items.map((item) => {
+                const isActive = item.id === activeId;
+                const isH3 = item.level === 3;
+                return (
+                  <li key={item.id}>
+                    <a
+                      href={`#${item.id}`}
+                      onClick={(e) => handleLinkClick(e, item.id)}
+                      className={`toc-link ${isH3 ? 'toc-link--h3' : ''} ${
+                        isActive ? 'is-active' : ''
+                      }`}
+                    >
+                      {item.text}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </div>
 

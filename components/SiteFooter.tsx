@@ -3,6 +3,7 @@ import { BrandLogo } from './BrandLogo';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { BadgeMarquee } from './BadgeMarquee';
 import { FooterNavSection } from './FooterNavSection';
+import { AsciiCodeCanvas } from './ui/AsciiCodeCanvas';
 
 /**
  * Site footer — kept to ~5 columns with concise link sets so mobile users
@@ -11,17 +12,21 @@ import { FooterNavSection } from './FooterNavSection';
 export function SiteFooter() {
   return (
     <footer className="container site-footer grid-crosshair grid-crosshair-tl grid-crosshair-tr">
-      <div className="newsletter-footer-cta surface-interactive">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <h2 className="footer-heading" style={{ margin: 0 }}>Stay in the loop</h2>
-          </div>
+      <div className="newsletter-footer-cta">
+        <AsciiCodeCanvas
+          className="newsletter-ascii-bg"
+          opacity={0.28}
+          density={14}
+        />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <h2 className="footer-heading" style={{ margin: '0 0 0.25rem 0', fontSize: '1.2rem' }}>Stay in the loop</h2>
           <p className="site-footer-blurb" style={{ margin: 0 }}>
             Get new MCP servers and top picks in your inbox.
           </p>
         </div>
-        <NewsletterSignupForm source="footer" compact />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <NewsletterSignupForm source="footer" compact />
+        </div>
       </div>
       <div className="site-footer-grid">
         <div className="site-footer-brand">

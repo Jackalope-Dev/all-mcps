@@ -14,16 +14,21 @@ function formatCompactNumber(num: number): string {
     const formatted = (num / 1_000).toFixed(1);
     return `${formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted}k+`;
   }
-  return num.toLocaleString();
+  return num.toLocaleString('en-US');
 }
 
 function formatExactNumber(num: number): string {
-  return num.toLocaleString();
+  return num.toLocaleString('en-US');
+}
+
+function hasCountableStats(stats?: SiteStats) {
+  if (!stats) return false;
+  return (stats.totalServers ?? 0) > 0 || (stats.toolsIndexed ?? 0) > 0 || (stats.totalViews ?? 0) > 0;
 }
 
 export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
   const [stats, setStats] = useState(initialStats);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => hasCountableStats(initialStats));
 
   // The homepage shell is ISR-cached (see app/page.tsx), so these numbers can
   // be frozen to a stale/zeroed build-time snapshot — see app/api/site-stats.
@@ -61,7 +66,11 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
   // guess growing once data lands.
   return (
     <div className="stats-banner" aria-label="Platform statistics">
-      <div className="stats-banner-pill">
+      <Link
+        href="/trust"
+        className="stats-banner-pill"
+        title="View the live verified registry and traffic analytics on /trust"
+      >
         {!loaded ? (
           <span className="stats-banner-item">
             <Loader2 size={13} className="animate-spin" style={{ color: 'var(--text-secondary)' }} aria-hidden="true" />
@@ -71,8 +80,8 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
           <>
             {totalServers > 0 && (
               <span className="stats-banner-item">
-                <Cpu size={14} style={{ color: '#34d399' }} aria-hidden="true" />
-                <strong>{formatExactNumber(totalServers)}</strong> MCP servers
+                <Cpu size={14} style={{ color: '#34d399', flexShrink: 0 }} aria-hidden="true" />
+                <span><strong>{formatExactNumber(totalServers)}</strong>&nbsp;MCP servers</span>
               </span>
             )}
 
@@ -81,8 +90,8 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
                 <span className="stats-banner-dot" aria-hidden="true">
                   •
                 </span>
-                <Wrench size={13} style={{ color: '#fbbf24' }} aria-hidden="true" />
-                <strong>{formatCompactNumber(toolsIndexed)}</strong> tools indexed
+                <Wrench size={13} style={{ color: '#fbbf24', flexShrink: 0 }} aria-hidden="true" />
+                <span><strong>{formatCompactNumber(toolsIndexed)}</strong>&nbsp;tools indexed</span>
               </span>
             )}
 
@@ -91,8 +100,8 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
                 <span className="stats-banner-dot" aria-hidden="true">
                   •
                 </span>
-                <Eye size={13} style={{ color: '#60a5fa' }} aria-hidden="true" />
-                <strong>{formatCompactNumber(totalViews)}</strong> views
+                <Eye size={13} style={{ color: '#60a5fa', flexShrink: 0 }} aria-hidden="true" />
+                <span><strong>{formatCompactNumber(totalViews)}</strong>&nbsp;views</span>
               </span>
             )}
 
@@ -101,22 +110,13 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
                 <span className="stats-banner-dot" aria-hidden="true">
                   •
                 </span>
-                <Bot size={14} style={{ color: 'var(--brand-cyan)' }} aria-hidden="true" />
-                <strong>{formatCompactNumber(aiReads)}</strong> AI reads
+                <Bot size={14} style={{ color: 'var(--tab-discover, #00e5ff)', flexShrink: 0 }} aria-hidden="true" />
+                <span><strong>{formatCompactNumber(aiReads)}</strong>&nbsp;AI reads</span>
               </span>
             )}
           </>
         )}
-
-        <Link href="/trust" className="stats-banner-item stats-banner-link" title="See the live AI traffic breakdown on Trust">
-          {(loaded && hasCountStat) || !loaded ? (
-            <span className="stats-banner-dot" aria-hidden="true">
-              •
-            </span>
-          ) : null}
-          <span className="stats-banner-more">Trust →</span>
-        </Link>
-      </div>
+      </Link>
     </div>
   );
 }

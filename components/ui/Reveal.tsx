@@ -8,6 +8,7 @@ interface RevealProps {
   /** Stagger index — multiplies a small delay so sibling Reveals cascade in. */
   index?: number;
   as?: 'div' | 'section';
+  style?: React.CSSProperties;
 }
 
 /**
@@ -18,7 +19,7 @@ interface RevealProps {
  * animation class client-side, so it degrades to "just visible" without JS
  * and is a no-op under prefers-reduced-motion (handled in globals.css).
  */
-export function Reveal({ children, className = '', index = 0, as = 'div' }: RevealProps) {
+export function Reveal({ children, className = '', index = 0, as = 'div', style }: RevealProps) {
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -43,7 +44,7 @@ export function Reveal({ children, className = '', index = 0, as = 'div' }: Reve
     <Tag
       ref={ref as React.Ref<HTMLDivElement & HTMLElement>}
       className={`reveal ${visible ? 'is-visible' : ''} ${className}`.trim()}
-      style={{ '--reveal-index': index } as React.CSSProperties}
+      style={{ '--reveal-index': index, ...style } as React.CSSProperties}
     >
       {children}
     </Tag>

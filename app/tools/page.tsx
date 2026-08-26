@@ -1,6 +1,8 @@
-import { Metadata } from 'next';
-import { Card } from '../../components/ui/Card';
-import { FileJson, CheckCircle2, Calculator, Code2, ShieldCheck } from 'lucide-react';
+import React from 'react';
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { FileJson, CheckCircle2, Calculator, Code2, ShieldCheck, ArrowRight } from 'lucide-react';
+import { PageShell, PageHeader } from '../../components/PageShell';
 
 export const metadata: Metadata = {
   title: 'Free MCP Developer Tools — Generators & Validators',
@@ -27,64 +29,109 @@ const TOOLS = [
     href: '/stack',
     icon: FileJson,
     title: 'MCP Stack Builder',
+    kicker: 'Stack Builder',
+    bentoSize: 'hero' as const,
+    accent: '#00e5ff',
+    lightAccent: '#0284c7',
     description:
-      'Select your favorite MCP tools and export a single unified claude_desktop_config.json or Cursor setup in seconds.',
+      'Select your favorite MCP tools and export a single unified claude_desktop_config.json or Cursor setup in seconds with interactive live previews.',
+    actionLabel: 'Build Your Stack',
   },
   {
     href: '/compare',
     icon: ShieldCheck,
     title: 'Side-by-Side Server Comparison',
+    kicker: 'Comparison',
+    bentoSize: 'standard' as const,
+    accent: '#c084fc',
+    lightAccent: '#7e22ce',
     description:
-      'Compare 2 to 4 MCP servers side-by-side on tool capabilities, installation requirements, GitHub stars, and security.',
+      'Compare 2 to 4 MCP servers side-by-side on tool capabilities, installation requirements, GitHub stars, and security posture.',
+    actionLabel: 'Compare Servers',
   },
   {
     href: '/tools/openapi-to-mcp',
     icon: Code2,
     title: 'OpenAPI to MCP Generator',
+    kicker: 'Code Generator',
+    bentoSize: 'standard' as const,
+    accent: '#34d399',
+    lightAccent: '#047857',
     description:
       'Convert OpenAPI 3.0/3.1 or Swagger specs into runnable TypeScript SDK or Python FastMCP server code automatically.',
+    actionLabel: 'Generate Code',
   },
   {
     href: '/tools/protocol-inspector',
     icon: ShieldCheck,
     title: 'Protocol Inspector & Debugger',
+    kicker: 'Protocol Debugger',
+    bentoSize: 'wide' as const,
+    accent: '#fbbf24',
+    lightAccent: '#b45309',
     description:
       'Inspect raw JSON-RPC 2.0 payloads, validate schema compliance, catch protocol errors, and preview live AI client rendering.',
+    actionLabel: 'Inspect Payloads',
   },
   {
     href: '/tools/config-generator',
     icon: FileJson,
     title: 'Config Generator',
+    kicker: 'Configuration',
+    bentoSize: 'standard' as const,
+    accent: '#38bdf8',
+    lightAccent: '#0369a1',
     description:
-      'Build a ready-to-paste claude_desktop_config.json (or Cursor/VS Code/Windsurf equivalent) from servers in the directory or your own custom setup.',
+      'Build a ready-to-paste claude_desktop_config.json (or Cursor/VS Code/Windsurf equivalent) from directory servers or custom setups.',
+    actionLabel: 'Generate Config',
   },
   {
     href: '/tools/config-auditor',
     icon: CheckCircle2,
     title: 'Config Auditor & Merger',
+    kicker: 'Security & Audit',
+    bentoSize: 'wide' as const,
+    accent: '#fb7185',
+    lightAccent: '#be123c',
     description:
       'Audit your MCP client JSON configs for unreplaced API key placeholders, syntax issues, and merge directory servers in 1 click.',
+    actionLabel: 'Audit Configs',
   },
   {
     href: '/tools/playground',
     icon: ShieldCheck,
     title: 'Interactive MCP Playground',
+    kicker: 'Live Testing',
+    bentoSize: 'standard' as const,
+    accent: '#818cf8',
+    lightAccent: '#4338ca',
     description:
       'Test remote JSON-RPC 2.0 MCP endpoints in your browser — execute initialize, tools/list, and tools/call requests with live logging.',
+    actionLabel: 'Open Playground',
   },
   {
     href: '/tools/config-validator',
     icon: CheckCircle2,
     title: 'Config Validator',
+    kicker: 'Schema Validator',
+    bentoSize: 'standard' as const,
+    accent: '#2dd4bf',
+    lightAccent: '#0f766e',
     description:
       'Paste your MCP config JSON and catch syntax errors, missing fields, and path issues before restarting your client.',
+    actionLabel: 'Validate JSON',
   },
   {
     href: '/tools/token-calculator',
     icon: Calculator,
     title: 'Token Cost Calculator',
+    kicker: 'Context Budget',
+    bentoSize: 'standard' as const,
+    accent: '#f472b6',
+    lightAccent: '#db2777',
     description:
       "Estimate how much of your model's context window your installed MCP servers' tool schemas consume on every turn.",
+    actionLabel: 'Calculate Overhead',
   },
 ];
 
@@ -121,43 +168,60 @@ const jsonLd = {
 
 export default function ToolsHubPage() {
   return (
-    <main className="page-shell page-shell--tool">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="page-shell-inner">
-        <div className="surface page-panel grid-crosshair grid-crosshair-tl grid-crosshair-br">
-          <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 2.5rem' }}>
-            <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Free MCP Developer Tools</h1>
-            <p className="text-lead" style={{ margin: 0 }}>
-              Browser-based utilities for building, inspecting, validating, and optimizing Model Context Protocol (MCP) servers and client configurations. 100% private &mdash; nothing leaves your browser.
-            </p>
-          </div>
-          <ul
-            style={{
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '1.5rem',
-            }}
-          >
-            {TOOLS.map(({ href, icon: Icon, title, description }) => (
-              <li key={href}>
-                <Card href={href} hoverable glow crosshair style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <Icon size={28} style={{ color: 'var(--accent-color)', marginBottom: '1rem', flexShrink: 0 }} />
-                  <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{title}</h2>
+      <PageShell variant="default">
+        <PageHeader
+          title="Free MCP Developer Tools"
+          description="Browser-based utilities for building, inspecting, validating, and optimizing Model Context Protocol (MCP) servers and client configurations. 100% private — nothing leaves your browser."
+        />
+
+        <div className="tools-bento-grid">
+          {TOOLS.map((tool) => {
+            const Icon = tool.icon;
+            const bentoClass = `tool-bento-card--${tool.bentoSize}`;
+
+            return (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className={`tool-bento-card surface grid-crosshair grid-crosshair-tl grid-crosshair-br ${bentoClass}`}
+                style={
+                  {
+                    '--tool-accent': tool.accent,
+                    '--tool-light-accent': tool.lightAccent,
+                  } as React.CSSProperties
+                }
+              >
+                <div>
+                  <div className="tool-bento-header">
+                    <div className="tool-bento-icon">
+                      <Icon size={20} />
+                    </div>
+                    <div className="tool-bento-kicker">
+                      <span className="tool-bento-dot" />
+                      <span>{tool.kicker}</span>
+                    </div>
                   </div>
-                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55, flexGrow: 1 }}>{description}</p>
-                </Card>
-              </li>
-            ))}
-          </ul>
+
+                  <h2 className="tool-bento-title">{tool.title}</h2>
+                  <p className="tool-bento-desc">{tool.description}</p>
+                </div>
+
+                <div className="tool-bento-footer">
+                  <span className="tool-bento-cta">
+                    <span>{tool.actionLabel}</span>
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
-      </div>
-    </main>
+      </PageShell>
+    </>
   );
 }

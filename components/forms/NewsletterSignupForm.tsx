@@ -1,11 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { TurnstileWidget } from '../ui/TurnstileWidget';
 import { toast } from '../ui/Toast';
 import { trackNewsletterSignup } from '../../lib/gtag';
+
+const TurnstileWidget = dynamic(
+  () => import('../ui/TurnstileWidget').then((m) => m.TurnstileWidget),
+  { ssr: false }
+);
 
 type NewsletterSource = 'footer' | 'homepage' | 'modal';
 
@@ -21,6 +26,7 @@ export function NewsletterSignupForm({
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [captchaReady, setCaptchaReady] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -84,15 +90,18 @@ export function NewsletterSignupForm({
         inputMode="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        onFocus={() => setCaptchaReady(true)}
         aria-label="Email address"
       />
-      <TurnstileWidget
-        appearance="interaction-only"
-        compact
-        onSuccess={setToken}
-        onExpire={() => setToken('')}
-        onError={() => setToken('')}
-      />
+      {captchaReady ? (
+        <TurnstileWidget
+          appearance="interaction-only"
+          compact
+          onSuccess={setToken}
+          onExpire={() => setToken('')}
+          onError={() => setToken('')}
+        />
+      ) : null}
       <Button variant="primary" type="submit" disabled={status === 'loading'}>
         {status === 'loading' ? 'Subscribing…' : 'Subscribe'}
       </Button>

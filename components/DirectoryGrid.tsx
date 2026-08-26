@@ -4,13 +4,9 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
-import { Input } from './ui/Input';
 import { Button } from './ui/Button';
-import { FeaturedMarquee } from './FeaturedMarquee';
-import { FeaturedCards } from './FeaturedCards';
-import { HeroSection } from './HeroSection';
-import { BentoShowcase } from './BentoShowcase';
-import { Eye, Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Package, Sparkles, Grid, ShieldCheck, Zap, CheckCircle2, ArrowRight, Copy, Check, Wrench, Clock, Dices } from 'lucide-react';
+
+import { Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Wrench, Clock } from 'lucide-react';
 import { SafeMarkdown } from './ui/SafeMarkdown';
 import { EmptyState } from './EmptyState';
 import { ServerAvatar } from './ui/ServerAvatar';
@@ -20,14 +16,10 @@ import {
   isVerifiedListing as isVerifiedListingShared,
 } from '../lib/featuredStatus';
 import { parseServerName } from '../lib/displayName';
-import { trackSearch, trackOutboundClick } from '../lib/gtag';
-import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
-import { OutboundLink } from './ui/OutboundLink';
+import { trackSearch } from '../lib/gtag';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { SponsorAdUnit } from './ads/SponsorAdUnit';
-import { StatsBanner } from './StatsBanner';
-import type { SiteStats } from '../lib/siteStats';
-import { DIRECTORY_CATEGORIES, CATEGORY_GROUPS, getCategoryMeta, parseCategoryLabel, categorySlug, normalizeCategory } from '../lib/categories';
+import { DIRECTORY_CATEGORIES, getCategoryMeta, parseCategoryLabel, categorySlug, normalizeCategory } from '../lib/categories';
 import { compileQuery, scoreServerMatch, engagementScore, trendingScore } from '../lib/search';
 import { formatCommitAge, formatFullDate, formatCompactNumber } from '../lib/format';
 
@@ -84,26 +76,28 @@ type SortMode = 'relevance' | 'trending' | 'most_upvoted' | 'most_viewed' | 'new
 type TechStack = 'all' | 'typescript' | 'python' | 'go' | 'rust';
 type TransportKind = 'all' | 'stdio' | 'remote';
 
-
+/** Deterministic slot so SSR HTML and client hydration produce the same tree.
+ *  `Math.random()` here remounted the entire grid on every load. */
+function stableAdSlot(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (Math.imul(h, 31) + seed.charCodeAt(i)) | 0;
+  }
+  return 3 + (Math.abs(h) % 8);
+}
 
 export default function DirectoryGrid({
   initialServers,
-  marqueeServers = [],
-  featuredCards = [],
   initialCategory = null,
   initialQuery = '',
   variant = 'landing',
   totalCount,
   lazyFeedUrl,
-  siteStats,
-  fullCategoryCounts,
 }: {
   initialServers: Server[];
-  marqueeServers?: Server[];
-  featuredCards?: Server[];
   initialCategory?: string | null;
   initialQuery?: string;
-  /** `landing` = homepage with marketing hero; `browse` = dedicated list/filter page */
+  /** `landing` = homepage catalog slice; `browse` = dedicated list/filter page */
   variant?: 'landing' | 'browse';
   /** Full catalog size, when `initialServers` is a truncated subset (landing page only). Drives the "browse all" callout. */
   totalCount?: number;
@@ -113,10 +107,6 @@ export default function DirectoryGrid({
    * search/sort/filter cover everything without shipping the whole catalog in HTML.
    */
   lazyFeedUrl?: string;
-  /** Aggregate platform stats (AI system reads, monthly visitors, countries) for hero social proof. */
-  siteStats?: SiteStats;
-  /** Full category counts from the backend catalog (landing view). */
-  fullCategoryCounts?: Record<string, number>;
 }) {
   const isBrowse = variant === 'browse';
   const browseBase = '/browse';
@@ -139,11 +129,11 @@ export default function DirectoryGrid({
   // localStorage may override after mount.
   const [viewMode, setViewMode] = useState<ViewMode>(isBrowse ? 'list' : 'grid');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(30);
+  const [visibleCount, setVisibleCount] = useState(isBrowse ? 30 : 12);
 
   const SEARCH_PLACEHOLDERS = useMemo(
     () => [
-      `Search ${typeof totalCount === 'number' && totalCount > 0 ? totalCount.toLocaleString() + '+' : '10,000+'} MCP tools (e.g. GitHub, Postgres, Slack)...`,
+      `Search ${typeof totalCount === 'number' && totalCount > 0 ? totalCount.toLocaleString('en-US') + '+' : '10,000+'} MCP tools (e.g. GitHub, Postgres, Slack)...`,
       'Try searching: "find latest btc prices"...',
       'Try searching: "check transit times & train schedules"...',
       'Try searching: "query postgres database"...',
@@ -182,8 +172,10 @@ export default function DirectoryGrid({
   // a sort the user explicitly picked. Entering a query switches to relevance;
   // clearing it drops relevance back to trending (any other pick is preserved).
   const prevQueryEmptyRef = useRef(!initialQuery.trim());
-  // Stable random ad slot — picked once on mount, survives filter/sort re-renders
-  const adSlotRef = useRef(Math.floor(Math.random() * 8) + 3); // slot 3–10
+  const adSlot = useMemo(
+    () => stableAdSlot(initialServers[0]?.id ?? 'directory'),
+    [initialServers]
+  );
   useEffect(() => {
     const empty = !searchQuery.trim();
     if (!empty && prevQueryEmptyRef.current) {
@@ -280,18 +272,6 @@ export default function DirectoryGrid({
   const categories = useMemo(() => {
     const cats = new Set(servers.map((s) => s.category));
     return Array.from(cats).sort();
-  }, [servers]);
-
-  // Top categories by count for quick-filter tags
-  const topCategories = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const s of servers) {
-      counts.set(s.category, (counts.get(s.category) || 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([name]) => name);
   }, [servers]);
 
   // Precompile the query once per keystroke; scoring stays cheap per row.
@@ -559,8 +539,6 @@ export default function DirectoryGrid({
     selectedTransport !== 'all' ||
     selectedPricing !== 'all' ||
     selectedAuth !== 'all';
-  // Discovery chrome (marquee / featured) only on the marketing landing page
-  const showDiscovery = !isBrowse;
   const categoryMeta = selectedCategory ? parseCategoryLabel(selectedCategory) : null;
 
   // Width for the category select so long names are never clipped
@@ -572,7 +550,7 @@ export default function DirectoryGrid({
     return (
       <div className="directory-stats">
         <IconTooltip
-          label={`${(server.upvotes || 0).toLocaleString()} upvotes`}
+          label={`${(server.upvotes || 0).toLocaleString('en-US')} upvotes`}
           asSpan
           trigger={
             <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -590,7 +568,7 @@ export default function DirectoryGrid({
 
         {typeof server.githubStars === 'number' && (
           <IconTooltip
-            label={`${server.githubStars.toLocaleString()} GitHub stars`}
+            label={`${server.githubStars.toLocaleString('en-US')} GitHub stars`}
             asSpan
             trigger={
               <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -608,7 +586,7 @@ export default function DirectoryGrid({
         )}
 
         <IconTooltip
-          label={`${(server.copies || 0).toLocaleString()} installs`}
+          label={`${(server.copies || 0).toLocaleString('en-US')} installs`}
           asSpan
           trigger={
             <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -651,7 +629,7 @@ export default function DirectoryGrid({
             asSpan
             trigger={
               <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Clock size={12} aria-hidden="true" /> {commitAge}
+                <Clock size={12} aria-hidden="true" /> <span suppressHydrationWarning>{commitAge}</span>
               </div>
             }
           >
@@ -719,7 +697,7 @@ export default function DirectoryGrid({
   const resultSubtitle = (
     <>
       Showing{' '}
-      <strong style={{ color: 'var(--text-primary)' }}>{filteredServers.length.toLocaleString()}</strong>{' '}
+      <strong style={{ color: 'var(--text-primary)' }}>{filteredServers.length.toLocaleString('en-US')}</strong>{' '}
       {filteredServers.length === 1 ? 'server' : 'servers'}
       {selectedCategory ? ' in this category' : ''}
       {verifiedOnly ? ' (verified only)' : ''}
@@ -732,51 +710,11 @@ export default function DirectoryGrid({
     </>
   );
 
-  const [activeCategoryGroup, setActiveCategoryGroup] = useState<string>('all');
-
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    if (fullCategoryCounts && Object.keys(fullCategoryCounts).length > 0) {
-      for (const [cat, cnt] of Object.entries(fullCategoryCounts)) {
-        counts.set(cat, cnt);
-      }
-    } else {
-      for (const s of servers) {
-        if (s.category) {
-          counts.set(s.category, (counts.get(s.category) || 0) + 1);
-        }
-      }
-    }
-    return counts;
-  }, [servers, fullCategoryCounts]);
-
-  const featuredCategoryCards = useMemo(() => {
-    const all = DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories;
-    if (activeCategoryGroup === 'all') {
-      return [...all]
-        .sort((a, b) => (categoryCounts.get(b) || 0) - (categoryCounts.get(a) || 0))
-        .slice(0, 12);
-    }
-    return all.filter((cat) => {
-      const meta = getCategoryMeta(cat);
-      return meta.group.id === activeCategoryGroup;
-    });
-  }, [activeCategoryGroup, categoryCounts, categories]);
-
   return (
     <>
-      {/* Marketing hero — Goal-oriented discovery and assembly */}
-      {!isBrowse && !selectedCategory && (
-        <HeroSection totalCount={totalCount} />
-      )}
-
-      {/* Trust-signal stats strip — three metrics max; detail on /trust */}
-      {!isBrowse && !selectedCategory && <StatsBanner stats={siteStats} />}
-
       {/* Browse page title — the marketing hero (with its own <h1>) only renders on the
-          unfiltered homepage landing above, so the dedicated /browse route needs its own
+          unfiltered homepage landing, so the dedicated /browse route needs its own
           single, page-specific <h1> here instead of relying on the "Results" <h2> below. */}
-      {/* Browse page title — centered with proper header spacing */}
       {isBrowse && (
         <section className="container animate-fade-in delay-1" style={{ paddingTop: '2.5rem', paddingBottom: '1.25rem', textAlign: 'center' }}>
           <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
@@ -790,7 +728,8 @@ export default function DirectoryGrid({
         </section>
       )}
 
-      {/* Search Bar & Filters — sticky on scroll so discovery stays one gesture away */}
+      {/* Search Bar & Filters — browse only. The homepage playground owns discovery. */}
+      {isBrowse && (
       <section
         id="directory-search"
         className="container animate-fade-in delay-2 directory-search-section"
@@ -962,204 +901,6 @@ export default function DirectoryGrid({
           )}
         </div>
       </section>
-
-      {/* Featured & Trending Cards (below search, hidden when filtering) */}
-      {showDiscovery && <FeaturedCards servers={featuredCards} />}
-
-      {/* Bento Grid Infrastructure Showcase */}
-      {showDiscovery && <BentoShowcase />}
-
-      {/* AllMCPs' own MCP server — self-promo callout, homepage landing only */}
-      {showDiscovery && (
-        <section className="container mcp-promo-section" style={{ margin: '1.5rem auto 2.5rem' }}>
-          <div className="mcp-promo-card">
-            <ServerAvatar name="AllMCPs Server" logoUrl="/logos/allmcps-server" size={44} />
-            <div className="mcp-promo-content">
-              <h2 className="mcp-promo-title">
-                AllMCPs has its own MCP server
-                <span className="mcp-promo-official-badge">
-                  <BadgeCheck size={13} aria-hidden="true" /> Official
-                </span>
-              </h2>
-              <p className="mcp-promo-desc">
-                Search the directory, get install configs, submit servers, and check boost pricing —
-                directly from Claude, Cursor, or any MCP client.
-              </p>
-              <ul className="mcp-promo-features">
-                <li>
-                  <CheckCircle2 size={14} aria-hidden="true" /> Search &amp; browse listings
-                </li>
-                <li>
-                  <CheckCircle2 size={14} aria-hidden="true" /> Ready-to-paste install configs
-                </li>
-                <li>
-                  <CheckCircle2 size={14} aria-hidden="true" /> Submit &amp; verify servers
-                </li>
-                <li>
-                  <CheckCircle2 size={14} aria-hidden="true" /> Check boost pricing
-                </li>
-              </ul>
-            </div>
-            <div className="mcp-promo-actions">
-              <code className="mcp-promo-install">
-                <Zap size={12} aria-hidden="true" /> npx -y allmcps-server
-              </code>
-              <div className="mcp-promo-buttons">
-                <Link href="/mcp/allmcps-server" className="btn btn-primary btn-sm">
-                  View listing <ArrowRight size={14} aria-hidden="true" />
-                </Link>
-                <OutboundLink
-                  href="https://github.com/Jackalope-Dev/allmcps-server"
-                  destinationType="github"
-                  serverId="allmcps-server"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary btn-sm"
-                >
-                  GitHub
-                </OutboundLink>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Category Showcase Section (mcp.so vibe) — homepage landing only when not filtered */}
-      {!isBrowse && !selectedCategory && !searchQuery && (
-        <section className="container animate-fade-in delay-2" style={{ margin: '0 auto 2.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Grid size={20} style={{ color: 'var(--accent-color)' }} aria-hidden="true" />
-                <span>Browse by Category &amp; Ecosystem</span>
-              </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: '0.2rem 0 0' }}>
-                Find ready-to-install MCP servers grouped by technology stack and workflow
-              </p>
-            </div>
-            <Link href="/categories" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}>
-              <span>All 50+ categories</span>
-              <ChevronRight size={14} />
-            </Link>
-          </div>
-
-          {/* Category Group Filter Tabs */}
-          <div className="directory-tags-row" style={{ marginBottom: '1.25rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
-            <button
-              type="button"
-              className={`directory-tag ${activeCategoryGroup === 'all' ? 'directory-tag-active' : ''}`}
-              onClick={() => setActiveCategoryGroup('all')}
-            >
-              ✨ All Featured
-            </button>
-            {CATEGORY_GROUPS.map((g) => (
-              <button
-                key={g.id}
-                type="button"
-                className={`directory-tag ${activeCategoryGroup === g.id ? 'directory-tag-active' : ''}`}
-                onClick={() => setActiveCategoryGroup(g.id)}
-                style={{
-                  borderColor: activeCategoryGroup === g.id ? g.color : undefined,
-                  color: activeCategoryGroup === g.id ? g.color : undefined,
-                  background: activeCategoryGroup === g.id ? g.bgTint : undefined,
-                }}
-              >
-                <span aria-hidden="true">{g.emoji}</span>
-                <span>{g.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Category Showcase Cards */}
-          <div className="categories-grid">
-            {featuredCategoryCards.map((catName) => {
-              const meta = getCategoryMeta(catName);
-              const count = categoryCounts.get(catName) || 0;
-              const isSelected = selectedCategory === catName;
-              return (
-                <Link
-                  key={catName}
-                  href={`/categories/${categorySlug(catName)}`}
-                  className={`category-card surface-interactive ${isSelected ? 'category-card-selected' : ''}`}
-                  style={{
-                    textAlign: 'left',
-                    textDecoration: 'none',
-                    border: isSelected ? `2px solid ${meta.color}` : `1px solid ${meta.borderTint || meta.color + '40'}`,
-                    background: isSelected
-                      ? `linear-gradient(135deg, ${meta.color}25 0%, var(--bg-elevated) 100%)`
-                      : `linear-gradient(135deg, ${meta.color}15 0%, var(--bg-elevated) 100%)`,
-                    boxShadow: isSelected ? `0 0 20px ${meta.color}35` : `var(--shadow-sm)`,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div
-                    className="category-card-emoji"
-                    aria-hidden="true"
-                    style={{
-                      background: isSelected ? `${meta.color}30` : `${meta.color}18`,
-                      borderColor: isSelected ? meta.color : (meta.borderTint || `${meta.color}40`),
-                      boxShadow: `0 2px 10px ${meta.color}20`,
-                    }}
-                  >
-                    {meta.emoji}
-                  </div>
-                  <div className="category-card-content">
-                    <h3 className="category-card-label" style={{ color: isSelected ? meta.color : 'var(--text-primary)' }}>
-                      {meta.label}
-                    </h3>
-                    <span className="category-card-count" style={{ color: 'var(--text-secondary)' }}>
-                      {count > 0 ? `Browse ${count.toLocaleString()} ${meta.label} MCP ${count === 1 ? 'server' : 'servers'}` : 'Explore MCP servers'}
-                    </span>
-                  </div>
-                  <span className="category-card-arrow" aria-hidden="true" style={{ color: meta.color }}>
-                    →
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Featured Marquee near top of the discovery section */}
-      {showDiscovery && <FeaturedMarquee servers={marqueeServers} />}
-
-      {/* Feeling Lucky Arcade Callout Banner */}
-      {showDiscovery && (
-        <section className="container animate-fade-in delay-2" style={{ margin: '0 auto 2.5rem' }}>
-          <div className="feeling-lucky-home-banner">
-            <div className="lucky-banner-left">
-              <div className="lucky-banner-icon-box">
-                <Dices size={32} />
-              </div>
-              <div className="lucky-banner-text-box">
-                <h2 className="lucky-banner-heading">
-                  Feeling Lucky? Spin the Arcade Slot Machine
-                </h2>
-                <p className="lucky-banner-subtext">
-                  Roll pure random MCPs, discover underrated sleeper gems, or roll instant triple stacks with 8-bit retro sound FX!
-                </p>
-              </div>
-            </div>
-            <Link href="/lucky" className="lucky-banner-btn">
-              <Dices size={18} />
-              <span>SPIN NOW</span>
-              <ArrowRight size={16} />
-            </Link>
-          </div>
-        </section>
-      )}
-
-      {showDiscovery && (
-        <section className="container newsletter-homepage-section">
-          <div>
-            <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.125rem' }}>Get new MCP servers in your inbox</h2>
-            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-              A roundup of new and top submissions — no spam, unsubscribe anytime.
-            </p>
-          </div>
-          <NewsletterSignupForm source="homepage" compact />
-        </section>
       )}
 
       {/* Directory */}
@@ -1187,10 +928,10 @@ export default function DirectoryGrid({
 
         <div className="directory-toolbar">
           <div>
-            <h2 style={{ marginBottom: 0, fontSize: isBrowse || selectedCategory ? '1.5rem' : undefined }}>
-              {isBrowse || selectedCategory || isFiltered ? 'Results' : 'Newest Servers'}{' '}
+            <h2 style={{ marginBottom: 0, fontSize: isBrowse || selectedCategory ? '1.5rem' : undefined }} className={!isBrowse && !isFiltered ? 'landing-section-title' : undefined}>
+              {isBrowse || selectedCategory || isFiltered ? 'Results' : 'New MCP servers'}{' '}
               <span style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', fontWeight: 500 }}>
-                ({filteredServers.length.toLocaleString()} {filteredServers.length === 1 ? 'tool' : 'tools'})
+                ({filteredServers.length.toLocaleString('en-US')} {filteredServers.length === 1 ? 'tool' : 'tools'})
                 {lazyFeedUrl && feedStatus === 'loading' ? ' · loading…' : ''}
               </span>
             </h2>
@@ -1380,7 +1121,7 @@ export default function DirectoryGrid({
             <span>
               {isFiltered
                 ? `Searching only the ${initialServers.length} listings on this page — press Enter or open Browse for the full catalog.`
-                : `Showing the ${initialServers.length} most recently added listings of ${totalCount.toLocaleString()} total.`}
+                : `Showing the ${initialServers.length} most recently added listings of ${totalCount.toLocaleString('en-US')} total.`}
             </span>
             <button
               type="button"
@@ -1400,8 +1141,8 @@ export default function DirectoryGrid({
               }}
             >
               {searchQuery.trim()
-                ? `Search all ${totalCount.toLocaleString()} for “${searchQuery.trim().slice(0, 32)}${searchQuery.trim().length > 32 ? '…' : ''}”`
-                : `Browse all ${totalCount.toLocaleString()} servers`}{' '}
+                ? `Search all ${totalCount.toLocaleString('en-US')} for “${searchQuery.trim().slice(0, 32)}${searchQuery.trim().length > 32 ? '…' : ''}”`
+                : `Browse all ${totalCount.toLocaleString('en-US')} servers`}{' '}
               <ChevronRight size={14} />
             </button>
           </div>
@@ -1451,7 +1192,7 @@ export default function DirectoryGrid({
               const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_grid' as const;
               return (
               <React.Fragment key={server.id}>
-              {index === adSlotRef.current && (
+              {index === adSlot && (
                 <SponsorAdUnit placement="directory_inline" />
               )}
               <ImpressionBeacon serverId={server.id} surface={surface}>
@@ -1515,7 +1256,7 @@ export default function DirectoryGrid({
               const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_list' as const;
               return (
               <React.Fragment key={server.id}>
-              {index === adSlotRef.current && (
+              {index === adSlot && (
                 <SponsorAdUnit placement="directory_inline" layout="row" />
               )}
               <ImpressionBeacon serverId={server.id} surface={surface}>

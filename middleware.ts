@@ -176,7 +176,7 @@ export function middleware(req: NextRequest) {
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://www.googletagmanager.com https://*.posthog.com https://p.allmcps.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://*.posthog.com https://us-assets.i.posthog.com https://p.allmcps.com; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://*.posthog.com https://us.posthog.com https://p.allmcps.com;"
+    "default-src 'self' https://p.allmcps.com https://*.posthog.com https://us.posthog.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://www.googletagmanager.com https://*.posthog.com https://us.posthog.com https://us-assets.i.posthog.com https://p.allmcps.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://*.posthog.com https://us-assets.i.posthog.com https://p.allmcps.com; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://*.posthog.com https://us.posthog.com https://p.allmcps.com https://www.youtube.com https://www.youtube-nocookie.com;"
   );
 
   // CDNs cache by URL alone unless told otherwise. Every non-API path here can

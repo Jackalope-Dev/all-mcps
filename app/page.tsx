@@ -1,5 +1,18 @@
 import type { Metadata } from 'next';
 import DirectoryGrid from '../components/DirectoryGrid';
+import { HeroSection } from '../components/HeroSection';
+import { FeaturedCards } from '../components/FeaturedCards';
+import { FeaturedMarquee } from '../components/FeaturedMarquee';
+import { BentoShowcase } from '../components/BentoShowcase';
+import { StatsBanner } from '../components/StatsBanner';
+import { SectionKicker } from '../components/ui/SectionKicker';
+import {
+  LandingIntents,
+  LandingFaq,
+  LandingCta,
+  LandingMcpPromo,
+  LandingNewsletter,
+} from '../components/LandingHome';
 import { pickDiscoveryServers } from '../lib/featured';
 import { getActiveServersLight, getNewestActiveServers, type Server } from '../lib/servers';
 import { getSiteStats } from '../lib/siteStats';
@@ -10,7 +23,7 @@ export const metadata: Metadata = {
     absolute: 'AllMCPs — Discover & Install MCP Servers for AI Agents',
   },
   description:
-    'Find, discover, and install the best Model Context Protocol (MCP) servers. Connect Claude, Cursor, and AI agents to files, databases, and APIs.',
+    'Find and install MCP servers for Claude, Cursor, and other AI agents. Search thousands of listings by the job you need done.',
   alternates: {
     canonical: 'https://allmcps.com',
   },
@@ -18,7 +31,7 @@ export const metadata: Metadata = {
     images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
     title: 'AllMCPs — Discover & Install MCP Servers for AI Agents',
     description:
-      'Find, discover, and install the best Model Context Protocol (MCP) servers. Connect Claude, Cursor, and AI agents to files, databases, and APIs.',
+      'Find and install MCP servers for Claude, Cursor, and other AI agents. Search thousands of listings by the job you need done.',
     url: 'https://allmcps.com',
     // Page-level `openGraph` fully replaces (doesn't merge with) the root
     // layout's — Next.js metadata merging is shallow per-segment — so `type`
@@ -130,29 +143,35 @@ export default async function Home() {
     ],
   };
 
-  // Compute full category counts across the entire catalog for homepage cards & filters
-  const fullCategoryCounts: Record<string, number> = {};
-  for (const s of discoveryPool) {
-    if (s.category) {
-      fullCategoryCounts[s.category] = (fullCategoryCounts[s.category] || 0) + 1;
-    }
-  }
-
   return (
     <main>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(datasetJsonLd) }}
       />
+      {/*
+        Marketing chrome lives here (not inside DirectoryGrid) so a hydration
+        mismatch in the interactive catalog cannot remount the hero. That remount
+        was replaying enter-up / fade-in animations and looked like a full reload.
+      */}
+      <HeroSection totalCount={discoveryPool.length} />
+      <div className="landing-proof">
+        <SectionKicker index={1} label="Proof" aside="Live catalog" />
+        <StatsBanner stats={siteStats} />
+      </div>
+      <LandingIntents />
+      <FeaturedCards servers={featuredCards} />
+      <BentoShowcase />
+      <LandingMcpPromo />
+      <FeaturedMarquee servers={marqueeServers} />
+      <LandingNewsletter />
       <DirectoryGrid
         initialServers={landingServers}
-        marqueeServers={marqueeServers}
-        featuredCards={featuredCards}
         variant="landing"
         totalCount={discoveryPool.length}
-        siteStats={siteStats}
-        fullCategoryCounts={fullCategoryCounts}
       />
+      <LandingFaq />
+      <LandingCta totalCount={discoveryPool.length} />
     </main>
   );
 }

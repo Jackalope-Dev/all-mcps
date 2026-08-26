@@ -40,7 +40,9 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
   const [eventToken, setEventToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(!previewAd);
   const [impressionSent, setImpressionSent] = useState<boolean>(false);
-  const [placeholderVariant, setPlaceholderVariant] = useState<PlaceholderVariant>(() => getRandomPlaceholderVariant());
+  const [placeholderVariant] = useState<PlaceholderVariant>(() =>
+    getRandomPlaceholderVariant(Array.from(placement).reduce((h, c) => h + c.charCodeAt(0), 0))
+  );
   const [logoError, setLogoError] = useState(false);
   const adRef = useRef<HTMLDivElement | null>(null);
 

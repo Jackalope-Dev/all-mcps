@@ -8,216 +8,274 @@ interface AsciiCodeCanvasProps {
   density?: number;
 }
 
-const CHARACTERS = [
-  '{', '}', '[', ']', '<', '>', '/', '\\', '*', '+', '=', '#', '$', '%', '~',
-  '0', '1', 'm', 'c', 'p', 'r', 'p', 'c', 'j', 's', 'o', 'n', ':', ';', '&', '!', '?',
-];
-
 /**
- * High-performance HTML5 Canvas component that generates an undulating field of
- * ASCII characters and code particles inspired by Firecrawl's interactive ASCII
- * art and canvas backdrops, styled in AllMCPs' electric cyan & cobalt blue theme.
+ * Classic ASCII fire, remapped onto AllMCPs cyan.
  *
- * Features:
- * - Subtle sine-wave flow & particle movement
- * - Interactive mouse repulsion / glow ripple
- * - Automatically throttles and pauses when out of view (IntersectionObserver)
- * - Honors `prefers-reduced-motion`
- * - Ultra-lightweight with negligible CPU overhead
+ * Heat is seeded at the bottom of the field, averaged upward, and mapped
+ * onto a density ramp of characters plus a slate → blue → cyan → white
+ * color scale. That is the Firecrawl flame motif (design.md: ~85ms/frame,
+ * pause off-screen, honor prefers-reduced-motion) expressed in our brand
+ * rather than heat-orange.
+ *
+ * Pointer proximity adds a local heat bloom. Reduced-motion visitors get
+ * a single static frame.
  */
+const RAMP = ' .\'`^":;~-_+<>i!lI?/\\|()1{}[]rcvunxzjftLCJUYXZO0Qoahkbdpqwm*WMB8&%$#@';
+const HOT_GLYPHS = '{ } [ ] / * # $ > 0 1 m c p'.split(' ');
+
+const FRAME_MS = 85;
+const COOLING = 1.7;
+
+function heatColor(t: number, light: boolean): [number, number, number, number] {
+  // t is 0..1. Dark theme: dim slate → brand blue → cyan → white.
+  // Light theme: pale slate → blue → cyan, never blown-out white.
+  const stops = light
+    ? [
+        [100, 116, 139, 0.0],
+        [14, 116, 144, 0.35],
+        [2, 132, 199, 0.55],
+        [8, 145, 178, 0.72],
+        [3, 105, 161, 0.88],
+      ]
+    : [
+        [15, 23, 42, 0.0],
+        [30, 64, 175, 0.22],
+        [0, 123, 255, 0.45],
+        [0, 229, 255, 0.72],
+        [186, 250, 255, 0.92],
+        [255, 255, 255, 1.0],
+      ];
+  const clamped = Math.max(0, Math.min(0.999, t));
+  const scaled = clamped * (stops.length - 1);
+  const i = Math.floor(scaled);
+  const f = scaled - i;
+  const a = stops[i];
+  const b = stops[i + 1] ?? stops[i];
+  return [
+    a[0] + (b[0] - a[0]) * f,
+    a[1] + (b[1] - a[1]) * f,
+    a[2] + (b[2] - a[2]) * f,
+    a[3] + (b[3] - a[3]) * f,
+  ];
+}
+
+function glyphFor(heat: number): string {
+  if (heat > 180 && Math.random() < 0.18) {
+    return HOT_GLYPHS[(Math.random() * HOT_GLYPHS.length) | 0];
+  }
+  const idx = Math.min(RAMP.length - 1, Math.max(0, ((heat / 255) * (RAMP.length - 1)) | 0));
+  return RAMP[idx];
+}
+
 export function AsciiCodeCanvas({
   className = '',
-  opacity = 0.65,
-  density = 24,
+  opacity = 0.55,
+  density = 12,
 }: AsciiCodeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const context = canvas.getContext('2d', { alpha: true });
+    if (!context) return;
+    const ctx = context;
 
-    const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
+    let width = 0;
+    let height = 0;
+    let cols = 0;
+    let rows = 0;
+    let cellW = density;
+    let cellH = density * 1.35;
+    let heat: Uint8Array = new Uint8Array(0);
+    let visible = true;
+    let raf = 0;
+    let lastDraw = 0;
+    let mouseX = -1;
+    let mouseY = -1;
+    let targetX = -1;
+    let targetY = -1;
 
-    let animationFrameId: number;
-    let isVisible = true;
-    const dpr = window.devicePixelRatio || 1;
-    let width = canvas.offsetWidth;
-    let height = canvas.offsetHeight;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
+    const isLight = () => document.documentElement.getAttribute('data-theme') === 'light';
 
-    let mouseX = -1000;
-    let mouseY = -1000;
-    let targetMouseX = -1000;
-    let targetMouseY = -1000;
+    const idx = (x: number, y: number) => y * cols + x;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      targetMouseX = e.clientX - rect.left;
-      targetMouseY = e.clientY - rect.top;
-    };
+    function resize() {
+      if (!canvas) return;
+      width = canvas.offsetWidth;
+      height = canvas.offsetHeight;
+      canvas.width = Math.max(1, Math.floor(width * dpr));
+      canvas.height = Math.max(1, Math.floor(height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const handleMouseLeave = () => {
-      targetMouseX = -1000;
-      targetMouseY = -1000;
-    };
-
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    document.addEventListener('mouseleave', handleMouseLeave, { passive: true });
-
-    // Grid sizing
-    const cellWidth = density;
-    const cellHeight = density * 1.25;
-    let cols = Math.floor(width / cellWidth);
-    let rows = Math.floor(height / cellHeight);
-
-    interface Cell {
-      char: string;
-      baseChar: string;
-      x: number;
-      y: number;
-      offset: number;
-      speed: number;
-      colorType: 'cyan' | 'blue' | 'slate' | 'dim';
+      cellW = density;
+      cellH = density * 1.35;
+      cols = Math.max(8, Math.floor(width / cellW));
+      rows = Math.max(8, Math.floor(height / cellH));
+      // Cap the field so a 4k window cannot spawn tens of thousands of glyphs.
+      const maxCells = 2800;
+      if (cols * rows > maxCells) {
+        const scale = Math.sqrt(maxCells / (cols * rows));
+        cols = Math.max(8, Math.floor(cols * scale));
+        rows = Math.max(8, Math.floor(rows * scale));
+        cellW = width / cols;
+        cellH = height / rows;
+      }
+      heat = new Uint8Array(cols * rows);
+      seedBase();
     }
 
-    let cells: Cell[] = [];
+    function seedBase() {
+      // A quiet ember bed so the first frame is not empty.
+      for (let x = 0; x < cols; x++) {
+        heat[idx(x, rows - 1)] = 140 + ((Math.random() * 80) | 0);
+        if (rows > 2) heat[idx(x, rows - 2)] = 80 + ((Math.random() * 60) | 0);
+      }
+    }
 
-    function initCells() {
-      if (!canvas) return;
-      cols = Math.max(1, Math.floor(width / cellWidth));
-      rows = Math.max(1, Math.floor(height / cellHeight));
-      cells = [];
+    function tick() {
+      // Seed the floor. Intensity is biased toward the left/right so the
+      // headline in the center stays readable.
+      for (let x = 0; x < cols; x++) {
+        const edge = Math.abs(x / cols - 0.5) * 2; // 0 center, 1 edges
+        const bias = 0.35 + edge * 0.65;
+        if (Math.random() < 0.55 * bias) {
+          heat[idx(x, rows - 1)] = Math.min(255, 160 + ((Math.random() * 95 * bias) | 0));
+        } else if (Math.random() < 0.12) {
+          heat[idx(x, rows - 1)] = 20;
+        }
+      }
 
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const char = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
-          const rand = Math.random();
-          const colorType: Cell['colorType'] =
-            rand > 0.88 ? 'cyan' : rand > 0.72 ? 'blue' : rand > 0.35 ? 'slate' : 'dim';
+      // Pointer bloom.
+      if (mouseX >= 0 && mouseY >= 0) {
+        const cx = Math.floor(mouseX / cellW);
+        const cy = Math.floor(mouseY / cellH);
+        const radius = 4;
+        for (let y = cy - radius; y <= cy + radius; y++) {
+          for (let x = cx - radius; x <= cx + radius; x++) {
+            if (x < 0 || y < 0 || x >= cols || y >= rows) continue;
+            const d = Math.hypot(x - cx, y - cy);
+            if (d > radius) continue;
+            const add = ((1 - d / radius) * 70) | 0;
+            const i = idx(x, y);
+            heat[i] = Math.min(255, heat[i] + add);
+          }
+        }
+      }
 
-          cells.push({
-            char,
-            baseChar: char,
-            x: c * cellWidth + cellWidth / 2,
-            y: r * cellHeight + cellHeight / 2,
-            offset: Math.random() * Math.PI * 2,
-            speed: 0.0008 + Math.random() * 0.0012,
-            colorType,
-          });
+      // Propagate upward with neighbor averaging + floor cooling.
+      const next = new Uint8Array(heat.length);
+      for (let y = 0; y < rows - 1; y++) {
+        for (let x = 0; x < cols; x++) {
+          const left = heat[idx(x > 0 ? x - 1 : x, y + 1)];
+          const mid = heat[idx(x, y + 1)];
+          const right = heat[idx(x < cols - 1 ? x + 1 : x, y + 1)];
+          const self = heat[idx(x, y)];
+          const avg = (left + mid + right + self) / 4;
+          const cooled = avg - COOLING - Math.random() * 1.4;
+          next[idx(x, y)] = cooled > 0 ? cooled | 0 : 0;
+        }
+      }
+      for (let x = 0; x < cols; x++) {
+        next[idx(x, rows - 1)] = heat[idx(x, rows - 1)];
+      }
+      heat = next;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.font = `${Math.max(9, Math.floor(cellW * 0.92))}px var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, monospace)`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const light = isLight();
+      const fadeTop = height * 0.12;
+      const fadeBottom = height * 0.78;
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const h = heat[idx(x, y)];
+          if (h < 10) continue;
+          const px = x * cellW + cellW / 2;
+          const py = y * cellH + cellH / 2;
+
+          // Feather the top so copy stays readable; denser toward the floor.
+          const yFade =
+            py < fadeTop
+              ? py / fadeTop
+              : py > fadeBottom
+                ? 1
+                : 0.35 + ((py - fadeTop) / (fadeBottom - fadeTop)) * 0.65;
+
+          const t = h / 255;
+          const [r, g, b, a] = heatColor(t, light);
+          const alpha = a * yFade * (0.55 + t * 0.45);
+          if (alpha < 0.03) continue;
+          ctx.fillStyle = `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${Math.min(0.9, alpha)})`;
+          ctx.fillText(glyphFor(h), px, py);
         }
       }
     }
 
-    initCells();
-
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.offsetWidth;
-      height = canvas.offsetHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
-      initCells();
+    const onMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      targetX = e.clientX - rect.left;
+      targetY = e.clientY - rect.top;
+    };
+    const onLeave = () => {
+      targetX = -1;
+      targetY = -1;
     };
 
-    window.addEventListener('resize', handleResize, { passive: true });
+    window.addEventListener('mousemove', onMove, { passive: true });
+    document.addEventListener('mouseleave', onLeave, { passive: true });
+    window.addEventListener('resize', resize, { passive: true });
 
-    // Intersection observer to pause when offscreen
     const observer = new IntersectionObserver(
       (entries) => {
-        isVisible = entries[0]?.isIntersecting ?? false;
+        visible = entries[0]?.isIntersecting ?? false;
       },
       { threshold: 0.05 }
     );
     observer.observe(canvas);
 
-    let time = 0;
+    resize();
+    tick();
+    draw();
 
-    const render = () => {
-      if (!isVisible) {
-        animationFrameId = requestAnimationFrame(render);
-        return;
+    if (reduceMotion) {
+      return () => {
+        window.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseleave', onLeave);
+        window.removeEventListener('resize', resize);
+        observer.disconnect();
+      };
+    }
+
+    const loop = (t: number) => {
+      raf = requestAnimationFrame(loop);
+      if (!visible) return;
+      mouseX += (targetX - mouseX) * 0.18;
+      mouseY += (targetY - mouseY) * 0.18;
+      if (targetX < 0) {
+        mouseX = -1;
+        mouseY = -1;
       }
-
-      time += 0.012;
-      mouseX += (targetMouseX - mouseX) * 0.1;
-      mouseY += (targetMouseY - mouseY) * 0.1;
-
-      ctx.clearRect(0, 0, width, height);
-
-      ctx.font = '10px ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const cellCount = cells.length;
-      for (let i = 0; i < cellCount; i++) {
-        const cell = cells[i];
-
-        // Undulating sine-wave movement
-        const wave = Math.sin(time + cell.offset + cell.x * 0.005 + cell.y * 0.008);
-        const wave2 = Math.cos(time * 0.7 + cell.offset + cell.x * 0.008);
-        
-        // Distance to cursor
-        const dx = cell.x - mouseX;
-        const dy = cell.y - mouseY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const mouseInfluence = Math.max(0, 1 - dist / 180);
-
-        // Alpha calculation with vertical boundary feathering
-        const verticalFade =
-          Math.min(1, Math.max(0, (height - cell.y) / (height * 0.35))) *
-          Math.min(1, Math.max(0, cell.y / (height * 0.12)));
-
-        let alpha = (0.08 + (wave + 1) * 0.07) * verticalFade;
-        if (alpha <= 0.005) continue;
-
-        if (cell.colorType === 'cyan') alpha *= 1.8;
-        if (cell.colorType === 'dim') alpha *= 0.5;
-        if (mouseInfluence > 0) {
-          alpha += mouseInfluence * 0.6;
-        }
-
-        // Color selection
-        if (mouseInfluence > 0.4 || cell.colorType === 'cyan') {
-          ctx.fillStyle = `rgba(0, 229, 255, ${Math.min(alpha * 1.5, 0.85)})`;
-        } else if (cell.colorType === 'blue') {
-          ctx.fillStyle = `rgba(56, 189, 248, ${Math.min(alpha * 1.3, 0.7)})`;
-        } else if (cell.colorType === 'slate') {
-          ctx.fillStyle = `rgba(148, 163, 184, ${Math.min(alpha, 0.4)})`;
-        } else {
-          ctx.fillStyle = `rgba(100, 116, 139, ${Math.min(alpha, 0.25)})`;
-        }
-
-        // Occasional char mutation on wave peaks
-        let displayChar = cell.char;
-        if (wave > 0.95 && Math.random() < 0.02) {
-          cell.char = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
-          displayChar = cell.char;
-        }
-
-        const drawX = cell.x + wave2 * 2 + (dx / (dist + 0.1)) * mouseInfluence * 8;
-        const drawY = cell.y + wave * 2 + (dy / (dist + 0.1)) * mouseInfluence * 8;
-
-        ctx.fillText(displayChar, drawX, drawY);
-      }
-
-      animationFrameId = requestAnimationFrame(render);
+      if (t - lastDraw < FRAME_MS) return;
+      lastDraw = t;
+      tick();
+      draw();
     };
-
-    render();
+    raf = requestAnimationFrame(loop);
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseleave', handleMouseLeave);
+      cancelAnimationFrame(raf);
+      window.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseleave', onLeave);
+      window.removeEventListener('resize', resize);
       observer.disconnect();
     };
   }, [density]);

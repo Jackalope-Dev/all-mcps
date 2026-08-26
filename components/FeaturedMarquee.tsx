@@ -31,7 +31,7 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                 href={`/mcp/${server.id}`}
                 tabIndex={isDuplicate ? -1 : undefined}
                 aria-hidden={isDuplicate ? true : undefined}
-                className="surface"
+                className="marquee-chip"
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -40,7 +40,9 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                   borderRadius: '100px',
                   whiteSpace: 'nowrap',
                   background: 'var(--bg-muted)',
-                  borderColor: 'var(--border-color)',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'none',
+                  textDecoration: 'none',
                   transition: 'transform 0.2s ease, border-color 0.2s ease, background 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
@@ -82,7 +84,7 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                 href="/submit"
                 tabIndex={isDuplicate ? -1 : undefined}
                 aria-hidden={isDuplicate ? true : undefined}
-                className="surface"
+                className="marquee-chip marquee-chip-submit"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -91,11 +93,12 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                   borderRadius: '100px',
                   whiteSpace: 'nowrap',
                   background: 'var(--brand-gradient-soft)',
-                  borderColor: 'var(--accent-color)',
+                  border: '1px solid var(--accent-color)',
                   color: 'var(--accent-color)',
                   fontWeight: 700,
                   fontSize: '0.825rem',
-                  boxShadow: '0 0 12px rgba(0, 229, 255, 0.15)',
+                  boxShadow: 'none',
+                  textDecoration: 'none',
                   transition: 'transform 0.2s, border-color 0.2s',
                 }}
               >

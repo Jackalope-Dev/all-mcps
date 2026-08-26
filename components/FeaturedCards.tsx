@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Plus, ArrowRight } from 'lucide-react';
+import { Plus, ArrowRight } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { SafeMarkdown } from './ui/SafeMarkdown';
@@ -26,9 +26,8 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
 
   return (
     <section className="container animate-fade-in delay-2" style={{ marginBottom: '2.5rem' }}>
-      <h2 className="text-section" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <Sparkles size={24} style={{ color: 'var(--accent-color)' }} />
-        Featured Servers
+      <h2 className="landing-section-title" style={{ marginBottom: '1.5rem' }}>
+        Featured MCP servers
       </h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
         {displayServers.map((server) => (
@@ -114,17 +113,17 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
               <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Plus size={28} style={{ color: 'var(--accent-color)' }} />
               </div>
-              <Badge variant="success" className="badge-featured">★ Add Server</Badge>
+              <Badge variant="success" className="badge-featured">Submit</Badge>
             </div>
             
             <div style={{ minHeight: '2.8rem', marginBottom: '0.4rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>Submit Your MCP Server</h3>
+              <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>Submit your MCP server</h3>
             </div>
             <p style={{ fontSize: '0.875rem', height: '5.25rem', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem' }}>
-              List your server in the directory so developers building with Claude, Cursor, and AI agents can discover and install your integration.
+              List it in the directory so people can find and install it.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.9rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
-              <span>Submit Server</span>
+              <span>Submit a server</span>
               <ArrowRight size={16} />
             </div>
           </Card>

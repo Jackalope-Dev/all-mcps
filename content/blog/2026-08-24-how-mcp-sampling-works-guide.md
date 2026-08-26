@@ -380,7 +380,7 @@ The tool heals itself before ever returning to the host, keeping the outer conve
 
 ### 4. Zero-Key Multi-Tenant Plugins
 
-If you distribute a public MCP server (for example, via npm, PyPI, or the [AllMCPS Registry](/mcp-registry-vs-directory-publish-official-registry)), requiring users to supply OpenAI or Anthropic API keys creates friction, credential exposure risks, and support tickets.
+If you distribute a public MCP server (for example, via npm, PyPI, or the [AllMCPS Registry](/blog/mcp-registry-vs-directory-publish-official-registry)), requiring users to supply OpenAI or Anthropic API keys creates friction, credential exposure risks, and support tickets.
 
 By relying on sampling, your server becomes a zero-dependency, zero-key plugin. Anyone running an MCP-compliant client can install and run your AI-augmented server out of the box with zero configuration.
 
