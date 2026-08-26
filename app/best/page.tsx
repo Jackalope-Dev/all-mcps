@@ -46,6 +46,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { BEST_TOPICS, CATEGORY_TOPICS, KEYWORD_TOPICS } from '../../lib/bestTopics';
+import { Card } from '../../components/ui/Card';
+import { PageShell, PageHeader } from '../../components/PageShell';
 
 const SITE = 'https://allmcps.com';
 
@@ -122,6 +124,37 @@ const KEYWORD_ICONS: Record<string, LucideIcon> = {
   seo: Search,
 };
 
+function TopicTile({
+  href,
+  Icon,
+  title,
+  lead,
+  level = 2,
+}: {
+  href: string;
+  Icon: LucideIcon;
+  title: string;
+  lead: string;
+  /** Heading level — the category grid is under the page h1, the keyword grid is under its own h2. */
+  level?: 2 | 3;
+}) {
+  const Heading = level === 3 ? 'h3' : 'h2';
+  return (
+    <Card href={href} hoverable padding="md" className="topic-tile">
+      <div className="topic-tile-header">
+        <div className="topic-tile-icon">
+          <Icon size={20} />
+        </div>
+        <Heading className="topic-tile-title">{title}</Heading>
+      </div>
+      <p className="topic-tile-lead">{lead}</p>
+      <span className="topic-tile-link">
+        View ranking <ArrowRight size={15} />
+      </span>
+    </Card>
+  );
+}
+
 export default function BestIndexPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -156,193 +189,61 @@ export default function BestIndexPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <main className="page-shell page-shell--default" style={{ paddingBottom: '4rem' }}>
-        <div className="page-shell-inner">
-          <nav aria-label="Breadcrumb">
-            <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
-              <li><Link href="/">Home</Link></li>
-              <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
-              <li className="breadcrumb-current">Best MCP Servers</li>
-            </ol>
-          </nav>
+      <PageShell variant="default">
+        <nav aria-label="Breadcrumb">
+          <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
+            <li><Link href="/">Home</Link></li>
+            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li className="breadcrumb-current">Best MCP Servers</li>
+          </ol>
+        </nav>
 
-          {/* Hero Header */}
-          <section style={{ textAlign: 'center', maxWidth: '780px', margin: '0 auto 3rem', padding: '0 1rem' }}>
-            <h1 className="text-display" style={{ marginBottom: '1rem' }}>
-              Best MCP Servers by Use Case
-            </h1>
-            <p className="text-lead" style={{ margin: '0 auto', maxWidth: '680px' }}>
-              Hand-picked, usage-ranked guides to the best Model Context Protocol servers for the jobs
-              people reach for most &mdash; each list is drawn live from the AllMCPs directory.
+        <PageHeader
+          centered
+          title="Best MCP Servers by Use Case"
+          description="Hand-picked, usage-ranked guides to the best Model Context Protocol servers for the jobs people reach for most — each list is drawn live from the AllMCPs directory."
+        />
+
+        {/* Category Topics Grid */}
+        <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+          {CATEGORY_TOPICS.map((t) => (
+            <li key={t.slug}>
+              <TopicTile
+                href={`/best/${t.slug}`}
+                Icon={CATEGORY_ICONS[t.slug] || Sparkles}
+                title={`Best for ${t.title}`}
+                lead={t.lead}
+              />
+            </li>
+          ))}
+        </ul>
+
+        {/* Integration Topics Section */}
+        <section style={{ marginTop: '4.5rem' }}>
+          <div style={{ textAlign: 'center', maxWidth: '780px', margin: '0 auto 2.5rem', padding: '0 1rem' }}>
+            <h2 className="text-display" style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: '0.75rem' }}>
+              By Integration &amp; Tool
+            </h2>
+            <p className="text-lead" style={{ margin: '0 auto', maxWidth: '640px', fontSize: '1.05rem' }}>
+              Looking for a specific tool? Jump straight to the best MCP servers for the platforms and
+              databases people connect most.
             </p>
-          </section>
-
-          {/* Category Topics Grid */}
+          </div>
           <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-            {CATEGORY_TOPICS.map((t) => {
-              const Icon = CATEGORY_ICONS[t.slug] || Sparkles;
-              return (
-                <li key={t.slug}>
-                  <Link
-                    href={`/best/${t.slug}`}
-                    className="surface-interactive"
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      padding: '1.5rem',
-                      borderRadius: '14px',
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      border: '1px solid var(--border-color)',
-                      height: '100%',
-                      transition: 'all var(--transition-normal)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '0.875rem' }}>
-                      <div
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '10px',
-                          background: 'rgba(0, 229, 255, 0.08)',
-                          border: '1px solid rgba(0, 229, 255, 0.2)',
-                          color: 'var(--accent-color)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Icon size={20} />
-                      </div>
-                      <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
-                        Best for {t.title}
-                      </h2>
-                    </div>
-                    <p
-                      style={{
-                        fontSize: '0.875rem',
-                        color: 'var(--text-secondary)',
-                        margin: '0 0 1.25rem',
-                        lineHeight: 1.55,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        flexGrow: 1,
-                      }}
-                    >
-                      {t.lead}
-                    </p>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        color: 'var(--accent-color)',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        marginTop: 'auto',
-                        paddingTop: '0.5rem',
-                      }}
-                    >
-                      View ranking <ArrowRight size={15} />
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
+            {KEYWORD_TOPICS.map((t) => (
+              <li key={t.slug}>
+                <TopicTile
+                  href={`/best/${t.slug}`}
+                  Icon={KEYWORD_ICONS[t.slug] || Sparkles}
+                  title={`Best ${t.title} MCP servers`}
+                  lead={t.lead}
+                  level={3}
+                />
+              </li>
+            ))}
           </ul>
-
-          {/* Integration Topics Section */}
-          <section style={{ marginTop: '4.5rem' }}>
-            <div style={{ textAlign: 'center', maxWidth: '780px', margin: '0 auto 2.5rem', padding: '0 1rem' }}>
-              <h2 className="text-display" style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: '0.75rem' }}>
-                By Integration &amp; Tool
-              </h2>
-              <p className="text-lead" style={{ margin: '0 auto', maxWidth: '640px', fontSize: '1.05rem' }}>
-                Looking for a specific tool? Jump straight to the best MCP servers for the platforms and
-                databases people connect most.
-              </p>
-            </div>
-            <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {KEYWORD_TOPICS.map((t) => {
-                const Icon = KEYWORD_ICONS[t.slug] || Sparkles;
-                return (
-                  <li key={t.slug}>
-                    <Link
-                      href={`/best/${t.slug}`}
-                      className="surface-interactive"
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        padding: '1.5rem',
-                        borderRadius: '14px',
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        border: '1px solid var(--border-color)',
-                        height: '100%',
-                        transition: 'all var(--transition-normal)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '0.875rem' }}>
-                        <div
-                          style={{
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '10px',
-                            background: 'rgba(0, 229, 255, 0.08)',
-                            border: '1px solid rgba(0, 229, 255, 0.2)',
-                            color: 'var(--accent-color)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <Icon size={20} />
-                        </div>
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
-                          Best {t.title} MCP servers
-                        </h3>
-                      </div>
-                      <p
-                        style={{
-                          fontSize: '0.875rem',
-                          color: 'var(--text-secondary)',
-                          margin: '0 0 1.25rem',
-                          lineHeight: 1.55,
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          flexGrow: 1,
-                        }}
-                      >
-                        {t.lead}
-                      </p>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          color: 'var(--accent-color)',
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          marginTop: 'auto',
-                          paddingTop: '0.5rem',
-                        }}
-                      >
-                        View ranking <ArrowRight size={15} />
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </div>
-      </main>
+        </section>
+      </PageShell>
     </>
   );
 }

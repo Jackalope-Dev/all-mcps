@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import serversData from '../../data/mcp-servers.json';
 import { CategoryGrid } from '../../components/CategoryGrid';
 import { categorySlug } from '../../lib/categories';
+import { PageShell, PageHeader } from '../../components/PageShell';
 
 // Hourly ISR keeps category counts current from D1 without querying on every request.
 export const revalidate = 3600;
@@ -157,8 +158,7 @@ export default async function CategoriesPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="page-shell page-shell--default" style={{ paddingBottom: '4rem' }}>
-        <div className="page-shell-inner">
+      <PageShell variant="default">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb">
           <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
@@ -172,35 +172,28 @@ export default async function CategoriesPage() {
           </ol>
         </nav>
 
-        {/* Hero */}
-        <section
+        <PageHeader
+          centered
           className="animate-fade-in delay-1"
-          style={{ textAlign: 'center', marginBottom: '2.5rem' }}
-        >
-          <h1 className="text-display" style={{ marginBottom: '1rem' }}>Browse by Category</h1>
-          <p
-            className="text-lead"
-            style={{
-              margin: '0 auto',
-              textAlign: 'center',
-            }}
-          >
-            Explore{' '}
-            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
-              {totalServers.toLocaleString()}
-            </span>{' '}
-            MCP servers across{' '}
-            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
-              {categories.length}
-            </span>{' '}
-            categories.
-          </p>
-        </section>
+          title="Browse by Category"
+          description={
+            <>
+              Explore{' '}
+              <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+                {totalServers.toLocaleString()}
+              </span>{' '}
+              MCP servers across{' '}
+              <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+                {categories.length}
+              </span>{' '}
+              categories.
+            </>
+          }
+        />
 
         {/* Client-side search + grid */}
         <CategoryGrid categories={categories} />
-        </div>
-      </main>
+      </PageShell>
     </>
   );
 }

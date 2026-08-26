@@ -170,8 +170,14 @@ export function AsciiCodeCanvas({
         const dist = Math.sqrt(dx * dx + dy * dy);
         const mouseInfluence = Math.max(0, 1 - dist / 180);
 
-        // Alpha calculation
-        let alpha = 0.08 + (wave + 1) * 0.07;
+        // Alpha calculation with vertical boundary feathering
+        const verticalFade =
+          Math.min(1, Math.max(0, (height - cell.y) / (height * 0.35))) *
+          Math.min(1, Math.max(0, cell.y / (height * 0.12)));
+
+        let alpha = (0.08 + (wave + 1) * 0.07) * verticalFade;
+        if (alpha <= 0.005) continue;
+
         if (cell.colorType === 'cyan') alpha *= 1.8;
         if (cell.colorType === 'dim') alpha *= 0.5;
         if (mouseInfluence > 0) {

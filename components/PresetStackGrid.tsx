@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { saveStackServerIds } from '@/lib/stackStore';
 import { toast } from '@/components/ui/Toast';
+import { Card } from '@/components/ui/Card';
 
 export interface PresetStack {
   id: string;
@@ -27,10 +28,7 @@ export interface PresetStack {
   badge: string;
   description: string;
   icon: React.ReactNode;
-  accentColor: string; // Brand accent hex (e.g. #00e5ff)
-  gradientBg: string; // CSS background
-  borderGlow: string; // CSS box shadow or border style
-  textColor: string; // Theme readable title color
+  accentColor: string; // Brand accent hex (e.g. #00e5ff) — drives Card's accent border/icon/badge color
   servers: string[];
   displayTools: Array<{ name: string; tag: string }>;
 }
@@ -42,10 +40,11 @@ export const PRESET_STACKS: PresetStack[] = [
     badge: 'Most Popular',
     description: 'Git repository management, SQL database introspection, headless browser testing, and persistent agent memory.',
     icon: <Code2 size={22} />,
-    accentColor: '#00e5ff',
-    gradientBg: 'linear-gradient(135deg, rgba(0, 229, 255, 0.12) 0%, rgba(0, 123, 255, 0.08) 100%)',
-    borderGlow: 'rgba(0, 229, 255, 0.3)',
-    textColor: '#00e5ff',
+    // Uses the theme accent token (not a fixed hex like the other presets)
+    // because raw #00e5ff cyan text/border reads fine on dark but fails
+    // contrast on a white light-theme surface — var(--accent-color) already
+    // resolves to a darker, readable blue in light theme everywhere else.
+    accentColor: 'var(--accent-color)',
     servers: ['github-github-mcp-server', 'crystaldba-postgres-mcp', 'automatalabs-mcp-server-playwright', 'basicmachines-co-basic-memory'],
     displayTools: [
       { name: 'GitHub', tag: 'DevOps' },
@@ -61,9 +60,6 @@ export const PRESET_STACKS: PresetStack[] = [
     description: 'Query SQLite & BigQuery databases, execute Python data analysis scripts, and parse spreadsheet workbooks.',
     icon: <Database size={22} />,
     accentColor: '#a855f7',
-    gradientBg: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(124, 58, 237, 0.08) 100%)',
-    borderGlow: 'rgba(168, 85, 247, 0.3)',
-    textColor: '#c084fc',
     servers: ['jparkerweb-mcp-sqlite', 'ergut-mcp-bigquery-server', 'haris-musa-excel-mcp-server', 'kestra-io-mcp-server-python'],
     displayTools: [
       { name: 'SQLite', tag: 'Database' },
@@ -79,9 +75,6 @@ export const PRESET_STACKS: PresetStack[] = [
     description: 'Control Kubernetes clusters, manage AWS S3 storage buckets, orchestrate Docker containers, and Cloudflare workers.',
     icon: <Cloud size={22} />,
     accentColor: '#34d399',
-    gradientBg: 'linear-gradient(135deg, rgba(52, 211, 153, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%)',
-    borderGlow: 'rgba(52, 211, 153, 0.3)',
-    textColor: '#34d399',
     servers: ['flux159-mcp-server-kubernetes', 'alexei-led-aws-mcp-server', 'docker-hub-mcp', 'cloudflare-mcp-server-cloudflare'],
     displayTools: [
       { name: 'Kubernetes', tag: 'K8s' },
@@ -97,9 +90,6 @@ export const PRESET_STACKS: PresetStack[] = [
     description: 'Equip your AI agent with long-term graph memory, real-time Brave web search, file system tools, and deep context.',
     icon: <Bot size={22} />,
     accentColor: '#f59e0b',
-    gradientBg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.08) 100%)',
-    borderGlow: 'rgba(245, 158, 11, 0.3)',
-    textColor: '#fbbf24',
     servers: ['basicmachines-co-basic-memory', 'brave-brave-search-mcp-server', 'modelcontextprotocol-server-everything', 'aitytech-agentkits-memory'],
     displayTools: [
       { name: 'Basic Memory', tag: 'Memory' },
@@ -115,9 +105,6 @@ export const PRESET_STACKS: PresetStack[] = [
     description: 'Streamline team messaging via Slack, search Notion workspaces, monitor Sentry error tracking, and fetch Figma designs.',
     icon: <Briefcase size={22} />,
     accentColor: '#f43f5e',
-    gradientBg: 'linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(225, 29, 72, 0.08) 100%)',
-    borderGlow: 'rgba(244, 63, 94, 0.3)',
-    textColor: '#fb7185',
     servers: ['jtalk22-slack-mcp-server', 'badhansen-notion-mcp', 'getsentry-sentry-mcp', 'glips-figma-context-mcp'],
     displayTools: [
       { name: 'Slack', tag: 'Chat' },
@@ -133,9 +120,6 @@ export const PRESET_STACKS: PresetStack[] = [
     description: 'Automate browser navigation, query live web indexes, fetch structured page content, and summarize articles automatically.',
     icon: <Globe size={22} />,
     accentColor: '#0ea5e9',
-    gradientBg: 'linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%)',
-    borderGlow: 'rgba(14, 165, 233, 0.3)',
-    textColor: '#38bdf8',
     servers: ['automatalabs-mcp-server-playwright', 'brave-brave-search-mcp-server', 'ashlrai-webfetch', '0xshellming-mcp-summarizer'],
     displayTools: [
       { name: 'Playwright', tag: 'Scraper' },
@@ -193,23 +177,19 @@ export function PresetStackGrid() {
           const isLoading = loadingId === preset.id;
 
           return (
-            <div
+            <Card
               key={preset.id}
+              accent={preset.accentColor}
+              padding="md"
               className="preset-card"
               data-preset-id={preset.id}
-              style={{
-                '--preset-accent': preset.accentColor,
-                '--preset-bg': preset.gradientBg,
-                '--preset-border': preset.borderGlow,
-                '--preset-text': preset.textColor,
-              } as React.CSSProperties}
             >
               {/* Header Badge & Icon */}
               <div className="preset-card-top">
-                <div className="preset-card-icon-wrap" style={{ color: 'var(--preset-accent)' }}>
+                <div className="preset-card-icon-wrap" style={{ color: 'var(--card-accent)' }}>
                   {preset.icon}
                 </div>
-                <span className="preset-card-badge" style={{ borderColor: 'var(--preset-border)', color: 'var(--preset-text)' }}>
+                <span className="preset-card-badge" style={{ borderColor: 'var(--card-accent)', color: 'var(--card-accent)' }}>
                   {preset.badge}
                 </span>
               </div>
@@ -251,7 +231,7 @@ export function PresetStackGrid() {
                   {preset.servers.length} Tools
                 </span>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

@@ -314,6 +314,8 @@ body {
      `position: relative`; no z-index juggling required on sibling content. */
   z-index: -1;
   border-radius: inherit;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 50%, rgba(0, 0, 0, 0.35) 75%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 50%, rgba(0, 0, 0, 0.35) 75%, transparent 100%);
 }
 
 /* Graph-paper ruled grid + dot at each intersection. */
@@ -321,17 +323,17 @@ body {
   position: absolute;
   inset: 0;
   background-image:
-    radial-gradient(circle at 0 0, rgba(var(--accent-rgb), 0.6) 1px, transparent 1.5px),
+    radial-gradient(circle at 0 0, rgba(var(--accent-rgb), 0.5) 1px, transparent 1.5px),
     linear-gradient(to right, var(--border-strong) 1px, transparent 1px),
     linear-gradient(to bottom, var(--border-strong) 1px, transparent 1px);
   background-size: 88px 88px;
-  -webkit-mask-image: radial-gradient(ellipse 85% 90% at 50% 20%, #000 40%, transparent 100%);
-  mask-image: radial-gradient(ellipse 85% 90% at 50% 20%, #000 40%, transparent 100%);
-  opacity: 0.6;
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 15%, #000 20%, transparent 100%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 15%, #000 20%, transparent 100%);
+  opacity: 0.45;
 }
 
 [data-theme="light"] .ambient-grid {
-  opacity: 0.55;
+  opacity: 0.4;
 }
 
 /* Sparse "[ TAG ]" labels — static, sitting near the hero corners like
@@ -399,7 +401,8 @@ body {
 .ambient-code-fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, var(--bg-color) 0%, transparent 22%, transparent 78%, var(--bg-color) 100%);
+  background: linear-gradient(180deg, transparent 0%, transparent 40%, var(--bg-color) 100%);
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -614,15 +617,15 @@ p {
   justify-content: space-between;
   align-items: center;
   position: relative;
-  gap: 1.5rem;
-  flex-wrap: wrap;
+  gap: 1rem;
+  flex-wrap: nowrap;
 }
 
 .site-nav {
   display: flex;
-  gap: 1.25rem;
+  gap: clamp(0.65rem, 1.1vw, 1.25rem);
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .site-nav .nav-link {
@@ -3497,24 +3500,14 @@ nav[aria-label="Table of contents"] {
   max-width: 640px;
 }
 
+/* .guide-card's own background/border/radius/shadow/hover-lift now comes
+   from Card.tsx (`padding="lg" hoverable`) — these are layout-only rules for
+   its content. */
 .guide-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   height: 100%;
-  background: var(--bg-elevated, #0f172a);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-xl, 1rem);
-  padding: 1.75rem;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.guide-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(0, 229, 255, 0.35);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 229, 255, 0.08);
 }
 
 .guide-card-header {
@@ -3528,9 +3521,9 @@ nav[aria-label="Table of contents"] {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: var(--radius-md, 0.5rem);
-  background: rgba(0, 229, 255, 0.1);
-  border: 1px solid rgba(0, 229, 255, 0.25);
-  color: #00e5ff;
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  color: var(--accent-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3546,7 +3539,7 @@ nav[aria-label="Table of contents"] {
 
 .guide-card-meta {
   font-size: 0.8rem;
-  color: var(--brand-cyan, #00e5ff);
+  color: var(--accent-color);
   font-weight: 600;
   margin-bottom: 0.85rem;
 }
@@ -3578,17 +3571,13 @@ nav[aria-label="Table of contents"] {
   line-height: 1.4;
 }
 
+/* .guide-card-banner's surface now comes from Card.tsx (`accent`, `padding="lg"`). */
 .guide-card-banner {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.85) 100%);
-  border: 1px solid rgba(0, 229, 255, 0.25);
-  border-radius: var(--radius-xl, 1rem);
-  padding: 2.25rem 2.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
   flex-wrap: wrap;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   margin-top: 1rem;
 }
 
@@ -4391,6 +4380,65 @@ nav[aria-label="Table of contents"] {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 1.5rem;
+}
+
+/* Best-page topic tile (Card.tsx) — was two verbatim-duplicated inline-styled
+   blocks (category topics + keyword topics); now one mapped component. */
+.topic-tile {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: inherit;
+}
+
+.topic-tile-header {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: 0.875rem;
+}
+
+.topic-tile-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: rgba(var(--accent-rgb), 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  color: var(--accent-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.topic-tile-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.topic-tile-lead {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0 0 1.25rem;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex-grow: 1;
+}
+
+.topic-tile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent-color);
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-top: auto;
+  padding-top: 0.5rem;
 }
 
 .directory-list {
@@ -5514,6 +5562,26 @@ nav[aria-label="Table of contents"] {
   padding: var(--space-6);
 }
 
+.feature-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.feature-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
 .feature-card h2 {
   font-size: 1.05rem;
   font-weight: 700;
@@ -6377,27 +6445,12 @@ nav[aria-label="Table of contents"] {
    base .btn-primary rule), which already resolves to #ffffff in light theme — no
    per-state override needed here anymore. */
 
-[data-theme="light"] .guide-card {
-  background: #ffffff;
-  border-color: rgba(15, 23, 42, 0.1);
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
-}
-
-[data-theme="light"] .guide-card-icon {
-  background: rgba(2, 132, 199, 0.1);
-  border-color: rgba(2, 132, 199, 0.25);
-  color: var(--accent-color);
-}
-
+/* .guide-card / .guide-card-icon / .guide-card-banner light-theme colors now
+   come from Card.tsx's surface + the token-based .guide-card-icon above —
+   nothing left here to override. */
 [data-theme="light"] .guide-card-highlights {
   background: rgba(15, 23, 42, 0.04);
   border-color: rgba(15, 23, 42, 0.08);
-}
-
-[data-theme="light"] .guide-card-banner {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-color: rgba(2, 132, 199, 0.3);
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
 }
 
 [data-theme="light"] .directory-list-row-featured {
@@ -9970,37 +10023,11 @@ code.inline-path {
   gap: 1.5rem;
 }
 
-.preset-card {
-  position: relative;
-  background: var(--preset-bg, var(--bg-elevated));
-  border: 1px solid var(--preset-border, var(--border-color));
-  border-radius: 16px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  backdrop-filter: blur(12px);
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
-  overflow: hidden;
-}
-
-.preset-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--preset-accent, var(--accent-color));
-  opacity: 0.85;
-}
-
-.preset-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.4), 0 0 20px var(--preset-border);
-  border-color: var(--preset-accent);
-}
-
+/* .preset-card's surface/accent-border/hover-lift now comes from Card.tsx
+   (`accent={preset.accentColor} padding="md"`) — these are content-layout
+   rules only. Card also dropped the old per-preset full gradient background
+   in favor of a plain surface + accent top border: more minimal, and one
+   less thing every new preset has to hand-tune a color for. */
 .preset-card-top {
   display: flex;
   align-items: center;
@@ -10033,7 +10060,7 @@ code.inline-path {
 .preset-card-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--preset-text, var(--text-primary));
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   line-height: 1.35;
 }
@@ -10097,12 +10124,12 @@ code.inline-path {
   border: none;
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xs);
 }
 
 .preset-card-load-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px var(--preset-border);
+  box-shadow: var(--shadow-sm);
   opacity: 0.95;
 }
 
@@ -10117,24 +10144,10 @@ code.inline-path {
 }
 
 /* Light Theme Contrast Overrides for Preset Cards */
-[data-theme="light"] .preset-card {
-  /* Keep each card's accent gradient visible, just lightened for a white surface
-     instead of the flat #fff that was hiding it entirely. */
-  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.6)), var(--preset-bg, #ffffff);
-  border-color: rgba(15, 23, 42, 0.12);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-}
-
-/* The default cyan (#00e5ff) badge/icon is unreadable on light surfaces —
-   swap to the brand's darker blue stop for light theme only. */
-[data-theme="light"] .preset-card[data-preset-id="fullstack-dev"] {
-  /* !important needed: the component sets these same custom properties inline
-     (per-card accent), which otherwise always wins over an external stylesheet rule. */
-  --preset-text: var(--brand-blue) !important;
-  --preset-accent: var(--brand-blue) !important;
-  --preset-border: rgba(0, 82, 204, 0.3) !important;
-}
-
+/* .preset-card's surface (background/border/shadow, both themes) and its
+   accent color now come entirely from Card.tsx's `accent`/`padding` props —
+   nothing left to override here. The old per-card fullstack-dev color swap
+   and the light-only gradient background it needed are gone with it. */
 [data-theme="light"] .preset-card-icon-wrap {
   background: var(--bg-muted);
   border-color: rgba(15, 23, 42, 0.1);
@@ -10143,14 +10156,6 @@ code.inline-path {
 [data-theme="light"] .preset-card-badge {
   background: var(--bg-muted);
   border-color: rgba(15, 23, 42, 0.12);
-}
-
-[data-theme="light"] .preset-card-title {
-  color: var(--text-primary);
-}
-
-[data-theme="light"] .preset-card-desc {
-  color: #475569;
 }
 
 [data-theme="light"] .preset-tool-pill {

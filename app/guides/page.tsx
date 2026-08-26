@@ -16,6 +16,8 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { Card } from '@/components/ui/Card';
+import { PageShell, PageHeader } from '@/components/PageShell';
 
 export const metadata: Metadata = {
   title: 'Model Context Protocol Guides & Tutorials',
@@ -243,54 +245,19 @@ export default function GuidesLandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="page-shell page-shell--default">
-        <div className="page-shell-inner">
-          {/* Centered Hero Header Section */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              maxWidth: '768px',
-              margin: '0 auto 3.5rem',
-              padding: '0 1rem',
-            }}
-          >
-            <h1
-              className="text-page-title"
-              style={{
-                fontSize: 'clamp(2.25rem, 5vw, 3.25rem)',
-                marginBottom: '1.25rem',
-                fontWeight: 800,
-                textAlign: 'center',
-                width: '100%',
-              }}
-            >
-              Model Context Protocol Guides
-            </h1>
-
-            <p
-              className="text-lead"
-              style={{
-                fontSize: '1.15rem',
-                color: 'var(--text-secondary)',
-                textAlign: 'center',
-                margin: '0 auto',
-                maxWidth: '640px',
-                lineHeight: 1.65,
-              }}
-            >
-              Master MCP from the ground up: understand the protocol, connect your favorite AI client, build production-ready servers, or fix connection failures when something breaks.
-            </p>
-          </div>
+      <PageShell variant="default">
+        <PageHeader
+          centered
+          title="Model Context Protocol Guides"
+          description="Master MCP from the ground up: understand the protocol, connect your favorite AI client, build production-ready servers, or fix connection failures when something breaks."
+        />
 
           {/* Featured Pillar Guides Grid */}
           <div className="guides-grid">
             {guidesList.map((guide) => {
               const Icon = guide.icon;
               return (
-                <article key={guide.slug} className="guide-card group">
+                <Card key={guide.slug} padding="lg" hoverable className="guide-card group">
                   <div>
                     <div className="guide-card-header">
                       <div className="guide-card-icon">
@@ -332,7 +299,7 @@ export default function GuidesLandingPage() {
                     <span>Read Guide</span>
                     <ArrowRight size={16} />
                   </Link>
-                </article>
+                </Card>
               );
             })}
           </div>
@@ -362,31 +329,21 @@ export default function GuidesLandingPage() {
             >
               {troubleshootingDeepDives.map((item) => (
                 <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="surface"
-                    style={{
-                      display: 'block',
-                      padding: '1.1rem 1.25rem',
-                      borderRadius: '12px',
-                      textDecoration: 'none',
-                      height: '100%',
-                    }}
-                  >
+                  <Card href={item.href} padding="sm" hoverable style={{ display: 'block', height: '100%' }}>
                     <div style={{ fontWeight: 650, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
                       {item.title}
                     </div>
                     <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
                       {item.description}
                     </div>
-                  </Link>
+                  </Card>
                 </li>
               ))}
             </ul>
           </section>
 
           {/* Directory Callout Banner */}
-          <div className="guide-card-banner">
+          <Card padding="lg" accent="var(--accent-color)" className="guide-card-banner">
             <div style={{ maxWidth: '600px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-color)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                 <Layers size={18} /> Directory &amp; Tools
@@ -406,9 +363,8 @@ export default function GuidesLandingPage() {
                 Submit Your MCP
               </Link>
             </div>
-          </div>
-        </div>
-      </main>
+          </Card>
+      </PageShell>
     </>
   );
 }

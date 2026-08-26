@@ -173,15 +173,8 @@ export function SiteHeader() {
     <header className="site-header" role="banner">
       <div className="container grid-crosshair grid-crosshair-bl grid-crosshair-br">
         <div className="site-header-inner">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center">
             <BrandLogo size="md" />
-            <Link
-              href="/browse"
-              className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium text-cyan-400 bg-cyan-950/40 border border-cyan-500/25 hover:border-cyan-400/50 transition-colors"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              <span>10k+ servers</span>
-            </Link>
           </div>
 
           {/* Desktop Navigation */}

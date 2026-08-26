@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
-import { Search, Zap, Rocket } from 'lucide-react';
+import { Search, Zap, Rocket, type LucideIcon } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { PageShell, PageHeader } from '../../components/PageShell';
 
 export const metadata: Metadata = {
@@ -60,6 +61,24 @@ const aboutJsonLd = {
   ],
 };
 
+const FEATURES: Array<{ Icon: LucideIcon; title: string; body: string }> = [
+  {
+    Icon: Search,
+    title: 'Discover Tools',
+    body: 'Search hundreds of curated MCP servers spanning databases, APIs, dev tools, and desktop applications.',
+  },
+  {
+    Icon: Zap,
+    title: '1-Click Install',
+    body: 'Copy pre-formatted Claude Desktop and Cursor JSON configs directly into your local setup.',
+  },
+  {
+    Icon: Rocket,
+    title: 'Community Driven',
+    body: 'Submit your own open-source MCP servers to reach thousands of AI developers and users.',
+  },
+];
+
 export default function AboutPage() {
   return (
     <PageShell variant="content" panel className="animate-fade-in">
@@ -84,40 +103,17 @@ export default function AboutPage() {
       />
 
       <div className="feature-grid">
-        <div className="surface-muted feature-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.2)' }}>
-              <Search size={18} style={{ color: 'var(--accent-color)' }} />
+        {FEATURES.map(({ Icon, title, body }) => (
+          <Card key={title} surface="muted" className="feature-card">
+            <div className="feature-card-header">
+              <div className="feature-card-icon">
+                <Icon size={18} />
+              </div>
+              <h2 style={{ margin: 0 }}>{title}</h2>
             </div>
-            <h2 style={{ margin: 0 }}>Discover Tools</h2>
-          </div>
-          <p>
-            Search hundreds of curated MCP servers spanning databases, APIs, dev tools, and desktop
-            applications.
-          </p>
-        </div>
-        <div className="surface-muted feature-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.2)' }}>
-              <Zap size={18} style={{ color: 'var(--accent-color)' }} />
-            </div>
-            <h2 style={{ margin: 0 }}>1-Click Install</h2>
-          </div>
-          <p>
-            Copy pre-formatted Claude Desktop and Cursor JSON configs directly into your local setup.
-          </p>
-        </div>
-        <div className="surface-muted feature-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2.25rem', height: '2.25rem', borderRadius: '10px', background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.2)' }}>
-              <Rocket size={18} style={{ color: 'var(--accent-color)' }} />
-            </div>
-            <h2 style={{ margin: 0 }}>Community Driven</h2>
-          </div>
-          <p>
-            Submit your own open-source MCP servers to reach thousands of AI developers and users.
-          </p>
-        </div>
+            <p>{body}</p>
+          </Card>
+        ))}
       </div>
 
       <h2 className="text-section">Built by Jackalope Digital</h2>
