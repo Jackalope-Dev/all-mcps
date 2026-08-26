@@ -1774,6 +1774,7 @@ p {
 }
 
 .brand-logo-wordmark {
+  font-family: var(--font-wordmark), var(--font-atkinson), sans-serif;
   font-weight: 800;
   line-height: 1;
 }
@@ -1790,10 +1791,9 @@ p {
   font-size: 1.9rem;
 }
 
-/* Wordmark: keep "All" + "MCPs" as readable chunks. Atkinson already
-   differentiates lowercase "l"; light positive tracking on "All" keeps the
-   double-l from merging at logo size. */
+/* Wordmark: Plus Jakarta Sans display typography with custom tracking for 'All' and 'MCPs' */
 .wordmark-text {
+  font-family: var(--font-wordmark), var(--font-atkinson), sans-serif;
   display: inline-flex;
   align-items: baseline;
   letter-spacing: -0.01em;
@@ -1803,11 +1803,20 @@ p {
 }
 
 .wordmark-all {
+  background: linear-gradient(135deg, #00f0ff 0%, #38bdf8 55%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.02em;
+  filter: drop-shadow(0 0 14px rgba(0, 229, 255, 0.35));
+}
+
+[data-theme="light"] .wordmark-all {
   background: var(--brand-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  letter-spacing: 0.04em;
+  filter: none;
 }
 
 .wordmark-mcps {

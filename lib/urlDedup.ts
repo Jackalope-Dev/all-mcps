@@ -16,6 +16,25 @@ export function normalizeUrlKey(rawUrl: string): string {
   }
 }
 
+/**
+ * Canonical package-identity key (e.g. "npm:@foo/bar") — closes a gap the URL key
+ * alone misses: the same npm/PyPI package can be listed under different repo or
+ * marketing URLs across sources. `ecosystem` is 'npm' or 'pypi' (see
+ * scripts/ingest-sources.mjs's installEcosystemFromCommand for how it's derived
+ * from a cached installCommand). Ported verbatim into scripts/ingest-sources.mjs
+ * for the same reason normalizeUrlKey is — that script runs as plain Node ESM,
+ * not through the TS toolchain.
+ */
+export function normalizePackageKey(
+  ecosystem: 'npm' | 'pypi' | null | undefined,
+  packageName: string | null | undefined
+): string | null {
+  if (!ecosystem || !packageName) return null;
+  const pkg = packageName.trim().toLowerCase();
+  if (!pkg || pkg.startsWith('http')) return null;
+  return `${ecosystem}:${pkg}`;
+}
+
 export type ExistingListingMatch = {
   id: string;
   name: string;

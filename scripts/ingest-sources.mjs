@@ -25,6 +25,23 @@ import { execSync } from 'child_process';
 
 const AUTO_APPLY = process.argv.includes('--apply');
 
+// --only=<source1,source2> / --skip=<source1,source2> — operational kill switch so
+// a source can be disabled from CI (the workflow file) without a code change, e.g.
+// while a newly-added source's first few runs are still being reviewed manually.
+// Source names match the `source` tag each fetcher stamps on its entries below
+// ('official-registry', a SOURCES[].name, or 'pulsemcp').
+function argListFlag(name) {
+  const prefix = `--${name}=`;
+  const arg = process.argv.find((a) => a.startsWith(prefix));
+  return arg ? arg.slice(prefix.length).split(',').map((s) => s.trim()).filter(Boolean) : null;
+}
+const ONLY_SOURCES = argListFlag('only');
+const SKIP_SOURCES = argListFlag('skip') || [];
+function sourceEnabled(name) {
+  if (ONLY_SOURCES) return ONLY_SOURCES.includes(name);
+  return !SKIP_SOURCES.includes(name);
+}
+
 const DB_NAME = 'all-mcps';
 // wrangler.jsonc has no `account_id`, and this Cloudflare login has more than one
 // account, so a non-interactive `wrangler d1` call fails closed (7403) without this.
@@ -38,6 +55,20 @@ const ACCOUNT_ID = '1a04a617cf42aaaba19b44365dd7c882';
 // cursor param instead of paging everything every time.
 const OFFICIAL_REGISTRY_BASE = 'https://registry.modelcontextprotocol.io';
 const OFFICIAL_REGISTRY_MAX_PAGES = 300; // 300 * 100 = 30,000 servers (registry already exceeds 5,000 as of 2026-08)
+
+// PulseMCP (https://www.pulsemcp.com) — third-party MCP directory with a public,
+// paginated JSON API (confirmed live 2026-08-26: GET .../v0beta/servers returns
+// {servers, total_count, next}; ~22k entries vs. our ~11k rows). Unlike the official
+// registry this has no moderation policy we've vetted, so candidates are NOT
+// auto-approved, and — because the volume dwarfs the two README sources — get their
+// own quality floor and per-run cap so the admin queue stays reviewable instead of
+// getting flooded in one run. See docs/superpowers/specs/2026-08-07-ingest-sources-design.md.
+const PULSEMCP_API_BASE = 'https://api.pulsemcp.com/v0beta/servers';
+const PULSEMCP_PAGE_SIZE = 100;
+const PULSEMCP_MAX_PAGES = 400; // 400 * 100 = 40,000 servers of headroom
+const PULSEMCP_MIN_SIGNAL = { stars: 1, downloads: 50 };
+const PULSEMCP_MAX_NEW_PER_RUN = 150;
+const PULSEMCP_HOST_BLOCKLIST = ['pulsemcp.com', 'www.pulsemcp.com'];
 
 const SOURCES = [
   {
@@ -269,6 +300,52 @@ function normalizeUrlKey(rawUrl) {
   }
 }
 
+// --- package-identity dedup ------------------------------------------------
+// Verbatim port of lib/urlDedup.ts's installEcosystemFromCommand/normalizePackageKey
+// (same "plain Node ESM, no TS toolchain" reason normalizeUrlKey above is ported).
+// Closes a gap URL-only dedup misses: the same npm/PyPI package can be listed
+// under different repo/marketing URLs across sources.
+
+function installEcosystemFromCommand(installCommand) {
+  const cmd = (installCommand || '').toLowerCase();
+  if (/npx|bunx|npm|pnpm|yarn/.test(cmd)) return 'npm';
+  if (/uvx|pipx|pip\b|python/.test(cmd)) return 'pypi';
+  return null;
+}
+
+function normalizePackageKey(ecosystem, packageName) {
+  if (!ecosystem || !packageName) return null;
+  const pkg = String(packageName).trim().toLowerCase();
+  if (!pkg || pkg.startsWith('http')) return null;
+  return `${ecosystem}:${pkg}`;
+}
+
+// --- multi-signal duplicate *flagging* (review-only, never auto-skip) ------
+// Exact url/package identity above is the only thing allowed to silently drop
+// a candidate — that's deliberately conservative. But it misses a real case:
+// the same GitHub owner shipping what's clearly the same project name under a
+// different repo/URL (a rename, a monorepo split, a fork under a new org).
+// Corroborating signals (owner match + name match) raise confidence enough to
+// flag it in the generated SQL/console for a human to look at, without ever
+// silently merging or rejecting a possibly-distinct listing.
+
+function parseGithubOwnerRepo(url) {
+  const m = (url || '').match(/github\.com\/([^/]+)\/([^/#?]+)/i);
+  if (!m) return null;
+  return { owner: m[1].toLowerCase(), repo: m[2].replace(/\.git$/i, '').toLowerCase() };
+}
+
+/** Collapse a listing name to a bare identity key: lowercase, strip "mcp"/"server(s)" filler words and punctuation. */
+function normalizeNameKey(name) {
+  return (name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter((w) => w && w !== 'mcp' && w !== 'server' && w !== 'servers')
+    .join(' ')
+    .trim();
+}
+
 function slugify(name) {
   return (
     name
@@ -413,6 +490,175 @@ async function fetchOfficialRegistryEntries() {
   return entries;
 }
 
+// --- PulseMCP (JSON API, not markdown) --------------------------------------
+
+function isPulseMcpOwnUrl(url) {
+  try {
+    return PULSEMCP_HOST_BLOCKLIST.includes(new URL(url).hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * PulseMCP's ~22k entries dwarf our ~11k rows — an unfiltered first run would dump
+ * thousands of zero-signal candidates (empty forks, one-off scripts) into the admin
+ * queue at once. This is a soft floor, not a strict bar: any one of a handful of
+ * "this looks like a real, used project" signals is enough to pass.
+ */
+function pulseMcpPassesQualityFloor(entry) {
+  if ((entry.github_stars ?? 0) >= PULSEMCP_MIN_SIGNAL.stars) return true;
+  if ((entry.package_download_count ?? 0) >= PULSEMCP_MIN_SIGNAL.downloads) return true;
+  if (Array.isArray(entry.remotes) && entry.remotes.length > 0) return true;
+  if (entry.external_url && !isPulseMcpOwnUrl(entry.external_url)) return true;
+  return false;
+}
+
+/**
+ * PulseMCP gives structured package/remote fields directly — resolve install config
+ * from those now instead of waiting on the enrich cron's README-parse heuristic.
+ * Unrecognized package_registry values (anything besides npm/PyPI) are left unset;
+ * the enrich cron already handles that case for every other source today.
+ */
+function pulseMcpInstallFields(entry) {
+  const pkg = (entry.package_name || '').trim();
+  const registry = (entry.package_registry || '').toLowerCase();
+  const remote = Array.isArray(entry.remotes) ? entry.remotes[0] : null;
+  const out = {};
+
+  if (registry === 'npm' && pkg) {
+    out.installKind = 'stdio';
+    out.installCommand = 'npx';
+    out.installArgs = ['-y', pkg];
+    out.installPackage = pkg;
+    out.installConfidence = 'high';
+    if (typeof entry.package_download_count === 'number') out.npmDownloads = entry.package_download_count;
+  } else if (registry === 'pypi' && pkg) {
+    out.installKind = 'stdio';
+    out.installCommand = 'uvx';
+    out.installArgs = [pkg];
+    out.installPackage = pkg;
+    out.installConfidence = 'high';
+  } else if (remote?.url_direct) {
+    out.installKind = 'remote';
+    out.installPackage = remote.url_direct;
+    out.installConfidence = 'high';
+  }
+
+  // Secondary connection method alongside whichever primary install branch fired
+  // above (see db/schema.ts's remoteEndpointUrl comment) — set whenever a remote
+  // exists, independent of package_registry.
+  if (remote?.url_direct) out.remoteEndpointUrl = remote.url_direct;
+
+  return out;
+}
+
+// Confirmed live 2026-08-26: repeated identical requests to this API alternate
+// between 200 and 410 with no discernible pattern (not a page-size or offset
+// limit — verified by re-requesting the exact same URL and getting different
+// results). Treated as a flaky third-party dependency: retry each page a few
+// times before giving up on it.
+const PULSEMCP_FETCH_RETRIES = 3;
+const PULSEMCP_RETRY_DELAY_MS = 1000;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchPulseMcpPage(url) {
+  let lastErr;
+  for (let attempt = 1; attempt <= PULSEMCP_FETCH_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': 'AllMCPs-Ingest' } });
+      if (res.ok) return await res.json();
+      lastErr = new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+    if (attempt < PULSEMCP_FETCH_RETRIES) await sleep(PULSEMCP_RETRY_DELAY_MS * attempt);
+  }
+  throw lastErr;
+}
+
+async function fetchPulseMcpEntries() {
+  const entries = [];
+  let url = `${PULSEMCP_API_BASE}?count_per_page=${PULSEMCP_PAGE_SIZE}&offset=0`;
+  let page = 0;
+  let skippedNoUrl = 0;
+  let skippedLowSignal = 0;
+
+  while (url && page < PULSEMCP_MAX_PAGES) {
+    let body;
+    try {
+      body = await fetchPulseMcpPage(url);
+    } catch (err) {
+      // A flaky page shouldn't sacrifice everything fetched so far, or (more
+      // importantly) take down the official-registry/README sources — the
+      // caller in main() already isolates this fetch in its own try/catch,
+      // but bail out of pagination gracefully here too so a mid-run failure
+      // still yields whatever was already collected instead of nothing.
+      console.warn(`  pulsemcp: giving up on pagination after a page failed (${err.message}); keeping ${entries.length} entries collected so far.`);
+      break;
+    }
+
+    for (const entry of body.servers ?? []) {
+      if (!pulseMcpPassesQualityFloor(entry)) {
+        skippedLowSignal++;
+        continue;
+      }
+
+      const remote = Array.isArray(entry.remotes) ? entry.remotes[0] : null;
+      // Never the pulsemcp.com detail-page URL itself — that's their directory
+      // page, not the project's own repo/site.
+      const primaryUrl =
+        entry.source_code_url ||
+        remote?.url_direct ||
+        (entry.external_url && !isPulseMcpOwnUrl(entry.external_url) ? entry.external_url : null);
+      if (!primaryUrl) {
+        skippedNoUrl++;
+        continue;
+      }
+
+      const name = entry.name;
+      const desc = entry.short_description || entry.EXPERIMENTAL_ai_generated_description || '';
+      const websiteUrl =
+        entry.external_url &&
+        entry.external_url !== primaryUrl &&
+        !isPulseMcpOwnUrl(entry.external_url) &&
+        !/github\.com/i.test(entry.external_url)
+          ? entry.external_url
+          : undefined;
+
+      entries.push({
+        name,
+        url: primaryUrl,
+        description: desc,
+        category: inferCategoryFromSignals(name, desc, primaryUrl),
+        websiteUrl,
+        source: 'pulsemcp',
+        githubStars: /github\.com/i.test(primaryUrl) ? entry.github_stars ?? undefined : undefined,
+        // Sort keys for the per-run cap below — kept separate from githubStars
+        // since githubStars is only set for GitHub-primary listings, but the cap
+        // should still rank non-GitHub (remote-only) candidates sensibly.
+        sortStars: entry.github_stars ?? 0,
+        sortDownloads: entry.package_download_count ?? 0,
+        ...pulseMcpInstallFields(entry),
+      });
+    }
+
+    url = body.next || null;
+    page++;
+  }
+
+  if (page >= PULSEMCP_MAX_PAGES && url) {
+    console.warn(`  pulsemcp: hit the ${PULSEMCP_MAX_PAGES}-page safety cap with more pages remaining.`);
+  }
+  if (skippedNoUrl) console.log(`  pulsemcp: skipped ${skippedNoUrl} entries with no usable URL.`);
+  if (skippedLowSignal) console.log(`  pulsemcp: skipped ${skippedLowSignal} entries below the quality floor.`);
+
+  return entries;
+}
+
 // --- liveness pre-check for official-registry candidates -------------------
 // The registry's own moderation doesn't verify submitted repo URLs are still
 // live (confirmed in practice: the first live import included several
@@ -449,10 +695,16 @@ async function checkLive(url) {
   }
 }
 
-async function checkLivenessOfRegistryCandidates(candidates) {
-  const toCheck = candidates.filter((c) => c.source === 'official-registry');
+// official-registry candidates otherwise auto-publish as 'active' (a failed check
+// demotes them to 'pending'); pulsemcp candidates always land 'pending' regardless,
+// but a failed check there means "confirmed dead" — see main()'s use of this flag,
+// which drops those entirely rather than queuing a dead link for admin review.
+const LIVE_CHECK_SOURCES = new Set(['official-registry', 'pulsemcp']);
+
+async function checkLivenessOfNewCandidates(candidates) {
+  const toCheck = candidates.filter((c) => LIVE_CHECK_SOURCES.has(c.source));
   if (toCheck.length === 0) return;
-  console.log(`Live-checking ${toCheck.length} new official-registry candidates...`);
+  console.log(`Live-checking ${toCheck.length} new official-registry/pulsemcp candidates...`);
 
   let deadCount = 0;
   for (let i = 0; i < toCheck.length; i += LIVENESS_CONCURRENCY) {
@@ -478,7 +730,7 @@ async function checkLivenessOfRegistryCandidates(candidates) {
 const WRANGLER_ENV = { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID };
 
 function queryExisting() {
-  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "SELECT id, url FROM servers"`;
+  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "SELECT id, name, url, install_command, install_package FROM servers"`;
   let out;
   try {
     out = execSync(cmd, {
@@ -512,32 +764,105 @@ async function main() {
   // one of the README sources below, the dedup loop keeps whichever entry it
   // sees first, and registry data (accurate description, auto-approved
   // status) should win over a possibly-stale awesome-list scrape.
-  const registryEntries = await fetchOfficialRegistryEntries();
-  console.log(`  official-registry: ${registryEntries.length} active entries fetched`);
-  const allEntries = [...registryEntries];
+  const allEntries = [];
+
+  if (sourceEnabled('official-registry')) {
+    const registryEntries = await fetchOfficialRegistryEntries();
+    console.log(`  official-registry: ${registryEntries.length} active entries fetched`);
+    allEntries.push(...registryEntries);
+  }
 
   for (const source of SOURCES) {
+    if (!sourceEnabled(source.name)) continue;
     const md = await fetchReadme(source.readmeUrl);
     const entries = parseServerList(md, source);
     console.log(`  ${source.name}: ${entries.length} entries parsed`);
     allEntries.push(...entries);
   }
 
+  if (sourceEnabled('pulsemcp')) {
+    try {
+      const pulsemcpEntries = await fetchPulseMcpEntries();
+      console.log(`  pulsemcp: ${pulsemcpEntries.length} entries above the quality floor`);
+      allEntries.push(...pulsemcpEntries);
+    } catch (err) {
+      // Isolated deliberately: pulsemcp's API has observed intermittent failures
+      // (see fetchPulseMcpPage) and is not a source we're vetting the reliability
+      // of the way the official registry has been — a bad run there should never
+      // sacrifice the official-registry/README ingestion that already succeeded.
+      console.warn(`  pulsemcp: skipping this run entirely — fetch failed: ${err.message}`);
+    }
+  }
+
   const byUrlKey = new Map();
+  const seenPackageKeys = new Map();
   for (const e of allEntries) {
     if (!isSafeSubmissionUrl(e.url)) continue;
     const key = normalizeUrlKey(e.url);
-    if (!byUrlKey.has(key)) byUrlKey.set(key, { ...e, urlKey: key });
+    if (byUrlKey.has(key)) continue;
+
+    const pkgKey =
+      e.installKind === 'stdio'
+        ? normalizePackageKey(installEcosystemFromCommand(e.installCommand), e.installPackage)
+        : null;
+    if (pkgKey && seenPackageKeys.has(pkgKey)) continue;
+
+    byUrlKey.set(key, { ...e, urlKey: key, packageKey: pkgKey });
+    if (pkgKey) seenPackageKeys.set(pkgKey, key);
   }
   console.log(`Deduped to ${byUrlKey.size} unique candidates across sources.`);
 
   console.log('Querying live DB for existing urls/ids...');
   const existing = queryExisting();
   const existingUrlKeys = new Set(existing.map((r) => normalizeUrlKey(r.url)));
+  const existingPackageKeys = new Set(
+    existing
+      .map((r) => normalizePackageKey(installEcosystemFromCommand(r.install_command), r.install_package))
+      .filter(Boolean)
+  );
   const usedIds = new Set(existing.map((r) => r.id));
   console.log(`  ${existing.length} servers already on file.`);
 
-  const newCandidates = [...byUrlKey.values()].filter((c) => !existingUrlKeys.has(c.urlKey));
+  // Corroborating (review-only) signals for the duplicate-confidence flag below.
+  const existingByOwner = new Map(); // github owner -> [{id, url, nameKey}]
+  const existingByNameKey = new Map(); // nameKey -> [{id, url}]
+  for (const r of existing) {
+    const nameKey = normalizeNameKey(r.name);
+    const gh = parseGithubOwnerRepo(r.url);
+    if (gh) {
+      if (!existingByOwner.has(gh.owner)) existingByOwner.set(gh.owner, []);
+      existingByOwner.get(gh.owner).push({ id: r.id, url: r.url, nameKey });
+    }
+    if (nameKey) {
+      if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
+      existingByNameKey.get(nameKey).push({ id: r.id, url: r.url });
+    }
+  }
+
+  function findPossibleDuplicate(candidate) {
+    const nameKey = normalizeNameKey(candidate.name);
+    if (!nameKey) return null;
+
+    const gh = parseGithubOwnerRepo(candidate.url);
+    if (gh) {
+      const sameOwner = existingByOwner.get(gh.owner) || [];
+      const ownerMatch = sameOwner.find((e) => e.nameKey === nameKey);
+      if (ownerMatch) return { id: ownerMatch.id, url: ownerMatch.url, reason: 'same GitHub owner + same name' };
+    }
+
+    // Weaker on its own (unrelated projects occasionally share a generic name),
+    // but still worth a human glance rather than silently inserting a second
+    // listing that reads identically on the directory.
+    const sameName = existingByNameKey.get(nameKey) || [];
+    if (sameName.length > 0) {
+      return { id: sameName[0].id, url: sameName[0].url, reason: 'same name, different owner/URL' };
+    }
+    return null;
+  }
+
+  const newCandidates = [...byUrlKey.values()].filter(
+    (c) => !existingUrlKeys.has(c.urlKey) && !(c.packageKey && existingPackageKeys.has(c.packageKey))
+  );
   console.log(`${newCandidates.length} candidates are not yet in the catalog.`);
 
   if (newCandidates.length === 0) {
@@ -545,10 +870,29 @@ async function main() {
     return;
   }
 
-  await checkLivenessOfRegistryCandidates(newCandidates);
+  await checkLivenessOfNewCandidates(newCandidates);
 
+  const deadPulsemcp = newCandidates.filter((c) => c.source === 'pulsemcp' && c.liveCheckFailed).length;
+  if (deadPulsemcp > 0) {
+    console.log(`  pulsemcp: dropping ${deadPulsemcp} dead-on-arrival candidates instead of queuing them for review.`);
+  }
+  let finalCandidates = newCandidates.filter((c) => !(c.source === 'pulsemcp' && c.liveCheckFailed));
+
+  const pulsemcpCandidates = finalCandidates
+    .filter((c) => c.source === 'pulsemcp')
+    .sort((a, b) => b.sortStars - a.sortStars || b.sortDownloads - a.sortDownloads);
+  if (pulsemcpCandidates.length > PULSEMCP_MAX_NEW_PER_RUN) {
+    const heldBack = pulsemcpCandidates.length - PULSEMCP_MAX_NEW_PER_RUN;
+    console.log(
+      `  pulsemcp: capping this run to the top ${PULSEMCP_MAX_NEW_PER_RUN} by stars/downloads (${heldBack} held back for a future run).`
+    );
+    const keepUrlKeys = new Set(pulsemcpCandidates.slice(0, PULSEMCP_MAX_NEW_PER_RUN).map((c) => c.urlKey));
+    finalCandidates = finalCandidates.filter((c) => c.source !== 'pulsemcp' || keepUrlKeys.has(c.urlKey));
+  }
+
+  let dupWarningCount = 0;
   const rows = [];
-  for (const c of newCandidates) {
+  for (const c of finalCandidates) {
     const base = slugify(c.name);
     let id = base;
     let n = 2;
@@ -557,8 +901,15 @@ async function main() {
     }
     usedIds.add(id);
 
+    // Checked against both the live DB and every candidate already accepted
+    // this run (registered into the same maps right after, below) — catches
+    // two *new* sources introducing what looks like the same project too.
+    const dup = findPossibleDuplicate(c);
+    if (dup) dupWarningCount++;
+
     rows.push({
       id,
+      dupWarning: dup ? `possible duplicate of '${dup.id}' (${dup.reason}): ${dup.url}` : null,
       name: c.name,
       url: c.url,
       websiteUrl: c.websiteUrl,
@@ -570,22 +921,57 @@ async function main() {
       // unless the liveness pre-check above found the URL already dead.
       // Everything else keeps going through review, same as /api/submit.
       status: c.source === 'official-registry' && !c.liveCheckFailed ? 'active' : 'pending',
+      // Structured signals pulsemcp gives us directly — pre-populated now instead
+      // of waiting on the health/enrich crons' README-parse heuristics. Every
+      // other source simply leaves these undefined, which serializes to NULL below.
+      githubStars: c.githubStars,
+      npmDownloads: c.npmDownloads,
+      installKind: c.installKind,
+      installCommand: c.installCommand,
+      installArgs: c.installArgs,
+      installPackage: c.installPackage,
+      installConfidence: c.installConfidence,
+      remoteEndpointUrl: c.remoteEndpointUrl,
     });
+
+    // Register this now-accepted candidate so a *later* candidate in this same
+    // run (from a different source) also gets checked against it.
+    const nameKey = normalizeNameKey(c.name);
+    const gh = parseGithubOwnerRepo(c.url);
+    if (gh) {
+      if (!existingByOwner.has(gh.owner)) existingByOwner.set(gh.owner, []);
+      existingByOwner.get(gh.owner).push({ id, url: c.url, nameKey });
+    }
+    if (nameKey) {
+      if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
+      existingByNameKey.get(nameKey).push({ id, url: c.url });
+    }
+  }
+  if (dupWarningCount > 0) {
+    console.log(`  ⚠ ${dupWarningCount} candidate(s) flagged as possible duplicates — review before applying (see comments in the generated SQL).`);
   }
 
   const date = new Date().toISOString().slice(0, 10);
   const sqlPath = path.join(process.cwd(), 'drizzle', `ingest-${date}.sql`);
   const esc = (s) => String(s).replace(/'/g, "''");
+  const strOrNull = (s) => (s ? `'${esc(s)}'` : 'NULL');
+  const numOrNull = (n) => (typeof n === 'number' && Number.isFinite(n) ? String(n) : 'NULL');
 
   let sql = '';
   for (const r of rows) {
     // created_at is stored in Unix *seconds* (matches scripts/seed-sql.mjs and the
     // Drizzle submit route) — do not multiply by 1000.
-    const websiteUrlSql = r.websiteUrl ? `'${esc(r.websiteUrl)}'` : 'NULL';
+    const installArgsJson = r.installArgs ? JSON.stringify(r.installArgs) : null;
+    if (r.dupWarning) sql += `-- ⚠ ${r.dupWarning}\n`;
     sql +=
-      `INSERT INTO servers (id, name, url, website_url, description, category, is_official, status, created_at) ` +
-      `VALUES ('${esc(r.id)}', '${esc(r.name)}', '${esc(r.url)}', ${websiteUrlSql}, '${esc(r.description)}', ` +
-      `'${esc(r.category)}', ${r.isOfficial ? 1 : 0}, '${esc(r.status)}', strftime('%s', 'now')) ` +
+      `INSERT INTO servers (id, name, url, website_url, description, category, is_official, status, ` +
+      `github_stars, npm_downloads, install_kind, install_command, install_args, install_package, ` +
+      `install_confidence, remote_endpoint_url, created_at) ` +
+      `VALUES ('${esc(r.id)}', '${esc(r.name)}', '${esc(r.url)}', ${strOrNull(r.websiteUrl)}, '${esc(r.description)}', ` +
+      `'${esc(r.category)}', ${r.isOfficial ? 1 : 0}, '${esc(r.status)}', ` +
+      `${numOrNull(r.githubStars)}, ${numOrNull(r.npmDownloads)}, ${strOrNull(r.installKind)}, ` +
+      `${strOrNull(r.installCommand)}, ${strOrNull(installArgsJson)}, ${strOrNull(r.installPackage)}, ` +
+      `${strOrNull(r.installConfidence)}, ${strOrNull(r.remoteEndpointUrl)}, strftime('%s', 'now')) ` +
       `ON CONFLICT(id) DO NOTHING;\n`;
   }
 
@@ -594,10 +980,15 @@ async function main() {
 
   const relPath = path.relative(process.cwd(), sqlPath);
   const activeCount = rows.filter((r) => r.status === 'active').length;
+  const bySource = finalCandidates.reduce((acc, c) => {
+    acc[c.source] = (acc[c.source] || 0) + 1;
+    return acc;
+  }, {});
   console.log(`\nWrote ${rows.length} new listings to ${relPath} (${activeCount} auto-active from the official registry, ${rows.length - activeCount} pending review).`);
+  console.log(`  By source: ${Object.entries(bySource).map(([s, n]) => `${s}=${n}`).join(', ')}`);
   console.log('First up to 15 new listings:');
   for (const r of rows.slice(0, 15)) {
-    console.log(`  - ${r.name}  (${r.category})  [${r.status}]  ${r.url}`);
+    console.log(`  - ${r.name}  (${r.category})  [${r.status}]  ${r.url}${r.dupWarning ? `  ⚠ ${r.dupWarning}` : ''}`);
   }
 
   if (AUTO_APPLY) {

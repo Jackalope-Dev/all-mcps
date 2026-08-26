@@ -200,6 +200,7 @@ const EXCLUDED_DOMAINS_FOR_WEBSITE = [
   'glama.ai',
   'smithery.ai',
   'pulse.mcp.so',
+  'pulsemcp.com',
   'localhost',
   '127.0.0.1',
 ];

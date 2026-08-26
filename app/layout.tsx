@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Atkinson_Hyperlegible_Next, Geist_Mono } from "next/font/google";
+import { Atkinson_Hyperlegible_Next, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
@@ -37,6 +37,14 @@ const sans = Atkinson_Hyperlegible_Next({
 const mono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+  display: "swap",
+});
+
+// Plus Jakarta Sans: High-impact geometric display face for the AllMCPs logo/wordmark
+const wordmark = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-wordmark",
+  weight: ["700", "800"],
   display: "swap",
 });
 
@@ -100,7 +108,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`} data-theme="dark" suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${mono.variable} ${wordmark.variable}`} data-theme="dark" suppressHydrationWarning>
       <head>
         {/*
           A plain <script> tag (not next/script) on purpose: this Next.js version's
