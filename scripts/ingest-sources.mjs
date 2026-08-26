@@ -869,7 +869,7 @@ async function main() {
       existingByOwner.get(gh.owner).push({ id: r.id, url: r.url, nameKey });
     }
 
-    const websiteDomain = domainOf(r.website_url);
+    const websiteDomain = websiteDomainOf(r.website_url);
     if (websiteDomain) domainUsageCount.set(websiteDomain, (domainUsageCount.get(websiteDomain) || 0) + 1);
 
     if (nameKey) {
@@ -998,7 +998,7 @@ async function main() {
       if (!existingByOwner.has(gh.owner)) existingByOwner.set(gh.owner, []);
       existingByOwner.get(gh.owner).push({ id, url: c.url, nameKey });
     }
-    const acceptedDomain = domainOf(c.websiteUrl) || domainOf(c.url);
+    const acceptedDomain = domainOf(c.websiteUrl) || websiteDomainOf(c.url);
     if (acceptedDomain) domainUsageCount.set(acceptedDomain, (domainUsageCount.get(acceptedDomain) || 0) + 1);
     if (nameKey) {
       if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
