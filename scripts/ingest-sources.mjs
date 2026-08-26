@@ -346,6 +346,20 @@ function normalizeNameKey(name) {
     .trim();
 }
 
+function domainOf(url) {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+/** Bare package name for cross-ecosystem name comparison — excludes remote-install URLs (installPackage there is a URL, not a name). */
+function barePackageName(installKind, installPackage) {
+  if (installKind !== 'stdio' || !installPackage) return null;
+  return String(installPackage).trim().toLowerCase();
+}
+
 function slugify(name) {
   return (
     name
@@ -730,7 +744,7 @@ async function checkLivenessOfNewCandidates(candidates) {
 const WRANGLER_ENV = { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID };
 
 function queryExisting() {
-  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "SELECT id, name, url, install_command, install_package FROM servers"`;
+  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "SELECT id, name, url, website_url, install_kind, install_command, install_package FROM servers"`;
   let out;
   try {
     out = execSync(cmd, {
@@ -824,8 +838,12 @@ async function main() {
   console.log(`  ${existing.length} servers already on file.`);
 
   // Corroborating (review-only) signals for the duplicate-confidence flag below.
+  // Name alone is deliberately NOT enough to flag on its own — two unrelated
+  // authors can genuinely both ship a "Polymarket MCP". It only counts once
+  // paired with something much harder to coincidentally share: the same
+  // GitHub owner, the same package name, or the same website domain.
   const existingByOwner = new Map(); // github owner -> [{id, url, nameKey}]
-  const existingByNameKey = new Map(); // nameKey -> [{id, url}]
+  const existingByNameKey = new Map(); // nameKey -> [{id, url, websiteDomain, packageName}]
   for (const r of existing) {
     const nameKey = normalizeNameKey(r.name);
     const gh = parseGithubOwnerRepo(r.url);
@@ -835,7 +853,12 @@ async function main() {
     }
     if (nameKey) {
       if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
-      existingByNameKey.get(nameKey).push({ id: r.id, url: r.url });
+      existingByNameKey.get(nameKey).push({
+        id: r.id,
+        url: r.url,
+        websiteDomain: domainOf(r.website_url),
+        packageName: barePackageName(r.install_kind, r.install_package),
+      });
     }
   }
 
@@ -850,13 +873,20 @@ async function main() {
       if (ownerMatch) return { id: ownerMatch.id, url: ownerMatch.url, reason: 'same GitHub owner + same name' };
     }
 
-    // Weaker on its own (unrelated projects occasionally share a generic name),
-    // but still worth a human glance rather than silently inserting a second
-    // listing that reads identically on the directory.
     const sameName = existingByNameKey.get(nameKey) || [];
-    if (sameName.length > 0) {
-      return { id: sameName[0].id, url: sameName[0].url, reason: 'same name, different owner/URL' };
-    }
+    if (sameName.length === 0) return null;
+
+    const candidateDomain = domainOf(candidate.websiteUrl) || domainOf(candidate.url);
+    const candidatePackage = barePackageName(candidate.installKind, candidate.installPackage);
+
+    const domainMatch = candidateDomain && sameName.find((e) => e.websiteDomain === candidateDomain);
+    if (domainMatch) return { id: domainMatch.id, url: domainMatch.url, reason: 'same name + same website domain' };
+
+    const packageMatch = candidatePackage && sameName.find((e) => e.packageName === candidatePackage);
+    if (packageMatch) return { id: packageMatch.id, url: packageMatch.url, reason: 'same name + same package name' };
+
+    // Name matched but nothing else corroborated it — too weak to flag on its
+    // own (see comment above); silently allow it through as a distinct listing.
     return null;
   }
 
