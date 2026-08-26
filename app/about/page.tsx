@@ -65,7 +65,7 @@ const FEATURES: Array<{ Icon: LucideIcon; title: string; body: string }> = [
   {
     Icon: Search,
     title: 'Discover Tools',
-    body: 'Search hundreds of curated MCP servers spanning databases, APIs, dev tools, and desktop applications.',
+    body: 'Search thousands of curated MCP servers spanning databases, APIs, dev tools, and desktop applications.',
   },
   {
     Icon: Zap,

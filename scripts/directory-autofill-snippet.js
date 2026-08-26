@@ -14,7 +14,7 @@
     url: "https://allmcps.com",
     tagline: "The Open Directory & Registry for Model Context Protocol (MCP) Servers",
     shortDescription: "Discover, search, and connect verified MCP servers to AI tools like Claude Desktop, Cursor, Windsurf, and Antigravity.",
-    longDescription: "AllMCPs is the definitive public registry and ecosystem hub for Model Context Protocol (MCP) servers. It provides developers, AI enthusiasts, and teams with instant access to hundreds of verified MCP servers for file management, database connectors, browser automation, search integrations, and API workflows. Features include deep semantic search, developer documentation, badge verification, and single-click config generation for Claude Desktop, Cursor, and custom agentic frameworks.",
+    longDescription: "AllMCPs is the definitive public registry and ecosystem hub for Model Context Protocol (MCP) servers. It provides developers, AI enthusiasts, and teams with instant access to thousands of verified MCP servers for file management, database connectors, browser automation, search integrations, and API workflows. Features include deep semantic search, developer documentation, badge verification, and single-click config generation for Claude Desktop, Cursor, and custom agentic frameworks.",
     email: "contact@allmcps.com",
     twitter: "https://x.com/allmcps",
     pricing: "Free",

@@ -22,7 +22,7 @@ Discover, search, and connect verified MCP servers to Claude Desktop, Cursor, an
 AllMCPs is the open registry and discovery platform for Model Context Protocol (MCP) servers. Effortlessly search, test, and install verified MCP tools for Claude, Cursor, & AI agents.
 
 [LONG DESCRIPTION / ABOUT / OVERVIEW]
-AllMCPs is the definitive public registry and ecosystem hub for Model Context Protocol (MCP) servers. It provides developers, AI engineers, and teams with instant access to hundreds of verified MCP servers for file management, database connectors, browser automation, search integrations, and API workflows. Features include deep semantic search, developer documentation, badge verification, automated config generation for Claude Desktop and Cursor, token cost calculators, and llms.txt standards for agentic frameworks.
+AllMCPs is the definitive public registry and ecosystem hub for Model Context Protocol (MCP) servers. It provides developers, AI engineers, and teams with instant access to thousands of verified MCP servers for file management, database connectors, browser automation, search integrations, and API workflows. Features include deep semantic search, developer documentation, badge verification, automated config generation for Claude Desktop and Cursor, token cost calculators, and llms.txt standards for agentic frameworks.
 
 [FIRST COMMENT / MAKER INTRO PITCH / FOUNDER STORY]
 Hi everyone! AllMCPs is the open directory & ecosystem hub for Model Context Protocol (MCP) servers. We built this to help developers discover, verify, and connect MCP servers into Claude Desktop, Cursor, Windsurf, and custom AI agents. Excited to hear your thoughts and feedback!

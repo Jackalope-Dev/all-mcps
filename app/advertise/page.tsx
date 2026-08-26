@@ -125,7 +125,7 @@ export default async function AdvertiseLandingPage() {
       >
         <div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent-color)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <Cpu size={22} style={{ color: '#34d399' }} /> {stats.totalServers.toLocaleString()}+
+            <Cpu size={22} style={{ color: '#34d399' }} /> {stats.totalServers.toLocaleString()}
           </div>
           <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
             Active MCP Servers

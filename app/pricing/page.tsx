@@ -159,7 +159,7 @@ export default async function PricingPage({
 
         <Card padding="md" className="pricing-stats-bar">
           <div className="pricing-stat">
-            <p className="pricing-stat-value">{siteStats.totalServers.toLocaleString()}+</p>
+            <p className="pricing-stat-value">{siteStats.totalServers.toLocaleString()}</p>
             <p className="pricing-stat-label">MCP Servers Indexed</p>
           </div>
           <div className="pricing-stat" style={{ color: 'var(--accent-color)' }}>
@@ -170,7 +170,7 @@ export default async function PricingPage({
           </div>
           <div className="pricing-stat">
             <p className="pricing-stat-value" style={{ color: 'var(--verified-green)' }}>
-              {siteStats.toolsIndexed > 0 ? `${siteStats.toolsIndexed.toLocaleString()}+` : '3,000+'}
+              {siteStats.toolsIndexed > 0 ? siteStats.toolsIndexed.toLocaleString() : '—'}
             </p>
             <p className="pricing-stat-label">Tools Introspected</p>
           </div>
