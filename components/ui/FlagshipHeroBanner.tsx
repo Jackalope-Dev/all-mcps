@@ -111,7 +111,7 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
             maxWidth: '780px',
           }}
         >
-          Equip <strong>Claude Desktop</strong>, <strong>Cursor</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> with programmatic access to search 10,000+ Model Context Protocol servers, generate instant client configuration JSON, verify listing claims, and submit new MCP tools straight from your prompt window.
+          Equip <strong>Claude Desktop</strong>, <strong>Cursor</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> with programmatic access to search the AllMCPs directory, generate instant client configuration JSON, verify listing claims, and submit new MCP tools straight from your prompt window.
         </p>
 
         {/* Feature Grid Pills */}

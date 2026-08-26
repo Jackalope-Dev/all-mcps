@@ -158,7 +158,7 @@ export function LandingFaq() {
 export function LandingCta({ totalCount }: { totalCount?: number }) {
   const catalogLabel =
     typeof totalCount === 'number' && totalCount > 0
-      ? `${totalCount.toLocaleString('en-US')}+ servers`
+      ? `${totalCount.toLocaleString('en-US')} servers`
       : 'the full catalog';
 
   return (

@@ -221,7 +221,7 @@ const GOALS = [
     title: 'Discover',
     colorVar: 'var(--tab-discover, #00e5ff)',
     kicker: '[ 01 / 04 ] · Dynamic Query',
-    tagline: 'Search 10,000+ MCP servers by capability, database, or tool.',
+    tagline: 'Search MCP servers by capability, database, or tool.',
     ctaHref: '/browse',
     ctaLabel: 'Browse All Servers',
     outputLabel: 'GET /api/v1/search',
@@ -285,11 +285,25 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
   const [selectedInspectSample, setSelectedInspectSample] = useState<string>('allmcps');
   const [selectedPublishMode, setSelectedPublishMode] = useState<'agent' | 'curl'>('agent');
 
-  const current = GOALS.find((g) => g.id === activeGoal) ?? GOALS[0];
   const catalogLabel =
     typeof totalCount === 'number' && totalCount > 0
-      ? `${totalCount.toLocaleString('en-US')}+`
-      : '10,000+';
+      ? totalCount.toLocaleString('en-US')
+      : 'thousands of';
+
+  const goals = useMemo(
+    () =>
+      GOALS.map((goal) =>
+        goal.id === 'discover'
+          ? {
+              ...goal,
+              tagline: `Search ${catalogLabel} MCP servers by capability, database, or tool.`,
+            }
+          : goal
+      ),
+    [catalogLabel]
+  );
+
+  const current = goals.find((g) => g.id === activeGoal) ?? goals[0];
 
   const output = useMemo(() => {
     if (activeGoal === 'discover') return searchCurl(query);
@@ -352,7 +366,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
         >
           {/* Tab Navigation with Dedicated Color Pops */}
           <div className="hero-playground-tabs" role="tablist" aria-label="What do you want to do?">
-            {GOALS.map((goal) => {
+            {goals.map((goal) => {
               const Icon = goal.icon;
               const isActive = activeGoal === goal.id;
               return (

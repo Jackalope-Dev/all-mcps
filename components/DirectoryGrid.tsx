@@ -133,7 +133,7 @@ export default function DirectoryGrid({
 
   const SEARCH_PLACEHOLDERS = useMemo(
     () => [
-      `Search ${typeof totalCount === 'number' && totalCount > 0 ? totalCount.toLocaleString('en-US') + '+' : '10,000+'} MCP tools (e.g. GitHub, Postgres, Slack)...`,
+      `Search ${typeof totalCount === 'number' && totalCount > 0 ? totalCount.toLocaleString('en-US') : 'thousands of'} MCP tools (e.g. GitHub, Postgres, Slack)...`,
       'Try searching: "find latest btc prices"...',
       'Try searching: "check transit times & train schedules"...',
       'Try searching: "query postgres database"...',
