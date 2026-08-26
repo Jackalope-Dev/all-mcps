@@ -54,15 +54,15 @@ import { DirectoryBadgeCard } from '../../../components/ui/DirectoryBadgeCard';
 const getServer = getServerById;
 
 // Keeps the rendered <title> (this string + the root layout's " | AllMCPs" suffix)
-// within ~60 chars even for the longest real listing names, which can run 40+
-// chars once the org/scope prefix is stripped off by parseServerName.
+// within ~60 chars while aligning with developer search intent (config, tools, setup).
 function buildDetailTitle(displayName: string): string {
-  // Don't append "MCP Server" when the display name already mentions MCP, and
-  // never write an ellipsis into <title> (it wastes the SERP snippet).
-  const suffix = /mcp/i.test(displayName) ? '' : ' MCP Server';
-  const budget = 50 - suffix.length;
-  if (displayName.length <= budget) return `${displayName}${suffix}`;
-  return `${displayName.slice(0, budget).trimEnd()}${suffix}`;
+  const base = displayName.trim();
+  const cleanName = /mcp/i.test(base) ? base : `${base} MCP`;
+  const candidate = `${cleanName}: Config & Tools`;
+  if (candidate.length <= 48) return candidate;
+  const shortCandidate = `${cleanName} Server`;
+  if (shortCandidate.length <= 48) return shortCandidate;
+  return cleanName.slice(0, 45).trimEnd();
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -79,9 +79,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // sentence, whereas the raw description is often scraped chrome. Better CTR + no
   // duplicate-snippet penalty against the upstream repo.
   const metaSource = (server.aiSummary && server.aiSummary.trim()) || server.description || '';
-  let desc = metaSource.length > 155 ? `${metaSource.slice(0, 152)}...` : metaSource;
-  if (desc.length > 0 && desc.length <= 110 && !desc.toLowerCase().includes('claude') && !desc.toLowerCase().includes('cursor')) {
-    desc = `${desc.replace(/\.$/, '')}. Connect to Claude Desktop, Cursor & Windsurf.`;
+  let cleanSource = metaSource.trim().replace(/\.+$/, '');
+  if (cleanSource.length > 100) {
+    cleanSource = `${cleanSource.slice(0, 97).trimEnd()}...`;
+  }
+  let desc = `${cleanSource}. Install & connect to Claude Desktop, Cursor & Windsurf with verified JSON config & tools.`;
+  if (desc.length > 160) {
+    desc = `${desc.slice(0, 157).trimEnd()}...`;
   }
 
   const { displayName } = parseServerName(server.name, server.url);
@@ -356,70 +360,124 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
           },
         ];
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
+  const hasRealFaq = Boolean(server.aiFaq && server.aiFaq.length > 0);
+
+  const howToJsonLd = {
+    '@type': 'HowTo',
+    name: `How to install and connect ${displayName} MCP Server`,
+    description: `Step-by-step instructions to configure ${displayName} for Claude Desktop, Cursor, Windsurf, or Cline.`,
+    totalTime: 'PT2M',
+    step: [
       {
-        '@type': 'SoftwareApplication',
-        name: displayName,
-        description: server.description,
-        url: canonicalUrl,
-        mainEntityOfPage: canonicalUrl,
-        image: ogImage,
-        sameAs,
-        codeRepository: server.url,
-        applicationCategory: 'DeveloperApplication',
-        applicationSubCategory: 'Model Context Protocol Server',
-        operatingSystem: 'Cross-platform',
-        softwareRequirements: 'Node.js, npx, Claude Desktop or MCP compatible client',
-        isAccessibleForFree: true,
-        keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
-        ...(publishedIso ? { datePublished: publishedIso } : {}),
-        ...(org ? { author: { '@type': 'Organization', name: org, ...(server.url ? { url: server.url } : {}) } } : {}),
-        provider: {
-          '@type': 'Organization',
-          name: 'AllMCPs',
-          url: 'https://allmcps.com',
-        },
-        offers: {
-          '@type': 'Offer',
-          price: '0',
-          priceCurrency: 'USD',
-        },
-        ...(interactionStatistic.length ? { interactionStatistic } : {}),
+        '@type': 'HowToStep',
+        position: 1,
+        name: 'Copy Configuration Snippet',
+        text: `Copy the JSON configuration block for ${displayName} formatted for your MCP client.`,
+        url: `${canonicalUrl}#config-tabs`,
       },
       {
-        '@type': 'FAQPage',
-        mainEntity: faqItems.map((item) => ({
-          '@type': 'Question',
-          name: item.q,
-          acceptedAnswer: { '@type': 'Answer', text: item.a },
-        })),
+        '@type': 'HowToStep',
+        position: 2,
+        name: 'Open Client MCP Settings',
+        text: 'Open your MCP client settings file (e.g. claude_desktop_config.json for Claude Desktop, or Cursor Settings > Features > MCP).',
       },
       {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'Home',
-            item: 'https://allmcps.com',
-          },
-          {
-            '@type': 'ListItem',
-            position: 2,
-            name: categoryLabel,
-            item: `https://allmcps.com/categories/${catSlug}`,
-          },
-          {
-            '@type': 'ListItem',
-            position: 3,
-            name: server.name,
-            item: `https://allmcps.com/mcp/${server.id}`,
-          },
-        ],
+        '@type': 'HowToStep',
+        position: 3,
+        name: 'Add Server Configuration',
+        text: `Paste the ${installSlug} configuration snippet under the mcpServers key, adding any required environment variables.`,
+      },
+      {
+        '@type': 'HowToStep',
+        position: 4,
+        name: 'Restart Client & Test Tools',
+        text: `Restart your AI editor or client and verify that ${displayName} tools are active.`,
       },
     ],
+  };
+
+  const jsonLdGraph: any[] = [
+    {
+      '@type': 'SoftwareApplication',
+      name: displayName,
+      description: server.description,
+      url: canonicalUrl,
+      mainEntityOfPage: canonicalUrl,
+      image: ogImage,
+      sameAs,
+      codeRepository: server.url,
+      applicationCategory: 'DeveloperApplication',
+      applicationSubCategory: 'Model Context Protocol Server',
+      operatingSystem: 'Cross-platform',
+      softwareRequirements: 'Node.js, npx, Claude Desktop or MCP compatible client',
+      isAccessibleForFree: true,
+      keywords: [server.name, 'MCP server', 'Model Context Protocol', 'AI agent tool', server.category].join(', '),
+      ...(publishedIso ? { datePublished: publishedIso } : {}),
+      ...(org ? { author: { '@type': 'Organization', name: org, ...(server.url ? { url: server.url } : {}) } } : {}),
+      provider: {
+        '@type': 'Organization',
+        name: 'AllMCPs',
+        url: 'https://allmcps.com',
+      },
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+      },
+      ...(reviewSummary.count > 0 && reviewSummary.avgRating
+        ? {
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: reviewSummary.avgRating.toFixed(1),
+              reviewCount: reviewSummary.count,
+              bestRating: '5',
+              worstRating: '1',
+            },
+          }
+        : {}),
+      ...(interactionStatistic.length ? { interactionStatistic } : {}),
+    },
+    howToJsonLd,
+    ...(hasRealFaq
+      ? [
+          {
+            '@type': 'FAQPage',
+            mainEntity: server.aiFaq!.map((item) => ({
+              '@type': 'Question',
+              name: item.q,
+              acceptedAnswer: { '@type': 'Answer', text: item.a },
+            })),
+          },
+        ]
+      : []),
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://allmcps.com',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: categoryLabel,
+          item: `https://allmcps.com/categories/${catSlug}`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: server.name,
+          item: `https://allmcps.com/mcp/${server.id}`,
+        },
+      ],
+    },
+  ];
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': jsonLdGraph,
   };
 
   return (

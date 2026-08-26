@@ -170,10 +170,19 @@ export function SiteHeader() {
   }, [mobileMenuOpen]);
 
   return (
-    <header className="site-header">
-      <div className="container">
+    <header className="site-header" role="banner">
+      <div className="container grid-crosshair grid-crosshair-bl grid-crosshair-br">
         <div className="site-header-inner">
-          <BrandLogo size="md" />
+          <div className="flex items-center gap-3">
+            <BrandLogo size="md" />
+            <Link
+              href="/browse"
+              className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium text-cyan-400 bg-cyan-950/40 border border-cyan-500/25 hover:border-cyan-400/50 transition-colors"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>10k+ servers</span>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
           <nav className="site-nav desktop-only-nav animate-fade-in delay-1" aria-label="Main">
@@ -219,14 +228,14 @@ export function SiteHeader() {
                 </a>
               </div>
             ) : (
-              <>
+              <div className="site-nav-auth-group">
                 <Button href={loginHref} variant="secondary" size="sm" className="site-nav-login">
                   <LogIn size={13} aria-hidden="true" /> Log in
                 </Button>
                 <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
                   <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
                 </Button>
-              </>
+              </div>
             )}
           </nav>
 

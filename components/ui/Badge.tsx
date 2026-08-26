@@ -2,13 +2,17 @@ import React from 'react';
 import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 
-type BadgeVariant = 'default' | 'official' | 'verified' | 'success' | 'premium' | 'category';
+type BadgeVariant = 'default' | 'official' | 'verified' | 'success' | 'premium' | 'category' | 'cyan';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
   children: React.ReactNode;
   /** When set, the badge renders as a link (e.g. category → filtered browse). */
   href?: string;
+  /** Renders an animated pulsing live dot indicator inside the badge */
+  pulse?: boolean;
+  /** Monospace dev-tool typography */
+  mono?: boolean;
 }
 
 function variantClass(variant: BadgeVariant): string {
@@ -23,6 +27,8 @@ function variantClass(variant: BadgeVariant): string {
       return 'badge-success';
     case 'category':
       return 'badge-category';
+    case 'cyan':
+      return 'badge-cyan';
     default:
       return 'badge-default';
   }
@@ -33,10 +39,19 @@ export function Badge({
   children,
   style,
   href,
+  pulse = false,
+  mono = false,
   className = '',
   ...props
 }: BadgeProps) {
-  const classes = ['badge', variantClass(variant), href ? 'badge-link' : '', className]
+  const classes = [
+    'badge',
+    variantClass(variant),
+    pulse ? 'badge-pulse' : '',
+    mono ? 'badge-mono' : '',
+    href ? 'badge-link' : '',
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
 

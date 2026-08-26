@@ -17,6 +17,10 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement | HTMLAnchorElem
   accent?: string;
   /** Inner padding scale — defaults to the existing `.surface`/`.card-padded` rhythm. */
   padding?: CardPadding;
+  /** Adds subtle radial glow / border glow effect */
+  glow?: boolean;
+  /** Adds Firecrawl-style corner crosshair markers */
+  crosshair?: boolean;
 }
 
 export function Card({
@@ -25,6 +29,8 @@ export function Card({
   surface = 'solid',
   accent,
   padding,
+  glow = false,
+  crosshair = false,
   children,
   className = '',
   style,
@@ -41,8 +47,10 @@ export function Card({
 
   const paddingClass = padding ? `card-padding-${padding}` : '';
   const accentClass = accent ? 'card-accent' : '';
+  const glowClass = glow ? 'card-glow' : '';
+  const crosshairClass = crosshair ? 'grid-crosshair grid-crosshair-tl grid-crosshair-br' : '';
 
-  const baseClass = `${surfaceClass} ${hoverable || href ? 'card-hoverable' : ''} ${paddingClass} ${accentClass} ${className}`.trim();
+  const baseClass = `${surfaceClass} ${hoverable || href ? 'card-hoverable' : ''} ${paddingClass} ${accentClass} ${glowClass} ${crosshairClass} ${className}`.trim();
   const mergedStyle = accent ? { ...style, '--card-accent': accent } as React.CSSProperties : style;
 
   if (href) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 
-type ButtonVariant = 'primary' | 'secondary' | 'glass';
+type ButtonVariant = 'primary' | 'secondary' | 'glass' | 'terminal';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -29,6 +29,7 @@ export function Button({
     variant === 'primary' ? 'btn-primary' : '',
     variant === 'secondary' ? 'btn-secondary' : '',
     variant === 'glass' ? 'btn-glass' : '',
+    variant === 'terminal' ? 'btn-terminal' : '',
     size === 'sm' ? 'btn-sm' : '',
     size === 'md' ? 'btn-md' : '',
     size === 'lg' ? 'btn-lg' : '',

@@ -1,10 +1,14 @@
+import type { ReactNode } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { PricingClient } from './PricingClient';
 import { PAID_PRODUCTS, FREE_TIER, formatUsd, tieredSavingsPct, type PaidSku } from '../../lib/pricing';
 import { getSiteStats } from '../../lib/siteStats';
 import { FaqSection } from '../../components/ui/FaqSection';
-import { Sparkles, Zap, Crown, Check, HelpCircle, ShieldCheck, BarChart3, Link2, TrendingUp, Clock, ArrowRight, X, Megaphone } from 'lucide-react';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { PageShell, PageHeader } from '../../components/PageShell';
+import { Sparkles, Check, ArrowRight, X, Megaphone } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Pricing & Sponsorships — Featured MCP Listings',
@@ -52,6 +56,13 @@ const FAQ_ITEMS = [
     a: 'Yes, absolutely. You can manage invoices, change billing methods, or cancel anytime in one click via the Stripe Billing Portal with zero lock-in or cancellation fees.',
   },
 ];
+
+function CheckCell({ ok, fallback }: { ok: boolean; fallback?: ReactNode }) {
+  if (!ok) {
+    return fallback !== undefined ? <>{fallback}</> : <X size={16} color="var(--text-secondary)" />;
+  }
+  return <Check size={18} color="var(--verified-green)" />;
+}
 
 export default async function PricingPage({
   searchParams,
@@ -123,607 +134,316 @@ export default async function PricingPage({
     ],
   };
 
+  const premium = PAID_PRODUCTS.premium_monthly;
+  const boostSkus = ['priority_review', 'featured_7d'] as const;
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <main className="container page-shell" style={{ maxWidth: '1140px', paddingTop: 'var(--space-10)', paddingBottom: 'var(--space-16)' }}>
-        
-        {/* Header Hero Section */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.35rem 0.85rem',
-              borderRadius: '999px',
-              background: 'var(--brand-gradient-soft)',
-              border: '1px solid rgba(var(--accent-rgb), 0.3)',
-              color: 'var(--accent-color)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              marginBottom: '1rem',
-              letterSpacing: '0.02em',
-            }}
-          >
-            <Sparkles size={14} color="var(--accent-color)" /> Elevate Your MCP Discovery
-          </div>
-          <h1 className="text-page-title" style={{ marginBottom: '0.85rem', fontSize: 'clamp(2rem, 4vw, 2.75rem)' }}>
-            Pricing & Promotion Options
-          </h1>
-          <p className="text-lead" style={{ margin: '0 auto', textAlign: 'center', maxWidth: '680px', fontSize: '1.05rem', color: 'var(--text-secondary)' }}>
-            Listing on AllMCPs is <strong>100% free forever</strong>. Upgrade anytime to jump the review queue, sponsor your category, or unlock continuous featured reach & dofollow SEO power.
-          </p>
-        </div>
+      <PageShell variant="tool">
+        <PageHeader
+          centered
+          badge={
+            <>
+              <Sparkles size={14} color="var(--accent-color)" /> Elevate Your MCP Discovery
+            </>
+          }
+          title="Pricing & Promotion Options"
+          description={
+            <>
+              Listing on AllMCPs is <strong>100% free forever</strong>. Upgrade anytime to jump the review queue,
+              sponsor your category, or unlock continuous featured reach &amp; dofollow SEO power.
+            </>
+          }
+        />
 
-        {/* Social Proof & Metrics Bar */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem',
-            padding: '1.25rem 1.5rem',
-            borderRadius: '16px',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-color)',
-            marginBottom: '3rem',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-              {siteStats.totalServers.toLocaleString()}+
-            </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>MCP Servers Indexed</p>
+        <Card padding="md" className="pricing-stats-bar">
+          <div className="pricing-stat">
+            <p className="pricing-stat-value">{siteStats.totalServers.toLocaleString()}+</p>
+            <p className="pricing-stat-label">MCP Servers Indexed</p>
           </div>
-          <div style={{ textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-color)', margin: 0 }}>
+          <div className="pricing-stat" style={{ color: 'var(--accent-color)' }}>
+            <p className="pricing-stat-value" style={{ color: 'var(--accent-color)' }}>
               {siteStats.categoryCount.toLocaleString()}
             </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Active Categories</p>
+            <p className="pricing-stat-label">Active Categories</p>
           </div>
-          <div style={{ textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--verified-green)', margin: 0 }}>
+          <div className="pricing-stat">
+            <p className="pricing-stat-value" style={{ color: 'var(--verified-green)' }}>
               {siteStats.toolsIndexed > 0 ? `${siteStats.toolsIndexed.toLocaleString()}+` : '3,000+'}
             </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Tools Introspected</p>
+            <p className="pricing-stat-label">Tools Introspected</p>
           </div>
-          <div style={{ textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--gold-color)', margin: 0 }}>&lt; 24h</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0' }}>Priority Queue Turnaround</p>
+          <div className="pricing-stat">
+            <p className="pricing-stat-value" style={{ color: 'var(--gold-color)' }}>&lt; 24h</p>
+            <p className="pricing-stat-label">Priority Queue Turnaround</p>
           </div>
-        </div>
+        </Card>
 
-        <p style={{ textAlign: 'center', marginTop: '-2rem', marginBottom: '3rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+        <p className="pricing-trust-link">
           Want to inspect our live platform traffic and AI crawler activity?{' '}
           <Link href="/trust" style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
-            View Trust & Traffic Transparency →
+            View Trust &amp; Traffic Transparency →
           </Link>
         </p>
 
-        {canceled && (
-          <p
-            style={{
-              textAlign: 'center',
-              marginBottom: '1.5rem',
-              padding: '0.75rem 1rem',
-              borderRadius: '10px',
-              background: 'rgba(248,113,113,0.1)',
-              border: '1px solid rgba(248,113,113,0.3)',
-              color: '#fca5a5',
-              fontSize: '0.9rem',
-            }}
-          >
-            Checkout canceled. You can try again anytime.
-          </p>
-        )}
+        {canceled && <p className="pricing-alert">Checkout canceled. You can try again anytime.</p>}
 
         {/* Main Listing Tiers */}
-        <div style={{ marginBottom: '3.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-            <span
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                background: 'rgba(var(--accent-rgb), 0.15)',
-                border: '1px solid rgba(var(--accent-rgb), 0.4)',
-                color: 'var(--accent-color)',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              1
-            </span>
+        <section className="pricing-section">
+          <div className="pricing-section-header">
+            <span className="pricing-step-badge">1</span>
             <h2 style={{ fontSize: '1.25rem', margin: 0, fontWeight: 700 }}>Choose a plan</h2>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-              gap: '1.75rem',
-              alignItems: 'stretch',
-            }}
-          >
-            {/* Free Listing Card */}
-            <div
-              className="surface"
-              style={{
-                padding: '2rem',
-                borderRadius: '20px',
-                display: 'flex',
-                flexDirection: 'column',
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-elevated)',
-                position: 'relative',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Free Forever
-                </span>
+          <div className="pricing-tier-grid">
+            <Card padding="lg" className="tier-card">
+              <div className="tier-eyebrow-row">
+                <span className="tier-eyebrow">Free Forever</span>
               </div>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.25rem', fontWeight: 800 }}>{FREE_TIER.name}</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>{FREE_TIER.tagline}</p>
-              <div style={{ marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '2.5rem', fontWeight: 800 }}>$0</span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginLeft: '0.4rem' }}>forever</span>
+              <h3 className="tier-title">{FREE_TIER.name}</h3>
+              <p className="tier-tagline">{FREE_TIER.tagline}</p>
+              <div className="tier-price-row">
+                <span className="tier-price">$0</span>
+                <span className="tier-price-suffix"> forever</span>
               </div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', fontStyle: 'italic' }}>
+              <p className="tier-hint" style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>
                 {FREE_TIER.placementHint}
               </p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+              <ul className="tier-benefits">
                 {FREE_TIER.benefits.map((b) => (
-                  <li key={b} style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <Check size={16} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+                  <li key={b} className="tier-benefit">
+                    <Check size={16} color="var(--accent-color)" />
                     <span>{b}</span>
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/submit"
-                className="btn btn-secondary"
-                style={{ display: 'inline-flex', width: '100%', justifyContent: 'center', padding: '0.85rem', fontWeight: 700, borderRadius: '12px' }}
-              >
+              <Button href="/submit" variant="secondary" className="tier-cta">
                 Submit for free
-              </Link>
-            </div>
+              </Button>
+            </Card>
 
-            {/* Premium Subscription Card */}
-            {(() => {
-              const p = PAID_PRODUCTS.premium_monthly;
-              return (
-                <div
-                  key={p.sku}
-                  id="premium"
-                  className="surface"
-                  style={{
-                    padding: '2rem',
-                    borderRadius: '20px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    border: '2px solid var(--accent-color)',
-                    background: 'linear-gradient(160deg, rgba(var(--accent-rgb),0.12), rgba(var(--accent-secondary-rgb),0.06), var(--bg-elevated))',
-                    scrollMarginTop: '5rem',
-                    boxShadow: '0 12px 40px rgba(var(--accent-rgb), 0.18)',
-                    position: 'relative',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span
-                      style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 800,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: 'var(--accent-color)',
-                      }}
-                    >
-                      Most Popular
-                    </span>
-                    {p.badgeText && (
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 800,
-                          padding: '0.25rem 0.65rem',
-                          borderRadius: '8px',
-                          background: 'rgba(var(--accent-rgb),0.2)',
-                          color: 'var(--accent-color)',
-                          border: '1px solid rgba(var(--accent-rgb),0.4)',
-                        }}
-                      >
-                        {p.badgeText}
-                      </span>
-                    )}
-                  </div>
-                  <h3 style={{ fontSize: '1.5rem', marginBottom: '0.25rem', fontWeight: 800 }}>{p.name} Subscription</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>{p.tagline}</p>
-                  
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '2.5rem', fontWeight: 800 }}>{formatUsd(p.unitAmount)}</span>
-                    <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>/mo</span>
-                    <div style={{ display: 'inline-block', marginLeft: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', background: 'var(--verified-green-bg)', border: '1px solid var(--verified-green-border)', color: 'var(--verified-green)', fontSize: '0.75rem', fontWeight: 700 }}>
-                      Or $149/yr (Save 35%)
-                    </div>
-                  </div>
+            <Card padding="lg" accent="var(--accent-color)" className="tier-card tier-card--featured" id="premium">
+              <div className="tier-eyebrow-row">
+                <span className="tier-eyebrow tier-eyebrow--accent">Most Popular</span>
+                {premium.badgeText && <span className="tier-pill">{premium.badgeText}</span>}
+              </div>
+              <h3 className="tier-title">{premium.name} Subscription</h3>
+              <p className="tier-tagline">{premium.tagline}</p>
 
-                  {p.placementHint && (
-                    <p style={{ fontSize: '0.825rem', color: 'var(--accent-color)', marginBottom: '1.5rem', fontWeight: 600 }}>
-                      📌 {p.placementHint}
-                    </p>
-                  )}
+              <div className="tier-price-row">
+                <span className="tier-price">{formatUsd(premium.unitAmount)}</span>
+                <span className="tier-price-suffix">/mo</span>
+                <span className="tier-savings-badge">Or $149/yr (Save 35%)</span>
+              </div>
 
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
-                    {p.benefits.map((b) => (
-                      <li key={b} style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                        <Check size={16} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
-                        <span style={{ fontWeight: 500 }}>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <a
-                    href={checkoutHref(p.sku)}
-                    className="btn btn-primary"
-                    style={{ width: '100%', justifyContent: 'center', padding: '0.85rem', fontWeight: 700, borderRadius: '12px', fontSize: '1rem' }}
-                  >
-                    Get Premium Now <ArrowRight size={16} style={{ marginLeft: '0.4rem' }} />
-                  </a>
-                </div>
-              );
-            })()}
+              {premium.placementHint && <p className="tier-hint">📌 {premium.placementHint}</p>}
+
+              <ul className="tier-benefits">
+                {premium.benefits.map((b) => (
+                  <li key={b} className="tier-benefit tier-benefit--strong">
+                    <Check size={16} color="var(--accent-color)" />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+              <Button href={checkoutHref(premium.sku)} variant="primary" className="tier-cta">
+                Get Premium Now <ArrowRight size={16} />
+              </Button>
+            </Card>
           </div>
-        </div>
+        </section>
 
-        {/* One-Time Boost Options Section */}
-        <div style={{ marginBottom: '4rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        {/* One-Time Boost Options */}
+        <section className="pricing-section">
+          <div className="pricing-section-header is-centered">
             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.4rem' }}>One-Time Boost Upgrades</h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: '0 auto', maxWidth: '580px' }}>
-              Single-payment visibility packages designed to amplify your MCP launch or category reach without a recurring subscription.
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', maxWidth: '580px' }}>
+              Single-payment visibility packages designed to amplify your MCP launch or category reach without a
+              recurring subscription.
             </p>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '1.5rem',
-            }}
-          >
-            {(['priority_review', 'featured_7d'] as const).map((sku) => {
-              const p = PAID_PRODUCTS[sku];
+          <div className="pricing-boost-grid">
+            {boostSkus.map((boostSku) => {
+              const p = PAID_PRODUCTS[boostSku];
               return (
-                <div
-                  key={sku}
-                  className="surface"
-                  style={{
-                    padding: '1.75rem',
-                    borderRadius: '18px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-elevated)',
-                    scrollMarginTop: '5rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span
-                      style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: 'var(--accent-color)',
-                      }}
-                    >
-                      One-Time Boost
-                    </span>
-                    {p.badgeText && (
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 800,
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: '6px',
-                          background: 'var(--bg-muted)',
-                          color: 'var(--text-primary)',
-                          border: '1px solid var(--border-color)',
-                        }}
-                      >
-                        {p.badgeText}
-                      </span>
-                    )}
+                <Card padding="md" key={boostSku} className="tier-card tier-card--boost" style={{ scrollMarginTop: '5rem' }}>
+                  <div className="tier-eyebrow-row">
+                    <span className="tier-eyebrow tier-eyebrow--accent">One-Time Boost</span>
+                    {p.badgeText && <span className="tier-pill tier-pill--muted">{p.badgeText}</span>}
                   </div>
-                  <h3 style={{ fontSize: '1.3rem', marginBottom: '0.25rem', fontWeight: 800 }}>{p.name}</h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{p.tagline}</p>
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '2.25rem', fontWeight: 800 }}>
-                      {formatUsd(p.unitAmount)}
-                    </span>
-                    {p.weeklyTiers && (
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>/wk</span>
-                    )}
+                  <h3 className="tier-title">{p.name}</h3>
+                  <p className="tier-tagline">{p.tagline}</p>
+                  <div className="tier-price-row">
+                    <span className="tier-price">{formatUsd(p.unitAmount)}</span>
+                    {p.weeklyTiers && <span className="tier-price-suffix">/wk</span>}
                   </div>
                   {p.weeklyTiers && (
-                    <p style={{ fontSize: '0.775rem', color: 'var(--verified-green)', fontWeight: 600, marginBottom: '0.85rem' }}>
-                      Buy {p.maxWeeks || 8} weeks at checkout — save up to{' '}
-                      {tieredSavingsPct(p, p.maxWeeks || 8)}%
+                    <p className="tier-savings-note">
+                      Buy {p.maxWeeks || 8} weeks at checkout — save up to {tieredSavingsPct(p, p.maxWeeks || 8)}%
                     </p>
                   )}
-                  {p.placementHint && (
-                    <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
-                      📌 {p.placementHint}
-                    </p>
-                  )}
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', flex: 1 }}>
+                  {p.placementHint && <p className="tier-hint tier-hint--muted">📌 {p.placementHint}</p>}
+                  <ul className="tier-benefits">
                     {p.benefits.map((b) => (
-                      <li key={b} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                        <Check size={15} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+                      <li key={b} className="tier-benefit">
+                        <Check size={15} color="var(--accent-color)" />
                         <span>{b}</span>
                       </li>
                     ))}
                   </ul>
-                  <a
-                    href={checkoutHref(p.sku)}
-                    className="btn btn-secondary"
-                    style={{ width: '100%', justifyContent: 'center', padding: '0.75rem', borderRadius: '10px', fontWeight: 600 }}
-                  >
+                  <Button href={checkoutHref(p.sku)} variant="secondary" className="tier-cta">
                     Select Boost →
-                  </a>
-                </div>
+                  </Button>
+                </Card>
               );
             })}
 
-            {/* Universal Sponsor Ads Card */}
-            <div
-              className="surface"
-              style={{
-                padding: '1.75rem',
-                borderRadius: '18px',
-                display: 'flex',
-                flexDirection: 'column',
-                border: '1px solid rgba(0, 229, 255, 0.4)',
-                background: 'linear-gradient(160deg, rgba(0, 229, 255, 0.06), rgba(0, 123, 255, 0.03), var(--bg-elevated))',
-                scrollMarginTop: '5rem',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    color: 'var(--accent-color)',
-                  }}
-                >
-                  Universal Ad Network
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    padding: '0.2rem 0.55rem',
-                    borderRadius: '6px',
-                    background: 'rgba(0, 229, 255, 0.15)',
-                    color: 'var(--accent-color)',
-                    border: '1px solid rgba(0, 229, 255, 0.3)',
-                  }}
-                >
-                  Any Product / CPM
-                </span>
+            <Card padding="md" accent="var(--accent-color)" className="tier-card tier-card--boost" style={{ scrollMarginTop: '5rem' }}>
+              <div className="tier-eyebrow-row">
+                <span className="tier-eyebrow tier-eyebrow--accent">Universal Ad Network</span>
+                <span className="tier-pill">Any Product / CPM</span>
               </div>
-              <h3 style={{ fontSize: '1.3rem', marginBottom: '0.25rem', fontWeight: 800 }}>Sponsor Ad Spaces</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-                Promote any developer tool, API, SaaS, or site across AllMCPs.
-              </p>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '2.25rem', fontWeight: 800 }}>$5.00</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}> / 1k views</span>
+              <h3 className="tier-title">Sponsor Ad Spaces</h3>
+              <p className="tier-tagline">Promote any developer tool, API, SaaS, or site across AllMCPs.</p>
+              <div className="tier-price-row">
+                <span className="tier-price">$5.00</span>
+                <span className="tier-price-suffix"> / 1k views</span>
               </div>
-              <p style={{ fontSize: '0.775rem', color: 'var(--verified-green)', fontWeight: 600, marginBottom: '0.85rem' }}>
-                1k to 100k+ impression credit blocks with weighted CPM bidding
-              </p>
-              <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>
+              <p className="tier-savings-note">1k to 100k+ impression credit blocks with weighted CPM bidding</p>
+              <p className="tier-hint tier-hint--muted">
                 📌 Placed natively across directory cards, listing sidebars, and guides
               </p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', flex: 1 }}>
-                <li style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                  <Check size={15} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+              <ul className="tier-benefits">
+                <li className="tier-benefit">
+                  <Check size={15} color="var(--accent-color)" />
                   <span>Reach active AI developers &amp; software engineers</span>
                 </li>
-                <li style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                  <Check size={15} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+                <li className="tier-benefit">
+                  <Check size={15} color="var(--accent-color)" />
                   <span>Custom copy, logo icon, and direct outbound link</span>
                 </li>
-                <li style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                  <Check size={15} color="var(--accent-color)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+                <li className="tier-benefit">
+                  <Check size={15} color="var(--accent-color)" />
                   <span>Real-time impressions &amp; CTR reporting dashboard</span>
                 </li>
               </ul>
-              <Link
-                href="/advertise"
-                className="btn btn-primary"
-                style={{ width: '100%', justifyContent: 'center', padding: '0.75rem', borderRadius: '10px', fontWeight: 700 }}
-              >
+              <Button href="/advertise" variant="primary" className="tier-cta">
                 Launch Sponsor Ad →
-              </Link>
-            </div>
+              </Button>
+            </Card>
           </div>
-        </div>
+        </section>
 
-        {/* Detailed Feature Comparison Matrix */}
-        <div style={{ marginBottom: '4.5rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        {/* Feature Comparison Matrix */}
+        <section className="pricing-section">
+          <div className="pricing-section-header is-centered">
             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.4rem' }}>Feature Comparison Matrix</h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Compare what is included across every tier and upgrade.</p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              Compare what is included across every tier and upgrade.
+            </p>
           </div>
 
-          <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid var(--border-color)', background: 'var(--bg-elevated)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+          <Card padding="sm" className="pricing-table-wrap">
+            <table className="pricing-table">
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-                  <th style={{ padding: '1rem 1.25rem', color: 'var(--text-primary)', fontWeight: 700 }}>Features & Benefits</th>
-                  <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 700 }}>Free Listing</th>
-                  <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--accent-color)', fontWeight: 700 }}>Priority ($5)</th>
-                  <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--accent-color)', fontWeight: 700 }}>Featured ($12/wk)</th>
-                  <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--accent-color)', fontWeight: 800, background: 'rgba(var(--accent-rgb),0.08)' }}>Premium ($19/mo)</th>
-                  <th style={{ padding: '1rem 1rem', textAlign: 'center', color: 'var(--accent-color)', fontWeight: 700 }}>Sponsor Ads ($5 CPM)</th>
+                <tr>
+                  <th>Features &amp; Benefits</th>
+                  <th>Free Listing</th>
+                  <th style={{ color: 'var(--accent-color)' }}>Priority ($5)</th>
+                  <th style={{ color: 'var(--accent-color)' }}>Featured ($12/wk)</th>
+                  <th className="is-highlight">Premium ($19/mo)</th>
+                  <th style={{ color: 'var(--accent-color)' }}>Sponsor Ads ($5 CPM)</th>
                 </tr>
               </thead>
-              <tbody style={{ color: 'var(--text-secondary)' }}>
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Directory Search & Category Indexing</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Guaranteed &lt; 24h Review Turnaround</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>Instant Launch</td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Homepage Discovery Grid Spotlight</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Native Sidebars & Guide Banners</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Dofollow SEO Website Backlink</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>Direct Link</td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Live Impressions & CTR Analytics</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><X size={16} color="var(--text-secondary)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+              <tbody>
+                <tr>
+                  <td>Directory Search &amp; Category Indexing</td>
+                  <td><CheckCell ok /></td>
+                  <td><CheckCell ok /></td>
+                  <td><CheckCell ok /></td>
+                  <td className="is-highlight"><CheckCell ok /></td>
+                  <td><CheckCell ok /></td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '0.85rem 1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Works for Any App, API or Website</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>MCP Only</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>MCP Only</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}>MCP Only</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center', background: 'rgba(var(--accent-rgb),0.05)' }}>MCP Only</td>
-                  <td style={{ padding: '0.85rem', textAlign: 'center' }}><Check size={18} color="var(--verified-green)" style={{ margin: '0 auto' }} /></td>
+                  <td>Guaranteed &lt; 24h Review Turnaround</td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok /></td>
+                  <td><CheckCell ok /></td>
+                  <td className="is-highlight"><CheckCell ok /></td>
+                  <td>Instant Launch</td>
+                </tr>
+                <tr>
+                  <td>Homepage Discovery Grid Spotlight</td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok /></td>
+                  <td className="is-highlight"><CheckCell ok /></td>
+                  <td><CheckCell ok /></td>
+                </tr>
+                <tr>
+                  <td>Native Sidebars &amp; Guide Banners</td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok={false} /></td>
+                  <td className="is-highlight"><CheckCell ok={false} /></td>
+                  <td><CheckCell ok /></td>
+                </tr>
+                <tr>
+                  <td>Dofollow SEO Website Backlink</td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok={false} /></td>
+                  <td className="is-highlight"><CheckCell ok /></td>
+                  <td>Direct Link</td>
+                </tr>
+                <tr>
+                  <td>Live Impressions &amp; CTR Analytics</td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok={false} /></td>
+                  <td><CheckCell ok={false} /></td>
+                  <td className="is-highlight"><CheckCell ok /></td>
+                  <td><CheckCell ok /></td>
+                </tr>
+                <tr>
+                  <td>Works for Any App, API or Website</td>
+                  <td>MCP Only</td>
+                  <td>MCP Only</td>
+                  <td>MCP Only</td>
+                  <td className="is-highlight">MCP Only</td>
+                  <td><CheckCell ok /></td>
                 </tr>
               </tbody>
             </table>
-          </div>
-        </div>
+          </Card>
+        </section>
 
         {/* Don't have an MCP Server? Universal Advertiser Banner */}
-        <div
-          className="surface"
-          style={{
-            borderRadius: '18px',
-            border: '1px solid rgba(0, 229, 255, 0.35)',
-            background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 123, 255, 0.03), var(--bg-elevated))',
-            padding: '1.75rem 2rem',
-            marginBottom: '4rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1.5rem',
-            boxShadow: '0 8px 32px -4px rgba(0, 229, 255, 0.08)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', flex: 1, minWidth: '300px' }}>
-            <div
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'rgba(0, 229, 255, 0.12)',
-                border: '1px solid rgba(0, 229, 255, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--accent-color)',
-                flexShrink: 0,
-              }}
-            >
+        <Card padding="md" accent="var(--accent-color)" className="pricing-promo-banner" style={{ marginBottom: '4rem' }}>
+          <div className="pricing-promo-content">
+            <div className="pricing-promo-icon">
               <Megaphone size={24} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.35rem' }}>
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: 'var(--accent-color)',
-                    background: 'rgba(0, 229, 255, 0.1)',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                  }}
-                >
-                  No MCP Server Required
-                </span>
+              <div className="pricing-promo-tag-row">
+                <span className="pricing-promo-tag">No MCP Server Required</span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                   For Developers, SaaS, Apps &amp; Startups
                 </span>
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                Want to promote your App, Developer Tool, API, or Website?
-              </h3>
-              <p style={{ margin: '0.35rem 0 0', fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5, maxWidth: '640px' }}>
-                You don&apos;t need to have an MCP server listed to reach our audience. Sponsor native logo + copy ad units across directory cards, listing sidebars, and guide articles starting at <strong>$5.00 per 1,000 views</strong> with live reporting and weighted CPM bidding.
+              <h3 className="pricing-promo-title">Want to promote your App, Developer Tool, API, or Website?</h3>
+              <p className="pricing-promo-desc">
+                You don&apos;t need to have an MCP server listed to reach our audience. Sponsor native logo + copy ad
+                units across directory cards, listing sidebars, and guide articles starting at{' '}
+                <strong>$5.00 per 1,000 views</strong> with live reporting and weighted CPM bidding.
               </p>
             </div>
           </div>
-          <Link
-            href="/advertise"
-            className="btn btn-primary"
-            style={{
-              padding: '0.85rem 1.5rem',
-              borderRadius: '12px',
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              gap: '8px',
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <Button href="/advertise" variant="primary" style={{ whiteSpace: 'nowrap' }}>
             Create Sponsor Ad <ArrowRight size={16} />
-          </Link>
-        </div>
+          </Button>
+        </Card>
 
         {/* Step 2 Checkout Selection Component */}
         <PricingClient
@@ -732,11 +452,13 @@ export default async function PricingPage({
           initialSku={sku}
         />
 
-        {/* Frequently Asked Questions Section */}
-        <div style={{ marginTop: '4.5rem', marginBottom: '3rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        {/* Frequently Asked Questions */}
+        <section className="pricing-section" style={{ marginTop: '4.5rem' }}>
+          <div className="pricing-section-header is-centered">
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.4rem' }}>Frequently Asked Questions</h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Everything you need to know about listing, boosting, and billing on AllMCPs.</p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              Everything you need to know about listing, boosting, and billing on AllMCPs.
+            </p>
           </div>
 
           <FaqSection
@@ -744,7 +466,7 @@ export default async function PricingPage({
             defaultOpenIndex={0}
             renderJsonLd={false}
           />
-        </div>
+        </section>
 
         <p style={{ textAlign: 'center', marginTop: '3rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
           Free forever to list and claim.{' '}
@@ -757,7 +479,7 @@ export default async function PricingPage({
           </Link>
           .
         </p>
-      </main>
+      </PageShell>
     </>
   );
 }

@@ -24,7 +24,7 @@ export const revalidate = 3600;
 
 /** Named sitemap shards so GSC/Bing can prioritize core + listings first. */
 export async function generateSitemaps() {
-  return [{ id: 'core' }, { id: 'listings' }, { id: 'secondary' }];
+  return [{ id: 'core' }, { id: 'listings' }];
 }
 
 function staticEntry(
@@ -189,63 +189,11 @@ function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
   }));
 }
 
-function buildSecondarySitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
-  const byCategory = new Map<string, SitemapServer[]>();
-  for (const s of servers) {
-    const cat = s.category || 'other';
-    if (!byCategory.has(cat)) byCategory.set(cat, []);
-    byCategory.get(cat)!.push(s);
-  }
-
-  // Alternatives pages are templated near-duplicates of the parent listing.
-  // They stay navigable but are noindexed (see alternatives/page.tsx) and are
-  // not submitted here — they were ~half of all sitemap URLs.
-
-  // Compare pages: top engagement seeds × peers (capped).
-  const engagement = (s: SitemapServer) =>
-    engagementScore({
-      githubStars: s.githubStars ?? s.stars ?? 0,
-      npmDownloads: s.npmDownloads ?? s.downloads ?? 0,
-      views: s.views ?? 0,
-      copies: s.copies ?? 0,
-      upvotes: s.upvotes ?? 0,
-    });
-
-  for (const list of byCategory.values()) {
-    list.sort((a, b) => engagement(b) - engagement(a));
-  }
-
-  const topSeeds = [...servers].sort((a, b) => engagement(b) - engagement(a)).slice(0, 80);
-  const compareSeen = new Set<string>();
-  const compareEntries: MetadataRoute.Sitemap = [];
-
-  for (const seed of topSeeds) {
-    const candidatePeers = (byCategory.get(seed.category || 'other') || [])
-      .filter((p) => p.id !== seed.id);
-    
-    // Sort peers by semantic similarity & engagement to current seed server
-    candidatePeers.sort((a, b) => relatedRankingScore(b as any, seed as any) - relatedRankingScore(a as any, seed as any));
-    
-    const peers = candidatePeers.slice(0, 3);
-    for (const peer of peers) {
-      const [a, b] = seed.id < peer.id ? [seed.id, peer.id] : [peer.id, seed.id];
-      const key = `${a}|${b}`;
-      if (compareSeen.has(key)) continue;
-      compareSeen.add(key);
-      compareEntries.push({
-        url: `${BASE}/mcp/${a}/vs/${b}`,
-        lastModified: safeDateISO(
-          seed.lastCheckedAt || seed.createdAt || seed.created_at || peer.lastCheckedAt
-        ),
-        changeFrequency: 'weekly',
-        priority: 0.4,
-      });
-      if (compareEntries.length >= 400) break;
-    }
-    if (compareEntries.length >= 400) break;
-  }
-
-  return compareEntries;
+function buildSecondarySitemap(_servers: SitemapServer[]): MetadataRoute.Sitemap {
+  // Programmatic vs / comparison pages and alternatives pages are kept navigable
+  // on-site but noindexed to avoid Google's Scaled Content Abuse penalties for large
+  // programmatic matrix doorways. They are not submitted in sitemaps.
+  return [];
 }
 
 export default async function sitemap(props: {

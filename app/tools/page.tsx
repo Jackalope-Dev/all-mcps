@@ -127,7 +127,7 @@ export default function ToolsHubPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <div className="page-shell-inner">
-        <div className="surface page-panel">
+        <div className="surface page-panel grid-crosshair grid-crosshair-tl grid-crosshair-br">
           <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 2.5rem' }}>
             <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>Free MCP Developer Tools</h1>
             <p className="text-lead" style={{ margin: 0 }}>
@@ -146,7 +146,7 @@ export default function ToolsHubPage() {
           >
             {TOOLS.map(({ href, icon: Icon, title, description }) => (
               <li key={href}>
-                <Card href={href} hoverable style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Card href={href} hoverable glow crosshair style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
                   <Icon size={28} style={{ color: 'var(--accent-color)', marginBottom: '1rem', flexShrink: 0 }} />
                   <div style={{ minHeight: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{title}</h2>

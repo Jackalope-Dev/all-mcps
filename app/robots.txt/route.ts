@@ -50,7 +50,6 @@ Content-Signal: ai-train=no, search=yes, ai-input=yes
 Sitemap: https://allmcps.com/sitemap.xml
 Sitemap: https://allmcps.com/sitemap/core.xml
 Sitemap: https://allmcps.com/sitemap/listings.xml
-Sitemap: https://allmcps.com/sitemap/secondary.xml
 `;
 
   return new NextResponse(content, {

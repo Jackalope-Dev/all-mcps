@@ -155,9 +155,10 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
   const currentGoal = GOALS.find((g) => g.id === activeGoal);
 
   return (
-    <section className="container landing-hero-modern animate-fade-in">
+    <section className="landing-hero-section animate-fade-in">
       <AmbientCodeBackground />
 
+      <div className="container landing-hero-modern">
       {/* Viewport-Scale Value Proposition */}
       <h1 className="hero-headline">
         Find the exact MCP tools <br className="hidden sm:inline" />
@@ -169,7 +170,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
       </p>
 
       {/* Goal-Oriented Command Center */}
-      <div className="hero-goals-card surface">
+      <div className="hero-goals-card surface grid-crosshair grid-crosshair-tl grid-crosshair-br">
         {/* Goal Tabs */}
         <div className="hero-goals-tabs" role="tablist" aria-label="Goal switcher">
           {GOALS.map((goal) => {
@@ -518,6 +519,7 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
             </Link>
           ))}
         </div>
+      </div>
       </div>
     </section>
   );

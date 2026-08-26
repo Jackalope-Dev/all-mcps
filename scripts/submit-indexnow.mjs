@@ -148,54 +148,15 @@ function collectUrlBuckets() {
     /* optional */
   }
 
-  // Listings + secondary
+  // Listings (active indexable servers)
   const serversPath = path.join(rootDir, 'data', 'mcp-servers.json');
   if (fs.existsSync(serversPath)) {
     try {
       const serversData = JSON.parse(fs.readFileSync(serversPath, 'utf8'));
       if (Array.isArray(serversData)) {
         for (const server of serversData) {
-          if (!server.id) continue;
+          if (!server.id || server.status === 'removed') continue;
           add(listings, `${BASE_URL}/mcp/${server.id}`);
-          add(secondary, `${BASE_URL}/mcp/${server.id}/alternatives`);
-        }
-
-        const engagement = (s) =>
-          (s.upvotes || 0) * 5 +
-          (s.copies || 0) +
-          (s.views || 0) * 0.05 +
-          Math.min(Math.log10(1 + (s.githubStars || s.stars || 0)) * 3, 15) +
-          Math.min(Math.log10(1 + (s.npmDownloads || s.downloads || 0)) * 2, 12);
-
-        const byCategory = new Map();
-        for (const s of serversData) {
-          const cat = s.category || 'other';
-          if (!byCategory.has(cat)) byCategory.set(cat, []);
-          byCategory.get(cat).push(s);
-        }
-        for (const list of byCategory.values()) {
-          list.sort((a, b) => engagement(b) - engagement(a));
-        }
-
-        const topSeeds = [...serversData].sort((a, b) => engagement(b) - engagement(a)).slice(0, 80);
-        const compareSeen = new Set();
-        let compareCount = 0;
-
-        for (const seed of topSeeds) {
-          const peers = (byCategory.get(seed.category) || [])
-            .filter((p) => p.id !== seed.id)
-            .slice(0, 3);
-
-          for (const peer of peers) {
-            const [a, b] = seed.id < peer.id ? [seed.id, peer.id] : [peer.id, seed.id];
-            const key = `${a}|${b}`;
-            if (compareSeen.has(key)) continue;
-            compareSeen.add(key);
-            add(secondary, `${BASE_URL}/mcp/${a}/vs/${b}`);
-            compareCount++;
-            if (compareCount >= 400) break;
-          }
-          if (compareCount >= 400) break;
         }
       }
     } catch (err) {

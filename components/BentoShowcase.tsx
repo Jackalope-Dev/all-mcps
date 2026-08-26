@@ -39,6 +39,8 @@ export function BentoShowcase() {
         <Card
           href="/browse"
           hoverable
+          glow
+          crosshair
           className="bento-card bento-card--large bento-card--catalog"
         >
           <div className="bento-card-bg-gradient" />
@@ -62,6 +64,8 @@ export function BentoShowcase() {
         <Card
           href="/mcp-for-cursor"
           hoverable
+          glow
+          crosshair
           className="bento-card bento-card--standard"
         >
           <div className="bento-card-content">
@@ -84,6 +88,8 @@ export function BentoShowcase() {
         <Card
           href="/stack"
           hoverable
+          glow
+          crosshair
           className="bento-card bento-card--standard"
         >
           <div className="bento-card-content">
@@ -106,6 +112,8 @@ export function BentoShowcase() {
         <Card
           href="/tools"
           hoverable
+          glow
+          crosshair
           className="bento-card bento-card--large bento-card--tools"
         >
           <div className="bento-card-bg-gradient" />

@@ -39,7 +39,46 @@ Used in the logo mark, primary buttons, nav hairline, hero “superpowers”, an
 - Use `400` or `500` font weights for body text to ensure readability.
 - Wordmark markup: split as `All` (gradient) + `MCPs` (solid), via the `.wordmark-all` / `.wordmark-mcps` classes.
 
-## 4. Logo & Assets
+## 4. Design System & UI Patterns (Firecrawl-Inspired)
+
+Our UI language takes direct inspiration from modern high-performance dev tools (e.g. Firecrawl), featuring generous whitespace, crisp hairline borders, elevated dark surfaces, subtle electric blue/cyan glow, structural crosshair grids, and animated ASCII code canvas backgrounds.
+
+### Elevated Surfaces & Glass
+- **Base Background:** `#030712` (`--bg-color`)
+- **Elevated Surface:** `#0b1324` (`--bg-elevated`)
+- **Glass Chrome:** `rgba(11, 19, 36, 0.75)` with `backdrop-filter: blur(16px)`
+- **Hairline Borders:** `rgba(255, 255, 255, 0.08)` default, `rgba(0, 229, 255, 0.3)` on hover/active
+- **Glow Accents:** `radial-gradient(circle, rgba(0, 229, 255, 0.25), transparent)`
+
+### Structural Grid & Crosshairs
+- **Crosshair Corners:** Use `.grid-crosshair` (`.grid-crosshair-tl`, `.grid-crosshair-tr`, `.grid-crosshair-bl`, `.grid-crosshair-br`) to place subtle monospace `+` intersection marks on container borders.
+- **Full-Bleed Dividers:** `.border-grid-x` generates edge-to-edge hairline dividers framing sections.
+
+### ASCII Code Canvas & Atmosphere
+- **Component:** `components/ui/AsciiCodeCanvas.tsx`
+- Renders an undulating interactive matrix wave of JSON-RPC / MCP characters (`{ } [ ] / * $ > # 0 1 mcp rpc`) in cyan/blue/slate tones.
+- Automatically throttles/pauses when out of view and honors `prefers-reduced-motion`.
+- Paired with `components/ui/AmbientCodeBackground.tsx` for hero/marketing section backdrops.
+
+### Shared UI Components
+Always use canonical shared components instead of hand-rolling one-off styles:
+- **`Button` (`components/ui/Button.tsx`)**:
+  - `variant="primary"`: Electric cyan/blue gradient with specular top highlight and glow flare.
+  - `variant="secondary"`: Dark glass surface with hairline border and hover lift.
+  - `variant="terminal"`: Monospace dev-tool button for command/code actions.
+  - `variant="glass"`: Semi-transparent frosted glass button.
+- **`Badge` (`components/ui/Badge.tsx`)**:
+  - `variant="cyan" | "official" | "verified" | "premium" | "category" | "default"`
+  - `pulse={true}`: Displays an animated live status indicator dot.
+  - `mono={true}`: Displays crisp monospace tracking for dev-tool tags.
+- **`Card` (`components/ui/Card.tsx`)**:
+  - `hoverable={true}`: Hover lift with shadow elevation.
+  - `glow={true}`: Subtle cyan glow aura.
+  - `crosshair={true}`: Adds corner intersection crosshairs.
+- **`CopyBlock` (`components/ui/CopyBlock.tsx`)**:
+  - Terminal window with traffic light controls (`red`, `yellow`, `green`) and one-click copy with toast feedback.
+
+## 5. Logo & Assets
 All official brand assets are located in the `/brand-assets/` directory.
 - `logo-icon.svg` / `.png` - The standalone cyan geometric "M". Use for favicons, small spaces, and standard UI headers alongside text.
 - `logo-full-light.svg` / `.png` - Icon + White Wordmark. Best for dark backgrounds.

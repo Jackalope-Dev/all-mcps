@@ -10,11 +10,13 @@ import { FooterNavSection } from './FooterNavSection';
  */
 export function SiteFooter() {
   return (
-    <footer className="container site-footer">
-      <hr className="brand-divider" />
-      <div className="newsletter-footer-cta">
+    <footer className="container site-footer grid-crosshair grid-crosshair-tl grid-crosshair-tr">
+      <div className="newsletter-footer-cta surface-interactive">
         <div>
-          <h2 className="footer-heading">Stay in the loop</h2>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <h2 className="footer-heading" style={{ margin: 0 }}>Stay in the loop</h2>
+          </div>
           <p className="site-footer-blurb" style={{ margin: 0 }}>
             Get new MCP servers and top picks in your inbox.
           </p>

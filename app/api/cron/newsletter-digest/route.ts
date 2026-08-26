@@ -92,25 +92,43 @@ function listingHeaderHtml(listing: ListingSummary): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" valign="top" style="width:48px;padding-right:12px">${icon}</td><td valign="top"><div style="font-weight:700;font-size:16px;color:#020617;line-height:1.3;margin-bottom:4px">${name}</div><span style="display:inline-block;background-color:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600">${category}</span></td></tr></table>`;
 }
 
+// Shared "card" look for a listing: light background + hairline border + radius,
+// via Sequenzy's block-level `styles` object rather than hand-rolled HTML, so it
+// renders through the same email-safe pipeline as every other block.
+const LISTING_CARD_STYLES = {
+  backgroundColor: '#f8fafc',
+  borderColor: '#e2e8f0',
+  borderWidth: 1,
+  borderRadius: 12,
+  paddingTop: 20,
+  paddingBottom: 20,
+  paddingLeft: 20,
+  paddingRight: 20,
+};
+
 function listingBlocks(listing: ListingSummary, blurb?: string): SequenzyBlock[] {
   // Prefer the LLM-written editorial blurb ("why it's worth a look"); fall back to the
   // cleaned scrape so the section still reads well when the LLM is unavailable.
   const copy = blurb && /[\p{L}\p{N}]/u.test(blurb)
     ? truncate(blurb.trim(), 160)
     : truncate(cleanDescription(listing.description), 140);
-  const blocks: SequenzyBlock[] = [
-    { type: 'text', variant: 'paragraph', content: listingHeaderHtml(listing) },
-  ];
+
+  let content = listingHeaderHtml(listing);
   if (/[\p{L}\p{N}]/u.test(copy)) {
-    blocks.push({ type: 'text', content: `<p>${escapeHtml(copy)}</p>`, variant: 'paragraph' });
+    content += `<p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#475569">${escapeHtml(copy)}</p>`;
   }
-  blocks.push({
-    type: 'button',
-    text: `View ${truncate(listing.name, 30)} →`,
-    url: `${APP_URL}/mcp/${listing.id}`,
-    variant: 'secondary',
-  });
-  return blocks;
+  // A plain text link, not a button — one full-width button per listing (6+ per
+  // email) read as a wall of chrome. The link lives inside the card's own HTML
+  // block (rather than a separate `button` block) so it sits flush under the
+  // blurb instead of as a visually distinct element under it.
+  content += `<a href="${escapeHtml(`${APP_URL}/mcp/${listing.id}`)}" style="display:inline-block;margin-top:14px;font-size:13px;font-weight:600;color:#2563eb;text-decoration:none">${escapeHtml(
+    truncate(listing.name, 30)
+  )} →</a>`;
+
+  return [
+    { type: 'text', variant: 'html', content, styles: LISTING_CARD_STYLES },
+    { type: 'spacer', height: 12 },
+  ];
 }
 
 // --- Weekly variety -------------------------------------------------------
@@ -244,18 +262,25 @@ function buildDigestBlocks(
       variant: 'paragraph',
       content: `<p>${escapeHtml(intro)}</p>`,
     },
+    { type: 'spacer', height: 8 },
   ];
 
   if (newListings.length > 0) {
     blocks.push({ type: 'heading', content: rotate(NEW_HEADINGS, week), level: 2 });
+    blocks.push({ type: 'spacer', height: 4 });
     for (const listing of newListings) blocks.push(...listingBlocks(listing, blurbs[listing.id]));
   }
 
   if (trendingListings.length > 0) {
+    // Only when both sections are present — a lone section already reads clearly
+    // without a rule separating it from nothing.
+    if (newListings.length > 0) blocks.push({ type: 'divider' });
     blocks.push({ type: 'heading', content: rotate(TRENDING_HEADINGS, week), level: 2 });
+    blocks.push({ type: 'spacer', height: 4 });
     for (const listing of trendingListings) blocks.push(...listingBlocks(listing, blurbs[listing.id]));
   }
 
+  blocks.push({ type: 'spacer', height: 8 });
   blocks.push({ type: 'button', text: 'Browse the full directory →', url: `${APP_URL}/browse`, variant: 'primary' });
   blocks.push({
     type: 'footer',
