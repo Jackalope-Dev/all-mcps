@@ -974,7 +974,12 @@ async function main() {
     }
     if (nameKey) {
       if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
-      existingByNameKey.get(nameKey).push({ id, url: c.url });
+      existingByNameKey.get(nameKey).push({
+        id,
+        url: c.url,
+        websiteDomain: domainOf(c.websiteUrl) || domainOf(c.url),
+        packageName: barePackageName(c.installKind, c.installPackage),
+      });
     }
   }
   if (dupWarningCount > 0) {
