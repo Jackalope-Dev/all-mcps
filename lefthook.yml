@@ -1,0 +1,11 @@
+# Lefthook git hook configuration
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: "*.{js,ts,jsx,tsx,json,css}"
+      run: node node_modules/@biomejs/biome/bin/biome check --no-errors-on-unmatched --staged {staged_files}
+    typecheck:
+      run: node node_modules/typescript/bin/tsc --noEmit
