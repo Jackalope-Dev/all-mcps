@@ -1,5 +1,5 @@
-import type { NextConfig } from "next";
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
+import type { NextConfig } from 'next';
 
 initOpenNextCloudflareForDev();
 
@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     useTypeScriptCli: true,
+    optimizePackageImports: ['lucide-react'],
   },
   // @cf-wasm/photon's /workerd entrypoint does a raw ESM `.wasm` import that only
   // Cloudflare's own esbuild-based Worker bundler understands (not Next's webpack
@@ -20,7 +21,10 @@ const nextConfig: NextConfig = {
     return [
       { source: '/sitemap.xml', destination: '/sitemap-index.xml' },
       { source: '/apple-touch-icon.png', destination: '/logo-icon.png' },
-      { source: '/apple-touch-icon-precomposed.png', destination: '/logo-icon.png' },
+      {
+        source: '/apple-touch-icon-precomposed.png',
+        destination: '/logo-icon.png',
+      },
     ];
   },
 };

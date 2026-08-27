@@ -35,7 +35,8 @@
         "noNonNullAssertion": "off"
       },
       "complexity": {
-        "noBannedTypes": "off"
+        "noBannedTypes": "off",
+        "noImportantStyles": "off"
       },
       "security": {
         "noDangerouslySetInnerHtml": "off"

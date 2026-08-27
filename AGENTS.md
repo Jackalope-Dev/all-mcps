@@ -58,3 +58,11 @@ Guidelines:
 - Everything else (tag filters, search, RSS feed, sitemap entry, JSON-LD) is generated automatically from the file. No other file needs to change to publish a post.
 - Posts are statically generated, so a new file goes live on the next build/deploy, not instantly — run `npm run build` locally to confirm it compiles before pushing.
 
+# Agent Pre-Handoff Quality Gate
+
+Before completing any task, handing off work to the user, or declaring a change complete, all AI agents MUST run and verify that these checks pass cleanly:
+
+1. `npm run typecheck` — TypeScript verification (`tsc --noEmit`) must exit with 0 errors.
+2. `npm run check` or `npm run format` — Ensure staged/modified files conform to Biome formatting and linter rules.
+3. `npm test` — Ensure all Vitest unit and regression tests pass.
+
