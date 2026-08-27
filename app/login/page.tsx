@@ -26,7 +26,16 @@ export default async function LoginPage({
   searchParams: Promise<{ callbackUrl?: string }>;
 }) {
   const session = await auth();
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl: rawCallbackUrl } = await searchParams;
+  // Drop any URL fragment: it's never sent to the server anyway, and an encoded
+  // "%23" surviving into the magic-link callback query is mis-parsed by the
+  // Cloudflare adapter — it truncates the query at that point, dropping the
+  // verification token and every param after it (Auth.js then throws
+  // "Configuration: Missing token").
+  const callbackUrl =
+    typeof rawCallbackUrl === 'string'
+      ? rawCallbackUrl.split('#')[0]
+      : rawCallbackUrl;
   // Must be a same-app relative path: reject absolute/protocol-relative URLs
   // (e.g. "//evil.com" starts with "/" but browsers treat it as external),
   // and avoid loops to login/verify-request.

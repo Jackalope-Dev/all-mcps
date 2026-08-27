@@ -58,7 +58,10 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
     };
   }, [serverId]);
 
-  const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}#reviews`)}`;
+  // No `#reviews` fragment here: it never reaches the server, and an encoded
+  // "%23" in the magic-link callback query is mis-parsed by the Cloudflare
+  // adapter (truncates every param after it, dropping the verification token).
+  const signInHref = `/login?callbackUrl=${encodeURIComponent(`/mcp/${serverId}`)}`;
 
   const handleSubmit = async () => {
     if (rating < 1) {
