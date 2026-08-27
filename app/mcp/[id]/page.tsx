@@ -48,6 +48,7 @@ import { ScreenshotViewer } from '../../../components/ui/ScreenshotViewer';
 import { FaqSection } from '../../../components/ui/FaqSection';
 import { FlagshipHeroBanner } from '../../../components/ui/FlagshipHeroBanner';
 import { DirectoryBadgeCard } from '../../../components/ui/DirectoryBadgeCard';
+import { AdminQuickBar } from '../../../components/ui/AdminQuickBar';
 
 // Listing shape and the D1-with-JSON-fallback fetch (incl. README-chrome
 // sanitization) live in lib/servers so every page/route stays consistent.
@@ -1643,6 +1644,8 @@ export default async function MCPDetail({ params }: { params: Promise<{ id: stri
               </Link>
             </div>
           ) : null}
+
+          <AdminQuickBar server={server} />
 
           <OwnerZone
             serverId={server.id}
