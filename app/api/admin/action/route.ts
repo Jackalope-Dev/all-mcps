@@ -14,6 +14,12 @@ import { notifyListingApproved } from '../../../../lib/listingApprovalNotify';
 import { notifyListingIndexed } from '../../../../lib/indexnow';
 
 import { tweetMcpServer } from '../../../../lib/twitter';
+import { fetchGithubReadme, parseGithubUrl } from '../../../../lib/listingEnrich';
+import { getGithubToken } from '../../../../lib/githubAuth';
+import { generateListingContent } from '../../../../lib/aiContent';
+import { cleanListingDescription } from '../../../../lib/description';
+import { parseServerTools } from '../../../../lib/servers';
+import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 
 const actionSchema = z.object({
   id: z.string().min(1),
@@ -27,6 +33,8 @@ const actionSchema = z.object({
     'republish',
     'delete',
     'feature',
+    'unfeature',
+    'enrich_ai',
     'approve_edit',
     'reject_edit',
     'approve_claim',
@@ -68,6 +76,8 @@ const MESSAGES: Record<string, string> = {
   republish: 'Listing republished.',
   delete: 'Listing permanently deleted.',
   feature: 'Featured placement granted.',
+  unfeature: 'Featured placement removed.',
+  enrich_ai: 'AI enrichment generated and applied.',
   approve_edit: 'Edit approved and applied.',
   reject_edit: 'Edit rejected.',
   approve_claim: 'Claim approved.',
@@ -343,6 +353,76 @@ export async function POST(req: Request) {
         success: true,
         message: MESSAGES.feature,
         featuredUntil: newFeaturedUntil.toISOString(),
+      });
+    } else if (action === 'unfeature') {
+      await db.update(servers).set({ featuredUntil: null }).where(eq(servers.id, id));
+      return NextResponse.json({
+        success: true,
+        message: MESSAGES.unfeature,
+        featuredUntil: null,
+      });
+    } else if (action === 'enrich_ai') {
+      const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
+      const server = rows[0];
+      if (!server) return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
+
+      const parsedUrl = parseGithubUrl(server.url);
+      let readme: string | null = null;
+      if (parsedUrl) {
+        const token = await getGithubToken();
+        readme = await fetchGithubReadme(parsedUrl.owner, parsedUrl.repo, token);
+      }
+      if (!readme && server.description) {
+        readme = server.description;
+      }
+
+      const tools = parseServerTools(server.tools);
+      const outcome = await generateListingContent({
+        name: server.name,
+        category: server.category || '',
+        url: server.url,
+        description: cleanListingDescription(server.description || ''),
+        readme: readme || '',
+        tools,
+      });
+
+      if (outcome.status !== 'ok') {
+        return NextResponse.json(
+          { error: `AI enrichment failed: ${outcome.reason}` },
+          { status: 500 }
+        );
+      }
+
+      const content = outcome.content;
+
+      const updates: Record<string, any> = {
+        aiSummary: content.summary,
+        aiOverview: content.overview,
+        aiUseCases: content.useCases,
+        aiFeatures: content.features,
+        aiFaq: content.faq,
+        aiEnvVars: content.envVars,
+        aiEnrichedAt: new Date(),
+      };
+      if (content.pricingModel) updates.pricingModel = content.pricingModel;
+      if (content.authType) updates.authType = content.authType;
+      if (content.license) updates.license = content.license;
+      if (content.tags && content.tags.length > 0) updates.tags = content.tags;
+      if (content.compatibleClients && content.compatibleClients.length > 0) {
+        updates.compatibleClients = content.compatibleClients;
+      }
+      if (content.category && server.category === DEFAULT_SUBMIT_CATEGORY) {
+        updates.category = content.category;
+      }
+
+      await db.update(servers).set(updates).where(eq(servers.id, id));
+
+      return NextResponse.json({
+        success: true,
+        message: `AI content enriched: "${content.summary.slice(0, 75)}..."`,
+        aiSummary: content.summary,
+        aiOverview: content.overview,
+        tags: content.tags,
       });
     } else if (action === 'approve_edit' || action === 'reject_edit') {
       const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
