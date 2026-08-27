@@ -755,3 +755,35 @@ export const sponsorAdLogs = sqliteTable(
     createdIdx: index('idx_ad_logs_created').on(table.createdAt),
   }),
 );
+
+/**
+ * Back-office admin audit trail (ADR 0006, jackalope-digital-hub).
+ * One row per mutation made through the /api/backoffice/* adapter. Additive and
+ * self-contained — nothing in the app writes here except lib/backoffice.
+ */
+export const adminAudit = sqliteTable(
+  'admin_audit',
+  {
+    id: text('id').primaryKey(),
+    connectorId: text('connector_id').notNull(),
+    actorId: text('actor_id').notNull(),
+    requestId: text('request_id').notNull(),
+    action: text('action').notNull(),
+    targetType: text('target_type').notNull(),
+    targetId: text('target_id').notNull(),
+    /** JSON string, or null. */
+    before: text('before'),
+    /** JSON string, or null. */
+    after: text('after'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    createdIdx: index('idx_admin_audit_created').on(table.createdAt),
+    targetIdx: index('idx_admin_audit_target').on(
+      table.targetType,
+      table.targetId,
+    ),
+  }),
+);
