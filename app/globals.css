@@ -12194,14 +12194,17 @@ code.inline-path {
     justify-content: center;
   }
 
-  .hero-playground-tab {
+  /* Scoped with the parent so these win over the later base
+     `.hero-playground-tab { min-width: 7.5rem }` rule regardless of
+     source order — otherwise the tabs stay 120px wide and overflow. */
+  .hero-playground-tabs .hero-playground-tab {
     min-width: 0;
     padding: 0.75rem 0.35rem;
     font-size: 0.78rem;
     gap: 0.28rem;
   }
 
-  .hero-playground-tab svg {
+  .hero-playground-tabs .hero-playground-tab svg {
     display: none;
   }
 }
@@ -12721,7 +12724,7 @@ code.inline-path {
 
 @media (max-width: 640px) {
   .landing-intent-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -12729,6 +12732,7 @@ code.inline-path {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
   padding: 1.15rem 1.35rem;
   text-decoration: none;
   color: inherit;
@@ -12864,15 +12868,18 @@ code.inline-path {
 }
 
 @media (max-width: 900px) {
-  .landing-steps,
-  .landing-intent-grid {
+  .landing-steps {
     grid-template-columns: 1fr;
+  }
+
+  .landing-intent-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (min-width: 640px) and (max-width: 900px) {
   .landing-intent-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
