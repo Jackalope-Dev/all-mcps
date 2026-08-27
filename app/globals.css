@@ -5815,12 +5815,19 @@ nav[aria-label="Table of contents"] {
   border-radius: var(--radius-md);
   padding: 0.75rem 0.9rem;
   box-shadow: var(--shadow-md);
+  /* `display: none` (not just visibility/opacity) when closed: an absolutely
+     positioned, icon-centered bubble on an edge-most card otherwise counts
+     toward the page's scroll width at every viewport and forces a phantom
+     horizontal scrollbar. allow-discrete + @starting-style keep the fade. */
+  display: none;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition:
     opacity 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    display 0.15s allow-discrete,
+    visibility 0.15s allow-discrete;
   transition-delay: 0s;
   z-index: 150;
   text-align: left;
@@ -5853,18 +5860,35 @@ nav[aria-label="Table of contents"] {
 @media (hover: hover) {
   .mcp-icon-tooltip:hover .mcp-icon-tooltip-bubble,
   .mcp-icon-tooltip:focus-within .mcp-icon-tooltip-bubble {
+    display: block;
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(0);
     transition-delay: 0.1s;
   }
+
+  @starting-style {
+    .mcp-icon-tooltip:hover .mcp-icon-tooltip-bubble,
+    .mcp-icon-tooltip:focus-within .mcp-icon-tooltip-bubble {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-4px);
+    }
+  }
 }
 
 .mcp-icon-tooltip.is-open .mcp-icon-tooltip-bubble {
+  display: block;
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
   transition-delay: 0s;
+}
+
+@starting-style {
+  .mcp-icon-tooltip.is-open .mcp-icon-tooltip-bubble {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
 }
 
 /* On narrow screens an absolutely-positioned, icon-centered bubble can extend
@@ -5925,11 +5949,18 @@ nav[aria-label="Table of contents"] {
   text-transform: none;
   letter-spacing: normal;
   color: var(--text-primary);
+  /* display:none (not just visibility:hidden) when closed — otherwise each of
+     the strip's ~100 hidden bubbles counts toward the page's scroll width and
+     the edge-most ones force a phantom horizontal scrollbar. allow-discrete +
+     @starting-style keep the fade. */
+  display: none;
   opacity: 0;
   visibility: hidden;
   transition:
     opacity 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    display 0.15s allow-discrete,
+    visibility 0.15s allow-discrete;
   transition-delay: 0s;
   pointer-events: none;
   z-index: 20;
@@ -5944,15 +5975,20 @@ nav[aria-label="Table of contents"] {
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-top-color: var(--border-strong);
+  display: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    display 0.15s allow-discrete,
+    visibility 0.15s allow-discrete;
   z-index: 20;
 }
 
 @media (hover: hover) {
   .health-dot:hover::after,
   .health-dot:hover::before {
+    display: block;
     opacity: 1;
     visibility: visible;
     transition-delay: 0.1s;
@@ -5960,10 +5996,21 @@ nav[aria-label="Table of contents"] {
   .health-dot:hover::after {
     transform: translateX(-50%) translateY(0);
   }
+
+  @starting-style {
+    .health-dot:hover::after {
+      opacity: 0;
+      transform: translateX(-50%) translateY(2px);
+    }
+    .health-dot:hover::before {
+      opacity: 0;
+    }
+  }
 }
 
 .health-dot:focus-visible::after,
 .health-dot:focus-visible::before {
+  display: block;
   opacity: 1;
   visibility: visible;
 }
