@@ -5891,9 +5891,10 @@ nav[aria-label="Table of contents"] {
   }
 }
 
-/* On narrow screens an absolutely-positioned, icon-centered bubble can extend
-   past the viewport edge and force horizontal scrolling. Detach it into a
-   fixed, near-full-width popover pinned to the bottom so it always fits. */
+/* On narrow screens an anchored, icon-centered bubble renders half off-screen
+   for edge-most cards even though `display: none` (above) already keeps it out
+   of the scroll width. Detach it into a fixed, near-full-width bottom popover
+   so the open tooltip is always fully readable. */
 @media (max-width: 640px) {
   .mcp-icon-tooltip-bubble {
     position: fixed;
@@ -6018,12 +6019,10 @@ nav[aria-label="Table of contents"] {
   transform: translateX(-50%) translateY(0);
 }
 
-/* Same viewport-overflow trap as .mcp-icon-tooltip-bubble: an absolutely-
-   positioned, dot-centered bubble (up to 250px wide, centered on a ~3px bar)
-   extends well past the card/viewport edge for the strip's edge-most dots.
-   Because it's only visibility:hidden — not display:none — it still counts
-   toward the page's scroll width and forces a phantom horizontal scrollbar.
-   Detach it into a fixed, near-full-width bottom popover so it always fits. */
+/* `display: none` (above) keeps the closed bubbles out of the scroll width;
+   on narrow screens the *open* dot-centered bubble (up to 250px, centered on a
+   ~3px bar) still renders half off-screen for edge-most dots, so detach it into
+   a fixed, near-full-width bottom popover. */
 @media (max-width: 640px) {
   .health-dot::after {
     position: fixed;
