@@ -9,3 +9,9 @@ pre-commit:
       run: node node_modules/@biomejs/biome/bin/biome check --no-errors-on-unmatched --staged {staged_files}
     typecheck:
       run: node node_modules/typescript/bin/tsc --noEmit
+
+pre-push:
+  parallel: true
+  commands:
+    test:
+      run: node node_modules/vitest/vitest.mjs run
