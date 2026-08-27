@@ -1,11 +1,15 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { sponsorAds } from '@/db/schema';
-import { validateAdPayload, calculateAdCostCents, type AdPlacement } from '@/lib/ads';
-import { isStripeConfigured } from '@/lib/pricing';
-import { getStripe, getAppUrl } from '@/lib/stripe';
+import {
+  type AdPlacement,
+  calculateAdCostCents,
+  validateAdPayload,
+} from '@/lib/ads';
 import { auth } from '@/lib/auth';
+import { isStripeConfigured } from '@/lib/pricing';
+import { getAppUrl, getStripe } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +59,10 @@ export async function POST(request: Request) {
 
     const ctx = await getCloudflareContext();
     if (!ctx?.env?.DB) {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 },
+      );
     }
 
     const db = drizzle(ctx.env.DB);
@@ -134,10 +141,16 @@ export async function POST(request: Request) {
         // config issue, etc.) — surface this instead of silently falling through
         // to the unpaid-creation path below, which would leave an ad stuck in
         // pending_approval with no way to ever pay for it.
-        console.error('[ads/create] Stripe checkout session creation failed:', stripeErr?.message);
+        console.error(
+          '[ads/create] Stripe checkout session creation failed:',
+          stripeErr?.message,
+        );
         return NextResponse.json(
-          { error: 'Payment setup failed. Please try again in a moment or contact support@allmcps.com.' },
-          { status: 502 }
+          {
+            error:
+              'Payment setup failed. Please try again in a moment or contact support@allmcps.com.',
+          },
+          { status: 502 },
         );
       }
     }
@@ -169,6 +182,9 @@ export async function POST(request: Request) {
     });
   } catch (err: any) {
     console.error('[ads/create] error:', err?.message);
-    return NextResponse.json({ error: 'Failed to create ad campaign' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to create ad campaign' },
+      { status: 500 },
+    );
   }
 }

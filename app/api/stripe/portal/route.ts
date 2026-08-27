@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { servers } from '../../../../db/schema';
 import { getAppUrl, getStripe } from '../../../../lib/stripe';
@@ -22,7 +22,10 @@ export async function POST(req: Request) {
 
     const secretKey = env?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
-      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 503 });
+      return NextResponse.json(
+        { error: 'Stripe is not configured' },
+        { status: 503 },
+      );
     }
 
     const parsed = bodySchema.safeParse(await req.json());
@@ -31,16 +34,26 @@ export async function POST(req: Request) {
     }
 
     if (!env?.DB) {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 },
+      );
     }
 
     const db = drizzle(env.DB);
-    const rows = await db.select().from(servers).where(eq(servers.id, parsed.data.serverId)).limit(1);
+    const rows = await db
+      .select()
+      .from(servers)
+      .where(eq(servers.id, parsed.data.serverId))
+      .limit(1);
     const server = rows[0];
     if (!server?.stripeCustomerId) {
       return NextResponse.json(
-        { error: 'No billing customer on this listing. Complete a Premium checkout first.' },
-        { status: 400 }
+        {
+          error:
+            'No billing customer on this listing. Complete a Premium checkout first.',
+        },
+        { status: 400 },
       );
     }
 
@@ -53,6 +66,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url });
   } catch (e) {
     console.error('Stripe portal error:', e);
-    return NextResponse.json({ error: 'Could not open billing portal' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Could not open billing portal' },
+      { status: 500 },
+    );
   }
 }

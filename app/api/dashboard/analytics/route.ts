@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { servers } from '@/db/schema';
-import { auth } from '@/lib/auth';
 import { getServerAnalytics, getServerAnalyticsBatch } from '@/lib/analytics';
+import { auth } from '@/lib/auth';
 
 import { isFeaturedListing } from '@/lib/featuredStatus';
 
@@ -26,17 +26,26 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const serverId = searchParams.get('serverId');
-  const days = Math.min(Math.max(parseInt(searchParams.get('days') || '30', 10), 1), 90);
+  const days = Math.min(
+    Math.max(parseInt(searchParams.get('days') || '30', 10), 1),
+    90,
+  );
 
-  let ctx;
+  let ctx: Awaited<ReturnType<typeof getCloudflareContext>> | undefined;
   try {
     ctx = await getCloudflareContext();
   } catch {
-    return NextResponse.json({ error: 'Could not get Cloudflare context' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Could not get Cloudflare context' },
+      { status: 500 },
+    );
   }
 
   if (!ctx?.env || !(ctx.env as any).DB) {
-    return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Database not available' },
+      { status: 500 },
+    );
   }
 
   const db = drizzle((ctx.env as any).DB);
@@ -63,7 +72,10 @@ export async function GET(request: Request) {
 
     const hasAccess = isFeaturedListing(owned);
     if (!hasAccess) {
-      return NextResponse.json({ error: 'Premium or active Boost required for detailed analytics' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Premium or active Boost required for detailed analytics' },
+        { status: 403 },
+      );
     }
 
     const analytics = await getServerAnalytics(db, serverId, days);
@@ -73,7 +85,9 @@ export async function GET(request: Request) {
       serverId,
       isPremium: owned.isPremium,
       hasActiveBoost,
-      featuredUntil: owned.featuredUntil ? owned.featuredUntil.toISOString() : null,
+      featuredUntil: owned.featuredUntil
+        ? owned.featuredUntil.toISOString()
+        : null,
       analytics,
     });
   }
@@ -84,8 +98,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ servers: [] });
   }
 
-  const allowedIds = serverIds.filter((id) => isFeaturedListing(ownedById.get(id)!));
-  const summaries = allowedIds.length > 0 ? await getServerAnalyticsBatch(db, allowedIds, days) : {};
+  const allowedIds = serverIds.filter((id) =>
+    isFeaturedListing(ownedById.get(id)!),
+  );
+  const summaries =
+    allowedIds.length > 0
+      ? await getServerAnalyticsBatch(db, allowedIds, days)
+      : {};
 
   return NextResponse.json({
     servers: serverIds.map((id) => {

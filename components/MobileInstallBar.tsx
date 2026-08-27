@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Terminal } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 /**
  * Mobile-only sticky CTA that keeps install within one thumb-tap of any scroll
@@ -29,7 +29,7 @@ export function MobileInstallBar({
         // Show the bar only when the install section has scrolled out of view.
         setVisible(!entry.isIntersecting);
       },
-      { rootMargin: '-80px 0px 0px 0px', threshold: 0.05 }
+      { rootMargin: '-80px 0px 0px 0px', threshold: 0.05 },
     );
     observer.observe(target);
     return () => observer.disconnect();
@@ -38,7 +38,11 @@ export function MobileInstallBar({
   if (!visible) return null;
 
   return (
-    <div className="mobile-install-bar" role="region" aria-label="Quick install">
+    <div
+      className="mobile-install-bar"
+      role="region"
+      aria-label="Quick install"
+    >
       <button
         type="button"
         className="mobile-install-bar-btn"

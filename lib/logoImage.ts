@@ -15,7 +15,10 @@ function matchesSignature(bytes: Uint8Array, signature: number[]): boolean {
 }
 
 function isPngOrJpeg(bytes: Uint8Array): boolean {
-  return matchesSignature(bytes, PNG_SIGNATURE) || matchesSignature(bytes, JPEG_SIGNATURE);
+  return (
+    matchesSignature(bytes, PNG_SIGNATURE) ||
+    matchesSignature(bytes, JPEG_SIGNATURE)
+  );
 }
 
 /**
@@ -32,15 +35,23 @@ function isPngOrJpeg(bytes: Uint8Array): boolean {
 const MAX_DECODE_PIXELS = 20_000_000; // ~20MP, e.g. 5000x4000 — well beyond any real favicon/logo/screenshot
 
 /** Reads width/height from a PNG's IHDR chunk (always the first chunk, right after the signature). */
-function readPngDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+function readPngDimensions(
+  bytes: Uint8Array,
+): { width: number; height: number } | null {
   if (bytes.length < 24) return null;
-  const width = ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>> 0;
-  const height = ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>> 0;
+  const width =
+    ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>>
+    0;
+  const height =
+    ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>>
+    0;
   return { width, height };
 }
 
 /** Walks JPEG markers to find the SOF segment carrying width/height. */
-function readJpegDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+function readJpegDimensions(
+  bytes: Uint8Array,
+): { width: number; height: number } | null {
   let offset = 2;
   while (offset + 4 <= bytes.length) {
     if (bytes[offset] !== 0xff) {
@@ -79,7 +90,7 @@ function assertDecodeSizeSafe(bytes: Uint8Array): void {
     : readJpegDimensions(bytes);
   if (dims && dims.width * dims.height > MAX_DECODE_PIXELS) {
     throw new LogoValidationError(
-      `Image is too large (${dims.width}x${dims.height}px). Please use a smaller image.`
+      `Image is too large (${dims.width}x${dims.height}px). Please use a smaller image.`,
     );
   }
 }
@@ -105,7 +116,9 @@ function assertDecodeSizeSafe(bytes: Uint8Array): void {
  * plain Node to statically inspect their exports, and a top-level import
  * here would execute (and fail) during that step too.
  */
-export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array> {
+export async function processLogoUpload(
+  bytes: ArrayBuffer,
+): Promise<Uint8Array> {
   if (bytes.byteLength === 0) {
     throw new LogoValidationError('Uploaded file is empty.');
   }
@@ -119,9 +132,8 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array>
   }
   assertDecodeSizeSafe(view);
 
-  const { PhotonImage, SamplingFilter, Rgba, crop, padding_uniform, resize } = await import(
-    '@cf-wasm/photon/workerd'
-  );
+  const { PhotonImage, SamplingFilter, Rgba, crop, padding_uniform, resize } =
+    await import('@cf-wasm/photon/workerd');
 
   let input: PhotonImageType;
   try {
@@ -132,7 +144,13 @@ export async function processLogoUpload(bytes: ArrayBuffer): Promise<Uint8Array>
   }
 
   try {
-    return processDecodedImage(input, { crop, padding_uniform, resize, SamplingFilter, Rgba });
+    return processDecodedImage(input, {
+      crop,
+      padding_uniform,
+      resize,
+      SamplingFilter,
+      Rgba,
+    });
   } finally {
     input.free();
   }
@@ -146,7 +164,9 @@ const MAX_SCREENSHOT_HEIGHT = 1080;
  * Validates, decodes, and re-encodes an uploaded listing screenshot while preserving
  * high resolution (up to 1920x1080 bounds) and natural aspect ratio.
  */
-export async function processScreenshotUpload(bytes: ArrayBuffer): Promise<Uint8Array> {
+export async function processScreenshotUpload(
+  bytes: ArrayBuffer,
+): Promise<Uint8Array> {
   if (bytes.byteLength === 0) {
     throw new LogoValidationError('Uploaded file is empty.');
   }
@@ -184,7 +204,10 @@ export async function processScreenshotUpload(bytes: ArrayBuffer): Promise<Uint8
       return input.get_bytes();
     }
 
-    const ratio = Math.min(MAX_SCREENSHOT_WIDTH / width, MAX_SCREENSHOT_HEIGHT / height);
+    const ratio = Math.min(
+      MAX_SCREENSHOT_WIDTH / width,
+      MAX_SCREENSHOT_HEIGHT / height,
+    );
     const targetW = Math.max(1, Math.round(width * ratio));
     const targetH = Math.max(1, Math.round(height * ratio));
 
@@ -226,13 +249,22 @@ function processDecodedImage(
     resize: typeof import('@cf-wasm/photon/workerd').resize;
     SamplingFilter: typeof import('@cf-wasm/photon/workerd').SamplingFilter;
     Rgba: typeof import('@cf-wasm/photon/workerd').Rgba;
-  }
+  },
 ): Uint8Array {
   try {
-    return cropResizePad(input, { crop, padding_uniform, resize, SamplingFilter, Rgba });
+    return cropResizePad(input, {
+      crop,
+      padding_uniform,
+      resize,
+      SamplingFilter,
+      Rgba,
+    });
   } catch (err) {
     if (err instanceof LogoValidationError) throw err;
-    console.warn('Photon failed to process logo image (skipping this candidate):', err);
+    console.warn(
+      'Photon failed to process logo image (skipping this candidate):',
+      err,
+    );
     throw new LogoValidationError('Could not process this image.');
   }
 }
@@ -251,12 +283,14 @@ function cropResizePad(
     resize: typeof import('@cf-wasm/photon/workerd').resize;
     SamplingFilter: typeof import('@cf-wasm/photon/workerd').SamplingFilter;
     Rgba: typeof import('@cf-wasm/photon/workerd').Rgba;
-  }
+  },
 ): Uint8Array {
   const width = input.get_width();
   const height = input.get_height();
   if (width < MIN_SOURCE_DIMENSION || height < MIN_SOURCE_DIMENSION) {
-    throw new LogoValidationError(`Image must be at least ${MIN_SOURCE_DIMENSION}x${MIN_SOURCE_DIMENSION}px.`);
+    throw new LogoValidationError(
+      `Image must be at least ${MIN_SOURCE_DIMENSION}x${MIN_SOURCE_DIMENSION}px.`,
+    );
   }
 
   const aspectRatio = width / height;
@@ -269,7 +303,12 @@ function cropResizePad(
 
     const cropped = crop(input, x1, y1, x1 + side, y1 + side);
     try {
-      const resized = resize(cropped, OUTPUT_SIZE, OUTPUT_SIZE, SamplingFilter.Lanczos3);
+      const resized = resize(
+        cropped,
+        OUTPUT_SIZE,
+        OUTPUT_SIZE,
+        SamplingFilter.Lanczos3,
+      );
       try {
         return resized.get_bytes();
       } finally {

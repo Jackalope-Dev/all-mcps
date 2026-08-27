@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, asc, eq, isNotNull, or } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
-import { mapToOsvEcosystem, osvQueryBatch, osvGetSeverity } from '../../../../lib/vulnScan';
+import {
+  mapToOsvEcosystem,
+  osvGetSeverity,
+  osvQueryBatch,
+} from '../../../../lib/vulnScan';
 
 /**
  * Supply-chain vulnerability signal — periodic OSV.dev scan of each listing's
@@ -28,9 +32,22 @@ const BATCH_SIZE = 150;
 const MAX_DETAIL_FETCHES = 300;
 const DETAIL_FETCH_CONCURRENCY = 10;
 
-const MAPPABLE_INSTALL_COMMANDS = ['npx', 'bunx', 'npm', 'uvx', 'pip', 'pip3', 'python', 'python3'];
+const MAPPABLE_INSTALL_COMMANDS = [
+  'npx',
+  'bunx',
+  'npm',
+  'uvx',
+  'pip',
+  'pip3',
+  'python',
+  'python3',
+];
 
-async function mapWithConcurrency<T, R>(items: T[], concurrency: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let next = 0;
   async function worker() {
@@ -39,7 +56,9 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, fn: (it
       results[i] = await fn(items[i]);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, worker),
+  );
   return results;
 }
 
@@ -73,33 +92,58 @@ export async function POST(req: Request) {
         and(
           eq(servers.status, 'active'),
           isNotNull(servers.installPackage),
-          or(...MAPPABLE_INSTALL_COMMANDS.map((c) => eq(servers.installCommand, c)))
-        )
+          or(
+            ...MAPPABLE_INSTALL_COMMANDS.map((c) =>
+              eq(servers.installCommand, c),
+            ),
+          ),
+        ),
       )
       .orderBy(asc(servers.vulnScannedAt))
       .limit(BATCH_SIZE);
 
     if (batch.length === 0) {
-      return NextResponse.json({ success: true, message: 'No scannable listings.' });
+      return NextResponse.json({
+        success: true,
+        message: 'No scannable listings.',
+      });
     }
 
     const mapped = batch
       .map((s) => ({ server: s, eco: mapToOsvEcosystem(s) }))
-      .filter((m): m is { server: (typeof batch)[number]; eco: NonNullable<ReturnType<typeof mapToOsvEcosystem>> } => m.eco != null);
+      .filter(
+        (
+          m,
+        ): m is {
+          server: (typeof batch)[number];
+          eco: NonNullable<ReturnType<typeof mapToOsvEcosystem>>;
+        } => m.eco != null,
+      );
 
     if (mapped.length === 0) {
-      return NextResponse.json({ success: true, message: 'No scannable listings in this batch.' });
+      return NextResponse.json({
+        success: true,
+        message: 'No scannable listings in this batch.',
+      });
     }
 
     const osvResults = await osvQueryBatch(mapped.map((m) => m.eco));
 
-    const idsByServer = mapped.map((m, i) => (osvResults[i]?.vulns || []).map((v) => v.id));
+    const idsByServer = mapped.map((m, i) =>
+      (osvResults[i]?.vulns || []).map((v) => v.id),
+    );
     const uniqueIds = [...new Set(idsByServer.flat())].sort();
     const idsToResolve = uniqueIds.slice(0, MAX_DETAIL_FETCHES);
     const resolvedSet = new Set(idsToResolve);
 
-    const severities = await mapWithConcurrency(idsToResolve, DETAIL_FETCH_CONCURRENCY, osvGetSeverity);
-    const severityById = new Map(idsToResolve.map((id, i) => [id, severities[i]]));
+    const severities = await mapWithConcurrency(
+      idsToResolve,
+      DETAIL_FETCH_CONCURRENCY,
+      osvGetSeverity,
+    );
+    const severityById = new Map(
+      idsToResolve.map((id, i) => [id, severities[i]]),
+    );
 
     const now = new Date();
     let scanned = 0;
@@ -148,6 +192,9 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('Vuln scan cron error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

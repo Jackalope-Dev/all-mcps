@@ -1,10 +1,9 @@
-import React from 'react';
+import { ArrowRight, Scale } from 'lucide-react';
 import type { Metadata } from 'next';
-import { getNewestActiveServers, type Server } from '@/lib/servers';
-import { PageShell } from '@/components/PageShell';
 import Link from 'next/link';
-import { Scale, ArrowRight, Search, Sparkles } from 'lucide-react';
 import { CompareSelector } from '@/components/CompareSelector';
+import { PageShell } from '@/components/PageShell';
+import { getNewestActiveServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
   title: 'Compare MCP Servers Side-by-Side',
@@ -14,7 +13,14 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/compare',
   },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Compare MCP Servers Side-by-Side | AllMCPs',
     description:
       'Compare Model Context Protocol (MCP) servers side-by-side. Evaluate feature matrices, tools, GitHub stars, authentication models, and install configurations.',
@@ -27,7 +33,9 @@ export default async function CompareIndexPage() {
 
   return (
     <PageShell>
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '2.5rem 1rem' }}>
+      <div
+        style={{ maxWidth: '960px', margin: '0 auto', padding: '2.5rem 1rem' }}
+      >
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <div
             style={{
@@ -46,11 +54,26 @@ export default async function CompareIndexPage() {
           >
             <Scale size={14} /> Side-by-Side Feature Matrix
           </div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+          <h1
+            style={{
+              fontSize: '2.5rem',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              marginBottom: '0.75rem',
+            }}
+          >
             Compare MCP Servers
           </h1>
-          <p style={{ fontSize: '1.05rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-            Select 2 to 4 servers to evaluate tool capabilities, installation requirements, and community metrics side-by-side.
+          <p
+            style={{
+              fontSize: '1.05rem',
+              color: 'var(--text-secondary)',
+              maxWidth: '600px',
+              margin: '0 auto',
+            }}
+          >
+            Select 2 to 4 servers to evaluate tool capabilities, installation
+            requirements, and community metrics side-by-side.
           </p>
         </div>
 
@@ -58,11 +81,24 @@ export default async function CompareIndexPage() {
 
         {/* Popular Comparisons */}
         <div style={{ marginTop: '3.5rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
+          <h2
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              marginBottom: '1.25rem',
+            }}
+          >
             Popular Server Comparisons
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1rem',
+            }}
+          >
             <Link
               href="/mcp/crystaldba-postgres-mcp/vs/jparkerweb-mcp-sqlite"
               className="compare-popular-card compare-card-blue"
@@ -71,7 +107,13 @@ export default async function CompareIndexPage() {
                 <div className="compare-popular-card-title">
                   Postgres MCP vs. SQLite MCP
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    color: 'var(--text-secondary)',
+                    marginTop: '0.2rem',
+                  }}
+                >
                   Compare relational database tools
                 </div>
               </div>
@@ -86,7 +128,13 @@ export default async function CompareIndexPage() {
                 <div className="compare-popular-card-title">
                   GitHub MCP vs. GitLab MCP
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    color: 'var(--text-secondary)',
+                    marginTop: '0.2rem',
+                  }}
+                >
                   Compare Git platform tools & APIs
                 </div>
               </div>
@@ -101,7 +149,13 @@ export default async function CompareIndexPage() {
                 <div className="compare-popular-card-title">
                   Automata Playwright vs. Microsoft Playwright
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    color: 'var(--text-secondary)',
+                    marginTop: '0.2rem',
+                  }}
+                >
                   Compare browser automation tools
                 </div>
               </div>

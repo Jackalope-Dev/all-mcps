@@ -1,6 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { NextResponse } from 'next/server';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
 export async function GET() {
   const filePath = join(process.cwd(), 'public', 'auth.md');

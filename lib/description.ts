@@ -14,7 +14,9 @@
  * would empty the description entirely, the original (trimmed) text is returned so a
  * listing never loses its only copy.
  */
-export function cleanListingDescription(description: string | null | undefined): string {
+export function cleanListingDescription(
+  description: string | null | undefined,
+): string {
   if (!description) return '';
   let text = description;
   for (let i = 0; i < 5; i++) {
@@ -23,7 +25,10 @@ export function cleanListingDescription(description: string | null | undefined):
       // Leading badge links: empty-text `[](url)` or image `![alt](img)`.
       .replace(/^(?:\s*(?:!\[[^\]]*\]\([^)]*\)|\[\s*\]\([^)]*\))\s*)+/g, '')
       // Leading platform-indicator emoji run (incl. variation selectors, ZWJ, skin tones).
-      .replace(/^[\p{Extended_Pictographic}️‍\u{1F3FB}-\u{1F3FF}\s]+/u, '')
+      .replace(
+        /^(?:[\p{Extended_Pictographic}\s]|[\u{1F3FB}-\u{1F3FF}]|\uFE0F|\u200D)+/u,
+        '',
+      )
       // Leading separator left behind once badges/emoji are gone.
       .replace(/^[-–—:|·•]+\s+/, '');
     if (text === before) break;

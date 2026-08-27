@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Copy, Check, ShieldCheck, Sparkles, Search, Server as ServerIcon, X, ExternalLink } from 'lucide-react';
-import { toast } from './Toast';
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  Search,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { parseServerName } from '../../lib/displayName';
 import { trackShare } from '../../lib/gtag';
 import { ServerAvatar } from './ServerAvatar';
-import { parseServerName } from '../../lib/displayName';
+import { toast } from './Toast';
 
 interface BadgeEmbedBuilderProps {
   serverId?: string;
@@ -26,14 +33,20 @@ export function BadgeEmbedBuilder({
   serverName = '',
   className = '',
 }: BadgeEmbedBuilderProps) {
-  const [badgeStyle, setBadgeStyle] = useState<'shield' | 'flat-square' | 'featured' | 'directory'>('shield');
-  const [badgeMetric, setBadgeMetric] = useState<'status' | 'upvotes' | 'views' | 'installs'>('status');
+  const [badgeStyle, setBadgeStyle] = useState<
+    'shield' | 'flat-square' | 'featured' | 'directory'
+  >('shield');
+  const [badgeMetric, setBadgeMetric] = useState<
+    'status' | 'upvotes' | 'views' | 'installs'
+  >('status');
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Server selection state
   const [customId, setCustomId] = useState(serverId || 'allmcps-server');
-  const [selectedServerName, setSelectedServerName] = useState(serverName || 'AllMCPs Server');
+  const [selectedServerName, setSelectedServerName] = useState(
+    serverName || 'AllMCPs Server',
+  );
 
   // Autocomplete search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +59,8 @@ export function BadgeEmbedBuilder({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const paramId = params.get('server') || params.get('id') || params.get('serverId');
+    const paramId =
+      params.get('server') || params.get('id') || params.get('serverId');
     if (paramId) {
       setCustomId(paramId);
       const { displayName } = parseServerName(paramId);
@@ -90,7 +104,10 @@ export function BadgeEmbedBuilder({
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     };
@@ -107,18 +124,24 @@ export function BadgeEmbedBuilder({
   };
 
   const cleanId = customId.trim() || 'allmcps-server';
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
+  const baseUrl =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://allmcps.com';
 
   const queryParams = new URLSearchParams();
   if (badgeStyle !== 'shield') queryParams.set('style', badgeStyle);
   if (badgeMetric !== 'status') queryParams.set('metric', badgeMetric);
   if (badgeTheme !== 'dark') queryParams.set('theme', badgeTheme);
 
-  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  const queryString = queryParams.toString()
+    ? `?${queryParams.toString()}`
+    : '';
   const badgeSrc = `${baseUrl}/api/badge/${cleanId}${queryString}`;
   const targetUrl = `${baseUrl}/mcp/${cleanId}`;
 
-  const badgeHeight = badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
+  const badgeHeight =
+    badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
 
   const markdownSnippet = `[![AllMCPs](${badgeSrc})](${targetUrl})`;
   const htmlSnippet = `<a href="${targetUrl}"><img src="${badgeSrc}" alt="${selectedServerName} on AllMCPs" height="${badgeHeight}" /></a>`;
@@ -150,8 +173,10 @@ export function BadgeEmbedBuilder({
   ];
 
   return (
-    <div className={`badge-embed-builder ${className}`} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      
+    <div
+      className={`badge-embed-builder ${className}`}
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}
+    >
       {/* STEP 1: Select Your MCP Server */}
       <section
         style={{
@@ -162,7 +187,14 @@ export function BadgeEmbedBuilder({
           boxShadow: 'var(--shadow-sm)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.85rem',
+          }}
+        >
           <span
             style={{
               width: '24px',
@@ -180,13 +212,28 @@ export function BadgeEmbedBuilder({
           >
             1
           </span>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+          <h3
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              margin: 0,
+              color: 'var(--text-primary)',
+            }}
+          >
             Select Your MCP Server
           </h3>
         </div>
 
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1rem', lineHeight: 1.5 }}>
-          Search for an indexed MCP server from AllMCPs or enter a custom server ID below:
+        <p
+          style={{
+            fontSize: '0.85rem',
+            color: 'var(--text-secondary)',
+            margin: '0 0 1rem',
+            lineHeight: 1.5,
+          }}
+        >
+          Search for an indexed MCP server from AllMCPs or enter a custom server
+          ID below:
         </p>
 
         {/* Selected Server Card */}
@@ -203,13 +250,35 @@ export function BadgeEmbedBuilder({
             marginBottom: '1rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              minWidth: 0,
+            }}
+          >
             <ServerAvatar name={selectedServerName} size={36} />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  color: 'var(--text-primary)',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {selectedServerName}
               </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+              <div
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                  fontFamily: 'monospace',
+                }}
+              >
                 ID: {cleanId}
               </div>
             </div>
@@ -291,7 +360,16 @@ export function BadgeEmbedBuilder({
           </div>
 
           {/* Manual ID fallback input if user enters raw string */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginTop: '0.75rem',
+              fontSize: '0.78rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
             <span>Or enter custom server ID manually:</span>
             <input
               type="text"
@@ -299,7 +377,9 @@ export function BadgeEmbedBuilder({
               onChange={(e) => {
                 const val = e.target.value;
                 setCustomId(val);
-                setSelectedServerName(val ? parseServerName(val).displayName : 'Custom Server');
+                setSelectedServerName(
+                  val ? parseServerName(val).displayName : 'Custom Server',
+                );
               }}
               className="form-input"
               style={{
@@ -330,7 +410,15 @@ export function BadgeEmbedBuilder({
                 padding: '0.35rem',
               }}
             >
-              <div style={{ padding: '0.35rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div
+                style={{
+                  padding: '0.35rem 0.6rem',
+                  fontSize: '0.72rem',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                }}
+              >
                 Indexed Servers ({suggestions.length})
               </div>
               {suggestions.map((s) => {
@@ -345,7 +433,10 @@ export function BadgeEmbedBuilder({
                       padding: '0.5rem 0.65rem',
                       borderRadius: '6px',
                       border: 'none',
-                      background: s.id === cleanId ? 'rgba(0, 229, 255, 0.12)' : 'transparent',
+                      background:
+                        s.id === cleanId
+                          ? 'rgba(0, 229, 255, 0.12)'
+                          : 'transparent',
                       color: 'var(--text-primary)',
                       textAlign: 'left',
                       display: 'flex',
@@ -356,13 +447,31 @@ export function BadgeEmbedBuilder({
                       transition: 'background 0.15s ease',
                     }}
                   >
-                    <ServerAvatar name={s.name} logoUrl={s.logoUrl} category={s.category} size={24} />
+                    <ServerAvatar
+                      name={s.name}
+                      logoUrl={s.logoUrl}
+                      category={s.category}
+                      size={24}
+                    />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {displayName}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                        {s.category} &bull; <span style={{ fontFamily: 'monospace' }}>{s.id}</span>
+                      <div
+                        style={{
+                          fontSize: '0.72rem',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        {s.category} &bull;{' '}
+                        <span style={{ fontFamily: 'monospace' }}>{s.id}</span>
                       </div>
                     </div>
                   </button>
@@ -383,7 +492,14 @@ export function BadgeEmbedBuilder({
           boxShadow: 'var(--shadow-sm)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.85rem',
+          }}
+        >
           <span
             style={{
               width: '24px',
@@ -401,13 +517,23 @@ export function BadgeEmbedBuilder({
           >
             2
           </span>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+          <h3
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              margin: 0,
+              color: 'var(--text-primary)',
+            }}
+          >
             Customize Badge Style &amp; Theme
           </h3>
         </div>
 
         {/* Style & Metric Toggles */}
-        <div className="badge-embed-builder-toggles" style={{ marginBottom: '1.25rem' }}>
+        <div
+          className="badge-embed-builder-toggles"
+          style={{ marginBottom: '1.25rem' }}
+        >
           {/* Style selection */}
           <div>
             <div className="badge-embed-label">Badge Style</div>
@@ -467,8 +593,12 @@ export function BadgeEmbedBuilder({
 
         {/* Live Badge Preview */}
         <div>
-          <div className="badge-embed-label">Live Preview for &quot;{selectedServerName}&quot;</div>
-          <div className={`badge-embed-preview ${badgeTheme === 'light' ? 'badge-embed-preview--light' : 'badge-embed-preview--dark'}`}>
+          <div className="badge-embed-label">
+            Live Preview for &quot;{selectedServerName}&quot;
+          </div>
+          <div
+            className={`badge-embed-preview ${badgeTheme === 'light' ? 'badge-embed-preview--light' : 'badge-embed-preview--dark'}`}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/badge/${cleanId}${queryString}`}
@@ -489,7 +619,14 @@ export function BadgeEmbedBuilder({
           boxShadow: 'var(--shadow-sm)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.85rem',
+          }}
+        >
           <span
             style={{
               width: '24px',
@@ -507,28 +644,50 @@ export function BadgeEmbedBuilder({
           >
             3
           </span>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+          <h3
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              margin: 0,
+              color: 'var(--text-primary)',
+            }}
+          >
             Copy Embed Snippet
           </h3>
         </div>
 
         {/* Verification Bonus Callout */}
         <div className="badge-embed-callout" style={{ marginBottom: '1rem' }}>
-          <ShieldCheck size={16} style={{ color: '#34d399', flexShrink: 0, marginTop: '0.125rem' }} />
+          <ShieldCheck
+            size={16}
+            style={{ color: '#34d399', flexShrink: 0, marginTop: '0.125rem' }}
+          />
           <div className="badge-embed-callout-text">
-            <span style={{ fontWeight: 600 }}>Automatic badge health sync</span>: we re-check your badge on each health
-            run, so once it&apos;s live your reciprocal dofollow link stays credited automatically.
+            <span style={{ fontWeight: 600 }}>Automatic badge health sync</span>
+            : we re-check your badge on each health run, so once it&apos;s live
+            your reciprocal dofollow link stays credited automatically.
           </div>
         </div>
 
         {/* Reciprocal Dofollow Callout */}
-        <div className="badge-embed-callout" style={{ marginBottom: '1.25rem' }}>
-          <ShieldCheck size={16} style={{ color: 'var(--accent-color)', flexShrink: 0, marginTop: '0.125rem' }} />
+        <div
+          className="badge-embed-callout"
+          style={{ marginBottom: '1.25rem' }}
+        >
+          <ShieldCheck
+            size={16}
+            style={{
+              color: 'var(--accent-color)',
+              flexShrink: 0,
+              marginTop: '0.125rem',
+            }}
+          />
           <div className="badge-embed-callout-text">
-            <span style={{ fontWeight: 600 }}>Reciprocal dofollow link</span>: These snippets are a genuine{' '}
-            <strong>dofollow</strong> link back to AllMCPs (no <code>rel=&quot;nofollow&quot;</code>). Verify your site
-            (badge, meta tag, or DNS) and keep the link dofollow, and your listing&apos;s website link becomes dofollow in
-            return.
+            <span style={{ fontWeight: 600 }}>Reciprocal dofollow link</span>:
+            These snippets are a genuine <strong>dofollow</strong> link back to
+            AllMCPs (no <code>rel=&quot;nofollow&quot;</code>). Verify your site
+            (badge, meta tag, or DNS) and keep the link dofollow, and your
+            listing&apos;s website link becomes dofollow in return.
           </div>
         </div>
 
@@ -548,26 +707,62 @@ export function BadgeEmbedBuilder({
           }}
         >
           <div style={{ flex: '1 1 260px' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.925rem', color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: '0.925rem',
+                color: 'var(--text-primary)',
+                marginBottom: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
               <ShieldCheck size={18} style={{ color: 'var(--accent-color)' }} />
               Claim &amp; Verify Ownership for <code>{cleanId}</code>
             </div>
-            <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-              Claim this listing to get your Verified owner badge, manage description &amp; logo, and earn reciprocal SEO backlinks.
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.775rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.45,
+              }}
+            >
+              Claim this listing to get your Verified owner badge, manage
+              description &amp; logo, and earn reciprocal SEO backlinks.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.5rem',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
             <a
               href={`/mcp/${cleanId}/claim`}
               className="btn btn-primary"
-              style={{ fontSize: '0.825rem', padding: '0.5rem 0.95rem', textDecoration: 'none', whiteSpace: 'nowrap', fontWeight: 700 }}
+              style={{
+                fontSize: '0.825rem',
+                padding: '0.5rem 0.95rem',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                fontWeight: 700,
+              }}
             >
               Claim &amp; Verify Listing →
             </a>
             <a
               href={`/mcp/${cleanId}`}
               className="btn btn-secondary"
-              style={{ fontSize: '0.825rem', padding: '0.5rem 0.85rem', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              style={{
+                fontSize: '0.825rem',
+                padding: '0.5rem 0.85rem',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
             >
               View Listing
             </a>
@@ -590,7 +785,11 @@ export function BadgeEmbedBuilder({
                 onClick={() => copyToClipboard(markdownSnippet, 'markdown')}
                 className="badge-embed-copy-btn"
               >
-                {copiedKey === 'markdown' ? <Check size={14} style={{ color: '#34d399' }} /> : <Copy size={14} />}
+                {copiedKey === 'markdown' ? (
+                  <Check size={14} style={{ color: '#34d399' }} />
+                ) : (
+                  <Copy size={14} />
+                )}
                 <span>{copiedKey === 'markdown' ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
@@ -610,7 +809,11 @@ export function BadgeEmbedBuilder({
                 onClick={() => copyToClipboard(htmlSnippet, 'html')}
                 className="badge-embed-copy-btn"
               >
-                {copiedKey === 'html' ? <Check size={14} style={{ color: '#34d399' }} /> : <Copy size={14} />}
+                {copiedKey === 'html' ? (
+                  <Check size={14} style={{ color: '#34d399' }} />
+                ) : (
+                  <Copy size={14} />
+                )}
                 <span>{copiedKey === 'html' ? 'Copied' : 'Copy'}</span>
               </button>
             </div>

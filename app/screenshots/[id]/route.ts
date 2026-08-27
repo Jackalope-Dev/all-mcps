@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { NextResponse } from 'next/server';
 
 const ID_PATTERN = /^[a-z0-9-]+$/;
 
 /** Public GET for approved listing screenshots (R2: screenshots/live/<id>.png). */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   if (!ID_PATTERN.test(id)) {
     return new NextResponse(null, { status: 404 });
@@ -29,10 +32,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const etag = object.httpEtag || object.etag;
   const headers: Record<string, string> = {
     'Content-Type': 'image/png',
-    'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+    'Cache-Control':
+      'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
   };
   if (etag) {
-    headers['ETag'] = etag;
+    headers.ETag = etag;
   }
 
   return new NextResponse(object.body, { headers });

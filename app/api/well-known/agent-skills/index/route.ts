@@ -7,23 +7,29 @@ export async function GET() {
       {
         name: 'mcp-search',
         type: 'search',
-        description: 'Search and discover MCP servers across categories, tech stacks, and capabilities',
+        description:
+          'Search and discover MCP servers across categories, tech stacks, and capabilities',
         url: 'https://allmcps.com/.well-known/agent-skills/mcp-search/SKILL.md',
-        sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+        sha256:
+          '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
       },
       {
         name: 'mcp-registry',
         type: 'registry',
-        description: 'Query details and configuration schemas for individual MCP servers',
+        description:
+          'Query details and configuration schemas for individual MCP servers',
         url: 'https://allmcps.com/.well-known/agent-skills/mcp-registry/SKILL.md',
-        sha256: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+        sha256:
+          '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
       },
       {
         name: 'mcp-monetization',
         type: 'monetization',
-        description: 'Feature MCP servers, query sponsorship tiers, and initiate agentic commerce payments',
+        description:
+          'Feature MCP servers, query sponsorship tiers, and initiate agentic commerce payments',
         url: 'https://allmcps.com/.well-known/agent-skills/mcp-monetization/SKILL.md',
-        sha256: '3a884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542e9',
+        sha256:
+          '3a884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542e9',
       },
     ],
   };

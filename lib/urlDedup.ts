@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/d1';
+import type { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../db/schema';
 
 /**
@@ -27,7 +27,7 @@ export function normalizeUrlKey(rawUrl: string): string {
  */
 export function normalizePackageKey(
   ecosystem: 'npm' | 'pypi' | null | undefined,
-  packageName: string | null | undefined
+  packageName: string | null | undefined,
 ): string | null {
   if (!ecosystem || !packageName) return null;
   const pkg = packageName.trim().toLowerCase();
@@ -51,10 +51,19 @@ export type ExistingListingMatch = {
  */
 export async function findExistingListingByUrl(
   db: ReturnType<typeof drizzle>,
-  url: string
+  url: string,
 ): Promise<ExistingListingMatch | null> {
   const key = normalizeUrlKey(url);
-  const rows = await db.select({ id: servers.id, name: servers.name, url: servers.url, status: servers.status }).from(servers);
+  const rows = await db
+    .select({
+      id: servers.id,
+      name: servers.name,
+      url: servers.url,
+      status: servers.status,
+    })
+    .from(servers);
   const match = rows.find((r) => normalizeUrlKey(r.url) === key);
-  return match ? { id: match.id, name: match.name, status: match.status } : null;
+  return match
+    ? { id: match.id, name: match.name, status: match.status }
+    : null;
 }

@@ -1,7 +1,7 @@
 'use client';
 
+import { Download, Eye } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Eye, Download } from 'lucide-react';
 import { IconTooltip } from './IconTooltip';
 
 const viewKey = (serverId: string) => `view_${serverId}`;
@@ -87,11 +87,18 @@ export function ViewTracker({
       label={`${views.toLocaleString()} unique views`}
       asSpan
       trigger={
-        <div className="detail-stat-item" style={{ cursor: 'pointer' }} aria-label={`${views.toLocaleString()} unique ${views === 1 ? 'view' : 'views'}`}>
+        <div
+          className="detail-stat-item"
+          style={{ cursor: 'pointer' }}
+          role="group"
+          aria-label={`${views.toLocaleString()} unique ${views === 1 ? 'view' : 'views'}`}
+        >
           <span className="detail-stat-item-label">
             <Eye size={12} aria-hidden="true" /> Views
           </span>
-          <span className="detail-stat-item-value">{views.toLocaleString()}</span>
+          <span className="detail-stat-item-value">
+            {views.toLocaleString()}
+          </span>
         </div>
       }
     >
@@ -113,7 +120,12 @@ export function InstallsStat({ count = 0 }: { count?: number }) {
       label={`${n.toLocaleString()} total installs`}
       asSpan
       trigger={
-        <div className="detail-stat-item" style={{ cursor: 'pointer' }} aria-label={`${n.toLocaleString()} ${n === 1 ? 'install' : 'installs'}`}>
+        <div
+          className="detail-stat-item"
+          style={{ cursor: 'pointer' }}
+          role="group"
+          aria-label={`${n.toLocaleString()} ${n === 1 ? 'install' : 'installs'}`}
+        >
           <span className="detail-stat-item-label">
             <Download size={12} aria-hidden="true" /> Installs
           </span>
@@ -122,10 +134,12 @@ export function InstallsStat({ count = 0 }: { count?: number }) {
       }
     >
       <span className="mcp-icon-tooltip-title">
-        <Download size={14} style={{ color: 'var(--accent-color)' }} /> Installs &amp; Copy Actions
+        <Download size={14} style={{ color: 'var(--accent-color)' }} /> Installs
+        &amp; Copy Actions
       </span>
       <span className="mcp-icon-tooltip-body">
-        Total times users copied install commands or configuration snippets for this server.
+        Total times users copied install commands or configuration snippets for
+        this server.
       </span>
     </IconTooltip>
   );

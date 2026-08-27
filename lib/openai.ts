@@ -18,7 +18,11 @@ export type OpenAIChatSuccess = {
   ok: true;
   content: string;
   model: string;
-  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
 };
 
 export type OpenAIChatFailure = {
@@ -54,7 +58,9 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const GPT5_FAMILY_RE = /^gpt-5/i;
 
 /** Status codes that mean "stop spending / don't hammer" rather than transient blips. */
-function classifyHttpStatus(status: number): Pick<OpenAIChatFailure, 'reason' | 'retryable'> {
+function classifyHttpStatus(
+  status: number,
+): Pick<OpenAIChatFailure, 'reason' | 'retryable'> {
   if (status === 401 || status === 403) {
     return { reason: 'auth', retryable: false };
   }
@@ -110,7 +116,9 @@ export type ChatCompletionOptions = {
  * programmer mistakes (e.g. empty messages). Safe to call from request handlers
  * and crons without try/catch for spend failures.
  */
-export async function chatCompletion(options: ChatCompletionOptions): Promise<OpenAIChatResult> {
+export async function chatCompletion(
+  options: ChatCompletionOptions,
+): Promise<OpenAIChatResult> {
   if (!options.messages?.length) {
     return {
       ok: false,
@@ -210,7 +218,9 @@ export async function chatCompletion(options: ChatCompletionOptions): Promise<Op
     return {
       ok: false,
       reason: isTimeout ? 'timeout' : 'upstream',
-      message: isTimeout ? 'OpenAI request timed out' : e?.message || 'OpenAI request failed',
+      message: isTimeout
+        ? 'OpenAI request timed out'
+        : e?.message || 'OpenAI request failed',
       retryable: true,
     };
   }
@@ -221,7 +231,7 @@ export async function chatCompletion(options: ChatCompletionOptions): Promise<Op
  * (budget, timeout, bad JSON) so callers stay simple.
  */
 export async function chatJson<T = Record<string, unknown>>(
-  options: Omit<ChatCompletionOptions, 'json'>
+  options: Omit<ChatCompletionOptions, 'json'>,
 ): Promise<{ ok: true; data: T; model: string } | OpenAIChatFailure> {
   const result = await chatCompletion({ ...options, json: true });
   if (!result.ok) return result;

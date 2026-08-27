@@ -11,16 +11,16 @@
  * keeps falling back to the raw description/README. See app/api/cron/ai-content.
  */
 
-import { chatJson } from './openai';
-import { cleanListingDescription } from './description';
 import { DIRECTORY_CATEGORIES } from './categories';
+import { cleanListingDescription } from './description';
+import { chatJson } from './openai';
 import {
-  isPricingModel,
-  isAuthType,
-  normalizeTags,
-  normalizeCompatibleClients,
-  type PricingModel,
   type AuthType,
+  isAuthType,
+  isPricingModel,
+  normalizeCompatibleClients,
+  normalizeTags,
+  type PricingModel,
 } from './serverEnums';
 
 export type AiFaqItem = { q: string; a: string };
@@ -93,12 +93,17 @@ export type ListingContentOutcome =
 
 /** Parse a stored JSON string-array column tolerantly (bad data → []). */
 export function parseStringArray(raw: unknown): string[] {
-  if (Array.isArray(raw)) return raw.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim());
+  if (Array.isArray(raw))
+    return raw
+      .filter((x) => typeof x === 'string' && x.trim())
+      .map((x) => x.trim());
   if (typeof raw !== 'string' || !raw.trim()) return [];
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((x) => typeof x === 'string' && x.trim()).map((x) => String(x).trim());
+    return parsed
+      .filter((x) => typeof x === 'string' && x.trim())
+      .map((x) => String(x).trim());
   } catch {
     return [];
   }
@@ -110,7 +115,10 @@ export function parseFaqArray(raw: unknown): AiFaqItem[] {
     arr
       .filter(
         (x): x is { q: string; a: string } =>
-          !!x && typeof x === 'object' && typeof (x as any).q === 'string' && typeof (x as any).a === 'string'
+          !!x &&
+          typeof x === 'object' &&
+          typeof (x as any).q === 'string' &&
+          typeof (x as any).a === 'string',
       )
       .map((x) => ({ q: x.q.trim(), a: x.a.trim() }))
       .filter((x) => x.q && x.a);
@@ -144,7 +152,12 @@ function clampList(value: unknown, maxItems: number, maxLen: number): string[] {
 }
 
 /** Cap FAQ item count and per-field length (mirrors clampList, but for {q,a} pairs). */
-export function clampFaq(value: unknown, maxItems: number, maxQLen: number, maxALen: number): AiFaqItem[] {
+export function clampFaq(
+  value: unknown,
+  maxItems: number,
+  maxQLen: number,
+  maxALen: number,
+): AiFaqItem[] {
   if (!Array.isArray(value)) return [];
   const out: AiFaqItem[] = [];
   for (const item of value) {
@@ -166,7 +179,10 @@ function clampEnvVars(value: unknown, maxItems: number): string[] {
   const seen = new Set<string>();
   for (const item of value) {
     if (typeof item !== 'string') continue;
-    const name = item.trim().toUpperCase().replace(/[\s-]+/g, '_');
+    const name = item
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, '_');
     if (!ENV_VAR_NAME_PATTERN.test(name) || seen.has(name)) continue;
     seen.add(name);
     out.push(name);
@@ -180,7 +196,19 @@ function clampEnvVars(value: unknown, maxItems: number): string[] {
  * model hallucinating a command shape rather than reading one off the page.
  */
 const INSTALL_COMMAND_ALLOWLIST = new Set([
-  'npx', 'uvx', 'bunx', 'pipx', 'pip', 'pip3', 'python', 'python3', 'node', 'docker', 'deno', 'go', 'cargo',
+  'npx',
+  'uvx',
+  'bunx',
+  'pipx',
+  'pip',
+  'pip3',
+  'python',
+  'python3',
+  'node',
+  'docker',
+  'deno',
+  'go',
+  'cargo',
 ]);
 
 /**
@@ -189,7 +217,8 @@ const INSTALL_COMMAND_ALLOWLIST = new Set([
  * alongside the prompt instruction, since a confident-sounding model can
  * still copy an example verbatim including its placeholders.
  */
-const PLACEHOLDER_PATTERN = /^[<[{]|[>\]}]$|^(your|my|insert|replace|example)[-_]|path\/to\//i;
+const PLACEHOLDER_PATTERN =
+  /^[<[{]|[>\]}]$|^(your|my|insert|replace|example)[-_]|path\/to\//i;
 
 /**
  * Defense in depth against the exact failure modes install extraction is
@@ -212,7 +241,8 @@ function clampInstall(value: unknown): AiListingContent['install'] {
   if (!value || typeof value !== 'object') return null;
   const v = value as Record<string, unknown>;
 
-  const confidence = v.confidence === 'high' || v.confidence === 'medium' ? v.confidence : null;
+  const confidence =
+    v.confidence === 'high' || v.confidence === 'medium' ? v.confidence : null;
   if (!confidence) return null;
 
   if (v.kind === 'remote') {
@@ -222,13 +252,19 @@ function clampInstall(value: unknown): AiListingContent['install'] {
   }
 
   if (v.kind === 'stdio') {
-    const command = typeof v.command === 'string' ? v.command.trim().toLowerCase() : '';
+    const command =
+      typeof v.command === 'string' ? v.command.trim().toLowerCase() : '';
     if (!INSTALL_COMMAND_ALLOWLIST.has(command)) return null;
 
     const args = Array.isArray(v.args)
-      ? v.args.filter(looksLikePackageToken).map((a) => a.slice(0, 200)).slice(0, 15)
+      ? v.args
+          .filter(looksLikePackageToken)
+          .map((a) => a.slice(0, 200))
+          .slice(0, 15)
       : [];
-    const pkg = looksLikePackageToken(v.package) ? (v.package as string).slice(0, 200) : '';
+    const pkg = looksLikePackageToken(v.package)
+      ? (v.package as string).slice(0, 200)
+      : '';
     // Require both a real-looking package name AND real args — a command
     // guess with no identifiable package is exactly the "grabbed a flag or
     // a stray word" failure mode this replaces, not a usable result.
@@ -280,7 +316,7 @@ const SYSTEM_PROMPT =
   '(a) third-party installer CLIs the README mentions as ONE way to install (e.g. "@smithery/cli", "@modelcontextprotocol/inspector") — these need the real package name as an argument, which is what you must find instead; ' +
   '(b) generic debugging/proxy/bridge utilities unrelated to this specific server (e.g. "mcp-remote", "@modelcontextprotocol/inspector"); ' +
   '(c) framework or library dependencies this project is built WITH, not the project itself (e.g. a Python project built on "fastmcp" is not the "fastmcp" package; a project using psycopg2 is not the "psycopg2-binary" package); ' +
-  '(d) other people\'s servers mentioned as examples, comparisons, or things this project can proxy to. ' +
+  "(d) other people's servers mentioned as examples, comparisons, or things this project can proxy to. " +
   'When "install" is not null: "kind" is "stdio" (runs locally via a package manager) or "remote" (a hosted HTTP/SSE endpoint URL); ' +
   'for "stdio", "command" is the runner binary alone (e.g. "npx", "uvx", "bunx", "pipx", "docker" — never a flag), "args" is the full real argument list including the actual package/image name as it would be typed, "package" is that same package/image name alone. ' +
   'A stdio command must be directly runnable with no editing — this rules out two common README patterns: ' +
@@ -290,7 +326,11 @@ const SYSTEM_PROMPT =
   '"confidence" is "high" only if the README states the exact command verbatim, "medium" if you inferred it from strong context (e.g. the npm/PyPI package name matches the repo unambiguously) — use "medium", or null the whole field, for anything less certain.';
 
 /** Chat failure reasons that mean "stop spending" rather than "this one didn't work". */
-const BUDGET_REASONS = new Set(['budget_or_rate_limit', 'auth', 'not_configured']);
+const BUDGET_REASONS = new Set([
+  'budget_or_rate_limit',
+  'auth',
+  'not_configured',
+]);
 
 /**
  * Generate the content layer for one listing. Never throws. Returns a discriminated
@@ -298,9 +338,10 @@ const BUDGET_REASONS = new Set(['budget_or_rate_limit', 'auth', 'not_configured'
  * a one-off failure ('skip' → retry this listing later) from success.
  */
 export async function generateListingContent(
-  input: ListingContentInput
+  input: ListingContentInput,
 ): Promise<ListingContentOutcome> {
-  const cleanedDesc = cleanListingDescription(input.description) || input.description || '';
+  const cleanedDesc =
+    cleanListingDescription(input.description) || input.description || '';
   const toolLines = (input.tools || [])
     .slice(0, 30)
     .map((t) => `- ${t.name}${t.description ? `: ${t.description}` : ''}`)
@@ -312,7 +353,9 @@ export async function generateListingContent(
     `Repository/Source: ${input.url}`,
     `Current description: ${cleanedDesc || '(none)'}`,
     toolLines ? `Tools it exposes over MCP:\n${toolLines}` : '',
-    input.readme ? `README (excerpt):\n${input.readme.slice(0, README_BUDGET)}` : 'README: (unavailable)',
+    input.readme
+      ? `README (excerpt):\n${input.readme.slice(0, README_BUDGET)}`
+      : 'README: (unavailable)',
     `Allowed categories (pick exactly one, copied verbatim, for the "category" field):\n${DIRECTORY_CATEGORIES.slice(0, 40).join('\n')}`,
   ]
     .filter(Boolean)
@@ -359,20 +402,35 @@ export async function generateListingContent(
   const faq = clampFaq(result.data.faq, 5, 150, 400);
   const envVars = clampEnvVars(result.data.envVars, 8);
 
-  const pricingModel = isPricingModel(result.data.pricingModel) ? result.data.pricingModel : null;
-  const authType = isAuthType(result.data.authType) ? result.data.authType : null;
-  const rawLicense = typeof result.data.license === 'string' ? result.data.license.trim().slice(0, 30) : null;
-  const license = rawLicense && /^[\w\.\-]+$/.test(rawLicense) ? rawLicense : null;
+  const pricingModel = isPricingModel(result.data.pricingModel)
+    ? result.data.pricingModel
+    : null;
+  const authType = isAuthType(result.data.authType)
+    ? result.data.authType
+    : null;
+  const rawLicense =
+    typeof result.data.license === 'string'
+      ? result.data.license.trim().slice(0, 30)
+      : null;
+  const license =
+    rawLicense && /^[\w.-]+$/.test(rawLicense) ? rawLicense : null;
   const tags = normalizeTags(result.data.tags);
-  const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
+  const compatibleClients = normalizeCompatibleClients(
+    result.data.compatibleClients,
+  );
   const install = clampInstall(result.data.install);
   // Exact-match only — the model was told to copy verbatim from the allowed list;
   // anything else is a hallucinated/malformed category name, safer to drop than store.
-  const rawCategory = typeof result.data.category === 'string' ? result.data.category.trim() : '';
-  const category = rawCategory && DIRECTORY_CATEGORIES.includes(rawCategory) ? rawCategory : null;
+  const rawCategory =
+    typeof result.data.category === 'string' ? result.data.category.trim() : '';
+  const category =
+    rawCategory && DIRECTORY_CATEGORIES.includes(rawCategory)
+      ? rawCategory
+      : null;
 
   // A usable summary is the minimum bar — without it the page gains nothing over the raw scrape.
-  if (!summary || summary.length < 12) return { status: 'skip', reason: 'empty' };
+  if (!summary || summary.length < 12)
+    return { status: 'skip', reason: 'empty' };
 
   return {
     status: 'ok',

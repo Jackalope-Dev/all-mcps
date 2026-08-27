@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 /**
  * Small info tooltip for the status/verification icons beside a listing title.
@@ -32,7 +32,8 @@ export function IconTooltip({
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+      if (rootRef.current && !rootRef.current.contains(e.target as Node))
+        setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -48,7 +49,10 @@ export function IconTooltip({
   const TriggerTag = asSpan ? 'span' : 'button';
 
   return (
-    <span ref={rootRef} className={`mcp-icon-tooltip${open ? ' is-open' : ''} ${className}`}>
+    <span
+      ref={rootRef}
+      className={`mcp-icon-tooltip${open ? ' is-open' : ''} ${className}`}
+    >
       <TriggerTag
         {...(asSpan ? {} : { type: 'button' as const })}
         className="mcp-icon-tooltip-trigger"
@@ -57,7 +61,10 @@ export function IconTooltip({
         aria-describedby={bubbleId}
         onClick={() => {
           // Only toggle on touch/coarse pointers; hover devices use CSS.
-          if (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches) {
+          if (
+            typeof window !== 'undefined' &&
+            window.matchMedia('(hover: none)').matches
+          ) {
             setOpen((o) => !o);
           }
         }}

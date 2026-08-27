@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { getCategoryMeta, CATEGORY_GROUPS } from '../lib/categories';
+import { useEffect, useMemo, useState } from 'react';
+import { CATEGORY_GROUPS, getCategoryMeta } from '../lib/categories';
 
 type CategoryItem = {
   name: string;
@@ -25,7 +25,11 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
       }
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!c.label.toLowerCase().includes(q) && !c.name.toLowerCase().includes(q)) return false;
+        if (
+          !c.label.toLowerCase().includes(q) &&
+          !c.name.toLowerCase().includes(q)
+        )
+          return false;
       }
       return true;
     });
@@ -42,8 +46,11 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           // Brief highlight effect
-          el.style.boxShadow = '0 0 0 2px var(--accent-color), 0 12px 40px rgba(0, 0, 0, 0.5)';
-          setTimeout(() => { el.style.boxShadow = ''; }, 2000);
+          el.style.boxShadow =
+            '0 0 0 2px var(--accent-color), 0 12px 40px rgba(0, 0, 0, 0.5)';
+          setTimeout(() => {
+            el.style.boxShadow = '';
+          }, 2000);
         }
         setHasScrolled(true);
       }, 300);
@@ -54,7 +61,16 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
   return (
     <>
       {/* Search & Group Tabs */}
-      <div className="animate-fade-in delay-2" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', marginBottom: '2.5rem' }}>
+      <div
+        className="animate-fade-in delay-2"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1.25rem',
+          marginBottom: '2.5rem',
+        }}
+      >
         <input
           type="text"
           placeholder="Search categories..."
@@ -66,7 +82,15 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
           id="search-categories"
         />
 
-        <div className="directory-tags-row" style={{ overflowX: 'auto', paddingBottom: '0.25rem', maxWidth: '100%', justifyContent: 'center' }}>
+        <div
+          className="directory-tags-row"
+          style={{
+            overflowX: 'auto',
+            paddingBottom: '0.25rem',
+            maxWidth: '100%',
+            justifyContent: 'center',
+          }}
+        >
           <button
             type="button"
             className={`directory-tag ${activeGroup === 'all' ? 'directory-tag-active' : ''}`}
@@ -95,8 +119,16 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
 
       {/* Results count when filtering */}
       {searchQuery && (
-        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.875rem' }}>
-          {filtered.length} {filtered.length === 1 ? 'category' : 'categories'} found
+        <p
+          style={{
+            textAlign: 'center',
+            color: 'var(--text-secondary)',
+            marginBottom: '2rem',
+            fontSize: '0.875rem',
+          }}
+        >
+          {filtered.length} {filtered.length === 1 ? 'category' : 'categories'}{' '}
+          found
         </p>
       )}
 
@@ -111,20 +143,24 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
               href={`/categories/${cat.slug}`}
               id={cat.name}
               className="category-card surface-interactive"
-              style={{ 
-                animationDelay: `${Math.min(i * 0.03, 0.6)}s`,
-                '--cat-color': meta.color,
-                '--cat-light-color': lightColor,
-                '--cat-bg': meta.bgTint,
-                '--cat-bg-light': `${lightColor}15`,
-                '--cat-border': meta.borderTint || `${meta.color}40`,
-                '--cat-border-light': `${lightColor}35`,
-                '--cat-gradient-bg': `linear-gradient(135deg, ${meta.color}15 0%, var(--bg-elevated) 100%)`,
-                '--cat-gradient-light': meta.lightGradient || `linear-gradient(135deg, ${lightColor}12 0%, #ffffff 100%)`,
-              } as React.CSSProperties}
+              style={
+                {
+                  animationDelay: `${Math.min(i * 0.03, 0.6)}s`,
+                  '--cat-color': meta.color,
+                  '--cat-light-color': lightColor,
+                  '--cat-bg': meta.bgTint,
+                  '--cat-bg-light': `${lightColor}15`,
+                  '--cat-border': meta.borderTint || `${meta.color}40`,
+                  '--cat-border-light': `${lightColor}35`,
+                  '--cat-gradient-bg': `linear-gradient(135deg, ${meta.color}15 0%, var(--bg-elevated) 100%)`,
+                  '--cat-gradient-light':
+                    meta.lightGradient ||
+                    `linear-gradient(135deg, ${lightColor}12 0%, #ffffff 100%)`,
+                } as React.CSSProperties
+              }
             >
-              <div 
-                className="category-card-emoji" 
+              <div
+                className="category-card-emoji"
                 aria-hidden="true"
                 style={{
                   background: `${meta.color}18`,
@@ -137,15 +173,21 @@ export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
               <div className="category-card-content">
                 <h3 className="category-card-label">{cat.label}</h3>
                 <span className="category-card-count">
-                  Browse {cat.count.toLocaleString()} {cat.label} MCP {cat.count === 1 ? 'server' : 'servers'}
+                  Browse {cat.count.toLocaleString()} {cat.label} MCP{' '}
+                  {cat.count === 1 ? 'server' : 'servers'}
                 </span>
               </div>
-              <span className="category-card-arrow" aria-hidden="true" style={{ color: meta.color }}>→</span>
+              <span
+                className="category-card-arrow"
+                aria-hidden="true"
+                style={{ color: meta.color }}
+              >
+                →
+              </span>
             </Link>
           );
         })}
       </div>
-
 
       {filtered.length === 0 && (
         <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>

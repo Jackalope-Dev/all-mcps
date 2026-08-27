@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getSitemapServers, maxServerLastMod, STATIC_PAGE_LASTMOD, safeDateISO } from '../../lib/sitemapHelpers';
+import {
+  getSitemapServers,
+  maxServerLastMod,
+  STATIC_PAGE_LASTMOD,
+  safeDateISO,
+} from '../../lib/sitemapHelpers';
 
 // Lives at /sitemap-index.xml (not /sitemap.xml) because a route folder
 // literally named "sitemap.xml" collides with the app/sitemap.ts metadata

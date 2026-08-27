@@ -1,32 +1,41 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { TurnstileWidget } from '../ui/TurnstileWidget';
-import { toast } from '../ui/Toast';
-import { isUserInEU } from '../../lib/consentRegion';
-import { DEFAULT_SUBMIT_CATEGORY, DIRECTORY_CATEGORIES } from '../../lib/categories';
-import { trackSubmitLead } from '../../lib/gtag';
-import { MCP_CLIENTS } from '../../lib/clients';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  PRICING_MODELS,
-  PRICING_MODEL_LABELS,
-  AUTH_TYPES,
+  DEFAULT_SUBMIT_CATEGORY,
+  DIRECTORY_CATEGORIES,
+} from '../../lib/categories';
+import { MCP_CLIENTS } from '../../lib/clients';
+import { isUserInEU } from '../../lib/consentRegion';
+import { trackSubmitLead } from '../../lib/gtag';
+import {
   AUTH_TYPE_LABELS,
-  MAINTENANCE_STATUSES,
+  AUTH_TYPES,
   MAINTENANCE_STATUS_LABELS,
+  MAINTENANCE_STATUSES,
+  PRICING_MODEL_LABELS,
+  PRICING_MODELS,
 } from '../../lib/serverEnums';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { toast } from '../ui/Toast';
+import { TurnstileWidget } from '../ui/TurnstileWidget';
 
 type FormStep = 1 | 2 | 3;
 
 export function SubmitForm() {
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
   const [token, setToken] = useState<string>('');
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [prefillLoading, setPrefillLoading] = useState(false);
-  const [duplicateMatch, setDuplicateMatch] = useState<{ id: string; name: string; status: string } | null>(null);
+  const [duplicateMatch, setDuplicateMatch] = useState<{
+    id: string;
+    name: string;
+    status: string;
+  } | null>(null);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -54,7 +63,8 @@ export function SubmitForm() {
   const [supportUrl, setSupportUrl] = useState('');
   const [remoteEndpointUrl, setRemoteEndpointUrl] = useState('');
   const [suggestedInstallCommand, setSuggestedInstallCommand] = useState('');
-  const [suggestedInstallArgsInput, setSuggestedInstallArgsInput] = useState('');
+  const [suggestedInstallArgsInput, setSuggestedInstallArgsInput] =
+    useState('');
 
   const agentPromptText = `Read this repository's package.json and README.md to understand what this MCP server does. Then submit it to AllMCPs.com using its remote MCP server: POST {"jsonrpc":"2.0","id":1,"method":"tools/list"} to https://allmcps.com/api/mcp to see the full "submit_mcp_server" schema, including the exact allowed category values and other enums — then POST {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"submit_mcp_server","arguments":{...}}} to the same URL with as many fields as you can confidently determine from the repo: name, url, description, category, email (required), plus optional enrichment like tags, license, authType, pricingModel, maintenanceStatus, compatibleClients, supportUrl, suggestedInstallCommand, and suggestedInstallArgs. Only include a field if you're confident about it — leave uncertain ones out. If you can't make MCP tool calls, POST the same field names as flat JSON to https://allmcps.com/api/v1/submit instead (GET https://allmcps.com/api/v1/categories first for the valid category list).`;
 
@@ -69,7 +79,8 @@ export function SubmitForm() {
     try {
       await navigator.clipboard.writeText(agentPromptText);
       toast.success('AI agent prompt copied', {
-        description: 'Paste it in Cursor, Claude Code, or Windsurf inside your repo.',
+        description:
+          'Paste it in Cursor, Claude Code, or Windsurf inside your repo.',
       });
     } catch {
       toast.error('Could not copy automatically.');
@@ -131,7 +142,9 @@ export function SubmitForm() {
             : 'From the website title and meta tags.',
       });
     } catch (e: any) {
-      toast.error('Prefill failed', { description: e?.message || 'Enter fields manually.' });
+      toast.error('Prefill failed', {
+        description: e?.message || 'Enter fields manually.',
+      });
     } finally {
       setPrefillLoading(false);
     }
@@ -153,7 +166,9 @@ export function SubmitForm() {
 
     setStatus('loading');
     const formData = new FormData(e.currentTarget);
-    const data: Record<string, unknown> = Object.fromEntries(formData.entries());
+    const data: Record<string, unknown> = Object.fromEntries(
+      formData.entries(),
+    );
     data['cf-turnstile-response'] = token;
     data.name = name;
     data.email = email;
@@ -161,7 +176,10 @@ export function SubmitForm() {
     data.websiteUrl = websiteUrl;
     data.description = description;
     data.category = category;
-    data.tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+    data.tags = tagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
     data.pricingModel = pricingModel || undefined;
     data.pricingNotes = pricingNotes || undefined;
     data.authType = authType || undefined;
@@ -171,7 +189,10 @@ export function SubmitForm() {
     data.supportUrl = supportUrl || undefined;
     data.remoteEndpointUrl = remoteEndpointUrl || undefined;
     data.suggestedInstallCommand = suggestedInstallCommand || undefined;
-    data.suggestedInstallArgs = suggestedInstallArgsInput.split(/\s+/).map((a) => a.trim()).filter(Boolean);
+    data.suggestedInstallArgs = suggestedInstallArgsInput
+      .split(/\s+/)
+      .map((a) => a.trim())
+      .filter(Boolean);
     data.newsletterOptIn = newsletterOptIn;
 
     try {
@@ -182,7 +203,9 @@ export function SubmitForm() {
       });
 
       if (res.ok) {
-        const payload = (await res.json().catch(() => null)) as { id?: string } | null;
+        const payload = (await res.json().catch(() => null)) as {
+          id?: string;
+        } | null;
         setSubmittedId(payload?.id || null);
         setStatus('success');
         trackSubmitLead({
@@ -194,7 +217,9 @@ export function SubmitForm() {
           description: 'Your listing is pending review.',
         });
       } else {
-        const errorData = (await res.json().catch(() => null)) as { error?: unknown } | null;
+        const errorData = (await res.json().catch(() => null)) as {
+          error?: unknown;
+        } | null;
         const serverError = errorData?.error
           ? typeof errorData.error === 'string'
             ? errorData.error
@@ -217,7 +242,10 @@ export function SubmitForm() {
 
   if (status === 'success') {
     const isGithub = url.includes('github.com');
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
+    const baseUrl =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://allmcps.com';
     const sampleId = submittedId || 'your-server';
     const badgeSrc = `${baseUrl}/api/badge/${sampleId}?style=shield`;
     const badgeMarkdown = `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${sampleId})`;
@@ -228,10 +256,12 @@ export function SubmitForm() {
           <div className="submit-success-icon" aria-hidden="true">
             ✓
           </div>
-          <h2 className="submit-success-title">You&apos;re in the review queue</h2>
+          <h2 className="submit-success-title">
+            You&apos;re in the review queue
+          </h2>
           <p className="submit-success-lead">
-            We&apos;ll email you when the listing is approved. Meanwhile, prepare your badge and
-            optionally skip the queue with a boost.
+            We&apos;ll email you when the listing is approved. Meanwhile,
+            prepare your badge and optionally skip the queue with a boost.
           </p>
         </div>
 
@@ -242,7 +272,10 @@ export function SubmitForm() {
             </span>
             <div>
               <h3>We review your listing</h3>
-              <p>Free submissions are reviewed in queue. Priority Review jumps ahead.</p>
+              <p>
+                Free submissions are reviewed in queue. Priority Review jumps
+                ahead.
+              </p>
             </div>
           </li>
           <li className="submit-timeline-item">
@@ -261,8 +294,8 @@ export function SubmitForm() {
             <div>
               <h3>Claim &amp; verify</h3>
               <p>
-                Verify your site and keep the AllMCPs badge live for a free reciprocal dofollow
-                backlink.
+                Verify your site and keep the AllMCPs badge live for a free
+                reciprocal dofollow backlink.
               </p>
             </div>
           </li>
@@ -305,12 +338,16 @@ export function SubmitForm() {
 
         <div className="submit-upsell">
           <h3 className="submit-upsell-title">Optional: launch faster</h3>
-          <p className="submit-upsell-lead">Boosts are optional — free listings are reviewed in queue.</p>
+          <p className="submit-upsell-lead">
+            Boosts are optional — free listings are reviewed in queue.
+          </p>
           <div className="submit-upsell-grid">
             <div className="submit-upsell-card">
               <span className="submit-upsell-kicker">Quick pass</span>
               <h4>Priority Review</h4>
-              <p>Jump the manual queue — typically reviewed within a few hours.</p>
+              <p>
+                Jump the manual queue — typically reviewed within a few hours.
+              </p>
               <div className="submit-upsell-footer">
                 <span className="submit-upsell-price">$5</span>
                 <Link
@@ -326,9 +363,13 @@ export function SubmitForm() {
               </div>
             </div>
             <div className="submit-upsell-card submit-upsell-card--spotlight">
-              <span className="submit-upsell-kicker submit-upsell-kicker--green">Spotlight</span>
+              <span className="submit-upsell-kicker submit-upsell-kicker--green">
+                Spotlight
+              </span>
               <h4>7-day launch boost</h4>
-              <p>Featured placement on homepage discovery and search for a week.</p>
+              <p>
+                Featured placement on homepage discovery and search for a week.
+              </p>
               <div className="submit-upsell-footer">
                 <span className="submit-upsell-price">$12</span>
                 <Link
@@ -349,7 +390,10 @@ export function SubmitForm() {
         <div className="submit-success-actions">
           {submittedId && (
             <>
-              <Link href={`/mcp/${submittedId}/claim`} className="btn btn-primary">
+              <Link
+                href={`/mcp/${submittedId}/claim`}
+                className="btn btn-primary"
+              >
                 Open claim page
               </Link>
               <Link href={`/mcp/${submittedId}`} className="btn btn-secondary">
@@ -358,7 +402,11 @@ export function SubmitForm() {
             </>
           )}
           <Link
-            href={submittedId ? `/pricing?serverId=${encodeURIComponent(submittedId)}` : '/pricing'}
+            href={
+              submittedId
+                ? `/pricing?serverId=${encodeURIComponent(submittedId)}`
+                : '/pricing'
+            }
             className="btn btn-secondary"
           >
             All plans
@@ -375,13 +423,20 @@ export function SubmitForm() {
     <div className="submit-flow">
       <div className="submit-agent-banner">
         <div className="submit-agent-banner-text">
-          <span className="submit-agent-banner-kicker">Optional · for AI agents</span>
+          <span className="submit-agent-banner-kicker">
+            Optional · for AI agents
+          </span>
           <p>
-            Have Cursor, Claude Code, or Windsurf submit for you — copy the prompt and run it inside
-            your MCP repo.
+            Have Cursor, Claude Code, or Windsurf submit for you — copy the
+            prompt and run it inside your MCP repo.
           </p>
         </div>
-        <Button type="button" variant="secondary" size="sm" onClick={copyAgentPrompt}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={copyAgentPrompt}
+        >
           Copy agent prompt
         </Button>
       </div>
@@ -405,7 +460,9 @@ export function SubmitForm() {
               </span>
               <span className="submit-stepper-label">{s.label}</span>
             </div>
-            {i < arr.length - 1 && <span className="submit-stepper-connector" aria-hidden="true" />}
+            {i < arr.length - 1 && (
+              <span className="submit-stepper-connector" aria-hidden="true" />
+            )}
           </div>
         ))}
       </nav>
@@ -418,7 +475,10 @@ export function SubmitForm() {
           <header className="submit-section-header">
             <span className="submit-section-badge">Step 1</span>
             <h2 id="submit-step-1">Repository or website</h2>
-            <p>Paste a GitHub URL or product site — we&apos;ll pull what we can automatically.</p>
+            <p>
+              Paste a GitHub URL or product site — we&apos;ll pull what we can
+              automatically.
+            </p>
           </header>
 
           <Input
@@ -443,7 +503,8 @@ export function SubmitForm() {
               {prefillLoading ? 'Fetching metadata…' : 'Auto-prefill form'}
             </Button>
             <p className="submit-hint">
-              Fills name, description, category, and website from GitHub or page meta tags.
+              Fills name, description, category, and website from GitHub or page
+              meta tags.
             </p>
           </div>
 
@@ -463,22 +524,44 @@ export function SubmitForm() {
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   This server is already listed
                 </p>
-                <p style={{ margin: '0.3rem 0 0.75rem', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  &ldquo;{duplicateMatch.name}&rdquo; is already in the directory
+                <p
+                  style={{
+                    margin: '0.3rem 0 0.75rem',
+                    fontSize: '0.9rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  &ldquo;{duplicateMatch.name}&rdquo; is already in the
+                  directory
                   {duplicateMatch.status === 'removed'
                     ? ' — our automated checks marked it offline. If this is your project and it works again, claim it to fix the link instead of creating a new listing.'
                     : duplicateMatch.status === 'pending'
                       ? ' and is currently awaiting review.'
                       : '.'}
                 </p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <Link href={`/mcp/${duplicateMatch.id}`} className="btn btn-secondary btn-sm">
+                <div
+                  style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}
+                >
+                  <Link
+                    href={`/mcp/${duplicateMatch.id}`}
+                    className="btn btn-secondary btn-sm"
+                  >
                     View listing
                   </Link>
-                  <Link href={`/mcp/${duplicateMatch.id}/claim`} className="btn btn-primary btn-sm">
+                  <Link
+                    href={`/mcp/${duplicateMatch.id}/claim`}
+                    className="btn btn-primary btn-sm"
+                  >
                     Claim this listing
                   </Link>
                 </div>
@@ -494,7 +577,10 @@ export function SubmitForm() {
           <header className="submit-section-header">
             <span className="submit-section-badge">Step 2</span>
             <h2 id="submit-step-2">Listing details</h2>
-            <p>How your server appears in the directory and where we send status updates.</p>
+            <p>
+              How your server appears in the directory and where we send status
+              updates.
+            </p>
           </header>
 
           <Input
@@ -517,7 +603,9 @@ export function SubmitForm() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
             />
-            <p className="submit-hint">Used for review status and your claim link — never sold.</p>
+            <p className="submit-hint">
+              Used for review status and your claim link — never sold.
+            </p>
           </div>
 
           <label className="form-checkbox-row">
@@ -527,7 +615,10 @@ export function SubmitForm() {
               checked={newsletterOptIn}
               onChange={(e) => setNewsletterOptIn(e.target.checked)}
             />
-            <span>Keep me posted with the AllMCPs newsletter (new servers, guides, product updates).</span>
+            <span>
+              Keep me posted with the AllMCPs newsletter (new servers, guides,
+              product updates).
+            </span>
           </label>
 
           <div className="form-field">
@@ -540,8 +631,9 @@ export function SubmitForm() {
               onChange={(e) => setWebsiteUrl(e.target.value)}
             />
             <p className="submit-hint">
-              Free listings use <strong>nofollow</strong> on website links. Verify + badge (or
-              Premium) unlocks a <strong>dofollow</strong> reciprocal link.
+              Free listings use <strong>nofollow</strong> on website links.
+              Verify + badge (or Premium) unlocks a <strong>dofollow</strong>{' '}
+              reciprocal link.
             </p>
           </div>
 
@@ -582,11 +674,13 @@ export function SubmitForm() {
           </div>
 
           <details className="submit-optional-details">
-            <summary>Optional details (pricing, auth, license, compatible clients…)</summary>
+            <summary>
+              Optional details (pricing, auth, license, compatible clients…)
+            </summary>
             <div className="submit-optional-body">
               <p className="submit-hint">
-                None of this is required — the more you fill in, the easier your listing is to find
-                and trust.
+                None of this is required — the more you fill in, the easier your
+                listing is to find and trust.
               </p>
 
               <div className="form-field">
@@ -700,8 +794,16 @@ export function SubmitForm() {
                   value={remoteEndpointUrl}
                   onChange={(e) => setRemoteEndpointUrl(e.target.value)}
                 />
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '0.35rem 0 0' }}>
-                  If you offer a live remote endpoint in addition to the install method above, we&rsquo;ll verify it directly instead of guessing tools from your README.
+                <p
+                  style={{
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.8rem',
+                    margin: '0.35rem 0 0',
+                  }}
+                >
+                  If you offer a live remote endpoint in addition to the install
+                  method above, we&rsquo;ll verify it directly instead of
+                  guessing tools from your README.
                 </p>
               </div>
 
@@ -717,7 +819,9 @@ export function SubmitForm() {
                           checked={checked}
                           onChange={(e) =>
                             setCompatibleClients((prev) =>
-                              e.target.checked ? [...prev, c.slug] : prev.filter((s) => s !== c.slug)
+                              e.target.checked
+                                ? [...prev, c.slug]
+                                : prev.filter((s) => s !== c.slug),
                             )
                           }
                         />
@@ -744,13 +848,15 @@ export function SubmitForm() {
                     label="Suggested install args (space-separated)"
                     placeholder="e.g. -y @scope/package"
                     value={suggestedInstallArgsInput}
-                    onChange={(e) => setSuggestedInstallArgsInput(e.target.value)}
+                    onChange={(e) =>
+                      setSuggestedInstallArgsInput(e.target.value)
+                    }
                   />
                 </div>
               </div>
               <p className="submit-hint">
-                Only used as a hint if we can&apos;t confidently detect an install command
-                automatically — reviewers can still correct it.
+                Only used as a hint if we can&apos;t confidently detect an
+                install command automatically — reviewers can still correct it.
               </p>
             </div>
           </details>
@@ -763,13 +869,24 @@ export function SubmitForm() {
           <header className="submit-section-header">
             <span className="submit-section-badge">Step 3</span>
             <h2 id="submit-step-3">Security &amp; submit</h2>
-            <p>One quick check, then you&apos;re in the queue. Listing is free.</p>
+            <p>
+              One quick check, then you&apos;re in the queue. Listing is free.
+            </p>
           </header>
 
-          <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />
+          <TurnstileWidget
+            onSuccess={setToken}
+            onExpire={() => setToken('')}
+            onError={() => setToken('')}
+          />
 
           <div className="submit-form-footer">
-            <Button variant="primary" type="submit" disabled={status === 'loading'} size="lg">
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={status === 'loading'}
+              size="lg"
+            >
               {status === 'loading' ? 'Submitting…' : 'Submit to AllMCPs'}
             </Button>
             <p className="submit-hint">

@@ -1,10 +1,5 @@
-import * as React from "react";
-import { Text, Button } from "@react-email/components";
-import {
-  BaseLayout,
-  textStyle,
-  buttonStyle,
-} from "./BaseLayout";
+import { Button, Text } from '@react-email/components';
+import { BaseLayout, buttonStyle, textStyle } from './BaseLayout';
 
 interface NotificationEmailProps {
   heading: string;
@@ -14,17 +9,15 @@ interface NotificationEmailProps {
 }
 
 export const NotificationEmail = ({
-  heading = "You have a new notification",
-  message = "This is a standard notification message from AllMCPs.",
+  heading = 'You have a new notification',
+  message = 'This is a standard notification message from AllMCPs.',
   actionText,
   actionUrl,
 }: NotificationEmailProps) => {
   return (
     <BaseLayout previewText={heading} heading={heading}>
-      <Text style={textStyle}>
-        {message}
-      </Text>
-      
+      <Text style={textStyle}>{message}</Text>
+
       {actionText && actionUrl && (
         <Button href={actionUrl} style={buttonStyle}>
           {actionText}

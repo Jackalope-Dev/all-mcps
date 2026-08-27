@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { getAllPosts, getAllTags } from '../../lib/blog';
 import { BlogListClient } from '../../components/BlogListClient';
-import { PageShell, PageHeader } from '../../components/PageShell';
+import { PageHeader, PageShell } from '../../components/PageShell';
+import { getAllPosts, getAllTags } from '../../lib/blog';
 
 export const dynamic = 'force-static';
 
@@ -16,7 +16,14 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Blog: MCP News, Guides & Directory Updates | AllMCPs',
     description:
       'News, guides, and troubleshooting for the Model Context Protocol — server directory updates, agent tooling, and installation how-tos.',
@@ -45,8 +52,18 @@ export default function BlogPage() {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://allmcps.com/blog' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Blog',
+            item: 'https://allmcps.com/blog',
+          },
         ],
       },
     ],
@@ -54,7 +71,10 @@ export default function BlogPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PageShell variant="default">
         <PageHeader
           kicker="[ 01 / 02 ] · Editorial & Technical Guides //"

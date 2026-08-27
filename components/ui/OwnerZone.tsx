@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Globe, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { PremiumUpgrade } from '../PremiumUpgrade';
 
 type Props = {
@@ -40,7 +40,9 @@ export function OwnerZone({
     (async () => {
       try {
         const res = await fetch(`/api/mcp/${serverId}/is-owner`);
-        const data = res.ok ? ((await res.json()) as { isOwner?: boolean }) : null;
+        const data = res.ok
+          ? ((await res.json()) as { isOwner?: boolean })
+          : null;
         if (!cancelled) setIsOwner(Boolean(data?.isOwner));
       } catch {
         // Network error — leave the logged-out/non-owner default in place.
@@ -57,10 +59,25 @@ export function OwnerZone({
     <>
       {isOfficial && isOwner && (
         <div className="surface" style={{ padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <h3
+            style={{
+              fontSize: '1rem',
+              marginBottom: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
             <Globe size={18} color="var(--accent-color)" /> Listing owner
           </h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.55 }}>
+          <p
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+              marginBottom: '1rem',
+              lineHeight: 1.55,
+            }}
+          >
             {websiteUrl
               ? websiteBacklinkOk
                 ? 'Website is attached and Verified — the AllMCPs badge is live and detected automatically.'
@@ -74,19 +91,40 @@ export function OwnerZone({
                 padding: '0.85rem 1rem',
                 borderRadius: '8px',
                 marginBottom: '1rem',
-                background: dofollow ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+                background: dofollow
+                  ? 'rgba(16,185,129,0.08)'
+                  : 'rgba(255,255,255,0.04)',
                 border: `1px solid ${dofollow ? 'rgba(16,185,129,0.3)' : 'var(--border-color)'}`,
               }}
             >
-              <p style={{ fontSize: '0.8rem', fontWeight: 700, color: dofollow ? 'var(--verified-green)' : 'var(--text-secondary)', marginBottom: dofollow ? 0 : '0.5rem' }}>
+              <p
+                style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: dofollow
+                    ? 'var(--verified-green)'
+                    : 'var(--text-secondary)',
+                  marginBottom: dofollow ? 0 : '0.5rem',
+                }}
+              >
                 {dofollow
                   ? `Website link is dofollow${isPremium ? ' — Premium' : ' — reciprocal badge verified'}`
                   : 'Website link is nofollow'}
               </p>
               {!dofollow && (
                 <>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
-                    Add the AllMCPs badge to your site and verify it to earn a free dofollow backlink — rechecked periodically to stay live. Premium listings get dofollow instantly, no badge required.
+                  <p
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '0.75rem',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Add the AllMCPs badge to your site and verify it to earn a
+                    free dofollow backlink — rechecked periodically to stay
+                    live. Premium listings get dofollow instantly, no badge
+                    required.
                   </p>
                   <Link
                     href={`/mcp/${serverId}/claim`}
@@ -110,7 +148,9 @@ export function OwnerZone({
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}
+          >
             <Link
               href={`/mcp/${serverId}/claim`}
               style={{

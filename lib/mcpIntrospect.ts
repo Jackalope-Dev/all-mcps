@@ -9,7 +9,11 @@ import { isSafeFetchTarget } from './urlSafety';
  * body (application/json) or an SSE stream (text/event-stream).
  */
 
-export type McpTool = { name: string; description?: string; inputSchema?: unknown };
+export type McpTool = {
+  name: string;
+  description?: string;
+  inputSchema?: unknown;
+};
 
 const PROTOCOL_VERSION = '2025-06-18';
 const CLIENT_INFO = { name: 'AllMCPs Inspector', version: '1.0.0' };
@@ -77,7 +81,7 @@ async function rpc(
   body: object,
   id: number,
   headers: Record<string, string>,
-  sessionId?: string
+  sessionId?: string,
 ): Promise<{ msg: any; sessionId?: string }> {
   const h: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -111,7 +115,8 @@ async function rpc(
     throw new HttpStatusError(res.status, res.headers.get('www-authenticate'));
   }
   const msg = extractJsonRpc(text, res.headers.get('content-type') || '', id);
-  if (!msg && !res.ok) throw new HttpStatusError(res.status, res.headers.get('www-authenticate'));
+  if (!msg && !res.ok)
+    throw new HttpStatusError(res.status, res.headers.get('www-authenticate'));
   return { msg, sessionId: returnedSession || undefined };
 }
 
@@ -121,7 +126,11 @@ async function rpc(
  */
 export async function callMcpEndpoint(
   url: string,
-  opts: { headers?: Record<string, string>; method?: string; params?: unknown } = {}
+  opts: {
+    headers?: Record<string, string>;
+    method?: string;
+    params?: unknown;
+  } = {},
 ): Promise<McpResult> {
   const targetUrl = url?.trim() || '';
   if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
@@ -144,10 +153,14 @@ export async function callMcpEndpoint(
           jsonrpc: '2.0',
           id: 1,
           method: 'initialize',
-          params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: CLIENT_INFO },
+          params: {
+            protocolVersion: PROTOCOL_VERSION,
+            capabilities: {},
+            clientInfo: CLIENT_INFO,
+          },
         },
         1,
-        headers
+        headers,
       );
     } catch (e) {
       // A spec-compliant 401 here means "real MCP server, OAuth required" —
@@ -156,14 +169,30 @@ export async function callMcpEndpoint(
       // server that *does* answer initialize without auth to please health
       // checkers breaks real clients the same way, confirmed independently
       // by other MCP server operators — see the health-cron caller).
-      if (e instanceof HttpStatusError && e.status === 401 && e.wwwAuthenticate) {
+      if (
+        e instanceof HttpStatusError &&
+        e.status === 401 &&
+        e.wwwAuthenticate
+      ) {
         const match = e.wwwAuthenticate.match(/resource_metadata="([^"]+)"/i);
-        return { ok: true, authRequired: true, authResourceMetadataUrl: match?.[1] };
+        return {
+          ok: true,
+          authRequired: true,
+          authResourceMetadataUrl: match?.[1],
+        };
       }
       throw e;
     }
-    if (!init.msg) return { ok: false, error: 'No JSON-RPC response from the endpoint (is it an MCP server?).' };
-    if (init.msg.error) return { ok: false, error: init.msg.error.message || 'initialize failed' };
+    if (!init.msg)
+      return {
+        ok: false,
+        error: 'No JSON-RPC response from the endpoint (is it an MCP server?).',
+      };
+    if (init.msg.error)
+      return {
+        ok: false,
+        error: init.msg.error.message || 'initialize failed',
+      };
     const serverInfo = init.msg.result?.serverInfo;
     const session = init.sessionId;
 
@@ -178,7 +207,10 @@ export async function callMcpEndpoint(
           ...(session ? { 'Mcp-Session-Id': session } : {}),
           ...headers,
         },
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'notifications/initialized',
+        }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch {
@@ -191,10 +223,16 @@ export async function callMcpEndpoint(
       { jsonrpc: '2.0', id: 2, method, params: opts.params ?? {} },
       2,
       headers,
-      session
+      session,
     );
-    if (!call.msg) return { ok: false, error: 'No response to ' + method + '.', serverInfo };
-    if (call.msg.error) return { ok: false, error: call.msg.error.message || `${method} failed`, serverInfo };
+    if (!call.msg)
+      return { ok: false, error: `No response to ${method}.`, serverInfo };
+    if (call.msg.error)
+      return {
+        ok: false,
+        error: call.msg.error.message || `${method} failed`,
+        serverInfo,
+      };
 
     const tools =
       method === 'tools/list' && Array.isArray(call.msg.result?.tools)
@@ -207,7 +245,10 @@ export async function callMcpEndpoint(
 
     return { ok: true, serverInfo, tools, result: call.msg.result };
   } catch (e: any) {
-    const msg = e?.name === 'TimeoutError' ? 'Connection timed out.' : e?.message || 'Connection failed.';
+    const msg =
+      e?.name === 'TimeoutError'
+        ? 'Connection timed out.'
+        : e?.message || 'Connection failed.';
     return { ok: false, error: msg };
   }
 }

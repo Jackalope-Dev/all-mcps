@@ -1,12 +1,12 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'mcp-servers.json');
 
 const CATEGORY_MAP = {
   // Merge "🛠️ Development & Coding" into "💻 Developer Tools"
   '🛠️ Development & Coding': '💻 Developer Tools',
-  'Development': '💻 Developer Tools',
+  Development: '💻 Developer Tools',
   'Dev Tools': '💻 Developer Tools',
   'Developer Tool': '💻 Developer Tools',
 
@@ -35,8 +35,14 @@ function align() {
     return server;
   });
 
-  fs.writeFileSync(DATA_FILE, `${JSON.stringify(updatedServers, null, 2)}\n`, 'utf8');
-  console.log(`Aligned categories for ${updatedCount} server(s) in ${DATA_FILE}`);
+  fs.writeFileSync(
+    DATA_FILE,
+    `${JSON.stringify(updatedServers, null, 2)}\n`,
+    'utf8',
+  );
+  console.log(
+    `Aligned categories for ${updatedCount} server(s) in ${DATA_FILE}`,
+  );
 }
 
 align();

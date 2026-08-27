@@ -1,5 +1,11 @@
 import { and, count, desc, eq, gt, isNotNull, ne, or, sum } from 'drizzle-orm';
-import { servers, socialPosts, apiAccessLogs, users, impressionLogs } from '../db/schema';
+import {
+  apiAccessLogs,
+  impressionLogs,
+  servers,
+  socialPosts,
+  users,
+} from '../db/schema';
 
 export type AdminStats = {
   statusCounts: { pending: number; active: number; removed: number };
@@ -32,7 +38,12 @@ export type AdminStats = {
   };
   engagement: { totalViews: number; totalUpvotes: number; totalCopies: number };
   topByViews: { id: string; name: string; views: number }[];
-  recentToolsErrors: { id: string; name: string; toolsError: string; toolsCheckedAt: string | null }[];
+  recentToolsErrors: {
+    id: string;
+    name: string;
+    toolsError: string;
+    toolsCheckedAt: string | null;
+  }[];
 };
 
 /** `db` is a drizzle-orm/d1 database instance (typed loosely, matching this repo's `drizzle(env.DB as any)` convention). */
@@ -61,8 +72,14 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     surfaceRows,
     recentToolsErrorsRows,
   ] = await Promise.all([
-    db.select({ status: servers.status, total: count() }).from(servers).groupBy(servers.status),
-    db.select({ total: count() }).from(servers).where(eq(servers.isPremium, true)),
+    db
+      .select({ status: servers.status, total: count() })
+      .from(servers)
+      .groupBy(servers.status),
+    db
+      .select({ total: count() })
+      .from(servers)
+      .where(eq(servers.isPremium, true)),
     // Matches lib/featuredStatus.ts's isFeaturedListing (premium counts as featured too).
     db
       .select({ total: count() })
@@ -70,21 +87,20 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
       .where(
         and(
           eq(servers.status, 'active'),
-          or(eq(servers.isPremium, true), gt(servers.featuredUntil, now))
-        )
+          or(eq(servers.isPremium, true), gt(servers.featuredUntil, now)),
+        ),
       ),
     db
       .select({ total: count() })
       .from(servers)
-      .where(and(eq(servers.status, 'active'), ne(servers.healthStatus, 'healthy'))),
+      .where(
+        and(eq(servers.status, 'active'), ne(servers.healthStatus, 'healthy')),
+      ),
     db
       .select({ total: count() })
       .from(servers)
       .where(isNotNull(servers.aiSummary)),
-    db
-      .select({ total: count() })
-      .from(servers)
-      .where(isNotNull(servers.tools)),
+    db.select({ total: count() }).from(servers).where(isNotNull(servers.tools)),
     db
       .select({ total: count() })
       .from(servers)
@@ -101,7 +117,10 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
       .select({ total: count() })
       .from(servers)
       .where(isNotNull(servers.pendingScreenshotKey)),
-    db.select({ total: count() }).from(users).catch(() => [{ total: 0 }]),
+    db
+      .select({ total: count() })
+      .from(users)
+      .catch(() => [{ total: 0 }]),
     db
       .select({ total: count() })
       .from(servers)
@@ -110,7 +129,10 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
       .select({ total: count() })
       .from(servers)
       .where(isNotNull(servers.toolsError)),
-    db.select({ source: servers.logoSource, total: count() }).from(servers).groupBy(servers.logoSource),
+    db
+      .select({ source: servers.logoSource, total: count() })
+      .from(servers)
+      .groupBy(servers.logoSource),
     db
       .select({
         totalViews: sum(servers.views),
@@ -123,9 +145,21 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
       .from(servers)
       .orderBy(desc(servers.views))
       .limit(5),
-    db.select({ status: socialPosts.status, total: count() }).from(socialPosts).groupBy(socialPosts.status).catch(() => []),
-    db.select({ callerClass: apiAccessLogs.callerClass, total: count() }).from(apiAccessLogs).groupBy(apiAccessLogs.callerClass).catch(() => []),
-    db.select({ surface: impressionLogs.surface, total: count() }).from(impressionLogs).groupBy(impressionLogs.surface).catch(() => []),
+    db
+      .select({ status: socialPosts.status, total: count() })
+      .from(socialPosts)
+      .groupBy(socialPosts.status)
+      .catch(() => []),
+    db
+      .select({ callerClass: apiAccessLogs.callerClass, total: count() })
+      .from(apiAccessLogs)
+      .groupBy(apiAccessLogs.callerClass)
+      .catch(() => []),
+    db
+      .select({ surface: impressionLogs.surface, total: count() })
+      .from(impressionLogs)
+      .groupBy(impressionLogs.surface)
+      .catch(() => []),
     db
       .select({
         id: servers.id,
@@ -142,7 +176,11 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
 
   const statusCounts = { pending: 0, active: 0, removed: 0 };
   for (const row of statusRows as { status: string; total: number }[]) {
-    if (row.status === 'pending' || row.status === 'active' || row.status === 'removed') {
+    if (
+      row.status === 'pending' ||
+      row.status === 'active' ||
+      row.status === 'removed'
+    ) {
       statusCounts[row.status] = row.total;
     }
   }
@@ -155,12 +193,18 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     github_user: 0,
     none: 0,
   };
-  for (const row of logoSourceRows as { source: string | null; total: number }[]) {
+  for (const row of logoSourceRows as {
+    source: string | null;
+    total: number;
+  }[]) {
     if (row.source === 'manual') logoSourceCounts.manual = row.total;
     else if (row.source === 'readme') logoSourceCounts.readme = row.total;
-    else if (row.source === 'website_favicon') logoSourceCounts.website_favicon = row.total;
-    else if (row.source === 'github_org') logoSourceCounts.github_org = row.total;
-    else if (row.source === 'github_user') logoSourceCounts.github_user = row.total;
+    else if (row.source === 'website_favicon')
+      logoSourceCounts.website_favicon = row.total;
+    else if (row.source === 'github_org')
+      logoSourceCounts.github_org = row.total;
+    else if (row.source === 'github_user')
+      logoSourceCounts.github_user = row.total;
     else logoSourceCounts.none += row.total;
   }
 
@@ -178,25 +222,38 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
   }
 
   const callerCounts: Record<string, number> = {};
-  for (const row of (callerRows || []) as { callerClass: string; total: number }[]) {
+  for (const row of (callerRows || []) as {
+    callerClass: string;
+    total: number;
+  }[]) {
     if (row.callerClass) {
       callerCounts[row.callerClass] = row.total;
     }
   }
 
   const surfaceImpressions: Record<string, number> = {};
-  for (const row of (surfaceRows || []) as { surface: string; total: number }[]) {
+  for (const row of (surfaceRows || []) as {
+    surface: string;
+    total: number;
+  }[]) {
     if (row.surface) {
       surfaceImpressions[row.surface] = row.total;
     }
   }
 
-  const formattedRecentToolsErrors = (recentToolsErrorsRows || []).map((row: any) => ({
-    id: row.id,
-    name: row.name,
-    toolsError: String(row.toolsError || ''),
-    toolsCheckedAt: row.toolsCheckedAt instanceof Date ? row.toolsCheckedAt.toISOString() : (row.toolsCheckedAt ? String(row.toolsCheckedAt) : null),
-  }));
+  const formattedRecentToolsErrors = (recentToolsErrorsRows || []).map(
+    (row: any) => ({
+      id: row.id,
+      name: row.name,
+      toolsError: String(row.toolsError || ''),
+      toolsCheckedAt:
+        row.toolsCheckedAt instanceof Date
+          ? row.toolsCheckedAt.toISOString()
+          : row.toolsCheckedAt
+            ? String(row.toolsCheckedAt)
+            : null,
+    }),
+  );
 
   return {
     statusCounts,
@@ -214,7 +271,12 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
       claims: pendingClaims,
       logos: pendingLogos,
       screenshots: pendingScreenshots,
-      total: pendingSubmissions + pendingEdits + pendingClaims + pendingLogos + pendingScreenshots,
+      total:
+        pendingSubmissions +
+        pendingEdits +
+        pendingClaims +
+        pendingLogos +
+        pendingScreenshots,
     },
     socialCounts,
     callerCounts,
@@ -229,5 +291,3 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     recentToolsErrors: formattedRecentToolsErrors,
   };
 }
-
-

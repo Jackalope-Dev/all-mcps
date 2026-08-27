@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
 import { Sparkles, TrendingUp } from 'lucide-react';
-import { useImpressionTracker, ImpressionBeacon } from './ImpressionTracker';
-import { parseServerName } from '../lib/displayName';
+import Link from 'next/link';
+import React from 'react';
 import { getCategoryMeta } from '../lib/categories';
+import { parseServerName } from '../lib/displayName';
+import { ImpressionBeacon, useImpressionTracker } from './ImpressionTracker';
 
 type Server = {
   id: string;
@@ -27,23 +27,24 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
         return (
           <React.Fragment key={`${server.id}-${i}`}>
             <ImpressionBeacon serverId={server.id} surface="homepage_marquee">
-              <Link 
+              <Link
                 href={`/mcp/${server.id}`}
                 tabIndex={isDuplicate ? -1 : undefined}
                 aria-hidden={isDuplicate ? true : undefined}
                 className="marquee-chip"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.6rem', 
-                  padding: '0.45rem 1rem', 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  padding: '0.45rem 1rem',
                   borderRadius: '100px',
                   whiteSpace: 'nowrap',
                   background: 'var(--bg-muted)',
                   border: '1px solid var(--border-color)',
                   boxShadow: 'none',
                   textDecoration: 'none',
-                  transition: 'transform 0.2s ease, border-color 0.2s ease, background 0.2s ease',
+                  transition:
+                    'transform 0.2s ease, border-color 0.2s ease, background 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = catMeta.color;
@@ -51,27 +52,35 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   trackImpression(server.id, 'homepage_marquee');
                 }}
-                onMouseLeave={(e) => { 
-                  e.currentTarget.style.borderColor = 'var(--border-color)'; 
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
                   e.currentTarget.style.background = 'var(--bg-muted)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   {parseServerName(server.name).displayName}
                 </span>
                 <span
                   className="marquee-chip-category"
-                  style={{
-                    '--cat-chip-color': catMeta.color,
-                    '--cat-chip-light-color': catMeta.lightColor,
-                    fontSize: '0.725rem',
-                    fontWeight: 500,
-                    opacity: 0.9,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                  } as React.CSSProperties}
+                  style={
+                    {
+                      '--cat-chip-color': catMeta.color,
+                      '--cat-chip-light-color': catMeta.lightColor,
+                      fontSize: '0.725rem',
+                      fontWeight: 500,
+                      opacity: 0.9,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    } as React.CSSProperties
+                  }
                 >
                   <span aria-hidden="true">{catMeta.emoji}</span>
                   {catMeta.label}
@@ -118,12 +127,12 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
       style={{ margin: '1.75rem auto 2.5rem auto' }}
       aria-label="Featured and trending MCP servers"
     >
-      <div 
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          gap: '0.5rem', 
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
           marginBottom: '0.75rem',
           fontSize: '0.75rem',
           fontWeight: 700,
@@ -132,13 +141,20 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
           color: 'var(--text-secondary)',
         }}
       >
-        <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} aria-hidden="true" />
+        <TrendingUp
+          size={14}
+          style={{ color: 'var(--accent-color)' }}
+          aria-hidden="true"
+        />
         <span>Featured &amp; Trending MCP Servers</span>
       </div>
 
       {/* Duplicate track is decorative for seamless scroll; hidden from AT.
           Animation pauses via CSS when prefers-reduced-motion is set. */}
-      <div className="marquee-container" style={{ margin: 0, padding: '0.5rem 0' }}>
+      <div
+        className="marquee-container"
+        style={{ margin: 0, padding: '0.5rem 0' }}
+      >
         <div className="marquee-content">
           <MarqueeItems />
         </div>
@@ -149,4 +165,3 @@ export function FeaturedMarquee({ servers }: { servers: Server[] }) {
     </section>
   );
 }
-

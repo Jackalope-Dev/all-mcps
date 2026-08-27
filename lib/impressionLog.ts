@@ -54,7 +54,7 @@ function chunk<T>(items: T[], size: number): T[][] {
  */
 export async function logImpressions(
   db: any,
-  impressions: ImpressionParams[]
+  impressions: ImpressionParams[],
 ): Promise<void> {
   if (impressions.length === 0) return;
 
@@ -66,7 +66,7 @@ export async function logImpressions(
           surface: imp.surface,
           sessionHash: imp.sessionHash || null,
           createdAt: new Date(),
-        }))
+        })),
       );
     } catch (err: any) {
       console.error('[impressionLog] Failed to insert batch:', err?.message);

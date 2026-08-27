@@ -39,34 +39,40 @@ export function buildServerVectorText(server: {
 
   if (server.tags) {
     const tags =
-      typeof server.tags === 'string' ? safeParseJson<string[]>(server.tags, []) : server.tags;
+      typeof server.tags === 'string'
+        ? safeParseJson<string[]>(server.tags, [])
+        : server.tags;
     if (tags.length > 0) parts.push(`Tags: ${tags.join(', ')}`);
   }
   if (server.license) parts.push(`License: ${server.license}`);
   if (server.pricingModel) parts.push(`Pricing: ${server.pricingModel}`);
   if (server.authType) parts.push(`Auth: ${server.authType}`);
-  if (server.maintenanceStatus) parts.push(`Maintenance: ${server.maintenanceStatus}`);
+  if (server.maintenanceStatus)
+    parts.push(`Maintenance: ${server.maintenanceStatus}`);
   if (server.compatibleClients) {
     const clients =
       typeof server.compatibleClients === 'string'
         ? safeParseJson<string[]>(server.compatibleClients, [])
         : server.compatibleClients;
-    if (clients.length > 0) parts.push(`Compatible clients: ${clients.join(', ')}`);
+    if (clients.length > 0)
+      parts.push(`Compatible clients: ${clients.join(', ')}`);
   }
 
   if (server.aiUseCases) {
-    const useCases = typeof server.aiUseCases === 'string'
-      ? safeParseJson<string[]>(server.aiUseCases, [])
-      : server.aiUseCases;
+    const useCases =
+      typeof server.aiUseCases === 'string'
+        ? safeParseJson<string[]>(server.aiUseCases, [])
+        : server.aiUseCases;
     if (useCases.length > 0) {
       parts.push(`Use Cases: ${useCases.join(', ')}`);
     }
   }
 
   if (server.aiFaq) {
-    const faq = typeof server.aiFaq === 'string'
-      ? safeParseJson<Array<{ q?: string; a?: string }>>(server.aiFaq, [])
-      : server.aiFaq;
+    const faq =
+      typeof server.aiFaq === 'string'
+        ? safeParseJson<Array<{ q?: string; a?: string }>>(server.aiFaq, [])
+        : server.aiFaq;
     if (Array.isArray(faq) && faq.length > 0) {
       const faqTexts = faq
         .map((item) => {
@@ -85,21 +91,30 @@ export function buildServerVectorText(server: {
   }
 
   if (server.aiFeatures) {
-    const features = typeof server.aiFeatures === 'string'
-      ? safeParseJson<string[]>(server.aiFeatures, [])
-      : server.aiFeatures;
+    const features =
+      typeof server.aiFeatures === 'string'
+        ? safeParseJson<string[]>(server.aiFeatures, [])
+        : server.aiFeatures;
     if (features.length > 0) {
       parts.push(`Features: ${features.join(', ')}`);
     }
   }
 
   if (server.tools) {
-    const toolsList = typeof server.tools === 'string'
-      ? safeParseJson<Array<{ name?: string; description?: string }>>(server.tools, [])
-      : server.tools;
+    const toolsList =
+      typeof server.tools === 'string'
+        ? safeParseJson<Array<{ name?: string; description?: string }>>(
+            server.tools,
+            [],
+          )
+        : server.tools;
     if (Array.isArray(toolsList) && toolsList.length > 0) {
       const toolTexts = toolsList
-        .map((t) => (t?.name ? `${t.name}${t.description ? `: ${t.description}` : ''}` : ''))
+        .map((t) =>
+          t?.name
+            ? `${t.name}${t.description ? `: ${t.description}` : ''}`
+            : '',
+        )
         .filter(Boolean)
         .slice(0, 10);
       if (toolTexts.length > 0) {
@@ -124,13 +139,16 @@ function safeParseJson<T>(jsonStr: string, fallback: T): T {
  */
 export async function generateEmbedding(
   text: string,
-  env: CloudflareEnv
+  env: CloudflareEnv,
 ): Promise<number[] | null> {
   if (!env?.AI) return null;
   try {
-    const response: any = await (env.AI as any).run('@cf/baai/bge-small-en-v1.5', {
-      text: [text],
-    });
+    const response: any = await (env.AI as any).run(
+      '@cf/baai/bge-small-en-v1.5',
+      {
+        text: [text],
+      },
+    );
 
     if (response?.data?.[0]) {
       return response.data[0];
@@ -148,7 +166,7 @@ export async function generateEmbedding(
 export async function queryVectorIndex(
   query: string,
   env: CloudflareEnv,
-  topK = 50
+  topK = 50,
 ): Promise<VectorSearchResult[]> {
   if (!env?.VECTOR_INDEX || !env?.AI) return [];
 
@@ -176,7 +194,7 @@ export async function queryVectorIndex(
  */
 export async function upsertServerEmbedding(
   server: Parameters<typeof buildServerVectorText>[0] & { id: string },
-  env: CloudflareEnv
+  env: CloudflareEnv,
 ): Promise<boolean> {
   if (!env?.VECTOR_INDEX || !env?.AI) return false;
 
@@ -197,7 +215,10 @@ export async function upsertServerEmbedding(
     ]);
     return true;
   } catch (error) {
-    console.error(`[vectorSearch] Failed to upsert vector for server ${server.id}:`, error);
+    console.error(
+      `[vectorSearch] Failed to upsert vector for server ${server.id}:`,
+      error,
+    );
     return false;
   }
 }
@@ -207,9 +228,11 @@ export async function upsertServerEmbedding(
  * Generates embeddings in bounded concurrent chunks and pushes all vectors in a batch upsert.
  */
 export async function upsertServerEmbeddingsBatch(
-  serverList: Array<Parameters<typeof buildServerVectorText>[0] & { id: string }>,
+  serverList: Array<
+    Parameters<typeof buildServerVectorText>[0] & { id: string }
+  >,
   env: CloudflareEnv,
-  concurrency = 5
+  concurrency = 5,
 ): Promise<{ successfulIds: string[]; failedIds: string[] }> {
   if (!env?.VECTOR_INDEX || !env?.AI) {
     return { successfulIds: [], failedIds: serverList.map((s) => s.id) };
@@ -241,7 +264,7 @@ export async function upsertServerEmbeddingsBatch(
           };
         }
         return null;
-      })
+      }),
     );
 
     results.forEach((item, idx) => {
@@ -262,14 +285,20 @@ export async function upsertServerEmbeddingsBatch(
     await env.VECTOR_INDEX.upsert(vectorsToUpsert);
     successfulIds.push(...vectorsToUpsert.map((v) => v.id));
   } catch (batchError) {
-    console.error('[vectorSearch] Batch upsert failed, attempting individual fallbacks:', batchError);
+    console.error(
+      '[vectorSearch] Batch upsert failed, attempting individual fallbacks:',
+      batchError,
+    );
     // Fall back to individual upserts to isolate any problematic vector
     for (const vec of vectorsToUpsert) {
       try {
         await env.VECTOR_INDEX.upsert([vec]);
         successfulIds.push(vec.id);
       } catch (indError) {
-        console.error(`[vectorSearch] Failed to upsert vector for server ${vec.id}:`, indError);
+        console.error(
+          `[vectorSearch] Failed to upsert vector for server ${vec.id}:`,
+          indError,
+        );
         failedIds.push(vec.id);
       }
     }
@@ -277,4 +306,3 @@ export async function upsertServerEmbeddingsBatch(
 
   return { successfulIds, failedIds };
 }
-

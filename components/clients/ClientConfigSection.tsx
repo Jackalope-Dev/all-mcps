@@ -1,27 +1,34 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Terminal, Copy, Check, Folder, ChevronDown, Sparkles } from 'lucide-react';
-import { McpClient, formatServerClientConfig } from '@/lib/clients';
-import { Server } from '@/lib/servers';
+import { Check, ChevronDown, Copy, Folder, Terminal } from 'lucide-react';
+import { useState } from 'react';
+import { formatServerClientConfig, type McpClient } from '@/lib/clients';
+import type { Server } from '@/lib/servers';
 
 interface ClientConfigSectionProps {
   client: McpClient;
   featuredServers?: Server[];
 }
 
-export function ClientConfigSection({ client, featuredServers = [] }: ClientConfigSectionProps) {
+export function ClientConfigSection({
+  client,
+  featuredServers = [],
+}: ClientConfigSectionProps) {
   const [selectedOsIndex, setSelectedOsIndex] = useState(0);
   const [copiedPath, setCopiedPath] = useState(false);
   const [copiedConfig, setCopiedConfig] = useState(false);
   const [selectedServerId, setSelectedServerId] = useState<string>('default');
 
-  const currentLoc = client.configLocations[selectedOsIndex] || client.configLocations[0];
+  const currentLoc =
+    client.configLocations[selectedOsIndex] || client.configLocations[0];
 
   const selectedServer = featuredServers.find((s) => s.id === selectedServerId);
 
   const displayCode = selectedServer
-    ? formatServerClientConfig(client.slug, selectedServer.name, 'npx', ['-y', selectedServer.name])
+    ? formatServerClientConfig(client.slug, selectedServer.name, 'npx', [
+        '-y',
+        selectedServer.name,
+      ])
     : client.configExample;
 
   const handleCopyPath = () => {
@@ -44,16 +51,24 @@ export function ClientConfigSection({ client, featuredServers = [] }: ClientConf
           <h2 className="client-config-panel-title">
             <Terminal size={22} aria-hidden="true" />
             <span>
-              Configuring <span className="client-config-panel-title-accent">{client.name}</span>
+              Configuring{' '}
+              <span className="client-config-panel-title-accent">
+                {client.name}
+              </span>
             </span>
           </h2>
           <p className="client-config-panel-meta">
-            Config file: <code className="inline-path">{client.configFilename}</code>
+            Config file:{' '}
+            <code className="inline-path">{client.configFilename}</code>
           </p>
         </div>
 
         {client.configLocations.length > 1 && (
-          <div className="client-config-os-tabs" role="tablist" aria-label="Operating system">
+          <div
+            className="client-config-os-tabs"
+            role="tablist"
+            aria-label="Operating system"
+          >
             {client.configLocations.map((loc, idx) => (
               <button
                 key={loc.os}
@@ -73,8 +88,14 @@ export function ClientConfigSection({ client, featuredServers = [] }: ClientConf
       {currentLoc && (
         <div className="client-config-path-box">
           <div className="client-config-path-main">
-            <Folder size={16} className="client-config-path-icon" aria-hidden="true" />
-            <span className="client-config-path-label">{currentLoc.os} path</span>
+            <Folder
+              size={16}
+              className="client-config-path-icon"
+              aria-hidden="true"
+            />
+            <span className="client-config-path-label">
+              {currentLoc.os} path
+            </span>
             <code className="client-config-path-value">{currentLoc.path}</code>
           </div>
           <button
@@ -82,7 +103,11 @@ export function ClientConfigSection({ client, featuredServers = [] }: ClientConf
             type="button"
             className="btn btn-secondary client-config-path-copy"
           >
-            {copiedPath ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+            {copiedPath ? (
+              <Check size={12} aria-hidden="true" />
+            ) : (
+              <Copy size={12} aria-hidden="true" />
+            )}
             <span>{copiedPath ? 'Copied' : 'Copy path'}</span>
           </button>
         </div>
@@ -90,7 +115,9 @@ export function ClientConfigSection({ client, featuredServers = [] }: ClientConf
 
       <div className="client-config-snippet-toolbar">
         <div className="client-config-snippet-toolbar-left">
-          <span className="client-config-snippet-label">Configuration snippet</span>
+          <span className="client-config-snippet-label">
+            Configuration snippet
+          </span>
           {featuredServers.length > 0 && (
             <div className="client-config-preset-wrap">
               <select
@@ -106,7 +133,11 @@ export function ClientConfigSection({ client, featuredServers = [] }: ClientConf
                   </option>
                 ))}
               </select>
-              <ChevronDown size={12} className="client-config-preset-chevron" aria-hidden="true" />
+              <ChevronDown
+                size={12}
+                className="client-config-preset-chevron"
+                aria-hidden="true"
+              />
             </div>
           )}
         </div>
@@ -116,7 +147,11 @@ export function ClientConfigSection({ client, featuredServers = [] }: ClientConf
           type="button"
           className="btn btn-primary client-config-copy-json"
         >
-          {copiedConfig ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+          {copiedConfig ? (
+            <Check size={13} aria-hidden="true" />
+          ) : (
+            <Copy size={13} aria-hidden="true" />
+          )}
           <span>{copiedConfig ? 'Copied config' : 'Copy config JSON'}</span>
         </button>
       </div>

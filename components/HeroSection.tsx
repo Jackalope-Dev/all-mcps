@@ -1,27 +1,31 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  Layers,
+  PlusCircle,
+  Search,
+  Terminal,
+  Wrench,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Search,
-  Layers,
-  Wrench,
-  PlusCircle,
-  ArrowRight,
-  Copy,
-  Check,
-  Terminal,
-} from 'lucide-react';
-import { toast } from './ui/Toast';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { AmbientCodeBackground } from './ui/AmbientCodeBackground';
 import { ScrambleCode } from './ui/ScrambleCode';
+import { toast } from './ui/Toast';
 
 interface HeroSectionProps {
   totalCount?: number;
 }
 
-const STACK_PRESETS: Record<string, { label: string; config: string; tools: string[] }> = {
+const STACK_PRESETS: Record<
+  string,
+  { label: string; config: string; tools: string[] }
+> = {
   fullstack: {
     label: 'Fullstack Dev',
     tools: ['GitHub', 'PostgreSQL', 'Playwright', 'Memory'],
@@ -108,7 +112,10 @@ const STACK_PRESETS: Record<string, { label: string; config: string; tools: stri
   },
 };
 
-const INSPECT_SAMPLES: Record<string, { label: string; path: string; schema: string }> = {
+const INSPECT_SAMPLES: Record<
+  string,
+  { label: string; path: string; schema: string }
+> = {
   allmcps: {
     label: 'AllMCPs Server',
     path: '/mcp/allmcps-server.md',
@@ -212,7 +219,14 @@ Report the response and claim verification link.`,
   },
 };
 
-const QUICK_SEARCH_CHIPS = ['postgres', 'github', 'playwright', 'sqlite', 'brave', 'docker'];
+const QUICK_SEARCH_CHIPS = [
+  'postgres',
+  'github',
+  'playwright',
+  'sqlite',
+  'brave',
+  'docker',
+];
 
 const GOALS = [
   {
@@ -232,7 +246,8 @@ const GOALS = [
     title: 'Stack',
     colorVar: 'var(--tab-stack, #c084fc)',
     kicker: '[ 02 / 04 ] · Config Bundler',
-    tagline: 'Combine multiple tools into one ready-to-paste client configuration.',
+    tagline:
+      'Combine multiple tools into one ready-to-paste client configuration.',
     ctaHref: '/stack',
     ctaLabel: 'Open Stack Builder',
     outputLabel: 'claude_desktop_config.json',
@@ -243,7 +258,8 @@ const GOALS = [
     title: 'Inspect',
     colorVar: 'var(--tab-inspect, #fbbf24)',
     kicker: '[ 03 / 04 ] · Tool Introspection',
-    tagline: 'Inspect executable tool schemas, verify parameters, and test endpoints.',
+    tagline:
+      'Inspect executable tool schemas, verify parameters, and test endpoints.',
     ctaHref: '/tools/protocol-inspector',
     ctaLabel: 'Launch Inspector',
     outputLabel: 'JSON-RPC Tool Schema',
@@ -254,7 +270,8 @@ const GOALS = [
     title: 'Publish',
     colorVar: 'var(--tab-publish, #34d399)',
     kicker: '[ 04 / 04 ] · Open Registry',
-    tagline: 'Submit your MCP server to reach thousands of AI developers & agents.',
+    tagline:
+      'Submit your MCP server to reach thousands of AI developers & agents.',
     ctaHref: '/submit',
     ctaLabel: 'Submit MCP Server',
     outputLabel: 'POST /api/v1/submit',
@@ -281,9 +298,13 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
   const [activeGoal, setActiveGoal] = useState<GoalId>('discover');
   const [copied, setCopied] = useState<boolean>(false);
   const [query, setQuery] = useState('postgres');
-  const [selectedStackPreset, setSelectedStackPreset] = useState<string>('fullstack');
-  const [selectedInspectSample, setSelectedInspectSample] = useState<string>('allmcps');
-  const [selectedPublishMode, setSelectedPublishMode] = useState<'agent' | 'curl'>('agent');
+  const [selectedStackPreset, setSelectedStackPreset] =
+    useState<string>('fullstack');
+  const [selectedInspectSample, setSelectedInspectSample] =
+    useState<string>('allmcps');
+  const [selectedPublishMode, setSelectedPublishMode] = useState<
+    'agent' | 'curl'
+  >('agent');
 
   const catalogLabel =
     typeof totalCount === 'number' && totalCount > 0
@@ -298,19 +319,33 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
               ...goal,
               tagline: `Search ${catalogLabel} MCP servers by capability, database, or tool.`,
             }
-          : goal
+          : goal,
       ),
-    [catalogLabel]
+    [catalogLabel],
   );
 
   const current = goals.find((g) => g.id === activeGoal) ?? goals[0];
 
   const output = useMemo(() => {
     if (activeGoal === 'discover') return searchCurl(query);
-    if (activeGoal === 'stack') return STACK_PRESETS[selectedStackPreset]?.config || STACK_PRESETS.fullstack.config;
-    if (activeGoal === 'inspect') return INSPECT_SAMPLES[selectedInspectSample]?.schema || INSPECT_SAMPLES.allmcps.schema;
+    if (activeGoal === 'stack')
+      return (
+        STACK_PRESETS[selectedStackPreset]?.config ||
+        STACK_PRESETS.fullstack.config
+      );
+    if (activeGoal === 'inspect')
+      return (
+        INSPECT_SAMPLES[selectedInspectSample]?.schema ||
+        INSPECT_SAMPLES.allmcps.schema
+      );
     return PUBLISH_MODES[selectedPublishMode].cmd;
-  }, [activeGoal, query, selectedStackPreset, selectedInspectSample, selectedPublishMode]);
+  }, [
+    activeGoal,
+    query,
+    selectedStackPreset,
+    selectedInspectSample,
+    selectedPublishMode,
+  ]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(output);
@@ -330,23 +365,41 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
       <AmbientCodeBackground />
 
       <div className="container landing-hero-modern">
-        <p className="hero-kicker enter-up" style={{ '--stagger': '0ms' } as React.CSSProperties}>
+        <p
+          className="hero-kicker enter-up"
+          style={{ '--stagger': '0ms' } as React.CSSProperties}
+        >
           <span className="hero-kicker-tag">[ 200 OK ]</span>
           MCP server directory
         </p>
 
-        <h1 className="hero-headline enter-up" style={{ '--stagger': '80ms' } as React.CSSProperties}>
+        <h1
+          className="hero-headline enter-up"
+          style={{ '--stagger': '80ms' } as React.CSSProperties}
+        >
           Find the MCP server
           <br className="hidden sm:inline" />{' '}
           <span className="hero-headline-gradient">your agent needs.</span>
         </h1>
 
-        <p className="hero-sublead enter-up" style={{ '--stagger': '160ms' } as React.CSSProperties}>
-          Search {catalogLabel} MCP servers. Install in Claude, Cursor, Windsurf, or Cline.{' '}
-          <Link href="/what-is-mcp" style={{ color: 'var(--brand-cyan)', textDecoration: 'none' }}>What is MCP?</Link>
+        <p
+          className="hero-sublead enter-up"
+          style={{ '--stagger': '160ms' } as React.CSSProperties}
+        >
+          Search {catalogLabel} MCP servers. Install in Claude, Cursor,
+          Windsurf, or Cline.{' '}
+          <Link
+            href="/what-is-mcp"
+            style={{ color: 'var(--brand-cyan)', textDecoration: 'none' }}
+          >
+            What is MCP?
+          </Link>
         </p>
 
-        <div className="hero-cta-row enter-up" style={{ '--stagger': '240ms' } as React.CSSProperties}>
+        <div
+          className="hero-cta-row enter-up"
+          style={{ '--stagger': '240ms' } as React.CSSProperties}
+        >
           <Link href="/browse" className="btn btn-primary hero-cta-btn">
             Browse MCP servers <ArrowRight size={16} aria-hidden="true" />
           </Link>
@@ -358,14 +411,20 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
         {/* Interactive Hero Playground Card */}
         <div
           className="hero-playground surface grid-crosshair grid-crosshair-tl grid-crosshair-br enter-up"
-          style={{
-            '--stagger': '320ms',
-            '--tab-accent': current.colorVar,
-            borderColor: 'var(--border-color)',
-          } as React.CSSProperties}
+          style={
+            {
+              '--stagger': '320ms',
+              '--tab-accent': current.colorVar,
+              borderColor: 'var(--border-color)',
+            } as React.CSSProperties
+          }
         >
           {/* Tab Navigation with Dedicated Color Pops */}
-          <div className="hero-playground-tabs" role="tablist" aria-label="What do you want to do?">
+          <div
+            className="hero-playground-tabs"
+            role="tablist"
+            aria-label="What do you want to do?"
+          >
             {goals.map((goal) => {
               const Icon = goal.icon;
               const isActive = activeGoal === goal.id;
@@ -389,7 +448,10 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                 >
                   <Icon
                     size={15}
-                    style={{ color: isActive ? goal.colorVar : 'inherit', transition: 'color 0.2s ease' }}
+                    style={{
+                      color: isActive ? goal.colorVar : 'inherit',
+                      transition: 'color 0.2s ease',
+                    }}
                     aria-hidden="true"
                   />
                   <span>{goal.title}</span>
@@ -412,9 +474,24 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
 
               {/* Tab 1: Discover View */}
               {activeGoal === 'discover' && (
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  <form className="hero-playground-search" onSubmit={runDiscover} role="search">
-                    <Search size={15} style={{ color: current.colorVar, flexShrink: 0 }} aria-hidden="true" />
+                <div
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.65rem',
+                  }}
+                >
+                  <form
+                    className="hero-playground-search"
+                    onSubmit={runDiscover}
+                    role="search"
+                  >
+                    <Search
+                      size={15}
+                      style={{ color: current.colorVar, flexShrink: 0 }}
+                      aria-hidden="true"
+                    />
                     <input
                       type="search"
                       name="q"
@@ -424,27 +501,49 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                       aria-label="Search MCP servers"
                       autoComplete="off"
                     />
-                    <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '0.35rem 0.75rem' }}>
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-sm"
+                      style={{ padding: '0.35rem 0.75rem' }}
+                    >
                       Search
                     </button>
                   </form>
 
                   <div className="hero-playground-search-tags">
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Quick tags:</span>
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      Quick tags:
+                    </span>
                     {QUICK_SEARCH_CHIPS.map((chip) => (
                       <button
                         key={chip}
                         type="button"
                         onClick={() => setQuery(chip)}
                         className="hero-playground-search-tag"
-                        style={query === chip ? { borderColor: current.colorVar, color: current.colorVar } : {}}
+                        style={
+                          query === chip
+                            ? {
+                                borderColor: current.colorVar,
+                                color: current.colorVar,
+                              }
+                            : {}
+                        }
                       >
                         {chip}
                       </button>
                     ))}
                   </div>
 
-                  <Link href="/browse" className="hero-playground-cta-link" style={{ color: current.colorVar, marginTop: '0.25rem' }}>
+                  <Link
+                    href="/browse"
+                    className="hero-playground-cta-link"
+                    style={{ color: current.colorVar, marginTop: '0.25rem' }}
+                  >
                     <span>Browse complete catalog</span>
                     <ArrowRight size={13} />
                   </Link>
@@ -453,8 +552,17 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
 
               {/* Tab 2: Stack View */}
               {activeGoal === 'stack' && (
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.65rem',
+                  }}
+                >
+                  <div
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}
+                  >
                     {Object.entries(STACK_PRESETS).map(([key, item]) => (
                       <button
                         key={key}
@@ -467,7 +575,14 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                     ))}
                   </div>
 
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', margin: '0.2rem 0' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.35rem',
+                      margin: '0.2rem 0',
+                    }}
+                  >
                     {STACK_PRESETS[selectedStackPreset]?.tools.map((t) => (
                       <span key={t} className="hero-tool-pill">
                         ✓ {t}
@@ -475,7 +590,11 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                     ))}
                   </div>
 
-                  <Link href="/stack" className="hero-playground-cta-link" style={{ color: current.colorVar }}>
+                  <Link
+                    href="/stack"
+                    className="hero-playground-cta-link"
+                    style={{ color: current.colorVar }}
+                  >
                     <span>Open multi-tool Stack Builder</span>
                     <ArrowRight size={13} />
                   </Link>
@@ -484,8 +603,17 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
 
               {/* Tab 3: Inspect View */}
               {activeGoal === 'inspect' && (
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.65rem',
+                  }}
+                >
+                  <div
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}
+                  >
                     {Object.entries(INSPECT_SAMPLES).map(([key, item]) => (
                       <button
                         key={key}
@@ -498,7 +626,11 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                     ))}
                   </div>
 
-                  <Link href="/tools/protocol-inspector" className="hero-playground-cta-link" style={{ color: current.colorVar, marginTop: '0.5rem' }}>
+                  <Link
+                    href="/tools/protocol-inspector"
+                    className="hero-playground-cta-link"
+                    style={{ color: current.colorVar, marginTop: '0.5rem' }}
+                  >
                     <span>Launch Protocol Inspector & Debugger</span>
                     <ArrowRight size={13} />
                   </Link>
@@ -507,7 +639,14 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
 
               {/* Tab 4: Publish View */}
               {activeGoal === 'publish' && (
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.65rem',
+                  }}
+                >
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     {(['agent', 'curl'] as const).map((mode) => (
                       <button
@@ -521,7 +660,11 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                     ))}
                   </div>
 
-                  <Link href="/submit" className="hero-playground-cta-link" style={{ color: current.colorVar, marginTop: '0.5rem' }}>
+                  <Link
+                    href="/submit"
+                    className="hero-playground-cta-link"
+                    style={{ color: current.colorVar, marginTop: '0.5rem' }}
+                  >
                     <span>Submit MCP server via Web Form</span>
                     <ArrowRight size={13} />
                   </Link>
@@ -532,12 +675,49 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
             {/* Terminal Output Right Column */}
             <div className="hero-playground-output">
               <div className="hero-playground-output-bar">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f56', display: 'inline-block' }} />
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffbd2e', display: 'inline-block' }} />
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#27c93f', display: 'inline-block' }} />
-                  <span className="hero-playground-output-label" style={{ marginLeft: '0.4rem' }}>
-                    <Terminal size={12} style={{ color: current.colorVar }} aria-hidden="true" />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#ff5f56',
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#ffbd2e',
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#27c93f',
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span
+                    className="hero-playground-output-label"
+                    style={{ marginLeft: '0.4rem' }}
+                  >
+                    <Terminal
+                      size={12}
+                      style={{ color: current.colorVar }}
+                      aria-hidden="true"
+                    />
                     <span>[ {current.outputLabel} ]</span>
                   </span>
                 </div>
@@ -547,9 +727,15 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
                     type="button"
                     className="hero-playground-copy"
                     onClick={handleCopy}
-                    style={copied ? { borderColor: '#10b981', color: '#10b981' } : {}}
+                    style={
+                      copied ? { borderColor: '#10b981', color: '#10b981' } : {}
+                    }
                   >
-                    {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+                    {copied ? (
+                      <Check size={12} aria-hidden="true" />
+                    ) : (
+                      <Copy size={12} aria-hidden="true" />
+                    )}
                     <span>{copied ? 'Copied!' : 'Copy'}</span>
                   </button>
                 </div>
@@ -557,7 +743,10 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
 
               <pre className="hero-playground-code">
                 <code>
-                  <ScrambleCode text={output} replayKey={`${activeGoal}:${selectedStackPreset}:${selectedInspectSample}:${selectedPublishMode}:${output}`} />
+                  <ScrambleCode
+                    text={output}
+                    replayKey={`${activeGoal}:${selectedStackPreset}:${selectedInspectSample}:${selectedPublishMode}:${output}`}
+                  />
                 </code>
               </pre>
             </div>
@@ -569,7 +758,11 @@ export function HeroSection({ totalCount }: HeroSectionProps) {
           <span className="hero-clients-label">Works out of the box with</span>
           <div className="hero-clients-list">
             {CLIENTS.map((client) => (
-              <Link key={client.href} href={client.href} className="hero-client-pill">
+              <Link
+                key={client.href}
+                href={client.href}
+                className="hero-client-pill"
+              >
                 {client.label}
               </Link>
             ))}

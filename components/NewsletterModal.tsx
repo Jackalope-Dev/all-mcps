@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 
 const DISMISS_KEY = 'allmcps_newsletter_dismissed';
@@ -84,7 +84,10 @@ export function NewsletterModal() {
       aria-label="Newsletter signup"
       onClick={dismiss}
     >
-      <div className="newsletter-modal-card" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="newsletter-modal-card"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           type="button"
           className="newsletter-modal-close"
@@ -93,7 +96,9 @@ export function NewsletterModal() {
         >
           ✕
         </button>
-        <h3 style={{ margin: '0 0 0.5rem' }}>Get new MCP servers in your inbox</h3>
+        <h3 style={{ margin: '0 0 0.5rem' }}>
+          Get new MCP servers in your inbox
+        </h3>
         <p style={{ margin: '0 0 1rem', color: 'var(--text-secondary)' }}>
           A roundup of new and top submissions — no spam, unsubscribe anytime.
         </p>

@@ -1,9 +1,23 @@
-import { and, count, countDistinct, gte, isNotNull, sql, sum, eq } from 'drizzle-orm';
+import {
+  and,
+  count,
+  countDistinct,
+  eq,
+  gte,
+  isNotNull,
+  sql,
+  sum,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { apiAccessLogs, servers, stdioVerificationPilot } from '../db/schema';
 import serversData from '../data/mcp-servers.json';
-import { CALLER_LABELS, ENDPOINT_LABELS, CallerClass, Endpoint } from './accessLog';
-import { computeQualityScore, QualityTier } from './qualityScore';
+import { apiAccessLogs, servers, stdioVerificationPilot } from '../db/schema';
+import {
+  CALLER_LABELS,
+  type CallerClass,
+  ENDPOINT_LABELS,
+  type Endpoint,
+} from './accessLog';
+import { computeQualityScore } from './qualityScore';
 
 /**
  * Named AI assistants and their crawlers — the honest "AI is reading us" signal.
@@ -24,12 +38,20 @@ export const AI_SYSTEM_CLASSES: CallerClass[] = [
   'windsurf',
 ];
 
-export type CallerBreakdown = { class: CallerClass; label: string; hits: number };
+export type CallerBreakdown = {
+  class: CallerClass;
+  label: string;
+  hits: number;
+};
 
 /** One day of traffic — total hits vs the subset from named AI systems. Zero-filled for days with no rows. */
 export type DailyTrendPoint = { date: string; total: number; ai: number };
 
-export type EndpointBreakdown = { endpoint: Endpoint; label: string; hits: number };
+export type EndpointBreakdown = {
+  endpoint: Endpoint;
+  label: string;
+  hits: number;
+};
 
 export type CountryBreakdown = { country: string; hits: number };
 
@@ -55,15 +77,35 @@ export type SiteStats = {
   totalUpvotes: number;
   toolsIndexed: number;
   verifiedCount: number;
-  toolsSourceBreakdown: { introspected: number; readme: number; unparsed: number };
-  stdioPilotStats: { totalTested: number; okCount: number; avgDurationMs: number };
-  qualityTierBreakdown: { Excellent: number; Great: number; Good: number; Fair: number; Emerging: number };
+  toolsSourceBreakdown: {
+    introspected: number;
+    readme: number;
+    unparsed: number;
+  };
+  stdioPilotStats: {
+    totalTested: number;
+    okCount: number;
+    avgDurationMs: number;
+  };
+  qualityTierBreakdown: {
+    Excellent: number;
+    Great: number;
+    Good: number;
+    Fair: number;
+    Emerging: number;
+  };
   reciprocalBadgeCount: number;
   recentCommitCount30d: number;
 };
 
 /** Helper to compute quality tier breakdown from an array of server objects */
-function calcQualityTiers(serverList: any[]): { Excellent: number; Great: number; Good: number; Fair: number; Emerging: number } {
+function calcQualityTiers(serverList: any[]): {
+  Excellent: number;
+  Great: number;
+  Good: number;
+  Fair: number;
+  Emerging: number;
+} {
   const breakdown = { Excellent: 0, Great: 0, Good: 0, Fair: 0, Emerging: 0 };
   for (const s of serverList) {
     try {
@@ -88,12 +130,22 @@ function getSnapshotFallback(): SiteStats {
 
   const snapshotServers = serversData as any[];
   const snapshotTotal = snapshotServers.length;
-  const snapshotCategories = new Set(snapshotServers.map((s) => s.category)).size;
-  const snapshotViews = snapshotServers.reduce((acc, s) => acc + (Number(s.views) || 0), 0);
-  const snapshotCopies = snapshotServers.reduce((acc, s) => acc + (Number(s.copies) || 0), 0);
-  const snapshotUpvotes = snapshotServers.reduce((acc, s) => acc + (Number(s.upvotes) || 0), 0);
+  const snapshotCategories = new Set(snapshotServers.map((s) => s.category))
+    .size;
+  const snapshotViews = snapshotServers.reduce(
+    (acc, s) => acc + (Number(s.views) || 0),
+    0,
+  );
+  const snapshotCopies = snapshotServers.reduce(
+    (acc, s) => acc + (Number(s.copies) || 0),
+    0,
+  );
+  const snapshotUpvotes = snapshotServers.reduce(
+    (acc, s) => acc + (Number(s.upvotes) || 0),
+    0,
+  );
   const snapshotVerified = snapshotServers.filter(
-    (s) => s.isOfficial || s.isPremium || s.reciprocalBadgeOk
+    (s) => s.isOfficial || s.isPremium || s.reciprocalBadgeOk,
   ).length;
   const snapshotTools = snapshotServers.reduce((acc, s) => {
     if (Array.isArray(s.tools)) return acc + s.tools.length;
@@ -105,15 +157,27 @@ function getSnapshotFallback(): SiteStats {
     }
   }, 0);
 
-  const snapshotIntrospected = snapshotServers.filter((s) => s.toolsSource === 'introspected').length;
-  const snapshotReadme = snapshotServers.filter(
-    (s) => s.toolsSource === 'readme' || (Array.isArray(s.tools) && s.tools.length > 0 && !s.toolsSource)
+  const snapshotIntrospected = snapshotServers.filter(
+    (s) => s.toolsSource === 'introspected',
   ).length;
-  const snapshotUnparsed = Math.max(0, snapshotTotal - snapshotIntrospected - snapshotReadme);
+  const snapshotReadme = snapshotServers.filter(
+    (s) =>
+      s.toolsSource === 'readme' ||
+      (Array.isArray(s.tools) && s.tools.length > 0 && !s.toolsSource),
+  ).length;
+  const snapshotUnparsed = Math.max(
+    0,
+    snapshotTotal - snapshotIntrospected - snapshotReadme,
+  );
 
-  const snapshotReciprocalBadges = snapshotServers.filter((s) => s.reciprocalBadgeOk).length;
+  const snapshotReciprocalBadges = snapshotServers.filter(
+    (s) => s.reciprocalBadgeOk,
+  ).length;
   const snapshotCutoff30d = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const snapshotRecentCommits = snapshotServers.filter((s) => s.lastCommitAt && new Date(s.lastCommitAt).getTime() >= snapshotCutoff30d).length;
+  const snapshotRecentCommits = snapshotServers.filter(
+    (s) =>
+      s.lastCommitAt && new Date(s.lastCommitAt).getTime() >= snapshotCutoff30d,
+  ).length;
   const snapshotQualityTiers = calcQualityTiers(snapshotServers);
 
   memoizedSnapshotFallback = {
@@ -133,7 +197,11 @@ function getSnapshotFallback(): SiteStats {
     totalUpvotes: snapshotUpvotes,
     toolsIndexed: snapshotTools,
     verifiedCount: snapshotVerified,
-    toolsSourceBreakdown: { introspected: snapshotIntrospected, readme: snapshotReadme, unparsed: snapshotUnparsed },
+    toolsSourceBreakdown: {
+      introspected: snapshotIntrospected,
+      readme: snapshotReadme,
+      unparsed: snapshotUnparsed,
+    },
     stdioPilotStats: { totalTested: 124, okCount: 98, avgDurationMs: 3420 },
     qualityTierBreakdown: snapshotQualityTiers,
     reciprocalBadgeCount: snapshotReciprocalBadges,
@@ -158,7 +226,7 @@ export async function getSiteStats(): Promise<SiteStats> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       db = drizzle((ctx.env as any).DB);
     }
   } catch {
@@ -172,7 +240,17 @@ export async function getSiteStats(): Promise<SiteStats> {
   try {
     const cutoff = new Date(now - 30 * 24 * 60 * 60 * 1000);
 
-    const [countryRows, callerClassRows, serverStatsRows, dailyRows, endpointRows, topCountryRows, serverExtraRows, stdioPilotRows, activeServersRows] = await Promise.all([
+    const [
+      countryRows,
+      callerClassRows,
+      serverStatsRows,
+      dailyRows,
+      endpointRows,
+      topCountryRows,
+      serverExtraRows,
+      stdioPilotRows,
+      activeServersRows,
+    ] = await Promise.all([
       db
         .select({
           uniqueCountries: countDistinct(apiAccessLogs.ipCountry),
@@ -208,13 +286,18 @@ export async function getSiteStats(): Promise<SiteStats> {
       // Daily hits by caller class (aggregated into total vs AI in JS below) — powers the trend chart.
       db
         .select({
-          date: sql<string>`date(${apiAccessLogs.createdAt}, 'unixepoch')`.as('day'),
+          date: sql<string>`date(${apiAccessLogs.createdAt}, 'unixepoch')`.as(
+            'day',
+          ),
           callerClass: apiAccessLogs.callerClass,
           hits: count(),
         })
         .from(apiAccessLogs)
         .where(gte(apiAccessLogs.createdAt, cutoff))
-        .groupBy(sql`date(${apiAccessLogs.createdAt}, 'unixepoch')`, apiAccessLogs.callerClass)
+        .groupBy(
+          sql`date(${apiAccessLogs.createdAt}, 'unixepoch')`,
+          apiAccessLogs.callerClass,
+        )
         .catch(() => []),
 
       db
@@ -234,7 +317,12 @@ export async function getSiteStats(): Promise<SiteStats> {
           hits: count(),
         })
         .from(apiAccessLogs)
-        .where(and(gte(apiAccessLogs.createdAt, cutoff), isNotNull(apiAccessLogs.ipCountry)))
+        .where(
+          and(
+            gte(apiAccessLogs.createdAt, cutoff),
+            isNotNull(apiAccessLogs.ipCountry),
+          ),
+        )
         .groupBy(apiAccessLogs.ipCountry)
         .orderBy(sql`count() desc`)
         .limit(8)
@@ -304,10 +392,13 @@ export async function getSiteStats(): Promise<SiteStats> {
     const fallback = getSnapshotFallback();
     const countries = Number(countryRows[0]?.uniqueCountries ?? 0);
 
-    const callerRows = (callerClassRows as { callerClass: CallerClass; hits: number }[]) || [];
+    const callerRows =
+      (callerClassRows as { callerClass: CallerClass; hits: number }[]) || [];
 
     // "AI Reads" — only the named AI assistants/crawlers, ordered by hits desc (SQL already sorted this).
-    const aiRows = callerRows.filter((r) => r.callerClass && AI_SYSTEM_CLASSES.includes(r.callerClass));
+    const aiRows = callerRows.filter(
+      (r) => r.callerClass && AI_SYSTEM_CLASSES.includes(r.callerClass),
+    );
     const hits = aiRows.reduce((acc, r) => acc + Number(r.hits || 0), 0);
     const callersCount = aiRows.length;
     const activeCallers: string[] = aiRows
@@ -322,7 +413,7 @@ export async function getSiteStats(): Promise<SiteStats> {
           r.callerClass &&
           !AI_SYSTEM_CLASSES.includes(r.callerClass) &&
           r.callerClass !== 'browser' &&
-          r.callerClass !== 'unknown'
+          r.callerClass !== 'unknown',
       )
       .reduce((acc, r) => acc + Number(r.hits || 0), 0);
 
@@ -336,56 +427,97 @@ export async function getSiteStats(): Promise<SiteStats> {
     // even on days with no traffic at all.
     const dayMap = new Map<string, { total: number; ai: number }>();
     for (let i = 29; i >= 0; i--) {
-      const key = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const key = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
       dayMap.set(key, { total: 0, ai: 0 });
     }
-    for (const r of (dailyRows as { date: string; callerClass: CallerClass; hits: number }[]) || []) {
+    for (const r of (dailyRows as {
+      date: string;
+      callerClass: CallerClass;
+      hits: number;
+    }[]) || []) {
       const bucket = dayMap.get(r.date);
       if (!bucket) continue; // outside the zero-filled window (cutoff boundary)
       const rowHits = Number(r.hits || 0);
       bucket.total += rowHits;
-      if (r.callerClass && AI_SYSTEM_CLASSES.includes(r.callerClass)) bucket.ai += rowHits;
+      if (r.callerClass && AI_SYSTEM_CLASSES.includes(r.callerClass))
+        bucket.ai += rowHits;
     }
-    const dailyTrend: DailyTrendPoint[] = Array.from(dayMap.entries()).map(([date, v]) => ({
-      date,
-      total: v.total,
-      ai: v.ai,
-    }));
-
-    const endpointBreakdown: EndpointBreakdown[] = ((endpointRows as { endpoint: Endpoint; hits: number }[]) || []).map(
-      (r) => ({
-        endpoint: r.endpoint,
-        label: ENDPOINT_LABELS[r.endpoint] || r.endpoint,
-        hits: Number(r.hits || 0),
-      })
+    const dailyTrend: DailyTrendPoint[] = Array.from(dayMap.entries()).map(
+      ([date, v]) => ({
+        date,
+        total: v.total,
+        ai: v.ai,
+      }),
     );
 
-    const topCountries: CountryBreakdown[] = ((topCountryRows as { country: string | null; hits: number }[]) || [])
-      .filter((r) => r.country)
-      .map((r) => ({ country: r.country as string, hits: Number(r.hits || 0) }));
+    const endpointBreakdown: EndpointBreakdown[] = (
+      (endpointRows as { endpoint: Endpoint; hits: number }[]) || []
+    ).map((r) => ({
+      endpoint: r.endpoint,
+      label: ENDPOINT_LABELS[r.endpoint] || r.endpoint,
+      hits: Number(r.hits || 0),
+    }));
 
-    const dbTotal = Number(serverStatsRows[0]?.totalServers ?? fallback.totalServers);
-    const dbViews = Number(serverStatsRows[0]?.totalViews ?? fallback.totalViews);
-    const dbCopies = Number(serverStatsRows[0]?.totalCopies ?? fallback.totalCopies);
-    const dbUpvotes = Number(serverStatsRows[0]?.totalUpvotes ?? fallback.totalUpvotes);
-    const dbCategories = Number(serverStatsRows[0]?.categories ?? fallback.categoryCount);
+    const topCountries: CountryBreakdown[] = (
+      (topCountryRows as { country: string | null; hits: number }[]) || []
+    )
+      .filter((r) => r.country)
+      .map((r) => ({
+        country: r.country as string,
+        hits: Number(r.hits || 0),
+      }));
+
+    const dbTotal = Number(
+      serverStatsRows[0]?.totalServers ?? fallback.totalServers,
+    );
+    const dbViews = Number(
+      serverStatsRows[0]?.totalViews ?? fallback.totalViews,
+    );
+    const dbCopies = Number(
+      serverStatsRows[0]?.totalCopies ?? fallback.totalCopies,
+    );
+    const dbUpvotes = Number(
+      serverStatsRows[0]?.totalUpvotes ?? fallback.totalUpvotes,
+    );
+    const dbCategories = Number(
+      serverStatsRows[0]?.categories ?? fallback.categoryCount,
+    );
     const dbTools = Number(serverStatsRows[0]?.totalTools ?? 0);
 
-    const introspectedCount = Number(serverExtraRows[0]?.introspected ?? fallback.toolsSourceBreakdown.introspected);
-    const readmeCount = Number(serverExtraRows[0]?.readme ?? fallback.toolsSourceBreakdown.readme);
-    const unparsedCount = Math.max(0, (dbTotal || fallback.totalServers) - introspectedCount - readmeCount);
+    const introspectedCount = Number(
+      serverExtraRows[0]?.introspected ??
+        fallback.toolsSourceBreakdown.introspected,
+    );
+    const readmeCount = Number(
+      serverExtraRows[0]?.readme ?? fallback.toolsSourceBreakdown.readme,
+    );
+    const unparsedCount = Math.max(
+      0,
+      (dbTotal || fallback.totalServers) - introspectedCount - readmeCount,
+    );
 
     const pilotTotal = Number(stdioPilotRows[0]?.totalTested ?? 0);
     const pilotOk = Number(stdioPilotRows[0]?.okCount ?? 0);
-    const pilotAvgMs = Math.round(Number(stdioPilotRows[0]?.avgDurationMs ?? 0));
+    const pilotAvgMs = Math.round(
+      Number(stdioPilotRows[0]?.avgDurationMs ?? 0),
+    );
 
-    const dbQualityTiers = (activeServersRows && activeServersRows.length > 0)
-      ? calcQualityTiers(activeServersRows)
-      : fallback.qualityTierBreakdown;
+    const dbQualityTiers =
+      activeServersRows && activeServersRows.length > 0
+        ? calcQualityTiers(activeServersRows)
+        : fallback.qualityTierBreakdown;
 
-    const dbReciprocalBadges = Number(serverExtraRows[0]?.reciprocalBadges ?? fallback.reciprocalBadgeCount);
-    const dbRecentCommits = Number(serverExtraRows[0]?.recentCommits ?? fallback.recentCommitCount30d);
-    const dbVerified = Number(serverExtraRows[0]?.verified ?? fallback.verifiedCount);
+    const dbReciprocalBadges = Number(
+      serverExtraRows[0]?.reciprocalBadges ?? fallback.reciprocalBadgeCount,
+    );
+    const dbRecentCommits = Number(
+      serverExtraRows[0]?.recentCommits ?? fallback.recentCommitCount30d,
+    );
+    const dbVerified = Number(
+      serverExtraRows[0]?.verified ?? fallback.verifiedCount,
+    );
 
     const result: SiteStats = {
       totalServers: dbTotal > 0 ? dbTotal : fallback.totalServers,

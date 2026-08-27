@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { processLogoUpload, LogoValidationError } from '@/lib/logoImage';
+import { NextResponse } from 'next/server';
+import { LogoValidationError, processLogoUpload } from '@/lib/logoImage';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +10,10 @@ export async function POST(req: Request) {
     const file = form.get('file');
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'No image file provided.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No image file provided.' },
+        { status: 400 },
+      );
     }
 
     let env: any;
@@ -18,11 +21,17 @@ export async function POST(req: Request) {
       const ctx = await getCloudflareContext();
       env = ctx.env;
     } catch {
-      return NextResponse.json({ error: 'Storage unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Storage unavailable' },
+        { status: 500 },
+      );
     }
 
     if (!env?.LOGOS) {
-      return NextResponse.json({ error: 'Storage unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Storage unavailable' },
+        { status: 500 },
+      );
     }
 
     let processed: Uint8Array;
@@ -52,7 +61,7 @@ export async function POST(req: Request) {
     console.error('Sponsor logo upload error:', error);
     return NextResponse.json(
       { error: error?.message || 'Failed to upload logo image.' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

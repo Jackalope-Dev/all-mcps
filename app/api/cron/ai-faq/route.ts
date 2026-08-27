@@ -1,14 +1,27 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  sql,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
-import { fetchGithubReadme, parseGithubUrl } from '../../../../lib/listingEnrich';
-import { getGithubToken } from '../../../../lib/githubAuth';
-import { cleanListingDescription } from '../../../../lib/description';
-import { parseServerTools } from '../../../../lib/servers';
 import { generateListingContent } from '../../../../lib/aiContent';
+import { cleanListingDescription } from '../../../../lib/description';
+import { getGithubToken } from '../../../../lib/githubAuth';
+import {
+  fetchGithubReadme,
+  parseGithubUrl,
+} from '../../../../lib/listingEnrich';
+import { parseServerTools } from '../../../../lib/servers';
 
 /**
  * FAQ backfill pass — fills `ai_faq` on listings that were enriched by
@@ -81,18 +94,18 @@ export async function POST(req: Request) {
                 eq(servers.status, 'active'),
                 isNotNull(servers.aiEnrichedAt),
                 isNull(servers.aiFaqAt),
-                lt(servers.aiEnrichedAt, settledCutoff)
-              )
+                lt(servers.aiEnrichedAt, settledCutoff),
+              ),
             )
             .orderBy(
               desc(servers.views),
               desc(servers.upvotes),
               sql`${servers.githubStars} IS NULL`,
               desc(servers.githubStars),
-              asc(servers.createdAt)
+              asc(servers.createdAt),
             )
-            .limit(BATCH_SIZE)
-        )
+            .limit(BATCH_SIZE),
+        ),
       )
       .returning({
         id: servers.id,
@@ -103,7 +116,13 @@ export async function POST(req: Request) {
         tools: servers.tools,
       })) as ClaimedRow[];
 
-    const stats = { claimed: claimed.length, enriched: 0, skippedThin: 0, failed: 0, budgetStopped: false };
+    const stats = {
+      claimed: claimed.length,
+      enriched: 0,
+      skippedThin: 0,
+      failed: 0,
+      budgetStopped: false,
+    };
     const keep = new Set<string>();
     let budgetHit = false;
 
@@ -113,7 +132,9 @@ export async function POST(req: Request) {
       const results = await Promise.all(
         chunk.map(async (server) => {
           const gh = parseGithubUrl(server.url);
-          const readme = gh ? await fetchGithubReadme(gh.owner, gh.repo, githubToken) : null;
+          const readme = gh
+            ? await fetchGithubReadme(gh.owner, gh.repo, githubToken)
+            : null;
           const cleanedDesc = cleanListingDescription(server.description) || '';
 
           if (!readme && cleanedDesc.length < MIN_MATERIAL_CHARS) {
@@ -128,7 +149,7 @@ export async function POST(req: Request) {
             tools: parseServerTools(server.tools),
           });
           return { server, outcome };
-        })
+        }),
       );
 
       for (const r of results) {
@@ -144,7 +165,9 @@ export async function POST(req: Request) {
           await db
             .update(servers)
             .set({
-              aiFaq: o.content.faq.length ? JSON.stringify(o.content.faq) : null,
+              aiFaq: o.content.faq.length
+                ? JSON.stringify(o.content.faq)
+                : null,
             })
             .where(eq(servers.id, r.server.id));
           stats.enriched++;
@@ -159,7 +182,10 @@ export async function POST(req: Request) {
     // Release every claimed row we didn't complete, same as /api/cron/ai-content.
     const toRelease = claimed.filter((c) => !keep.has(c.id)).map((c) => c.id);
     if (toRelease.length > 0) {
-      await db.update(servers).set({ aiFaqAt: null }).where(inArray(servers.id, toRelease));
+      await db
+        .update(servers)
+        .set({ aiFaqAt: null })
+        .where(inArray(servers.id, toRelease));
     }
     stats.budgetStopped = budgetHit;
 
@@ -171,8 +197,8 @@ export async function POST(req: Request) {
           eq(servers.status, 'active'),
           isNotNull(servers.aiEnrichedAt),
           isNull(servers.aiFaqAt),
-          lt(servers.aiEnrichedAt, settledCutoff)
-        )
+          lt(servers.aiEnrichedAt, settledCutoff),
+        ),
       );
 
     return NextResponse.json({
@@ -186,6 +212,9 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('AI FAQ cron error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

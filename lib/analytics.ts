@@ -2,7 +2,17 @@
  * Analytics query functions for the Premium owner dashboard.
  * Aggregates api_access_logs and impression_logs data per server.
  */
-import { and, count, desc, eq, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  sql,
+} from 'drizzle-orm';
 import { apiAccessLogs, impressionLogs, socialPosts } from '@/db/schema';
 import type { CallerClass } from './accessLog';
 import type { ImpressionSurface } from './impressionLog';
@@ -67,7 +77,7 @@ export type ServerAnalytics = {
 export async function getServerAnalytics(
   db: any,
   serverId: string,
-  days = 30
+  days = 30,
 ): Promise<ServerAnalytics> {
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
@@ -89,18 +99,30 @@ export async function getServerAnalytics(
         hits: count(),
       })
       .from(apiAccessLogs)
-      .where(and(eq(apiAccessLogs.serverId, serverId), gte(apiAccessLogs.createdAt, cutoff)))
+      .where(
+        and(
+          eq(apiAccessLogs.serverId, serverId),
+          gte(apiAccessLogs.createdAt, cutoff),
+        ),
+      )
       .groupBy(apiAccessLogs.callerClass)
       .orderBy(desc(count())),
 
     // Daily hits (using SQLite date function on the unix timestamp)
     db
       .select({
-        date: sql<string>`date(${apiAccessLogs.createdAt}, 'unixepoch')`.as('day'),
+        date: sql<string>`date(${apiAccessLogs.createdAt}, 'unixepoch')`.as(
+          'day',
+        ),
         hits: count(),
       })
       .from(apiAccessLogs)
-      .where(and(eq(apiAccessLogs.serverId, serverId), gte(apiAccessLogs.createdAt, cutoff)))
+      .where(
+        and(
+          eq(apiAccessLogs.serverId, serverId),
+          gte(apiAccessLogs.createdAt, cutoff),
+        ),
+      )
       .groupBy(sql`date(${apiAccessLogs.createdAt}, 'unixepoch')`)
       .orderBy(sql`date(${apiAccessLogs.createdAt}, 'unixepoch')`),
 
@@ -111,7 +133,12 @@ export async function getServerAnalytics(
         hits: count(),
       })
       .from(apiAccessLogs)
-      .where(and(eq(apiAccessLogs.serverId, serverId), gte(apiAccessLogs.createdAt, cutoff)))
+      .where(
+        and(
+          eq(apiAccessLogs.serverId, serverId),
+          gte(apiAccessLogs.createdAt, cutoff),
+        ),
+      )
       .groupBy(apiAccessLogs.endpoint)
       .orderBy(desc(count())),
 
@@ -122,7 +149,12 @@ export async function getServerAnalytics(
         impressions: count(),
       })
       .from(impressionLogs)
-      .where(and(eq(impressionLogs.serverId, serverId), gte(impressionLogs.createdAt, cutoff)))
+      .where(
+        and(
+          eq(impressionLogs.serverId, serverId),
+          gte(impressionLogs.createdAt, cutoff),
+        ),
+      )
       .groupBy(impressionLogs.surface)
       .orderBy(desc(count())),
 
@@ -137,8 +169,8 @@ export async function getServerAnalytics(
         and(
           eq(apiAccessLogs.serverId, serverId),
           gte(apiAccessLogs.createdAt, cutoff),
-          isNotNull(apiAccessLogs.ipCountry)
-        )
+          isNotNull(apiAccessLogs.ipCountry),
+        ),
       )
       .groupBy(apiAccessLogs.ipCountry)
       .orderBy(desc(count()))
@@ -153,8 +185,8 @@ export async function getServerAnalytics(
           eq(apiAccessLogs.serverId, serverId),
           eq(apiAccessLogs.endpoint, 'v1_search'),
           gte(apiAccessLogs.createdAt, cutoff),
-          isNotNull(apiAccessLogs.methodOrTool)
-        )
+          isNotNull(apiAccessLogs.methodOrTool),
+        ),
       )
       .orderBy(desc(apiAccessLogs.createdAt))
       .limit(20),
@@ -180,25 +212,37 @@ export async function getServerAnalytics(
       .where(
         and(
           eq(apiAccessLogs.serverId, serverId),
-          gte(apiAccessLogs.createdAt, new Date(cutoff.getTime() - days * 24 * 60 * 60 * 1000)),
-          lt(apiAccessLogs.createdAt, cutoff)
-        )
+          gte(
+            apiAccessLogs.createdAt,
+            new Date(cutoff.getTime() - days * 24 * 60 * 60 * 1000),
+          ),
+          lt(apiAccessLogs.createdAt, cutoff),
+        ),
       ),
   ]);
 
   const totalApiHits = callerRows.reduce(
     (sum: number, r: { hits: number }) => sum + r.hits,
-    0
+    0,
   );
   const totalImpressions = surfaceRows.reduce(
     (sum: number, r: { impressions: number }) => sum + r.impressions,
-    0
+    0,
   );
   const totalOutboundClicks = surfaceRows
-    .filter((r: { surface: string; impressions: number }) => r.surface === 'outbound_github' || r.surface === 'outbound_website')
-    .reduce((sum: number, r: { impressions: number }) => sum + r.impressions, 0);
+    .filter(
+      (r: { surface: string; impressions: number }) =>
+        r.surface === 'outbound_github' || r.surface === 'outbound_website',
+    )
+    .reduce(
+      (sum: number, r: { impressions: number }) => sum + r.impressions,
+      0,
+    );
 
-  const ctr = totalImpressions > 0 ? Math.round((totalOutboundClicks / totalImpressions) * 1000) / 10 : 0;
+  const ctr =
+    totalImpressions > 0
+      ? Math.round((totalOutboundClicks / totalImpressions) * 1000) / 10
+      : 0;
 
   const uniqueCallers = callerRows.length;
   const topCaller =
@@ -213,16 +257,18 @@ export async function getServerAnalytics(
     (r: { caller: CallerClass; hits: number }) => ({
       caller: r.caller,
       hits: r.hits,
-      pct: totalApiHits > 0 ? Math.round((r.hits / totalApiHits) * 1000) / 10 : 0,
-    })
+      pct:
+        totalApiHits > 0 ? Math.round((r.hits / totalApiHits) * 1000) / 10 : 0,
+    }),
   );
 
   const byCountry: CountryBreakdown[] = (countryRows || []).map(
     (r: { country: string | null; hits: number }) => ({
       country: r.country || 'Unknown',
       hits: r.hits,
-      pct: totalApiHits > 0 ? Math.round((r.hits / totalApiHits) * 1000) / 10 : 0,
-    })
+      pct:
+        totalApiHits > 0 ? Math.round((r.hits / totalApiHits) * 1000) / 10 : 0,
+    }),
   );
 
   // Deduplicate search queries
@@ -245,14 +291,22 @@ export async function getServerAnalytics(
             ? rawTweet.sentAt.toISOString()
             : String(rawTweet.sentAt)
           : rawTweet.createdAt instanceof Date
-          ? rawTweet.createdAt.toISOString()
-          : String(rawTweet.createdAt),
+            ? rawTweet.createdAt.toISOString()
+            : String(rawTweet.createdAt),
         status: (rawTweet.status as 'sent' | 'queued') || 'queued',
       }
     : null;
 
   return {
-    summary: { totalApiHits, totalImpressions, totalOutboundClicks, uniqueCallers, topCaller, trend, ctr },
+    summary: {
+      totalApiHits,
+      totalImpressions,
+      totalOutboundClicks,
+      uniqueCallers,
+      topCaller,
+      trend,
+      ctr,
+    },
     byCallerClass,
     byDay: dailyRows as DailyHits[],
     byEndpoint: endpointRows as EndpointBreakdown[],
@@ -270,7 +324,7 @@ export async function getServerAnalytics(
 export async function getServerAnalyticsBatch(
   db: any,
   serverIds: string[],
-  days = 30
+  days = 30,
 ): Promise<Record<string, AnalyticsSummary>> {
   if (serverIds.length === 0) return {};
 
@@ -289,8 +343,8 @@ export async function getServerAnalyticsBatch(
       .where(
         and(
           inArray(apiAccessLogs.serverId, serverIds),
-          gte(apiAccessLogs.createdAt, cutoff)
-        )
+          gte(apiAccessLogs.createdAt, cutoff),
+        ),
       )
       .groupBy(apiAccessLogs.serverId, apiAccessLogs.callerClass),
 
@@ -304,8 +358,8 @@ export async function getServerAnalyticsBatch(
       .where(
         and(
           inArray(impressionLogs.serverId, serverIds),
-          gte(impressionLogs.createdAt, cutoff)
-        )
+          gte(impressionLogs.createdAt, cutoff),
+        ),
       )
       .groupBy(impressionLogs.serverId, impressionLogs.surface),
 
@@ -319,8 +373,8 @@ export async function getServerAnalyticsBatch(
         and(
           inArray(apiAccessLogs.serverId, serverIds),
           gte(apiAccessLogs.createdAt, prevCutoff),
-          lt(apiAccessLogs.createdAt, cutoff)
-        )
+          lt(apiAccessLogs.createdAt, cutoff),
+        ),
       )
       .groupBy(apiAccessLogs.serverId),
   ]);
@@ -341,7 +395,11 @@ export async function getServerAnalyticsBatch(
 
   // Process hit rows
   const callerMap = new Map<string, Map<string, number>>();
-  for (const row of hitRows as { serverId: string; callerClass: string; hits: number }[]) {
+  for (const row of hitRows as {
+    serverId: string;
+    callerClass: string;
+    hits: number;
+  }[]) {
     if (!row.serverId) continue;
     if (!callerMap.has(row.serverId)) callerMap.set(row.serverId, new Map());
     callerMap.get(row.serverId)!.set(row.callerClass, row.hits);
@@ -360,10 +418,17 @@ export async function getServerAnalyticsBatch(
   }
 
   // Process impression & click rows
-  for (const row of impressionRows as { serverId: string; surface: string; impressions: number }[]) {
+  for (const row of impressionRows as {
+    serverId: string;
+    surface: string;
+    impressions: number;
+  }[]) {
     if (row.serverId && result[row.serverId]) {
       result[row.serverId].totalImpressions += row.impressions;
-      if (row.surface === 'outbound_github' || row.surface === 'outbound_website') {
+      if (
+        row.surface === 'outbound_github' ||
+        row.surface === 'outbound_website'
+      ) {
         result[row.serverId].totalOutboundClicks += row.impressions;
       }
     }

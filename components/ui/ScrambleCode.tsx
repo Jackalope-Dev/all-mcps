@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const GLYPHS = '!<>-_\\/[]{}-=+*^?#01mcpMCP';
 
@@ -13,11 +13,19 @@ function scrambleChar(ch: string) {
  * Firecrawl playground decode: lock characters left-to-right after a brief
  * scramble. Opacity-only when the user prefers reduced motion.
  */
-export function ScrambleCode({ text, replayKey }: { text: string; replayKey: string }) {
+export function ScrambleCode({
+  text,
+  replayKey,
+}: {
+  text: string;
+  replayKey: string;
+}) {
   const [shown, setShown] = useState(text);
 
   useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
     if (reduce) {
       setShown(text);
       return;

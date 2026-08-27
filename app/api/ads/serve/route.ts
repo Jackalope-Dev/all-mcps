@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { and, eq, lt, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { sponsorAds } from '@/db/schema';
-import { eq, or, and, lt } from 'drizzle-orm';
-import { selectWeightedAd, type AdPlacement } from '@/lib/ads';
 import { mintAdEventToken } from '@/lib/adEventToken';
+import { type AdPlacement, selectWeightedAd } from '@/lib/ads';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,11 +38,17 @@ export async function GET(request: Request) {
       .where(
         and(
           eq(sponsorAds.status, 'active'),
-          lt(sponsorAds.impressionsServed, sponsorAds.totalImpressionsPurchased),
+          lt(
+            sponsorAds.impressionsServed,
+            sponsorAds.totalImpressionsPurchased,
+          ),
           placement === 'all'
             ? undefined
-            : or(eq(sponsorAds.placement, placement), eq(sponsorAds.placement, 'all'))
-        )
+            : or(
+                eq(sponsorAds.placement, placement),
+                eq(sponsorAds.placement, 'all'),
+              ),
+        ),
       );
 
     if (!candidateAds || candidateAds.length === 0) {
@@ -52,7 +58,9 @@ export async function GET(request: Request) {
     // Deduplication: Avoid serving an ad that is already active on this page
     let eligible = candidateAds;
     if (excludeIds.length > 0) {
-      const notExcluded = candidateAds.filter((ad) => !excludeIds.includes(ad.id));
+      const notExcluded = candidateAds.filter(
+        (ad) => !excludeIds.includes(ad.id),
+      );
       if (notExcluded.length > 0) {
         eligible = notExcluded;
       } else {

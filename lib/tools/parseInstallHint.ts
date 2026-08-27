@@ -31,7 +31,13 @@ const URL_PATTERN = /https?:\/\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/;
  * `allmcps.com/mcp/<id>?verify=...`) gets that badge link mistaken for its install endpoint —
  * confidently wrong, and it would only get more common as badge adoption grows.
  */
-const NON_ENDPOINT_HOSTS = ['glama.ai', 'github.com', 'npmjs.com', 'pypi.org', 'allmcps.com'];
+const NON_ENDPOINT_HOSTS = [
+  'glama.ai',
+  'github.com',
+  'npmjs.com',
+  'pypi.org',
+  'allmcps.com',
+];
 
 /**
  * Package/URL captures come from prose, so a match routinely swallows the sentence's
@@ -50,12 +56,40 @@ function trimTrailingPunctuation(candidate: string): string {
  * MCP server" — confidently wrong, since none of these tools ever *are* the MCP server.
  */
 const NON_MCP_TOOLING_PACKAGES = new Set([
-  'vitest', 'jest', 'mocha', 'ava', 'tap', 'tape', 'playwright', 'cypress',
-  'tsx', 'ts-node', 'ts-node-dev', 'nodemon', 'typescript', 'tsc',
-  'eslint', 'prettier', 'standard', 'biome',
-  'webpack', 'rollup', 'vite', 'esbuild', 'parcel', 'turbo', 'nx',
-  'husky', 'lint-staged', 'commitizen', 'semantic-release', 'changeset',
-  'concurrently', 'cross-env', 'rimraf', 'dotenv',
+  'vitest',
+  'jest',
+  'mocha',
+  'ava',
+  'tap',
+  'tape',
+  'playwright',
+  'cypress',
+  'tsx',
+  'ts-node',
+  'ts-node-dev',
+  'nodemon',
+  'typescript',
+  'tsc',
+  'eslint',
+  'prettier',
+  'standard',
+  'biome',
+  'webpack',
+  'rollup',
+  'vite',
+  'esbuild',
+  'parcel',
+  'turbo',
+  'nx',
+  'husky',
+  'lint-staged',
+  'commitizen',
+  'semantic-release',
+  'changeset',
+  'concurrently',
+  'cross-env',
+  'rimraf',
+  'dotenv',
 ]);
 
 /**
@@ -69,9 +103,15 @@ function parseJsonConfigHint(text: string): InstallHint | null {
   const cmdMatch = text.match(JSON_COMMAND_PATTERN);
   const argsMatch = text.match(JSON_ARGS_PATTERN);
   if (!cmdMatch || !argsMatch) return null;
-  if (Math.abs((argsMatch.index ?? 0) - (cmdMatch.index ?? 0)) > JSON_FIELD_PROXIMITY) return null;
+  if (
+    Math.abs((argsMatch.index ?? 0) - (cmdMatch.index ?? 0)) >
+    JSON_FIELD_PROXIMITY
+  )
+    return null;
 
-  const rawArgs = Array.from(argsMatch[1].matchAll(/"([^"]*)"/g)).map((m) => m[1]);
+  const rawArgs = Array.from(argsMatch[1].matchAll(/"([^"]*)"/g)).map(
+    (m) => m[1],
+  );
   if (rawArgs.length === 0) return null;
 
   const lastIdx = rawArgs.length - 1;
@@ -118,7 +158,9 @@ export function parseInstallHint(description: string): ParsedInstallHint {
   const urlMatch = description.match(URL_PATTERN);
   if (urlMatch) {
     const candidate = trimTrailingPunctuation(urlMatch[0]);
-    const isNonEndpoint = NON_ENDPOINT_HOSTS.some((host) => candidate.includes(host));
+    const isNonEndpoint = NON_ENDPOINT_HOSTS.some((host) =>
+      candidate.includes(host),
+    );
     if (!isNonEndpoint) {
       return { url: candidate };
     }

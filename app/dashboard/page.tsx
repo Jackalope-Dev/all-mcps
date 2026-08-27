@@ -1,11 +1,14 @@
+import { eq, or } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { drizzle } from 'drizzle-orm/d1';
-import { eq, or } from 'drizzle-orm';
 import { servers, sponsorAds } from '@/db/schema';
-import { auth } from '@/lib/auth';
-import { getServerAnalyticsBatch, type AnalyticsSummary } from '@/lib/analytics';
 import { parseStringArray } from '@/lib/aiContent';
+import {
+  type AnalyticsSummary,
+  getServerAnalyticsBatch,
+} from '@/lib/analytics';
+import { auth } from '@/lib/auth';
 import DashboardClient from './DashboardClient';
 
 export type OwnedAd = {
@@ -145,13 +148,21 @@ async function getOwnedServers(userId: string): Promise<{
 
       // Compute category ranks for owned servers
       const { and, desc, sql } = await import('drizzle-orm');
-      const categoryRanks: Record<string, { rank: number; totalInCategory: number }> = {};
+      const categoryRanks: Record<
+        string,
+        { rank: number; totalInCategory: number }
+      > = {};
       for (const server of rows) {
         try {
           const categoryList = await db
             .select({ id: servers.id })
             .from(servers)
-            .where(and(eq(servers.category, server.category), eq(servers.status, 'active')))
+            .where(
+              and(
+                eq(servers.category, server.category),
+                eq(servers.status, 'active'),
+              ),
+            )
             .orderBy(desc(sql`${servers.upvotes} * 10 + ${servers.views}`));
 
           const index = categoryList.findIndex((item) => item.id === server.id);
@@ -173,7 +184,12 @@ async function getOwnedServers(userId: string): Promise<{
         suggestedInstallArgs: parseStringArray(r.suggestedInstallArgs),
       }));
 
-      return { servers: normalized as OwnedServer[], analytics, categoryRanks, isPremium };
+      return {
+        servers: normalized as OwnedServer[],
+        analytics,
+        categoryRanks,
+        isPremium,
+      };
     }
   } catch {
     // fall through with empty list
@@ -181,7 +197,10 @@ async function getOwnedServers(userId: string): Promise<{
   return { servers: [], analytics: {}, categoryRanks: {}, isPremium: false };
 }
 
-async function getOwnedAds(userId: string, email: string | null | undefined): Promise<OwnedAd[]> {
+async function getOwnedAds(
+  userId: string,
+  email: string | null | undefined,
+): Promise<OwnedAd[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -208,8 +227,11 @@ async function getOwnedAds(userId: string, email: string | null | undefined): Pr
       .from(sponsorAds)
       .where(
         normalizedEmail
-          ? or(eq(sponsorAds.advertiserUserId, userId), eq(sponsorAds.advertiserEmail, normalizedEmail))
-          : eq(sponsorAds.advertiserUserId, userId)
+          ? or(
+              eq(sponsorAds.advertiserUserId, userId),
+              eq(sponsorAds.advertiserEmail, normalizedEmail),
+            )
+          : eq(sponsorAds.advertiserUserId, userId),
       );
 
     return rows;
@@ -228,7 +250,10 @@ export default async function DashboardPage({
     redirect('/login?callbackUrl=/dashboard');
   }
 
-  const [{ servers: ownedServers, analytics, categoryRanks, isPremium }, ownedAds] = await Promise.all([
+  const [
+    { servers: ownedServers, analytics, categoryRanks, isPremium },
+    ownedAds,
+  ] = await Promise.all([
     getOwnedServers(session.user.id),
     getOwnedAds(session.user.id, session.user.email),
   ]);
@@ -242,7 +267,7 @@ export default async function DashboardPage({
             <h1 className="text-page-title">Manage listings</h1>
             <p className="text-lead dashboard-page-lead">
               {ownedAds.length > 0
-                ? "Track installs, finish setup for free dofollow links, boost discovery, and manage your sponsor ad campaigns — all in one place."
+                ? 'Track installs, finish setup for free dofollow links, boost discovery, and manage your sponsor ad campaigns — all in one place.'
                 : "Track installs, finish setup for free dofollow links, and boost discovery when you're ready."}
             </p>
           </div>

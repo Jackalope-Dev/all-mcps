@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { logImpressions, type ImpressionSurface } from '@/lib/impressionLog';
+import { NextResponse } from 'next/server';
+import { type ImpressionSurface, logImpressions } from '@/lib/impressionLog';
 
 const VALID_SURFACES: Set<string> = new Set([
   'homepage_featured',
@@ -34,14 +34,14 @@ export async function POST(request: Request) {
     if (!Array.isArray(impressions) || impressions.length === 0) {
       return NextResponse.json(
         { error: 'impressions must be a non-empty array' },
-        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } },
       );
     }
 
     if (impressions.length > 50) {
       return NextResponse.json(
         { error: 'Maximum 50 impressions per batch' },
-        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } },
       );
     }
 
@@ -51,13 +51,13 @@ export async function POST(request: Request) {
         typeof imp.serverId === 'string' &&
         imp.serverId.length > 0 &&
         typeof imp.surface === 'string' &&
-        VALID_SURFACES.has(imp.surface)
+        VALID_SURFACES.has(imp.surface),
     );
 
     if (valid.length === 0) {
       return NextResponse.json(
         { error: 'No valid impressions in batch' },
-        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
+        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } },
       );
     }
 
@@ -65,12 +65,13 @@ export async function POST(request: Request) {
     if (!ctx?.env || !(ctx.env as any).DB) {
       return NextResponse.json(
         { error: 'Database not available' },
-        { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
+        { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } },
       );
     }
 
     const db = drizzle((ctx.env as any).DB);
-    const hash = typeof sessionHash === 'string' ? sessionHash.slice(0, 64) : null;
+    const hash =
+      typeof sessionHash === 'string' ? sessionHash.slice(0, 64) : null;
 
     // Fire-and-forget via waitUntil
     ctx.ctx.waitUntil(
@@ -80,19 +81,19 @@ export async function POST(request: Request) {
           serverId: imp.serverId,
           surface: imp.surface as ImpressionSurface,
           sessionHash: hash,
-        }))
-      )
+        })),
+      ),
     );
 
     return NextResponse.json(
       { ok: true, logged: valid.length },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
+      { headers: { 'Access-Control-Allow-Origin': '*' } },
     );
   } catch (err: any) {
     console.error('[impressions] Error:', err?.message);
     return NextResponse.json(
       { error: 'Internal error' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
+      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } },
     );
   }
 }

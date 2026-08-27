@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq, inArray } from 'drizzle-orm';
-import { socialPosts, servers } from '@/db/schema';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
+import { servers, socialPosts } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
-import { dedupeTweetItems, normalizeTweetForDedup, tweetMcpServer } from '@/lib/twitter';
+import {
+  dedupeTweetItems,
+  normalizeTweetForDedup,
+  tweetMcpServer,
+} from '@/lib/twitter';
 
 export async function GET(req: Request) {
   try {
@@ -20,7 +24,7 @@ export async function GET(req: Request) {
       throw new Error('Could not get Cloudflare context.');
     }
 
-    if (!env || !env.DB) {
+    if (!env?.DB) {
       throw new Error('Database binding not found');
     }
 
@@ -43,15 +47,26 @@ export async function GET(req: Request) {
       .limit(50);
 
     return NextResponse.json({
-      posts: posts.map((p: typeof posts[number]) => ({
+      posts: posts.map((p: (typeof posts)[number]) => ({
         ...p,
-        createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt),
-        sentAt: p.sentAt instanceof Date ? p.sentAt.toISOString() : p.sentAt ? String(p.sentAt) : null,
+        createdAt:
+          p.createdAt instanceof Date
+            ? p.createdAt.toISOString()
+            : String(p.createdAt),
+        sentAt:
+          p.sentAt instanceof Date
+            ? p.sentAt.toISOString()
+            : p.sentAt
+              ? String(p.sentAt)
+              : null,
       })),
     });
   } catch (error: any) {
     console.error('Admin social GET error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }
 
@@ -82,7 +97,7 @@ export async function POST(req: Request) {
       throw new Error('Could not get Cloudflare context.');
     }
 
-    if (!env || !env.DB) {
+    if (!env?.DB) {
       throw new Error('Database binding not found');
     }
 
@@ -97,9 +112,15 @@ export async function POST(req: Request) {
     // as a duplicate and Make disables the scenario after enough consecutive 400s.
     if (action === 'mark_sent') {
       if (typeof id !== 'number' && !guid) {
-        return NextResponse.json({ error: 'id or guid is required.' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'id or guid is required.' },
+          { status: 400 },
+        );
       }
-      const where = typeof id === 'number' ? eq(socialPosts.id, id) : eq(socialPosts.guid, guid!);
+      const where =
+        typeof id === 'number'
+          ? eq(socialPosts.id, id)
+          : eq(socialPosts.guid, guid!);
       const sentAt = new Date();
       const updated = await db
         .update(socialPosts)
@@ -107,13 +128,22 @@ export async function POST(req: Request) {
         .where(where)
         .returning({ id: socialPosts.id, serverId: socialPosts.serverId });
       if (updated.length === 0) {
-        return NextResponse.json({ error: 'No matching queued post found.' }, { status: 404 });
+        return NextResponse.json(
+          { error: 'No matching queued post found.' },
+          { status: 404 },
+        );
       }
       const sentServerId = updated[0]?.serverId;
       if (sentServerId) {
-        await db.update(servers).set({ lastFeaturedAt: sentAt }).where(eq(servers.id, sentServerId));
+        await db
+          .update(servers)
+          .set({ lastFeaturedAt: sentAt })
+          .where(eq(servers.id, sentServerId));
       }
-      return NextResponse.json({ success: true, message: 'Post marked as sent.' });
+      return NextResponse.json({
+        success: true,
+        message: 'Post marked as sent.',
+      });
     }
 
     // Clear duplicate queued tweets so Buffer never receives two posts X.com would
@@ -121,16 +151,29 @@ export async function POST(req: Request) {
     // older duplicates.
     if (action === 'dedupe_queue') {
       const queued = await db
-        .select({ id: socialPosts.id, tweetText: socialPosts.tweetText, serverId: socialPosts.serverId })
+        .select({
+          id: socialPosts.id,
+          tweetText: socialPosts.tweetText,
+          serverId: socialPosts.serverId,
+        })
         .from(socialPosts)
-        .where(and(eq(socialPosts.channel, 'twitter'), eq(socialPosts.status, 'queued')))
+        .where(
+          and(
+            eq(socialPosts.channel, 'twitter'),
+            eq(socialPosts.status, 'queued'),
+          ),
+        )
         .orderBy(desc(socialPosts.createdAt));
 
       const keepIds = new Set(dedupeTweetItems(queued).map((row) => row.id));
-      const duplicateIds = queued.filter((row) => !keepIds.has(row.id)).map((row) => row.id);
+      const duplicateIds = queued
+        .filter((row) => !keepIds.has(row.id))
+        .map((row) => row.id);
 
       if (duplicateIds.length > 0) {
-        await db.delete(socialPosts).where(inArray(socialPosts.id, duplicateIds));
+        await db
+          .delete(socialPosts)
+          .where(inArray(socialPosts.id, duplicateIds));
       }
 
       return NextResponse.json({
@@ -145,14 +188,24 @@ export async function POST(req: Request) {
 
     if (action === 'queue_tweet') {
       if (!serverId && !tweetText) {
-        return NextResponse.json({ error: 'serverId or tweetText is required.' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'serverId or tweetText is required.' },
+          { status: 400 },
+        );
       }
 
       if (serverId) {
-        const rows = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+        const rows = await db
+          .select()
+          .from(servers)
+          .where(eq(servers.id, serverId))
+          .limit(1);
         const server = rows[0];
         if (!server) {
-          return NextResponse.json({ error: 'Server not found.' }, { status: 404 });
+          return NextResponse.json(
+            { error: 'Server not found.' },
+            { status: 404 },
+          );
         }
 
         const tweetResult = await tweetMcpServer(
@@ -164,21 +217,29 @@ export async function POST(req: Request) {
             category: server.category,
             isNew: false,
           },
-          { source: 'admin_manual' }
+          { source: 'admin_manual' },
         );
 
         if (!tweetResult.success || !tweetResult.queued) {
-          return NextResponse.json({
-            error: tweetResult.error || 'Server is already queued or was tweeted recently.',
-            result: tweetResult,
-          }, { status: 409 });
+          return NextResponse.json(
+            {
+              error:
+                tweetResult.error ||
+                'Server is already queued or was tweeted recently.',
+              result: tweetResult,
+            },
+            { status: 409 },
+          );
         }
 
         // Match the cron/approval enqueue paths so a manually-queued tweet also counts
         // toward the repost cooldown — otherwise an admin queuing a listing today doesn't
         // stop the highlight cron from picking the same listing again tomorrow.
         if (tweetResult.success && tweetResult.queued) {
-          await db.update(servers).set({ lastTweetedAt: new Date() }).where(eq(servers.id, server.id));
+          await db
+            .update(servers)
+            .set({ lastTweetedAt: new Date() })
+            .where(eq(servers.id, server.id));
         }
 
         return NextResponse.json({
@@ -196,9 +257,16 @@ export async function POST(req: Request) {
           .where(eq(socialPosts.channel, 'twitter'))
           .orderBy(desc(socialPosts.createdAt))
           .limit(150);
-        if (recentPosts.some((row: any) => normalizeTweetForDedup(row.tweetText) === normalized)) {
+        if (
+          recentPosts.some(
+            (row: any) => normalizeTweetForDedup(row.tweetText) === normalized,
+          )
+        ) {
           return NextResponse.json(
-            { error: 'An identical tweet has already been queued or posted recently.' },
+            {
+              error:
+                'An identical tweet has already been queued or posted recently.',
+            },
             { status: 409 },
           );
         }
@@ -211,13 +279,19 @@ export async function POST(req: Request) {
           tweetText: tweetText.trim(),
           source: 'admin_custom',
         });
-        return NextResponse.json({ success: true, message: 'Custom tweet queued successfully.' });
+        return NextResponse.json({
+          success: true,
+          message: 'Custom tweet queued successfully.',
+        });
       }
     }
 
     return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
   } catch (error: any) {
     console.error('Admin social POST error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

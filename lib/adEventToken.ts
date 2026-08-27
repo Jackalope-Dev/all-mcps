@@ -17,9 +17,13 @@ async function hmac(secret: string, message: string): Promise<string> {
     new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign']
+    ['sign'],
   );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  const sig = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    new TextEncoder().encode(message),
+  );
   return Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
@@ -35,17 +39,20 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 function getSecret(env?: { AD_EVENT_TOKEN_SECRET?: string }): string | null {
-  const secret = env?.AD_EVENT_TOKEN_SECRET || process.env.AD_EVENT_TOKEN_SECRET;
+  const secret =
+    env?.AD_EVENT_TOKEN_SECRET || process.env.AD_EVENT_TOKEN_SECRET;
   return secret && secret.length > 0 ? secret : null;
 }
 
 export async function mintAdEventToken(
   adId: string,
-  env?: { AD_EVENT_TOKEN_SECRET?: string }
+  env?: { AD_EVENT_TOKEN_SECRET?: string },
 ): Promise<string | null> {
   const secret = getSecret(env);
   if (!secret) {
-    console.error('[adEventToken] AD_EVENT_TOKEN_SECRET not configured — serving ad without an event token.');
+    console.error(
+      '[adEventToken] AD_EVENT_TOKEN_SECRET not configured — serving ad without an event token.',
+    );
     return null;
   }
   const exp = Date.now() + TOKEN_TTL_MS;
@@ -63,11 +70,13 @@ export async function mintAdEventToken(
 export async function verifyAdEventToken(
   adId: string,
   token: unknown,
-  env?: { AD_EVENT_TOKEN_SECRET?: string }
+  env?: { AD_EVENT_TOKEN_SECRET?: string },
 ): Promise<boolean> {
   const secret = getSecret(env);
   if (!secret) {
-    console.error('[adEventToken] AD_EVENT_TOKEN_SECRET not configured — skipping event token verification.');
+    console.error(
+      '[adEventToken] AD_EVENT_TOKEN_SECRET not configured — skipping event token verification.',
+    );
     return true;
   }
   if (!token || typeof token !== 'string') return false;

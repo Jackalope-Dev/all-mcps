@@ -9,5 +9,5 @@ import dynamic from 'next/dynamic';
 // changes which chunk the *hydration* JS loads from, not what's painted or
 // when, so there's no visible/behavioral change from SafeMarkdownImpl.
 export const SafeMarkdown = dynamic(() =>
-  import('./SafeMarkdownImpl').then((m) => m.SafeMarkdown)
+  import('./SafeMarkdownImpl').then((m) => m.SafeMarkdown),
 );

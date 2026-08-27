@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Sparkles, Copy, Check, Folder, Plus, X } from 'lucide-react';
+import { Check, Copy, Folder, Plus, Sparkles, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { trackFeatureUse } from '../lib/gtag';
 import { resolveInstallConfig } from '../lib/installConfig';
 import { CopyBlock } from './ui/CopyBlock';
-import { trackFeatureUse } from '../lib/gtag';
 import { toast } from './ui/Toast';
 
 interface ServerConfigProps {
@@ -23,9 +23,21 @@ interface ServerConfigProps {
   };
 }
 
-type ClientTab = 'claude' | 'cursor' | 'claude-code' | 'windsurf' | 'cline' | 'zed' | 'cli';
+type ClientTab =
+  | 'claude'
+  | 'cursor'
+  | 'claude-code'
+  | 'windsurf'
+  | 'cline'
+  | 'zed'
+  | 'cli';
 
-const PRESET_ENV_KEYS = ['API_KEY', 'GITHUB_TOKEN', 'AUTH_TOKEN', 'OPENAI_API_KEY'];
+const PRESET_ENV_KEYS = [
+  'API_KEY',
+  'GITHUB_TOKEN',
+  'AUTH_TOKEN',
+  'OPENAI_API_KEY',
+];
 
 const TABS: { id: ClientTab; label: string; file: string }[] = [
   { id: 'claude', label: 'Claude Desktop', file: 'claude_desktop_config.json' },
@@ -42,9 +54,9 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
   const [showEnvVars, setShowEnvVars] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
   const [osMode, setOsMode] = useState<'mac' | 'windows'>('mac');
-  const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>([
-    { key: 'API_KEY', value: '' },
-  ]);
+  const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>(
+    [{ key: 'API_KEY', value: '' }],
+  );
 
   // Robust install configuration derivation supporting stdio, python/uvx, and remote endpoints
   const install = useMemo(
@@ -62,13 +74,14 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
         suggestedInstallCommand: server.suggestedInstallCommand,
         suggestedInstallArgs: server.suggestedInstallArgs,
       }),
-    [server]
+    [server],
   );
 
-  const serverKey = (server.id || server.name)
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, '-')
-    .replace(/^-+|-+$/g, '') || 'mcp-server';
+  const serverKey =
+    (server.id || server.name)
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-')
+      .replace(/^-+|-+$/g, '') || 'mcp-server';
 
   // Active env vars map (only non-empty keys)
   const envObj = useMemo(() => {
@@ -95,7 +108,10 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
         },
       };
 
-      const pathMap: Record<ClientTab, { mac: string; win: string; note?: string }> = {
+      const pathMap: Record<
+        ClientTab,
+        { mac: string; win: string; note?: string }
+      > = {
         claude: {
           mac: '~/Library/Application Support/Claude/claude_desktop_config.json',
           win: '%APPDATA%\\Claude\\claude_desktop_config.json',
@@ -152,7 +168,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
               },
             },
             null,
-            2
+            2,
           );
           break;
         case 'zed':
@@ -168,7 +184,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
               },
             },
             null,
-            2
+            2,
           );
           break;
         case 'cli':
@@ -192,18 +208,21 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
     };
 
     const envCliStr = hasEnv
-      ? Object.entries(envObj)
+      ? `${Object.entries(envObj)
           .map(([k, v]) => `${k}="${v}"`)
-          .join(' ') + ' '
+          .join(' ')} `
       : '';
 
     const envClaudeCodeFlags = hasEnv
-      ? Object.entries(envObj)
+      ? `${Object.entries(envObj)
           .map(([k, v]) => `-e ${k}="${v}"`)
-          .join(' ') + ' '
+          .join(' ')} `
       : '';
 
-    const pathMap: Record<ClientTab, { mac: string; win: string; note?: string }> = {
+    const pathMap: Record<
+      ClientTab,
+      { mac: string; win: string; note?: string }
+    > = {
       claude: {
         mac: '~/Library/Application Support/Claude/claude_desktop_config.json',
         win: '%APPDATA%\\Claude\\claude_desktop_config.json',
@@ -246,7 +265,8 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
         code = JSON.stringify(stdioBlock, null, 2);
         break;
       case 'claude-code':
-        code = `claude mcp add ${serverKey} ${envClaudeCodeFlags}-- ${command} ${args.join(' ')}`.trim();
+        code =
+          `claude mcp add ${serverKey} ${envClaudeCodeFlags}-- ${command} ${args.join(' ')}`.trim();
         break;
       case 'cline':
         code = JSON.stringify(
@@ -262,7 +282,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
             },
           },
           null,
-          2
+          2,
         );
         break;
       case 'zed':
@@ -280,7 +300,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
             },
           },
           null,
-          2
+          2,
         );
         break;
       case 'cli':
@@ -302,7 +322,8 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
       setCopiedPath(true);
       setTimeout(() => setCopiedPath(false), 2000);
       toast.success('Config path copied', {
-        description: 'Paste it into your terminal, Finder (Cmd+Shift+G), or editor.',
+        description:
+          'Paste it into your terminal, Finder (Cmd+Shift+G), or editor.',
       });
     } catch {
       toast.error('Could not copy path automatically.');
@@ -320,9 +341,13 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
     });
   };
 
-  const handleEnvChange = (index: number, field: 'key' | 'value', val: string) => {
+  const handleEnvChange = (
+    index: number,
+    field: 'key' | 'value',
+    val: string,
+  ) => {
     setEnvVars((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: val } : item))
+      prev.map((item, i) => (i === index ? { ...item, [field]: val } : item)),
     );
   };
 
@@ -348,8 +373,19 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
           minWidth: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-          <Sparkles size={18} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            minWidth: 0,
+          }}
+        >
+          <Sparkles
+            size={18}
+            style={{ color: 'var(--accent-color)', flexShrink: 0 }}
+            aria-hidden="true"
+          />
           <h3
             style={{
               fontSize: '1.05rem',
@@ -387,9 +423,15 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.4rem',
-            background: showEnvVars ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
-            border: showEnvVars ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-            color: showEnvVars ? 'var(--accent-color)' : 'var(--text-secondary)',
+            background: showEnvVars
+              ? 'var(--brand-gradient-soft)'
+              : 'var(--bg-muted)',
+            border: showEnvVars
+              ? '1px solid var(--accent-color)'
+              : '1px solid var(--border-color)',
+            color: showEnvVars
+              ? 'var(--accent-color)'
+              : 'var(--text-secondary)',
             fontSize: '0.8rem',
             fontWeight: 600,
             cursor: 'pointer',
@@ -429,7 +471,8 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
               lineHeight: 1.45,
             }}
           >
-            Add required secrets below — values are included directly in the generated snippet so you can copy and paste with confidence.
+            Add required secrets below — values are included directly in the
+            generated snippet so you can copy and paste with confidence.
           </div>
 
           {/* Quick preset chips */}
@@ -442,11 +485,19 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
               marginBottom: '0.75rem',
             }}
           >
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 500,
+              }}
+            >
               Quick Add:
             </span>
             {PRESET_ENV_KEYS.map((pk) => {
-              const alreadyExists = envVars.some((ev) => ev.key.toUpperCase() === pk);
+              const alreadyExists = envVars.some(
+                (ev) => ev.key.toUpperCase() === pk,
+              );
               return (
                 <button
                   key={pk}
@@ -464,8 +515,12 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                     padding: '0.2rem 0.5rem',
                     borderRadius: '6px',
                     border: '1px solid var(--border-color)',
-                    background: alreadyExists ? 'transparent' : 'var(--bg-elevated)',
-                    color: alreadyExists ? 'var(--text-secondary)' : 'var(--accent-color)',
+                    background: alreadyExists
+                      ? 'transparent'
+                      : 'var(--bg-elevated)',
+                    color: alreadyExists
+                      ? 'var(--text-secondary)'
+                      : 'var(--accent-color)',
                     cursor: alreadyExists ? 'default' : 'pointer',
                     opacity: alreadyExists ? 0.5 : 1,
                     display: 'inline-flex',
@@ -498,7 +553,9 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                 aria-label={`Environment variable key ${idx + 1}`}
                 placeholder="KEY (e.g. API_KEY)"
                 value={env.key}
-                onChange={(e) => handleEnvChange(idx, 'key', e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  handleEnvChange(idx, 'key', e.target.value.toUpperCase())
+                }
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -615,16 +672,25 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
               aria-selected={isSelected}
               aria-controls={`panel-${t.id}`}
               onClick={() => {
-                trackFeatureUse('client_config_tabs', { client: t.id, server_id: server.id });
+                trackFeatureUse('client_config_tabs', {
+                  client: t.id,
+                  server_id: server.id,
+                });
                 setActiveTab(t.id);
               }}
               className="client-config-tab"
               style={{
                 padding: '0.42rem 0.85rem',
                 borderRadius: '8px',
-                border: isSelected ? '1px solid var(--accent-color)' : '1px solid transparent',
-                background: isSelected ? 'var(--brand-gradient-soft)' : 'transparent',
-                color: isSelected ? 'var(--accent-color)' : 'var(--text-secondary)',
+                border: isSelected
+                  ? '1px solid var(--accent-color)'
+                  : '1px solid transparent',
+                background: isSelected
+                  ? 'var(--brand-gradient-soft)'
+                  : 'transparent',
+                color: isSelected
+                  ? 'var(--accent-color)'
+                  : 'var(--text-secondary)',
                 fontWeight: isSelected ? 700 : 500,
                 fontSize: '0.825rem',
                 cursor: 'pointer',
@@ -673,8 +739,14 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                 flex: 1,
               }}
             >
-              <Folder size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
-              <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>Target File:</span>
+              <Folder
+                size={15}
+                style={{ color: 'var(--accent-color)', flexShrink: 0 }}
+                aria-hidden="true"
+              />
+              <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>
+                Target File:
+              </span>
               <code
                 style={{
                   color: 'var(--text-primary)',
@@ -691,7 +763,14 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
               </code>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                flexShrink: 0,
+              }}
+            >
               {/* OS Toggle if windows/mac paths differ */}
               {pathInfo.mac !== pathInfo.win && (
                 <div
@@ -708,8 +787,14 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                     onClick={() => setOsMode('mac')}
                     style={{
                       border: 'none',
-                      background: osMode === 'mac' ? 'var(--accent-color)' : 'transparent',
-                      color: osMode === 'mac' ? 'var(--bg-color)' : 'var(--text-secondary)',
+                      background:
+                        osMode === 'mac'
+                          ? 'var(--accent-color)'
+                          : 'transparent',
+                      color:
+                        osMode === 'mac'
+                          ? 'var(--bg-color)'
+                          : 'var(--text-secondary)',
                       fontSize: '0.7rem',
                       fontWeight: 600,
                       padding: '0.15rem 0.4rem',
@@ -724,8 +809,14 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                     onClick={() => setOsMode('windows')}
                     style={{
                       border: 'none',
-                      background: osMode === 'windows' ? 'var(--accent-color)' : 'transparent',
-                      color: osMode === 'windows' ? 'var(--bg-color)' : 'var(--text-secondary)',
+                      background:
+                        osMode === 'windows'
+                          ? 'var(--accent-color)'
+                          : 'transparent',
+                      color:
+                        osMode === 'windows'
+                          ? 'var(--bg-color)'
+                          : 'var(--text-secondary)',
                       fontSize: '0.7rem',
                       fontWeight: 600,
                       padding: '0.15rem 0.4rem',
@@ -751,7 +842,11 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                 }}
                 title="Copy configuration file path"
               >
-                {copiedPath ? <Check size={12} color="#10b981" aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+                {copiedPath ? (
+                  <Check size={12} color="#10b981" aria-hidden="true" />
+                ) : (
+                  <Copy size={12} aria-hidden="true" />
+                )}
                 <span>{copiedPath ? 'Copied' : 'Copy path'}</span>
               </button>
             </div>
@@ -780,11 +875,16 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
           {pathInfo.note ? (
             <>💡 {pathInfo.note}</>
           ) : isCliOrCommand ? (
-            <>💡 Run the command directly in your shell to register or test this MCP server.</>
+            <>
+              💡 Run the command directly in your shell to register or test this
+              MCP server.
+            </>
           ) : (
             <>
-              💡 Paste the JSON block into your client&apos;s configuration file under{' '}
-              <code style={{ color: 'var(--text-primary)' }}>mcpServers</code>, then restart the application.
+              💡 Paste the JSON block into your client&apos;s configuration file
+              under{' '}
+              <code style={{ color: 'var(--text-primary)' }}>mcpServers</code>,
+              then restart the application.
             </>
           )}
         </p>

@@ -1,11 +1,14 @@
 'use client';
 
+import { Check, Code2, Layers, Terminal } from 'lucide-react';
 import React, { useMemo } from 'react';
-import { Terminal, Code2, Layers, Check, Plus } from 'lucide-react';
-import { toast } from './Toast';
 import { trackCopyConfig } from '../../lib/gtag';
-import { resolveInstallConfig, type CachedInstallFields } from '../../lib/installConfig';
+import {
+  type CachedInstallFields,
+  resolveInstallConfig,
+} from '../../lib/installConfig';
 import { isServerInStack, toggleServerInStack } from '../../lib/stackStore';
+import { toast } from './Toast';
 
 interface InstallButtonsProps extends CachedInstallFields {
   serverId: string;
@@ -66,10 +69,11 @@ export function InstallButtons({
       installConfidence,
       suggestedInstallCommand,
       suggestedInstallArgs,
-    ]
+    ],
   );
 
-  const cleanName = serverId || serverName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const cleanName =
+    serverId || serverName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   // Remote HTTP servers: deep-link config uses url transport
   const cursorConfig =
@@ -77,7 +81,7 @@ export function InstallButtons({
       ? { url: install.url }
       : { command: install.command, args: install.args };
   const cursorHref = `cursor://anysphere.cursor-deeplink/mcp/install?name=${encodeURIComponent(
-    cleanName
+    cleanName,
   )}&config=${encodeURIComponent(base64EncodeUtf8(JSON.stringify(cursorConfig)))}`;
 
   const vscodeConfig =
@@ -100,7 +104,7 @@ export function InstallButtons({
           install.confidence === 'low'
             ? 'Config is a best-effort guess — verify in README after install.'
             : 'Approve the install in your editor to finish.',
-      }
+      },
     );
   };
 
@@ -116,18 +120,35 @@ export function InstallButtons({
   const handleToggleStack = () => {
     const nextState = toggleServerInStack(serverId);
     setInStack(nextState);
-    toast.success(nextState ? `Added ${serverName} to your Stack!` : `Removed ${serverName} from Stack`);
+    toast.success(
+      nextState
+        ? `Added ${serverName} to your Stack!`
+        : `Removed ${serverName} from Stack`,
+    );
   };
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem', minWidth: 0, maxWidth: '100%' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.75rem',
+        marginBottom: '0.5rem',
+        minWidth: 0,
+        maxWidth: '100%',
+      }}
+    >
       <a
         href={cursorHref}
         onClick={() => handleInstall('cursor')}
         className="install-deeplink-btn"
         title="1-click install in Cursor IDE"
       >
-        <Terminal size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+        <Terminal
+          size={15}
+          style={{ color: 'var(--accent-color)', flexShrink: 0 }}
+          aria-hidden="true"
+        />
         <span>Add to Cursor</span>
       </a>
       <a
@@ -136,7 +157,11 @@ export function InstallButtons({
         className="install-deeplink-btn"
         title="1-click install in VS Code"
       >
-        <Code2 size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+        <Code2
+          size={15}
+          style={{ color: 'var(--accent-color)', flexShrink: 0 }}
+          aria-hidden="true"
+        />
         <span>Add to VS Code</span>
       </a>
       <button
@@ -148,11 +173,14 @@ export function InstallButtons({
         {inStack ? (
           <Check size={15} aria-hidden="true" style={{ flexShrink: 0 }} />
         ) : (
-          <Layers size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+          <Layers
+            size={15}
+            style={{ color: 'var(--accent-color)', flexShrink: 0 }}
+            aria-hidden="true"
+          />
         )}
         <span>{inStack ? 'In Stack' : 'Add to Stack'}</span>
       </button>
     </div>
   );
 }
-

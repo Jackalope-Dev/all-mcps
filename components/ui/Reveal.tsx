@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface RevealProps {
   children: React.ReactNode;
@@ -19,7 +20,13 @@ interface RevealProps {
  * animation class client-side, so it degrades to "just visible" without JS
  * and is a no-op under prefers-reduced-motion (handled in globals.css).
  */
-export function Reveal({ children, className = '', index = 0, as = 'div', style }: RevealProps) {
+export function Reveal({
+  children,
+  className = '',
+  index = 0,
+  as = 'div',
+  style,
+}: RevealProps) {
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -33,7 +40,7 @@ export function Reveal({ children, className = '', index = 0, as = 'div', style 
           observer.disconnect();
         }
       },
-      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
     );
     observer.observe(el);
     return () => observer.disconnect();

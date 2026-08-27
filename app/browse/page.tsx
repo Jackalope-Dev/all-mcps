@@ -1,7 +1,12 @@
-import DirectoryGrid from '../../components/DirectoryGrid';
 import type { Metadata } from 'next';
+import DirectoryGrid from '../../components/DirectoryGrid';
+import {
+  categoryFromSlug,
+  categorySlug,
+  normalizeCategory,
+  parseCategoryLabel,
+} from '../../lib/categories';
 import { getCategoryServers, getNewestActiveServers } from '../../lib/servers';
-import { categoryFromSlug, categorySlug, normalizeCategory, parseCategoryLabel } from '../../lib/categories';
 
 // 5-minute ISR caches default /browse views at the Edge CDN for instant page loads.
 export const revalidate = 300;
@@ -9,7 +14,9 @@ export const revalidate = 300;
 function resolveCategory(raw: string): string | undefined {
   const fromSlug = categoryFromSlug(raw);
   if (fromSlug) return fromSlug;
-  const fromLabel = categoryFromSlug(categorySlug(parseCategoryLabel(raw).label));
+  const fromLabel = categoryFromSlug(
+    categorySlug(parseCategoryLabel(raw).label),
+  );
   if (fromLabel) return fromLabel;
   const normalized = normalizeCategory(raw);
   if (normalized === raw) return normalized;
@@ -22,7 +29,8 @@ export async function generateMetadata({
   searchParams: Promise<{ category?: string; q?: string; page?: string }>;
 }): Promise<Metadata> {
   const params = await searchParams;
-  const category = typeof params.category === 'string' ? params.category : undefined;
+  const category =
+    typeof params.category === 'string' ? params.category : undefined;
   const q = typeof params.q === 'string' ? params.q : undefined;
 
   const noindex = { robots: { index: false, follow: true } as const };
@@ -30,7 +38,9 @@ export async function generateMetadata({
   if (category) {
     const resolved = resolveCategory(category);
     const slug = resolved ? categorySlug(resolved) : categorySlug(category);
-    const label = resolved ? parseCategoryLabel(resolved).label : parseCategoryLabel(category).label;
+    const label = resolved
+      ? parseCategoryLabel(resolved).label
+      : parseCategoryLabel(category).label;
     return {
       title: `${label} MCP Servers`,
       description: `Browse Model Context Protocol servers in the ${label} category. Find and install the best AI agent tools on AllMCPs.`,
@@ -57,7 +67,14 @@ export async function generateMetadata({
     },
     openGraph: {
       type: 'website',
-      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      images: [
+        {
+          url: 'https://allmcps.com/opengraph-image',
+          width: 1200,
+          height: 630,
+          alt: 'AllMCPs',
+        },
+      ],
       title: 'Browse MCP Servers | AllMCPs',
       description:
         'Browse and search thousands of Model Context Protocol servers. Filter by category, sort by trending or newest.',
@@ -72,11 +89,16 @@ export default async function BrowsePage({
   searchParams: Promise<{ category?: string; q?: string }>;
 }) {
   const params = await searchParams;
-  const categoryRaw = typeof params.category === 'string' ? params.category : null;
+  const categoryRaw =
+    typeof params.category === 'string' ? params.category : null;
   const q = typeof params.q === 'string' ? params.q : '';
-  const category = categoryRaw ? resolveCategory(categoryRaw) || categoryRaw : null;
+  const category = categoryRaw
+    ? resolveCategory(categoryRaw) || categoryRaw
+    : null;
 
-  const servers = category ? await getCategoryServers(category) : await getNewestActiveServers(60);
+  const servers = category
+    ? await getCategoryServers(category)
+    : await getNewestActiveServers(60);
 
   const label = category ? parseCategoryLabel(category).label : null;
   const canonical = category
@@ -99,8 +121,18 @@ export default async function BrowsePage({
       }));
 
   const breadcrumbItems = [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-    { '@type': 'ListItem', position: 2, name: 'Browse', item: 'https://allmcps.com/browse' },
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: 'https://allmcps.com',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Browse',
+      item: 'https://allmcps.com/browse',
+    },
     ...(label
       ? [{ '@type': 'ListItem', position: 3, name: label, item: canonical }]
       : []),
@@ -111,12 +143,20 @@ export default async function BrowsePage({
     '@graph': [
       {
         '@type': 'CollectionPage',
-        name: label ? `${label} MCP Servers` : q ? `Search results for “${q}”` : 'Browse MCP Servers',
+        name: label
+          ? `${label} MCP Servers`
+          : q
+            ? `Search results for “${q}”`
+            : 'Browse MCP Servers',
         description: label
           ? `Model Context Protocol servers in the ${label} category.`
           : 'Browse and search thousands of Model Context Protocol servers for AI agents.',
         url: canonical,
-        isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: 'https://allmcps.com' },
+        isPartOf: {
+          '@type': 'WebSite',
+          name: 'AllMCPs',
+          url: 'https://allmcps.com',
+        },
         ...(itemList.length
           ? {
               mainEntity: {

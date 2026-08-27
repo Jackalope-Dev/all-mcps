@@ -1,6 +1,7 @@
-import React from 'react';
+import type React from 'react';
 
-export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextareaProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   textareaClassName?: string;
   error?: boolean;
@@ -17,7 +18,8 @@ export function Textarea({
   helperText,
   ...props
 }: TextareaProps) {
-  const textareaId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const textareaId =
+    id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
     <div className={`form-field ${className}`.trim()} style={style}>
@@ -32,7 +34,13 @@ export function Textarea({
         {...props}
       />
       {helperText ? (
-        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+        <div
+          style={{
+            fontSize: '0.72rem',
+            color: 'var(--text-secondary)',
+            marginTop: '0.25rem',
+          }}
+        >
           {helperText}
         </div>
       ) : null}

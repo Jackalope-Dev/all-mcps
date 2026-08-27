@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { reviews } from '../../../../../../db/schema';
 import { auth } from '../../../../../../lib/auth';
 
@@ -11,7 +11,10 @@ import { auth } from '../../../../../../lib/auth';
  * app/api/mcp/[id]/is-owner, since the detail page itself can never call
  * auth() without forcing the page dynamic (killing its ISR cache).
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const session = await auth();
   const userId = session?.user?.id;
@@ -25,7 +28,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!env?.DB) return NextResponse.json({ signedIn: true, review: null });
     const db = drizzle(env.DB);
     const [row] = await db
-      .select({ rating: reviews.rating, comment: reviews.comment, commentStatus: reviews.commentStatus })
+      .select({
+        rating: reviews.rating,
+        comment: reviews.comment,
+        commentStatus: reviews.commentStatus,
+      })
       .from(reviews)
       .where(and(eq(reviews.serverId, id), eq(reviews.userId, userId)))
       .limit(1);

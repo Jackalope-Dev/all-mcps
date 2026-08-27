@@ -1,14 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { SignInGate } from './SignInGate';
 import { toast } from './Toast';
 import { TurnstileWidget } from './TurnstileWidget';
-import { SignInGate } from './SignInGate';
 
 type MineResponse = {
   signedIn: boolean;
-  review: { rating: number; comment: string | null; commentStatus: string } | null;
+  review: {
+    rating: number;
+    comment: string | null;
+    commentStatus: string;
+  } | null;
 };
 
 /**
@@ -23,10 +27,14 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
-  const [existingCommentStatus, setExistingCommentStatus] = useState<string | null>(null);
+  const [existingCommentStatus, setExistingCommentStatus] = useState<
+    string | null
+  >(null);
   const [token, setToken] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [justSubmitted, setJustSubmitted] = useState<{ commentStatus: string } | null>(null);
+  const [justSubmitted, setJustSubmitted] = useState<{
+    commentStatus: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,9 +74,16 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
       const res = await fetch(`/api/mcp/${serverId}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating, comment, 'cf-turnstile-response': token }),
+        body: JSON.stringify({
+          rating,
+          comment,
+          'cf-turnstile-response': token,
+        }),
       });
-      const data = (await res.json()) as { error?: string; commentStatus?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        commentStatus?: string;
+      };
       if (!res.ok) throw new Error(data.error || 'Could not submit review');
       setExistingCommentStatus(data.commentStatus || 'none');
       setJustSubmitted({ commentStatus: data.commentStatus || 'none' });
@@ -83,7 +98,9 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
   if (loading) return null;
 
   if (!signedIn) {
-    return <SignInGate href={signInHref} message="Sign in to write a review." />;
+    return (
+      <SignInGate href={signInHref} message="Sign in to write a review." />
+    );
   }
 
   const displayRating = hoverRating || rating;
@@ -97,8 +114,16 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
         background: 'var(--bg-muted)',
       }}
     >
-      <h3 style={{ fontSize: '0.95rem', margin: '0 0 0.75rem', color: 'var(--text-primary)' }}>
-        {existingCommentStatus !== null || rating > 0 ? 'Update your review' : 'Write a review'}
+      <h3
+        style={{
+          fontSize: '0.95rem',
+          margin: '0 0 0.75rem',
+          color: 'var(--text-primary)',
+        }}
+      >
+        {existingCommentStatus !== null || rating > 0
+          ? 'Update your review'
+          : 'Write a review'}
       </h3>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: '0.9rem' }}>
@@ -110,9 +135,18 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
             onMouseEnter={() => setHoverRating(n)}
             onMouseLeave={() => setHoverRating(0)}
             aria-label={`${n} star${n > 1 ? 's' : ''}`}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2 }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 2,
+            }}
           >
-            <Star size={26} fill={n <= displayRating ? '#fbbf24' : 'none'} color={n <= displayRating ? '#fbbf24' : 'var(--border-strong)'} />
+            <Star
+              size={26}
+              fill={n <= displayRating ? '#fbbf24' : 'none'}
+              color={n <= displayRating ? '#fbbf24' : 'var(--border-strong)'}
+            />
           </button>
         ))}
       </div>
@@ -127,7 +161,11 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
         style={{ width: '100%', marginBottom: '0.75rem', resize: 'vertical' }}
       />
 
-      <TurnstileWidget onSuccess={setToken} onExpire={() => setToken(null)} compact />
+      <TurnstileWidget
+        onSuccess={setToken}
+        onExpire={() => setToken(null)}
+        compact
+      />
 
       <button
         type="button"
@@ -141,7 +179,8 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
           background: 'var(--accent-color)',
           color: 'var(--bg-color)',
           fontWeight: 600,
-          cursor: submitting || !token || rating < 1 ? 'not-allowed' : 'pointer',
+          cursor:
+            submitting || !token || rating < 1 ? 'not-allowed' : 'pointer',
           opacity: submitting || !token || rating < 1 ? 0.6 : 1,
         }}
       >
@@ -149,7 +188,14 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
       </button>
 
       {justSubmitted && (
-        <p style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+        <p
+          style={{
+            marginTop: '0.75rem',
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            lineHeight: 1.5,
+          }}
+        >
           Your rating is live now.
           {justSubmitted.commentStatus === 'pending' &&
             ' Your comment is awaiting a quick review before it shows up publicly.'}

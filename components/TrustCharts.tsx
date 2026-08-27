@@ -1,25 +1,34 @@
 'use client';
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  type PointerEvent as ReactPointerEvent,
+  useRef,
+  useState,
+} from 'react';
 
 export type TrendPoint = { date: string; total: number; ai: number };
 
 function formatCompact(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (n >= 1_000_000)
+    return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`;
   return `${n}`;
 }
 
 function formatDateLabel(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 /** Round a max value up to a visually clean gridline step (1 / 2 / 5 x 10^n). */
 function niceMax(value: number): number {
   if (value <= 0) return 1;
   const exp = Math.floor(Math.log10(value));
-  const base = Math.pow(10, exp);
+  const base = 10 ** exp;
   const frac = value / base;
   const step = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10;
   const result = step * base;
@@ -52,8 +61,18 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
   const xAt = (i: number) => PAD_LEFT + i * step;
   const yAt = (v: number) => PAD_TOP + plotH - (v / max) * plotH;
 
-  const totalPath = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(1)} ${yAt(d.total).toFixed(1)}`).join(' ');
-  const aiPath = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(1)} ${yAt(d.ai).toFixed(1)}`).join(' ');
+  const totalPath = data
+    .map(
+      (d, i) =>
+        `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(1)} ${yAt(d.total).toFixed(1)}`,
+    )
+    .join(' ');
+  const aiPath = data
+    .map(
+      (d, i) =>
+        `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(1)} ${yAt(d.ai).toFixed(1)}`,
+    )
+    .join(' ');
   const totalArea = `${totalPath} L ${xAt(data.length - 1).toFixed(1)} ${(PAD_TOP + plotH).toFixed(1)} L ${xAt(0).toFixed(1)} ${(PAD_TOP + plotH).toFixed(1)} Z`;
 
   const gridSteps = [0, 0.5, 1];
@@ -97,10 +116,14 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
       <svg
         ref={svgRef}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        style={{ width: '100%', height: 'auto', display: 'block', touchAction: 'pan-y' }}
+        style={{
+          width: '100%',
+          height: 'auto',
+          display: 'block',
+          touchAction: 'pan-y',
+        }}
         role="img"
         aria-label="Daily API traffic over the last 30 days, total requests versus AI assistant requests"
-        tabIndex={0}
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         onKeyDown={onKeyDown}
@@ -109,8 +132,16 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
       >
         <defs>
           <linearGradient id="trustTrendArea" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="var(--text-secondary)" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="var(--text-secondary)" stopOpacity="0" />
+            <stop
+              offset="0%"
+              stopColor="var(--text-secondary)"
+              stopOpacity="0.18"
+            />
+            <stop
+              offset="100%"
+              stopColor="var(--text-secondary)"
+              stopOpacity="0"
+            />
           </linearGradient>
         </defs>
 
@@ -118,8 +149,22 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
           const y = PAD_TOP + plotH - g * plotH;
           return (
             <g key={g}>
-              <line x1={PAD_LEFT} x2={WIDTH - PAD_RIGHT} y1={y} y2={y} stroke="var(--border-color)" strokeWidth={1} />
-              <text x={PAD_LEFT - 8} y={y} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="var(--text-secondary)">
+              <line
+                x1={PAD_LEFT}
+                x2={WIDTH - PAD_RIGHT}
+                y1={y}
+                y2={y}
+                stroke="var(--border-color)"
+                strokeWidth={1}
+              />
+              <text
+                x={PAD_LEFT - 8}
+                y={y}
+                textAnchor="end"
+                dominantBaseline="middle"
+                fontSize={10}
+                fill="var(--text-secondary)"
+              >
                 {formatCompact(Math.round(g * max))}
               </text>
             </g>
@@ -127,11 +172,41 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
         })}
 
         <path d={totalArea} fill="url(#trustTrendArea)" />
-        <path d={totalPath} fill="none" stroke="var(--text-secondary)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" opacity={0.55} />
-        <path d={aiPath} fill="none" stroke="var(--brand-cyan)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={totalPath}
+          fill="none"
+          stroke="var(--text-secondary)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity={0.55}
+        />
+        <path
+          d={aiPath}
+          fill="none"
+          stroke="var(--brand-cyan)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
 
-        <circle cx={xAt(data.length - 1)} cy={yAt(data[data.length - 1].ai)} r={4} fill="var(--brand-cyan)" stroke="var(--bg-elevated)" strokeWidth={2} />
-        <circle cx={xAt(data.length - 1)} cy={yAt(data[data.length - 1].total)} r={4} fill="var(--text-secondary)" stroke="var(--bg-elevated)" strokeWidth={2} opacity={0.85} />
+        <circle
+          cx={xAt(data.length - 1)}
+          cy={yAt(data[data.length - 1].ai)}
+          r={4}
+          fill="var(--brand-cyan)"
+          stroke="var(--bg-elevated)"
+          strokeWidth={2}
+        />
+        <circle
+          cx={xAt(data.length - 1)}
+          cy={yAt(data[data.length - 1].total)}
+          r={4}
+          fill="var(--text-secondary)"
+          stroke="var(--bg-elevated)"
+          strokeWidth={2}
+          opacity={0.85}
+        />
 
         {hoverIdx !== null && (
           <g>
@@ -145,15 +220,40 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
               strokeDasharray="3 3"
               opacity={0.6}
             />
-            <circle cx={xAt(hoverIdx)} cy={yAt(data[hoverIdx].ai)} r={5} fill="var(--brand-cyan)" stroke="var(--bg-elevated)" strokeWidth={2} />
-            <circle cx={xAt(hoverIdx)} cy={yAt(data[hoverIdx].total)} r={5} fill="var(--text-secondary)" stroke="var(--bg-elevated)" strokeWidth={2} />
+            <circle
+              cx={xAt(hoverIdx)}
+              cy={yAt(data[hoverIdx].ai)}
+              r={5}
+              fill="var(--brand-cyan)"
+              stroke="var(--bg-elevated)"
+              strokeWidth={2}
+            />
+            <circle
+              cx={xAt(hoverIdx)}
+              cy={yAt(data[hoverIdx].total)}
+              r={5}
+              fill="var(--text-secondary)"
+              stroke="var(--bg-elevated)"
+              strokeWidth={2}
+            />
           </g>
         )}
 
-        <text x={PAD_LEFT} y={HEIGHT - 6} fontSize={10} fill="var(--text-secondary)">
+        <text
+          x={PAD_LEFT}
+          y={HEIGHT - 6}
+          fontSize={10}
+          fill="var(--text-secondary)"
+        >
           {formatDateLabel(data[0].date)}
         </text>
-        <text x={WIDTH - PAD_RIGHT} y={HEIGHT - 6} textAnchor="end" fontSize={10} fill="var(--text-secondary)">
+        <text
+          x={WIDTH - PAD_RIGHT}
+          y={HEIGHT - 6}
+          textAnchor="end"
+          fontSize={10}
+          fill="var(--text-secondary)"
+        >
           {formatDateLabel(data[data.length - 1].date)}
         </text>
       </svg>
@@ -165,7 +265,9 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
             top: 4,
             left: tooltipAlignRight ? undefined : `${tooltipLeftPct}%`,
             right: tooltipAlignRight ? `${100 - tooltipLeftPct}%` : undefined,
-            transform: tooltipAlignRight ? 'translateX(12px)' : 'translateX(12px)',
+            transform: tooltipAlignRight
+              ? 'translateX(12px)'
+              : 'translateX(12px)',
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border-color)',
             borderRadius: 10,
@@ -177,33 +279,130 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
             zIndex: 2,
           }}
         >
-          <div style={{ color: 'var(--text-secondary)', marginBottom: '0.35rem', fontWeight: 600 }}>
+          <div
+            style={{
+              color: 'var(--text-secondary)',
+              marginBottom: '0.35rem',
+              fontWeight: 600,
+            }}
+          >
             {formatDateLabel(hovered.date)}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
-              <span style={{ width: 10, height: 2, background: 'var(--brand-cyan)', display: 'inline-block', borderRadius: 1 }} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <span
+                style={{
+                  width: 10,
+                  height: 2,
+                  background: 'var(--brand-cyan)',
+                  display: 'inline-block',
+                  borderRadius: 1,
+                }}
+              />
               AI assistants
             </span>
-            <strong style={{ color: 'var(--text-primary)' }}>{formatCompact(hovered.ai)}</strong>
+            <strong style={{ color: 'var(--text-primary)' }}>
+              {formatCompact(hovered.ai)}
+            </strong>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.2rem' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
-              <span style={{ width: 10, height: 2, background: 'var(--text-secondary)', display: 'inline-block', borderRadius: 1, opacity: 0.6 }} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              marginTop: '0.2rem',
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <span
+                style={{
+                  width: 10,
+                  height: 2,
+                  background: 'var(--text-secondary)',
+                  display: 'inline-block',
+                  borderRadius: 1,
+                  opacity: 0.6,
+                }}
+              />
               Total requests
             </span>
-            <strong style={{ color: 'var(--text-primary)' }}>{formatCompact(hovered.total)}</strong>
+            <strong style={{ color: 'var(--text-primary)' }}>
+              {formatCompact(hovered.total)}
+            </strong>
           </div>
         </div>
       )}
 
-      <ul style={{ listStyle: 'none', display: 'flex', gap: '1.25rem', margin: '0.75rem 0 0', padding: 0 }}>
-        <li style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <span style={{ width: 12, height: 2, background: 'var(--brand-cyan)', display: 'inline-block', borderRadius: 1 }} />
+      <ul
+        style={{
+          listStyle: 'none',
+          display: 'flex',
+          gap: '1.25rem',
+          margin: '0.75rem 0 0',
+          padding: 0,
+        }}
+      >
+        <li
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <span
+            style={{
+              width: 12,
+              height: 2,
+              background: 'var(--brand-cyan)',
+              display: 'inline-block',
+              borderRadius: 1,
+            }}
+          />
           AI assistants
         </li>
-        <li style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <span style={{ width: 12, height: 2, background: 'var(--text-secondary)', display: 'inline-block', borderRadius: 1, opacity: 0.6 }} />
+        <li
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <span
+            style={{
+              width: 12,
+              height: 2,
+              background: 'var(--text-secondary)',
+              display: 'inline-block',
+              borderRadius: 1,
+              opacity: 0.6,
+            }}
+          />
           Total requests
         </li>
       </ul>

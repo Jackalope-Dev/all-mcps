@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { ArrowRight, Calendar, Clock, Rss, Search, Tag, X } from 'lucide-react';
 import Link from 'next/link';
-import { Search, Rss, ArrowRight, Clock, Calendar, Sparkles, Tag, X } from 'lucide-react';
-import { Badge } from './ui/Badge';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import type { BlogPost } from '../lib/blog';
+import { Badge } from './ui/Badge';
 
 function formatDate(date: string): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
@@ -24,7 +25,14 @@ type PostColorTheme = {
 function getPostTheme(post: BlogPost, index: number): PostColorTheme {
   const t = (post.tags || []).map((tag) => tag.toLowerCase());
 
-  if (t.some((tag) => tag.includes('sampling') || tag.includes('vision') || tag.includes('ai'))) {
+  if (
+    t.some(
+      (tag) =>
+        tag.includes('sampling') ||
+        tag.includes('vision') ||
+        tag.includes('ai'),
+    )
+  ) {
     return {
       accent: '#00e5ff',
       lightAccent: '#0284c7',
@@ -32,7 +40,15 @@ function getPostTheme(post: BlogPost, index: number): PostColorTheme {
       kickerLabel: 'AI & Sampling',
     };
   }
-  if (t.some((tag) => tag.includes('architect') || tag.includes('deploy') || tag.includes('remote') || tag.includes('production'))) {
+  if (
+    t.some(
+      (tag) =>
+        tag.includes('architect') ||
+        tag.includes('deploy') ||
+        tag.includes('remote') ||
+        tag.includes('production'),
+    )
+  ) {
     return {
       accent: '#34d399',
       lightAccent: '#047857',
@@ -40,7 +56,15 @@ function getPostTheme(post: BlogPost, index: number): PostColorTheme {
       kickerLabel: 'Architecture & Infra',
     };
   }
-  if (t.some((tag) => tag.includes('secur') || tag.includes('auth') || tag.includes('troubleshoot') || tag.includes('connect'))) {
+  if (
+    t.some(
+      (tag) =>
+        tag.includes('secur') ||
+        tag.includes('auth') ||
+        tag.includes('troubleshoot') ||
+        tag.includes('connect'),
+    )
+  ) {
     return {
       accent: '#fbbf24',
       lightAccent: '#b45309',
@@ -48,7 +72,16 @@ function getPostTheme(post: BlogPost, index: number): PostColorTheme {
       kickerLabel: 'Security & Debugging',
     };
   }
-  if (t.some((tag) => tag.includes('claude') || tag.includes('cursor') || tag.includes('client') || tag.includes('skill') || tag.includes('tool'))) {
+  if (
+    t.some(
+      (tag) =>
+        tag.includes('claude') ||
+        tag.includes('cursor') ||
+        tag.includes('client') ||
+        tag.includes('skill') ||
+        tag.includes('tool'),
+    )
+  ) {
     return {
       accent: '#c084fc',
       lightAccent: '#7e22ce',
@@ -56,7 +89,15 @@ function getPostTheme(post: BlogPost, index: number): PostColorTheme {
       kickerLabel: 'Clients & Tooling',
     };
   }
-  if (t.some((tag) => tag.includes('browser') || tag.includes('scrape') || tag.includes('playwright') || tag.includes('seo'))) {
+  if (
+    t.some(
+      (tag) =>
+        tag.includes('browser') ||
+        tag.includes('scrape') ||
+        tag.includes('playwright') ||
+        tag.includes('seo'),
+    )
+  ) {
     return {
       accent: '#38bdf8',
       lightAccent: '#0369a1',
@@ -66,15 +107,41 @@ function getPostTheme(post: BlogPost, index: number): PostColorTheme {
   }
 
   const fallbacks: PostColorTheme[] = [
-    { accent: '#00e5ff', lightAccent: '#0284c7', badgeVariant: 'cyan', kickerLabel: 'Technical Guide' },
-    { accent: '#c084fc', lightAccent: '#7e22ce', badgeVariant: 'category', kickerLabel: 'Developer Notes' },
-    { accent: '#34d399', lightAccent: '#047857', badgeVariant: 'verified', kickerLabel: 'Protocol Deep Dive' },
-    { accent: '#fbbf24', lightAccent: '#b45309', badgeVariant: 'premium', kickerLabel: 'Best Practices' },
+    {
+      accent: '#00e5ff',
+      lightAccent: '#0284c7',
+      badgeVariant: 'cyan',
+      kickerLabel: 'Technical Guide',
+    },
+    {
+      accent: '#c084fc',
+      lightAccent: '#7e22ce',
+      badgeVariant: 'category',
+      kickerLabel: 'Developer Notes',
+    },
+    {
+      accent: '#34d399',
+      lightAccent: '#047857',
+      badgeVariant: 'verified',
+      kickerLabel: 'Protocol Deep Dive',
+    },
+    {
+      accent: '#fbbf24',
+      lightAccent: '#b45309',
+      badgeVariant: 'premium',
+      kickerLabel: 'Best Practices',
+    },
   ];
   return fallbacks[index % fallbacks.length];
 }
 
-export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: string[] }) {
+export function BlogListClient({
+  posts,
+  tags,
+}: {
+  posts: BlogPost[];
+  tags: string[];
+}) {
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
@@ -98,8 +165,15 @@ export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: strin
       {/* Search & Tag Filter Chrome */}
       <div className="blog-filter-bar surface grid-crosshair grid-crosshair-tl grid-crosshair-br">
         <div className="blog-search-row">
-          <div className="hero-playground-search" style={{ flex: 1, minWidth: '240px' }}>
-            <Search size={15} style={{ color: 'var(--accent-color)', flexShrink: 0 }} aria-hidden="true" />
+          <div
+            className="hero-playground-search"
+            style={{ flex: 1, minWidth: '240px' }}
+          >
+            <Search
+              size={15}
+              style={{ color: 'var(--accent-color)', flexShrink: 0 }}
+              aria-hidden="true"
+            />
             <input
               type="search"
               placeholder="Search guides, architecture, sampling, clients…"
@@ -113,7 +187,13 @@ export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: strin
                 type="button"
                 onClick={() => setQuery('')}
                 aria-label="Clear search"
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.2rem' }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '0.2rem',
+                }}
               >
                 <X size={14} />
               </button>
@@ -126,7 +206,12 @@ export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: strin
             rel="noopener noreferrer"
             className="btn btn-secondary btn-sm"
             title="Subscribe to RSS Feed"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              whiteSpace: 'nowrap',
+            }}
           >
             <Rss size={13} style={{ color: '#fb923c' }} aria-hidden="true" />
             <span>RSS Feed</span>
@@ -152,10 +237,14 @@ export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: strin
                     type="button"
                     className={`directory-tag ${isActive ? 'directory-tag-active' : ''}`}
                     aria-pressed={isActive}
-                    onClick={() => setActiveTag((cur) => (cur === tag ? null : tag))}
+                    onClick={() =>
+                      setActiveTag((cur) => (cur === tag ? null : tag))
+                    }
                   >
                     <span>{tag}</span>
-                    <span style={{ opacity: 0.6, fontSize: '0.7rem' }}>({count})</span>
+                    <span style={{ opacity: 0.6, fontSize: '0.7rem' }}>
+                      ({count})
+                    </span>
                   </button>
                 );
               })}
@@ -166,11 +255,40 @@ export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: strin
 
       {/* Post Grid */}
       {filtered.length === 0 ? (
-        <div className="surface" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderRadius: 'var(--radius-xl)' }}>
-          <Tag size={28} style={{ color: 'var(--text-secondary)', opacity: 0.5, margin: '0 auto 0.75rem' }} />
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 0.5rem' }}>No articles found</h3>
-          <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.25rem', fontSize: '0.9rem' }}>
-            No posts match &ldquo;{query || activeTag}&rdquo;. Try another keyword or clear your filters.
+        <div
+          className="surface"
+          style={{
+            padding: '3.5rem 2rem',
+            textAlign: 'center',
+            borderRadius: 'var(--radius-xl)',
+          }}
+        >
+          <Tag
+            size={28}
+            style={{
+              color: 'var(--text-secondary)',
+              opacity: 0.5,
+              margin: '0 auto 0.75rem',
+            }}
+          />
+          <h3
+            style={{
+              fontSize: '1.15rem',
+              fontWeight: 700,
+              margin: '0 0 0.5rem',
+            }}
+          >
+            No articles found
+          </h3>
+          <p
+            style={{
+              color: 'var(--text-secondary)',
+              margin: '0 0 1.25rem',
+              fontSize: '0.9rem',
+            }}
+          >
+            No posts match &ldquo;{query || activeTag}&rdquo;. Try another
+            keyword or clear your filters.
           </p>
           <button
             type="button"
@@ -212,14 +330,33 @@ export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: strin
                   {/* Kicker bar */}
                   <div className="blog-card-kicker">
                     <span className="blog-card-dot" />
-                    <span>{isHero ? 'FEATURED EDITORIAL' : isWide ? 'POPULAR GUIDE' : theme.kickerLabel}</span>
+                    <span>
+                      {isHero
+                        ? 'FEATURED EDITORIAL'
+                        : isWide
+                          ? 'POPULAR GUIDE'
+                          : theme.kickerLabel}
+                    </span>
                     <span style={{ opacity: 0.5 }}>·</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                    >
                       <Clock size={11} aria-hidden="true" />
                       {post.readingTime} min read
                     </span>
                     <span style={{ opacity: 0.5 }}>·</span>
-                    <time dateTime={post.date} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <time
+                      dateTime={post.date}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                    >
                       <Calendar size={11} aria-hidden="true" />
                       {formatDate(post.date)}
                     </time>
@@ -241,7 +378,13 @@ export function BlogListClient({ posts, tags }: { posts: BlogPost[]; tags: strin
                       </Badge>
                     ))}
                     {post.tags.length > 3 && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', alignSelf: 'center' }}>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          color: 'var(--text-secondary)',
+                          alignSelf: 'center',
+                        }}
+                      >
                         +{post.tags.length - 3}
                       </span>
                     )}

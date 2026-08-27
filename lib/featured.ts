@@ -30,19 +30,21 @@ function seededRandom(seed: number): () => number {
  */
 export function pickDiscoveryServers<T extends FeaturedCandidate>(
   servers: T[],
-  options: { marquee: number; featured: number; seed?: number }
+  options: { marquee: number; featured: number; seed?: number },
 ): { marquee: T[]; featured: T[] } {
   if (servers.length === 0) {
     return { marquee: [], featured: [] };
   }
 
-  const rand = options.seed !== undefined ? seededRandom(options.seed) : Math.random;
+  const rand =
+    options.seed !== undefined ? seededRandom(options.seed) : Math.random;
 
   const premiumServers = servers.filter((s) => s.isPremium);
   const nonPremiumServers = servers.filter((s) => !s.isPremium);
 
   const scored = nonPremiumServers.map((s) => {
-    const engagement = (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
+    const engagement =
+      (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
     const boost =
       (isFeaturedListing(s) ? 2000 : 0) +
       // A flat 800 previously let the catalog's ~1 non-premium `isOfficial`
@@ -58,14 +60,19 @@ export function pickDiscoveryServers<T extends FeaturedCandidate>(
   scored.sort((a, b) => b.score - a.score);
 
   const featured = [...premiumServers];
-  const remainingFeaturedCount = Math.max(0, options.featured - featured.length);
-  
-  const additionalFeatured = scored.slice(0, remainingFeaturedCount).map((x) => x.s);
+  const remainingFeaturedCount = Math.max(
+    0,
+    options.featured - featured.length,
+  );
+
+  const additionalFeatured = scored
+    .slice(0, remainingFeaturedCount)
+    .map((x) => x.s);
   featured.push(...additionalFeatured);
 
   const featuredIds = new Set(featured.map((s) => s.id));
   const rest = scored.filter((x) => !featuredIds.has(x.s.id)).map((x) => x.s);
-  
+
   const marqueeCount = options.marquee;
   const marquee =
     rest.length >= marqueeCount

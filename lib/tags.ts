@@ -1,5 +1,5 @@
-import { getActiveServersLight, type Server } from './servers';
 import { parseCategoryLabel } from './categories';
+import { getActiveServersLight, type Server } from './servers';
 
 export function slugifyTag(str: string): string {
   return str
@@ -11,7 +11,11 @@ export function slugifyTag(str: string): string {
 /** Known technology and topic keywords to extract from server metadata */
 const TECH_KEYWORDS: { slug: string; label: string; pattern: RegExp }[] = [
   { slug: 'github', label: 'GitHub', pattern: /\b(github|git)\b/i },
-  { slug: 'postgres', label: 'PostgreSQL', pattern: /\b(postgres|postgresql|pg)\b/i },
+  {
+    slug: 'postgres',
+    label: 'PostgreSQL',
+    pattern: /\b(postgres|postgresql|pg)\b/i,
+  },
   { slug: 'sqlite', label: 'SQLite', pattern: /\b(sqlite|sqlite3)\b/i },
   { slug: 'mysql', label: 'MySQL', pattern: /\b(mysql|mariadb)\b/i },
   { slug: 'redis', label: 'Redis', pattern: /\b(redis|valkey)\b/i },
@@ -23,27 +27,77 @@ const TECH_KEYWORDS: { slug: string; label: string; pattern: RegExp }[] = [
   { slug: 'figma', label: 'Figma', pattern: /\b(figma)\b/i },
   { slug: 'linear', label: 'Linear', pattern: /\b(linear)\b/i },
   { slug: 'jira', label: 'Jira', pattern: /\b(jira|atlassian)\b/i },
-  { slug: 'docker', label: 'Docker', pattern: /\b(docker|container|containers)\b/i },
+  {
+    slug: 'docker',
+    label: 'Docker',
+    pattern: /\b(docker|container|containers)\b/i,
+  },
   { slug: 'kubernetes', label: 'Kubernetes', pattern: /\b(k8s|kubernetes)\b/i },
   { slug: 'python', label: 'Python', pattern: /\b(python|pip|pipx|pytest)\b/i },
-  { slug: 'typescript', label: 'TypeScript', pattern: /\b(typescript|ts|node|npm|npx)\b/i },
-  { slug: 'browser-automation', label: 'Browser Automation', pattern: /\b(browser|puppeteer|playwright|selenium)\b/i },
-  { slug: 'vector-db', label: 'Vector DB', pattern: /\b(vector|pinecone|chroma|qdrant|weaviate|milvus)\b/i },
+  {
+    slug: 'typescript',
+    label: 'TypeScript',
+    pattern: /\b(typescript|ts|node|npm|npx)\b/i,
+  },
+  {
+    slug: 'browser-automation',
+    label: 'Browser Automation',
+    pattern: /\b(browser|puppeteer|playwright|selenium)\b/i,
+  },
+  {
+    slug: 'vector-db',
+    label: 'Vector DB',
+    pattern: /\b(vector|pinecone|chroma|qdrant|weaviate|milvus)\b/i,
+  },
   { slug: 'seo', label: 'SEO', pattern: /\b(seo|sitemap|robots\.txt)\b/i },
-  { slug: 'email', label: 'Email', pattern: /\b(email|gmail|sendgrid|resend|imap|smtp)\b/i },
-  { slug: 'audio-speech', label: 'Audio & Speech', pattern: /\b(audio|speech|tts|whisper|voice)\b/i },
+  {
+    slug: 'email',
+    label: 'Email',
+    pattern: /\b(email|gmail|sendgrid|resend|imap|smtp)\b/i,
+  },
+  {
+    slug: 'audio-speech',
+    label: 'Audio & Speech',
+    pattern: /\b(audio|speech|tts|whisper|voice)\b/i,
+  },
   { slug: 'video', label: 'Video', pattern: /\b(video|ffmpeg|youtube)\b/i },
-  { slug: 'image-processing', label: 'Image Processing', pattern: /\b(image|images|screenshot|canvas)\b/i },
-  { slug: 'filesystem-storage', label: 'Filesystem & Storage', pattern: /\b(filesystem|files|storage|s3|drive)\b/i },
-  { slug: 'weather', label: 'Weather', pattern: /\b(weather|forecast|meteo)\b/i },
-  { slug: 'crypto-web3', label: 'Crypto & Web3', pattern: /\b(crypto|blockchain|ethereum|solana|bitcoin|web3)\b/i },
-  { slug: 'calendar', label: 'Calendar', pattern: /\b(calendar|gcal|scheduling)\b/i },
+  {
+    slug: 'image-processing',
+    label: 'Image Processing',
+    pattern: /\b(image|images|screenshot|canvas)\b/i,
+  },
+  {
+    slug: 'filesystem-storage',
+    label: 'Filesystem & Storage',
+    pattern: /\b(filesystem|files|storage|s3|drive)\b/i,
+  },
+  {
+    slug: 'weather',
+    label: 'Weather',
+    pattern: /\b(weather|forecast|meteo)\b/i,
+  },
+  {
+    slug: 'crypto-web3',
+    label: 'Crypto & Web3',
+    pattern: /\b(crypto|blockchain|ethereum|solana|bitcoin|web3)\b/i,
+  },
+  {
+    slug: 'calendar',
+    label: 'Calendar',
+    pattern: /\b(calendar|gcal|scheduling)\b/i,
+  },
   { slug: 'obsidian', label: 'Obsidian', pattern: /\b(obsidian)\b/i },
-  { slug: 'auth', label: 'Auth & OAuth', pattern: /\b(auth|oauth|jwt|authentication)\b/i },
+  {
+    slug: 'auth',
+    label: 'Auth & OAuth',
+    pattern: /\b(auth|oauth|jwt|authentication)\b/i,
+  },
 ];
 
 /** Extract all matching tag objects ({ slug, label }) for a server */
-export function extractTagsForServer(server: Server): { slug: string; label: string }[] {
+export function extractTagsForServer(
+  server: Server,
+): { slug: string; label: string }[] {
   const map = new Map<string, string>();
 
   // 1. Explicit server tags
@@ -117,7 +171,9 @@ export async function getAllTagsWithCounts(): Promise<TagWithCount[]> {
 }
 
 /** Get all active servers matching a tag slug */
-export async function getServersForTag(targetSlug: string): Promise<{ servers: Server[]; rawTag: string }> {
+export async function getServersForTag(
+  targetSlug: string,
+): Promise<{ servers: Server[]; rawTag: string }> {
   const servers = await getActiveServersLight();
   const matched: Server[] = [];
   let foundLabel = targetSlug;

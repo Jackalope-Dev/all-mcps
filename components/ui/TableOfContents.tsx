@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { List, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, List } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface TocItem {
   id: string;
@@ -36,7 +37,7 @@ export function TableOfContents({
   const isClickScrolling = useRef<boolean>(false);
 
   useEffect(() => {
-    if (!items || !items.length) return;
+    if (!items?.length) return;
 
     const headingElements: { id: string; element: HTMLElement }[] = [];
 
@@ -56,7 +57,8 @@ export function TableOfContents({
 
       // Check if near bottom of page
       const isAtBottom =
-        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 60;
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 60;
 
       if (isAtBottom && headingElements.length > 0) {
         setActiveId(headingElements[headingElements.length - 1].id);
@@ -91,7 +93,10 @@ export function TableOfContents({
     return null;
   }
 
-  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+  const handleLinkClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    id: string,
+  ) => {
     e.preventDefault();
     setActiveId(id);
     setIsOpen(false);

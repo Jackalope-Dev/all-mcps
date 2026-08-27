@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { SponsorAdUnit } from './SponsorAdUnit';
+import type React from 'react';
 import type { SponsorAd } from '@/lib/ads';
+import { SponsorAdUnit } from './SponsorAdUnit';
 
 // ─── Fake listing card data ───────────────────────────────────────────────────
 
@@ -64,7 +64,14 @@ function MockListingCard({ listing }: { listing: (typeof FAKE_LISTINGS)[0] }) {
       }}
     >
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          marginBottom: '0.6rem',
+        }}
+      >
         {/* Avatar */}
         <div
           style={{
@@ -85,20 +92,61 @@ function MockListingCard({ listing }: { listing: (typeof FAKE_LISTINGS)[0] }) {
           {listing.name.slice(0, 2).toUpperCase()}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div
+            style={{
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {listing.name}
           </div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>by {listing.org}</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+            by {listing.org}
+          </div>
         </div>
       </div>
       {/* Description */}
-      <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: '0 0 0.6rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <p
+        style={{
+          fontSize: '0.775rem',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.45,
+          margin: '0 0 0.6rem',
+          display: '-webkit-box',
+          WebkitLineClamp: 3,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
         {listing.desc}
       </p>
       {/* Tags */}
-      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: 'auto' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.35rem',
+          flexWrap: 'wrap',
+          marginTop: 'auto',
+        }}
+      >
         {listing.tags.map((t) => (
-          <span key={t} style={{ fontSize: '0.65rem', fontWeight: 600, padding: '2px 7px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+          <span
+            key={t}
+            style={{
+              fontSize: '0.65rem',
+              fontWeight: 600,
+              padding: '2px 7px',
+              borderRadius: '8px',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-secondary)',
+            }}
+          >
             {t}
           </span>
         ))}
@@ -124,9 +172,25 @@ function ContextLabel({ children }: { children: React.ReactNode }) {
         gap: '6px',
       }}
     >
-      <span style={{ width: '18px', height: '2px', background: 'var(--border-color)', display: 'inline-block', borderRadius: '2px' }} />
+      <span
+        style={{
+          width: '18px',
+          height: '2px',
+          background: 'var(--border-color)',
+          display: 'inline-block',
+          borderRadius: '2px',
+        }}
+      />
       {children}
-      <span style={{ flex: 1, height: '2px', background: 'var(--border-color)', display: 'inline-block', borderRadius: '2px' }} />
+      <span
+        style={{
+          flex: 1,
+          height: '2px',
+          background: 'var(--border-color)',
+          display: 'inline-block',
+          borderRadius: '2px',
+        }}
+      />
     </div>
   );
 }
@@ -134,7 +198,11 @@ function ContextLabel({ children }: { children: React.ReactNode }) {
 // ─── Individual placement frames ──────────────────────────────────────────────
 
 /** directory_inline — 3-col mini grid with ad slotted in at position 1 (0-indexed) */
-function DirectoryInlineFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
+function DirectoryInlineFrame({
+  previewAd,
+}: {
+  previewAd: Partial<SponsorAd>;
+}) {
   const cols = [FAKE_LISTINGS[0], null, FAKE_LISTINGS[1], FAKE_LISTINGS[2]];
   return (
     <div>
@@ -142,10 +210,14 @@ function DirectoryInlineFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) 
       <div className="placement-preview-grid-3">
         {cols.map((listing, i) =>
           listing === null ? (
-            <SponsorAdUnit key="ad" placement="directory_inline" previewAd={previewAd} />
+            <SponsorAdUnit
+              key="ad"
+              placement="directory_inline"
+              previewAd={previewAd}
+            />
           ) : (
             <MockListingCard key={i} listing={listing} />
-          )
+          ),
         )}
       </div>
     </div>
@@ -170,7 +242,14 @@ function DetailSidebarFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
             userSelect: 'none',
           }}
         >
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.85rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.75rem',
+              alignItems: 'center',
+              marginBottom: '0.85rem',
+            }}
+          >
             <div
               style={{
                 width: '44px',
@@ -190,14 +269,45 @@ function DetailSidebarFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
               EX
             </div>
             <div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Example Database MCP</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>by example · ★ 4.6 · 12.3k installs</div>
+              <div
+                style={{
+                  fontSize: '1.05rem',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  lineHeight: 1.2,
+                }}
+              >
+                Example Database MCP
+              </div>
+              <div
+                style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+              >
+                by example · ★ 4.6 · 12.3k installs
+              </div>
             </div>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 1rem' }}>
-            Execute SQL queries, inspect schemas, and manage databases directly from Claude, Cursor, or Windsurf. Supports read-only and read-write modes with configurable connection strings.
+          <p
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.5,
+              margin: '0 0 1rem',
+            }}
+          >
+            Execute SQL queries, inspect schemas, and manage databases directly
+            from Claude, Cursor, or Windsurf. Supports read-only and read-write
+            modes with configurable connection strings.
           </p>
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+          <div
+            style={{
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: 'var(--text-secondary)',
+              marginBottom: '0.4rem',
+            }}
+          >
             Quick Install
           </div>
           <div
@@ -218,10 +328,36 @@ function DetailSidebarFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
             npx -y @example/database-mcp
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <div style={{ height: '30px', padding: '0 0.85rem', display: 'flex', alignItems: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div
+              style={{
+                height: '30px',
+                padding: '0 0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+              }}
+            >
               Add to Claude
             </div>
-            <div style={{ height: '30px', padding: '0 0.85rem', display: 'flex', alignItems: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div
+              style={{
+                height: '30px',
+                padding: '0 0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+              }}
+            >
               View Source
             </div>
           </div>
@@ -265,17 +401,37 @@ function HeaderBannerFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
         >
           🗄️
         </div>
-        <h4 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 0.4rem', color: 'var(--text-primary)' }}>
+        <h4
+          style={{
+            fontSize: '1.3rem',
+            fontWeight: 800,
+            margin: '0 0 0.4rem',
+            color: 'var(--text-primary)',
+          }}
+        >
           Database MCP Servers
         </h4>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 auto', maxWidth: '420px', lineHeight: 1.5 }}>
-          Browse and install the best Database MCP servers for AI agents. Compare tools, view install commands, and connect Claude, Cursor, and more.
+        <p
+          style={{
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            margin: '0 auto',
+            maxWidth: '420px',
+            lineHeight: 1.5,
+          }}
+        >
+          Browse and install the best Database MCP servers for AI agents.
+          Compare tools, view install commands, and connect Claude, Cursor, and
+          more.
         </p>
       </div>
       {/* Real ad */}
       <SponsorAdUnit placement="header_banner" previewAd={previewAd} />
       {/* Hint of grid below */}
-      <div className="placement-preview-grid-3" style={{ marginTop: '0.75rem', opacity: 0.5, pointerEvents: 'none' }}>
+      <div
+        className="placement-preview-grid-3"
+        style={{ marginTop: '0.75rem', opacity: 0.5, pointerEvents: 'none' }}
+      >
         {FAKE_LISTINGS.slice(0, 3).map((l, i) => (
           <MockListingCard key={i} listing={l} />
         ))}
@@ -290,22 +446,79 @@ function BlogGuideFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
     <div>
       <ContextLabel>Blog / Guide article · embedded mid-content</ContextLabel>
       {/* Fake article top */}
-      <div style={{ opacity: 0.6, pointerEvents: 'none', userSelect: 'none', marginBottom: '1rem' }}>
-        <div style={{ width: '70%', height: '20px', background: 'var(--border-strong)', borderRadius: '5px', marginBottom: '0.85rem' }} />
+      <div
+        style={{
+          opacity: 0.6,
+          pointerEvents: 'none',
+          userSelect: 'none',
+          marginBottom: '1rem',
+        }}
+      >
+        <div
+          style={{
+            width: '70%',
+            height: '20px',
+            background: 'var(--border-strong)',
+            borderRadius: '5px',
+            marginBottom: '0.85rem',
+          }}
+        />
         {[100, 94, 88, 97, 80].map((w, i) => (
-          <div key={i} style={{ height: '10px', background: 'var(--border-strong)', borderRadius: '4px', marginBottom: '8px', width: `${w}%` }} />
+          <div
+            key={i}
+            style={{
+              height: '10px',
+              background: 'var(--border-strong)',
+              borderRadius: '4px',
+              marginBottom: '8px',
+              width: `${w}%`,
+            }}
+          />
         ))}
-        <div style={{ width: '55%', height: '16px', background: 'var(--border-strong)', borderRadius: '5px', margin: '1rem 0 0.75rem' }} />
+        <div
+          style={{
+            width: '55%',
+            height: '16px',
+            background: 'var(--border-strong)',
+            borderRadius: '5px',
+            margin: '1rem 0 0.75rem',
+          }}
+        />
         {[100, 92, 85].map((w, i) => (
-          <div key={i} style={{ height: '10px', background: 'var(--border-strong)', borderRadius: '4px', marginBottom: '8px', width: `${w}%` }} />
+          <div
+            key={i}
+            style={{
+              height: '10px',
+              background: 'var(--border-strong)',
+              borderRadius: '4px',
+              marginBottom: '8px',
+              width: `${w}%`,
+            }}
+          />
         ))}
       </div>
       {/* Real ad */}
       <SponsorAdUnit placement="blog_guide" previewAd={previewAd} />
       {/* Fake article bottom */}
-      <div style={{ opacity: 0.35, pointerEvents: 'none', userSelect: 'none', marginTop: '1rem' }}>
+      <div
+        style={{
+          opacity: 0.35,
+          pointerEvents: 'none',
+          userSelect: 'none',
+          marginTop: '1rem',
+        }}
+      >
         {[100, 90, 78].map((w, i) => (
-          <div key={i} style={{ height: '10px', background: 'var(--border-strong)', borderRadius: '4px', marginBottom: '8px', width: `${w}%` }} />
+          <div
+            key={i}
+            style={{
+              height: '10px',
+              background: 'var(--border-strong)',
+              borderRadius: '4px',
+              marginBottom: '8px',
+              width: `${w}%`,
+            }}
+          />
         ))}
       </div>
     </div>
@@ -314,18 +527,29 @@ function BlogGuideFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
 
 // ─── Public export ────────────────────────────────────────────────────────────
 
-export type PlacementFrameType = 'directory_inline' | 'detail_sidebar' | 'header_banner' | 'blog_guide';
+export type PlacementFrameType =
+  | 'directory_inline'
+  | 'detail_sidebar'
+  | 'header_banner'
+  | 'blog_guide';
 
 interface PlacementContextPreviewProps {
   placement: PlacementFrameType;
   previewAd: Partial<SponsorAd>;
 }
 
-export function PlacementContextPreview({ placement, previewAd }: PlacementContextPreviewProps) {
+export function PlacementContextPreview({
+  placement,
+  previewAd,
+}: PlacementContextPreviewProps) {
   switch (placement) {
-    case 'directory_inline': return <DirectoryInlineFrame previewAd={previewAd} />;
-    case 'detail_sidebar':   return <DetailSidebarFrame previewAd={previewAd} />;
-    case 'header_banner':    return <HeaderBannerFrame previewAd={previewAd} />;
-    case 'blog_guide':       return <BlogGuideFrame previewAd={previewAd} />;
+    case 'directory_inline':
+      return <DirectoryInlineFrame previewAd={previewAd} />;
+    case 'detail_sidebar':
+      return <DetailSidebarFrame previewAd={previewAd} />;
+    case 'header_banner':
+      return <HeaderBannerFrame previewAd={previewAd} />;
+    case 'blog_guide':
+      return <BlogGuideFrame previewAd={previewAd} />;
   }
 }

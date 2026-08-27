@@ -1,9 +1,9 @@
-import { getActiveServersForScoring } from '@/lib/servers';
-import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
-import { categorySlug } from '@/lib/categories';
+import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
 import { BEST_TOPICS } from '@/lib/bestTopics';
+import { categorySlug } from '@/lib/categories';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { WORKFLOW_PROMPTS } from '@/lib/prompts';
+import { getActiveServersForScoring } from '@/lib/servers';
 
 export async function GET(request: Request) {
   const servers = await getActiveServersForScoring();
@@ -114,14 +114,16 @@ export async function GET(request: Request) {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const cfCtx = await getCloudflareContext();
     if (cfCtx?.env && (cfCtx.env as any).DB) {
-      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const logDb = (await import('drizzle-orm/d1')).drizzle(
+        (cfCtx.env as any).DB,
+      );
       const meta = extractRequestMeta(request);
       cfCtx.ctx.waitUntil(
         logApiAccess(logDb, {
           endpoint: 'llms_txt',
           userAgent: meta.userAgent,
           ipCountry: meta.ipCountry,
-        })
+        }),
       );
     }
   } catch {

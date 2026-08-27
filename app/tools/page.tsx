@@ -1,8 +1,15 @@
-import React from 'react';
+import {
+  ArrowRight,
+  Calculator,
+  CheckCircle2,
+  Code2,
+  FileJson,
+  ShieldCheck,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { FileJson, CheckCircle2, Calculator, Code2, ShieldCheck, ArrowRight } from 'lucide-react';
-import { PageShell, PageHeader } from '../../components/PageShell';
+import type React from 'react';
+import { PageHeader, PageShell } from '../../components/PageShell';
 
 export const metadata: Metadata = {
   title: 'Free MCP Developer Tools — Generators & Validators',
@@ -10,7 +17,14 @@ export const metadata: Metadata = {
     'Free browser-based MCP tools: convert OpenAPI specs to server code, inspect JSON-RPC payloads, validate client configs, and calculate token overhead.',
   alternates: { canonical: 'https://allmcps.com/tools' },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Free MCP Developer Tools — Generators & Validators | AllMCPs',
     description:
       'Free browser-based tools for Model Context Protocol: OpenAPI code generator, JSON-RPC protocol inspector, config validator, and token cost calculator.',
@@ -144,7 +158,11 @@ const jsonLd = {
       description:
         'Browser-based utilities for building, inspecting, validating, and optimizing Model Context Protocol servers and client configurations.',
       url: 'https://allmcps.com/tools',
-      isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: 'https://allmcps.com' },
+      isPartOf: {
+        '@type': 'WebSite',
+        name: 'AllMCPs',
+        url: 'https://allmcps.com',
+      },
       mainEntity: {
         '@type': 'ItemList',
         numberOfItems: TOOLS.length,
@@ -159,8 +177,18 @@ const jsonLd = {
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-        { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://allmcps.com/tools' },
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://allmcps.com',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Tools',
+          item: 'https://allmcps.com/tools',
+        },
       ],
     },
   ],

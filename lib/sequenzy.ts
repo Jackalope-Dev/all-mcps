@@ -31,7 +31,9 @@ export type SequenzySubscriberSync = {
  * alongside a submission or Stripe webhook and must not fail because Sequenzy is down.
  * Always merges (adds tags to an existing subscriber) rather than skipping or overwriting.
  */
-export async function syncSequenzySubscriber(input: SequenzySubscriberSync): Promise<void> {
+export async function syncSequenzySubscriber(
+  input: SequenzySubscriberSync,
+): Promise<void> {
   let key = process.env.SEQUENZY_API_KEY;
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');

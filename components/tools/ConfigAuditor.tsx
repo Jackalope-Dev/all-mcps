@@ -1,7 +1,17 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Copy, Check, AlertTriangle, AlertCircle, Info, Sparkles, Plus, Search, X } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  Check,
+  Copy,
+  Info,
+  Plus,
+  Search,
+  Sparkles,
+  X,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { auditMcpConfig, mergeServerIntoConfig } from '../../lib/configAudit';
 import { trackFeatureUse } from '../../lib/gtag';
 
@@ -22,11 +32,40 @@ const SAMPLE_CONFIG = `{
 }`;
 
 const SAMPLE_SERVERS = [
-  { id: 'modelcontextprotocol-server-sqlite', name: 'Server Sqlite', command: 'npx', args: ['-y', '@modelcontextprotocol/server-sqlite'] },
-  { id: 'modelcontextprotocol-server-filesystem', name: 'Server Filesystem', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/Users/username/Desktop'] },
-  { id: 'modelcontextprotocol-server-memory', name: 'Server Memory', command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'] },
-  { id: 'modelcontextprotocol-server-fetch', name: 'Server Fetch', command: 'npx', args: ['-y', '@modelcontextprotocol/server-fetch'] },
-  { id: 'modelcontextprotocol-server-git', name: 'Server Git', command: 'npx', args: ['-y', '@modelcontextprotocol/server-git'] },
+  {
+    id: 'modelcontextprotocol-server-sqlite',
+    name: 'Server Sqlite',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-sqlite'],
+  },
+  {
+    id: 'modelcontextprotocol-server-filesystem',
+    name: 'Server Filesystem',
+    command: 'npx',
+    args: [
+      '-y',
+      '@modelcontextprotocol/server-filesystem',
+      '/Users/username/Desktop',
+    ],
+  },
+  {
+    id: 'modelcontextprotocol-server-memory',
+    name: 'Server Memory',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-memory'],
+  },
+  {
+    id: 'modelcontextprotocol-server-fetch',
+    name: 'Server Fetch',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-fetch'],
+  },
+  {
+    id: 'modelcontextprotocol-server-git',
+    name: 'Server Git',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-git'],
+  },
 ];
 
 export function ConfigAuditor() {
@@ -44,23 +83,38 @@ export function ConfigAuditor() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleMergeServer = (s: { id: string; command: string; args: string[] }) => {
+  const handleMergeServer = (s: {
+    id: string;
+    command: string;
+    args: string[];
+  }) => {
     const updated = mergeServerIntoConfig(jsonText, s);
     setJsonText(updated);
     setShowModal(false);
-    trackFeatureUse('config_auditor', { action: 'merge_server', server_id: s.id });
+    trackFeatureUse('config_auditor', {
+      action: 'merge_server',
+      server_id: s.id,
+    });
   };
 
   const filteredPickerServers = SAMPLE_SERVERS.filter(
     (s) =>
       s.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
-      s.id.toLowerCase().includes(pickerSearch.toLowerCase())
+      s.id.toLowerCase().includes(pickerSearch.toLowerCase()),
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Action Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}
+      >
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button
             type="button"
@@ -83,7 +137,11 @@ export function ConfigAuditor() {
             type="button"
             className="btn btn-sm btn-primary"
             onClick={() => setShowModal(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
           >
             <Plus size={14} /> Merge Directory Server
           </button>
@@ -92,7 +150,11 @@ export function ConfigAuditor() {
             type="button"
             className="btn btn-sm btn-primary"
             onClick={handleCopy}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
           >
             {copied ? <Check size={14} /> : <Copy size={14} />}
             <span>{copied ? 'Copied!' : 'Copy Config'}</span>
@@ -101,11 +163,27 @@ export function ConfigAuditor() {
       </div>
 
       {/* Editor & Audit Results Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '1.5rem',
+        }}
+      >
         {/* Editor Pane */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label htmlFor="config-auditor-input" style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-            Paste Config JSON (`claude_desktop_config.json`, `.cursor/mcp.json`, etc.)
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+        >
+          <label
+            htmlFor="config-auditor-input"
+            style={{
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              color: 'var(--text-primary)',
+            }}
+          >
+            Paste Config JSON (`claude_desktop_config.json`, `.cursor/mcp.json`,
+            etc.)
           </label>
           <textarea
             id="config-auditor-input"
@@ -127,7 +205,16 @@ export function ConfigAuditor() {
 
         {/* Audit Report Pane */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h2
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
             <Sparkles size={18} style={{ color: 'var(--accent-color)' }} />
             Live Audit Report
           </h2>
@@ -137,7 +224,9 @@ export function ConfigAuditor() {
             style={{
               padding: '1.25rem',
               borderRadius: '12px',
-              border: audit.isValidJson ? '1px solid var(--border-color)' : '1px solid rgba(248, 113, 113, 0.4)',
+              border: audit.isValidJson
+                ? '1px solid var(--border-color)'
+                : '1px solid rgba(248, 113, 113, 0.4)',
               background: 'var(--bg-muted)',
               display: 'flex',
               flexDirection: 'column',
@@ -145,22 +234,69 @@ export function ConfigAuditor() {
             }}
           >
             {/* Status Summary Pill */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Detected format: <strong style={{ color: 'var(--accent-color)', textTransform: 'uppercase' }}>{audit.formatDetected}</strong>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span
+                style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
+              >
+                Detected format:{' '}
+                <strong
+                  style={{
+                    color: 'var(--accent-color)',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {audit.formatDetected}
+                </strong>
               </span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Servers: <strong style={{ color: 'var(--text-primary)' }}>{audit.serverCount}</strong>
+              <span
+                style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
+              >
+                Servers:{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>
+                  {audit.serverCount}
+                </strong>
               </span>
             </div>
 
             {/* Issue Items */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+              }}
+            >
               {audit.issues.map((issue, idx) => {
-                const Icon = issue.type === 'error' ? AlertCircle : issue.type === 'warning' ? AlertTriangle : Info;
-                const borderClr = issue.type === 'error' ? 'rgba(248, 113, 113, 0.4)' : issue.type === 'warning' ? 'rgba(245, 158, 11, 0.4)' : 'var(--border-color)';
-                const bgClr = issue.type === 'error' ? 'rgba(248, 113, 113, 0.08)' : issue.type === 'warning' ? 'rgba(245, 158, 11, 0.08)' : 'var(--brand-gradient-soft)';
-                const textClr = issue.type === 'error' ? '#ef4444' : issue.type === 'warning' ? '#d97706' : 'var(--accent-color)';
+                const Icon =
+                  issue.type === 'error'
+                    ? AlertCircle
+                    : issue.type === 'warning'
+                      ? AlertTriangle
+                      : Info;
+                const borderClr =
+                  issue.type === 'error'
+                    ? 'rgba(248, 113, 113, 0.4)'
+                    : issue.type === 'warning'
+                      ? 'rgba(245, 158, 11, 0.4)'
+                      : 'var(--border-color)';
+                const bgClr =
+                  issue.type === 'error'
+                    ? 'rgba(248, 113, 113, 0.08)'
+                    : issue.type === 'warning'
+                      ? 'rgba(245, 158, 11, 0.08)'
+                      : 'var(--brand-gradient-soft)';
+                const textClr =
+                  issue.type === 'error'
+                    ? '#ef4444'
+                    : issue.type === 'warning'
+                      ? '#d97706'
+                      : 'var(--accent-color)';
 
                 return (
                   <div
@@ -174,11 +310,31 @@ export function ConfigAuditor() {
                       gap: '0.65rem',
                     }}
                   >
-                    <Icon size={18} style={{ color: textClr, flexShrink: 0, marginTop: '2px' }} />
+                    <Icon
+                      size={18}
+                      style={{
+                        color: textClr,
+                        flexShrink: 0,
+                        marginTop: '2px',
+                      }}
+                    />
                     <div style={{ fontSize: '0.85rem', lineHeight: 1.45 }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{issue.message}</div>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          color: 'var(--text-primary)',
+                        }}
+                      >
+                        {issue.message}
+                      </div>
                       {issue.suggestion && (
-                        <div style={{ color: 'var(--text-secondary)', marginTop: '0.25rem', fontSize: '0.8rem' }}>
+                        <div
+                          style={{
+                            color: 'var(--text-secondary)',
+                            marginTop: '0.25rem',
+                            fontSize: '0.8rem',
+                          }}
+                        >
                           💡 {issue.suggestion}
                         </div>
                       )}
@@ -219,17 +375,45 @@ export function ConfigAuditor() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  margin: 0,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 Merge Directory Server into Config
               </h3>
-              <button type="button" onClick={() => setShowModal(false)} className="btn btn-sm btn-secondary" style={{ padding: '0.3rem' }}>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="btn btn-sm btn-secondary"
+                style={{ padding: '0.3rem' }}
+              >
                 <X size={16} />
               </button>
             </div>
 
             <div style={{ position: 'relative', marginBottom: '1rem' }}>
-              <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <Search
+                size={16}
+                style={{
+                  position: 'absolute',
+                  left: '0.85rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-secondary)',
+                }}
+              />
               <input
                 type="text"
                 className="form-input"
@@ -241,7 +425,15 @@ export function ConfigAuditor() {
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '280px', overflowY: 'auto' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                maxHeight: '280px',
+                overflowY: 'auto',
+              }}
+            >
               {filteredPickerServers.map((s) => (
                 <button
                   key={s.id}
@@ -261,10 +453,27 @@ export function ConfigAuditor() {
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{s.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{s.command} {s.args.join(' ')}</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      {s.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      {s.command} {s.args.join(' ')}
+                    </div>
                   </div>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-color)' }}>+ Merge</span>
+                  <span
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: 'var(--accent-color)',
+                    }}
+                  >
+                    + Merge
+                  </span>
                 </button>
               ))}
             </div>

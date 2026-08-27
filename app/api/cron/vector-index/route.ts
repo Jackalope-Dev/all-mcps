@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { servers } from '@/db/schema';
 import { isAdminAuthorized } from '@/lib/adminAuth';
 import { upsertServerEmbeddingsBatch } from '@/lib/vectorSearch';
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     if (!env?.VECTOR_INDEX || !env?.AI) {
       return NextResponse.json(
         { error: 'Vectorize or Workers AI bindings not configured' },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -77,10 +77,16 @@ export async function POST(req: Request) {
           db
             .select({ id: servers.id })
             .from(servers)
-            .where(and(eq(servers.status, 'active'), isNull(servers.vectorSyncedAt)))
-            .orderBy(desc(servers.views), desc(servers.upvotes), asc(servers.createdAt))
-            .limit(BATCH_SIZE)
-        )
+            .where(
+              and(eq(servers.status, 'active'), isNull(servers.vectorSyncedAt)),
+            )
+            .orderBy(
+              desc(servers.views),
+              desc(servers.upvotes),
+              asc(servers.createdAt),
+            )
+            .limit(BATCH_SIZE),
+        ),
       )
       .returning({
         id: servers.id,
@@ -104,7 +110,7 @@ export async function POST(req: Request) {
     const { successfulIds, failedIds } = await upsertServerEmbeddingsBatch(
       claimed,
       env,
-      CONCURRENCY
+      CONCURRENCY,
     );
     const indexed = successfulIds.length;
     const failed = failedIds.length;
@@ -112,7 +118,10 @@ export async function POST(req: Request) {
     // Release claims that failed (transient AI/Vectorize error) so they're retried
     // next tick instead of stuck "claimed" forever.
     if (failedIds.length > 0) {
-      await db.update(servers).set({ vectorSyncedAt: null }).where(inArray(servers.id, failedIds));
+      await db
+        .update(servers)
+        .set({ vectorSyncedAt: null })
+        .where(inArray(servers.id, failedIds));
     }
 
     const [{ remaining }] = await db
@@ -131,7 +140,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to execute vector indexing cron' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

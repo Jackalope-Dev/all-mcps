@@ -12,7 +12,12 @@ import { callMcpEndpoint } from '@/lib/mcpIntrospect';
  *     authenticated servers without us proxying arbitrary hop-by-hop headers.
  */
 
-const ALLOWED_METHODS = new Set(['tools/list', 'tools/call', 'resources/list', 'prompts/list']);
+const ALLOWED_METHODS = new Set([
+  'tools/list',
+  'tools/call',
+  'resources/list',
+  'prompts/list',
+]);
 
 function sanitizeHeaders(input: unknown): Record<string, string> {
   const out: Record<string, string> = {};
@@ -20,7 +25,11 @@ function sanitizeHeaders(input: unknown): Record<string, string> {
   for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
     if (typeof v !== 'string') continue;
     const key = k.toLowerCase();
-    if (key === 'authorization' || key.startsWith('x-') || key === 'mcp-session-id') {
+    if (
+      key === 'authorization' ||
+      key.startsWith('x-') ||
+      key === 'mcp-session-id'
+    ) {
       out[k] = v.slice(0, 4096);
     }
   }
@@ -32,16 +41,25 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ ok: false, error: 'Invalid JSON body.' }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: 'Invalid JSON body.' },
+      { status: 400 },
+    );
   }
 
   const url = typeof body?.url === 'string' ? body.url.trim() : '';
   const method = typeof body?.method === 'string' ? body.method : 'tools/list';
   if (!ALLOWED_METHODS.has(method)) {
-    return NextResponse.json({ ok: false, error: 'Unsupported method.' }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: 'Unsupported method.' },
+      { status: 400 },
+    );
   }
   if (url.length > 2048) {
-    return NextResponse.json({ ok: false, error: 'URL too long.' }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: 'URL too long.' },
+      { status: 400 },
+    );
   }
 
   const result = await callMcpEndpoint(url, {

@@ -1,12 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 console.log('--- Testing Agent Submission Components ---');
 
-const files = [
-  'app/api/v1/submit/route.ts',
-  'components/forms/SubmitForm.tsx',
-];
+const files = ['app/api/v1/submit/route.ts', 'components/forms/SubmitForm.tsx'];
 
 let ok = true;
 for (const f of files) {

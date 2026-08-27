@@ -1,11 +1,12 @@
-import * as React from "react";
-import { Text, Section, Row, Column, Hr, Button } from "@react-email/components";
 import {
-  BaseLayout,
-  textStyle,
-  highlightTextStyle,
-  buttonStyle,
-} from "./BaseLayout";
+  Button,
+  Column,
+  Hr,
+  Row,
+  Section,
+  Text,
+} from '@react-email/components';
+import { BaseLayout, buttonStyle, textStyle } from './BaseLayout';
 
 interface ReceiptEmailProps {
   receiptId: string;
@@ -17,10 +18,10 @@ interface ReceiptEmailProps {
 }
 
 export const ReceiptEmail = ({
-  receiptId = "RCPT-123456",
-  date = "July 27, 2026",
-  amount = "$49.00",
-  description = "AllMCPs Listing Fee",
+  receiptId = 'RCPT-123456',
+  date = 'July 27, 2026',
+  amount = '$49.00',
+  description = 'AllMCPs Listing Fee',
   actionText,
   actionUrl,
 }: ReceiptEmailProps) => {
@@ -32,7 +33,7 @@ export const ReceiptEmail = ({
       <Text style={textStyle}>
         Thank you for your payment. Your transaction was successful.
       </Text>
-      
+
       <Section style={receiptSection}>
         <Row style={row}>
           <Column style={labelColumn}>Receipt ID</Column>
@@ -60,8 +61,9 @@ export const ReceiptEmail = ({
         </Button>
       )}
 
-      <Text style={{ ...textStyle, marginTop: "32px", fontSize: "14px" }}>
-        If you have any questions about this receipt, please reply to this email.
+      <Text style={{ ...textStyle, marginTop: '32px', fontSize: '14px' }}>
+        If you have any questions about this receipt, please reply to this
+        email.
       </Text>
     </BaseLayout>
   );
@@ -70,47 +72,47 @@ export const ReceiptEmail = ({
 export default ReceiptEmail;
 
 const receiptSection = {
-  backgroundColor: "#020617", // Slate 950
-  borderRadius: "8px",
-  padding: "24px",
-  marginTop: "24px",
-  border: "1px solid rgba(255,255,255,0.05)",
+  backgroundColor: '#020617', // Slate 950
+  borderRadius: '8px',
+  padding: '24px',
+  marginTop: '24px',
+  border: '1px solid rgba(255,255,255,0.05)',
 };
 
 const row = {
-  marginBottom: "12px",
+  marginBottom: '12px',
 };
 
 const labelColumn = {
-  color: "#64748b",
-  fontSize: "14px",
-  width: "120px",
+  color: '#64748b',
+  fontSize: '14px',
+  width: '120px',
 };
 
 const valueColumn = {
-  color: "#e2e8f0",
-  fontSize: "14px",
-  fontWeight: "500",
+  color: '#e2e8f0',
+  fontSize: '14px',
+  fontWeight: '500',
 };
 
 const divider = {
-  borderColor: "rgba(255, 255, 255, 0.1)",
-  margin: "12px 0",
+  borderColor: 'rgba(255, 255, 255, 0.1)',
+  margin: '12px 0',
 };
 
 const totalRow = {
-  marginTop: "12px",
+  marginTop: '12px',
 };
 
 const totalLabelColumn = {
-  color: "#ffffff",
-  fontSize: "16px",
-  fontWeight: "500",
-  width: "120px",
+  color: '#ffffff',
+  fontSize: '16px',
+  fontWeight: '500',
+  width: '120px',
 };
 
 const totalValueColumn = {
-  color: "#00E5FF", // Cyan
-  fontSize: "16px",
-  fontWeight: "800",
+  color: '#00E5FF', // Cyan
+  fontSize: '16px',
+  fontWeight: '800',
 };

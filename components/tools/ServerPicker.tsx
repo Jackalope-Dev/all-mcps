@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
+import { Input } from '../ui/Input';
 
 export interface DirectoryServerHit {
   id: string;
@@ -38,7 +38,9 @@ export function ServerPicker({
     setLoading(true);
     setError(false);
     const timer = setTimeout(() => {
-      fetch(`/api/v1/search?q=${encodeURIComponent(trimmedQuery)}&limit=8`, { signal: controller.signal })
+      fetch(`/api/v1/search?q=${encodeURIComponent(trimmedQuery)}&limit=8`, {
+        signal: controller.signal,
+      })
         .then((res) => {
           if (!res.ok) throw new Error(`Search failed (${res.status})`);
           return res.json() as Promise<{ servers?: DirectoryServerHit[] }>;
@@ -67,7 +69,10 @@ export function ServerPicker({
   useEffect(() => {
     if (!isOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -101,7 +106,9 @@ export function ServerPicker({
       {showDropdown && (
         <div style={{ marginTop: '0.5rem' }}>
           {loading && (
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Searching…</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              Searching…
+            </div>
           )}
           {!loading && error && (
             <div
@@ -114,16 +121,29 @@ export function ServerPicker({
                 padding: '0.6rem 0.75rem',
               }}
             >
-              Search is temporarily unavailable — try again in a moment, or paste the listing id directly.
+              Search is temporarily unavailable — try again in a moment, or
+              paste the listing id directly.
             </div>
           )}
           {!loading && !error && results.length === 0 && (
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '0.25rem 0' }}>
+            <div
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                padding: '0.25rem 0',
+              }}
+            >
               No matching listings found for &ldquo;{trimmedQuery}&rdquo;.
             </div>
           )}
           {!loading && !error && results.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+              }}
+            >
               {results.map((server) => (
                 <Card
                   key={server.id}
@@ -137,7 +157,14 @@ export function ServerPicker({
                   style={{ padding: '0.75rem 1rem', cursor: 'pointer' }}
                 >
                   <strong style={{ display: 'block' }}>{server.name}</strong>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{server.category}</span>
+                  <span
+                    style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    {server.category}
+                  </span>
                 </Card>
               ))}
             </div>

@@ -1,27 +1,32 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import Link from 'next/link';
 import {
-  Layers,
-  Trash2,
-  Copy,
-  Check,
+  Bot,
+  CheckCircle2,
   Download,
+  Layers,
+  Plus,
   Share2,
   Sparkles,
-  X,
-  ExternalLink,
-  Plus,
+  Trash2,
   Wrench,
-  CheckCircle2,
-  Bot,
+  X,
 } from 'lucide-react';
-import { getStackServerIds, removeServerFromStack, toggleServerInStack, clearStack, buildStackShareUrl, parseStackFromUrl, saveStackServerIds } from '@/lib/stackStore';
+import Link from 'next/link';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { trackFeatureUse } from '@/lib/gtag';
 import { resolveInstallConfig } from '@/lib/installConfig';
 import type { Server } from '@/lib/servers';
+import {
+  buildStackShareUrl,
+  clearStack,
+  getStackServerIds,
+  parseStackFromUrl,
+  removeServerFromStack,
+  saveStackServerIds,
+  toggleServerInStack,
+} from '@/lib/stackStore';
 import { CopyBlock } from './ui/CopyBlock';
-import { trackFeatureUse } from '@/lib/gtag';
 
 type ClientFormat = 'claude' | 'cursor' | 'cline' | 'windsurf' | 'prompt';
 
@@ -138,28 +143,50 @@ export function StackBuilderModal({
       .map((id) => {
         const found = map.get(id);
         if (found) return found;
-        const cleanName =
-          id
-            .replace(/-(mcp|server)$/gi, '')
-            .replace(/[-_]/g, ' ')
-            .replace(/\b\w/g, (c) => c.toUpperCase()) + ' MCP';
-        return { id, name: cleanName, description: 'Model Context Protocol Server', category: 'MCP Tool', url: '' };
+        const cleanName = `${id
+          .replace(/-(mcp|server)$/gi, '')
+          .replace(/[-_]/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase())} MCP`;
+        return {
+          id,
+          name: cleanName,
+          description: 'Model Context Protocol Server',
+          category: 'MCP Tool',
+          url: '',
+        };
       })
       .filter(Boolean);
   }, [allServers, fetchedCatalog, serverIds]);
 
   const recommendedServers = useMemo(() => {
     const selectedSet = new Set(serverIds);
-    const catalog = fetchedCatalog.length > 0 ? fetchedCatalog : (allServers as unknown as CatalogServerItem[]);
+    const catalog =
+      fetchedCatalog.length > 0
+        ? fetchedCatalog
+        : (allServers as unknown as CatalogServerItem[]);
     if (!catalog.length) return [];
 
-    const defaultStapleIds = ['github-mcp', 'postgresql-mcp', 'puppeteer-mcp', 'memory-mcp', 'sqlite-mcp', 'docker-mcp', 'slack-mcp', 'terminal-mcp'];
-    const activeCategories = new Set(selectedServers.map((s) => s.category).filter(Boolean));
+    const defaultStapleIds = [
+      'github-mcp',
+      'postgresql-mcp',
+      'puppeteer-mcp',
+      'memory-mcp',
+      'sqlite-mcp',
+      'docker-mcp',
+      'slack-mcp',
+      'terminal-mcp',
+    ];
+    const activeCategories = new Set(
+      selectedServers.map((s) => s.category).filter(Boolean),
+    );
 
     const recs: CatalogServerItem[] = [];
     for (const item of catalog) {
       if (selectedSet.has(item.id)) continue;
-      if (activeCategories.has(item.category) || defaultStapleIds.includes(item.id)) {
+      if (
+        activeCategories.has(item.category) ||
+        defaultStapleIds.includes(item.id)
+      ) {
         recs.push(item);
       }
       if (recs.length >= 6) break;
@@ -289,13 +316,16 @@ Please update my configuration file and guide me through setting any required AP
   };
 
   const handleCopyPrompt = () => {
-    trackFeatureUse('stack_builder', { action: 'copy_ai_prompt', count: selectedServers.length });
+    trackFeatureUse('stack_builder', {
+      action: 'copy_ai_prompt',
+      count: selectedServers.length,
+    });
     const promptText = `Please configure the following Model Context Protocol (MCP) servers in my AI client:
 
 ${selectedServers
   .map(
     (s, i) =>
-      `${i + 1}. **${s.name}** (${s.category})\n   - Description: ${s.description || 'MCP tool'}`
+      `${i + 1}. **${s.name}** (${s.category})\n   - Description: ${s.description || 'MCP tool'}`,
   )
   .join('\n\n')}
 
@@ -318,7 +348,8 @@ Please update my client configuration file and help me set any required API keys
     if (activeTab === 'windsurf') filename = 'mcp_config.json';
     if (activeTab === 'prompt') filename = 'mcp_agent_prompt.md';
 
-    const mimeType = activeTab === 'prompt' ? 'text/markdown' : 'application/json';
+    const mimeType =
+      activeTab === 'prompt' ? 'text/markdown' : 'application/json';
     const blob = new Blob([mergedConfig], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -340,7 +371,9 @@ Please update my client configuration file and help me set any required API keys
         backgroundColor: 'var(--bg-elevated)',
         border: '1px solid var(--border-color)',
         borderRadius: '16px',
-        boxShadow: isModal ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)' : 'var(--shadow-md)',
+        boxShadow: isModal
+          ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
+          : 'var(--shadow-md)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -355,7 +388,8 @@ Please update my client configuration file and help me set any required API keys
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'linear-gradient(90deg, rgba(0,229,255,0.05), transparent)',
+          background:
+            'linear-gradient(90deg, rgba(0,229,255,0.05), transparent)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -375,11 +409,26 @@ Please update my client configuration file and help me set any required API keys
             <Layers size={20} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+            <h2
+              style={{
+                fontSize: '1.15rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
+            >
               MCP Stack Builder
             </h2>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-              {selectedServers.length} {selectedServers.length === 1 ? 'server' : 'servers'} selected in your multi-tool stack
+            <p
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                margin: 0,
+              }}
+            >
+              {selectedServers.length}{' '}
+              {selectedServers.length === 1 ? 'server' : 'servers'} selected in
+              your multi-tool stack
             </p>
           </div>
         </div>
@@ -437,12 +486,34 @@ Please update my client configuration file and help me set any required API keys
               borderRadius: '12px',
             }}
           >
-            <Wrench size={32} style={{ color: 'var(--accent-color)', margin: '0 auto 1rem', opacity: 0.8 }} />
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            <Wrench
+              size={32}
+              style={{
+                color: 'var(--accent-color)',
+                margin: '0 auto 1rem',
+                opacity: 0.8,
+              }}
+            />
+            <h3
+              style={{
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                marginBottom: '0.5rem',
+              }}
+            >
               Your MCP Stack is Empty
             </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem' }}>
-              Click &ldquo;+ Add to Stack&rdquo; on any MCP server card to build a combined configuration file for your AI client.
+            <p
+              style={{
+                fontSize: '0.85rem',
+                color: 'var(--text-secondary)',
+                maxWidth: '420px',
+                margin: '0 auto 1.5rem',
+              }}
+            >
+              Click &ldquo;+ Add to Stack&rdquo; on any MCP server card to build
+              a combined configuration file for your AI client.
             </p>
             <Link
               href="/browse"
@@ -464,13 +535,30 @@ Please update my client configuration file and help me set any required API keys
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+          >
             {/* Selected Chips */}
             <div>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
                 Selected Tools ({selectedServers.length})
               </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  marginTop: '0.5rem',
+                }}
+              >
                 {selectedServers.map((s) => (
                   <div
                     key={s.id}
@@ -509,11 +597,40 @@ Please update my client configuration file and help me set any required API keys
 
             {/* Recommended Complementary Tools */}
             {recommendedServers.length > 0 && (
-              <div style={{ marginTop: '0.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.5rem' }}>
-                  <Sparkles size={13} style={{ color: 'var(--accent-color)' }} /> Recommended to Complement Stack
+              <div
+                style={{
+                  marginTop: '0.25rem',
+                  paddingTop: '0.85rem',
+                  borderTop: '1px solid var(--border-color)',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--text-secondary)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  <Sparkles
+                    size={13}
+                    style={{ color: 'var(--accent-color)' }}
+                  />{' '}
+                  Recommended to Complement Stack
                 </span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns:
+                      'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '0.5rem',
+                  }}
+                >
                   {recommendedServers.map((rec) => (
                     <div
                       key={rec.id}
@@ -529,10 +646,27 @@ Please update my client configuration file and help me set any required API keys
                       }}
                     >
                       <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div
+                          style={{
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            color: 'var(--text-primary)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {rec.name}
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--text-secondary)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {rec.category || 'MCP Tool'}
                         </div>
                       </div>
@@ -540,7 +674,10 @@ Please update my client configuration file and help me set any required API keys
                         type="button"
                         onClick={() => {
                           toggleServerInStack(rec.id);
-                          trackFeatureUse('stack_builder', { action: 'add_recommended', server_id: rec.id });
+                          trackFeatureUse('stack_builder', {
+                            action: 'add_recommended',
+                            server_id: rec.id,
+                          });
                         }}
                         style={{
                           display: 'inline-flex',
@@ -567,18 +704,31 @@ Please update my client configuration file and help me set any required API keys
 
             {/* Format Selector Tabs */}
             <div>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.65rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '0.4rem',
+                  flexWrap: 'wrap',
+                  borderBottom: '1px solid var(--border-color)',
+                  paddingBottom: '0.65rem',
+                }}
+              >
                 {CLIENT_TABS.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => {
-                      trackFeatureUse('stack_builder', { action: 'switch_client', client: tab.id });
+                      trackFeatureUse('stack_builder', {
+                        action: 'switch_client',
+                        client: tab.id,
+                      });
                       setActiveTab(tab.id);
                     }}
                     className={`stack-tab-btn ${activeTab === tab.id ? 'is-active' : ''}`}
                   >
-                    {tab.id === 'prompt' && <Bot size={13} style={{ marginRight: '0.2rem' }} />}
+                    {tab.id === 'prompt' && (
+                      <Bot size={13} style={{ marginRight: '0.2rem' }} />
+                    )}
                     {tab.label}
                   </button>
                 ))}
@@ -587,19 +737,39 @@ Please update my client configuration file and help me set any required API keys
 
             {/* Merged Code Output */}
             <div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '0.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                }}
+              >
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {activeTab === 'claude' && 'Claude Desktop Config (claude_desktop_config.json)'}
+                  {activeTab === 'claude' &&
+                    'Claude Desktop Config (claude_desktop_config.json)'}
                   {activeTab === 'cursor' && 'Cursor MCP Config (mcp.json)'}
-                  {activeTab === 'cline' && 'Cline / Roo Code Settings (cline_mcp_settings.json)'}
-                  {activeTab === 'windsurf' && 'Windsurf Config (mcp_config.json)'}
-                  {activeTab === 'prompt' && 'Universal AI Agent Prompt (Natural Language)'}
+                  {activeTab === 'cline' &&
+                    'Cline / Roo Code Settings (cline_mcp_settings.json)'}
+                  {activeTab === 'windsurf' &&
+                    'Windsurf Config (mcp_config.json)'}
+                  {activeTab === 'prompt' &&
+                    'Universal AI Agent Prompt (Natural Language)'}
                 </span>
                 <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>
-                  {activeTab === 'prompt' ? 'Paste into ChatGPT, Claude, or Cursor AI' : 'Save to client settings'}
+                  {activeTab === 'prompt'
+                    ? 'Paste into ChatGPT, Claude, or Cursor AI'
+                    : 'Save to client settings'}
                 </span>
               </div>
-              <CopyBlock code={mergedConfig} language={activeTab === 'prompt' ? 'markdown' : 'json'} />
+              <CopyBlock
+                code={mergedConfig}
+                language={activeTab === 'prompt' ? 'markdown' : 'json'}
+              />
             </div>
           </div>
         )}
@@ -619,7 +789,14 @@ Please update my client configuration file and help me set any required API keys
             backgroundColor: 'var(--bg-elevated)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              flexWrap: 'wrap',
+            }}
+          >
             <button
               type="button"
               onClick={handleCopyLink}
@@ -636,7 +813,11 @@ Please update my client configuration file and help me set any required API keys
                 cursor: 'pointer',
               }}
             >
-              {copiedLink ? <CheckCircle2 size={14} style={{ color: '#34d399' }} /> : <Share2 size={14} />}
+              {copiedLink ? (
+                <CheckCircle2 size={14} style={{ color: '#34d399' }} />
+              ) : (
+                <Share2 size={14} />
+              )}
               {copiedLink ? 'Link Copied!' : 'Share Stack Link'}
             </button>
 
@@ -657,7 +838,11 @@ Please update my client configuration file and help me set any required API keys
                 cursor: 'pointer',
               }}
             >
-              {copiedPrompt ? <CheckCircle2 size={14} style={{ color: '#34d399' }} /> : <Bot size={14} />}
+              {copiedPrompt ? (
+                <CheckCircle2 size={14} style={{ color: '#34d399' }} />
+              ) : (
+                <Bot size={14} />
+              )}
               {copiedPrompt ? 'Prompt Copied!' : 'Copy AI Agent Prompt'}
             </button>
           </div>

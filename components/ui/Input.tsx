@@ -1,6 +1,7 @@
-import React from 'react';
+import type React from 'react';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   inputClassName?: string;
   error?: boolean;
@@ -17,7 +18,8 @@ export function Input({
   helperText,
   ...props
 }: InputProps) {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const inputId =
+    id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
     <div className={`form-field ${className}`.trim()} style={style}>
@@ -32,7 +34,13 @@ export function Input({
         {...props}
       />
       {helperText ? (
-        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+        <div
+          style={{
+            fontSize: '0.72rem',
+            color: 'var(--text-secondary)',
+            marginTop: '0.25rem',
+          }}
+        >
           {helperText}
         </div>
       ) : null}

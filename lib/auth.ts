@@ -1,11 +1,11 @@
-import NextAuth from "next-auth";
-import Resend from "next-auth/providers/resend";
-import { Resend as ResendClient } from "resend";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { drizzle } from "drizzle-orm/d1";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { users, accounts, sessions, verificationTokens } from "@/db/schema";
-import { MagicLinkEmail } from "@/components/emails/MagicLinkEmail";
+import { DrizzleAdapter } from '@auth/drizzle-adapter';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { drizzle } from 'drizzle-orm/d1';
+import NextAuth from 'next-auth';
+import Resend from 'next-auth/providers/resend';
+import { Resend as ResendClient } from 'resend';
+import { MagicLinkEmail } from '@/components/emails/MagicLinkEmail';
+import { accounts, sessions, users, verificationTokens } from '@/db/schema';
 
 // D1 bindings are only available per-request in the Workers runtime, so the
 // adapter is resolved via NextAuth's function-config form rather than at
@@ -24,12 +24,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
     trustHost: true,
     providers: [
       Resend({
-        from: `AllMCPs <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`,
+        from: `AllMCPs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
         sendVerificationRequest: async ({ identifier, url, provider }) => {
           const resend = new ResendClient(process.env.RESEND_API_KEY);
           const { host } = new URL(url);
           const fromAddress: string =
-            provider.from || `AllMCPs <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`;
+            provider.from ||
+            `AllMCPs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`;
 
           const result = await resend.emails.send({
             from: fromAddress,
@@ -41,15 +42,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
           if (result.error) {
             throw new Error(`Resend error: ${result.error.message}`);
           }
-        }
+        },
       }),
     ],
     pages: {
-      signIn: "/login",
-      verifyRequest: "/verify-request",
+      signIn: '/login',
+      verifyRequest: '/verify-request',
     },
     session: {
-      strategy: "jwt",
+      strategy: 'jwt',
     },
     callbacks: {
       jwt({ token, user }) {
@@ -74,8 +75,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
       },
       redirect({ url, baseUrl }) {
         // Allows relative callback URLs
-        if (url.startsWith("/")) {
-          if (url.startsWith("/login") || url.startsWith("/verify-request")) {
+        if (url.startsWith('/')) {
+          if (url.startsWith('/login') || url.startsWith('/verify-request')) {
             return `${baseUrl}/dashboard`;
           }
           return `${baseUrl}${url}`;
@@ -84,7 +85,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
         try {
           const parsedUrl = new URL(url);
           if (parsedUrl.origin === baseUrl) {
-            if (parsedUrl.pathname.startsWith("/login") || parsedUrl.pathname.startsWith("/verify-request")) {
+            if (
+              parsedUrl.pathname.startsWith('/login') ||
+              parsedUrl.pathname.startsWith('/verify-request')
+            ) {
               return `${baseUrl}/dashboard`;
             }
             return url;

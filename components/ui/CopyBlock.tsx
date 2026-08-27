@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Copy, Check, Terminal, Code2, FileCode, FileText } from 'lucide-react';
-import { toast } from './Toast';
+import { Check, Copy } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 import { trackCopyConfig } from '../../lib/gtag';
+import { toast } from './Toast';
 
 interface CopyBlockProps {
   code: string;
@@ -19,23 +19,53 @@ interface CopyBlockProps {
 /**
  * Detects snippet title and language for IDE header styling.
  */
-function inferLanguageAndTitle(code: string, explicitTitle?: string, explicitLang?: string) {
+function inferLanguageAndTitle(
+  code: string,
+  explicitTitle?: string,
+  explicitLang?: string,
+) {
   const trimmed = code.trim();
 
   if (explicitTitle) {
     return {
       title: explicitTitle,
-      lang: explicitLang || (explicitTitle.endsWith('.json') ? 'json' : explicitTitle.endsWith('.ts') ? 'typescript' : 'text'),
+      lang:
+        explicitLang ||
+        (explicitTitle.endsWith('.json')
+          ? 'json'
+          : explicitTitle.endsWith('.ts')
+            ? 'typescript'
+            : 'text'),
     };
   }
 
-  if (trimmed.startsWith('{\n') || trimmed.startsWith('[\n') || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
-    return { title: explicitLang === 'json' ? 'config.json' : 'JSON Config', lang: 'json' };
+  if (
+    trimmed.startsWith('{\n') ||
+    trimmed.startsWith('[\n') ||
+    (trimmed.startsWith('{') && trimmed.endsWith('}'))
+  ) {
+    return {
+      title: explicitLang === 'json' ? 'config.json' : 'JSON Config',
+      lang: 'json',
+    };
   }
-  if (trimmed.startsWith('npx ') || trimmed.startsWith('npm ') || trimmed.startsWith('pip ') || trimmed.startsWith('docker ') || trimmed.startsWith('fly ') || trimmed.startsWith('claude ') || trimmed.startsWith('wrangler ') || trimmed.startsWith('curl ')) {
+  if (
+    trimmed.startsWith('npx ') ||
+    trimmed.startsWith('npm ') ||
+    trimmed.startsWith('pip ') ||
+    trimmed.startsWith('docker ') ||
+    trimmed.startsWith('fly ') ||
+    trimmed.startsWith('claude ') ||
+    trimmed.startsWith('wrangler ') ||
+    trimmed.startsWith('curl ')
+  ) {
     return { title: 'Terminal', lang: 'bash' };
   }
-  if (trimmed.includes('FROM ') || trimmed.includes('WORKDIR ') || trimmed.includes('RUN npm')) {
+  if (
+    trimmed.includes('FROM ') ||
+    trimmed.includes('WORKDIR ') ||
+    trimmed.includes('RUN npm')
+  ) {
     return { title: 'Dockerfile', lang: 'dockerfile' };
   }
   if (trimmed.includes('services:') && trimmed.includes('image:')) {
@@ -47,7 +77,12 @@ function inferLanguageAndTitle(code: string, explicitTitle?: string, explicitLan
   if (trimmed.includes('reverse_proxy')) {
     return { title: 'Caddyfile', lang: 'caddy' };
   }
-  if (trimmed.includes('import ') || trimmed.includes('export ') || trimmed.includes('const ') || trimmed.includes('async ')) {
+  if (
+    trimmed.includes('import ') ||
+    trimmed.includes('export ') ||
+    trimmed.includes('const ') ||
+    trimmed.includes('async ')
+  ) {
     return { title: 'server.ts', lang: 'typescript' };
   }
 
@@ -61,7 +96,10 @@ function renderHighlightedLine(line: string, index: number) {
   const trimmed = line.trim();
 
   // Full-line comments
-  if (trimmed.startsWith('//') || (trimmed.startsWith('#') && !trimmed.startsWith('#!'))) {
+  if (
+    trimmed.startsWith('//') ||
+    (trimmed.startsWith('#') && !trimmed.startsWith('#!'))
+  ) {
     return (
       <span key={index} style={{ color: '#8b949e', fontStyle: 'italic' }}>
         {line}
@@ -71,13 +109,13 @@ function renderHighlightedLine(line: string, index: number) {
   }
 
   // Tokenize line using Regex for strings, JSON keys, keywords, CLI commands, booleans, and numbers
-  const tokenRegex = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`|\/\/.+$|\b(?:import|export|from|const|let|var|function|async|await|return|class|extends|default|new|if|else|try|catch|throw|type|interface|enum|public|private|static)\b|\b(?:true|false|null|undefined)\b|\b(?:string|number|boolean|void|any|unknown|Request|Response|McpServer|McpAgent|ExecutionContext)\b|\b\d+(?:\.\d+)?\b)/g;
+  const tokenRegex =
+    /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`|\/\/.+$|\b(?:import|export|from|const|let|var|function|async|await|return|class|extends|default|new|if|else|try|catch|throw|type|interface|enum|public|private|static)\b|\b(?:true|false|null|undefined)\b|\b(?:string|number|boolean|void|any|unknown|Request|Response|McpServer|McpAgent|ExecutionContext)\b|\b\d+(?:\.\d+)?\b)/g;
 
   const elements: React.ReactNode[] = [];
   let lastIdx = 0;
-  let match: RegExpExecArray | null;
 
-  while ((match = tokenRegex.exec(line)) !== null) {
+  for (const match of line.matchAll(tokenRegex)) {
     const matchedStr = match[0];
     const matchIdx = match.index;
 
@@ -88,11 +126,15 @@ function renderHighlightedLine(line: string, index: number) {
 
     // Determine token color
     let tokenColor = '#e6edf3';
-    let fontWeight: string | undefined = undefined;
+    let fontWeight: string | undefined;
 
     if (matchedStr.startsWith('//')) {
       tokenColor = '#8b949e';
-    } else if (matchedStr.startsWith('"') || matchedStr.startsWith("'") || matchedStr.startsWith('`')) {
+    } else if (
+      matchedStr.startsWith('"') ||
+      matchedStr.startsWith("'") ||
+      matchedStr.startsWith('`')
+    ) {
       // JSON key vs String value check
       const restOfLine = line.substring(matchIdx + matchedStr.length).trim();
       if (restOfLine.startsWith(':')) {
@@ -100,21 +142,32 @@ function renderHighlightedLine(line: string, index: number) {
       } else {
         tokenColor = '#a5d6ff'; // String literal (soft blue)
       }
-    } else if (/^(?:import|export|from|const|let|var|function|async|await|return|class|extends|default|new|if|else|try|catch|throw|type|interface|enum|public|private|static)$/.test(matchedStr)) {
+    } else if (
+      /^(?:import|export|from|const|let|var|function|async|await|return|class|extends|default|new|if|else|try|catch|throw|type|interface|enum|public|private|static)$/.test(
+        matchedStr,
+      )
+    ) {
       tokenColor = '#ff7b72'; // Keyword (coral red)
       fontWeight = '600';
     } else if (/^(?:true|false|null|undefined)$/.test(matchedStr)) {
       tokenColor = '#79c0ff'; // Boolean / null (cyan)
-    } else if (/^(?:string|number|boolean|void|any|unknown|Request|Response|McpServer|McpAgent|ExecutionContext)$/.test(matchedStr)) {
+    } else if (
+      /^(?:string|number|boolean|void|any|unknown|Request|Response|McpServer|McpAgent|ExecutionContext)$/.test(
+        matchedStr,
+      )
+    ) {
       tokenColor = '#ffa657'; // Type / Class name (amber)
     } else if (/^\d+(?:\.\d+)?$/.test(matchedStr)) {
       tokenColor = '#79c0ff'; // Numbers
     }
 
     elements.push(
-      <span key={`${index}-${matchIdx}`} style={{ color: tokenColor, fontWeight }}>
+      <span
+        key={`${index}-${matchIdx}`}
+        style={{ color: tokenColor, fontWeight }}
+      >
         {matchedStr}
-      </span>
+      </span>,
     );
 
     lastIdx = matchIdx + matchedStr.length;
@@ -133,10 +186,20 @@ function renderHighlightedLine(line: string, index: number) {
   );
 }
 
-export function CopyBlock({ code, serverId, title, language, snippetType = 'install_command', toastMessage = 'Copied to clipboard' }: CopyBlockProps) {
+export function CopyBlock({
+  code,
+  serverId,
+  title,
+  language,
+  snippetType = 'install_command',
+  toastMessage = 'Copied to clipboard',
+}: CopyBlockProps) {
   const [copied, setCopied] = useState(false);
 
-  const meta = useMemo(() => inferLanguageAndTitle(code, title, language), [code, title, language]);
+  const meta = useMemo(
+    () => inferLanguageAndTitle(code, title, language),
+    [code, title, language],
+  );
 
   const handleCopy = async () => {
     try {
@@ -156,7 +219,8 @@ export function CopyBlock({ code, serverId, title, language, snippetType = 'inst
       }
     } catch {
       toast.error('Could not copy', {
-        description: 'Your browser blocked clipboard access. Try selecting the text manually.',
+        description:
+          'Your browser blocked clipboard access. Try selecting the text manually.',
       });
     }
   };
@@ -191,17 +255,53 @@ export function CopyBlock({ code, serverId, title, language, snippetType = 'inst
           minWidth: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, overflow: 'hidden' }}>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f56', display: 'inline-block', flexShrink: 0 }} />
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ffbd2e', display: 'inline-block', flexShrink: 0 }} />
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#27c93f', display: 'inline-block', flexShrink: 0 }} />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            minWidth: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: '#ff5f56',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: '#ffbd2e',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: '#27c93f',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
           <span
             style={{
               marginLeft: '0.5rem',
               fontSize: '0.75rem',
               fontWeight: 600,
               color: '#8b949e',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              fontFamily:
+                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
               letterSpacing: '0.02em',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -217,7 +317,9 @@ export function CopyBlock({ code, serverId, title, language, snippetType = 'inst
           onClick={handleCopy}
           aria-label="Copy to clipboard"
           style={{
-            background: copied ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+            background: copied
+              ? 'rgba(16, 185, 129, 0.15)'
+              : 'rgba(255, 255, 255, 0.08)',
             border: `1px solid ${copied ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.12)'}`,
             borderRadius: '6px',
             padding: '0.35rem 0.65rem',
@@ -255,11 +357,14 @@ export function CopyBlock({ code, serverId, title, language, snippetType = 'inst
           maxWidth: '100%',
           fontSize: '0.86rem',
           lineHeight: 1.65,
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Fira Code", monospace',
+          fontFamily:
+            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Fira Code", monospace',
           color: '#e6edf3',
         }}
       >
-        <code style={{ color: '#e6edf3' }}>{lines.map((line, idx) => renderHighlightedLine(line, idx))}</code>
+        <code style={{ color: '#e6edf3' }}>
+          {lines.map((line, idx) => renderHighlightedLine(line, idx))}
+        </code>
       </pre>
     </div>
   );

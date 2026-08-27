@@ -1,5 +1,7 @@
 async function testLiveProd() {
-  console.log('--- Testing Live Production Endpoints on https://allmcps.com ---');
+  console.log(
+    '--- Testing Live Production Endpoints on https://allmcps.com ---',
+  );
 
   // 1. Pricing API
   const pricingRes = await fetch('https://allmcps.com/api/v1/boost/pricing');
@@ -11,7 +13,10 @@ async function testLiveProd() {
   const checkoutRes = await fetch('https://allmcps.com/api/v1/boost/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ serverId: 'alexar76-aimarket-plugins', sku: 'featured_7d' }),
+    body: JSON.stringify({
+      serverId: 'alexar76-aimarket-plugins',
+      sku: 'featured_7d',
+    }),
   });
   console.log('2. POST /api/v1/boost/checkout -> Status:', checkoutRes.status);
   const checkoutData = await checkoutRes.json();
@@ -32,9 +37,15 @@ async function testLiveProd() {
       },
     }),
   });
-  console.log('3. Remote MCP JSON-RPC (get_boost_pricing) -> Status:', mcpRes.status);
+  console.log(
+    '3. Remote MCP JSON-RPC (get_boost_pricing) -> Status:',
+    mcpRes.status,
+  );
   const mcpData = await mcpRes.json();
-  console.log('   Result Content:', mcpData.result?.content?.[0]?.text?.substring(0, 100) + '...');
+  console.log(
+    '   Result Content:',
+    `${mcpData.result?.content?.[0]?.text?.substring(0, 100)}...`,
+  );
 
   // 4. Remote MCP Tool boost_mcp_server
   const boostMcpRes = await fetch('https://allmcps.com/api/mcp', {
@@ -50,9 +61,15 @@ async function testLiveProd() {
       },
     }),
   });
-  console.log('4. Remote MCP JSON-RPC (boost_mcp_server) -> Status:', boostMcpRes.status);
+  console.log(
+    '4. Remote MCP JSON-RPC (boost_mcp_server) -> Status:',
+    boostMcpRes.status,
+  );
   const boostMcpData = await boostMcpRes.json();
-  console.log('   Result Text Snippet:\n', boostMcpData.result?.content?.[0]?.text?.substring(0, 180));
+  console.log(
+    '   Result Text Snippet:\n',
+    boostMcpData.result?.content?.[0]?.text?.substring(0, 180),
+  );
 }
 
 testLiveProd().catch(console.error);

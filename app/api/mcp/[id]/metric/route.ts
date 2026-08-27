@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { and, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers, upvoteRecords, viewRecords } from '../../../../../db/schema';
-import { eq, sql, and } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getClientIp, hashVisitorForServer } from '../../../../../lib/upvoteHash';
+import { servers, upvoteRecords, viewRecords } from '../../../../../db/schema';
+import {
+  getClientIp,
+  hashVisitorForServer,
+} from '../../../../../lib/upvoteHash';
 
 const metricSchema = z.object({
   metric: z.enum(['view', 'copy', 'upvote', 'unupvote']),
@@ -19,7 +22,10 @@ async function getDb() {
   return drizzle((env as any).DB as any);
 }
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await params;
     const body = await req.json();
@@ -31,14 +37,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const { metric } = result.data;
 
-    let db;
+    let db: Awaited<ReturnType<typeof getDb>>;
     try {
       db = await getDb();
     } catch {
-      return NextResponse.json({ error: 'Could not get Cloudflare context.' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Could not get Cloudflare context.' },
+        { status: 500 },
+      );
     }
     if (!db) {
-      return NextResponse.json({ error: 'Database binding not found' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database binding not found' },
+        { status: 500 },
+      );
     }
 
     // --- Upvote: one per (server, hashed IP) ---
@@ -46,17 +58,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const ip = getClientIp(req);
       const ipHash = await hashVisitorForServer(ip, id);
       if (!ipHash) {
-        return NextResponse.json({ error: 'Upvote is not configured' }, { status: 500 });
+        return NextResponse.json(
+          { error: 'Upvote is not configured' },
+          { status: 500 },
+        );
       }
 
       const inserted = await db
         .insert(upvoteRecords)
         .values({ serverId: id, ipHash })
-        .onConflictDoNothing({ target: [upvoteRecords.serverId, upvoteRecords.ipHash] })
+        .onConflictDoNothing({
+          target: [upvoteRecords.serverId, upvoteRecords.ipHash],
+        })
         .returning({ serverId: upvoteRecords.serverId });
 
       if (inserted.length === 0) {
-        return NextResponse.json({ success: false, alreadyVoted: true }, { status: 409 });
+        return NextResponse.json(
+          { success: false, alreadyVoted: true },
+          { status: 409 },
+        );
       }
 
       await db
@@ -72,21 +92,31 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const ip = getClientIp(req);
       const ipHash = await hashVisitorForServer(ip, id);
       if (!ipHash) {
-        return NextResponse.json({ error: 'Upvote is not configured' }, { status: 500 });
+        return NextResponse.json(
+          { error: 'Upvote is not configured' },
+          { status: 500 },
+        );
       }
 
       const deleted = await db
         .delete(upvoteRecords)
-        .where(and(eq(upvoteRecords.serverId, id), eq(upvoteRecords.ipHash, ipHash)))
+        .where(
+          and(eq(upvoteRecords.serverId, id), eq(upvoteRecords.ipHash, ipHash)),
+        )
         .returning({ serverId: upvoteRecords.serverId });
 
       if (deleted.length === 0) {
-        return NextResponse.json({ success: false, notVoted: true }, { status: 404 });
+        return NextResponse.json(
+          { success: false, notVoted: true },
+          { status: 404 },
+        );
       }
 
       await db
         .update(servers)
-        .set({ upvotes: sql`CASE WHEN ${servers.upvotes} > 0 THEN ${servers.upvotes} - 1 ELSE 0 END` })
+        .set({
+          upvotes: sql`CASE WHEN ${servers.upvotes} > 0 THEN ${servers.upvotes} - 1 ELSE 0 END`,
+        })
         .where(eq(servers.id, id));
 
       return NextResponse.json({ success: true });
@@ -97,17 +127,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const ip = getClientIp(req);
       const ipHash = await hashVisitorForServer(ip, id);
       if (!ipHash) {
-        return NextResponse.json({ error: 'View tracking is not configured' }, { status: 500 });
+        return NextResponse.json(
+          { error: 'View tracking is not configured' },
+          { status: 500 },
+        );
       }
 
       const inserted = await db
         .insert(viewRecords)
         .values({ serverId: id, ipHash })
-        .onConflictDoNothing({ target: [viewRecords.serverId, viewRecords.ipHash] })
+        .onConflictDoNothing({
+          target: [viewRecords.serverId, viewRecords.ipHash],
+        })
         .returning({ serverId: viewRecords.serverId });
 
       if (inserted.length === 0) {
-        return NextResponse.json({ success: false, alreadyViewed: true }, { status: 409 });
+        return NextResponse.json(
+          { success: false, alreadyViewed: true },
+          { status: 409 },
+        );
       }
 
       await db
@@ -127,22 +165,34 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Metric update error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await params;
 
-    let db;
+    let db: Awaited<ReturnType<typeof getDb>>;
     try {
       db = await getDb();
     } catch {
-      return NextResponse.json({ error: 'Could not get Cloudflare context.' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Could not get Cloudflare context.' },
+        { status: 500 },
+      );
     }
     if (!db) {
-      return NextResponse.json({ error: 'Database binding not found' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database binding not found' },
+        { status: 500 },
+      );
     }
 
     const ip = getClientIp(req);
@@ -155,12 +205,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       db
         .select({ serverId: upvoteRecords.serverId })
         .from(upvoteRecords)
-        .where(and(eq(upvoteRecords.serverId, id), eq(upvoteRecords.ipHash, ipHash)))
+        .where(
+          and(eq(upvoteRecords.serverId, id), eq(upvoteRecords.ipHash, ipHash)),
+        )
         .limit(1),
       db
         .select({ serverId: viewRecords.serverId })
         .from(viewRecords)
-        .where(and(eq(viewRecords.serverId, id), eq(viewRecords.ipHash, ipHash)))
+        .where(
+          and(eq(viewRecords.serverId, id), eq(viewRecords.ipHash, ipHash)),
+        )
         .limit(1),
     ]);
 
@@ -170,6 +224,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     });
   } catch (error) {
     console.error('Metric status error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

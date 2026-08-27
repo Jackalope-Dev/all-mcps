@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Card } from '../ui/Card';
-import { ServerPicker, DirectoryServerHit } from './ServerPicker';
-import { extractTools, computeToolTokens } from '../../lib/tools/tokenize';
 import { trackFeatureUse } from '../../lib/gtag';
+import { computeToolTokens, extractTools } from '../../lib/tools/tokenize';
+import { Card } from '../ui/Card';
+import { type DirectoryServerHit, ServerPicker } from './ServerPicker';
 
 const AVERAGE_TOKENS_PER_SERVER = 600;
 
@@ -31,7 +31,10 @@ export function TokenCalculatorTool() {
         };
       }
       const res = computeToolTokens(tools);
-      trackFeatureUse('token_calculator', { mode: 'paste', total_tokens: res.total });
+      trackFeatureUse('token_calculator', {
+        mode: 'paste',
+        total_tokens: res.total,
+      });
       return res;
     } catch (err) {
       return { error: (err as Error).message };
@@ -60,20 +63,34 @@ export function TokenCalculatorTool() {
       {tab === 'paste' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Paste the raw <code>tools/list</code> JSON-RPC response from your MCP server (or a bare array of tool
-            schemas). Counts use a GPT-4-class tokenizer as an approximation &mdash; exact counts vary by model.
+            Paste the raw <code>tools/list</code> JSON-RPC response from your
+            MCP server (or a bare array of tool schemas). Counts use a
+            GPT-4-class tokenizer as an approximation &mdash; exact counts vary
+            by model.
           </p>
           <textarea
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
             rows={12}
             className="form-input"
-            style={{ fontFamily: 'monospace', fontSize: '0.85rem', width: '100%', boxSizing: 'border-box' }}
+            style={{
+              fontFamily: 'monospace',
+              fontSize: '0.85rem',
+              width: '100%',
+              boxSizing: 'border-box',
+            }}
             placeholder='{"result": {"tools": [{"name": "search", "description": "...", "inputSchema": {}}]}}'
             aria-label="Paste your tools JSON"
           />
           {pasteResult && 'error' in pasteResult && (
-            <div className="surface-muted" style={{ padding: '1rem', borderLeft: '3px solid #ef4444', wordBreak: 'break-word' }}>
+            <div
+              className="surface-muted"
+              style={{
+                padding: '1rem',
+                borderLeft: '3px solid #ef4444',
+                wordBreak: 'break-word',
+              }}
+            >
               {pasteResult.error}
             </div>
           )}
@@ -82,14 +99,28 @@ export function TokenCalculatorTool() {
               <h2 className="text-section" style={{ marginBottom: '0.5rem' }}>
                 Total: {pasteResult.total.toLocaleString()} tokens
               </h2>
-              <ul style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', paddingLeft: '1.25rem' }}>
+              <ul
+                style={{
+                  fontSize: '0.85rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '1rem',
+                  paddingLeft: '1.25rem',
+                }}
+              >
                 {CONTEXT_WINDOWS.map((w) => (
                   <li key={w.label}>
-                    ≈ {((pasteResult.total / w.size) * 100).toFixed(2)}% of a {w.label} context window
+                    ≈ {((pasteResult.total / w.size) * 100).toFixed(2)}% of a{' '}
+                    {w.label} context window
                   </li>
                 ))}
               </ul>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.4rem',
+                }}
+              >
                 {pasteResult.breakdown.map((t) => (
                   <div
                     key={t.name}
@@ -105,7 +136,9 @@ export function TokenCalculatorTool() {
                     }}
                   >
                     <code style={{ wordBreak: 'break-all' }}>{t.name}</code>
-                    <span style={{ flexShrink: 0, fontWeight: 500 }}>{t.tokens.toLocaleString()} tokens</span>
+                    <span style={{ flexShrink: 0, fontWeight: 500 }}>
+                      {t.tokens.toLocaleString()} tokens
+                    </span>
                   </div>
                 ))}
               </div>
@@ -117,27 +150,53 @@ export function TokenCalculatorTool() {
       {tab === 'directory' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Rough estimate only &mdash; assumes ~{AVERAGE_TOKENS_PER_SERVER} tokens per server. Actual cost depends
-            on each server's real tool count and schema complexity. Use "Paste your tools JSON" for an exact number.
+            Rough estimate only &mdash; assumes ~{AVERAGE_TOKENS_PER_SERVER}{' '}
+            tokens per server. Actual cost depends on each server's real tool
+            count and schema complexity. Use "Paste your tools JSON" for an
+            exact number.
           </p>
           <ServerPicker
             onSelect={(server) =>
-              setSelected((s) => (s.some((x) => x.id === server.id) ? s : [...s, server]))
+              setSelected((s) =>
+                s.some((x) => x.id === server.id) ? s : [...s, server],
+              )
             }
           />
           {selected.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+              }}
+            >
               {selected.map((server) => (
                 <Card
                   key={server.id}
-                  style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
                 >
-                  <a href={`/mcp/${server.id}`} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={`/mcp/${server.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     {server.name}
                   </a>
                   <button
-                    onClick={() => setSelected((s) => s.filter((x) => x.id !== server.id))}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                    onClick={() =>
+                      setSelected((s) => s.filter((x) => x.id !== server.id))
+                    }
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                    }}
                   >
                     ✕
                   </button>

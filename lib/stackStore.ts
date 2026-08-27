@@ -11,7 +11,9 @@ export function getStackServerIds(): string[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((id) => typeof id === 'string')
+      : [];
   } catch {
     return [];
   }
@@ -65,8 +67,10 @@ export function clearStack(): void {
   saveStackServerIds([]);
 }
 
-export function parseStackFromUrl(searchParam: string | null | undefined): string[] {
-  if (!searchParam || !searchParam.trim()) return [];
+export function parseStackFromUrl(
+  searchParam: string | null | undefined,
+): string[] {
+  if (!searchParam?.trim()) return [];
   return searchParam
     .split(',')
     .map((s) => s.trim())
@@ -74,7 +78,8 @@ export function parseStackFromUrl(searchParam: string | null | undefined): strin
 }
 
 export function buildStackShareUrl(serverIds: string[]): string {
-  if (typeof window === 'undefined') return `/stack?servers=${encodeURIComponent(serverIds.join(','))}`;
+  if (typeof window === 'undefined')
+    return `/stack?servers=${encodeURIComponent(serverIds.join(','))}`;
   const origin = window.location.origin;
   return `${origin}/stack?servers=${encodeURIComponent(serverIds.join(','))}`;
 }

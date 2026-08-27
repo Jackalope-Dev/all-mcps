@@ -80,7 +80,9 @@ const UA_PATTERNS: [RegExp, CallerClass][] = [
 /**
  * Classify a User-Agent string into one of the known caller categories.
  */
-export function classifyCaller(userAgent: string | null | undefined): CallerClass {
+export function classifyCaller(
+  userAgent: string | null | undefined,
+): CallerClass {
   if (!userAgent) return 'unknown';
   for (const [pattern, cls] of UA_PATTERNS) {
     if (pattern.test(userAgent)) return cls;
@@ -196,7 +198,10 @@ type BatchLogParams = {
  * (a single serverId:null row, as search logging used to write, is invisible
  * to every server's per-id analytics query).
  */
-export function logApiAccessBatch(db: any, params: BatchLogParams): Promise<void> {
+export function logApiAccessBatch(
+  db: any,
+  params: BatchLogParams,
+): Promise<void> {
   if (params.serverIds.length === 0) return Promise.resolve();
   const callerClass = classifyCaller(params.userAgent);
   const userAgent = (params.userAgent || '').slice(0, 512);
@@ -223,19 +228,22 @@ export function logApiAccessBatch(db: any, params: BatchLogParams): Promise<void
             userAgent,
             callerClass,
             ipCountry: params.ipCountry || null,
-          }))
+          })),
         )
         .catch((err: any) => {
           console.error('[accessLog] Failed to batch insert:', err?.message);
-        })
-    )
+        }),
+    ),
   ).then(() => {});
 }
 
 /**
  * Helper to extract common request metadata for logging.
  */
-export function extractRequestMeta(request: Request): { userAgent: string | null; ipCountry: string | null } {
+export function extractRequestMeta(request: Request): {
+  userAgent: string | null;
+  ipCountry: string | null;
+} {
   return {
     userAgent: request.headers.get('user-agent'),
     ipCountry: request.headers.get('cf-ipcountry'),

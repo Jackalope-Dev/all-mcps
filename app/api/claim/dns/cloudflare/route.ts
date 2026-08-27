@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { auth } from '../../../../../lib/auth';
+import { getApexDomain } from '../../../../../lib/dnsProviders';
 import { isSafeSubmissionUrl } from '../../../../../lib/urlSafety';
 import { getClaimVerificationToken } from '../../../../../lib/verificationTokens';
-import { getApexDomain } from '../../../../../lib/dnsProviders';
-import { auth } from '../../../../../lib/auth';
 
 /**
  * One-shot: create the AllMCPs verification TXT record via a user-supplied
@@ -47,19 +47,28 @@ export async function POST(req: Request) {
     const json = await req.json();
     const parsed = bodySchema.safeParse(json);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid request. Check website URL and API token.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request. Check website URL and API token.' },
+        { status: 400 },
+      );
     }
 
     const { serverId, websiteUrl, apiToken } = parsed.data;
     const token = apiToken.trim();
 
     if (!isSafeSubmissionUrl(websiteUrl)) {
-      return NextResponse.json({ error: 'Website URL must be a public http(s) address.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Website URL must be a public http(s) address.' },
+        { status: 400 },
+      );
     }
 
     const apex = getApexDomain(websiteUrl);
     if (!apex) {
-      return NextResponse.json({ error: 'Could not parse domain from website URL.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Could not parse domain from website URL.' },
+        { status: 400 },
+      );
     }
 
     const content = getClaimVerificationToken(serverId, userId);
@@ -71,18 +80,20 @@ export async function POST(req: Request) {
     // 1. Resolve zone for this apex domain
     const zonesRes = await fetch(
       `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(apex)}&status=active`,
-      { headers, signal: AbortSignal.timeout(12000) }
+      { headers, signal: AbortSignal.timeout(12000) },
     );
     const zonesJson = (await zonesRes.json()) as CfListZones;
 
     if (!zonesRes.ok || !zonesJson.success) {
-      const msg = zonesJson.errors?.[0]?.message || 'Cloudflare rejected the API token or zone lookup failed.';
+      const msg =
+        zonesJson.errors?.[0]?.message ||
+        'Cloudflare rejected the API token or zone lookup failed.';
       return NextResponse.json(
         {
           error: msg,
           hint: 'Create a token at dash.cloudflare.com/profile/api-tokens with Zone:DNS:Edit and Zone:Zone:Read for this domain.',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -93,14 +104,14 @@ export async function POST(req: Request) {
           error: `No active Cloudflare zone found for ${apex}.`,
           hint: 'Confirm the domain uses Cloudflare nameservers and the token can access that zone.',
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // 2. Skip create if the TXT already exists
     const listRes = await fetch(
       `https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records?type=TXT&per_page=100`,
-      { headers, signal: AbortSignal.timeout(12000) }
+      { headers, signal: AbortSignal.timeout(12000) },
     );
     const listJson = (await listRes.json()) as CfDnsList;
     const existing = (listJson.result || []).find((r) => {
@@ -112,28 +123,33 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: true,
         alreadyExists: true,
-        message: 'Verification TXT record already present in Cloudflare. You can verify now.',
+        message:
+          'Verification TXT record already present in Cloudflare. You can verify now.',
         zone: zone.name,
       });
     }
 
     // 3. Create TXT on the apex (@)
-    const createRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records`, {
-      method: 'POST',
-      headers,
-      signal: AbortSignal.timeout(12000),
-      body: JSON.stringify({
-        type: 'TXT',
-        name: apex,
-        content,
-        ttl: 3600,
-        comment: 'AllMCPs site verification',
-      }),
-    });
+    const createRes = await fetch(
+      `https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records`,
+      {
+        method: 'POST',
+        headers,
+        signal: AbortSignal.timeout(12000),
+        body: JSON.stringify({
+          type: 'TXT',
+          name: apex,
+          content,
+          ttl: 3600,
+          comment: 'AllMCPs site verification',
+        }),
+      },
+    );
     const createJson = (await createRes.json()) as CfDnsCreate;
 
     if (!createRes.ok || !createJson.success) {
-      const msg = createJson.errors?.[0]?.message || 'Failed to create DNS record.';
+      const msg =
+        createJson.errors?.[0]?.message || 'Failed to create DNS record.';
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
@@ -144,7 +160,16 @@ export async function POST(req: Request) {
       zone: zone.name,
     });
   } catch (e) {
-    console.error('Cloudflare DNS claim helper error:', e instanceof Error ? e.message : 'unknown');
-    return NextResponse.json({ error: 'Could not reach Cloudflare. Try again or add the record manually.' }, { status: 500 });
+    console.error(
+      'Cloudflare DNS claim helper error:',
+      e instanceof Error ? e.message : 'unknown',
+    );
+    return NextResponse.json(
+      {
+        error:
+          'Could not reach Cloudflare. Try again or add the record manually.',
+      },
+      { status: 500 },
+    );
   }
 }

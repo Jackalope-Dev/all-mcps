@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Copy, Check, Terminal } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
 import { formatServerClientConfig } from '@/lib/clients';
 
 interface ServerConfigCopyButtonProps {
@@ -27,7 +28,13 @@ export function ServerConfigCopyButton({
     e.preventDefault();
     e.stopPropagation();
 
-    const formattedConfig = formatServerClientConfig(clientSlug, serverName, command, args, env);
+    const formattedConfig = formatServerClientConfig(
+      clientSlug,
+      serverName,
+      command,
+      args,
+      env,
+    );
     navigator.clipboard.writeText(formattedConfig);
 
     setCopied(true);
@@ -47,7 +54,9 @@ export function ServerConfigCopyButton({
         gap: '0.35rem',
         borderRadius: '6px',
         border: '1px solid var(--border-color)',
-        background: copied ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+        background: copied
+          ? 'rgba(16, 185, 129, 0.15)'
+          : 'rgba(255, 255, 255, 0.05)',
         color: copied ? '#10b981' : 'var(--text-primary)',
         transition: 'all 0.2s ease',
         cursor: 'pointer',

@@ -1,15 +1,21 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { Code, Cpu, AlertTriangle } from 'lucide-react';
-import { CopyBlock } from './ui/CopyBlock';
+import { AlertTriangle, Code, Cpu } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import {
-  resolveInstallConfig,
-  type ResolvedInstall,
   type CachedInstallFields,
+  type ResolvedInstall,
+  resolveInstallConfig,
 } from '../lib/installConfig';
+import { CopyBlock } from './ui/CopyBlock';
 
-export type IdeTarget = 'claude-desktop' | 'cursor' | 'claude-code' | 'windsurf' | 'goose' | 'continue';
+export type IdeTarget =
+  | 'claude-desktop'
+  | 'cursor'
+  | 'claude-code'
+  | 'windsurf'
+  | 'goose'
+  | 'continue';
 
 interface McpConfigGeneratorProps extends CachedInstallFields {
   serverId: string;
@@ -21,7 +27,7 @@ interface McpConfigGeneratorProps extends CachedInstallFields {
 function buildSnippet(
   ide: IdeTarget,
   install: ResolvedInstall,
-  key: string
+  key: string,
 ): { label: string; file: string; code: string } {
   if (install.kind === 'remote') {
     const remoteBlock = {
@@ -76,7 +82,7 @@ function buildSnippet(
               ],
             },
             null,
-            2
+            2,
           ),
         };
     }
@@ -99,7 +105,7 @@ function buildSnippet(
             },
           },
           null,
-          2
+          2,
         ),
       };
 
@@ -117,7 +123,7 @@ function buildSnippet(
             },
           },
           null,
-          2
+          2,
         ),
       };
 
@@ -142,7 +148,7 @@ function buildSnippet(
             },
           },
           null,
-          2
+          2,
         ),
       };
 
@@ -168,7 +174,7 @@ function buildSnippet(
             ],
           },
           null,
-          2
+          2,
         ),
       };
   }
@@ -216,12 +222,13 @@ export function McpConfigGenerator({
       installConfidence,
       suggestedInstallCommand,
       suggestedInstallArgs,
-    ]
+    ],
   );
 
   const key = serverId || serverName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const current = buildSnippet(activeIde, install, key);
-  const showGuessWarning = install.confidence === 'low' || install.source === 'heuristic';
+  const showGuessWarning =
+    install.confidence === 'low' || install.source === 'heuristic';
 
   const ides: { id: IdeTarget; name: string }[] = [
     { id: 'claude-desktop', name: 'Claude Desktop' },
@@ -299,9 +306,13 @@ export function McpConfigGenerator({
         >
           <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
           <span>
-            This config is a best-effort guess from the listing. Confirm the package name
-            and install steps in the project README before restarting your client
-            {install.kind === 'stdio' ? ` (package: ${install.packageName})` : ''}.
+            This config is a best-effort guess from the listing. Confirm the
+            package name and install steps in the project README before
+            restarting your client
+            {install.kind === 'stdio'
+              ? ` (package: ${install.packageName})`
+              : ''}
+            .
           </span>
         </div>
       )}
@@ -345,11 +356,17 @@ export function McpConfigGenerator({
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                background: isActive ? 'var(--brand-gradient-soft)' : 'var(--bg-muted)',
-                borderColor: isActive ? 'var(--accent-color)' : 'var(--border-color)',
+                background: isActive
+                  ? 'var(--brand-gradient-soft)'
+                  : 'var(--bg-muted)',
+                borderColor: isActive
+                  ? 'var(--accent-color)'
+                  : 'var(--border-color)',
                 borderStyle: 'solid',
                 borderWidth: '1px',
-                color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
+                color: isActive
+                  ? 'var(--accent-color)'
+                  : 'var(--text-secondary)',
                 boxShadow: isActive ? '0 0 14px var(--accent-glow)' : 'none',
               }}
             >

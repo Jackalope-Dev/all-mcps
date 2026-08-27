@@ -1,10 +1,11 @@
+import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { drizzle } from 'drizzle-orm/d1';
-import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
-import { findExistingListingByUrl } from '../../../../lib/urlDedup';
+import {
+  DEFAULT_SUBMIT_CATEGORY,
+  DIRECTORY_CATEGORIES,
+} from '../../../../lib/categories';
 import { chatJson } from '../../../../lib/openai';
-import { DIRECTORY_CATEGORIES, DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import {
   AUTH_TYPES,
   isAuthType,
@@ -13,6 +14,8 @@ import {
   MAINTENANCE_STATUSES,
   PRICING_MODELS,
 } from '../../../../lib/serverEnums';
+import { findExistingListingByUrl } from '../../../../lib/urlDedup';
+import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 
 const bodySchema = z.object({
   url: z.string().url(),
@@ -60,11 +63,13 @@ async function enrichWithLlm(input: {
       {
         role: 'user',
         content: `URL: ${input.url}\nName: ${input.name}\nDescription: ${input.description}\n${
-          input.readmeSnippet ? `README excerpt:\n${input.readmeSnippet.slice(0, 2500)}\n` : ''
+          input.readmeSnippet
+            ? `README excerpt:\n${input.readmeSnippet.slice(0, 2500)}\n`
+            : ''
         }\nAllowed categories (prefer exact match):\n${categories}\nDefault category if unsure: ${DEFAULT_SUBMIT_CATEGORY}\nAllowed pricingModel: ${PRICING_MODELS.join(
-          ', '
+          ', ',
         )}\nAllowed authType: ${AUTH_TYPES.join(', ')}\nAllowed maintenanceStatus: ${MAINTENANCE_STATUSES.join(
-          ', '
+          ', ',
         )}`,
       },
     ],
@@ -77,19 +82,21 @@ async function enrichWithLlm(input: {
 
   const data = result.data;
   const out: PrefillEnrichment = {};
-  if (typeof data.name === 'string' && data.name.trim()) out.name = data.name.trim().slice(0, 120);
+  if (typeof data.name === 'string' && data.name.trim())
+    out.name = data.name.trim().slice(0, 120);
   if (typeof data.description === 'string' && data.description.trim()) {
     out.description = data.description.trim().slice(0, 500);
   }
   if (typeof data.category === 'string') {
     const match = DIRECTORY_CATEGORIES.find(
-      (c) => c.toLowerCase() === data.category!.trim().toLowerCase()
+      (c) => c.toLowerCase() === data.category!.trim().toLowerCase(),
     );
     if (match) out.category = match;
   }
   if (isPricingModel(data.pricingModel)) out.pricingModel = data.pricingModel;
   if (isAuthType(data.authType)) out.authType = data.authType;
-  if (isMaintenanceStatus(data.maintenanceStatus)) out.maintenanceStatus = data.maintenanceStatus;
+  if (isMaintenanceStatus(data.maintenanceStatus))
+    out.maintenanceStatus = data.maintenanceStatus;
   if (typeof data.license === 'string' && data.license.trim()) {
     out.license = data.license.trim().slice(0, 60);
   }
@@ -111,11 +118,11 @@ function extractMeta(html: string, names: string[]): string | null {
   for (const name of names) {
     const propRe = new RegExp(
       `<meta[^>]+(?:property|name)=["']${name}["'][^>]+content=["']([^"']+)["']`,
-      'i'
+      'i',
     );
     const propRe2 = new RegExp(
       `<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${name}["']`,
-      'i'
+      'i',
     );
     const m = html.match(propRe) || html.match(propRe2);
     if (m?.[1]) return decodeHtmlEntities(m[1].trim());
@@ -138,12 +145,18 @@ export async function POST(req: Request) {
   try {
     const parsed = bodySchema.safeParse(await req.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Valid URL required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Valid URL required' },
+        { status: 400 },
+      );
     }
 
     const url = parsed.data.url.trim();
     if (!isSafeSubmissionUrl(url)) {
-      return NextResponse.json({ error: 'URL must be a public http(s) address' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'URL must be a public http(s) address' },
+        { status: 400 },
+      );
     }
 
     // Catch duplicates before spending a GitHub/LLM call on them — matches
@@ -171,15 +184,23 @@ export async function POST(req: Request) {
       let repo = githubMatch[2];
       if (repo.endsWith('.git')) repo = repo.slice(0, -4);
 
-      const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-        headers: { 'User-Agent': 'AllMCPs-Directory', Accept: 'application/vnd.github+json' },
-        signal: AbortSignal.timeout(10000),
-      });
+      const ghRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        {
+          headers: {
+            'User-Agent': 'AllMCPs-Directory',
+            Accept: 'application/vnd.github+json',
+          },
+          signal: AbortSignal.timeout(10000),
+        },
+      );
 
       if (!ghRes.ok) {
         return NextResponse.json(
-          { error: `GitHub returned ${ghRes.status}. Check the repository URL.` },
-          { status: 400 }
+          {
+            error: `GitHub returned ${ghRes.status}. Check the repository URL.`,
+          },
+          { status: 400 },
         );
       }
 
@@ -196,7 +217,8 @@ export async function POST(req: Request) {
         name: gh.name || repo,
         description: gh.description || '',
         url: gh.html_url || url,
-        websiteUrl: gh.homepage && isSafeSubmissionUrl(gh.homepage) ? gh.homepage : '',
+        websiteUrl:
+          gh.homepage && isSafeSubmissionUrl(gh.homepage) ? gh.homepage : '',
       };
 
       // Best-effort README snippet for pricing/auth/license inference (soft-fail).
@@ -207,9 +229,10 @@ export async function POST(req: Request) {
           {
             headers: { 'User-Agent': 'AllMCPs-Directory' },
             signal: AbortSignal.timeout(6000),
-          }
+          },
         );
-        if (readmeRes.ok) readmeSnippet = (await readmeRes.text()).slice(0, 4000);
+        if (readmeRes.ok)
+          readmeSnippet = (await readmeRes.text()).slice(0, 4000);
       } catch {
         /* ignore */
       }
@@ -240,13 +263,20 @@ export async function POST(req: Request) {
     });
 
     if (!res.ok) {
-      return NextResponse.json({ error: `Site returned HTTP ${res.status}` }, { status: 400 });
+      return NextResponse.json(
+        { error: `Site returned HTTP ${res.status}` },
+        { status: 400 },
+      );
     }
 
     const html = (await res.text()).slice(0, 400_000);
     const title = extractTitle(html);
     const description =
-      extractMeta(html, ['og:description', 'description', 'twitter:description']) || '';
+      extractMeta(html, [
+        'og:description',
+        'description',
+        'twitter:description',
+      ]) || '';
 
     let name = title || '';
     // Drop common site suffixes: "Foo — Home", "Foo | MCP Server"
@@ -274,7 +304,7 @@ export async function POST(req: Request) {
     console.error('Prefill error:', e);
     return NextResponse.json(
       { error: 'Could not fetch that URL. Enter details manually.' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

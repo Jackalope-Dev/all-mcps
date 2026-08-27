@@ -1,13 +1,13 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
-import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import serversData from '../../data/mcp-servers.json';
+import { drizzle } from 'drizzle-orm/d1';
+import { ChevronRight } from 'lucide-react';
+import type { Metadata } from 'next';
+import Link from 'next/link';
 import { CategoryGrid } from '../../components/CategoryGrid';
+import { PageHeader, PageShell } from '../../components/PageShell';
+import serversData from '../../data/mcp-servers.json';
+import { servers as serversTable } from '../../db/schema';
 import { categorySlug } from '../../lib/categories';
-import { PageShell, PageHeader } from '../../components/PageShell';
 
 // Hourly ISR keeps category counts current from D1 without querying on every request.
 export const revalidate = 3600;
@@ -20,7 +20,14 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/categories',
   },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Browse MCP Servers by Category | AllMCPs',
     description:
       'Explore Model Context Protocol servers across 50+ categories. Find AI agent tools for databases, developer workflows, and security.',
@@ -44,7 +51,7 @@ async function getServers(): Promise<ServerSlim[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext({ async: true });
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select({
@@ -89,7 +96,8 @@ function parseEmoji(category: string): { emoji: string; label: string } {
     }
   }
   // Fallback regex for environments without Segmenter
-  const emojiRegex = /^(\p{Extended_Pictographic}(?:\u200D\p{Extended_Pictographic}|\uFE0F)*)\s*/u;
+  const emojiRegex =
+    /^(\p{Extended_Pictographic}(?:\u200D\p{Extended_Pictographic}|\uFE0F)*)\s*/u;
   const match = category.match(emojiRegex);
   if (match) {
     return { emoji: match[1], label: category.slice(match[0].length) };
@@ -103,7 +111,10 @@ export default async function CategoriesPage() {
   // Group by category and count
   const categoryMap = new Map<string, number>();
   for (const server of servers) {
-    categoryMap.set(server.category, (categoryMap.get(server.category) || 0) + 1);
+    categoryMap.set(
+      server.category,
+      (categoryMap.get(server.category) || 0) + 1,
+    );
   }
 
   // Sort by count descending (most popular first)
@@ -145,8 +156,18 @@ export default async function CategoriesPage() {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Categories', item: 'https://allmcps.com/categories' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Categories',
+            item: 'https://allmcps.com/categories',
+          },
         ],
       },
     ],

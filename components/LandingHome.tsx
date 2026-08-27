@@ -1,25 +1,25 @@
-import React from 'react';
-import Link from 'next/link';
 import {
-  Database,
-  Globe,
-  Code2,
-  Brain,
-  Cloud,
-  FileText,
-  Terminal,
-  ShieldCheck,
-  MessageSquare,
   ArrowRight,
   BadgeCheck,
+  Brain,
+  Cloud,
+  Code2,
+  Database,
+  FileText,
+  Globe,
+  MessageSquare,
+  ShieldCheck,
+  Terminal,
   Zap,
 } from 'lucide-react';
-import { SectionKicker } from './ui/SectionKicker';
-import { FaqSection } from './ui/FaqSection';
-import { Reveal } from './ui/Reveal';
-import { ServerAvatar } from './ui/ServerAvatar';
-import { OutboundLink } from './ui/OutboundLink';
+import Link from 'next/link';
+import type React from 'react';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
+import { FaqSection } from './ui/FaqSection';
+import { OutboundLink } from './ui/OutboundLink';
+import { Reveal } from './ui/Reveal';
+import { SectionKicker } from './ui/SectionKicker';
+import { ServerAvatar } from './ui/ServerAvatar';
 
 const INTENTS = [
   {
@@ -112,11 +112,26 @@ const FAQ_ITEMS = [
 
 export function LandingIntents() {
   return (
-    <Reveal as="section" className="container landing-intents" style={{ marginBottom: '3.5rem' }}>
+    <Reveal
+      as="section"
+      className="container landing-intents"
+      style={{ marginBottom: '3.5rem' }}
+    >
       <SectionKicker label="Browse by goal" />
-      <h2 className="landing-section-title" style={{ marginBottom: '0.5rem' }}>What do you need done?</h2>
-      <p className="landing-section-sublead" style={{ maxWidth: '640px', margin: '0 auto 2rem', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-        Jump straight to verified tools with ready-to-paste configurations for your agents.
+      <h2 className="landing-section-title" style={{ marginBottom: '0.5rem' }}>
+        What do you need done?
+      </h2>
+      <p
+        className="landing-section-sublead"
+        style={{
+          maxWidth: '640px',
+          margin: '0 auto 2rem',
+          color: 'var(--text-secondary)',
+          fontSize: '0.95rem',
+        }}
+      >
+        Jump straight to verified tools with ready-to-paste configurations for
+        your agents.
       </p>
       <div className="landing-intent-grid">
         {INTENTS.map((intent) => {
@@ -126,9 +141,11 @@ export function LandingIntents() {
               key={intent.label}
               href={intent.href}
               className="landing-intent-card surface-interactive"
-              style={{
-                '--intent-color': intent.colorVar,
-              } as React.CSSProperties}
+              style={
+                {
+                  '--intent-color': intent.colorVar,
+                } as React.CSSProperties
+              }
             >
               <span className="landing-intent-icon">
                 <Icon size={20} aria-hidden="true" />
@@ -137,7 +154,11 @@ export function LandingIntents() {
                 <span className="landing-intent-label">{intent.label}</span>
                 <span className="landing-intent-hint">{intent.hint}</span>
               </span>
-              <ArrowRight size={16} className="landing-intent-arrow" aria-hidden="true" />
+              <ArrowRight
+                size={16}
+                className="landing-intent-arrow"
+                aria-hidden="true"
+              />
             </Link>
           );
         })}
@@ -183,9 +204,16 @@ export function LandingCta({ totalCount }: { totalCount?: number }) {
 
 export function LandingMcpPromo() {
   return (
-    <section className="container mcp-promo-section" style={{ margin: '1.5rem auto 2.5rem' }}>
+    <section
+      className="container mcp-promo-section"
+      style={{ margin: '1.5rem auto 2.5rem' }}
+    >
       <div className="mcp-promo-card">
-        <ServerAvatar name="AllMCPs Server" logoUrl="/logos/allmcps-server" size={44} />
+        <ServerAvatar
+          name="AllMCPs Server"
+          logoUrl="/logos/allmcps-server"
+          size={44}
+        />
         <div className="mcp-promo-content">
           <h2 className="mcp-promo-title">
             AllMCPs MCP server
@@ -194,7 +222,8 @@ export function LandingMcpPromo() {
             </span>
           </h2>
           <p className="mcp-promo-desc">
-            Search, install, and submit listings from Claude, Cursor, or any MCP client.
+            Search, install, and submit listings from Claude, Cursor, or any MCP
+            client.
           </p>
         </div>
         <div className="mcp-promo-actions">
@@ -226,7 +255,9 @@ export function LandingNewsletter() {
   return (
     <section className="container newsletter-homepage-section">
       <div>
-        <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.125rem' }}>New MCP servers, weekly</h2>
+        <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.125rem' }}>
+          New MCP servers, weekly
+        </h2>
         <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
           New and notable listings in your inbox.
         </p>

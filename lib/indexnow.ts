@@ -13,10 +13,11 @@ const ENDPOINT = 'https://api.indexnow.org/indexnow';
  * Safe to fire-and-forget on approve/republish.
  */
 export async function submitIndexNowUrls(urls: string[]): Promise<boolean> {
-  const urlList = [...new Set(urls.filter((u) => typeof u === 'string' && u.startsWith('https://')))].slice(
-    0,
-    100
-  );
+  const urlList = [
+    ...new Set(
+      urls.filter((u) => typeof u === 'string' && u.startsWith('https://')),
+    ),
+  ].slice(0, 100);
   if (urlList.length === 0) return false;
 
   try {
@@ -52,9 +53,14 @@ export async function submitIndexNowUrls(urls: string[]): Promise<boolean> {
 /** Ping IndexNow for a listing page (and optional extra paths). */
 export async function notifyListingIndexed(
   serverId: string,
-  extraPaths: string[] = []
+  extraPaths: string[] = [],
 ): Promise<void> {
   const base = `https://${HOST}/mcp/${serverId}`;
-  const urls = [base, ...extraPaths.map((p) => (p.startsWith('http') ? p : `https://${HOST}${p}`))];
+  const urls = [
+    base,
+    ...extraPaths.map((p) =>
+      p.startsWith('http') ? p : `https://${HOST}${p}`,
+    ),
+  ];
   await submitIndexNowUrls(urls);
 }

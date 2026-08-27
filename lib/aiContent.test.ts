@@ -1,4 +1,4 @@
-import { parseFaqArray, clampFaq } from './aiContent';
+import { clampFaq, parseFaqArray } from './aiContent';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -9,7 +9,9 @@ function assert(condition: boolean, message: string) {
 console.log('Testing parseFaqArray...');
 
 // 1. Valid JSON string array of {q,a} parses correctly.
-const valid = parseFaqArray(JSON.stringify([{ q: 'What does it do?', a: 'It does things.' }]));
+const valid = parseFaqArray(
+  JSON.stringify([{ q: 'What does it do?', a: 'It does things.' }]),
+);
 assert(valid.length === 1, 'Should parse one item');
 assert(valid[0].q === 'What does it do?', 'Should keep the question text');
 assert(valid[0].a === 'It does things.', 'Should keep the answer text');
@@ -19,13 +21,21 @@ const fromArray = parseFaqArray([{ q: 'Q', a: 'A' }]);
 assert(fromArray.length === 1, 'Should accept an already-parsed array');
 
 // 3. Malformed JSON never throws — returns [].
-assert(parseFaqArray('{not json').length === 0, 'Should tolerate malformed JSON');
+assert(
+  parseFaqArray('{not json').length === 0,
+  'Should tolerate malformed JSON',
+);
 
 // 4. Non-array JSON (e.g. a stray object) returns [].
-assert(parseFaqArray(JSON.stringify({ q: 'a', a: 'b' })).length === 0, 'Should reject a non-array payload');
+assert(
+  parseFaqArray(JSON.stringify({ q: 'a', a: 'b' })).length === 0,
+  'Should reject a non-array payload',
+);
 
 // 5. Items missing q or a are dropped, not crashed on.
-const partial = parseFaqArray(JSON.stringify([{ q: 'Only a question' }, { q: 'Full', a: 'Pair' }]));
+const partial = parseFaqArray(
+  JSON.stringify([{ q: 'Only a question' }, { q: 'Full', a: 'Pair' }]),
+);
 assert(partial.length === 1, 'Should drop items missing an answer');
 assert(partial[0].q === 'Full', 'Should keep the well-formed item');
 
@@ -46,19 +56,38 @@ assert(long[0].q.length <= 50, 'Question should be clamped to maxQLen');
 assert(long[0].a.length <= 100, 'Answer should be clamped to maxALen');
 
 // 9. Drops items with an empty question or answer after trimming.
-const emptyish = clampFaq([{ q: '   ', a: 'Real answer' }, { q: 'Real question', a: 'Real answer' }], 5, 200, 400);
+const emptyish = clampFaq(
+  [
+    { q: '   ', a: 'Real answer' },
+    { q: 'Real question', a: 'Real answer' },
+  ],
+  5,
+  200,
+  400,
+);
 assert(emptyish.length === 1, 'Should drop items with a blank question');
 
 // 10. Non-array input returns [].
-assert(clampFaq('not an array', 5, 200, 400).length === 0, 'Should return [] for non-array input');
+assert(
+  clampFaq('not an array', 5, 200, 400).length === 0,
+  'Should return [] for non-array input',
+);
 
 // 11. Non-string q/a values (null, number, object, boolean) are dropped, not coerced into garbage strings.
-const nonString = parseFaqArray(JSON.stringify([
-  { q: null, a: 'Real answer' },
-  { q: 42, a: 'Real answer' },
-  { q: 'Real question', a: 'Real answer' },
-]));
-assert(nonString.length === 1, 'Should drop items with non-string q/a instead of coercing them');
-assert(nonString[0].q === 'Real question', 'Should keep only the well-formed item');
+const nonString = parseFaqArray(
+  JSON.stringify([
+    { q: null, a: 'Real answer' },
+    { q: 42, a: 'Real answer' },
+    { q: 'Real question', a: 'Real answer' },
+  ]),
+);
+assert(
+  nonString.length === 1,
+  'Should drop items with non-string q/a instead of coercing them',
+);
+assert(
+  nonString[0].q === 'Real question',
+  'Should keep only the well-formed item',
+);
 
 console.log('ALL TESTS PASSED SUCCESSFULLY!');

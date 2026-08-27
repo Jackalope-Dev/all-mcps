@@ -1,7 +1,13 @@
+import { and, eq, gt, ne } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { eq, and, ne, gt } from 'drizzle-orm';
 import { servers } from '@/db/schema';
-import { getPriceId, getProductId, tieredUnitPrice, PAID_PRODUCTS, type PaidSku } from '@/lib/pricing';
+import {
+  getPriceId,
+  getProductId,
+  PAID_PRODUCTS,
+  type PaidSku,
+  tieredUnitPrice,
+} from '@/lib/pricing';
 import { getAppUrl, getStripe } from '@/lib/stripe';
 
 export type CreateCheckoutParams = {
@@ -37,10 +43,12 @@ function appendPrefilledPromoCode(url: string, code: string): string {
   return `${url}${sep}prefilled_promo_code=${encodeURIComponent(cleanCode)}`;
 }
 
-export async function createStripeCheckoutSession(params: CreateCheckoutParams): Promise<CreateCheckoutResult> {
+export async function createStripeCheckoutSession(
+  params: CreateCheckoutParams,
+): Promise<CreateCheckoutResult> {
   let { serverId, sku, email, coupon, weeks, env } = params;
 
-  if (!env || !env.DB || !env.STRIPE_SECRET_KEY) {
+  if (!env?.DB || !env.STRIPE_SECRET_KEY) {
     try {
       const { getCloudflareContext } = await import('@opennextjs/cloudflare');
       const ctx = await getCloudflareContext();
@@ -57,7 +65,11 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
   }
 
   const db = drizzle(env.DB);
-  const rows = await db.select().from(servers).where(eq(servers.id, serverId)).limit(1);
+  const rows = await db
+    .select()
+    .from(servers)
+    .where(eq(servers.id, serverId))
+    .limit(1);
   const server = rows[0];
   if (!server) {
     return { success: false, status: 404, error: 'Listing not found' };
@@ -67,18 +79,22 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     return {
       success: false,
       status: 400,
-      error: 'Priority review is only available for listings still awaiting approval.',
+      error:
+        'Priority review is only available for listings still awaiting approval.',
     };
   }
 
   if (
-    (sku === 'featured_7d' || sku === 'category_sponsor_7d' || sku === 'premium_monthly') &&
+    (sku === 'featured_7d' ||
+      sku === 'category_sponsor_7d' ||
+      sku === 'premium_monthly') &&
     server.status !== 'active'
   ) {
     return {
       success: false,
       status: 400,
-      error: 'Featured, Category Sponsor, and Premium are available after your listing is approved.',
+      error:
+        'Featured, Category Sponsor, and Premium are available after your listing is approved.',
     };
   }
 
@@ -126,7 +142,11 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
     };
   }
 
-  if (sku === 'premium_monthly' && server.isPremium && server.premiumStatus === 'active') {
+  if (
+    sku === 'premium_monthly' &&
+    server.isPremium &&
+    server.premiumStatus === 'active'
+  ) {
     return {
       success: false,
       status: 400,
@@ -137,14 +157,18 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
   if (sku === 'category_sponsor_7d') {
     const now = new Date();
     const existingSponsor = await db
-      .select({ id: servers.id, name: servers.name, categorySponsorUntil: servers.categorySponsorUntil })
+      .select({
+        id: servers.id,
+        name: servers.name,
+        categorySponsorUntil: servers.categorySponsorUntil,
+      })
       .from(servers)
       .where(
         and(
           eq(servers.category, server.category),
           ne(servers.id, server.id),
-          gt(servers.categorySponsorUntil, now)
-        )
+          gt(servers.categorySponsorUntil, now),
+        ),
       )
       .limit(1);
 
@@ -217,7 +241,7 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
   }
 
   let promoFound = false;
-  if (coupon && coupon.trim()) {
+  if (coupon?.trim()) {
     const cleanCoupon = coupon.trim();
     try {
       const promoList = await stripe.promotionCodes.list({
@@ -239,10 +263,17 @@ export async function createStripeCheckoutSession(params: CreateCheckoutParams):
   const session = await stripe.checkout.sessions.create(sessionParams);
 
   if (!session?.url) {
-    return { success: false, status: 500, error: 'Could not create Checkout session' };
+    return {
+      success: false,
+      status: 500,
+      error: 'Could not create Checkout session',
+    };
   }
 
-  const finalUrl = coupon && !promoFound ? appendPrefilledPromoCode(session.url, coupon) : session.url;
+  const finalUrl =
+    coupon && !promoFound
+      ? appendPrefilledPromoCode(session.url, coupon)
+      : session.url;
 
   return {
     success: true,

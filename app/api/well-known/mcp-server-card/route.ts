@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   const serverCard = {
-    $schema: 'https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/server-card.schema.json',
+    $schema:
+      'https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/server-card.schema.json',
     serverInfo: {
       name: 'AllMCPs Directory & Discovery Server',
       version: '1.1.0',
-      description: 'Comprehensive index, search engine, and agentic commerce server for Model Context Protocol (MCP) servers and tools.',
+      description:
+        'Comprehensive index, search engine, and agentic commerce server for Model Context Protocol (MCP) servers and tools.',
       vendor: 'AllMCPs',
       homepage: 'https://allmcps.com',
     },

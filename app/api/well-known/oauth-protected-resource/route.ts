@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { AGENT_SCOPES, AGENT_SCOPE_DETAILS } from '@/lib/agentAuth';
+import { AGENT_SCOPE_DETAILS, AGENT_SCOPES } from '@/lib/agentAuth';
 
 export async function GET() {
   const protectedResource = {

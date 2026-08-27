@@ -23,7 +23,7 @@ function notFound(request: Request) {
       status: 404,
       docs: 'https://allmcps.com/docs/api',
     },
-    { status: 404, headers: CORS_HEADERS }
+    { status: 404, headers: CORS_HEADERS },
   );
 }
 

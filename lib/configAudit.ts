@@ -12,7 +12,13 @@ export interface AuditIssue {
 
 export interface AuditResult {
   isValidJson: boolean;
-  formatDetected: 'claude' | 'cursor' | 'windsurf' | 'cline' | 'zed' | 'unknown';
+  formatDetected:
+    | 'claude'
+    | 'cursor'
+    | 'windsurf'
+    | 'cline'
+    | 'zed'
+    | 'unknown';
   issues: AuditIssue[];
   serverCount: number;
   parsedConfig: any;
@@ -25,7 +31,12 @@ export function auditMcpConfig(rawJson: string): AuditResult {
     return {
       isValidJson: false,
       formatDetected: 'unknown',
-      issues: [{ type: 'info', message: 'Paste your MCP configuration JSON to audit for issues.' }],
+      issues: [
+        {
+          type: 'info',
+          message: 'Paste your MCP configuration JSON to audit for issues.',
+        },
+      ],
       serverCount: 0,
       parsedConfig: null,
     };
@@ -42,7 +53,8 @@ export function auditMcpConfig(rawJson: string): AuditResult {
         {
           type: 'error',
           message: `JSON Syntax Error: ${e.message}`,
-          suggestion: 'Ensure all keys are double-quoted and trailing commas are removed.',
+          suggestion:
+            'Ensure all keys are double-quoted and trailing commas are removed.',
         },
       ],
       serverCount: 0,
@@ -57,7 +69,10 @@ export function auditMcpConfig(rawJson: string): AuditResult {
   if (parsed.mcpServers && typeof parsed.mcpServers === 'object') {
     formatDetected = 'claude';
     serversObj = parsed.mcpServers;
-  } else if (parsed.experimental?.context_servers && Array.isArray(parsed.experimental.context_servers)) {
+  } else if (
+    parsed.experimental?.context_servers &&
+    Array.isArray(parsed.experimental.context_servers)
+  ) {
     formatDetected = 'zed';
     parsed.experimental.context_servers.forEach((s: any) => {
       if (s.id) serversObj[s.id] = s;
@@ -79,7 +94,8 @@ export function auditMcpConfig(rawJson: string): AuditResult {
     });
   }
 
-  const envPlaceholderRegex = /<(?:YOUR_|YOUR_)?(?:API_KEY|TOKEN|SECRET|PASSWORD|URL|PATH|DB)[^>]*>|YOUR_[A-Z0-9_]+|CHANGEME|ENTER_[A-Z0-9_]+/i;
+  const envPlaceholderRegex =
+    /<(?:YOUR_|YOUR_)?(?:API_KEY|TOKEN|SECRET|PASSWORD|URL|PATH|DB)[^>]*>|YOUR_[A-Z0-9_]+|CHANGEME|ENTER_[A-Z0-9_]+/i;
 
   // Inspect each server entry
   for (const key of serverKeys) {
@@ -100,7 +116,8 @@ export function auditMcpConfig(rawJson: string): AuditResult {
         type: 'error',
         serverKey: key,
         message: `Server "${key}" is missing a "command" or "url" field.`,
-        suggestion: 'Specify "command": "npx" or "uvx" for stdio servers, or "url": "https://..." for remote SSE servers.',
+        suggestion:
+          'Specify "command": "npx" or "uvx" for stdio servers, or "url": "https://..." for remote SSE servers.',
       });
     }
 
@@ -111,7 +128,8 @@ export function auditMcpConfig(rawJson: string): AuditResult {
           type: 'error',
           serverKey: key,
           message: `Server "${key}" has "args" defined as a non-array.`,
-          suggestion: 'Change "args" to a JSON array of string arguments, e.g. ["-y", "package-name"].',
+          suggestion:
+            'Change "args" to a JSON array of string arguments, e.g. ["-y", "package-name"].',
         });
       } else {
         s.args.forEach((arg: any, idx: number) => {
@@ -120,7 +138,8 @@ export function auditMcpConfig(rawJson: string): AuditResult {
               type: 'warning',
               serverKey: key,
               message: `Server "${key}" argument #${idx + 1} contains unreplaced placeholder: "${arg}".`,
-              suggestion: 'Replace placeholder values with your real API key or credential string.',
+              suggestion:
+                'Replace placeholder values with your real API key or credential string.',
             });
           }
         });
@@ -142,13 +161,15 @@ export function auditMcpConfig(rawJson: string): AuditResult {
     }
 
     // Check deprecated package names
-    const commandStr = `${s.command || ''} ${(s.args || []).join(' ')}`.toLowerCase();
+    const commandStr =
+      `${s.command || ''} ${(s.args || []).join(' ')}`.toLowerCase();
     if (commandStr.includes('@smithery/cli')) {
       issues.push({
         type: 'info',
         serverKey: key,
         message: `Server "${key}" uses Smithery CLI runner.`,
-        suggestion: 'Consider using npx or uvx directly for faster startup and native MCP protocol stability.',
+        suggestion:
+          'Consider using npx or uvx directly for faster startup and native MCP protocol stability.',
       });
     }
   }
@@ -156,7 +177,8 @@ export function auditMcpConfig(rawJson: string): AuditResult {
   if (issues.length === 0) {
     issues.push({
       type: 'info',
-      message: '✅ Configuration structure is valid! No missing keys or syntax errors detected.',
+      message:
+        '✅ Configuration structure is valid! No missing keys or syntax errors detected.',
     });
   }
 
@@ -171,7 +193,7 @@ export function auditMcpConfig(rawJson: string): AuditResult {
 
 export function mergeServerIntoConfig(
   existingJson: string,
-  newServer: { id: string; command: string; args: string[] }
+  newServer: { id: string; command: string; args: string[] },
 ): string {
   let configObj: any;
 

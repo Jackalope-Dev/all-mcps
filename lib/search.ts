@@ -48,7 +48,7 @@ export function buildAiSearchText(
     authType?: string | null;
     compatibleClients?: string[] | null;
   },
-  maxLen = 600
+  maxLen = 600,
 ): string | null {
   const faqBits = (parts.aiFaq || []).flatMap((item) => {
     if (!item || typeof item !== 'object') return [];
@@ -171,20 +171,67 @@ const SYNONYMS: Record<string, string[]> = {
   logs: ['logging', 'observability'],
   // Finance / crypto
   finance: ['stock', 'crypto', 'trading', 'market'],
-  crypto: ['blockchain', 'web3', 'ethereum', 'bitcoin', 'solana', 'btc', 'coingecko', 'coinbase'],
-  btc: ['bitcoin', 'crypto', 'coingecko', 'coinbase', 'ticker', 'price', 'rates'],
+  crypto: [
+    'blockchain',
+    'web3',
+    'ethereum',
+    'bitcoin',
+    'solana',
+    'btc',
+    'coingecko',
+    'coinbase',
+  ],
+  btc: [
+    'bitcoin',
+    'crypto',
+    'coingecko',
+    'coinbase',
+    'ticker',
+    'price',
+    'rates',
+  ],
   prices: ['rates', 'quotes', 'ticker', 'market', 'price', 'cost'],
   payments: ['stripe', 'payment', 'billing'],
   // Transit & travel
-  transit: ['bus', 'train', 'subway', 'gtfs', 'commute', 'transportation', 'schedule', 'transit'],
+  transit: [
+    'bus',
+    'train',
+    'subway',
+    'gtfs',
+    'commute',
+    'transportation',
+    'schedule',
+    'transit',
+  ],
   bus: ['transit', 'transportation', 'schedule', 'gtfs'],
   train: ['transit', 'subway', 'rail', 'gtfs'],
   times: ['schedules', 'arrivals', 'timetable', 'realtime', 'status'],
 };
 
 const STOPWORDS = new Set([
-  'find', 'latest', 'check', 'show', 'me', 'how', 'to', 'where', 'can', 'i', 'get',
-  'for', 'the', 'a', 'an', 'is', 'are', 'with', 'want', 'need', 'search', 'look', 'up'
+  'find',
+  'latest',
+  'check',
+  'show',
+  'me',
+  'how',
+  'to',
+  'where',
+  'can',
+  'i',
+  'get',
+  'for',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'with',
+  'want',
+  'need',
+  'search',
+  'look',
+  'up',
 ]);
 
 /** Lowercase alphanumeric terms; separators (-, /, @, ., spaces) split words. Filter common intent stopwords when multiple words exist. */
@@ -242,18 +289,23 @@ export function trendingScore(s: TrendingItem): number {
     Math.min(stars * 0.1, 40) +
     Math.min(downloads * 0.05, 25);
 
-  const createdAtMs = s.createdAt ? new Date(s.createdAt).getTime() : Date.now();
-  const ageInDays = Math.max(0.5, (Date.now() - createdAtMs) / (1000 * 60 * 60 * 24));
+  const createdAtMs = s.createdAt
+    ? new Date(s.createdAt).getTime()
+    : Date.now();
+  const ageInDays = Math.max(
+    0.5,
+    (Date.now() - createdAtMs) / (1000 * 60 * 60 * 24),
+  );
 
   // Time decay factor: newer listings with recent engagement get boosted to top of Trending
-  return rawEngagement / Math.pow(ageInDays + 2, 1.25);
+  return rawEngagement / (ageInDays + 2) ** 1.25;
 }
 
 function fieldHitScore(
   field: string,
   term: string,
   boundary: RegExp,
-  weights: { exact: number; word: number; substr: number }
+  weights: { exact: number; word: number; substr: number },
 ): number {
   if (!field) return 0;
   if (field === term) return weights.exact;
@@ -271,7 +323,7 @@ export function scoreServerMatch(
   server: Searchable,
   terms: QueryTerm[],
   fullQuery: string,
-  requireAll = true
+  requireAll = true,
 ): number {
   if (terms.length === 0) return 0;
 
@@ -295,24 +347,32 @@ export function scoreServerMatch(
 
     best = Math.max(
       best,
-      fieldHitScore(name, term, boundary, { exact: 130, word: 90, substr: 60 })
+      fieldHitScore(name, term, boundary, { exact: 130, word: 90, substr: 60 }),
     );
     best = Math.max(
       best,
-      fieldHitScore(category, term, boundary, { exact: 50, word: 40, substr: 28 })
+      fieldHitScore(category, term, boundary, {
+        exact: 50,
+        word: 40,
+        substr: 28,
+      }),
     );
     best = Math.max(
       best,
-      fieldHitScore(description, term, boundary, { exact: 30, word: 22, substr: 10 })
+      fieldHitScore(description, term, boundary, {
+        exact: 30,
+        word: 22,
+        substr: 10,
+      }),
     );
     best = Math.max(
       best,
-      fieldHitScore(tools, term, boundary, { exact: 45, word: 32, substr: 16 })
+      fieldHitScore(tools, term, boundary, { exact: 45, word: 32, substr: 16 }),
     );
     // AI-authored search text — between description and tools in weight.
     best = Math.max(
       best,
-      fieldHitScore(extra, term, boundary, { exact: 34, word: 24, substr: 12 })
+      fieldHitScore(extra, term, boundary, { exact: 34, word: 24, substr: 12 }),
     );
 
     // Synonym expansion — slightly weaker than direct hits
@@ -358,12 +418,14 @@ export type RankOptions = {
 export function rankServers<T extends Searchable & Engagement>(
   servers: T[],
   query: string,
-  opts: RankOptions = {}
+  opts: RankOptions = {},
 ): T[] {
   const terms = compileQuery(query);
   if (terms.length === 0) {
     if (!query.trim()) {
-      return typeof opts.limit === 'number' ? servers.slice(0, opts.limit) : servers;
+      return typeof opts.limit === 'number'
+        ? servers.slice(0, opts.limit)
+        : servers;
     }
     return [];
   }
@@ -440,7 +502,7 @@ export function levenshteinDistance(a: string, b: string): number {
         matrix[i][j] = Math.min(
           matrix[i - 1][j - 1] + 1,
           matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
+          matrix[i - 1][j] + 1,
         );
       }
     }
@@ -460,11 +522,9 @@ export type SearchSuggestion = {
  * Generate autocomplete suggestions (matching servers, categories, client tools)
  * as the user types in header search or command palette.
  */
-export function getSearchSuggestions<T extends Searchable & Engagement & { id: string; logoUrl?: string | null }>(
-  query: string,
-  servers: T[],
-  limit = 8
-): SearchSuggestion[] {
+export function getSearchSuggestions<
+  T extends Searchable & Engagement & { id: string; logoUrl?: string | null },
+>(query: string, servers: T[], limit = 8): SearchSuggestion[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
 
@@ -513,16 +573,20 @@ export function getSearchSuggestions<T extends Searchable & Engagement & { id: s
 /**
  * Hybrid ranker combining keyword relevance matching with Cloudflare Vectorize similarity scores.
  */
-export function hybridRankServers<T extends Searchable & Engagement & { id: string }>(
+export function hybridRankServers<
+  T extends Searchable & Engagement & { id: string },
+>(
   servers: T[],
   query: string,
   vectorMatches: Array<{ id: string; score: number }> = [],
-  opts: RankOptions = {}
+  opts: RankOptions = {},
 ): T[] {
   const terms = compileQuery(query);
   if (terms.length === 0) {
     if (!query.trim()) {
-      return typeof opts.limit === 'number' ? servers.slice(0, opts.limit) : servers;
+      return typeof opts.limit === 'number'
+        ? servers.slice(0, opts.limit)
+        : servers;
     }
     return [];
   }
@@ -569,4 +633,3 @@ export function hybridRankServers<T extends Searchable & Engagement & { id: stri
   const ranked = scored.map((s) => s.server);
   return typeof opts.limit === 'number' ? ranked.slice(0, opts.limit) : ranked;
 }
-

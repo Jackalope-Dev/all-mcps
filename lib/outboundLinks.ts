@@ -12,7 +12,12 @@ export const ALLMCPS_UTM = {
 export function isOutboundHttpUrl(href: string | undefined | null): boolean {
   if (!href) return false;
   const trimmed = href.trim();
-  if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('mailto:') || trimmed.startsWith('tel:')) {
+  if (
+    !trimmed ||
+    trimmed.startsWith('#') ||
+    trimmed.startsWith('mailto:') ||
+    trimmed.startsWith('tel:')
+  ) {
     return false;
   }
   // Protocol-relative //example.com
@@ -28,7 +33,7 @@ export function isOutboundHttpUrl(href: string | undefined | null): boolean {
  */
 export function withAllMcpsUtm(
   href: string,
-  options?: { content?: string; campaign?: string }
+  options?: { content?: string; campaign?: string },
 ): string {
   const trimmed = href.trim();
   if (!isOutboundHttpUrl(trimmed)) return href;
@@ -39,7 +44,10 @@ export function withAllMcpsUtm(
 
     url.searchParams.set('utm_source', ALLMCPS_UTM.source);
     url.searchParams.set('utm_medium', ALLMCPS_UTM.medium);
-    url.searchParams.set('utm_campaign', options?.campaign || ALLMCPS_UTM.campaign);
+    url.searchParams.set(
+      'utm_campaign',
+      options?.campaign || ALLMCPS_UTM.campaign,
+    );
 
     if (options?.content) {
       url.searchParams.set('utm_content', options.content);

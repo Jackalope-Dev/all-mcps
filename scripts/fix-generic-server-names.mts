@@ -36,7 +36,8 @@
  *   wrangler d1 execute all-mcps --remote --yes --file out-dir/updates.sql
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { getGithubToken } from '../lib/githubAuth';
 import {
   deriveServerName,
   extractReadmeTitle,
@@ -44,7 +45,6 @@ import {
   isGenericServerName,
   parseGithubUrl,
 } from '../lib/listingEnrich';
-import { getGithubToken } from '../lib/githubAuth';
 
 type Row = { id: string; name: string; url: string; is_official: number };
 
@@ -58,7 +58,9 @@ function sqlString(s: string): string {
 async function main() {
   const [rowsPath, outDir] = process.argv.slice(2);
   if (!rowsPath || !outDir) {
-    console.error('Usage: npx tsx scripts/fix-generic-server-names.mts <rows.json> <out-dir>');
+    console.error(
+      'Usage: npx tsx scripts/fix-generic-server-names.mts <rows.json> <out-dir>',
+    );
     process.exit(1);
   }
   mkdirSync(outDir, { recursive: true });
@@ -67,11 +69,20 @@ async function main() {
   const rows: Row[] = wrangled[0]?.results ?? [];
   console.log(`Loaded ${rows.length} active listings from ${rowsPath}.`);
 
-  const candidates = rows.filter((r) => !r.is_official && isGenericServerName(r.name));
-  console.log(`${candidates.length} have a generic name and are not owner-claimed.\n`);
+  const candidates = rows.filter(
+    (r) => !r.is_official && isGenericServerName(r.name),
+  );
+  console.log(
+    `${candidates.length} have a generic name and are not owner-claimed.\n`,
+  );
 
   const githubToken = getGithubToken();
-  const results: { id: string; oldName: string; newName: string; source: string }[] = [];
+  const results: {
+    id: string;
+    oldName: string;
+    newName: string;
+    source: string;
+  }[] = [];
   const skipped: { id: string; name: string; url: string }[] = [];
   let ghFailures = 0;
 
@@ -88,24 +99,50 @@ async function main() {
       }
     }
 
-    const newName = deriveServerName({ currentName: row.name, url: row.url, ghRepo: gh, readme });
+    const newName = deriveServerName({
+      currentName: row.name,
+      url: row.url,
+      ghRepo: gh,
+      readme,
+    });
     if (newName && newName !== row.name) {
       const readmeTitle = extractReadmeTitle(readme);
-      const source = readmeTitle && readmeTitle.slice(0, 80) === newName ? 'readme-title' : gh ? 'slug' : 'hostname';
+      const source =
+        readmeTitle && readmeTitle.slice(0, 80) === newName
+          ? 'readme-title'
+          : gh
+            ? 'slug'
+            : 'hostname';
       results.push({ id: row.id, oldName: row.name, newName, source });
-      console.log(`  [${i + 1}/${candidates.length}] ${row.id}: "${row.name}" -> "${newName}" (${source})`);
+      console.log(
+        `  [${i + 1}/${candidates.length}] ${row.id}: "${row.name}" -> "${newName}" (${source})`,
+      );
     } else {
       skipped.push({ id: row.id, name: row.name, url: row.url });
     }
 
-    if ((i + 1) % 25 === 0) console.log(`  ...${i + 1}/${candidates.length} scanned`);
+    if ((i + 1) % 25 === 0)
+      console.log(`  ...${i + 1}/${candidates.length} scanned`);
     await sleep(DELAY_MS);
   }
 
-  writeFileSync(`${outDir}/proposed-renames.json`, JSON.stringify(results, null, 2), 'utf-8');
-  writeFileSync(`${outDir}/skipped.json`, JSON.stringify(skipped, null, 2), 'utf-8');
+  writeFileSync(
+    `${outDir}/proposed-renames.json`,
+    JSON.stringify(results, null, 2),
+    'utf-8',
+  );
+  writeFileSync(
+    `${outDir}/skipped.json`,
+    JSON.stringify(skipped, null, 2),
+    'utf-8',
+  );
 
-  const sql = results.map((r) => `UPDATE servers SET name = ${sqlString(r.newName)} WHERE id = ${sqlString(r.id)};`).join('\n');
+  const sql = results
+    .map(
+      (r) =>
+        `UPDATE servers SET name = ${sqlString(r.newName)} WHERE id = ${sqlString(r.id)};`,
+    )
+    .join('\n');
   writeFileSync(`${outDir}/updates.sql`, sql, 'utf-8');
 
   const bySource = results.reduce<Record<string, number>>((acc, r) => {
@@ -114,10 +151,12 @@ async function main() {
   }, {});
 
   console.log(
-    `\n${results.length}/${candidates.length} candidates got a better name (${ghFailures} GitHub fetch failures, ${skipped.length} left unchanged).`
+    `\n${results.length}/${candidates.length} candidates got a better name (${ghFailures} GitHub fetch failures, ${skipped.length} left unchanged).`,
   );
   console.log(`By source: ${JSON.stringify(bySource)}`);
-  console.log(`\nWrote:\n  ${outDir}/proposed-renames.json\n  ${outDir}/skipped.json\n  ${outDir}/updates.sql`);
+  console.log(
+    `\nWrote:\n  ${outDir}/proposed-renames.json\n  ${outDir}/skipped.json\n  ${outDir}/updates.sql`,
+  );
 }
 
 main().catch((err) => {

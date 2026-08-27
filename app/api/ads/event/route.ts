@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { and, count, eq, gt, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { sponsorAds, sponsorAdLogs } from '@/db/schema';
-import { eq, and, gt, count, sql } from 'drizzle-orm';
-import { hashVisitorForServer, getClientIp } from '@/lib/upvoteHash';
+import { NextResponse } from 'next/server';
+import { sponsorAdLogs, sponsorAds } from '@/db/schema';
+import { verifyAdEventToken } from '@/lib/adEventToken';
 import { sendNotificationEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
-import { verifyAdEventToken } from '@/lib/adEventToken';
+import { getClientIp, hashVisitorForServer } from '@/lib/upvoteHash';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,8 +34,11 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!body || !body.adId || !body.eventType) {
-      return NextResponse.json({ error: 'Missing adId or eventType' }, { status: 400 });
+    if (!body?.adId || !body.eventType) {
+      return NextResponse.json(
+        { error: 'Missing adId or eventType' },
+        { status: 400 },
+      );
     }
 
     const { adId, placement = 'all', eventType } = body;
@@ -52,9 +55,16 @@ export async function POST(request: Request) {
     // for this exact adId — someone POSTing a scraped adId directly (e.g. a
     // competitor trying to burn through another advertiser's impression
     // credits) never receives a token to begin with.
-    const tokenValid = await verifyAdEventToken(adId, body.eventToken, ctx.env as any);
+    const tokenValid = await verifyAdEventToken(
+      adId,
+      body.eventToken,
+      ctx.env as any,
+    );
     if (!tokenValid) {
-      return NextResponse.json({ error: 'Invalid or expired event token' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Invalid or expired event token' },
+        { status: 403 },
+      );
     }
 
     const db = drizzle(ctx.env.DB);
@@ -64,9 +74,20 @@ export async function POST(request: Request) {
     const [burst] = await db
       .select({ n: count() })
       .from(sponsorAdLogs)
-      .where(and(eq(sponsorAdLogs.adId, adId), gt(sponsorAdLogs.createdAt, new Date(Date.now() - AD_BURST_WINDOW_MS))));
+      .where(
+        and(
+          eq(sponsorAdLogs.adId, adId),
+          gt(
+            sponsorAdLogs.createdAt,
+            new Date(Date.now() - AD_BURST_WINDOW_MS),
+          ),
+        ),
+      );
     if ((burst?.n ?? 0) >= AD_BURST_MAX_EVENTS) {
-      return NextResponse.json({ error: 'Too many events for this ad recently' }, { status: 429 });
+      return NextResponse.json(
+        { error: 'Too many events for this ad recently' },
+        { status: 429 },
+      );
     }
 
     const ip = getClientIp(request);
@@ -76,7 +97,10 @@ export async function POST(request: Request) {
     // Without an IP-derived hash we can't dedup reliably, so those always count.
     let isDuplicate = false;
     if (sessionHash) {
-      const dedupWindowMs = eventType === 'impression' ? IMPRESSION_DEDUP_WINDOW_MS : CLICK_DEDUP_WINDOW_MS;
+      const dedupWindowMs =
+        eventType === 'impression'
+          ? IMPRESSION_DEDUP_WINDOW_MS
+          : CLICK_DEDUP_WINDOW_MS;
       const since = new Date(Date.now() - dedupWindowMs);
       const [recent] = await db
         .select({ id: sponsorAdLogs.id })
@@ -86,8 +110,8 @@ export async function POST(request: Request) {
             eq(sponsorAdLogs.adId, adId),
             eq(sponsorAdLogs.eventType, eventType),
             eq(sponsorAdLogs.sessionHash, sessionHash),
-            gt(sponsorAdLogs.createdAt, since)
-          )
+            gt(sponsorAdLogs.createdAt, since),
+          ),
         )
         .limit(1);
       isDuplicate = !!recent;
@@ -124,7 +148,11 @@ export async function POST(request: Request) {
           .from(sponsorAds)
           .where(eq(sponsorAds.id, adId));
 
-        if (current && current.served >= current.total && current.status !== 'completed') {
+        if (
+          current &&
+          current.served >= current.total &&
+          current.status !== 'completed'
+        ) {
           await db
             .update(sponsorAds)
             .set({

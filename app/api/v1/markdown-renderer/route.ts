@@ -1,18 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { encode } from 'gpt-tokenizer';
+import { type NextRequest, NextResponse } from 'next/server';
 import {
-  renderBlogPostMarkdown,
-  renderBlogIndexMarkdown,
-  renderCategoryMarkdown,
-  renderCategoryIndexMarkdown,
-  renderBestTopicMarkdown,
-  renderBestIndexMarkdown,
-  renderClientMarkdown,
-  renderClientIndexMarkdown,
-  renderPromptMarkdown,
-  renderPromptIndexMarkdown,
   renderAlternativesMarkdown,
+  renderBestIndexMarkdown,
+  renderBestTopicMarkdown,
+  renderBlogIndexMarkdown,
+  renderBlogPostMarkdown,
+  renderCategoryIndexMarkdown,
+  renderCategoryMarkdown,
+  renderClientIndexMarkdown,
+  renderClientMarkdown,
   renderCompareMarkdown,
+  renderPromptIndexMarkdown,
+  renderPromptMarkdown,
 } from '@/lib/agentMarkdown';
 
 // This route is always reached via middleware.ts rewriting many different client
@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
   // middleware.ts passes the target path via this header (see the comment there for
   // why a query param on the rewrite target doesn't reach this handler); the query
   // param fallback just keeps direct/manual calls to this route convenient.
-  const path = req.headers.get('x-agent-markdown-path') || searchParams.get('path') || '/';
+  const path =
+    req.headers.get('x-agent-markdown-path') || searchParams.get('path') || '/';
 
   const blogPostMatch = path.match(/^\/blog\/([^/]+)\/?$/);
   const categoryMatch = path.match(/^\/categories\/([^/]+)\/?$/);
@@ -102,10 +103,13 @@ Content requested in Markdown format for AI Agents.
   }
 
   if (markdown === null) {
-    return new NextResponse(`# 404 - Not Found\n\nNo content found for \`${path}\`.\n`, {
-      status: 404,
-      headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
-    });
+    return new NextResponse(
+      `# 404 - Not Found\n\nNo content found for \`${path}\`.\n`,
+      {
+        status: 404,
+        headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+      },
+    );
   }
 
   let tokens = 0;

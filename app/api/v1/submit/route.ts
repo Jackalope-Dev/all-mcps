@@ -1,21 +1,28 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers } from '../../../../db/schema';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { isSafeSubmissionUrl, normalizeUrl } from '../../../../lib/urlSafety';
-import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../../../../lib/categories';
-import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from '../../../../lib/sequenzy';
-import { sendNotificationEmail, getEmailEnv } from '../../../../lib/notify';
-import { getAppUrl } from '../../../../lib/stripe';
+import { servers } from '../../../../db/schema';
+import { normalizeCategory } from '../../../../lib/categories';
+import { getEmailEnv, sendNotificationEmail } from '../../../../lib/notify';
 import {
-  isPricingModel,
+  checkRateLimit,
+  clientKey,
+  rateLimitedResponse,
+} from '../../../../lib/rateLimit';
+import {
+  PRODUCT_SUBSCRIBERS_LIST_ID,
+  syncSequenzySubscriber,
+} from '../../../../lib/sequenzy';
+import {
   isAuthType,
   isMaintenanceStatus,
-  normalizeTags,
+  isPricingModel,
   normalizeCompatibleClients,
+  normalizeTags,
 } from '../../../../lib/serverEnums';
-import { checkRateLimit, clientKey, rateLimitedResponse } from '../../../../lib/rateLimit';
+import { getAppUrl } from '../../../../lib/stripe';
+import { isSafeSubmissionUrl, normalizeUrl } from '../../../../lib/urlSafety';
 
 const agentSubmitSchema = z.object({
   url: z.string().optional().or(z.literal('')),
@@ -52,26 +59,37 @@ export async function POST(req: Request) {
 
     const result = agentSubmitSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json({ error: 'Invalid submission data', details: result.error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid submission data', details: result.error.issues },
+        { status: 400 },
+      );
     }
 
     const email = result.data.email.trim().toLowerCase();
     let websiteUrl = normalizeUrl(result.data.websiteUrl || '');
     let name = result.data.name.trim();
     let description = result.data.description || '';
-    let category = normalizeCategory(result.data.category);
+    const category = normalizeCategory(result.data.category);
     let url = normalizeUrl(result.data.url || '');
 
     const tags = normalizeTags(result.data.tags);
-    const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
-    const pricingModel = isPricingModel(result.data.pricingModel) ? result.data.pricingModel : null;
-    const authType = isAuthType(result.data.authType) ? result.data.authType : null;
+    const compatibleClients = normalizeCompatibleClients(
+      result.data.compatibleClients,
+    );
+    const pricingModel = isPricingModel(result.data.pricingModel)
+      ? result.data.pricingModel
+      : null;
+    const authType = isAuthType(result.data.authType)
+      ? result.data.authType
+      : null;
     const maintenanceStatus = isMaintenanceStatus(result.data.maintenanceStatus)
       ? result.data.maintenanceStatus
       : null;
-    const pricingNotes = (result.data.pricingNotes || '').trim().slice(0, 280) || null;
+    const pricingNotes =
+      (result.data.pricingNotes || '').trim().slice(0, 280) || null;
     const license = (result.data.license || '').trim().slice(0, 60) || null;
-    const suggestedInstallCommand = (result.data.suggestedInstallCommand || '').trim().slice(0, 100) || null;
+    const suggestedInstallCommand =
+      (result.data.suggestedInstallCommand || '').trim().slice(0, 100) || null;
     const suggestedInstallArgs = (result.data.suggestedInstallArgs || [])
       .filter((a) => typeof a === 'string' && a.trim())
       .map((a) => a.trim())
@@ -87,11 +105,17 @@ export async function POST(req: Request) {
     }
 
     if (!url) {
-      return NextResponse.json({ error: 'Provide a repository URL and/or website URL.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Provide a repository URL and/or website URL.' },
+        { status: 400 },
+      );
     }
 
     if (!isSafeSubmissionUrl(url)) {
-      return NextResponse.json({ error: 'Primary URL must be a public http(s) address.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Primary URL must be a public http(s) address.' },
+        { status: 400 },
+      );
     }
 
     // Auto-fetch GitHub repository details if name/description omitted
@@ -102,14 +126,22 @@ export async function POST(req: Request) {
       if (repo.endsWith('.git')) repo = repo.slice(0, -4);
 
       try {
-        const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-          headers: { 'User-Agent': 'AllMCPs-Directory' },
-        });
+        const ghRes = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}`,
+          {
+            headers: { 'User-Agent': 'AllMCPs-Directory' },
+          },
+        );
         if (ghRes.ok) {
           const ghData = (await ghRes.json()) as any;
           if (!name) name = ghData.name;
-          if (!description && ghData.description) description = ghData.description;
-          if (!websiteUrl && ghData.homepage && isSafeSubmissionUrl(ghData.homepage)) {
+          if (!description && ghData.description)
+            description = ghData.description;
+          if (
+            !websiteUrl &&
+            ghData.homepage &&
+            isSafeSubmissionUrl(ghData.homepage)
+          ) {
             websiteUrl = ghData.homepage;
           }
         }
@@ -118,18 +150,28 @@ export async function POST(req: Request) {
       }
     }
 
-    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `mcp-${Date.now()}`;
+    const id =
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `mcp-${Date.now()}`;
 
     let env: any;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
     } catch {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 },
+      );
     }
 
-    if (!env || !env.DB) {
-      return NextResponse.json({ error: 'Database binding not found' }, { status: 500 });
+    if (!env?.DB) {
+      return NextResponse.json(
+        { error: 'Database binding not found' },
+        { status: 500 },
+      );
     }
 
     const db = drizzle(env.DB as any);
@@ -156,11 +198,15 @@ export async function POST(req: Request) {
         pricingNotes,
         authType,
         license,
-        compatibleClients: compatibleClients.length ? JSON.stringify(compatibleClients) : null,
+        compatibleClients: compatibleClients.length
+          ? JSON.stringify(compatibleClients)
+          : null,
         maintenanceStatus,
         supportUrl: supportUrl || null,
         suggestedInstallCommand,
-        suggestedInstallArgs: suggestedInstallArgs.length ? JSON.stringify(suggestedInstallArgs) : null,
+        suggestedInstallArgs: suggestedInstallArgs.length
+          ? JSON.stringify(suggestedInstallArgs)
+          : null,
       })
       .onConflictDoNothing()
       .returning({ id: servers.id });
@@ -168,7 +214,7 @@ export async function POST(req: Request) {
     if (insertResult.length === 0) {
       return NextResponse.json(
         { error: `Listing for "${name}" already exists on AllMCPs.` },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -217,6 +263,9 @@ export async function POST(req: Request) {
     });
   } catch (e: any) {
     console.error('Agent submission error:', e);
-    return NextResponse.json({ error: e?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: e?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

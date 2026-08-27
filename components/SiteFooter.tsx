@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { BrandLogo } from './BrandLogo';
-import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { BadgeMarquee } from './BadgeMarquee';
+import { BrandLogo } from './BrandLogo';
 import { FooterNavSection } from './FooterNavSection';
+import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 import { AsciiCodeCanvas } from './ui/AsciiCodeCanvas';
 
 /**
@@ -19,7 +19,12 @@ export function SiteFooter() {
           density={14}
         />
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <h2 className="footer-heading" style={{ margin: '0 0 0.25rem 0', fontSize: '1.2rem' }}>Stay in the loop</h2>
+          <h2
+            className="footer-heading"
+            style={{ margin: '0 0 0.25rem 0', fontSize: '1.2rem' }}
+          >
+            Stay in the loop
+          </h2>
           <p className="site-footer-blurb" style={{ margin: 0 }}>
             Get new MCP servers and top picks in your inbox.
           </p>
@@ -34,7 +39,8 @@ export function SiteFooter() {
             <BrandLogo size="sm" href="/" />
           </div>
           <p className="site-footer-blurb">
-            The open directory for discovering and installing Model Context Protocol servers.
+            The open directory for discovering and installing Model Context
+            Protocol servers.
           </p>
           <div className="site-footer-social">
             <a
@@ -44,9 +50,18 @@ export function SiteFooter() {
               className="nav-link site-footer-social-link"
               aria-label="Follow AllMCPs on X (opens in a new tab)"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
+              <span className="sr-only">
+                Follow AllMCPs on X (opens in a new tab)
+              </span>
             </a>
             <a
               href="https://github.com/Jackalope-Dev/allmcps-server"
@@ -55,13 +70,22 @@ export function SiteFooter() {
               className="nav-link site-footer-social-link"
               aria-label="AllMCPs on GitHub (opens in a new tab)"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path
                   fillRule="evenodd"
                   clipRule="evenodd"
                   d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
                 />
               </svg>
+              <span className="sr-only">
+                AllMCPs on GitHub (opens in a new tab)
+              </span>
             </a>
           </div>
           <div style={{ marginTop: '1.25rem' }}>
@@ -79,19 +103,32 @@ export function SiteFooter() {
                 borderRadius: '14px',
                 textDecoration: 'none',
                 fontFamily: "'Inter', system-ui, sans-serif",
-                background: 'linear-gradient(135deg, #3525E6, #D81FE0, #22B8F0)',
+                background:
+                  'linear-gradient(135deg, #3525E6, #D81FE0, #22B8F0)',
                 color: '#fff',
                 maxWidth: '100%',
                 boxSizing: 'border-box',
               }}
             >
-              <svg width="56" height="56" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+              <svg
+                width="56"
+                height="56"
+                viewBox="0 0 100 100"
+                style={{ flexShrink: 0 }}
+              >
                 <path
                   d="M50 6C52 32 68 48 94 50C68 52 52 68 50 94C48 68 32 52 6 50C32 48 48 32 50 6Z"
                   fill="#ffffff"
                 />
               </svg>
-              <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, whiteSpace: 'nowrap' }}>
+              <span
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  lineHeight: 1.15,
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 <span
                   style={{
                     fontFamily: 'monospace',
@@ -170,7 +207,8 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/lucky" className="nav-link">
-                Random discovery <span className="footer-badge footer-badge-new">New</span>
+                Random discovery{' '}
+                <span className="footer-badge footer-badge-new">New</span>
               </Link>
             </li>
             <li>
@@ -180,7 +218,8 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/pricing" className="nav-link">
-                Pricing &amp; Boost <span className="footer-badge footer-badge-boost">Boost</span>
+                Pricing &amp; Boost{' '}
+                <span className="footer-badge footer-badge-boost">Boost</span>
               </Link>
             </li>
           </ul>
@@ -295,23 +334,43 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/trust" className="nav-link">
-                Trust &amp; traffic <span className="footer-badge footer-badge-live"><span className="footer-badge-dot"></span>Live</span>
+                Trust &amp; traffic{' '}
+                <span className="footer-badge footer-badge-live">
+                  <span className="footer-badge-dot"></span>Live
+                </span>
               </Link>
             </li>
             <li>
-              <a href="/api/mcp" className="nav-link" target="_blank" rel="noopener noreferrer">
-                Remote MCP server <span className="footer-badge footer-badge-subtle">SSE</span> <span aria-hidden="true">↗</span>
+              <a
+                href="/api/mcp"
+                className="nav-link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Remote MCP server{' '}
+                <span className="footer-badge footer-badge-subtle">SSE</span>{' '}
+                <span aria-hidden="true">↗</span>
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
-              <a href="/llms.txt" className="nav-link" target="_blank" rel="noopener noreferrer">
+              <a
+                href="/llms.txt"
+                className="nav-link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 llms.txt <span aria-hidden="true">↗</span>
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
             <li>
-              <a href="/data.json" className="nav-link" target="_blank" rel="noopener noreferrer">
+              <a
+                href="/data.json"
+                className="nav-link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Catalog JSON <span aria-hidden="true">↗</span>
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
@@ -328,7 +387,10 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/advertise" className="nav-link">
-                Advertise <span className="footer-badge footer-badge-sponsor">Sponsor</span>
+                Advertise{' '}
+                <span className="footer-badge footer-badge-sponsor">
+                  Sponsor
+                </span>
               </Link>
             </li>
             <li>
@@ -373,7 +435,8 @@ export function SiteFooter() {
       </div>
       <BadgeMarquee />
       <div className="site-footer-copy">
-        &copy; {new Date().getFullYear()} Jackalope Digital LLC. All rights reserved.
+        &copy; {new Date().getFullYear()} Jackalope Digital LLC. All rights
+        reserved.
       </div>
     </footer>
   );

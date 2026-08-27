@@ -1,21 +1,27 @@
 'use client';
 
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Cpu,
+  Crown,
+  Sparkles,
+  User,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { AdminStats } from '@/lib/adminStats';
 import { ADMIN_STATS_REFRESH_EVENT } from '@/lib/adminStatsRefresh';
-import {
-  Clock,
-  CheckCircle2,
-  Crown,
-  Sparkles,
-  AlertTriangle,
-  Cpu,
-  User,
-  AlertCircle,
-} from 'lucide-react';
 
 export type KpiCardSelection = {
-  tab: 'overview' | 'moderation' | 'listings' | 'analytics' | 'social' | 'tools';
+  tab:
+    | 'overview'
+    | 'moderation'
+    | 'listings'
+    | 'analytics'
+    | 'social'
+    | 'tools';
   filters?: {
     status?: string;
     premium?: string;
@@ -55,7 +61,9 @@ export function StatsBar({
 
   const totalPending = stats.pendingCounts?.total ?? stats.statusCounts.pending;
   const aiEnrichedPercent = stats.statusCounts.active
-    ? Math.round(((stats.aiEnrichedCount || 0) / stats.statusCounts.active) * 100)
+    ? Math.round(
+        ((stats.aiEnrichedCount || 0) / stats.statusCounts.active) * 100,
+      )
     : 0;
 
   const handleCardClick = (card: (typeof cards)[0]) => {
@@ -81,7 +89,10 @@ export function StatsBar({
       subtext: `${stats.statusCounts.removed} removed`,
       icon: CheckCircle2,
       color: '#10b981',
-      action: { tab: 'listings', filters: { status: 'active' } } as KpiCardSelection,
+      action: {
+        tab: 'listings',
+        filters: { status: 'active' },
+      } as KpiCardSelection,
     },
     {
       label: 'Premium (Dofollow)',
@@ -89,7 +100,10 @@ export function StatsBar({
       subtext: 'Paid / verified listings',
       icon: Crown,
       color: 'var(--accent-color)',
-      action: { tab: 'listings', filters: { premium: 'true', status: 'all' } } as KpiCardSelection,
+      action: {
+        tab: 'listings',
+        filters: { premium: 'true', status: 'all' },
+      } as KpiCardSelection,
     },
     {
       label: 'Featured Boosts',
@@ -97,7 +111,10 @@ export function StatsBar({
       subtext: `${stats.categorySponsorsCount || 0} category sponsors`,
       icon: Sparkles,
       color: '#d97706',
-      action: { tab: 'listings', filters: { featured: 'true', status: 'all' } } as KpiCardSelection,
+      action: {
+        tab: 'listings',
+        filters: { featured: 'true', status: 'all' },
+      } as KpiCardSelection,
     },
     {
       label: 'Unhealthy / Offline',
@@ -105,7 +122,10 @@ export function StatsBar({
       subtext: 'Needs health re-check',
       icon: AlertTriangle,
       color: stats.unhealthyCount > 0 ? '#ef4444' : 'var(--text-secondary)',
-      action: { tab: 'listings', filters: { health: 'unhealthy', status: 'all' } } as KpiCardSelection,
+      action: {
+        tab: 'listings',
+        filters: { health: 'unhealthy', status: 'all' },
+      } as KpiCardSelection,
     },
     {
       label: 'AI Enriched',
@@ -113,7 +133,10 @@ export function StatsBar({
       subtext: `${aiEnrichedPercent}% of active catalog`,
       icon: Cpu,
       color: '#8b5cf6',
-      action: { tab: 'listings', filters: { aiEnriched: 'true', status: 'all' } } as KpiCardSelection,
+      action: {
+        tab: 'listings',
+        filters: { aiEnriched: 'true', status: 'all' },
+      } as KpiCardSelection,
     },
     {
       label: 'Registered Users',
@@ -128,15 +151,27 @@ export function StatsBar({
       value: `${stats.toolsIntrospectionErrorCount || 0}`,
       subtext: 'Failed MCP tool discovery',
       icon: AlertCircle,
-      color: (stats.toolsIntrospectionErrorCount || 0) > 0 ? '#f59e0b' : 'var(--text-secondary)',
-      action: { tab: 'listings', filters: { hasToolsError: 'true', status: 'all' } } as KpiCardSelection,
+      color:
+        (stats.toolsIntrospectionErrorCount || 0) > 0
+          ? '#f59e0b'
+          : 'var(--text-secondary)',
+      action: {
+        tab: 'listings',
+        filters: { hasToolsError: 'true', status: 'all' },
+      } as KpiCardSelection,
     },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+        marginBottom: '2rem',
+      }}
+    >
       <ul
-        role="list"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
@@ -158,7 +193,8 @@ export function StatsBar({
                 borderRadius: '12px',
                 padding: '0.9rem 1rem',
                 cursor: 'pointer',
-                transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
+                transition:
+                  'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -166,7 +202,14 @@ export function StatsBar({
               }}
               className="admin-kpi-card hover:border-cyan-500/40 hover:-translate-y-0.5"
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '1.4rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  height: '1.4rem',
+                }}
+              >
                 <span
                   style={{
                     fontSize: '0.725rem',
@@ -181,12 +224,33 @@ export function StatsBar({
                 >
                   {card.label}
                 </span>
-                <Icon className="w-4 h-4" style={{ color: card.color, flexShrink: 0 }} />
+                <Icon
+                  className="w-4 h-4"
+                  style={{ color: card.color, flexShrink: 0 }}
+                />
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1, margin: '0.25rem 0' }}>
+              <div
+                style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 800,
+                  color: 'var(--text-primary)',
+                  lineHeight: 1,
+                  margin: '0.25rem 0',
+                }}
+              >
                 {card.value}
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', height: '1rem', lineHeight: '1rem' }}>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  height: '1rem',
+                  lineHeight: '1rem',
+                }}
+              >
                 {card.subtext}
               </div>
             </li>
@@ -196,4 +260,3 @@ export function StatsBar({
     </div>
   );
 }
-

@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { attemptAutoReload, isLikelyTransientLoadError } from '../lib/errorRecovery';
+import {
+  attemptAutoReload,
+  isLikelyTransientLoadError,
+} from '../lib/errorRecovery';
 
 export default function GlobalError({
   error,
@@ -12,7 +15,9 @@ export default function GlobalError({
 }) {
   // Recover automatically from transient post-deploy load failures (one guarded
   // reload per URL) only when the error matches a network/chunk failure.
-  const [recovering, setRecovering] = useState(() => isLikelyTransientLoadError(error));
+  const [recovering, setRecovering] = useState(() =>
+    isLikelyTransientLoadError(error),
+  );
 
   useEffect(() => {
     console.error('Unhandled root layout error:', error);
@@ -44,7 +49,8 @@ export default function GlobalError({
           justifyContent: 'center',
           background: '#020617',
           color: '#ffffff',
-          fontFamily: '"Atkinson Hyperlegible Next", system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
+          fontFamily:
+            '"Atkinson Hyperlegible Next", system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
         }}
       >
         <div
@@ -58,11 +64,28 @@ export default function GlobalError({
             border: '1px solid rgba(255,255,255,0.1)',
           }}
         >
-          <h1 style={{ fontSize: '2rem', marginBottom: '1rem', fontWeight: 700 }}>Something went wrong</h1>
-          <p style={{ color: '#94a3b8', marginBottom: '2.5rem', lineHeight: '1.6' }}>
+          <h1
+            style={{ fontSize: '2rem', marginBottom: '1rem', fontWeight: 700 }}
+          >
+            Something went wrong
+          </h1>
+          <p
+            style={{
+              color: '#94a3b8',
+              marginBottom: '2.5rem',
+              lineHeight: '1.6',
+            }}
+          >
             AllMCPs hit an unexpected error. Please try reloading the page.
           </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
             <button
               onClick={() => reset()}
               style={{

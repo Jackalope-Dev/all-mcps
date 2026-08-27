@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { parseServerName } from '../../lib/displayName';
 import { getCategoryGradient } from '../../lib/categories';
+import { parseServerName } from '../../lib/displayName';
 
 // Deterministic brand-adjacent avatar gradients (cyan / blue / slate)
 const GRADIENTS = [
@@ -59,7 +59,12 @@ export function ServerAvatar({
         height={size}
         loading="lazy"
         decoding="async"
-        style={{ borderRadius: radius, flexShrink: 0, objectFit: 'cover', background: 'var(--bg-muted)' }}
+        style={{
+          borderRadius: radius,
+          flexShrink: 0,
+          objectFit: 'cover',
+          background: 'var(--bg-muted)',
+        }}
         onError={() => setImgFailed(true)}
       />
     );
@@ -87,4 +92,3 @@ export function ServerAvatar({
     </div>
   );
 }
-

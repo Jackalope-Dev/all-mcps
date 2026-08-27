@@ -1,16 +1,16 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, asc, eq, gt } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
+import { getGithubToken } from '../../../../lib/githubAuth';
 import {
   deriveServerName,
   fetchGithubReadme,
   isGenericServerName,
   parseGithubUrl,
 } from '../../../../lib/listingEnrich';
-import { getGithubToken } from '../../../../lib/githubAuth';
 
 /**
  * One-off backlog cleanup for listings whose `name` is a bare technical label
@@ -66,7 +66,9 @@ export async function POST(req: Request) {
       .orderBy(asc(servers.id))
       .limit(SCAN_PAGE_SIZE);
 
-    const candidates = page.filter((r) => !r.isOfficial && isGenericServerName(r.name));
+    const candidates = page.filter(
+      (r) => !r.isOfficial && isGenericServerName(r.name),
+    );
     const toFix = candidates.slice(0, FIX_LIMIT);
 
     const results: { id: string; oldName: string; newName: string }[] = [];
@@ -84,12 +86,20 @@ export async function POST(req: Request) {
         }
       }
 
-      const newName = deriveServerName({ currentName: row.name, url: row.url, ghRepo: gh, readme });
+      const newName = deriveServerName({
+        currentName: row.name,
+        url: row.url,
+        ghRepo: gh,
+        readme,
+      });
       if (!newName || newName === row.name) continue;
 
       results.push({ id: row.id, oldName: row.name, newName });
       if (!dryRun) {
-        await db.update(servers).set({ name: newName }).where(eq(servers.id, row.id));
+        await db
+          .update(servers)
+          .set({ name: newName })
+          .where(eq(servers.id, row.id));
       }
     }
 
@@ -111,6 +121,9 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('Fix-names cron error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

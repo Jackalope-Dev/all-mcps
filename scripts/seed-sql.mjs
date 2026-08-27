@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const dataPath = path.join(process.cwd(), 'data', 'mcp-servers.json');
 const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
@@ -14,7 +14,7 @@ for (const server of data) {
   const desc = server.description.replace(/'/g, "''");
   const cat = server.category.replace(/'/g, "''");
   const isOfficial = server.isOfficial ? 1 : 0;
-  
+
   // created_at is stored in Unix *seconds* to match the schema's mode:'timestamp'
   // and the Drizzle submit route (`createdAt: new Date()`). Do NOT multiply by 1000 —
   // milliseconds here get read back as `new Date(value * 1000)` (year ~58000) and break

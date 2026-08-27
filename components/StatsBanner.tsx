@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { Bot, Cpu, Eye, Loader2, Wrench } from 'lucide-react';
 import Link from 'next/link';
-import { Bot, Cpu, Wrench, Eye, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { SiteStats } from '../lib/siteStats';
 
 function formatCompactNumber(num: number): string {
@@ -23,7 +23,11 @@ function formatExactNumber(num: number): string {
 
 function hasCountableStats(stats?: SiteStats) {
   if (!stats) return false;
-  return (stats.totalServers ?? 0) > 0 || (stats.toolsIndexed ?? 0) > 0 || (stats.totalViews ?? 0) > 0;
+  return (
+    (stats.totalServers ?? 0) > 0 ||
+    (stats.toolsIndexed ?? 0) > 0 ||
+    (stats.totalViews ?? 0) > 0
+  );
 }
 
 export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
@@ -65,7 +69,7 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
   // height matches on both sides of the fetch instead of a shorter skeleton
   // guess growing once data lands.
   return (
-    <div className="stats-banner" aria-label="Platform statistics">
+    <div className="stats-banner" role="group" aria-label="Platform statistics">
       <Link
         href="/trust"
         className="stats-banner-pill"
@@ -73,15 +77,27 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
       >
         {!loaded ? (
           <span className="stats-banner-item">
-            <Loader2 size={13} className="animate-spin" style={{ color: 'var(--text-secondary)' }} aria-hidden="true" />
+            <Loader2
+              size={13}
+              className="animate-spin"
+              style={{ color: 'var(--text-secondary)' }}
+              aria-hidden="true"
+            />
             Loading site stats…
           </span>
         ) : (
           <>
             {totalServers > 0 && (
               <span className="stats-banner-item">
-                <Cpu size={14} style={{ color: '#34d399', flexShrink: 0 }} aria-hidden="true" />
-                <span><strong>{formatExactNumber(totalServers)}</strong>&nbsp;MCP servers</span>
+                <Cpu
+                  size={14}
+                  style={{ color: '#34d399', flexShrink: 0 }}
+                  aria-hidden="true"
+                />
+                <span>
+                  <strong>{formatExactNumber(totalServers)}</strong>&nbsp;MCP
+                  servers
+                </span>
               </span>
             )}
 
@@ -90,8 +106,15 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
                 <span className="stats-banner-dot" aria-hidden="true">
                   •
                 </span>
-                <Wrench size={13} style={{ color: '#fbbf24', flexShrink: 0 }} aria-hidden="true" />
-                <span><strong>{formatCompactNumber(toolsIndexed)}</strong>&nbsp;tools indexed</span>
+                <Wrench
+                  size={13}
+                  style={{ color: '#fbbf24', flexShrink: 0 }}
+                  aria-hidden="true"
+                />
+                <span>
+                  <strong>{formatCompactNumber(toolsIndexed)}</strong>
+                  &nbsp;tools indexed
+                </span>
               </span>
             )}
 
@@ -100,8 +123,14 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
                 <span className="stats-banner-dot" aria-hidden="true">
                   •
                 </span>
-                <Eye size={13} style={{ color: '#60a5fa', flexShrink: 0 }} aria-hidden="true" />
-                <span><strong>{formatCompactNumber(totalViews)}</strong>&nbsp;views</span>
+                <Eye
+                  size={13}
+                  style={{ color: '#60a5fa', flexShrink: 0 }}
+                  aria-hidden="true"
+                />
+                <span>
+                  <strong>{formatCompactNumber(totalViews)}</strong>&nbsp;views
+                </span>
               </span>
             )}
 
@@ -110,8 +139,17 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
                 <span className="stats-banner-dot" aria-hidden="true">
                   •
                 </span>
-                <Bot size={14} style={{ color: 'var(--tab-discover, #00e5ff)', flexShrink: 0 }} aria-hidden="true" />
-                <span><strong>{formatCompactNumber(aiReads)}</strong>&nbsp;AI reads</span>
+                <Bot
+                  size={14}
+                  style={{
+                    color: 'var(--tab-discover, #00e5ff)',
+                    flexShrink: 0,
+                  }}
+                  aria-hidden="true"
+                />
+                <span>
+                  <strong>{formatCompactNumber(aiReads)}</strong>&nbsp;AI reads
+                </span>
               </span>
             )}
           </>

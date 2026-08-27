@@ -25,7 +25,9 @@ export type DnsProviderLink = {
  * Cloudflare's `?to=/:account/:zone/dns/records` is resolved after login
  * (same pattern Cloudflare docs use for "Go to Records").
  */
-export function getDnsProviderLinks(apexDomain: string | null): DnsProviderLink[] {
+export function getDnsProviderLinks(
+  apexDomain: string | null,
+): DnsProviderLink[] {
   const zoneHint = apexDomain ? encodeURIComponent(apexDomain) : '';
 
   return [

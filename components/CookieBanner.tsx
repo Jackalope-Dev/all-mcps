@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { isUserInEU } from '../lib/consentRegion';
 
 declare global {
@@ -31,7 +31,10 @@ function denyAnalyticsConsent() {
   if (typeof window.gtag === 'function') {
     window.gtag('consent', 'update', { analytics_storage: 'denied' });
   }
-  if (window.posthog && typeof window.posthog.opt_out_capturing === 'function') {
+  if (
+    window.posthog &&
+    typeof window.posthog.opt_out_capturing === 'function'
+  ) {
     window.posthog.opt_out_capturing();
   }
 }
@@ -102,17 +105,26 @@ export function CookieBanner({ country }: { country?: string }) {
     >
       <div className="cookie-banner-title">Cookie preferences</div>
       <p className="cookie-banner-body">
-        We use analytics cookies to measure site traffic and improve AllMCPs. Learn more in our{' '}
+        We use analytics cookies to measure site traffic and improve AllMCPs.
+        Learn more in our{' '}
         <Link href="/privacy" className="cookie-banner-privacy-link">
           Privacy Policy
         </Link>
         .
       </p>
       <div className="cookie-banner-actions">
-        <button type="button" className="btn btn-secondary btn-sm" onClick={handleDecline}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={handleDecline}
+        >
           Decline
         </button>
-        <button type="button" className="btn btn-primary btn-sm" onClick={handleAccept}>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={handleAccept}
+        >
           Accept
         </button>
       </div>

@@ -38,13 +38,19 @@ export function HealthHistoryStrip({
   return (
     <div style={{ marginBottom: '0.85rem' }}>
       <div
-        style={{ display: 'flex', alignItems: 'flex-end', gap: '1px', height: '16px' }}
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '1px',
+          height: '16px',
+        }}
         role="img"
         aria-label={`${healthyCount} of ${history.length} recent health checks succeeded, over ${spanLabel(oldest)}.`}
       >
         {history.map((h, i) => {
           const isPrimaryPass = h.healthy || isOfficial;
-          const isRemotePass = h.remoteHealthy === true || (isOfficial && hasRemoteEndpoint);
+          const isRemotePass =
+            h.remoteHealthy === true || (isOfficial && hasRemoteEndpoint);
           const isRemoteFail = h.remoteHealthy === false && !isOfficial;
 
           const dateStr = new Date(h.checkedAt).toLocaleString(undefined, {
@@ -60,8 +66,12 @@ export function HealthHistoryStrip({
           if (hasRemoteEndpoint || h.remoteHealthy != null) {
             lines.push(
               `• Remote Endpoint: ${
-                isRemotePass ? 'Pass (Live)' : isRemoteFail ? 'Fail (Unreachable)' : 'Not checked'
-              }`
+                isRemotePass
+                  ? 'Pass (Live)'
+                  : isRemoteFail
+                    ? 'Fail (Unreachable)'
+                    : 'Not checked'
+              }`,
             );
           }
 
@@ -73,7 +83,7 @@ export function HealthHistoryStrip({
                   : pilotResult.status
                     ? `Issue (${pilotResult.status})`
                     : 'Pending'
-              }`
+              }`,
             );
           }
 
@@ -84,7 +94,6 @@ export function HealthHistoryStrip({
             <span
               key={i}
               className="health-dot"
-              tabIndex={0}
               data-tip={tipText}
               style={{
                 flex: '1 1 0',
@@ -101,7 +110,13 @@ export function HealthHistoryStrip({
           );
         })}
       </div>
-      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+      <div
+        style={{
+          fontSize: '0.68rem',
+          color: 'var(--text-secondary)',
+          marginTop: '0.3rem',
+        }}
+      >
         {healthyCount}/{history.length} checks healthy over {spanLabel(oldest)}
       </div>
     </div>

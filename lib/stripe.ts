@@ -3,7 +3,9 @@ import Stripe from 'stripe';
 export function getStripe(secretKey?: string): Stripe {
   const key = secretKey || process.env.STRIPE_SECRET_KEY;
   if (!key) {
-    throw new Error('STRIPE_SECRET_KEY environment secret is missing or empty.');
+    throw new Error(
+      'STRIPE_SECRET_KEY environment secret is missing or empty.',
+    );
   }
 
   let cleanKey = key.trim();
@@ -18,7 +20,7 @@ export function getStripe(secretKey?: string): Stripe {
 
   if (!cleanKey.startsWith('sk_') && !cleanKey.startsWith('rk_')) {
     throw new Error(
-      `STRIPE_SECRET_KEY must be a secret key starting with "sk_live_", "sk_test_", "rk_live_", or "rk_test_". Found prefix: "${cleanKey.slice(0, 7)}..."`
+      `STRIPE_SECRET_KEY must be a secret key starting with "sk_live_", "sk_test_", "rk_live_", or "rk_test_". Found prefix: "${cleanKey.slice(0, 7)}..."`,
     );
   }
 

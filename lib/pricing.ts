@@ -3,7 +3,11 @@
  * Catalog: one Product per plan (Stripe best practice).
  */
 
-export type PaidSku = 'priority_review' | 'featured_7d' | 'category_sponsor_7d' | 'premium_monthly';
+export type PaidSku =
+  | 'priority_review'
+  | 'featured_7d'
+  | 'category_sponsor_7d'
+  | 'premium_monthly';
 
 /** One volume-pricing tier: weeks <= upToWeeks (or unbounded if null) are billed at unitAmount/week. */
 export type WeeklyTier = { upToWeeks: number | null; unitAmount: number };
@@ -37,10 +41,12 @@ export type PaidProduct = {
 
 /** Per-week unit price at a given quantity, per the product's volume tiers (flat unitAmount if untiered). */
 export function tieredUnitPrice(product: PaidProduct, weeks: number): number {
-  if (!product.weeklyTiers || product.weeklyTiers.length === 0) return product.unitAmount;
+  if (!product.weeklyTiers || product.weeklyTiers.length === 0)
+    return product.unitAmount;
   const tier =
-    product.weeklyTiers.find((t) => t.upToWeeks !== null && weeks <= t.upToWeeks) ??
-    product.weeklyTiers[product.weeklyTiers.length - 1];
+    product.weeklyTiers.find(
+      (t) => t.upToWeeks !== null && weeks <= t.upToWeeks,
+    ) ?? product.weeklyTiers[product.weeklyTiers.length - 1];
   return tier.unitAmount;
 }
 
@@ -167,8 +173,10 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     mode: 'subscription',
     priceEnv: 'STRIPE_PRICE_PREMIUM_MONTHLY',
     badgeText: '💎 Best Value',
-    placementHint: 'Homepage rotation, category highlights & agent API priority.',
-    targetAudience: 'Growth-stage MCPs, SaaS tools & companies seeking continuous reach',
+    placementHint:
+      'Homepage rotation, category highlights & agent API priority.',
+    targetAudience:
+      'Growth-stage MCPs, SaaS tools & companies seeking continuous reach',
     benefits: [
       'Guaranteed featured rotation on homepage & browse',
       'Rich analytics: see which LLMs & agents access your server',
@@ -190,7 +198,7 @@ export function formatUsd(cents: number): string {
 
 export function getPriceId(sku: PaidSku, envCtx?: any): string | null {
   const envName = PAID_PRODUCTS[sku].priceEnv;
-  let value = (envCtx && envCtx[envName]) || process.env[envName];
+  let value = envCtx?.[envName] || process.env[envName];
   if (!value || typeof value !== 'string') return null;
   value = value.trim();
   while (
@@ -206,7 +214,7 @@ export function getPriceId(sku: PaidSku, envCtx?: any): string | null {
 export function getProductId(sku: PaidSku, envCtx?: any): string | null {
   const envName = PAID_PRODUCTS[sku].productEnv;
   if (!envName) return null;
-  let value = (envCtx && envCtx[envName]) || process.env[envName];
+  let value = envCtx?.[envName] || process.env[envName];
   if (!value || typeof value !== 'string') return null;
   value = value.trim();
   while (
@@ -219,7 +227,7 @@ export function getProductId(sku: PaidSku, envCtx?: any): string | null {
 }
 
 export function isStripeConfigured(envCtx?: any): boolean {
-  let key = (envCtx && envCtx.STRIPE_SECRET_KEY) || process.env.STRIPE_SECRET_KEY;
+  let key = envCtx?.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
   if (!key || typeof key !== 'string') return false;
   key = key.trim();
   return key.startsWith('sk_') || key.startsWith('rk_');

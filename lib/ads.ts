@@ -1,13 +1,23 @@
 /**
  * AllMCPs Sponsor Ad Network — Core Engine & Types
- * 
+ *
  * Manages universal logo + copy + link advertising spaces across AllMCPs.
  * Supports credit-based 1,000-impression blocks with weighted CPM bidding.
  */
 
-export type AdPlacement = 'all' | 'directory_inline' | 'detail_sidebar' | 'blog_guide' | 'header_banner';
+export type AdPlacement =
+  | 'all'
+  | 'directory_inline'
+  | 'detail_sidebar'
+  | 'blog_guide'
+  | 'header_banner';
 
-export type AdStatus = 'pending_approval' | 'active' | 'paused' | 'completed' | 'rejected';
+export type AdStatus =
+  | 'pending_approval'
+  | 'active'
+  | 'paused'
+  | 'completed'
+  | 'rejected';
 
 export type SponsorAd = {
   id: string;
@@ -48,7 +58,8 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
     id: 'all',
     name: 'All Placements (Max Reach)',
     tagline: 'Runs across directory, sidebars, and guide articles',
-    description: 'Rotates your ad automatically across all available spots on the site for maximum reach and fastest delivery.',
+    description:
+      'Rotates your ad automatically across all available spots on the site for maximum reach and fastest delivery.',
     aspectRatioHint: 'Square 1:1 or horizontal logo',
     estimatedDailyViews: 50000,
   },
@@ -56,7 +67,8 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
     id: 'directory_inline',
     name: 'Directory Native Card',
     tagline: 'Inlined natively in the MCP directory grid (every ~12 cards)',
-    description: 'Featured directly inside the main catalog and search results. Reaches high-intent developers browsing for tools.',
+    description:
+      'Featured directly inside the main catalog and search results. Reaches high-intent developers browsing for tools.',
     aspectRatioHint: 'Square 1:1 logo (64x64 or higher)',
     estimatedDailyViews: 25000,
   },
@@ -64,7 +76,8 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
     id: 'detail_sidebar',
     name: 'MCP Listing Sidebar',
     tagline: 'Dedicated sponsor slot on individual MCP detail pages',
-    description: 'Prominently shown on individual tool pages next to installation instructions and tool inspector configs.',
+    description:
+      'Prominently shown on individual tool pages next to installation instructions and tool inspector configs.',
     aspectRatioHint: 'Square 1:1 logo (48x48)',
     estimatedDailyViews: 15000,
   },
@@ -72,7 +85,8 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
     id: 'blog_guide',
     name: 'Blog & Guide In-Text Unit',
     tagline: 'Clean horizontal banner inside technical tutorials and guides',
-    description: 'High engagement placement embedded directly into long-form guides and tutorials read by engineering leaders.',
+    description:
+      'High engagement placement embedded directly into long-form guides and tutorials read by engineering leaders.',
     aspectRatioHint: 'Horizontal or square icon',
     estimatedDailyViews: 8000,
   },
@@ -80,7 +94,8 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
     id: 'header_banner',
     name: 'Category Page Header Banner',
     tagline: 'Top spotlight banner on targeted category and hub directories',
-    description: 'Prominently placed above server listings on topic-specific category hubs (e.g. Developer Tools, Cloud Platforms, Databases).',
+    description:
+      'Prominently placed above server listings on topic-specific category hubs (e.g. Developer Tools, Cloud Platforms, Databases).',
     aspectRatioHint: 'Square 1:1 or horizontal logo (44x44)',
     estimatedDailyViews: 20000,
   },
@@ -115,7 +130,10 @@ export const CPM_TIERS = [
 ] as const;
 
 /** Calculate total cost in cents given impression volume and chosen CPM */
-export function calculateAdCostCents(impressions: number, cpmCents: number): number {
+export function calculateAdCostCents(
+  impressions: number,
+  cpmCents: number,
+): number {
   return Math.round((impressions / 1000) * cpmCents);
 }
 
@@ -138,14 +156,23 @@ export function formatUsdAmount(cents: number): string {
  * Weighted Random Selection: Picks an active ad based on its bid CPM weight.
  * Higher bid CPM = proportionally higher likelihood of being served.
  */
-export function selectWeightedAd<T extends { bidCpm: number; impressionsServed: number; totalImpressionsPurchased: number }>(
-  ads: T[]
-): T | null {
-  const eligible = ads.filter((ad) => ad.impressionsServed < ad.totalImpressionsPurchased);
+export function selectWeightedAd<
+  T extends {
+    bidCpm: number;
+    impressionsServed: number;
+    totalImpressionsPurchased: number;
+  },
+>(ads: T[]): T | null {
+  const eligible = ads.filter(
+    (ad) => ad.impressionsServed < ad.totalImpressionsPurchased,
+  );
   if (eligible.length === 0) return null;
   if (eligible.length === 1) return eligible[0];
 
-  const totalWeight = eligible.reduce((sum, ad) => sum + Math.max(1, ad.bidCpm), 0);
+  const totalWeight = eligible.reduce(
+    (sum, ad) => sum + Math.max(1, ad.bidCpm),
+    0,
+  );
   let randomVal = Math.random() * totalWeight;
 
   for (const ad of eligible) {
@@ -173,10 +200,20 @@ export function validateAdPayload(data: {
   bidCpm?: number;
 }): { valid: boolean; error?: string } {
   if (!data.title || data.title.trim().length < 2 || data.title.length > 50) {
-    return { valid: false, error: 'Title must be between 2 and 50 characters.' };
+    return {
+      valid: false,
+      error: 'Title must be between 2 and 50 characters.',
+    };
   }
-  if (!data.description || data.description.trim().length < 5 || data.description.length > 140) {
-    return { valid: false, error: 'Description must be between 5 and 140 characters.' };
+  if (
+    !data.description ||
+    data.description.trim().length < 5 ||
+    data.description.length > 140
+  ) {
+    return {
+      valid: false,
+      error: 'Description must be between 5 and 140 characters.',
+    };
   }
   if (!data.targetUrl || !/^https?:\/\//i.test(data.targetUrl.trim())) {
     return { valid: false, error: 'Target URL must be a valid http(s) URL.' };
@@ -191,10 +228,17 @@ export function validateAdPayload(data: {
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!data.advertiserEmail || !emailRegex.test(data.advertiserEmail.trim())) {
-    return { valid: false, error: 'Please provide a valid advertiser email for campaign tracking and notifications.' };
+    return {
+      valid: false,
+      error:
+        'Please provide a valid advertiser email for campaign tracking and notifications.',
+    };
   }
   if (!data.impressions || data.impressions < 1000) {
-    return { valid: false, error: 'Minimum impression block is 1,000 impressions.' };
+    return {
+      valid: false,
+      error: 'Minimum impression block is 1,000 impressions.',
+    };
   }
   if (!data.bidCpm || data.bidCpm < 100) {
     return { valid: false, error: 'Minimum CPM bid is $1.00 (100 cents).' };
@@ -269,7 +313,10 @@ export function getRandomPlaceholderVariant(seed?: number): PlaceholderVariant {
  * These are free placements — they never touch impressionsServed / the purchased credit
  * balance — but are still logged so advertisers have real data on AI reach.
  */
-export async function logAiInjectionEvent(adId: string, placement: AdPlacement = 'all'): Promise<void> {
+export async function logAiInjectionEvent(
+  adId: string,
+  placement: AdPlacement = 'all',
+): Promise<void> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -292,7 +339,9 @@ export async function logAiInjectionEvent(adId: string, placement: AdPlacement =
 }
 
 /** Fetches a weighted active sponsor ad directly from D1 for API & AI agent queries */
-export async function fetchActiveSponsorAd(placement: AdPlacement = 'all'): Promise<SponsorAd | null> {
+export async function fetchActiveSponsorAd(
+  placement: AdPlacement = 'all',
+): Promise<SponsorAd | null> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -309,11 +358,17 @@ export async function fetchActiveSponsorAd(placement: AdPlacement = 'all'): Prom
       .where(
         and(
           eq(sponsorAds.status, 'active'),
-          lt(sponsorAds.impressionsServed, sponsorAds.totalImpressionsPurchased),
+          lt(
+            sponsorAds.impressionsServed,
+            sponsorAds.totalImpressionsPurchased,
+          ),
           placement === 'all'
             ? undefined
-            : or(eq(sponsorAds.placement, placement), eq(sponsorAds.placement, 'all'))
-        )
+            : or(
+                eq(sponsorAds.placement, placement),
+                eq(sponsorAds.placement, 'all'),
+              ),
+        ),
       );
 
     if (!candidateAds || candidateAds.length === 0) return null;
@@ -322,4 +377,3 @@ export async function fetchActiveSponsorAd(placement: AdPlacement = 'all'): Prom
     return null;
   }
 }
-

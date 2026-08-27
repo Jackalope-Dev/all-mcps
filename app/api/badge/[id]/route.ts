@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerById } from '../../../../lib/servers';
 import { parseServerName } from '../../../../lib/displayName';
+import { getServerById } from '../../../../lib/servers';
 
 type Theme = 'dark' | 'light';
 type Style = 'shield' | 'flat-square' | 'featured' | 'directory';
@@ -26,10 +26,10 @@ function parseMetric(value: string | null): Metric {
 
 function formatMetricNumber(n: number): string {
   if (n >= 1_000_000) {
-    return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
   }
   if (n >= 1_000) {
-    return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'k';
+    return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
   }
   return n.toLocaleString();
 }
@@ -50,7 +50,7 @@ function measureTextWidth(text: string): number {
 
 function truncateText(str: string, maxLen: number): string {
   if (str.length <= maxLen) return str;
-  return str.slice(0, maxLen - 1).trim() + '…';
+  return `${str.slice(0, maxLen - 1).trim()}…`;
 }
 
 function escapeXml(s: string) {
@@ -67,7 +67,7 @@ function buildShieldBadge(
   claimed: boolean,
   square: boolean,
   metric: Metric,
-  metrics: { upvotes: number; views: number; copies: number }
+  metrics: { upvotes: number; views: number; copies: number },
 ) {
   const isLight = theme === 'light';
   const rx = square ? 0 : 3;
@@ -127,7 +127,7 @@ function buildFeaturedBadge(
   theme: Theme,
   accent: string,
   metric: Metric,
-  metrics: { upvotes: number; views: number; copies: number }
+  metrics: { upvotes: number; views: number; copies: number },
 ) {
   const isLight = theme === 'light';
   const bg = isLight ? '#ffffff' : '#121212';
@@ -180,7 +180,7 @@ function buildDirectoryBadge(
   claimed: boolean,
   metric: Metric,
   metrics: { upvotes: number; views: number; copies: number },
-  rawServerName: string
+  rawServerName: string,
 ) {
   const isLight = theme === 'light';
   const bg = isLight ? '#f8fafc' : '#0b1220';
@@ -190,8 +190,12 @@ function buildDirectoryBadge(
 
   let status = claimed ? 'Verified' : 'Listed';
   let pillBg = claimed
-    ? isLight ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.15)'
-    : isLight ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.15)';
+    ? isLight
+      ? 'rgba(16,185,129,0.12)'
+      : 'rgba(16,185,129,0.15)'
+    : isLight
+      ? 'rgba(59,130,246,0.1)'
+      : 'rgba(59,130,246,0.15)';
   let pillFg = claimed ? '#059669' : isLight ? '#2563eb' : '#60a5fa';
 
   if (metric === 'upvotes') {
@@ -238,7 +242,10 @@ function buildDirectoryBadge(
   </svg>`;
 }
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const url = new URL(req.url);
   const theme = parseTheme(url.searchParams.get('theme'));
@@ -265,7 +272,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   let svg: string;
 
   if (style === 'directory') {
-    svg = buildDirectoryBadge(theme, isOfficial, metric, metricsData, serverName);
+    svg = buildDirectoryBadge(
+      theme,
+      isOfficial,
+      metric,
+      metricsData,
+      serverName,
+    );
   } else if (style === 'featured') {
     svg = buildFeaturedBadge(theme, accent, metric, metricsData);
   } else if (style === 'flat-square') {
@@ -278,13 +291,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   return new NextResponse(svg, {
     headers: {
       'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400',
+      'Cache-Control':
+        'public, max-age=300, s-maxage=300, stale-while-revalidate=86400',
       // Embeddable badge image — crawlers discover it via external embeds. Mark
       // noindex so it isn't filed as a "Crawled - currently not indexed" page.
       'X-Robots-Tag': 'noindex',
     },
   });
 }
-
-
-

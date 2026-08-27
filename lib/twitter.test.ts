@@ -3,9 +3,9 @@ import {
   dedupeTweetItems,
   getTwitterCharCount,
   normalizeTweetForDedup,
-  truncateToTwitterLimit,
   TWITTER_CHAR_LIMIT,
   TWITTER_SAFE_CHAR_LIMIT,
+  truncateToTwitterLimit,
 } from './twitter';
 
 // Basic assertions runner for node execution
@@ -18,7 +18,10 @@ function assert(condition: boolean, message: string) {
 console.log('Testing twitter char-limit helpers...');
 
 // 1. The safe limit must sit below the X.com hard cap so posts keep breathing room.
-assert(TWITTER_SAFE_CHAR_LIMIT < TWITTER_CHAR_LIMIT, 'safe limit should be below the hard cap');
+assert(
+  TWITTER_SAFE_CHAR_LIMIT < TWITTER_CHAR_LIMIT,
+  'safe limit should be below the hard cap',
+);
 assert(TWITTER_CHAR_LIMIT === 280, 'X.com hard cap should be 280');
 
 // 2. truncateToTwitterLimit defaults to the safe limit.
@@ -36,7 +39,9 @@ const legacyTweet =
   'This is a very long description that goes on and on '.repeat(6) +
   '\n\nExplore & install on @AllMCPs:\nhttps://allmcps.com/mcp/some-very-long-server-id-here\n\n#MCP #AI #Claude #DevTools';
 assert(
-  getTwitterCharCount(truncateToTwitterLimit(legacyTweet, TWITTER_SAFE_CHAR_LIMIT)) <= TWITTER_SAFE_CHAR_LIMIT,
+  getTwitterCharCount(
+    truncateToTwitterLimit(legacyTweet, TWITTER_SAFE_CHAR_LIMIT),
+  ) <= TWITTER_SAFE_CHAR_LIMIT,
   'legacy over-length tweet should be truncated under the safe limit',
 );
 
@@ -77,7 +82,8 @@ console.log('Testing tweet duplicate-detection helpers...');
 // 7. Normalization ignores case and surrounding/inner whitespace, the way X.com
 //    does when it flags a repost.
 assert(
-  normalizeTweetForDedup('Hello   World') === normalizeTweetForDedup('hello world'),
+  normalizeTweetForDedup('Hello   World') ===
+    normalizeTweetForDedup('hello world'),
   'normalization should ignore case and collapse whitespace',
 );
 assert(
@@ -104,19 +110,32 @@ const unique = dedupeTweetItems([
   { tweetText: 'two', serverId: 'server-2' },
   { tweetText: 'three', serverId: 'server-3' },
 ]);
-assert(unique.length === 3, 'dedupeTweetItems should leave unique lists unchanged');
+assert(
+  unique.length === 3,
+  'dedupeTweetItems should leave unique lists unchanged',
+);
 
 // 10. dedupeTweetItems drops duplicate serverId even if tweet text differs slightly.
 const dedupedServer = dedupeTweetItems([
-  { id: 4, serverId: 'server-alpha', tweetText: '🚀 Server Alpha now on AllMCPs!' },
-  { id: 3, serverId: 'server-alpha', tweetText: '🔥 Check out Server Alpha on AllMCPs!' },
+  {
+    id: 4,
+    serverId: 'server-alpha',
+    tweetText: '🚀 Server Alpha now on AllMCPs!',
+  },
+  {
+    id: 3,
+    serverId: 'server-alpha',
+    tweetText: '🔥 Check out Server Alpha on AllMCPs!',
+  },
   { id: 2, serverId: 'server-beta', tweetText: '⭐ Server Beta spotlight!' },
 ]);
-assert(dedupedServer.length === 2, 'dedupeTweetItems should drop duplicate serverId');
+assert(
+  dedupedServer.length === 2,
+  'dedupeTweetItems should drop duplicate serverId',
+);
 assert(
   (dedupedServer[0] as any).id === 4 && (dedupedServer[1] as any).id === 2,
   'dedupeTweetItems should keep the newest tweet for each serverId',
 );
 
 console.log('All twitter deduplication and char-limit tests passed ✔');
-

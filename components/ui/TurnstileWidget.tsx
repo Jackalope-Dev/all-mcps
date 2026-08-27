@@ -20,7 +20,8 @@ export function TurnstileWidget({
   compact = false,
 }: TurnstileWidgetProps) {
   // Use the provided environment variable or the user's actual site key
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAD_iUPDcKGNCmYcX';
+  const siteKey =
+    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAD_iUPDcKGNCmYcX';
 
   return (
     <div

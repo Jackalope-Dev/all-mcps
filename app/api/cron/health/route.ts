@@ -1,20 +1,20 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { and, asc, desc, eq, notInArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers, serverHealthChecks } from '../../../../db/schema';
-import { eq, asc, desc, and, notInArray } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+import { serverHealthChecks, servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
-import { isSafeFetchTarget } from '../../../../lib/urlSafety';
-import { websiteHasReciprocalBadge } from '../../../../lib/verification';
-import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
-import { parseToolsFromReadme } from '../../../../lib/tools/parseToolsFromReadme';
+import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
 import {
-  resolveInstallFromText,
   resolveInstallConfig,
+  resolveInstallFromText,
   toCachedInstallFields,
 } from '../../../../lib/installConfig';
-import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
 import { isListingTrulyDead } from '../../../../lib/listingEnrich';
+import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
+import { parseToolsFromReadme } from '../../../../lib/tools/parseToolsFromReadme';
+import { isSafeFetchTarget } from '../../../../lib/urlSafety';
+import { websiteHasReciprocalBadge } from '../../../../lib/verification';
 
 /**
  * Best-effort npm last-month downloads for a package name. Returns null if not on npm.
@@ -29,15 +29,25 @@ import { isListingTrulyDead } from '../../../../lib/listingEnrich';
  */
 async function fetchNpmDownloads(pkg: string): Promise<number | null> {
   const name = pkg.trim();
-  if (!name || /^[.\-_]+$/.test(name) || /\s/.test(name) || name.includes('://')) return null;
+  if (
+    !name ||
+    /^[.\-_]+$/.test(name) ||
+    /\s/.test(name) ||
+    name.includes('://')
+  )
+    return null;
   try {
-    const res = await fetch(`https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(name)}`, {
-      headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
-      signal: AbortSignal.timeout(8000),
-    });
+    const res = await fetch(
+      `https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(name)}`,
+      {
+        headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
     if (!res.ok) return null;
     const data = (await res.json()) as { downloads?: number; package?: string };
-    if (typeof data.downloads !== 'number' || data.package !== name) return null;
+    if (typeof data.downloads !== 'number' || data.package !== name)
+      return null;
     // No real single npm package has ever cleared ~1B monthly downloads.
     if (data.downloads > 1_000_000_000) return null;
     return data.downloads;
@@ -46,7 +56,10 @@ async function fetchNpmDownloads(pkg: string): Promise<number | null> {
   }
 }
 
-async function fetchGithubReadme(owner: string, repo: string): Promise<string | null> {
+async function fetchGithubReadme(
+  owner: string,
+  repo: string,
+): Promise<string | null> {
   for (const branch of ['main', 'master']) {
     try {
       const res = await fetch(
@@ -54,7 +67,7 @@ async function fetchGithubReadme(owner: string, repo: string): Promise<string | 
         {
           headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
           signal: AbortSignal.timeout(10000),
-        }
+        },
       );
       if (res.ok) return await res.text();
     } catch {
@@ -82,7 +95,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    let env;
+    let env: CloudflareEnv | undefined;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
@@ -90,7 +103,7 @@ export async function POST(req: Request) {
       throw new Error('Could not get Cloudflare context.');
     }
 
-    if (!env || !env.DB) {
+    if (!env?.DB) {
       throw new Error('Database binding not found');
     }
 
@@ -110,7 +123,11 @@ export async function POST(req: Request) {
         .select()
         .from(servers)
         .where(eq(servers.status, 'active'))
-        .orderBy(desc(servers.views), desc(servers.upvotes), desc(servers.copies))
+        .orderBy(
+          desc(servers.views),
+          desc(servers.upvotes),
+          desc(servers.copies),
+        )
         .limit(half * 2),
     ]);
 
@@ -121,7 +138,9 @@ export async function POST(req: Request) {
     // First: popular listings that are stale or never checked / missing stars
     for (const s of popular) {
       if (batch.length >= half) break;
-      const checked = s.lastCheckedAt ? new Date(s.lastCheckedAt as any).getTime() : 0;
+      const checked = s.lastCheckedAt
+        ? new Date(s.lastCheckedAt as any).getTime()
+        : 0;
       const needs =
         !checked ||
         checked < staleCutoff ||
@@ -150,7 +169,10 @@ export async function POST(req: Request) {
     }
 
     if (batch.length === 0) {
-      return NextResponse.json({ success: true, message: 'No active servers to check.' });
+      return NextResponse.json({
+        success: true,
+        message: 'No active servers to check.',
+      });
     }
 
     let processed = 0;
@@ -173,8 +195,10 @@ export async function POST(req: Request) {
       let toolsError: string | null = server.toolsError ?? null;
       let toolsSource: string | null = server.toolsSource ?? null;
       let lastCommitAt: Date | null = server.lastCommitAt ?? null;
-      let remoteEndpointHealthy: boolean | null = server.remoteEndpointHealthy ?? null;
-      let remoteEndpointCheckedAt: Date | null = server.remoteEndpointCheckedAt ?? null;
+      let remoteEndpointHealthy: boolean | null =
+        server.remoteEndpointHealthy ?? null;
+      let remoteEndpointCheckedAt: Date | null =
+        server.remoteEndpointCheckedAt ?? null;
 
       // Prefer package name from cached install, else listing name
       const npmName = server.installPackage || server.name;
@@ -190,10 +214,17 @@ export async function POST(req: Request) {
             let repo = githubMatch[2];
             if (repo.endsWith('.git')) repo = repo.slice(0, -4);
 
-            const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-              headers: githubApiHeaders(githubToken, 'application/vnd.github+json', 'AllMCPs-Health-Checker'),
-              signal: AbortSignal.timeout(10000),
-            });
+            const ghRes = await fetch(
+              `https://api.github.com/repos/${owner}/${repo}`,
+              {
+                headers: githubApiHeaders(
+                  githubToken,
+                  'application/vnd.github+json',
+                  'AllMCPs-Health-Checker',
+                ),
+                signal: AbortSignal.timeout(10000),
+              },
+            );
 
             if (ghRes.ok) {
               const ghData = (await ghRes.json()) as any;
@@ -213,7 +244,10 @@ export async function POST(req: Request) {
 
               readmeText = await fetchGithubReadme(owner, repo);
               if (readmeText) {
-                readmeBadgeOk = websiteHasReciprocalBadge(readmeText, server.id);
+                readmeBadgeOk = websiteHasReciprocalBadge(
+                  readmeText,
+                  server.id,
+                );
               }
 
               // GitHub-linked listings are almost always stdio packages (npx/uvx/pip), not a
@@ -263,15 +297,21 @@ export async function POST(req: Request) {
           }
 
           if (isVerifiedActive) {
-            const introspection = await callMcpEndpoint(server.url, { method: 'tools/list' });
+            const introspection = await callMcpEndpoint(server.url, {
+              method: 'tools/list',
+            });
             toolsCheckedAt = now;
-            if (introspection.ok && introspection.tools && introspection.tools.length > 0) {
+            if (
+              introspection.ok &&
+              introspection.tools &&
+              introspection.tools.length > 0
+            ) {
               toolsJson = JSON.stringify(
                 introspection.tools.map((t) => ({
                   name: t.name,
                   description: t.description,
                   parameters: t.inputSchema,
-                }))
+                })),
               );
               toolsSource = 'introspected';
               toolsError = null;
@@ -282,15 +322,20 @@ export async function POST(req: Request) {
               // as healthy; this message just needs to not read as a failure.
               // Reported independently as a common false-negative in other MCP
               // directories' health probes — worth getting right.
-              toolsError = 'Requires authentication (OAuth) — tools not introspected by the automated check.';
+              toolsError =
+                'Requires authentication (OAuth) — tools not introspected by the automated check.';
             } else {
               toolsError = (
-                introspection.ok ? 'Endpoint responded but returned no tools.' : introspection.error || 'Unknown error'
+                introspection.ok
+                  ? 'Endpoint responded but returned no tools.'
+                  : introspection.error || 'Unknown error'
               ).slice(0, 500);
               // Expected, per-listing condition (endpoint doesn't support tools/list, requires
               // auth, etc.) — already recorded on the row as toolsError. console.warn keeps it
               // out of error-level alerting while still showing up in logs for debugging.
-              console.warn(`[health-cron] tools/list failed for ${server.id} (${server.url}): ${toolsError}`);
+              console.warn(
+                `[health-cron] tools/list failed for ${server.id} (${server.url}): ${toolsError}`,
+              );
             }
           }
         }
@@ -307,7 +352,10 @@ export async function POST(req: Request) {
       // primary path's result for this run.
       if (server.remoteEndpointUrl) {
         try {
-          const remoteIntrospection = await callMcpEndpoint(server.remoteEndpointUrl, { method: 'tools/list' });
+          const remoteIntrospection = await callMcpEndpoint(
+            server.remoteEndpointUrl,
+            { method: 'tools/list' },
+          );
           toolsCheckedAt = now;
           // A successful initialize (part of callMcpEndpoint's handshake) means
           // the endpoint is up and speaking MCP correctly, regardless of whether
@@ -318,20 +366,25 @@ export async function POST(req: Request) {
           // unpublish logic). See lib/qualityScore.ts for where this feeds scoring.
           remoteEndpointHealthy = remoteIntrospection.ok;
           remoteEndpointCheckedAt = now;
-          if (remoteIntrospection.ok && remoteIntrospection.tools && remoteIntrospection.tools.length > 0) {
+          if (
+            remoteIntrospection.ok &&
+            remoteIntrospection.tools &&
+            remoteIntrospection.tools.length > 0
+          ) {
             toolsJson = JSON.stringify(
               remoteIntrospection.tools.map((t) => ({
                 name: t.name,
                 description: t.description,
                 parameters: t.inputSchema,
-              }))
+              })),
             );
             toolsSource = 'introspected';
             toolsError = null;
           } else if (remoteIntrospection.authRequired) {
             // See the primary-url branch above — same RFC 9728 case, healthy
             // endpoint, just OAuth-protected.
-            toolsError = 'Requires authentication (OAuth) — tools not introspected by the automated check.';
+            toolsError =
+              'Requires authentication (OAuth) — tools not introspected by the automated check.';
           } else {
             toolsError = (
               remoteIntrospection.ok
@@ -366,7 +419,8 @@ export async function POST(req: Request) {
             signal: AbortSignal.timeout(10000),
           });
           websiteBacklinkOk =
-            siteRes.ok && websiteHasReciprocalBadge(await siteRes.text(), server.id);
+            siteRes.ok &&
+            websiteHasReciprocalBadge(await siteRes.text(), server.id);
         } catch {
           websiteBacklinkOk = false;
         }
@@ -412,8 +466,10 @@ export async function POST(req: Request) {
           ? await isListingTrulyDead({
               githubDead: true,
               remoteEndpointHealthy,
-              installCommand: installFields?.installCommand ?? server.installCommand,
-              installPackage: installFields?.installPackage ?? server.installPackage,
+              installCommand:
+                installFields?.installCommand ?? server.installCommand,
+              installPackage:
+                installFields?.installPackage ?? server.installPackage,
             })
           : false;
 
@@ -470,14 +526,15 @@ export async function POST(req: Request) {
         .orderBy(desc(serverHealthChecks.checkedAt))
         .limit(HEALTH_HISTORY_LIMIT);
       if (keepIds.length === HEALTH_HISTORY_LIMIT) {
-        await db
-          .delete(serverHealthChecks)
-          .where(
-            and(
-              eq(serverHealthChecks.serverId, server.id),
-              notInArray(serverHealthChecks.id, keepIds.map((r) => r.id))
-            )
-          );
+        await db.delete(serverHealthChecks).where(
+          and(
+            eq(serverHealthChecks.serverId, server.id),
+            notInArray(
+              serverHealthChecks.id,
+              keepIds.map((r) => r.id),
+            ),
+          ),
+        );
       }
 
       if (shouldUnpublish) unpublished++;
@@ -493,6 +550,9 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('Cron error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

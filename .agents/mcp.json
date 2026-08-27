@@ -2,11 +2,7 @@
   "mcpServers": {
     "resend": {
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote@latest",
-        "https://mcp.resend.com/mcp"
-      ]
+      "args": ["-y", "mcp-remote@latest", "https://mcp.resend.com/mcp"]
     }
   }
 }

@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import { getAdminStats } from '@/lib/adminStats';
 
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    let env;
+    let env: CloudflareEnv | undefined;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
       throw new Error('Could not get Cloudflare context.');
     }
 
-    if (!env || !env.DB) {
+    if (!env?.DB) {
       throw new Error('Database binding not found');
     }
 
@@ -28,6 +28,9 @@ export async function GET(req: Request) {
     return NextResponse.json(stats);
   } catch (error) {
     console.error('Admin stats error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

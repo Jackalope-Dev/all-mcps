@@ -7,7 +7,7 @@ type PendingImpression = { serverId: string; surface: ImpressionSurface };
 
 let sessionHash: string | null = null;
 const seen = new Set<string>();
-let pending: PendingImpression[] = [];
+const pending: PendingImpression[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 function getSessionHash(): string {
@@ -32,7 +32,10 @@ function flush() {
   // Use sendBeacon for reliability on page unload, fetch otherwise
   const body = JSON.stringify({ impressions: batch, sessionHash: hash });
   if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-    navigator.sendBeacon('/api/impressions', new Blob([body], { type: 'application/json' }));
+    navigator.sendBeacon(
+      '/api/impressions',
+      new Blob([body], { type: 'application/json' }),
+    );
   } else {
     fetch('/api/impressions', {
       method: 'POST',
@@ -72,7 +75,7 @@ export function useImpressionTracker() {
     (serverId: string, surface: ImpressionSurface) => {
       enqueue(serverId, surface);
     },
-    []
+    [],
   );
   return { trackImpression };
 }
@@ -103,7 +106,7 @@ export function ImpressionBeacon({
           observer.disconnect();
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     observer.observe(el);

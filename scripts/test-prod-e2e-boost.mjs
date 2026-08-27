@@ -31,13 +31,20 @@ async function runE2EProductionBoostTest() {
 
   const stripeCheckRes = await fetch(data.checkout_url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     },
   });
 
   console.log('   Stripe Checkout Page HTTP Status:', stripeCheckRes.status);
-  if (stripeCheckRes.status === 200 || stripeCheckRes.status === 303 || stripeCheckRes.status === 302) {
-    console.log('\n✅ [SUCCESS] Stripe Checkout Session generated and verified live on production!');
+  if (
+    stripeCheckRes.status === 200 ||
+    stripeCheckRes.status === 303 ||
+    stripeCheckRes.status === 302
+  ) {
+    console.log(
+      '\n✅ [SUCCESS] Stripe Checkout Session generated and verified live on production!',
+    );
   } else {
     console.log('   Checkout Response Status:', stripeCheckRes.status);
   }

@@ -71,7 +71,9 @@ export function normalizeTweetForDedup(text: string): string {
  * are dropped — this is what stops the RSS feed from ever handing Buffer two posts
  * X.com would reject as duplicate content.
  */
-export function dedupeTweetItems<T extends { tweetText: string; serverId?: string | null }>(items: T[]): T[] {
+export function dedupeTweetItems<
+  T extends { tweetText: string; serverId?: string | null },
+>(items: T[]): T[] {
   const seenTexts = new Set<string>();
   const seenServers = new Set<string>();
   const out: T[] = [];
@@ -158,8 +160,25 @@ export function formatDisplayTitle(rawName: string): string {
 
   // Acronyms & brand casing map
   const upperAcronyms = new Set([
-    'MCP', 'AI', 'API', 'SQL', 'DB', 'LLM', 'JSON', 'CLI', 'URL',
-    'REST', 'SDK', 'UI', 'UX', 'CSS', 'HTML', 'JS', 'TS', 'HTTP', 'HTTPS'
+    'MCP',
+    'AI',
+    'API',
+    'SQL',
+    'DB',
+    'LLM',
+    'JSON',
+    'CLI',
+    'URL',
+    'REST',
+    'SDK',
+    'UI',
+    'UX',
+    'CSS',
+    'HTML',
+    'JS',
+    'TS',
+    'HTTP',
+    'HTTPS',
   ]);
 
   return cleaned
@@ -180,14 +199,25 @@ export function getHashtags(category?: string): string {
   const tags = new Set<string>(['#MCP']);
 
   const catLower = (category || '').toLowerCase();
-  if (catLower.includes('database') || catLower.includes('db')) tags.add('#Databases');
-  else if (catLower.includes('search') || catLower.includes('extraction')) tags.add('#Data');
-  else if (catLower.includes('version') || catLower.includes('git')) tags.add('#DevOps');
+  if (catLower.includes('database') || catLower.includes('db'))
+    tags.add('#Databases');
+  else if (catLower.includes('search') || catLower.includes('extraction'))
+    tags.add('#Data');
+  else if (catLower.includes('version') || catLower.includes('git'))
+    tags.add('#DevOps');
   else if (catLower.includes('file')) tags.add('#DevTools');
   else if (catLower.includes('agent')) tags.add('#AIAgents');
   else tags.add('#DevTools');
 
-  const generalPool = ['#AI', '#Claude', '#LLM', '#AITools', '#AIAgents', '#OpenSource', '#Anthropic'];
+  const generalPool = [
+    '#AI',
+    '#Claude',
+    '#LLM',
+    '#AITools',
+    '#AIAgents',
+    '#OpenSource',
+    '#Anthropic',
+  ];
   const shuffledGeneral = [...generalPool].sort(() => Math.random() - 0.5);
   for (const tag of shuffledGeneral) {
     if (tags.size >= 4) break;
@@ -230,7 +260,9 @@ export function stripMarkdown(input: string): string {
     .replace(/&nbsp;/g, ' ');
   text = text.replace(/\[\s*\]|\(\s*\)/g, '');
   text = text.replace(/\s+/g, ' ').trim();
-  text = text.replace(/^[\p{Extended_Pictographic}️‍\s]+/u, '').trim();
+  text = text
+    .replace(/^(?:[\p{Extended_Pictographic}\s]|\uFE0F|\u200D)+/u, '')
+    .trim();
   text = text.replace(/^[-–—:|]\s*/, '').trim();
 
   return text;
@@ -250,7 +282,11 @@ export function getTwitterCharCount(text: string): number {
   let count = 0;
   for (const char of textWithoutUrls) {
     const codePoint = char.codePointAt(0) || 0;
-    if (codePoint > 0xffff || (codePoint >= 0x2600 && codePoint <= 0x27bf) || (codePoint >= 0x1f000 && codePoint <= 0x1ffff)) {
+    if (
+      codePoint > 0xffff ||
+      (codePoint >= 0x2600 && codePoint <= 0x27bf) ||
+      (codePoint >= 0x1f000 && codePoint <= 0x1ffff)
+    ) {
       count += 2;
     } else {
       count += 1;
@@ -264,30 +300,39 @@ export function getTwitterCharCount(text: string): number {
  * which sits below X.com's 280 hard cap to leave breathing room).
  * Truncates cleanly on word boundaries when possible and appends '…'.
  */
-export function truncateToTwitterLimit(text: string, maxLen: number = TWITTER_SAFE_CHAR_LIMIT): string {
+export function truncateToTwitterLimit(
+  text: string,
+  maxLen: number = TWITTER_SAFE_CHAR_LIMIT,
+): string {
   if (getTwitterCharCount(text) <= maxLen) {
     return text;
   }
 
   let truncated = text;
-  while (getTwitterCharCount(truncated + '…') > maxLen && truncated.length > 0) {
+  while (
+    getTwitterCharCount(`${truncated}…`) > maxLen &&
+    truncated.length > 0
+  ) {
     const lastSpace = truncated.lastIndexOf(' ');
     if (lastSpace > truncated.length * 0.5) {
       truncated = truncated.slice(0, lastSpace);
     } else {
       truncated = truncated.slice(0, -1);
     }
-    truncated = truncated.replace(/[\s.,;:!\?]+$/, '');
+    truncated = truncated.replace(/[\s.,;:!?]+$/, '');
   }
 
-  return truncated ? truncated + '…' : text.slice(0, maxLen);
+  return truncated ? `${truncated}…` : text.slice(0, maxLen);
 }
 
 /**
  * Clean a scraped description into tweet-ready plain text: strip markdown, drop a
  * trailing install-command clause, then truncate on a word boundary according to X.com limit.
  */
-export function cleanTweetDescription(description: string | undefined, maxLen = 165): string {
+export function cleanTweetDescription(
+  description: string | undefined,
+  maxLen = 165,
+): string {
   let text = stripMarkdown(description || '');
   if (!text) return '';
 
@@ -296,18 +341,23 @@ export function cleanTweetDescription(description: string | undefined, maxLen = 
     text = text
       .slice(0, installIdx)
       .replace(/[\s.;:,(\-–—]+$/, '')
-      .replace(/\b(install(?:ation)?|usage|setup|run|quick\s?start|example|getting started)\s*$/i, '')
+      .replace(
+        /\b(install(?:ation)?|usage|setup|run|quick\s?start|example|getting started)\s*$/i,
+        '',
+      )
       .replace(/[\s.;:,(\-–—]+$/, '')
       .trim();
   }
 
   if (getTwitterCharCount(text) > maxLen) {
     let slice = text.slice(0, maxLen - 1);
-    while (getTwitterCharCount(slice + '…') > maxLen && slice.length > 0) {
+    while (getTwitterCharCount(`${slice}…`) > maxLen && slice.length > 0) {
       slice = slice.slice(0, -1);
     }
     const lastSpace = slice.lastIndexOf(' ');
-    text = (lastSpace > maxLen * 0.5 ? slice.slice(0, lastSpace) : slice).replace(/[\s.,;:]+$/, '') + '…';
+    text = `${(
+      lastSpace > maxLen * 0.5 ? slice.slice(0, lastSpace) : slice
+    ).replace(/[\s.,;:]+$/, '')}…`;
   }
 
   return text;
@@ -349,13 +399,18 @@ export function buildMcpServerTweetText(server: McpServerTweetPayload): string {
   if (availableDescBudget < 40 && hashtagList.length > 2) {
     hashtagList = hashtagList.slice(0, 2);
     hashtagsStr = hashtagList.join(' ');
-    const newBaseCount = getTwitterCharCount(`${header}\n\n${titleLine}\n\n${cta}\n${url}\n\n${hashtagsStr}`);
+    const newBaseCount = getTwitterCharCount(
+      `${header}\n\n${titleLine}\n\n${cta}\n${url}\n\n${hashtagsStr}`,
+    );
     availableDescBudget = TWITTER_SAFE_CHAR_LIMIT - newBaseCount - 1;
   }
 
   let cleanDesc = '';
   if (availableDescBudget >= 20 && rawDesc) {
-    cleanDesc = cleanTweetDescription(server.description, Math.min(availableDescBudget, 165));
+    cleanDesc = cleanTweetDescription(
+      server.description,
+      Math.min(availableDescBudget, 165),
+    );
   }
 
   let tweetText = cleanDesc
@@ -400,7 +455,12 @@ export async function tweetMcpServer(
       const existingQueued = await db
         .select({ id: socialPosts.id, guid: socialPosts.guid })
         .from(socialPosts)
-        .where(and(eq(socialPosts.serverId, server.id), eq(socialPosts.status, 'queued')))
+        .where(
+          and(
+            eq(socialPosts.serverId, server.id),
+            eq(socialPosts.status, 'queued'),
+          ),
+        )
         .limit(1)
         .catch(() => []);
 
@@ -426,7 +486,7 @@ export async function tweetMcpServer(
 
       if (recentPosts && recentPosts.length > 0) {
         const hasDuplicateText = recentPosts.some(
-          (row: any) => normalizeTweetForDedup(row.tweetText) === normalized
+          (row: any) => normalizeTweetForDedup(row.tweetText) === normalized,
         );
         if (hasDuplicateText) {
           return {
@@ -435,7 +495,8 @@ export async function tweetMcpServer(
             duplicate: true,
             guid,
             text,
-            error: 'An identical tweet has already been queued or posted recently.',
+            error:
+              'An identical tweet has already been queued or posted recently.',
           };
         }
       }

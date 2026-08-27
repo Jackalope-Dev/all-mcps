@@ -5,7 +5,9 @@
  * three-plus copies of a security-sensitive external call is exactly the
  * case where a fix in one copy silently missing the others is a real risk.
  */
-export type TurnstileVerifyResult = { ok: true } | { ok: false; error: string; status: number };
+export type TurnstileVerifyResult =
+  | { ok: true }
+  | { ok: false; error: string; status: number };
 
 /**
  * Verifies a Turnstile token against Cloudflare's siteverify endpoint. `env`
@@ -15,21 +17,27 @@ export type TurnstileVerifyResult = { ok: true } | { ok: false; error: string; s
 export async function verifyTurnstileToken(
   token: unknown,
   env: { TURNSTILE_SECRET?: string } | undefined,
-  remoteIp: string
+  remoteIp: string,
 ): Promise<TurnstileVerifyResult> {
   if (!token || typeof token !== 'string') {
     return { ok: false, error: 'Missing Turnstile token', status: 400 };
   }
 
   const verifyForm = new URLSearchParams();
-  verifyForm.append('secret', env?.TURNSTILE_SECRET || process.env.TURNSTILE_SECRET || '');
+  verifyForm.append(
+    'secret',
+    env?.TURNSTILE_SECRET || process.env.TURNSTILE_SECRET || '',
+  );
   verifyForm.append('response', token);
   verifyForm.append('remoteip', remoteIp);
 
-  const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-    method: 'POST',
-    body: verifyForm,
-  });
+  const verifyRes = await fetch(
+    'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    {
+      method: 'POST',
+      body: verifyForm,
+    },
+  );
 
   const verifyResult = (await verifyRes.json()) as any;
   if (!verifyResult.success) {

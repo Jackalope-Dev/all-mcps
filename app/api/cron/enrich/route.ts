@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
-import { processLogoUpload, LogoValidationError } from '../../../../lib/logoImage';
+import { cleanListingDescription } from '../../../../lib/description';
+import { getGithubToken } from '../../../../lib/githubAuth';
 import {
   descriptionNeedsClean,
   extractCandidateImagesFromReadme,
@@ -13,17 +14,19 @@ import {
   fetchGithubReadme,
   fetchGithubRepo,
   fetchPackageRegistryMetadata,
+  isListingTrulyDead,
+  type LogoSource,
   logoSourcePriority,
-  LogoSource,
   parseGithubUrl,
   pickBestWebsiteAndLogoWithLlm,
   pickDescription,
   pickWebsiteUrl,
   resolveInstallFromSignals,
-  isListingTrulyDead,
 } from '../../../../lib/listingEnrich';
-import { cleanListingDescription } from '../../../../lib/description';
-import { getGithubToken } from '../../../../lib/githubAuth';
+import {
+  LogoValidationError,
+  processLogoUpload,
+} from '../../../../lib/logoImage';
 
 /**
  * Catalog quality pass for scrape/import listings.
@@ -53,7 +56,7 @@ async function safeR2Put(
   bucket: any,
   key: string,
   value: ArrayBuffer | Uint8Array,
-  options?: any
+  options?: any,
 ): Promise<boolean> {
   try {
     await bucket.put(key, value, options);
@@ -67,7 +70,7 @@ async function safeR2Put(
 async function tryUploadLogo(
   url: string,
   serverId: string,
-  envLogos: any
+  envLogos: any,
 ): Promise<Uint8Array | null> {
   if (!url || !envLogos) return null;
   try {
@@ -84,7 +87,10 @@ async function tryUploadLogo(
     return await processLogoUpload(buf);
   } catch (e) {
     if (!(e instanceof LogoValidationError)) {
-      console.error(`Logo upload processing failed for ${serverId} (${url}):`, e);
+      console.error(
+        `Logo upload processing failed for ${serverId} (${url}):`,
+        e,
+      );
     }
     return null;
   }
@@ -124,9 +130,9 @@ export async function POST(req: Request) {
             isNull(servers.githubStars),
             sql`${servers.description} LIKE '%glama.ai%'`,
             sql`${servers.description} LIKE '[](%'`,
-            sql`length(${servers.description}) < 40`
-          )
-        )
+            sql`length(${servers.description}) < 40`,
+          ),
+        ),
       )
       .orderBy(asc(servers.lastCheckedAt))
       .limit(BATCH_SIZE * 2);
@@ -205,7 +211,9 @@ export async function POST(req: Request) {
           stats.installSet++;
         }
 
-        const pkgName = (updates.installPackage as string | undefined) || server.installPackage;
+        const pkgName =
+          (updates.installPackage as string | undefined) ||
+          server.installPackage;
         if (!websiteUrl && pkgName) {
           const pkgMeta = await fetchPackageRegistryMetadata(pkgName);
           if (pkgMeta?.websiteUrl) {
@@ -226,7 +234,9 @@ export async function POST(req: Request) {
             const png = await tryUploadLogo(faviconUrl, server.id, env.LOGOS);
             if (png) {
               const key = `live/${server.id}.png`;
-              const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+              const putOk = await safeR2Put(env.LOGOS, key, png, {
+                httpMetadata: { contentType: 'image/png' },
+              });
               if (putOk) {
                 logoUrl = `/logos/${server.id}`;
                 logoSource = 'website_favicon';
@@ -257,7 +267,12 @@ export async function POST(req: Request) {
             // Rate limited — stop early to avoid burning the rest of the batch
             await db
               .update(servers)
-              .set({ lastCheckedAt: now, description: (updates.description as string | undefined) ?? server.description })
+              .set({
+                lastCheckedAt: now,
+                description:
+                  (updates.description as string | undefined) ??
+                  server.description,
+              })
               .where(eq(servers.id, server.id));
             stats.skipped++;
             break;
@@ -297,13 +312,26 @@ export async function POST(req: Request) {
           }
 
           // README → website, logo, install hints
-          const readme = await fetchGithubReadme(gh.owner, gh.repo, githubToken);
+          const readme = await fetchGithubReadme(
+            gh.owner,
+            gh.repo,
+            githubToken,
+          );
 
           if (readme) {
-            const candidateWebsites = extractCandidateWebsitesFromReadme(readme, gh.owner, gh.repo);
-            const candidateImages = extractCandidateImagesFromReadme(readme, gh.owner, gh.repo);
+            const candidateWebsites = extractCandidateWebsitesFromReadme(
+              readme,
+              gh.owner,
+              gh.repo,
+            );
+            const candidateImages = extractCandidateImagesFromReadme(
+              readme,
+              gh.owner,
+              gh.repo,
+            );
 
-            let llmChoice: { websiteUrl?: string; logoUrl?: string } | null = null;
+            let llmChoice: { websiteUrl?: string; logoUrl?: string } | null =
+              null;
             if (candidateWebsites.length > 0 || candidateImages.length > 0) {
               llmChoice = await pickBestWebsiteAndLogoWithLlm({
                 readmeSnippet: readme,
@@ -315,8 +343,12 @@ export async function POST(req: Request) {
             }
 
             // Derive website from README if current is missing or points to github.com
-            const derivedWebsite = llmChoice?.websiteUrl || candidateWebsites[0];
-            if (derivedWebsite && (!websiteUrl || /github\.com/i.test(websiteUrl))) {
+            const derivedWebsite =
+              llmChoice?.websiteUrl || candidateWebsites[0];
+            if (
+              derivedWebsite &&
+              (!websiteUrl || /github\.com/i.test(websiteUrl))
+            ) {
               websiteUrl = derivedWebsite;
               updates.websiteUrl = websiteUrl;
               // New website domain — reset the website backlink, keep the repo README badge.
@@ -350,14 +382,25 @@ export async function POST(req: Request) {
               // Priority 4: README Logo
               if (currentPriority < 4) {
                 const readmeLogoCandidates = llmChoice?.logoUrl
-                  ? [llmChoice.logoUrl, ...candidateImages.filter((img) => img !== llmChoice!.logoUrl)]
+                  ? [
+                      llmChoice.logoUrl,
+                      ...candidateImages.filter(
+                        (img) => img !== llmChoice!.logoUrl,
+                      ),
+                    ]
                   : candidateImages;
 
                 for (const candidate of readmeLogoCandidates) {
-                  const png = await tryUploadLogo(candidate, server.id, env.LOGOS);
+                  const png = await tryUploadLogo(
+                    candidate,
+                    server.id,
+                    env.LOGOS,
+                  );
                   if (png) {
                     const key = `live/${server.id}.png`;
-                    const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+                    const putOk = await safeR2Put(env.LOGOS, key, png, {
+                      httpMetadata: { contentType: 'image/png' },
+                    });
                     if (putOk) {
                       logoUrl = `/logos/${server.id}`;
                       logoSource = 'readme';
@@ -380,7 +423,9 @@ export async function POST(req: Request) {
               const png = await tryUploadLogo(faviconUrl, server.id, env.LOGOS);
               if (png) {
                 const key = `live/${server.id}.png`;
-                const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+                const putOk = await safeR2Put(env.LOGOS, key, png, {
+                  httpMetadata: { contentType: 'image/png' },
+                });
                 if (putOk) {
                   logoUrl = `/logos/${server.id}`;
                   logoSource = 'website_favicon';
@@ -404,7 +449,9 @@ export async function POST(req: Request) {
             const png = await tryUploadLogo(avatarUrl, server.id, env.LOGOS);
             if (png) {
               const key = `live/${server.id}.png`;
-              const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+              const putOk = await safeR2Put(env.LOGOS, key, png, {
+                httpMetadata: { contentType: 'image/png' },
+              });
               if (putOk) {
                 logoUrl = `/logos/${server.id}`;
                 logoSource = 'github_org';
@@ -426,7 +473,9 @@ export async function POST(req: Request) {
             const png = await tryUploadLogo(avatarUrl, server.id, env.LOGOS);
             if (png) {
               const key = `live/${server.id}.png`;
-              const putOk = await safeR2Put(env.LOGOS, key, png, { httpMetadata: { contentType: 'image/png' } });
+              const putOk = await safeR2Put(env.LOGOS, key, png, {
+                httpMetadata: { contentType: 'image/png' },
+              });
               if (putOk) {
                 logoUrl = `/logos/${server.id}`;
                 logoSource = 'github_user';
@@ -450,8 +499,12 @@ export async function POST(req: Request) {
         ? await isListingTrulyDead({
             githubDead,
             remoteEndpointHealthy: server.remoteEndpointHealthy,
-            installCommand: (updates.installCommand as string | undefined) ?? server.installCommand,
-            installPackage: (updates.installPackage as string | undefined) ?? server.installPackage,
+            installCommand:
+              (updates.installCommand as string | undefined) ??
+              server.installCommand,
+            installPackage:
+              (updates.installPackage as string | undefined) ??
+              server.installPackage,
           })
         : false;
 
@@ -473,6 +526,9 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('Enrich cron error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

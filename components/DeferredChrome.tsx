@@ -5,15 +5,15 @@ import { useEffect, useState } from 'react';
 
 const WebMCPProvider = dynamic(
   () => import('./WebMCPProvider').then((m) => m.WebMCPProvider),
-  { ssr: false }
+  { ssr: false },
 );
 const NewsletterModal = dynamic(
   () => import('./NewsletterModal').then((m) => m.NewsletterModal),
-  { ssr: false }
+  { ssr: false },
 );
 const FloatingStackDock = dynamic(
   () => import('./ui/FloatingStackDock').then((m) => m.FloatingStackDock),
-  { ssr: false }
+  { ssr: false },
 );
 
 /**

@@ -4,14 +4,14 @@
  */
 
 import { cleanListingDescription } from './description';
-import { isSafeSubmissionUrl } from './urlSafety';
+import { githubApiHeaders } from './githubAuth';
 import {
-  resolveInstallFromText,
   resolveInstallConfig,
+  resolveInstallFromText,
   toCachedInstallFields,
 } from './installConfig';
-import { githubApiHeaders } from './githubAuth';
 import { chatJson } from './openai';
+import { isSafeSubmissionUrl } from './urlSafety';
 
 export type GhRepo = {
   full_name?: string;
@@ -25,7 +25,9 @@ export type GhRepo = {
   topics?: string[];
 };
 
-export function parseGithubUrl(url: string): { owner: string; repo: string } | null {
+export function parseGithubUrl(
+  url: string,
+): { owner: string; repo: string } | null {
   const m = (url || '').match(/github\.com\/([^/]+)\/([^/#?]+)/i);
   if (!m) return null;
   let repo = m[2];
@@ -34,7 +36,9 @@ export function parseGithubUrl(url: string): { owner: string; repo: string } | n
 }
 
 /** True when the stored description still looks like a scraped Glama/README header. */
-export function descriptionNeedsClean(description: string | null | undefined): boolean {
+export function descriptionNeedsClean(
+  description: string | null | undefined,
+): boolean {
   if (!description) return true;
   const d = description.trim();
   if (d.length < 24) return true;
@@ -42,11 +46,18 @@ export function descriptionNeedsClean(description: string | null | undefined): b
   if (/^\[\]\(https?:\/\//.test(d)) return true;
   if (/^!\[[^\]]*\]\(https?:\/\//.test(d)) return true;
   // Leading platform emoji dump (📇 ☁️ 🏠 …) with little prose
-  if (/^[\p{Extended_Pictographic}\s️‍]+[-–—]/u.test(d) && d.length < 120) return true;
+  if (
+    /^(?:[\p{Extended_Pictographic}\s]|\uFE0F|\u200D)+[-–—]/u.test(d) &&
+    d.length < 120
+  )
+    return true;
   return false;
 }
 
-export function pickDescription(current: string, ghDescription: string | null | undefined): string {
+export function pickDescription(
+  current: string,
+  ghDescription: string | null | undefined,
+): string {
   const cleanedCurrent = cleanListingDescription(current);
   const cleanedGh = cleanListingDescription(ghDescription || '');
 
@@ -62,9 +73,13 @@ export function pickDescription(current: string, ghDescription: string | null | 
 
 export function pickWebsiteUrl(
   current: string | null | undefined,
-  homepage: string | null | undefined
+  homepage: string | null | undefined,
 ): string | null {
-  if (current && isSafeSubmissionUrl(current) && !/github\.com/i.test(current)) {
+  if (
+    current &&
+    isSafeSubmissionUrl(current) &&
+    !/github\.com/i.test(current)
+  ) {
     return current;
   }
   const h = (homepage || '').trim();
@@ -104,10 +119,14 @@ export function resolveInstallFromSignals(input: {
 export async function fetchGithubRepo(
   owner: string,
   repo: string,
-  token?: string | null
+  token?: string | null,
 ): Promise<{ ok: true; data: GhRepo } | { ok: false; status: number }> {
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-    headers: githubApiHeaders(token, 'application/vnd.github+json', 'AllMCPs-Enricher'),
+    headers: githubApiHeaders(
+      token,
+      'application/vnd.github+json',
+      'AllMCPs-Enricher',
+    ),
     signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) return { ok: false, status: res.status };
@@ -118,13 +137,16 @@ export async function fetchGithubRepo(
 export async function fetchGithubReadme(
   owner: string,
   repo: string,
-  token?: string | null
+  token?: string | null,
 ): Promise<string | null> {
   for (const branch of ['main', 'master']) {
     try {
       const res = await fetch(
         `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`,
-        { headers: { 'User-Agent': 'AllMCPs-Enricher' }, signal: AbortSignal.timeout(10000) }
+        {
+          headers: { 'User-Agent': 'AllMCPs-Enricher' },
+          signal: AbortSignal.timeout(10000),
+        },
       );
       if (res.ok) return await res.text();
     } catch {
@@ -134,10 +156,17 @@ export async function fetchGithubReadme(
 
   // API fallback (uses token quota when raw is blocked)
   try {
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, {
-      headers: githubApiHeaders(token, 'application/vnd.github+json', 'AllMCPs-Enricher'),
-      signal: AbortSignal.timeout(12000),
-    });
+    const res = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/readme`,
+      {
+        headers: githubApiHeaders(
+          token,
+          'application/vnd.github+json',
+          'AllMCPs-Enricher',
+        ),
+        signal: AbortSignal.timeout(12000),
+      },
+    );
     if (!res.ok) return null;
     const data = (await res.json()) as { content?: string; encoding?: string };
     if (data.content && data.encoding === 'base64') {
@@ -153,16 +182,27 @@ export async function fetchGithubReadme(
   return null;
 }
 
-export type LogoSource = 'readme' | 'website_favicon' | 'github_org' | 'github_user' | 'manual';
+export type LogoSource =
+  | 'readme'
+  | 'website_favicon'
+  | 'github_org'
+  | 'github_user'
+  | 'manual';
 
 export function logoSourcePriority(source: string | null | undefined): number {
   switch (source) {
-    case 'manual': return 5;
-    case 'readme': return 4;
-    case 'website_favicon': return 3;
-    case 'github_org': return 2;
-    case 'github_user': return 1;
-    default: return 0;
+    case 'manual':
+      return 5;
+    case 'readme':
+      return 4;
+    case 'website_favicon':
+      return 3;
+    case 'github_org':
+      return 2;
+    case 'github_user':
+      return 1;
+    default:
+      return 0;
   }
 }
 
@@ -209,15 +249,14 @@ const EXCLUDED_DOMAINS_FOR_WEBSITE = [
 export function extractCandidateWebsitesFromReadme(
   readme: string,
   ghOwner: string,
-  ghRepo: string
+  ghRepo: string,
 ): string[] {
   if (!readme) return [];
   const urls = new Set<string>();
 
   // Extract markdown link destinations [text](url)
-  const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)\"]+)\)/g;
-  let m: RegExpExecArray | null;
-  while ((m = mdLinkRegex.exec(readme)) !== null) {
+  const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)"]+)\)/g;
+  for (const m of readme.matchAll(mdLinkRegex)) {
     const linkText = m[1].toLowerCase();
     const href = m[2].trim();
     if (
@@ -232,8 +271,8 @@ export function extractCandidateWebsitesFromReadme(
   }
 
   // Extract all http(s) URLs
-  const plainUrlRegex = /https?:\/\/[^\s<>\)\"]+/g;
-  while ((m = plainUrlRegex.exec(readme)) !== null) {
+  const plainUrlRegex = /https?:\/\/[^\s<>)"]+/g;
+  for (const m of readme.matchAll(plainUrlRegex)) {
     const raw = m[0].replace(/[.,;:!?]+$/, '');
     urls.add(raw);
   }
@@ -248,7 +287,11 @@ export function extractCandidateWebsitesFromReadme(
       continue;
     }
 
-    if (EXCLUDED_DOMAINS_FOR_WEBSITE.some((d) => host === d || host.endsWith('.' + d))) {
+    if (
+      EXCLUDED_DOMAINS_FOR_WEBSITE.some(
+        (d) => host === d || host.endsWith(`.${d}`),
+      )
+    ) {
       continue;
     }
 
@@ -267,7 +310,7 @@ export function extractCandidateImagesFromReadme(
   readme: string,
   ghOwner: string,
   ghRepo: string,
-  branch = 'main'
+  branch = 'main',
 ): string[] {
   if (!readme) return [];
   const lightImages = new Set<string>();
@@ -275,19 +318,20 @@ export function extractCandidateImagesFromReadme(
 
   // Extract <picture> tags with prefers-color-scheme: light
   const pictureRegex = /<picture>([\s\S]*?)<\/picture>/gi;
-  let picMatch: RegExpExecArray | null;
-  while ((picMatch = pictureRegex.exec(readme)) !== null) {
+  for (const picMatch of readme.matchAll(pictureRegex)) {
     const picContent = picMatch[1];
-    const lightSource = picContent.match(/<source[^>]+media=["'][^"']*prefers-color-scheme:\s*light[^"']*["'][^>]+srcset=["']([^"'\s]+)["']/i);
+    const lightSource = picContent.match(
+      /<source[^>]+media=["'][^"']*prefers-color-scheme:\s*light[^"']*["'][^>]+srcset=["']([^"'\s]+)["']/i,
+    );
     if (lightSource?.[1]) {
       lightImages.add(lightSource[1].trim());
     }
   }
 
   // Markdown image syntax ![]()
-  const mdImgRegex = /!\[[^\]]*\]\((https?:\/\/[^\s\)\"]+|\/[^\s\)\"]+|[^\s\)\"]+)\)/g;
-  let m: RegExpExecArray | null;
-  while ((m = mdImgRegex.exec(readme)) !== null) {
+  const mdImgRegex =
+    /!\[[^\]]*\]\((https?:\/\/[^\s)"]+|\/[^\s)"]+|[^\s)"]+)\)/g;
+  for (const m of readme.matchAll(mdImgRegex)) {
     const src = m[1].trim();
     if (src.includes('gh-light-mode-only') || src.includes('theme=light')) {
       lightImages.add(src);
@@ -298,7 +342,7 @@ export function extractCandidateImagesFromReadme(
 
   // HTML img tags <img ... src="..." ...>
   const htmlImgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
-  while ((m = htmlImgRegex.exec(readme)) !== null) {
+  for (const m of readme.matchAll(htmlImgRegex)) {
     const src = m[1].trim();
     if (src.includes('gh-light-mode-only') || src.includes('theme=light')) {
       lightImages.add(src);
@@ -312,7 +356,7 @@ export function extractCandidateImagesFromReadme(
   for (let src of allCandidates) {
     if (
       /shields\.io|badge|codecov|github-actions|workflow|license|build|downloads|stars|forks|contributors|last-commit/i.test(
-        src
+        src,
       )
     ) {
       continue;
@@ -332,17 +376,26 @@ export function extractCandidateImagesFromReadme(
 
 /** Fetch metadata for npm packages to discover homepage/repository URLs when missing. */
 export async function fetchPackageRegistryMetadata(
-  packageName: string
+  packageName: string,
 ): Promise<{ websiteUrl?: string; repoUrl?: string } | null> {
   if (!packageName) return null;
-  const cleanName = packageName.trim().replace(/^npx\s+/, '').replace(/^uvx\s+/, '');
-  if (!cleanName || cleanName.includes(' ') || cleanName.startsWith('http')) return null;
+  const cleanName = packageName
+    .trim()
+    .replace(/^npx\s+/, '')
+    .replace(/^uvx\s+/, '');
+  if (!cleanName || cleanName.includes(' ') || cleanName.startsWith('http'))
+    return null;
 
   try {
-    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(cleanName)}`, {
-      headers: { 'User-Agent': 'AllMCPs-Enricher/1.0 (+https://allmcps.com)' },
-      signal: AbortSignal.timeout(5000),
-    });
+    const res = await fetch(
+      `https://registry.npmjs.org/${encodeURIComponent(cleanName)}`,
+      {
+        headers: {
+          'User-Agent': 'AllMCPs-Enricher/1.0 (+https://allmcps.com)',
+        },
+        signal: AbortSignal.timeout(5000),
+      },
+    );
     if (!res.ok) return null;
     const data = (await res.json()) as {
       homepage?: string;
@@ -350,10 +403,17 @@ export async function fetchPackageRegistryMetadata(
     };
 
     const out: { websiteUrl?: string; repoUrl?: string } = {};
-    if (data.homepage && isSafeSubmissionUrl(data.homepage) && !/github\.com/i.test(data.homepage)) {
+    if (
+      data.homepage &&
+      isSafeSubmissionUrl(data.homepage) &&
+      !/github\.com/i.test(data.homepage)
+    ) {
       out.websiteUrl = data.homepage;
     }
-    const repoRaw = typeof data.repository === 'string' ? data.repository : data.repository?.url;
+    const repoRaw =
+      typeof data.repository === 'string'
+        ? data.repository
+        : data.repository?.url;
     if (repoRaw) {
       const match = repoRaw.match(/github\.com\/([^/]+\/[^/#?.]+)/i);
       if (match) {
@@ -367,26 +427,36 @@ export async function fetchPackageRegistryMetadata(
 }
 
 /** Best-effort check that a package still resolves on its registry (npm or PyPI, inferred from installCommand). */
-export async function isPackageInstallable(installCommand: string | null | undefined, pkg: string | null | undefined): Promise<boolean> {
+export async function isPackageInstallable(
+  installCommand: string | null | undefined,
+  pkg: string | null | undefined,
+): Promise<boolean> {
   const cleanPkg = (pkg || '').trim();
-  if (!cleanPkg || cleanPkg.startsWith('http') || cleanPkg.includes(' ')) return false;
+  if (!cleanPkg || cleanPkg.startsWith('http') || cleanPkg.includes(' '))
+    return false;
   const cmd = (installCommand || '').toLowerCase();
   const isPython = /uvx|pipx|pip\b|python/.test(cmd);
 
   try {
     if (isPython) {
-      const res = await fetch(`https://pypi.org/pypi/${encodeURIComponent(cleanPkg)}/json`, {
-        headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
-        signal: AbortSignal.timeout(6000),
-      });
+      const res = await fetch(
+        `https://pypi.org/pypi/${encodeURIComponent(cleanPkg)}/json`,
+        {
+          headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
+          signal: AbortSignal.timeout(6000),
+        },
+      );
       return res.ok;
     }
     // Default to npm — covers npx/bunx/npm/pnpm/yarn and any other/unset runner,
     // since most stdio listings in this catalog are npm packages.
-    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(cleanPkg)}`, {
-      headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
-      signal: AbortSignal.timeout(6000),
-    });
+    const res = await fetch(
+      `https://registry.npmjs.org/${encodeURIComponent(cleanPkg)}`,
+      {
+        headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
+        signal: AbortSignal.timeout(6000),
+      },
+    );
     return res.ok;
   } catch {
     return false;
@@ -411,11 +481,16 @@ export type LiveInterfaceSignals = {
  * that errors) never count as "confirmed dead" — only an explicit failure
  * does, so this stays conservative rather than trigger-happy.
  */
-export async function isListingTrulyDead(signals: LiveInterfaceSignals): Promise<boolean> {
+export async function isListingTrulyDead(
+  signals: LiveInterfaceSignals,
+): Promise<boolean> {
   if (!signals.githubDead) return false;
   if (signals.remoteEndpointHealthy) return false;
   if (signals.installPackage) {
-    const installable = await isPackageInstallable(signals.installCommand, signals.installPackage);
+    const installable = await isPackageInstallable(
+      signals.installCommand,
+      signals.installPackage,
+    );
     if (installable) return false;
   }
   return true;
@@ -457,10 +532,16 @@ export async function pickBestWebsiteAndLogoWithLlm(input: {
   if (!result.ok) return null;
 
   const out: { websiteUrl?: string; logoUrl?: string } = {};
-  if (result.data.websiteUrl && input.candidateUrls.includes(result.data.websiteUrl)) {
+  if (
+    result.data.websiteUrl &&
+    input.candidateUrls.includes(result.data.websiteUrl)
+  ) {
     out.websiteUrl = result.data.websiteUrl;
   }
-  if (result.data.logoUrl && input.candidateImages.includes(result.data.logoUrl)) {
+  if (
+    result.data.logoUrl &&
+    input.candidateImages.includes(result.data.logoUrl)
+  ) {
     out.logoUrl = result.data.logoUrl;
   }
 
@@ -468,7 +549,9 @@ export async function pickBestWebsiteAndLogoWithLlm(input: {
 }
 
 /** Given a website URL, extracts favicon, apple-touch-icon, og:image or Google Favicon URL. */
-export async function extractWebsiteFaviconUrl(websiteUrl: string): Promise<string | null> {
+export async function extractWebsiteFaviconUrl(
+  websiteUrl: string,
+): Promise<string | null> {
   if (!websiteUrl || !isSafeSubmissionUrl(websiteUrl)) return null;
 
   try {
@@ -485,21 +568,29 @@ export async function extractWebsiteFaviconUrl(websiteUrl: string): Promise<stri
       const html = (await res.text()).slice(0, 150_000);
 
       // 1. Apple Touch Icon
-      const appleMatch = html.match(/<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i);
+      const appleMatch = html.match(
+        /<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i,
+      );
       if (appleMatch?.[1]) {
         return new URL(appleMatch[1], websiteUrl).href;
       }
 
       // 2. og:image
       const ogMatch =
-        html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
-        html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+        html.match(
+          /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+        ) ||
+        html.match(
+          /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+        );
       if (ogMatch?.[1]) {
         return new URL(ogMatch[1], websiteUrl).href;
       }
 
       // 3. Icon / shortcut icon
-      const iconMatch = html.match(/<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i);
+      const iconMatch = html.match(
+        /<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i,
+      );
       if (iconMatch?.[1]) {
         return new URL(iconMatch[1], websiteUrl).href;
       }
@@ -528,14 +619,62 @@ export async function extractWebsiteFaviconUrl(websiteUrl: string): Promise<stri
  * it's clearly a real name, not a placeholder.
  */
 const GENERIC_NAME_WORDS = new Set([
-  'mcp', 'server', 'servers', 'tool', 'tools', 'toolkit', 'toolset',
-  'api', 'client', 'service', 'services', 'app', 'core', 'cli', 'sdk',
-  'docs', 'doc', 'documentation', 'gateway', 'assistant', 'agent', 'agents',
-  'memory', 'registry', 'catalog', 'marketplace', 'monitoring', 'audit', 'booking',
-  'library', 'libraries', 'reference', 'data', 'hub', 'kit', 'connector',
-  'connectors', 'integration', 'integrations', 'bridge', 'proxy', 'wrapper',
-  'adapter', 'util', 'utils', 'utility', 'utilities', 'backend', 'frontend',
-  'platform', 'system', 'framework', 'plugin', 'plugins', 'extension', 'module',
+  'mcp',
+  'server',
+  'servers',
+  'tool',
+  'tools',
+  'toolkit',
+  'toolset',
+  'api',
+  'client',
+  'service',
+  'services',
+  'app',
+  'core',
+  'cli',
+  'sdk',
+  'docs',
+  'doc',
+  'documentation',
+  'gateway',
+  'assistant',
+  'agent',
+  'agents',
+  'memory',
+  'registry',
+  'catalog',
+  'marketplace',
+  'monitoring',
+  'audit',
+  'booking',
+  'library',
+  'libraries',
+  'reference',
+  'data',
+  'hub',
+  'kit',
+  'connector',
+  'connectors',
+  'integration',
+  'integrations',
+  'bridge',
+  'proxy',
+  'wrapper',
+  'adapter',
+  'util',
+  'utils',
+  'utility',
+  'utilities',
+  'backend',
+  'frontend',
+  'platform',
+  'system',
+  'framework',
+  'plugin',
+  'plugins',
+  'extension',
+  'module',
 ]);
 
 /** Words too generic to carry a fetched title/repo-slug/hostname as a listing name. */
@@ -552,11 +691,50 @@ export function isGenericServerName(name: string | null | undefined): boolean {
 }
 
 const ACRONYMS = new Set([
-  'mcp', 'api', 'ai', 'sdk', 'cli', 'ui', 'ux', 'db', 'sql', 'aws', 'gcp',
-  'http', 'https', 'url', 'uri', 'id', 'ios', 'saas', 'crm', 'erp', 'seo',
-  'llm', 'rag', 'json', 'xml', 'yaml', 'csv', 'pdf', 'html', 'css', 'js',
-  'ts', 'npm', 'cdn', 'dns', 'ip', 'vpn', 'otp', 'jwt', 'oauth', 'rest',
-  'graphql', 'grpc', 'k8s',
+  'mcp',
+  'api',
+  'ai',
+  'sdk',
+  'cli',
+  'ui',
+  'ux',
+  'db',
+  'sql',
+  'aws',
+  'gcp',
+  'http',
+  'https',
+  'url',
+  'uri',
+  'id',
+  'ios',
+  'saas',
+  'crm',
+  'erp',
+  'seo',
+  'llm',
+  'rag',
+  'json',
+  'xml',
+  'yaml',
+  'csv',
+  'pdf',
+  'html',
+  'css',
+  'js',
+  'ts',
+  'npm',
+  'cdn',
+  'dns',
+  'ip',
+  'vpn',
+  'otp',
+  'jwt',
+  'oauth',
+  'rest',
+  'graphql',
+  'grpc',
+  'k8s',
 ]);
 
 /** Turns a repo/package slug or hostname label into a readable title, keeping known acronyms uppercase. */
@@ -581,7 +759,10 @@ function cleanReadmeHeadingText(line: string): string {
   s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1'); // links -> visible text
   s = s.replace(/<[^>]+>/g, ''); // stray html tags
   s = s.replace(/[`*_~]+/g, ''); // markdown emphasis markers
-  s = s.replace(/[\u{1F1E6}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}]/gu, ''); // emoji/arrows
+  s = s.replace(
+    /[\u{1F1E6}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}]/gu,
+    '',
+  ); // emoji/arrows
   s = s.replace(/\s+/g, ' ').trim();
   return s;
 }
@@ -598,19 +779,71 @@ function cleanReadmeHeadingText(line: string): string {
 // phrase like "skill" can't false-positive-match a real title like
 // "Skillsforge MCP" the way a naive .startsWith() would.
 const NON_TITLE_HEADING_PHRASES = [
-  'quick start', 'quickstart', 'getting started', 'table of contents', 'toc',
-  'installation', 'install', 'one-line install', 'usage', 'features', 'overview',
-  'introduction', 'about', 'prerequisites', 'requirements', 'setup', 'configuration',
-  'license', 'licence', 'contributing', 'contribution', 'faq', 'examples', 'example',
-  'demo', 'documentation', 'docs', 'api reference', 'reference', 'changelog', 'roadmap',
-  'support', 'contact', 'acknowledgements', 'acknowledgments', 'credits', 'try it',
-  'how it works', 'background', 'motivation', 'disclaimer', 'notes', 'todo', 'status',
-  'tools', 'tools available', 'available tools', 'skills', 'skill',
+  'quick start',
+  'quickstart',
+  'getting started',
+  'table of contents',
+  'toc',
+  'installation',
+  'install',
+  'one-line install',
+  'usage',
+  'features',
+  'overview',
+  'introduction',
+  'about',
+  'prerequisites',
+  'requirements',
+  'setup',
+  'configuration',
+  'license',
+  'licence',
+  'contributing',
+  'contribution',
+  'faq',
+  'examples',
+  'example',
+  'demo',
+  'documentation',
+  'docs',
+  'api reference',
+  'reference',
+  'changelog',
+  'roadmap',
+  'support',
+  'contact',
+  'acknowledgements',
+  'acknowledgments',
+  'credits',
+  'try it',
+  'how it works',
+  'background',
+  'motivation',
+  'disclaimer',
+  'notes',
+  'todo',
+  'status',
+  'tools',
+  'tools available',
+  'available tools',
+  'skills',
+  'skill',
 ].map((p) => p.split(' '));
 
 /** First-word filler that marks a heading as prose ("The tools", "Why teams use it") rather than a title. */
 const NON_TITLE_FIRST_WORDS = new Set([
-  'the', 'a', 'an', 'this', 'that', 'these', 'those', 'it', 'here', 'available', 'why', 'what',
+  'the',
+  'a',
+  'an',
+  'this',
+  'that',
+  'these',
+  'those',
+  'it',
+  'here',
+  'available',
+  'why',
+  'what',
 ]);
 
 /**
@@ -623,7 +856,8 @@ const NON_TITLE_FIRST_WORDS = new Set([
  */
 const STRONG_SECTION_NOUNS = new Set([
   ...NON_TITLE_HEADING_PHRASES.filter((p) => p.length === 1).map((p) => p[0]),
-  'contents', 'documentation',
+  'contents',
+  'documentation',
 ]);
 
 function looksLikeSectionHeading(cleaned: string): boolean {
@@ -636,14 +870,32 @@ function looksLikeSectionHeading(cleaned: string): boolean {
     .filter(Boolean); // drop punctuation-only tokens (e.g. a bare em-dash) so they don't inflate the word count
   if (words.length === 0) return true;
   if (NON_TITLE_FIRST_WORDS.has(words[0])) return true;
-  if (words.length <= 4 && words.some((w) => STRONG_SECTION_NOUNS.has(w))) return true;
+  if (words.length <= 4 && words.some((w) => STRONG_SECTION_NOUNS.has(w)))
+    return true;
   return NON_TITLE_HEADING_PHRASES.some(
-    (phrase) => words.length >= phrase.length && phrase.every((pw, i) => words[i] === pw)
+    (phrase) =>
+      words.length >= phrase.length && phrase.every((pw, i) => words[i] === pw),
   );
 }
 
 /** Short connector words that don't have to be capitalized for a heading to still read as Title Case. */
-const TITLE_CASE_CONNECTORS = new Set(['of', 'the', 'a', 'an', 'and', 'or', 'for', 'in', 'on', 'to', 'with', 'by', 'at', 'vs', 'via']);
+const TITLE_CASE_CONNECTORS = new Set([
+  'of',
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'for',
+  'in',
+  'on',
+  'to',
+  'with',
+  'by',
+  'at',
+  'vs',
+  'via',
+]);
 
 /**
  * Real project titles are near-universally Title Case ("GrabzIt MCP Server",
@@ -684,7 +936,9 @@ function isUsableReadmeTitle(cleaned: string): boolean {
 }
 
 /** Best-guess project title from a README's first top-level heading (typically the h1). */
-export function extractReadmeTitle(readme: string | null | undefined): string | null {
+export function extractReadmeTitle(
+  readme: string | null | undefined,
+): string | null {
   if (!readme) return null;
 
   // Prefer an HTML <h1> if the README opens with one (common for centered
@@ -723,13 +977,18 @@ export function deriveServerName(input: {
   if (!isGenericServerName(input.currentName)) return null;
 
   const fromReadme = extractReadmeTitle(input.readme);
-  if (fromReadme && fromReadme.toLowerCase() !== input.currentName.trim().toLowerCase()) {
+  if (
+    fromReadme &&
+    fromReadme.toLowerCase() !== input.currentName.trim().toLowerCase()
+  ) {
     return fromReadme.slice(0, 80);
   }
 
   if (input.ghRepo) {
     const { owner, repo } = input.ghRepo;
-    const base = isGenericServerName(repo) ? humanizeSlug(owner) : humanizeSlug(repo);
+    const base = isGenericServerName(repo)
+      ? humanizeSlug(owner)
+      : humanizeSlug(repo);
     if (!base) return null;
     return /\bmcp\b/i.test(base) ? base : `${base} MCP`;
   }
@@ -745,4 +1004,3 @@ export function deriveServerName(input: {
     return null;
   }
 }
-

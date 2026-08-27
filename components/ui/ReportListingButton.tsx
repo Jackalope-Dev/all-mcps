@@ -1,8 +1,8 @@
 'use client';
 
+import { Flag, X } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Flag, X } from 'lucide-react';
 import { toast } from './Toast';
 import { TurnstileWidget } from './TurnstileWidget';
 
@@ -49,7 +49,11 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
       const res = await fetch(`/api/mcp/${serverId}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason, details, 'cf-turnstile-response': token }),
+        body: JSON.stringify({
+          reason,
+          details,
+          'cf-turnstile-response': token,
+        }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error || 'Could not submit report');
@@ -89,23 +93,60 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
         <div className="share-modal-scroll">
           {submitted ? (
             <>
-              <h2 style={{ fontSize: '1.35rem', marginBottom: '0.5rem', color: 'var(--text-primary)', paddingRight: '2.5rem' }}>
+              <h2
+                style={{
+                  fontSize: '1.35rem',
+                  marginBottom: '0.5rem',
+                  color: 'var(--text-primary)',
+                  paddingRight: '2.5rem',
+                }}
+              >
                 Thanks for the report
               </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                Our team will take a look. This doesn&rsquo;t change anything about the listing publicly on its own — it goes into our review queue.
+              <p
+                style={{
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.6,
+                }}
+              >
+                Our team will take a look. This doesn&rsquo;t change anything
+                about the listing publicly on its own — it goes into our review
+                queue.
               </p>
             </>
           ) : (
             <>
-              <h2 style={{ fontSize: '1.35rem', marginBottom: '0.5rem', color: 'var(--text-primary)', paddingRight: '2.5rem' }}>
+              <h2
+                style={{
+                  fontSize: '1.35rem',
+                  marginBottom: '0.5rem',
+                  color: 'var(--text-primary)',
+                  paddingRight: '2.5rem',
+                }}
+              >
                 Report a problem
               </h2>
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', fontSize: '0.875rem' }}>
-                Let us know if something&rsquo;s broken, wrong, or unsafe about this listing.
+              <p
+                style={{
+                  color: 'var(--text-secondary)',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Let us know if something&rsquo;s broken, wrong, or unsafe about
+                this listing.
               </p>
 
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: '0.4rem',
+                }}
+              >
                 What&rsquo;s wrong?
               </label>
               <select
@@ -121,8 +162,21 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
                 ))}
               </select>
 
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                Details <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(optional)</span>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: '0.4rem',
+                }}
+              >
+                Details{' '}
+                <span
+                  style={{ fontWeight: 400, color: 'var(--text-secondary)' }}
+                >
+                  (optional)
+                </span>
               </label>
               <textarea
                 className="form-input"
@@ -131,10 +185,18 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
                 placeholder="Anything that would help us look into it"
-                style={{ width: '100%', marginBottom: '0.5rem', resize: 'vertical' }}
+                style={{
+                  width: '100%',
+                  marginBottom: '0.5rem',
+                  resize: 'vertical',
+                }}
               />
 
-              <TurnstileWidget onSuccess={setToken} onExpire={() => setToken(null)} compact />
+              <TurnstileWidget
+                onSuccess={setToken}
+                onExpire={() => setToken(null)}
+                compact
+              />
 
               <button
                 type="button"

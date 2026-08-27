@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
-import { sponsorAds } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { sponsorAds } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import { sendNotificationEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
-import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +32,15 @@ const adAdminActionSchema = z.object({
       ctaText: z.string().trim().min(1).max(50).optional(),
       targetUrl: z.string().trim().url().optional(),
       logoUrl: z.string().trim().url().optional(),
-      placement: z.enum(['all', 'directory_inline', 'detail_sidebar', 'blog_guide', 'header_banner']).optional(),
+      placement: z
+        .enum([
+          'all',
+          'directory_inline',
+          'detail_sidebar',
+          'blog_guide',
+          'header_banner',
+        ])
+        .optional(),
     })
     .optional(),
 });
@@ -47,14 +55,21 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = adAdminActionSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid parameters', details: parsed.error.format() }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid parameters', details: parsed.error.format() },
+        { status: 400 },
+      );
     }
 
-    const { id, action, reason, bonusImpressions, bidCpm, fields } = parsed.data;
+    const { id, action, reason, bonusImpressions, bidCpm, fields } =
+      parsed.data;
 
     const ctx = await getCloudflareContext();
     if (!ctx?.env?.DB) {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 },
+      );
     }
 
     const db = drizzle(ctx.env.DB);
@@ -73,8 +88,11 @@ export async function POST(request: Request) {
 
         if (!adToApprove?.stripePaymentIntentId) {
           return NextResponse.json(
-            { error: 'Cannot approve: payment is not yet confirmed for this campaign.' },
-            { status: 409 }
+            {
+              error:
+                'Cannot approve: payment is not yet confirmed for this campaign.',
+            },
+            { status: 409 },
           );
         }
 
@@ -109,20 +127,29 @@ export async function POST(request: Request) {
           .limit(1);
 
         // If paid via Stripe, automatically issue 100% full refund
-        if (existingAd?.stripePaymentIntentId && (ctx.env as any)?.STRIPE_SECRET_KEY) {
+        if (
+          existingAd?.stripePaymentIntentId &&
+          (ctx.env as any)?.STRIPE_SECRET_KEY
+        ) {
           try {
             const { getStripe } = await import('@/lib/stripe');
             const stripe = getStripe((ctx.env as any).STRIPE_SECRET_KEY);
             await stripe.refunds.create({
               payment_intent: existingAd.stripePaymentIntentId,
             });
-            console.log(`[admin/ads] Issued 100% refund for ad ${id} (PI: ${existingAd.stripePaymentIntentId})`);
+            console.log(
+              `[admin/ads] Issued 100% refund for ad ${id} (PI: ${existingAd.stripePaymentIntentId})`,
+            );
           } catch (refundErr: any) {
-            console.error('[admin/ads] Stripe refund error:', refundErr?.message);
+            console.error(
+              '[admin/ads] Stripe refund error:',
+              refundErr?.message,
+            );
           }
         }
 
-        const finalRejectionReason = reason || 'Does not meet sponsorship guidelines';
+        const finalRejectionReason =
+          reason || 'Does not meet sponsorship guidelines';
 
         await db
           .update(sponsorAds)
@@ -144,7 +171,10 @@ export async function POST(request: Request) {
               actionUrl: `${getAppUrl()}/advertise/create`,
             });
           } catch (emailErr) {
-            console.error('[admin/ads/action] rejection email failed:', emailErr);
+            console.error(
+              '[admin/ads/action] rejection email failed:',
+              emailErr,
+            );
           }
         }
         break;
@@ -152,7 +182,10 @@ export async function POST(request: Request) {
 
       case 'pause': {
         const [adToPause] = await db
-          .select({ advertiserEmail: sponsorAds.advertiserEmail, title: sponsorAds.title })
+          .select({
+            advertiserEmail: sponsorAds.advertiserEmail,
+            title: sponsorAds.title,
+          })
           .from(sponsorAds)
           .where(eq(sponsorAds.id, id))
           .limit(1);
@@ -182,7 +215,10 @@ export async function POST(request: Request) {
 
       case 'resume': {
         const [adToResume] = await db
-          .select({ advertiserEmail: sponsorAds.advertiserEmail, title: sponsorAds.title })
+          .select({
+            advertiserEmail: sponsorAds.advertiserEmail,
+            title: sponsorAds.title,
+          })
           .from(sponsorAds)
           .where(eq(sponsorAds.id, id))
           .limit(1);
@@ -225,10 +261,17 @@ export async function POST(request: Request) {
           // Bonus impressions reactivate the campaign, so this must never fire
           // on an ad that hasn't cleared the same payment gate `approve` enforces
           // (still pending_approval / unpaid) or one that was rejected & refunded.
-          if (!adToBonus?.stripePaymentIntentId || adToBonus.status === 'pending_approval' || adToBonus.status === 'rejected') {
+          if (
+            !adToBonus?.stripePaymentIntentId ||
+            adToBonus.status === 'pending_approval' ||
+            adToBonus.status === 'rejected'
+          ) {
             return NextResponse.json(
-              { error: 'Cannot add impressions: this campaign was never an approved, paid campaign.' },
-              { status: 409 }
+              {
+                error:
+                  'Cannot add impressions: this campaign was never an approved, paid campaign.',
+              },
+              { status: 409 },
             );
           }
 
@@ -249,7 +292,10 @@ export async function POST(request: Request) {
               actionUrl: `${getAppUrl()}/advertise/campaign/${id}`,
             });
           } catch (emailErr) {
-            console.error('[admin/ads/action] bonus impressions email failed:', emailErr);
+            console.error(
+              '[admin/ads/action] bonus impressions email failed:',
+              emailErr,
+            );
           }
         }
         break;
@@ -270,7 +316,9 @@ export async function POST(request: Request) {
             .update(sponsorAds)
             .set({
               ...(fields.title ? { title: fields.title } : {}),
-              ...(fields.description ? { description: fields.description } : {}),
+              ...(fields.description
+                ? { description: fields.description }
+                : {}),
               ...(fields.ctaText ? { ctaText: fields.ctaText } : {}),
               ...(fields.targetUrl ? { targetUrl: fields.targetUrl } : {}),
               ...(fields.logoUrl ? { logoUrl: fields.logoUrl } : {}),
@@ -282,7 +330,10 @@ export async function POST(request: Request) {
 
       case 'delete': {
         const [adToDelete] = await db
-          .select({ status: sponsorAds.status, stripePaymentIntentId: sponsorAds.stripePaymentIntentId })
+          .select({
+            status: sponsorAds.status,
+            stripePaymentIntentId: sponsorAds.stripePaymentIntentId,
+          })
           .from(sponsorAds)
           .where(eq(sponsorAds.id, id))
           .limit(1);
@@ -291,10 +342,16 @@ export async function POST(request: Request) {
         // refunded — deleting it here would erase the ad with no refund and no
         // advertiser notice. Route those through `reject` instead, which refunds
         // and emails the advertiser before the row is safe to delete.
-        if (adToDelete?.stripePaymentIntentId && (adToDelete.status === 'active' || adToDelete.status === 'paused')) {
+        if (
+          adToDelete?.stripePaymentIntentId &&
+          (adToDelete.status === 'active' || adToDelete.status === 'paused')
+        ) {
           return NextResponse.json(
-            { error: 'This campaign is paid and still active/paused. Reject it first to issue a refund, then delete.' },
-            { status: 409 }
+            {
+              error:
+                'This campaign is paid and still active/paused. Reject it first to issue a refund, then delete.',
+            },
+            { status: 409 },
           );
         }
 

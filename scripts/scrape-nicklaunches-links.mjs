@@ -8,15 +8,25 @@ async function scrapeFooterLinks() {
 
   const links = await page.evaluate(() => {
     const allAnchors = Array.from(document.querySelectorAll('a[href^="http"]'));
-    return allAnchors.map(a => ({
-      text: a.textContent.trim(),
-      href: a.href,
-      imgAlt: a.querySelector('img')?.alt || ''
-    })).filter(l => !l.href.includes('nicklaunches.com') && !l.href.includes('x.com') && !l.href.includes('twitter.com') && !l.href.includes('github.com'));
+    return allAnchors
+      .map((a) => ({
+        text: a.textContent.trim(),
+        href: a.href,
+        imgAlt: a.querySelector('img')?.alt || '',
+      }))
+      .filter(
+        (l) =>
+          !l.href.includes('nicklaunches.com') &&
+          !l.href.includes('x.com') &&
+          !l.href.includes('twitter.com') &&
+          !l.href.includes('github.com'),
+      );
   });
 
   console.log(`Found ${links.length} external directory/badge links!`);
-  links.forEach(l => console.log(`- ${l.text || l.imgAlt || 'Link'}: ${l.href}`));
+  for (const l of links) {
+    console.log(`- ${l.text || l.imgAlt || 'Link'}: ${l.href}`);
+  }
 
   await browser.close();
 }

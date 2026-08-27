@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /**
  * Derives the directory's category list from the catalog into a tiny committed
@@ -18,11 +18,17 @@ function build() {
   const servers = JSON.parse(raw);
 
   const categories = Array.from(
-    new Set(servers.map((s) => s.category).filter(Boolean))
+    new Set(servers.map((s) => s.category).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
 
-  fs.writeFileSync(OUTPUT_FILE, `${JSON.stringify(categories, null, 2)}\n`, 'utf8');
-  console.log(`Generated category manifest with ${categories.length} categories -> ${OUTPUT_FILE}`);
+  fs.writeFileSync(
+    OUTPUT_FILE,
+    `${JSON.stringify(categories, null, 2)}\n`,
+    'utf8',
+  );
+  console.log(
+    `Generated category manifest with ${categories.length} categories -> ${OUTPUT_FILE}`,
+  );
 }
 
 build();

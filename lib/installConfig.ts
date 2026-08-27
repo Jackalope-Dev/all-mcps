@@ -9,10 +9,10 @@
  */
 
 import {
-  parseInstallHint,
+  type InstallHint,
   isRemoteHint,
   type ParsedInstallHint,
-  type InstallHint,
+  parseInstallHint,
   type RemoteHint,
 } from './tools/parseInstallHint';
 
@@ -96,7 +96,9 @@ export type CachedInstallFields = {
   suggestedInstallArgs?: string | string[] | null;
 };
 
-function fromCached(cached: CachedInstallFields | undefined | null): ResolvedInstall | null {
+function fromCached(
+  cached: CachedInstallFields | undefined | null,
+): ResolvedInstall | null {
   if (!cached?.installKind) return null;
   const confidence =
     cached.installConfidence === 'high' ||
@@ -165,7 +167,7 @@ export function toCachedInstallFields(install: ResolvedInstall): {
  */
 export function resolveInstallFromText(
   text: string,
-  fallback: { id: string; name: string; url: string }
+  fallback: { id: string; name: string; url: string },
 ): ResolvedInstall | null {
   const hint = parseInstallHint(text || '');
   if (!hint) return null;
@@ -191,12 +193,14 @@ export function resolveInstallFromText(
   };
 }
 
-export function resolveInstallConfig(input: {
-  id: string;
-  name: string;
-  url: string;
-  description?: string | null;
-} & CachedInstallFields): ResolvedInstall {
+export function resolveInstallConfig(
+  input: {
+    id: string;
+    name: string;
+    url: string;
+    description?: string | null;
+  } & CachedInstallFields,
+): ResolvedInstall {
   const cached = fromCached(input);
   // High/medium cached wins. Low-confidence cache falls through so submitter
   // suggestions (and description/endpoint hints) can still improve the result.
@@ -288,7 +292,8 @@ export function resolveInstallConfig(input: {
  * silently — every surface that hands out a command carries the same warning text.
  */
 export function installConfidenceNote(install: ResolvedInstall): string {
-  if (install.confidence === 'high') return 'Install path detected from listing signals.';
+  if (install.confidence === 'high')
+    return 'Install path detected from listing signals.';
   if (install.confidence === 'medium')
     return 'Install path inferred — verify against the README before running it.';
   return 'Heuristic fallback — verify the package name and runner against the repository README before running it.';
@@ -304,7 +309,7 @@ export function installConfidenceNote(install: ResolvedInstall): string {
 export function toClaudeConfigSnippet(
   install: ResolvedInstall,
   key: string,
-  envVars?: string[]
+  envVars?: string[],
 ): Record<string, unknown> {
   if (install.kind === 'remote') {
     return {

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
 
 /**
@@ -19,7 +19,9 @@ export function ClaimHintLink({ serverId }: { serverId: string }) {
     (async () => {
       try {
         const res = await fetch(`/api/mcp/${serverId}/is-owner`);
-        const data = res.ok ? ((await res.json()) as { isOwner?: boolean }) : null;
+        const data = res.ok
+          ? ((await res.json()) as { isOwner?: boolean })
+          : null;
         if (!cancelled) setShowHint(!data?.isOwner);
       } catch {
         // Network error — leave the hint hidden rather than guessing.

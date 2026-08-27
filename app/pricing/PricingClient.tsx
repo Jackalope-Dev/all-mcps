@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { PremiumUpgrade } from '../../components/PremiumUpgrade';
-import { ServerPicker, type DirectoryServerHit } from '../../components/tools/ServerPicker';
+import {
+  type DirectoryServerHit,
+  ServerPicker,
+} from '../../components/tools/ServerPicker';
 import { PAID_PRODUCTS, type PaidSku } from '../../lib/pricing';
 
 export function PricingClient({
@@ -16,15 +19,21 @@ export function PricingClient({
 }) {
   const [serverId, setServerId] = useState(initialServerId);
   const [selectedSku, setSelectedSku] = useState<PaidSku | null>(
-    initialSku || (initialCategory ? 'featured_7d' : null)
+    initialSku || (initialCategory ? 'featured_7d' : null),
   );
   const [listingName, setListingName] = useState<string | null>(null);
   const [listingStatus, setListingStatus] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [featuredUntil, setFeaturedUntil] = useState<string | null>(null);
-  const [categorySponsorUntil, setCategorySponsorUntil] = useState<string | null>(null);
-  const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'ok' | 'missing'>('idle');
-  const [myListings, setMyListings] = useState<DirectoryServerHit[] | null>(null);
+  const [categorySponsorUntil, setCategorySponsorUntil] = useState<
+    string | null
+  >(null);
+  const [lookupState, setLookupState] = useState<
+    'idle' | 'loading' | 'ok' | 'missing'
+  >('idle');
+  const [myListings, setMyListings] = useState<DirectoryServerHit[] | null>(
+    null,
+  );
 
   useEffect(() => {
     const id = serverId.trim();
@@ -95,16 +104,27 @@ export function PricingClient({
     (async () => {
       try {
         const sessionRes = await fetch('/api/auth/session');
-        const session = sessionRes.ok ? ((await sessionRes.json()) as { user?: unknown }) : null;
+        const session = sessionRes.ok
+          ? ((await sessionRes.json()) as { user?: unknown })
+          : null;
         if (cancelled || !session?.user) return;
 
         const listingsRes = await fetch('/api/dashboard/my-listings');
         const data = listingsRes.ok
-          ? ((await listingsRes.json()) as { listings?: { id: string; name: string; category: string }[] })
+          ? ((await listingsRes.json()) as {
+              listings?: { id: string; name: string; category: string }[];
+            })
           : null;
         if (cancelled) return;
         const listings = data?.listings || [];
-        setMyListings(listings.map((l) => ({ id: l.id, name: l.name, category: l.category, description: '' })));
+        setMyListings(
+          listings.map((l) => ({
+            id: l.id,
+            name: l.name,
+            category: l.category,
+            description: '',
+          })),
+        );
       } catch {
         /* not signed in / session check failed — quick-pick just stays hidden */
       }
@@ -122,8 +142,24 @@ export function PricingClient({
   const selectedProduct = selectedSku ? PAID_PRODUCTS[selectedSku] : null;
 
   return (
-    <div id="checkout" className="surface" style={{ padding: '1.75rem', maxWidth: '520px', margin: '0 auto', scrollMarginTop: '5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+    <div
+      id="checkout"
+      className="surface"
+      style={{
+        padding: '1.75rem',
+        maxWidth: '520px',
+        margin: '0 auto',
+        scrollMarginTop: '5rem',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: '0.5rem',
+        }}
+      >
         <span
           style={{
             width: 22,
@@ -142,7 +178,9 @@ export function PricingClient({
         >
           2
         </span>
-        <h2 style={{ fontSize: '1.15rem', margin: 0 }}>Find your listing to check out</h2>
+        <h2 style={{ fontSize: '1.15rem', margin: 0 }}>
+          Find your listing to check out
+        </h2>
       </div>
 
       {selectedProduct ? (
@@ -160,10 +198,25 @@ export function PricingClient({
           }}
         >
           <div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-color)', letterSpacing: '0.05em' }}>
+            <span
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                color: 'var(--accent-color)',
+                letterSpacing: '0.05em',
+              }}
+            >
               Buying
             </span>
-            <p style={{ margin: '0.15rem 0 0', fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <p
+              style={{
+                margin: '0.15rem 0 0',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+              }}
+            >
               {selectedProduct.name}
               {initialCategory ? ` — ${initialCategory}` : ''}
             </p>
@@ -171,20 +224,43 @@ export function PricingClient({
           <button
             type="button"
             onClick={() => setSelectedSku(null)}
-            style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}
+            style={{
+              fontSize: '0.75rem',
+              color: 'var(--text-secondary)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              flexShrink: 0,
+            }}
           >
             Change
           </button>
         </div>
       ) : (
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-          Search for your MCP or paste the listing id from <code>/mcp/your-listing-id</code>, then pick what to buy below.
+        <p
+          style={{
+            fontSize: '0.85rem',
+            color: 'var(--text-secondary)',
+            marginBottom: '1.25rem',
+            lineHeight: 1.5,
+          }}
+        >
+          Search for your MCP or paste the listing id from{' '}
+          <code>/mcp/your-listing-id</code>, then pick what to buy below.
         </p>
       )}
 
       {myListings && myListings.length > 0 && (
         <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+              marginBottom: '0.5rem',
+            }}
+          >
             Your listings
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -199,8 +275,14 @@ export function PricingClient({
                   gap: '0.4rem',
                   padding: '0.45rem 0.85rem',
                   borderRadius: '999px',
-                  border: serverId === l.id ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                  background: serverId === l.id ? 'rgba(var(--accent-rgb),0.1)' : 'var(--bg-muted)',
+                  border:
+                    serverId === l.id
+                      ? '1px solid var(--accent-color)'
+                      : '1px solid var(--border-color)',
+                  background:
+                    serverId === l.id
+                      ? 'rgba(var(--accent-rgb),0.1)'
+                      : 'var(--bg-muted)',
                   color: 'var(--text-primary)',
                   fontSize: '0.825rem',
                   fontWeight: 600,
@@ -214,14 +296,30 @@ export function PricingClient({
         </div>
       )}
 
-      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-        {myListings && myListings.length > 0 ? 'Or search another listing' : 'Find your listing'}
+      <label
+        style={{
+          display: 'block',
+          fontSize: '0.8rem',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.35rem',
+        }}
+      >
+        {myListings && myListings.length > 0
+          ? 'Or search another listing'
+          : 'Find your listing'}
       </label>
       <div style={{ marginBottom: '0.85rem' }}>
         <ServerPicker onSelect={pickServer} placeholder="Search by name…" />
       </div>
 
-      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+      <label
+        style={{
+          display: 'block',
+          fontSize: '0.8rem',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.35rem',
+        }}
+      >
         Listing ID
       </label>
       <input
@@ -233,7 +331,13 @@ export function PricingClient({
       />
 
       {serverId && lookupState === 'loading' && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+        <p
+          style={{
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            marginBottom: '0.75rem',
+          }}
+        >
           Looking up listing…
         </p>
       )}
@@ -258,9 +362,17 @@ export function PricingClient({
         </p>
       )}
       {serverId && lookupState === 'missing' && (
-        <p style={{ fontSize: '0.8rem', color: '#fbbf24', marginBottom: '0.75rem', lineHeight: 1.45 }}>
-          Couldn&apos;t load that listing from the public catalog (it may still be pending). Checkout will
-          still work if the id is correct — Priority Review is available for pending submissions.
+        <p
+          style={{
+            fontSize: '0.8rem',
+            color: '#fbbf24',
+            marginBottom: '0.75rem',
+            lineHeight: 1.45,
+          }}
+        >
+          Couldn&apos;t load that listing from the public catalog (it may still
+          be pending). Checkout will still work if the id is correct — Priority
+          Review is available for pending submissions.
         </p>
       )}
 
@@ -276,13 +388,27 @@ export function PricingClient({
           showAll
         />
       ) : (
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+        <p
+          style={{
+            fontSize: '0.85rem',
+            color: 'var(--text-secondary)',
+            margin: 0,
+          }}
+        >
           Search or paste a listing id above to see what you can buy for it.
         </p>
       )}
-      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem', lineHeight: 1.45 }}>
-        After free submit, use the id from your confirmation email or the listing URL. Stripe must be
-        configured with live Price IDs for production.
+      <p
+        style={{
+          fontSize: '0.75rem',
+          color: 'var(--text-secondary)',
+          marginTop: '1rem',
+          lineHeight: 1.45,
+        }}
+      >
+        After free submit, use the id from your confirmation email or the
+        listing URL. Stripe must be configured with live Price IDs for
+        production.
       </p>
     </div>
   );

@@ -1,17 +1,27 @@
-import { cache } from 'react';
+import { and, desc, eq, gt, inArray, ne, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers as serversTable, stdioVerificationPilot, serverHealthChecks, reviews, users } from '../db/schema';
-import { eq, desc, sql, and, ne, or, gt, inArray } from 'drizzle-orm';
+import { cache } from 'react';
 import serversData from '../data/mcp-servers.json';
-import { isFeaturedListing } from './featuredStatus';
-import { cleanListingDescription } from './description';
-import { engagementScore, buildAiSearchText } from './search';
-import { resolveInstallConfig, installConfidenceNote } from './installConfig';
-import { parseStringArray, parseFaqArray, type AiFaqItem } from './aiContent';
+import {
+  reviews,
+  serverHealthChecks,
+  servers as serversTable,
+  stdioVerificationPilot,
+  users,
+} from '../db/schema';
+import { type AiFaqItem, parseFaqArray, parseStringArray } from './aiContent';
+import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
-import { type BestTopic } from './bestTopics';
+import { cleanListingDescription } from './description';
+import { isFeaturedListing } from './featuredStatus';
+import { installConfidenceNote, resolveInstallConfig } from './installConfig';
+import { buildAiSearchText, engagementScore } from './search';
 
-export type ServerTool = { name: string; description?: string; parameters?: Record<string, unknown> };
+export type ServerTool = {
+  name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+};
 
 /** Parse the `tools` column (JSON string) into a typed array, tolerating bad data. */
 export function parseServerTools(raw: unknown): ServerTool[] {
@@ -37,7 +47,9 @@ export function parseServerTools(raw: unknown): ServerTool[] {
  * Returns a shallow copy — the imported JSON module is shared across requests and
  * must not be mutated in place. Also parses the `tools` JSON column into an array.
  */
-function normalizeServer<T extends { description?: string | null; tools?: unknown }>(server: T): T {
+function normalizeServer<
+  T extends { description?: string | null; tools?: unknown },
+>(server: T): T {
   const s = server as {
     aiUseCases?: unknown;
     aiFeatures?: unknown;
@@ -281,7 +293,7 @@ export async function getActiveServersLight(): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select(DISCOVERY_COLUMNS)
@@ -350,7 +362,9 @@ export const CURATED_STARTER_STACK_IDS: string[] = [
  * curated id is missing/inactive so callers always get `limit` servers.
  */
 export async function getCuratedStarterServers(limit = 12): Promise<Server[]> {
-  const curated = await getServersByIds(CURATED_STARTER_STACK_IDS.slice(0, limit));
+  const curated = await getServersByIds(
+    CURATED_STARTER_STACK_IDS.slice(0, limit),
+  );
   if (curated.length >= limit) return curated.slice(0, limit);
   const seen = new Set(curated.map((s) => s.id));
   const fill = await getNewestActiveServers(limit - curated.length + seen.size);
@@ -376,12 +390,14 @@ export async function getServersByIds(ids: string[]): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
-        .where(and(inArray(serversTable.id, ids), eq(serversTable.status, 'active')));
+        .where(
+          and(inArray(serversTable.id, ids), eq(serversTable.status, 'active')),
+        );
       found = rows.map((r) => normalizeServer(r as unknown as Server));
     }
   } catch (e) {
@@ -402,7 +418,7 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select(PUBLIC_SERVER_COLUMNS)
@@ -428,12 +444,17 @@ export async function getCategoryServers(category: string): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
-        .where(and(eq(serversTable.status, 'active'), eq(serversTable.category, category)));
+        .where(
+          and(
+            eq(serversTable.status, 'active'),
+            eq(serversTable.category, category),
+          ),
+        );
       if (rows.length > 0) {
         return rows.map((r) => normalizeServer(r as unknown as Server));
       }
@@ -449,7 +470,7 @@ export async function getCategoryCounts(): Promise<Record<string, number>> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select({
@@ -479,13 +500,17 @@ export async function getPopularServers(limit: number): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
         .where(eq(serversTable.status, 'active'))
-        .orderBy(desc(serversTable.views), desc(serversTable.copies), desc(serversTable.upvotes))
+        .orderBy(
+          desc(serversTable.views),
+          desc(serversTable.copies),
+          desc(serversTable.upvotes),
+        )
         .limit(limit);
       if (rows.length > 0) {
         return rows.map((r) => normalizeServer(r as unknown as Server));
@@ -495,7 +520,10 @@ export async function getPopularServers(limit: number): Promise<Server[]> {
 
   return (serversData as unknown as Server[])
     .map(normalizeServer)
-    .sort((a, b) => (b.views || 0) + (b.copies || 0) - ((a.views || 0) + (a.copies || 0)))
+    .sort(
+      (a, b) =>
+        (b.views || 0) + (b.copies || 0) - ((a.views || 0) + (a.copies || 0)),
+    )
     .slice(0, limit);
 }
 
@@ -510,7 +538,7 @@ export const getActiveServers = cache(async (): Promise<Server[]> => {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const dbServers = await db
         .select(PUBLIC_SERVER_COLUMNS)
@@ -535,14 +563,23 @@ export const getActiveServers = cache(async (): Promise<Server[]> => {
  * afterward. json_valid guards malformed `tools` text (parseServerTools()
  * already tolerates bad JSON) so one bad row can't abort the whole scan.
  */
-const TRIMMED_TOOLS_SQL = sql<string | null>`CASE WHEN json_valid(${serversTable.tools}) THEN (
+const TRIMMED_TOOLS_SQL = sql<
+  string | null
+>`CASE WHEN json_valid(${serversTable.tools}) THEN (
   SELECT json_group_array(json_object('name', json_extract(je.value, '$.name'), 'description', json_extract(je.value, '$.description')))
   FROM json_each(${serversTable.tools}) AS je
 ) ELSE NULL END`;
 
 /** PUBLIC_SERVER_COLUMNS minus aiFaq (never read by relatedRankingScore/engagementScore), tools trimmed at the SQL level. */
-const { aiFaq: _omitAiFaq, tools: _fullTools, ...SCORING_SERVER_COLUMNS_REST } = PUBLIC_SERVER_COLUMNS;
-const SCORING_SERVER_COLUMNS = { ...SCORING_SERVER_COLUMNS_REST, tools: TRIMMED_TOOLS_SQL };
+const {
+  aiFaq: _omitAiFaq,
+  tools: _fullTools,
+  ...SCORING_SERVER_COLUMNS_REST
+} = PUBLIC_SERVER_COLUMNS;
+const SCORING_SERVER_COLUMNS = {
+  ...SCORING_SERVER_COLUMNS_REST,
+  tools: TRIMMED_TOOLS_SQL,
+};
 
 /**
  * Full-catalog scan for the scoring/ranking path only (related servers,
@@ -571,7 +608,7 @@ export const getActiveServersForScoring = cache(async (): Promise<Server[]> => {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const dbServers = await db
         .select(SCORING_SERVER_COLUMNS)
@@ -675,18 +712,26 @@ function feedAiTextFromRaw(
   overview?: string | null,
   useCases?: string | null,
   features?: string | null,
-  faq?: string | null
+  faq?: string | null,
 ): string | null {
   const clean = (v?: string | null) => (v || '').replace(/["[\]{}]/g, ' ');
   // FAQ JSON keys (`q`/`a`) would otherwise leak into the blob as noise tokens.
   const cleanFaq = (v?: string | null) => clean(v).replace(/\b[qa]\s*:/gi, ' ');
   // FAQ after use-cases so intent-shaped questions contribute before features fill the cap.
-  const text = [summary || '', overview || '', clean(useCases), cleanFaq(faq), clean(features)]
+  const text = [
+    summary || '',
+    overview || '',
+    clean(useCases),
+    cleanFaq(faq),
+    clean(features),
+  ]
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
   if (!text) return null;
-  return text.length > FEED_AI_TEXT_MAX ? text.slice(0, FEED_AI_TEXT_MAX) : text;
+  return text.length > FEED_AI_TEXT_MAX
+    ? text.slice(0, FEED_AI_TEXT_MAX)
+    : text;
 }
 
 /**
@@ -701,12 +746,12 @@ function feedAiTextFromRaw(
  */
 export async function getDirectoryFeedPage(
   offset: number,
-  limit: number
+  limit: number,
 ): Promise<{ items: DirectoryFeedItem[]; total: number }> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select({
@@ -735,11 +780,21 @@ export async function getDirectoryFeedPage(
           compatibleClients: serversTable.compatibleClients,
           // Cap the heavy AI-content columns in SQL so a page stays small even
           // when individual overviews/use-case lists are long.
-          aiSummary: sql<string | null>`substr(${serversTable.aiSummary}, 1, ${FEED_AI_TEXT_MAX})`,
-          aiOverview: sql<string | null>`substr(${serversTable.aiOverview}, 1, ${FEED_AI_TEXT_MAX})`,
-          aiUseCases: sql<string | null>`substr(${serversTable.aiUseCases}, 1, ${FEED_AI_TEXT_MAX})`,
-          aiFeatures: sql<string | null>`substr(${serversTable.aiFeatures}, 1, ${FEED_AI_TEXT_MAX})`,
-          aiFaq: sql<string | null>`substr(${serversTable.aiFaq}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiSummary: sql<
+            string | null
+          >`substr(${serversTable.aiSummary}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiOverview: sql<
+            string | null
+          >`substr(${serversTable.aiOverview}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiUseCases: sql<
+            string | null
+          >`substr(${serversTable.aiUseCases}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiFeatures: sql<
+            string | null
+          >`substr(${serversTable.aiFeatures}, 1, ${FEED_AI_TEXT_MAX})`,
+          aiFaq: sql<
+            string | null
+          >`substr(${serversTable.aiFaq}, 1, ${FEED_AI_TEXT_MAX})`,
         })
         .from(serversTable)
         .where(eq(serversTable.status, 'active'))
@@ -772,7 +827,13 @@ export async function getDirectoryFeedPage(
           toolText: feedToolText(r.tools),
           toolCount: parseServerTools(r.tools).length,
           toolsSource: r.toolsSource ?? null,
-          aiText: feedAiTextFromRaw(r.aiSummary, r.aiOverview, r.aiUseCases, r.aiFeatures, r.aiFaq),
+          aiText: feedAiTextFromRaw(
+            r.aiSummary,
+            r.aiOverview,
+            r.aiUseCases,
+            r.aiFeatures,
+            r.aiFaq,
+          ),
           views: r.views ?? 0,
           copies: r.copies ?? 0,
           upvotes: r.upvotes ?? 0,
@@ -796,42 +857,44 @@ export async function getDirectoryFeedPage(
     .map(normalizeServer)
     .sort((a, b) => toEpoch(b.createdAt) - toEpoch(a.createdAt));
   const total = all.length;
-  const items: DirectoryFeedItem[] = all.slice(offset, offset + limit).map((s) => {
-    const tools = Array.isArray(s.tools) ? s.tools : [];
-    const toolText =
-      tools
-        .map((t) => (t && typeof t.name === 'string' ? t.name : ''))
-        .filter(Boolean)
-        .join(' ')
-        .slice(0, FEED_TOOL_TEXT_MAX) || null;
-    return {
-      id: s.id,
-      name: s.name,
-      url: s.url,
-      description: s.description,
-      category: s.category,
-      logoUrl: s.logoUrl ?? null,
-      isOfficial: !!s.isOfficial,
-      isPremium: !!s.isPremium,
-      featuredUntil: s.featuredUntil ?? null,
-      githubStars: s.githubStars ?? null,
-      npmDownloads: s.npmDownloads ?? null,
-      lastCommitAt: s.lastCommitAt ?? null,
-      installConfidence: s.installConfidence ?? null,
-      toolText,
-      toolCount: tools.length,
-      toolsSource: s.toolsSource ?? null,
-      aiText: buildAiSearchText(s, FEED_AI_TEXT_MAX),
-      views: s.views ?? 0,
-      copies: s.copies ?? 0,
-      upvotes: s.upvotes ?? 0,
-      createdAt: s.createdAt ?? null,
-      tags: s.tags ?? [],
-      pricingModel: s.pricingModel ?? null,
-      authType: s.authType ?? null,
-      compatibleClients: s.compatibleClients ?? [],
-    };
-  });
+  const items: DirectoryFeedItem[] = all
+    .slice(offset, offset + limit)
+    .map((s) => {
+      const tools = Array.isArray(s.tools) ? s.tools : [];
+      const toolText =
+        tools
+          .map((t) => (t && typeof t.name === 'string' ? t.name : ''))
+          .filter(Boolean)
+          .join(' ')
+          .slice(0, FEED_TOOL_TEXT_MAX) || null;
+      return {
+        id: s.id,
+        name: s.name,
+        url: s.url,
+        description: s.description,
+        category: s.category,
+        logoUrl: s.logoUrl ?? null,
+        isOfficial: !!s.isOfficial,
+        isPremium: !!s.isPremium,
+        featuredUntil: s.featuredUntil ?? null,
+        githubStars: s.githubStars ?? null,
+        npmDownloads: s.npmDownloads ?? null,
+        lastCommitAt: s.lastCommitAt ?? null,
+        installConfidence: s.installConfidence ?? null,
+        toolText,
+        toolCount: tools.length,
+        toolsSource: s.toolsSource ?? null,
+        aiText: buildAiSearchText(s, FEED_AI_TEXT_MAX),
+        views: s.views ?? 0,
+        copies: s.copies ?? 0,
+        upvotes: s.upvotes ?? 0,
+        createdAt: s.createdAt ?? null,
+        tags: s.tags ?? [],
+        pricingModel: s.pricingModel ?? null,
+        authType: s.authType ?? null,
+        compatibleClients: s.compatibleClients ?? [],
+      };
+    });
   return { items, total };
 }
 
@@ -848,11 +911,14 @@ function toEpoch(v: unknown): number {
  * route rather than the detail page itself, so the page stays cacheable (see
  * app/mcp/[id]/page.tsx — it no longer reads the session server-side).
  */
-export async function checkIsOwner(id: string, userId: string): Promise<boolean> {
+export async function checkIsOwner(
+  id: string,
+  userId: string,
+): Promise<boolean> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select({ ownerUserId: serversTable.ownerUserId })
@@ -869,7 +935,7 @@ export async function getServerById(id: string): Promise<Server | undefined> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const dbServers = await db
         .select(PUBLIC_SERVER_COLUMNS)
@@ -904,7 +970,9 @@ export type StdioPilotResult = {
  * confirm, without us asserting the listing is broken (false negatives from
  * missing env vars, slow cold installs, etc. are expected).
  */
-export async function getStdioPilotResult(serverId: string): Promise<StdioPilotResult | null> {
+export async function getStdioPilotResult(
+  serverId: string,
+): Promise<StdioPilotResult | null> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -919,7 +987,12 @@ export async function getStdioPilotResult(serverId: string): Promise<StdioPilotR
         checkedAt: stdioVerificationPilot.checkedAt,
       })
       .from(stdioVerificationPilot)
-      .where(and(eq(stdioVerificationPilot.serverId, serverId), ne(stdioVerificationPilot.status, 'pending')))
+      .where(
+        and(
+          eq(stdioVerificationPilot.serverId, serverId),
+          ne(stdioVerificationPilot.status, 'pending'),
+        ),
+      )
       .orderBy(desc(stdioVerificationPilot.checkedAt))
       .limit(1);
     return (rows[0] as StdioPilotResult) ?? null;
@@ -941,7 +1014,9 @@ export type ServerHealthCheck = {
  * and server_health_checks in db/schema.ts), oldest-first so callers can
  * render it left-to-right as a timeline without re-sorting.
  */
-export async function getServerHealthHistory(serverId: string): Promise<ServerHealthCheck[]> {
+export async function getServerHealthHistory(
+  serverId: string,
+): Promise<ServerHealthCheck[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -968,7 +1043,12 @@ export type ReviewSummary = {
   avgRating: number;
   count: number;
   distribution: { 1: number; 2: number; 3: number; 4: number; 5: number };
-  comments: { rating: number; comment: string; createdAt: string; reviewerLabel: string }[];
+  comments: {
+    rating: number;
+    comment: string;
+    createdAt: string;
+    reviewerLabel: string;
+  }[];
 };
 
 const EMPTY_REVIEW_SUMMARY: ReviewSummary = {
@@ -980,7 +1060,7 @@ const EMPTY_REVIEW_SUMMARY: ReviewSummary = {
 
 /** First name + last-initial, or a generic fallback — never the raw account name/email verbatim beyond that. */
 function reviewerLabelFromName(name: string | null | undefined): string {
-  if (!name || !name.trim()) return 'AllMCPs user';
+  if (!name?.trim()) return 'AllMCPs user';
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0];
   return `${parts[0]} ${parts[parts.length - 1][0]}.`;
@@ -995,7 +1075,9 @@ function reviewerLabelFromName(name: string | null | undefined): string {
  * not a session call, so it doesn't threaten that page's ISR cache the way
  * an auth() call would.
  */
-export async function getServerReviews(serverId: string): Promise<ReviewSummary> {
+export async function getServerReviews(
+  serverId: string,
+): Promise<ReviewSummary> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -1028,11 +1110,19 @@ export async function getServerReviews(serverId: string): Promise<ReviewSummary>
       .map((r) => ({
         rating: r.rating,
         comment: r.comment as string,
-        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+        createdAt:
+          r.createdAt instanceof Date
+            ? r.createdAt.toISOString()
+            : String(r.createdAt),
         reviewerLabel: reviewerLabelFromName(r.reviewerName),
       }));
 
-    return { avgRating: count > 0 ? sum / count : 0, count, distribution, comments };
+    return {
+      avgRating: count > 0 ? sum / count : 0,
+      count,
+      distribution,
+      comments,
+    };
   } catch {
     return EMPTY_REVIEW_SUMMARY;
   }
@@ -1053,12 +1143,14 @@ const MIN_REMOTE_HISTORY_SAMPLES = 4;
  */
 export function computeCombinedAvailabilityPct(
   history: ServerHealthCheck[],
-  pilotOk: boolean
+  pilotOk: boolean,
 ): number | null {
   const remoteSamples = history.filter((h) => h.remoteHealthy !== null);
   const remotePct =
     remoteSamples.length >= MIN_REMOTE_HISTORY_SAMPLES
-      ? (remoteSamples.filter((h) => h.remoteHealthy).length / remoteSamples.length) * 100
+      ? (remoteSamples.filter((h) => h.remoteHealthy).length /
+          remoteSamples.length) *
+        100
       : null;
 
   if (remotePct === null && !pilotOk) return null;
@@ -1077,18 +1169,26 @@ export async function fetchServerReadme(url: string): Promise<string | null> {
       repo = repo.slice(0, -4);
     }
 
-    let res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) {
-      res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`, {
+    let res = await fetch(
+      `https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`,
+      {
         next: { revalidate: 3600 },
-      });
+      },
+    );
+    if (!res.ok) {
+      res = await fetch(
+        `https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`,
+        {
+          next: { revalidate: 3600 },
+        },
+      );
     }
 
     if (res.ok) {
       const text = await res.text();
-      return text.length > 250000 ? `${text.slice(0, 250000)}\n\n*(README truncated for size)*` : text;
+      return text.length > 250000
+        ? `${text.slice(0, 250000)}\n\n*(README truncated for size)*`
+        : text;
     }
     return null;
   } catch (e) {
@@ -1097,15 +1197,137 @@ export async function fetchServerReadme(url: string): Promise<string | null> {
 }
 
 const COMMON_STOP_WORDS = new Set([
-  'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you',
-  'do', 'at', 'this', 'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her', 'she', 'or', 'an', 'will', 'my', 'one',
-  'all', 'would', 'there', 'their', 'what', 'so', 'up', 'out', 'if', 'about', 'who', 'get', 'which', 'go', 'me', 'when',
-  'make', 'can', 'like', 'time', 'no', 'just', 'him', 'know', 'take', 'people', 'into', 'year', 'your', 'good', 'some',
-  'could', 'them', 'see', 'other', 'than', 'then', 'now', 'look', 'only', 'come', 'its', 'over', 'think', 'also', 'back',
-  'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 'way', 'even', 'new', 'want', 'because', 'any', 'these',
-  'give', 'day', 'most', 'us', 'server', 'mcp', 'model', 'context', 'protocol', 'allow', 'allows', 'provides', 'using',
-  'used', 'support', 'supports', 'client', 'clients', 'tools', 'tool', 'integration', 'official', 'service', 'https',
-  'http', 'com', 'github', 'org', 'repo', 'package', 'npm', 'pypi', 'python', 'typescript', 'javascript'
+  'the',
+  'be',
+  'to',
+  'of',
+  'and',
+  'a',
+  'in',
+  'that',
+  'have',
+  'i',
+  'it',
+  'for',
+  'not',
+  'on',
+  'with',
+  'he',
+  'as',
+  'you',
+  'do',
+  'at',
+  'this',
+  'but',
+  'his',
+  'by',
+  'from',
+  'they',
+  'we',
+  'say',
+  'her',
+  'she',
+  'or',
+  'an',
+  'will',
+  'my',
+  'one',
+  'all',
+  'would',
+  'there',
+  'their',
+  'what',
+  'so',
+  'up',
+  'out',
+  'if',
+  'about',
+  'who',
+  'get',
+  'which',
+  'go',
+  'me',
+  'when',
+  'make',
+  'can',
+  'like',
+  'time',
+  'no',
+  'just',
+  'him',
+  'know',
+  'take',
+  'people',
+  'into',
+  'year',
+  'your',
+  'good',
+  'some',
+  'could',
+  'them',
+  'see',
+  'other',
+  'than',
+  'then',
+  'now',
+  'look',
+  'only',
+  'come',
+  'its',
+  'over',
+  'think',
+  'also',
+  'back',
+  'after',
+  'use',
+  'two',
+  'how',
+  'our',
+  'work',
+  'first',
+  'well',
+  'way',
+  'even',
+  'new',
+  'want',
+  'because',
+  'any',
+  'these',
+  'give',
+  'day',
+  'most',
+  'us',
+  'server',
+  'mcp',
+  'model',
+  'context',
+  'protocol',
+  'allow',
+  'allows',
+  'provides',
+  'using',
+  'used',
+  'support',
+  'supports',
+  'client',
+  'clients',
+  'tools',
+  'tool',
+  'integration',
+  'official',
+  'service',
+  'https',
+  'http',
+  'com',
+  'github',
+  'org',
+  'repo',
+  'package',
+  'npm',
+  'pypi',
+  'python',
+  'typescript',
+  'javascript',
 ]);
 
 // Keyed by object identity, not server.id — getActiveServers() is request-
@@ -1132,7 +1354,10 @@ function extractSemanticTokens(s: Server): Set<string> {
   const add = (text?: string | null) => {
     if (!text) return;
     const str = text.length > 2000 ? text.slice(0, 2000) : text;
-    const words = str.toLowerCase().replace(/[^a-z0-9_\-\.]/g, ' ').split(/\s+/);
+    const words = str
+      .toLowerCase()
+      .replace(/[^a-z0-9_\-.]/g, ' ')
+      .split(/\s+/);
     for (const w of words) {
       if (w.length > 2 && w.length < 50 && !COMMON_STOP_WORDS.has(w)) {
         tokens.add(w);
@@ -1151,7 +1376,11 @@ function extractSemanticTokens(s: Server): Set<string> {
   if (Array.isArray(s.tags)) s.tags.forEach(add);
   if (Array.isArray(s.aiUseCases)) s.aiUseCases.forEach(add);
   if (Array.isArray(s.aiFeatures)) s.aiFeatures.forEach(add);
-  if (Array.isArray(s.tools)) s.tools.forEach((t) => { add(t.name); add(t.description); });
+  if (Array.isArray(s.tools))
+    s.tools.forEach((t) => {
+      add(t.name);
+      add(t.description);
+    });
 
   semanticTokenCache.set(s, tokens);
   return tokens;
@@ -1192,7 +1421,11 @@ function toolNameSet(s: Server): Set<string> {
   // rows through here without normalizeServer's JSON-column parsing, so this
   // field can arrive as an unparsed JSON string instead of an array.
   const set = Array.isArray(s.tools)
-    ? new Set(s.tools.map((t) => t.name?.toLowerCase()).filter((n): n is string => Boolean(n)))
+    ? new Set(
+        s.tools
+          .map((t) => t.name?.toLowerCase())
+          .filter((n): n is string => Boolean(n)),
+      )
     : new Set<string>();
   toolNameSetCache.set(s, set);
   return set;
@@ -1202,7 +1435,9 @@ const tagSetCache = new WeakMap<Server, Set<string>>();
 function tagSet(s: Server): Set<string> {
   const cached = tagSetCache.get(s);
   if (cached) return cached;
-  const set = Array.isArray(s.tags) ? new Set(s.tags.map((t) => t.toLowerCase())) : new Set<string>();
+  const set = Array.isArray(s.tags)
+    ? new Set(s.tags.map((t) => t.toLowerCase()))
+    : new Set<string>();
   tagSetCache.set(s, set);
   return set;
 }
@@ -1211,7 +1446,9 @@ const envVarSetCache = new WeakMap<Server, Set<string>>();
 function envVarSet(s: Server): Set<string> {
   const cached = envVarSetCache.get(s);
   if (cached) return cached;
-  const set = Array.isArray(s.aiEnvVars) ? new Set(s.aiEnvVars.map((v) => v.toUpperCase())) : new Set<string>();
+  const set = Array.isArray(s.aiEnvVars)
+    ? new Set(s.aiEnvVars.map((v) => v.toUpperCase()))
+    : new Set<string>();
   envVarSetCache.set(s, set);
   return set;
 }
@@ -1221,7 +1458,10 @@ function envVarSet(s: Server): Set<string> {
  * Engagement + install readiness + tool overlap + semantic text similarity with current page.
  * Exported so category pages stay consistent.
  */
-export function relatedRankingScore(candidate: Server, current?: Server | null): number {
+export function relatedRankingScore(
+  candidate: Server,
+  current?: Server | null,
+): number {
   let score = engagementScore(candidate);
 
   // Prefer listings with known install paths (higher install conversion).
@@ -1231,7 +1471,8 @@ export function relatedRankingScore(candidate: Server, current?: Server | null):
   else if (conf === 'low') score += 1;
 
   if (candidate.isOfficial || candidate.isPremium) score += 5;
-  if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy') score += 3;
+  if (candidate.isVerifiedActive || candidate.healthStatus === 'healthy')
+    score += 3;
   if (candidate.reciprocalBadgeOk) score += 2;
 
   if (current) {
@@ -1326,7 +1567,7 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
       (full, bang, text, _lt, target, _gt, title) => {
         const abs = toAbs(target, bang === '!');
         return abs === target ? full : `${bang}[${text}](${abs}${title || ''})`;
-      }
+      },
     );
     // Reference-style link definitions: [label]: target
     lines[i] = lines[i].replace(
@@ -1334,7 +1575,7 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
       (full, pre, _lt, target, _gt, post) => {
         const abs = toAbs(target, false);
         return abs === target ? full : `${pre}${abs}${post}`;
-      }
+      },
     );
     // Raw HTML href/src attributes (READMEs often use <img src="assets/…">)
     lines[i] = lines[i].replace(
@@ -1342,7 +1583,7 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
       (full, attr, q, target) => {
         const abs = toAbs(target, attr.toLowerCase() === 'src');
         return abs === target ? full : `${attr}=${q}${abs}${q}`;
-      }
+      },
     );
   }
   return lines.join('\n');
@@ -1365,7 +1606,7 @@ export const README_EXCERPT_CHARS = 10000;
  */
 export function truncateReadmeExcerpt(
   md: string | null | undefined,
-  maxChars: number = README_EXCERPT_CHARS
+  maxChars: number = README_EXCERPT_CHARS,
 ): { excerpt: string | null | undefined; truncated: boolean } {
   if (typeof md !== 'string' || md.length <= maxChars) {
     return { excerpt: md, truncated: false };
@@ -1384,21 +1625,28 @@ export function truncateReadmeExcerpt(
   return { excerpt, truncated: true };
 }
 
-export function formatServerAsMarkdown(server: Server, readme?: string | null): string {
+export function formatServerAsMarkdown(
+  server: Server,
+  readme?: string | null,
+): string {
   // The mcpServers object key just needs to be a readable identifier, not a real
   // package name, so it's safe to slugify.
-  const slug = (server.name.split('/').pop() || server.name)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'mcp-server';
-  const verifiedBadge = server.isOfficial || server.isPremium ? ' [Verified]' : '';
+  const slug =
+    (server.name.split('/').pop() || server.name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'mcp-server';
+  const verifiedBadge =
+    server.isOfficial || server.isPremium ? ' [Verified]' : '';
   const activeBadge = server.isVerifiedActive ? ' [Health: Active]' : '';
 
   let md = `# ${server.name}${verifiedBadge}${activeBadge}\n\n`;
   md += `**Category:** ${server.category}  \n`;
   md += `**Repository:** ${server.url}  \n`;
-  if (typeof server.githubStars === 'number') md += `**GitHub Stars:** ${server.githubStars}  \n`;
-  if (typeof server.npmDownloads === 'number') md += `**npm Downloads (last month):** ${server.npmDownloads}  \n`;
+  if (typeof server.githubStars === 'number')
+    md += `**GitHub Stars:** ${server.githubStars}  \n`;
+  if (typeof server.npmDownloads === 'number')
+    md += `**npm Downloads (last month):** ${server.npmDownloads}  \n`;
   md += `**Views:** ${server.views || 0}  \n`;
   md += `**Installs:** ${server.copies || 0}  \n`;
   md += `**Upvotes:** ${server.upvotes || 0}  \n`;
@@ -1449,7 +1697,13 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
     md += `    "command": "${install.command}",\n`;
     md += `    "args": ${argsJson}${envVars.length > 0 ? ',' : ''}\n`;
     if (envVars.length > 0) {
-      md += `    "env": ${JSON.stringify(Object.fromEntries(envVars.map((v) => [v, ''])), null, 2).split('\n').join('\n    ')}\n`;
+      md += `    "env": ${JSON.stringify(
+        Object.fromEntries(envVars.map((v) => [v, ''])),
+        null,
+        2,
+      )
+        .split('\n')
+        .join('\n    ')}\n`;
     }
     md += `  }\n`;
     md += `}\n`;
@@ -1460,7 +1714,7 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
   }
 
   const hasAiContent = Boolean(
-    server.aiOverview || server.aiUseCases?.length || server.aiFeatures?.length
+    server.aiOverview || server.aiUseCases?.length || server.aiFeatures?.length,
   );
 
   if (readme) {
@@ -1493,19 +1747,22 @@ export function formatServerAsMarkdown(server: Server, readme?: string | null): 
  */
 export function formatServerSummaryLine(server: Server): string {
   const bits: string[] = [];
-  if (typeof server.githubStars === 'number') bits.push(`⭐ ${server.githubStars.toLocaleString()}`);
+  if (typeof server.githubStars === 'number')
+    bits.push(`⭐ ${server.githubStars.toLocaleString()}`);
   if (server.copies) bits.push(`${server.copies.toLocaleString()} installs`);
   const meta = bits.length ? ` (${bits.join(' · ')})` : '';
   return `- [${server.name}](https://allmcps.com/mcp/${server.id})${meta} — ${server.description}`;
 }
 
-async function getSameCategoryActiveServers(currentServer: Server): Promise<Server[]> {
+async function getSameCategoryActiveServers(
+  currentServer: Server,
+): Promise<Server[]> {
   let sameCategory: Server[] = [];
 
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select(SCORING_SERVER_COLUMNS)
@@ -1514,8 +1771,8 @@ async function getSameCategoryActiveServers(currentServer: Server): Promise<Serv
           and(
             eq(serversTable.status, 'active'),
             eq(serversTable.category, currentServer.category),
-            ne(serversTable.id, currentServer.id)
-          )
+            ne(serversTable.id, currentServer.id),
+          ),
         );
       if (rows.length > 0) {
         sameCategory = rows.map((r) => normalizeServer(r as unknown as Server));
@@ -1528,7 +1785,10 @@ async function getSameCategoryActiveServers(currentServer: Server): Promise<Serv
   if (sameCategory.length === 0) {
     const allServers = serversData as unknown as Server[];
     sameCategory = allServers
-      .filter((s) => s.id !== currentServer.id && s.category === currentServer.category)
+      .filter(
+        (s) =>
+          s.id !== currentServer.id && s.category === currentServer.category,
+      )
       .map(normalizeServer);
   }
 
@@ -1546,14 +1806,19 @@ export const getSameCategoryAlternativesCount = cache(
   async (currentServer: Server): Promise<number> => {
     const sameCategory = await getSameCategoryActiveServers(currentServer);
     return sameCategory.length;
-  }
+  },
 );
 
-export async function getRelatedServers(currentServer: Server, limit = 4): Promise<Server[]> {
+export async function getRelatedServers(
+  currentServer: Server,
+  limit = 4,
+): Promise<Server[]> {
   const sameCategory = await getSameCategoryActiveServers(currentServer);
 
   sameCategory.sort(
-    (a, b) => relatedRankingScore(b, currentServer) - relatedRankingScore(a, currentServer)
+    (a, b) =>
+      relatedRankingScore(b, currentServer) -
+      relatedRankingScore(a, currentServer),
   );
 
   if (sameCategory.length >= limit) {
@@ -1565,7 +1830,7 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
         .select(SCORING_SERVER_COLUMNS)
@@ -1574,13 +1839,19 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
           and(
             eq(serversTable.status, 'active'),
             ne(serversTable.category, currentServer.category),
-            ne(serversTable.id, currentServer.id)
-          )
+            ne(serversTable.id, currentServer.id),
+          ),
         )
-        .orderBy(desc(serversTable.views), desc(serversTable.copies), desc(serversTable.upvotes))
+        .orderBy(
+          desc(serversTable.views),
+          desc(serversTable.copies),
+          desc(serversTable.upvotes),
+        )
         .limit(30);
       if (rows.length > 0) {
-        fallbackCandidates = rows.map((r) => normalizeServer(r as unknown as Server));
+        fallbackCandidates = rows.map((r) =>
+          normalizeServer(r as unknown as Server),
+        );
       }
     }
   } catch (e) {
@@ -1590,30 +1861,38 @@ export async function getRelatedServers(currentServer: Server, limit = 4): Promi
   if (fallbackCandidates.length === 0) {
     const allServers = serversData as unknown as Server[];
     fallbackCandidates = allServers
-      .filter((s) => s.id !== currentServer.id && s.category !== currentServer.category)
+      .filter(
+        (s) =>
+          s.id !== currentServer.id && s.category !== currentServer.category,
+      )
       .slice(0, 30)
       .map(normalizeServer);
   }
 
   fallbackCandidates.sort(
-    (a, b) => relatedRankingScore(b, currentServer) - relatedRankingScore(a, currentServer)
+    (a, b) =>
+      relatedRankingScore(b, currentServer) -
+      relatedRankingScore(a, currentServer),
   );
 
   return [...sameCategory, ...fallbackCandidates].slice(0, limit);
 }
 
 /** Paid/featured listings eligible to rotate into promotional ad slots, excluding the given server. */
-export async function getFeaturedServers(excludeId?: string, limit = 10): Promise<Server[]> {
+export async function getFeaturedServers(
+  excludeId?: string,
+  limit = 10,
+): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const conditions = [
         eq(serversTable.status, 'active'),
         or(
           eq(serversTable.isPremium, true),
-          gt(serversTable.featuredUntil, sql`CURRENT_TIMESTAMP`)
+          gt(serversTable.featuredUntil, sql`CURRENT_TIMESTAMP`),
         ),
       ];
       if (excludeId) {

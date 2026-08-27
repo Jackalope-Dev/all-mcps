@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { NextResponse } from 'next/server';
 import { getAuthorizedAdminEmail } from '../../../../lib/adminAuth';
 
 /** Logos: pending/<id>.png — Screenshots: screenshots/pending/<id>.png */
@@ -32,6 +32,9 @@ export async function GET(req: Request) {
   }
 
   return new NextResponse(object.body, {
-    headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store' },
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'private, no-store',
+    },
   });
 }

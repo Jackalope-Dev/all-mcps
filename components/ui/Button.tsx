@@ -1,5 +1,5 @@
-import React from 'react';
 import Link from 'next/link';
+import type React from 'react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'glass' | 'terminal';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -46,9 +46,13 @@ export function Button({
         href={href}
         className={classes}
         style={style}
-        onClick={onClick as React.MouseEventHandler<HTMLAnchorElement> | undefined}
+        onClick={
+          onClick as React.MouseEventHandler<HTMLAnchorElement> | undefined
+        }
         aria-label={props['aria-label']}
-        aria-current={props['aria-current'] as React.AriaAttributes['aria-current']}
+        aria-current={
+          props['aria-current'] as React.AriaAttributes['aria-current']
+        }
       >
         {children}
       </Link>
@@ -56,7 +60,13 @@ export function Button({
   }
 
   return (
-    <button className={classes} style={style} type={type} onClick={onClick} {...props}>
+    <button
+      className={classes}
+      style={style}
+      type={type}
+      onClick={onClick}
+      {...props}
+    >
       {children}
     </button>
   );

@@ -6,7 +6,8 @@
 import { getEnv } from './env';
 
 /** SDK-equivalent: client.transactional.send({ to, slug, variables }) */
-const SEQUENZY_TRANSACTIONAL_URL = 'https://api.sequenzy.com/api/v1/transactional/send';
+const SEQUENZY_TRANSACTIONAL_URL =
+  'https://api.sequenzy.com/api/v1/transactional/send';
 const TIMEOUT_MS = 8000;
 
 /** Saved transactional templates (API slugs) used by AllMCPs. */
@@ -37,7 +38,7 @@ async function resolveApiKey(): Promise<string | undefined> {
  * Queue a saved transactional email. Returns true if Sequenzy accepted the send.
  */
 export async function sendSequenzyTransactional(
-  input: SequenzyTransactionalSend
+  input: SequenzyTransactionalSend,
 ): Promise<boolean> {
   const key = await resolveApiKey();
   if (!key) {
@@ -58,7 +59,8 @@ export async function sendSequenzyTransactional(
       .toUpperCase();
     if (!(upper in variables)) variables[upper] = v;
     const lowerCamel = k.charAt(0).toLowerCase() + k.slice(1);
-    if (!(lowerCamel in variables) && k !== lowerCamel) variables[lowerCamel] = v;
+    if (!(lowerCamel in variables) && k !== lowerCamel)
+      variables[lowerCamel] = v;
   }
 
   try {
@@ -79,7 +81,11 @@ export async function sendSequenzyTransactional(
 
     if (!res.ok) {
       // Don't log body (may echo email). Status alone is enough for ops.
-      console.error('Sequenzy transactional send failed', res.status, input.slug);
+      console.error(
+        'Sequenzy transactional send failed',
+        res.status,
+        input.slug,
+      );
       return false;
     }
     return true;

@@ -5,7 +5,10 @@
  * prefix and humanizes the remainder for display; install snippets etc. should
  * keep using the raw `server.name`, not this.
  */
-export function parseServerName(name: string, url?: string): { displayName: string; org: string | null } {
+export function parseServerName(
+  name: string,
+  url?: string,
+): { displayName: string; org: string | null } {
   const idx = name.lastIndexOf('/');
   if (idx === -1) {
     // Some ~200 catalog entries have a bare, uninformative `name` of literally

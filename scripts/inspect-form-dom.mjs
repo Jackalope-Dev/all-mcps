@@ -8,7 +8,7 @@ async function inspectDOM() {
   const urls = [
     'https://nicklaunches.com/',
     'https://microlaunch.net/submit',
-    'https://www.uneed.best/submit'
+    'https://www.uneed.best/submit',
   ];
 
   for (const url of urls) {
@@ -20,8 +20,12 @@ async function inspectDOM() {
       await page.waitForTimeout(2500);
 
       const elements = await page.evaluate(() => {
-        const els = Array.from(document.querySelectorAll('input, textarea, select, button, [contenteditable="true"]'));
-        return els.map(e => ({
+        const els = Array.from(
+          document.querySelectorAll(
+            'input, textarea, select, button, [contenteditable="true"]',
+          ),
+        );
+        return els.map((e) => ({
           tag: e.tagName,
           type: e.type || '',
           name: e.getAttribute('name') || '',
@@ -31,13 +35,15 @@ async function inspectDOM() {
           label: e.labels?.[0]?.textContent?.trim() || '',
           text: e.textContent?.trim().slice(0, 50) || '',
           parent: e.parentElement?.textContent?.trim().slice(0, 100) || '',
-          outer: e.outerHTML.slice(0, 150)
+          outer: e.outerHTML.slice(0, 150),
         }));
       });
 
       console.log(`Found ${elements.length} interactive elements:`);
       elements.forEach((el, i) => {
-        console.log(`[${i + 1}] <${el.tag} type="${el.type}" name="${el.name}" id="${el.id}" placeholder="${el.placeholder}"> Label: "${el.label}" Parent: "${el.parent.replace(/\s+/g, ' ')}"`);
+        console.log(
+          `[${i + 1}] <${el.tag} type="${el.type}" name="${el.name}" id="${el.id}" placeholder="${el.placeholder}"> Label: "${el.label}" Parent: "${el.parent.replace(/\s+/g, ' ')}"`,
+        );
         console.log(`    HTML: ${el.outer}`);
       });
     } catch (err) {

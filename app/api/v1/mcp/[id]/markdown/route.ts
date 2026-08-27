@@ -1,10 +1,19 @@
-import { getServerById, fetchServerReadme, formatServerAsMarkdown } from '@/lib/servers';
-import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
-import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '@/lib/rateLimit';
+import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
+import {
+  checkRateLimit,
+  clientKey,
+  rateLimitedResponse,
+  rateLimitHeaders,
+} from '@/lib/rateLimit';
+import {
+  fetchServerReadme,
+  formatServerAsMarkdown,
+  getServerById,
+} from '@/lib/servers';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const rateLimit = checkRateLimit(`v1_markdown:${clientKey(request)}`, 60, 60);
   if (!rateLimit.allowed) return rateLimitedResponse(rateLimit);
@@ -35,7 +44,9 @@ export async function GET(
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const cfCtx = await getCloudflareContext();
     if (cfCtx?.env && (cfCtx.env as any).DB) {
-      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const logDb = (await import('drizzle-orm/d1')).drizzle(
+        (cfCtx.env as any).DB,
+      );
       const meta = extractRequestMeta(request);
       cfCtx.ctx.waitUntil(
         logApiAccess(logDb, {
@@ -43,7 +54,7 @@ export async function GET(
           endpoint: 'markdown_view',
           userAgent: meta.userAgent,
           ipCountry: meta.ipCountry,
-        })
+        }),
       );
     }
   } catch {

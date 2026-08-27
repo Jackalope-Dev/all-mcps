@@ -20,13 +20,16 @@ export function getClientIp(req: Request): string {
  *
  * Used for both upvote and view uniqueness tables (separate storage, same hash).
  */
-export async function hashVisitorForServer(ip: string, serverId: string): Promise<string | null> {
+export async function hashVisitorForServer(
+  ip: string,
+  serverId: string,
+): Promise<string | null> {
   const pepper = process.env.UPVOTE_HASH_SECRET;
   if (!pepper) return null;
 
   const digest = await crypto.subtle.digest(
     'SHA-256',
-    new TextEncoder().encode(`${ip}:${serverId}:${pepper}`)
+    new TextEncoder().encode(`${ip}:${serverId}:${pepper}`),
   );
 
   return Array.from(new Uint8Array(digest))
@@ -35,6 +38,9 @@ export async function hashVisitorForServer(ip: string, serverId: string): Promis
 }
 
 /** @deprecated Prefer hashVisitorForServer — same implementation. */
-export async function hashUpvoteVoter(ip: string, serverId: string): Promise<string | null> {
+export async function hashUpvoteVoter(
+  ip: string,
+  serverId: string,
+): Promise<string | null> {
   return hashVisitorForServer(ip, serverId);
 }

@@ -1,7 +1,18 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, desc, eq, gt, isNotNull, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 import { servers, stdioVerificationPilot } from '../../../../../db/schema';
 import { isAdminAuthorized } from '../../../../../lib/adminAuth';
 import { parseArgsJson } from '../../../../../lib/installConfig';
@@ -56,7 +67,10 @@ export async function POST(req: Request) {
     }
 
     const url = new URL(req.url);
-    const parsedSize = Number.parseInt(url.searchParams.get('batch_size') ?? '', 10);
+    const parsedSize = Number.parseInt(
+      url.searchParams.get('batch_size') ?? '',
+      10,
+    );
     const batchSize = Number.isFinite(parsedSize)
       ? Math.min(Math.max(parsedSize, 1), MAX_BATCH_SIZE)
       : DEFAULT_BATCH_SIZE;
@@ -76,7 +90,15 @@ export async function POST(req: Request) {
     // they're eligible for selection again instead of being stuck forever.
     await db
       .delete(stdioVerificationPilot)
-      .where(and(eq(stdioVerificationPilot.status, 'pending'), lt(stdioVerificationPilot.checkedAt, new Date(Date.now() - PENDING_STALE_MS))));
+      .where(
+        and(
+          eq(stdioVerificationPilot.status, 'pending'),
+          lt(
+            stdioVerificationPilot.checkedAt,
+            new Date(Date.now() - PENDING_STALE_MS),
+          ),
+        ),
+      );
 
     // Overselect a little — some candidates will lose the claim race under
     // concurrent requests, and we'd rather still return close to batchSize.
@@ -94,7 +116,10 @@ export async function POST(req: Request) {
         pilotStatus: stdioVerificationPilot.status,
       })
       .from(servers)
-      .leftJoin(stdioVerificationPilot, eq(stdioVerificationPilot.serverId, servers.id))
+      .leftJoin(
+        stdioVerificationPilot,
+        eq(stdioVerificationPilot.serverId, servers.id),
+      )
       .where(
         and(
           eq(servers.status, 'active'),
@@ -117,16 +142,23 @@ export async function POST(req: Request) {
               // PENDING_STALE_MS above already handles abandoned claims.
               ne(stdioVerificationPilot.status, 'pending'),
               or(
-                gt(servers.installExtractedAt, stdioVerificationPilot.checkedAt),
-                lt(stdioVerificationPilot.checkedAt, retestCutoff)
-              )
-            )
-          )
-        )
+                gt(
+                  servers.installExtractedAt,
+                  stdioVerificationPilot.checkedAt,
+                ),
+                lt(stdioVerificationPilot.checkedAt, retestCutoff),
+              ),
+            ),
+          ),
+        ),
       )
       // Never-tested listings first (nothing beats first-time coverage),
       // then by popularity within each group.
-      .orderBy(sql`CASE WHEN ${stdioVerificationPilot.id} IS NULL THEN 0 ELSE 1 END`, desc(servers.views), desc(servers.upvotes))
+      .orderBy(
+        sql`CASE WHEN ${stdioVerificationPilot.id} IS NULL THEN 0 ELSE 1 END`,
+        desc(servers.views),
+        desc(servers.upvotes),
+      )
       .limit(Math.min(batchSize * 2, MAX_BATCH_SIZE * 2));
 
     if (rows.length === 0) {
@@ -148,8 +180,13 @@ export async function POST(req: Request) {
           db
             .update(stdioVerificationPilot)
             .set({ status: 'pending', checkedAt: now })
-            .where(and(eq(stdioVerificationPilot.serverId, r.id), ne(stdioVerificationPilot.status, 'pending')))
-            .returning({ serverId: stdioVerificationPilot.serverId })
+            .where(
+              and(
+                eq(stdioVerificationPilot.serverId, r.id),
+                ne(stdioVerificationPilot.status, 'pending'),
+              ),
+            )
+            .returning({ serverId: stdioVerificationPilot.serverId }),
     );
     // db.batch() requires a non-empty tuple type that a dynamically-built
     // array can't structurally satisfy — rows.length > 0 is already
@@ -157,7 +194,9 @@ export async function POST(req: Request) {
     const claimResults = await db.batch(claimStatements as any);
 
     const claimedIds = new Set(
-      claimResults.flatMap((r: any) => (Array.isArray(r) ? r.map((row) => row.serverId) : []))
+      claimResults.flatMap((r: any) =>
+        Array.isArray(r) ? r.map((row) => row.serverId) : [],
+      ),
     );
     const batch = rows
       .filter((r) => claimedIds.has(r.id))
@@ -190,12 +229,19 @@ export async function POST(req: Request) {
     // stranding the claims with no batch ever reaching a caller (confirmed in
     // practice: 200 claimed, 0 processed, release never ran).
     const returnedIds = new Set(batch.map((b) => b.id));
-    const strandedIds = [...claimedIds].filter((id) => !returnedIds.has(id as string));
+    const strandedIds = [...claimedIds].filter(
+      (id) => !returnedIds.has(id as string),
+    );
     if (strandedIds.length > 0) {
       const releaseStatements = strandedIds.map((id) =>
         db
           .delete(stdioVerificationPilot)
-          .where(and(eq(stdioVerificationPilot.serverId, id as string), eq(stdioVerificationPilot.status, 'pending')))
+          .where(
+            and(
+              eq(stdioVerificationPilot.serverId, id as string),
+              eq(stdioVerificationPilot.status, 'pending'),
+            ),
+          ),
       );
       await db.batch(releaseStatements as any);
     }
@@ -203,6 +249,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, batch, count: batch.length });
   } catch (error: any) {
     console.error('stdio-pilot batch error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

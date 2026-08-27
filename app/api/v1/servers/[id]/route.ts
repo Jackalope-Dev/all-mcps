@@ -1,13 +1,22 @@
-import { getServerById, fetchServerReadme } from '@/lib/servers';
+import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
 import { computeQualityScore } from '@/lib/qualityScore';
-import { logApiAccess, extractRequestMeta } from '@/lib/accessLog';
-import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '@/lib/rateLimit';
+import {
+  checkRateLimit,
+  clientKey,
+  rateLimitedResponse,
+  rateLimitHeaders,
+} from '@/lib/rateLimit';
+import { fetchServerReadme, getServerById } from '@/lib/servers';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const rateLimit = checkRateLimit(`v1_server_detail:${clientKey(request)}`, 60, 60);
+  const rateLimit = checkRateLimit(
+    `v1_server_detail:${clientKey(request)}`,
+    60,
+    60,
+  );
   if (!rateLimit.allowed) return rateLimitedResponse(rateLimit);
 
   const { id } = await params;
@@ -16,7 +25,13 @@ export async function GET(
   if (!server) {
     return Response.json(
       { error: 'not_found', message: `No listing exists with id "${id}".` },
-      { status: 404, headers: { 'Access-Control-Allow-Origin': '*', ...rateLimitHeaders(rateLimit) } }
+      {
+        status: 404,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          ...rateLimitHeaders(rateLimit),
+        },
+      },
     );
   }
 
@@ -29,7 +44,9 @@ export async function GET(
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const cfCtx = await getCloudflareContext();
     if (cfCtx?.env && (cfCtx.env as any).DB) {
-      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const logDb = (await import('drizzle-orm/d1')).drizzle(
+        (cfCtx.env as any).DB,
+      );
       const meta = extractRequestMeta(request);
       cfCtx.ctx.waitUntil(
         logApiAccess(logDb, {
@@ -37,7 +54,7 @@ export async function GET(
           endpoint: 'v1_server_detail',
           userAgent: meta.userAgent,
           ipCountry: meta.ipCountry,
-        })
+        }),
       );
     }
   } catch {
@@ -70,6 +87,6 @@ export async function GET(
         'Access-Control-Allow-Origin': '*',
         ...rateLimitHeaders(rateLimit),
       },
-    }
+    },
   );
 }

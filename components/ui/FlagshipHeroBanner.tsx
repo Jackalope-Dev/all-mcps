@@ -1,15 +1,28 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Sparkles, Terminal, Search, Send, BadgeCheck, Copy, Check, ExternalLink, ArrowDown } from 'lucide-react';
+import {
+  ArrowDown,
+  BadgeCheck,
+  Check,
+  Copy,
+  ExternalLink,
+  Search,
+  Send,
+  Sparkles,
+  Terminal,
+} from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 
 interface FlagshipHeroBannerProps {
   serverId: string;
   serverName: string;
 }
 
-export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerProps) {
+export function FlagshipHeroBanner({
+  serverId,
+  serverName,
+}: FlagshipHeroBannerProps) {
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   const samplePrompt = `Install and configure the ${serverName} MCP server (npx -y allmcps-server) so you can search the AllMCPs directory, look up MCP server install configs, and submit new MCP tools directly from your prompts.`;
@@ -32,8 +45,10 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
         borderRadius: '16px',
         padding: '1.75rem',
         border: '1px solid rgba(0, 229, 255, 0.35)',
-        background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(124, 58, 237, 0.08) 50%, rgba(16, 185, 129, 0.05) 100%)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+        background:
+          'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(124, 58, 237, 0.08) 50%, rgba(16, 185, 129, 0.05) 100%)',
+        boxShadow:
+          '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -48,14 +63,23 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
           width: '220px',
           height: '220px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0, 229, 255, 0.25) 0%, rgba(0, 0, 0, 0) 70%)',
+          background:
+            'radial-gradient(circle, rgba(0, 229, 255, 0.25) 0%, rgba(0, 0, 0, 0) 70%)',
           pointerEvents: 'none',
         }}
       />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         {/* Banner Top Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.85rem',
+            flexWrap: 'wrap',
+          }}
+        >
           <span
             style={{
               display: 'inline-flex',
@@ -63,7 +87,8 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
               gap: '0.35rem',
               padding: '0.25rem 0.65rem',
               borderRadius: '20px',
-              background: 'linear-gradient(90deg, rgba(0,229,255,0.2), rgba(168,85,247,0.2))',
+              background:
+                'linear-gradient(90deg, rgba(0,229,255,0.2), rgba(168,85,247,0.2))',
               border: '1px solid rgba(0,229,255,0.4)',
               color: 'var(--brand-cyan)',
               fontSize: '0.75rem',
@@ -84,7 +109,8 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
               color: 'var(--text-secondary)',
             }}
           >
-            <BadgeCheck size={14} style={{ color: '#10b981' }} /> 8 Native MCP Tools
+            <BadgeCheck size={14} style={{ color: '#10b981' }} /> 8 Native MCP
+            Tools
           </span>
         </div>
 
@@ -111,7 +137,11 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
             maxWidth: '780px',
           }}
         >
-          Equip <strong>Claude Desktop</strong>, <strong>Cursor</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> with programmatic access to search the AllMCPs directory, generate instant client configuration JSON, verify listing claims, and submit new MCP tools straight from your prompt window.
+          Equip <strong>Claude Desktop</strong>, <strong>Cursor</strong>,{' '}
+          <strong>Windsurf</strong>, or <strong>Antigravity</strong> with
+          programmatic access to search the AllMCPs directory, generate instant
+          client configuration JSON, verify listing claims, and submit new MCP
+          tools straight from your prompt window.
         </p>
 
         {/* Feature Grid Pills */}
@@ -135,12 +165,31 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
               boxShadow: 'var(--shadow-sm)',
             }}
           >
-            <Search size={18} style={{ color: 'var(--brand-cyan)', flexShrink: 0, marginTop: '2px' }} />
+            <Search
+              size={18}
+              style={{
+                color: 'var(--brand-cyan)',
+                flexShrink: 0,
+                marginTop: '2px',
+              }}
+            />
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  color: 'var(--text-primary)',
+                }}
+              >
                 Directory Search &amp; Configs
               </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              <div
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.4,
+                }}
+              >
                 Search listings and get setup JSON on demand.
               </div>
             </div>
@@ -158,12 +207,27 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
               boxShadow: 'var(--shadow-sm)',
             }}
           >
-            <Send size={18} style={{ color: '#a855f7', flexShrink: 0, marginTop: '2px' }} />
+            <Send
+              size={18}
+              style={{ color: '#a855f7', flexShrink: 0, marginTop: '2px' }}
+            />
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  color: 'var(--text-primary)',
+                }}
+              >
                 Agentic Submissions
               </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              <div
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.4,
+                }}
+              >
                 Submit newly created MCP repos to AllMCPs.
               </div>
             </div>
@@ -181,12 +245,27 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
               boxShadow: 'var(--shadow-sm)',
             }}
           >
-            <Terminal size={18} style={{ color: '#10b981', flexShrink: 0, marginTop: '2px' }} />
+            <Terminal
+              size={18}
+              style={{ color: '#10b981', flexShrink: 0, marginTop: '2px' }}
+            />
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  color: 'var(--text-primary)',
+                }}
+              >
                 Zero-Config Bridge
               </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              <div
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.4,
+                }}
+              >
                 Run <code>npx -y allmcps-server</code> directly over stdio.
               </div>
             </div>
@@ -194,7 +273,14 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
         </div>
 
         {/* Action Button Strip */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '0.75rem',
+          }}
+        >
           <button
             type="button"
             onClick={copyPrompt}
@@ -208,7 +294,9 @@ export function FlagshipHeroBanner({ serverId, serverName }: FlagshipHeroBannerP
             }}
           >
             {copiedPrompt ? <Check size={16} /> : <Copy size={16} />}
-            <span>{copiedPrompt ? 'Prompt Copied!' : 'Copy Agent Setup Prompt'}</span>
+            <span>
+              {copiedPrompt ? 'Prompt Copied!' : 'Copy Agent Setup Prompt'}
+            </span>
           </button>
 
           <a

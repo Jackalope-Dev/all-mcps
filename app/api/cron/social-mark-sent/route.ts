@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq, inArray } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { servers, socialPosts } from '@/db/schema';
 import { isAdminAuthorized } from '@/lib/adminAuth';
 
@@ -19,7 +19,8 @@ async function handleMarkSent(req: Request) {
   try {
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.get('authorization');
-    const isCronAuthorized = cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCronAuthorized =
+      cronSecret && authHeader === `Bearer ${cronSecret}`;
 
     if (!isCronAuthorized && !(await isAdminAuthorized(req))) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
@@ -50,7 +51,10 @@ async function handleMarkSent(req: Request) {
     }
 
     if (typeof id !== 'number' && !guid && (!guids || guids.length === 0)) {
-      return NextResponse.json({ error: 'id, guid, or guids is required.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'id, guid, or guids is required.' },
+        { status: 400 },
+      );
     }
 
     let env: any;
@@ -61,7 +65,7 @@ async function handleMarkSent(req: Request) {
       throw new Error('Could not get Cloudflare context.');
     }
 
-    if (!env || !env.DB) {
+    if (!env?.DB) {
       throw new Error('Database binding not found');
     }
 
@@ -77,7 +81,10 @@ async function handleMarkSent(req: Request) {
         .where(inArray(socialPosts.guid, guids))
         .returning({ id: socialPosts.id, serverId: socialPosts.serverId });
     } else {
-      const where = typeof id === 'number' ? eq(socialPosts.id, id) : eq(socialPosts.guid, guid!);
+      const where =
+        typeof id === 'number'
+          ? eq(socialPosts.id, id)
+          : eq(socialPosts.guid, guid!);
       updated = await db
         .update(socialPosts)
         .set({ status: 'sent', sentAt })
@@ -86,20 +93,34 @@ async function handleMarkSent(req: Request) {
     }
 
     if (updated.length === 0) {
-      return NextResponse.json({ error: 'No matching queued post found.' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'No matching queued post found.' },
+        { status: 404 },
+      );
     }
 
     // Stamp lastFeaturedAt on the associated server
     for (const post of updated) {
       if (post.serverId) {
-        await db.update(servers).set({ lastFeaturedAt: sentAt }).where(eq(servers.id, post.serverId)).catch(() => {});
+        await db
+          .update(servers)
+          .set({ lastFeaturedAt: sentAt })
+          .where(eq(servers.id, post.serverId))
+          .catch(() => {});
       }
     }
 
-    return NextResponse.json({ success: true, message: `Marked ${updated.length} post(s) as sent.`, count: updated.length });
+    return NextResponse.json({
+      success: true,
+      message: `Marked ${updated.length} post(s) as sent.`,
+      count: updated.length,
+    });
   } catch (error: any) {
     console.error('Social mark-sent error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }
 

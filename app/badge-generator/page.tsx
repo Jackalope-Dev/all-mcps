@@ -1,15 +1,24 @@
-import { Metadata } from 'next';
-import { PageShell, PageHeader } from '../../components/PageShell';
+import type { Metadata } from 'next';
+import { PageHeader, PageShell } from '../../components/PageShell';
 import { BadgeEmbedBuilder } from '../../components/ui/BadgeEmbedBuilder';
 
 export const metadata: Metadata = {
   title: 'MCP Server Badge Generator & Embed Builder',
-  description: 'Generate dynamic SVG verification badges and embeddable widgets for your Model Context Protocol (MCP) server GitHub README or website.',
+  description:
+    'Generate dynamic SVG verification badges and embeddable widgets for your Model Context Protocol (MCP) server GitHub README or website.',
   alternates: { canonical: 'https://allmcps.com/badge-generator' },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'MCP Server Badge Generator | AllMCPs',
-    description: 'Create dark & light mode SVG badges for your MCP server. Keep the badge dofollow and verify your site to earn a reciprocal dofollow backlink.',
+    description:
+      'Create dark & light mode SVG badges for your MCP server. Keep the badge dofollow and verify your site to earn a reciprocal dofollow backlink.',
     url: 'https://allmcps.com/badge-generator',
   },
 };
@@ -21,7 +30,8 @@ export default function BadgeGeneratorPage() {
       {
         '@type': 'WebApplication',
         name: 'MCP Server Badge Generator & Embed Builder',
-        description: 'Generate dynamic SVG verification badges and embeddable widgets for your Model Context Protocol (MCP) server GitHub README or website.',
+        description:
+          'Generate dynamic SVG verification badges and embeddable widgets for your Model Context Protocol (MCP) server GitHub README or website.',
         url: 'https://allmcps.com/badge-generator',
         applicationCategory: 'DeveloperApplication',
         operatingSystem: 'All',
@@ -34,9 +44,24 @@ export default function BadgeGeneratorPage() {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://allmcps.com/tools' },
-          { '@type': 'ListItem', position: 3, name: 'Badge Generator', item: 'https://allmcps.com/badge-generator' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Tools',
+            item: 'https://allmcps.com/tools',
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: 'Badge Generator',
+            item: 'https://allmcps.com/badge-generator',
+          },
         ],
       },
     ],
@@ -44,7 +69,10 @@ export default function BadgeGeneratorPage() {
 
   return (
     <PageShell variant="tool" panel>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PageHeader
         title="MCP Badge & Embed Generator"
         description="Generate dynamic SVG badges in 3 easy steps: 1. Select your MCP server, 2. Customize badge style & metric, 3. Copy the Markdown or HTML snippet for your GitHub README or project site."
@@ -61,9 +89,10 @@ export default function BadgeGeneratorPage() {
           lineHeight: 1.55,
         }}
       >
-        <strong style={{ color: '#34d399' }}>Free dofollow path:</strong> claim your listing, verify
-        the product website, then embed a badge <em>without</em> <code>nofollow</code>. We recheck
-        periodically. Premium listings get dofollow without a badge — see{' '}
+        <strong style={{ color: '#34d399' }}>Free dofollow path:</strong> claim
+        your listing, verify the product website, then embed a badge{' '}
+        <em>without</em> <code>nofollow</code>. We recheck periodically. Premium
+        listings get dofollow without a badge — see{' '}
         <a href="/pricing#premium" style={{ color: 'var(--accent-color)' }}>
           Premium
         </a>

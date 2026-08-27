@@ -1,13 +1,25 @@
 'use client';
 
-import { useMemo, useState, type CSSProperties } from 'react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Cloud,
+  Copy,
+  ExternalLink,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import Link from 'next/link';
-import { ExternalLink, Copy, Cloud, CheckCircle2, AlertCircle, ShieldCheck, Globe, Terminal, Sparkles, HelpCircle, ArrowRight, Lock } from 'lucide-react';
-import { toast } from '../../../../components/ui/Toast';
+import { useMemo, useState } from 'react';
 import { CopyBlock } from '../../../../components/ui/CopyBlock';
 import { SignInGate } from '../../../../components/ui/SignInGate';
+import { toast } from '../../../../components/ui/Toast';
+import {
+  getApexDomain,
+  getDnsProviderLinks,
+} from '../../../../lib/dnsProviders';
 import { getClaimVerificationToken } from '../../../../lib/verificationTokens';
-import { getApexDomain, getDnsProviderLinks } from '../../../../lib/dnsProviders';
 
 type ClaimMethod = 'github' | 'website_badge' | 'dns';
 type BadgeStyle = 'shield' | 'flat-square' | 'featured' | 'directory';
@@ -44,7 +56,7 @@ export default function ClaimClient({
   const isSignedIn = !!userId;
   const hasGithub = repoUrl.includes('github.com');
   const [method, setMethod] = useState<ClaimMethod>(
-    hasGithub ? 'github' : 'website_badge'
+    hasGithub ? 'github' : 'website_badge',
   );
   const [websiteUrl, setWebsiteUrl] = useState(initialWebsite || '');
   const [loading, setLoading] = useState(false);
@@ -54,40 +66,59 @@ export default function ClaimClient({
   const [showCfToken, setShowCfToken] = useState(false);
   const [error, setError] = useState('');
   // Outcome reflects what the last verification attempt did
-  const [outcome, setOutcome] = useState<'official' | 'already-official' | 'pending' | null>(null);
+  const [outcome, setOutcome] = useState<
+    'official' | 'already-official' | 'pending' | null
+  >(null);
   const claimed = !!isOfficial || outcome === 'official';
-  const pendingReview = (!!hasPendingClaim || outcome === 'pending') && !claimed;
+  const pendingReview =
+    (!!hasPendingClaim || outcome === 'pending') && !claimed;
   // "Verified" (the reciprocal badge) is a separate, automatic signal — it's
   // never set by this form, only ever reflected from the server.
   const badgeVerified = !!reciprocalBadgeOk;
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
   const [badgeStyle, setBadgeStyle] = useState<BadgeStyle>(
-    hasGithub ? 'shield' : 'directory'
+    hasGithub ? 'shield' : 'directory',
   );
-  const [badgeMetric, setBadgeMetric] = useState<'status' | 'upvotes' | 'views' | 'installs'>('status');
+  const [badgeMetric, setBadgeMetric] = useState<
+    'status' | 'upvotes' | 'views' | 'installs'
+  >('status');
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
+  const baseUrl =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://allmcps.com';
   const personalizedToken = useMemo(
     () => (userId ? getClaimVerificationToken(serverId, userId) : null),
-    [serverId, userId]
+    [serverId, userId],
   );
   const dnsValue = personalizedToken ?? '';
-  const apexDomain = useMemo(() => getApexDomain(websiteUrl.trim()), [websiteUrl]);
-  const providerLinks = useMemo(() => getDnsProviderLinks(apexDomain), [apexDomain]);
+  const apexDomain = useMemo(
+    () => getApexDomain(websiteUrl.trim()),
+    [websiteUrl],
+  );
+  const providerLinks = useMemo(
+    () => getDnsProviderLinks(apexDomain),
+    [apexDomain],
+  );
 
   const queryParams = new URLSearchParams();
   if (badgeStyle !== 'shield') queryParams.set('style', badgeStyle);
   if (badgeMetric !== 'status') queryParams.set('metric', badgeMetric);
   if (badgeTheme !== 'dark') queryParams.set('theme', badgeTheme);
 
-  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  const queryString = queryParams.toString()
+    ? `?${queryParams.toString()}`
+    : '';
   const badgeSrc = `${baseUrl}/api/badge/${serverId}${queryString}`;
-  const badgeHeight = badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
+  const badgeHeight =
+    badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
 
   const badgeMarkdown = `[![AllMCPs](${badgeSrc})](${baseUrl}/mcp/${serverId})`;
   const badgeHtml = `<a href="${baseUrl}/mcp/${serverId}"><img src="${badgeSrc}" alt="AllMCPs" height="${badgeHeight}" /></a>`;
-  const metaTag = personalizedToken ? `<meta name="allmcps-verification" content="${personalizedToken}" />` : '';
-  
+  const metaTag = personalizedToken
+    ? `<meta name="allmcps-verification" content="${personalizedToken}" />`
+    : '';
+
   const githubVerifyMarkdown = userId
     ? `[![AllMCPs Verified](${badgeSrc})](${baseUrl}/mcp/${serverId}?verify=${userId})`
     : null;
@@ -95,9 +126,15 @@ export default function ClaimClient({
 
   const selectMethod = (next: ClaimMethod) => {
     setMethod(next);
-    if (next === 'github' && !REPO_BADGE_STYLES.some((s) => s.id === badgeStyle)) {
+    if (
+      next === 'github' &&
+      !REPO_BADGE_STYLES.some((s) => s.id === badgeStyle)
+    ) {
       setBadgeStyle('shield');
-    } else if (next === 'website_badge' && !SITE_BADGE_STYLES.some((s) => s.id === badgeStyle)) {
+    } else if (
+      next === 'website_badge' &&
+      !SITE_BADGE_STYLES.some((s) => s.id === badgeStyle)
+    ) {
       setBadgeStyle('directory');
     }
   };
@@ -109,7 +146,9 @@ export default function ClaimClient({
       await navigator.clipboard.writeText(text);
       toast.success(`${label} copied`);
     } catch {
-      toast.error('Could not copy', { description: 'Select the text and copy it manually.' });
+      toast.error('Could not copy', {
+        description: 'Select the text and copy it manually.',
+      });
     }
   };
 
@@ -127,7 +166,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
     try {
       await navigator.clipboard.writeText(agentClaimPromptText);
       toast.success('AI Agent Claim Prompt Copied!', {
-        description: 'Paste this prompt in Cursor, Claude Code, Windsurf, or Antigravity inside your project repo.',
+        description:
+          'Paste this prompt in Cursor, Claude Code, Windsurf, or Antigravity inside your project repo.',
       });
     } catch {
       toast.error('Could not copy automatically.');
@@ -153,17 +193,26 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         }),
       });
 
-      const data = (await res.json()) as { error?: string; message?: string; pending?: boolean };
+      const data = (await res.json()) as {
+        error?: string;
+        message?: string;
+        pending?: boolean;
+      };
 
       if (!res.ok) {
-        throw new Error(typeof data.error === 'string' ? data.error : 'Verification failed');
+        throw new Error(
+          typeof data.error === 'string' ? data.error : 'Verification failed',
+        );
       }
 
       const nextOutcome = data.pending ? 'pending' : 'official';
       setOutcome(nextOutcome);
-      toast.success(data.pending ? 'Submitted for review' : 'Ownership verified!', {
-        description: data.message,
-      });
+      toast.success(
+        data.pending ? 'Submitted for review' : 'Ownership verified!',
+        {
+          description: data.message,
+        },
+      );
     } catch (err: any) {
       const message = err?.message || 'Verification failed';
       setError(message);
@@ -196,10 +245,16 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
       });
       const data = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) {
-        throw new Error(typeof data.error === 'string' ? data.error : 'Could not save website');
+        throw new Error(
+          typeof data.error === 'string'
+            ? data.error
+            : 'Could not save website',
+        );
       }
       toast.success('Website saved', {
-        description: data.message || 'The reciprocal-badge check will pick it up automatically.',
+        description:
+          data.message ||
+          'The reciprocal-badge check will pick it up automatically.',
       });
     } catch (err: any) {
       const message = err?.message || 'Could not save website';
@@ -244,7 +299,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
       if (!res.ok) {
         throw new Error(
-          [data.error, data.hint].filter(Boolean).join(' ') || 'Cloudflare request failed'
+          [data.error, data.hint].filter(Boolean).join(' ') ||
+            'Cloudflare request failed',
         );
       }
 
@@ -273,11 +329,36 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
         }}
       >
-        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>✅</div>
-        <h2 style={{ marginBottom: '1rem', color: '#10b981', fontSize: '1.75rem', fontWeight: 800 }}>
-          {outcome === 'official' ? 'Ownership Verified & Active!' : 'Already confirmed'}
+        <div
+          style={{
+            fontSize: '4rem',
+            marginBottom: '1rem',
+            display: 'inline-block',
+          }}
+        >
+          ✅
+        </div>
+        <h2
+          style={{
+            marginBottom: '1rem',
+            color: '#10b981',
+            fontSize: '1.75rem',
+            fontWeight: 800,
+          }}
+        >
+          {outcome === 'official'
+            ? 'Ownership Verified & Active!'
+            : 'Already confirmed'}
         </h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 1.5rem' }}>
+        <p
+          style={{
+            color: 'var(--text-secondary)',
+            marginBottom: '1.5rem',
+            lineHeight: 1.6,
+            maxWidth: '540px',
+            margin: '0 auto 1.5rem',
+          }}
+        >
           {outcome === 'official'
             ? 'Your ownership proof was verified successfully. The listing is now officially claimed under your account with full editing access.'
             : "You're already the confirmed Official owner of this listing — nothing to review."}
@@ -298,11 +379,28 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             margin: '0 auto 2rem',
           }}
         >
-          <strong style={{ color: '#34d399', display: 'block', marginBottom: '0.25rem' }}>✨ Free Reciprocal Dofollow Backlinks:</strong>
-          To activate a dofollow backlink to your website, simply add the official AllMCPs badge to your website or README. Our automated background health checker detects it automatically!
+          <strong
+            style={{
+              color: '#34d399',
+              display: 'block',
+              marginBottom: '0.25rem',
+            }}
+          >
+            ✨ Free Reciprocal Dofollow Backlinks:
+          </strong>
+          To activate a dofollow backlink to your website, simply add the
+          official AllMCPs badge to your website or README. Our automated
+          background health checker detects it automatically!
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            justifyContent: 'center',
+          }}
+        >
           <Link
             href="/dashboard"
             style={{
@@ -362,11 +460,37 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
         }}
       >
-        <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'inline-block' }}>⏳</div>
-        <h2 style={{ marginBottom: '1rem', color: '#f59e0b', fontSize: '1.75rem', fontWeight: 800 }}>Pending admin review</h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '540px', margin: '0 auto 1.5rem' }}>
-          Your ownership proof was verified and is now waiting on a quick review from our team before the <strong>Official</strong> badge
-          and edit access go live. We'll email you as soon as it's approved.
+        <div
+          style={{
+            fontSize: '4rem',
+            marginBottom: '1rem',
+            display: 'inline-block',
+          }}
+        >
+          ⏳
+        </div>
+        <h2
+          style={{
+            marginBottom: '1rem',
+            color: '#f59e0b',
+            fontSize: '1.75rem',
+            fontWeight: 800,
+          }}
+        >
+          Pending admin review
+        </h2>
+        <p
+          style={{
+            color: 'var(--text-secondary)',
+            marginBottom: '1.5rem',
+            lineHeight: 1.6,
+            maxWidth: '540px',
+            margin: '0 auto 1.5rem',
+          }}
+        >
+          Your ownership proof was verified and is now waiting on a quick review
+          from our team before the <strong>Official</strong> badge and edit
+          access go live. We'll email you as soon as it's approved.
         </p>
         <div
           style={{
@@ -383,10 +507,27 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             margin: '0 auto 2rem',
           }}
         >
-          <strong style={{ color: '#34d399', display: 'block', marginBottom: '0.25rem' }}>✨ Earn Reciprocal Dofollow Backlinks:</strong>
-          Keep an AllMCPs badge live on your GitHub README or product website. When our automated health checker sees your live link, your website link on AllMCPs becomes a high-value dofollow backlink!
+          <strong
+            style={{
+              color: '#34d399',
+              display: 'block',
+              marginBottom: '0.25rem',
+            }}
+          >
+            ✨ Earn Reciprocal Dofollow Backlinks:
+          </strong>
+          Keep an AllMCPs badge live on your GitHub README or product website.
+          When our automated health checker sees your live link, your website
+          link on AllMCPs becomes a high-value dofollow backlink!
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            justifyContent: 'center',
+          }}
+        >
           <Link
             href={`/mcp/${serverId}`}
             style={{
@@ -436,7 +577,6 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      
       {/* Verification Status Banner Header */}
       <div
         style={{
@@ -455,8 +595,16 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           style={{
             padding: '1rem 1.15rem',
             borderRadius: '12px',
-            background: claimed ? 'rgba(16, 185, 129, 0.08)' : pendingReview ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
-            border: claimed ? '1px solid rgba(16, 185, 129, 0.3)' : pendingReview ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
+            background: claimed
+              ? 'rgba(16, 185, 129, 0.08)'
+              : pendingReview
+                ? 'rgba(245, 158, 11, 0.08)'
+                : 'var(--bg-muted)',
+            border: claimed
+              ? '1px solid rgba(16, 185, 129, 0.3)'
+              : pendingReview
+                ? '1px solid rgba(245, 158, 11, 0.3)'
+                : '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '0.85rem',
@@ -467,7 +615,11 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               width: '38px',
               height: '38px',
               borderRadius: '10px',
-              background: claimed ? 'rgba(16, 185, 129, 0.2)' : pendingReview ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              background: claimed
+                ? 'rgba(16, 185, 129, 0.2)'
+                : pendingReview
+                  ? 'rgba(245, 158, 11, 0.2)'
+                  : 'rgba(255, 255, 255, 0.05)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -478,13 +630,43 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             🛡️
           </div>
           <div>
-            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div
+              style={{
+                fontSize: '0.725rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Official Status
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: claimed ? '#10b981' : pendingReview ? '#f59e0b' : 'var(--text-primary)' }}>
-              {claimed ? '✓ Official' : pendingReview ? 'Pending admin review' : 'Not claimed'}
+            <div
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 800,
+                marginTop: '0.15rem',
+                color: claimed
+                  ? '#10b981'
+                  : pendingReview
+                    ? '#f59e0b'
+                    : 'var(--text-primary)',
+              }}
+            >
+              {claimed
+                ? '✓ Official'
+                : pendingReview
+                  ? 'Pending admin review'
+                  : 'Not claimed'}
             </div>
-            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <p
+              style={{
+                margin: '0.25rem 0 0 0',
+                fontSize: '0.775rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.4,
+              }}
+            >
               {claimed
                 ? 'Ownership confirmed and approved — you have edit access.'
                 : pendingReview
@@ -499,8 +681,16 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
           style={{
             padding: '1rem 1.15rem',
             borderRadius: '12px',
-            background: badgeVerified ? 'rgba(16, 185, 129, 0.08)' : websiteUrl ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-muted)',
-            border: badgeVerified ? '1px solid rgba(16, 185, 129, 0.3)' : websiteUrl ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
+            background: badgeVerified
+              ? 'rgba(16, 185, 129, 0.08)'
+              : websiteUrl
+                ? 'rgba(245, 158, 11, 0.08)'
+                : 'var(--bg-muted)',
+            border: badgeVerified
+              ? '1px solid rgba(16, 185, 129, 0.3)'
+              : websiteUrl
+                ? '1px solid rgba(245, 158, 11, 0.3)'
+                : '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '0.85rem',
@@ -511,7 +701,11 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               width: '38px',
               height: '38px',
               borderRadius: '10px',
-              background: badgeVerified ? 'rgba(16, 185, 129, 0.2)' : websiteUrl ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              background: badgeVerified
+                ? 'rgba(16, 185, 129, 0.2)'
+                : websiteUrl
+                  ? 'rgba(245, 158, 11, 0.2)'
+                  : 'rgba(255, 255, 255, 0.05)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -522,13 +716,43 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             🌐
           </div>
           <div>
-            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div
+              style={{
+                fontSize: '0.725rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Verified (reciprocal badge)
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.15rem', color: badgeVerified ? '#10b981' : websiteUrl ? '#f59e0b' : 'var(--text-secondary)' }}>
-              {badgeVerified ? '✓ Badge detected' : websiteUrl ? 'Badge not detected yet' : 'No Website Attached'}
+            <div
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 800,
+                marginTop: '0.15rem',
+                color: badgeVerified
+                  ? '#10b981'
+                  : websiteUrl
+                    ? '#f59e0b'
+                    : 'var(--text-secondary)',
+              }}
+            >
+              {badgeVerified
+                ? '✓ Badge detected'
+                : websiteUrl
+                  ? 'Badge not detected yet'
+                  : 'No Website Attached'}
             </div>
-            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <p
+              style={{
+                margin: '0.25rem 0 0 0',
+                fontSize: '0.775rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.4,
+              }}
+            >
               {badgeVerified
                 ? `Badge live on ${websiteUrl} — automatically rechecked.`
                 : websiteUrl
@@ -553,7 +777,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
       >
         {/* STEP 1: Select Method */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              marginBottom: '1rem',
+            }}
+          >
             <span
               style={{
                 width: '28px',
@@ -570,7 +801,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             >
               1
             </span>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+            <h2
+              style={{
+                fontSize: '1.2rem',
+                fontWeight: 700,
+                margin: 0,
+                color: 'var(--text-primary)',
+              }}
+            >
               Choose Verification Method
             </h2>
           </div>
@@ -589,26 +827,65 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 style={{
                   padding: '1.1rem 1.25rem',
                   borderRadius: '12px',
-                  border: method === 'github' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                  background: method === 'github' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-muted)',
+                  border:
+                    method === 'github'
+                      ? '2px solid var(--accent-color)'
+                      : '1px solid var(--border-color)',
+                  background:
+                    method === 'github'
+                      ? 'rgba(var(--accent-rgb), 0.12)'
+                      : 'var(--bg-muted)',
                   textAlign: 'left',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   position: 'relative',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '0.4rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: 'var(--text-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                    }}
+                  >
                     🐙 GitHub README
                   </span>
                   {claimed && (
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: '#10b981',
+                        background: 'rgba(16,185,129,0.15)',
+                        padding: '0.1rem 0.45rem',
+                        borderRadius: '999px',
+                      }}
+                    >
                       ✓ Official
                     </span>
                   )}
                 </div>
-                <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  Proves repo ownership — grants the Official badge &amp; edit access after a quick admin review.
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '0.775rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Proves repo ownership — grants the Official badge &amp; edit
+                  access after a quick admin review.
                 </p>
               </button>
             )}
@@ -619,25 +896,64 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               style={{
                 padding: '1.1rem 1.25rem',
                 borderRadius: '12px',
-                border: method === 'website_badge' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                background: method === 'website_badge' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-muted)',
+                border:
+                  method === 'website_badge'
+                    ? '2px solid var(--accent-color)'
+                    : '1px solid var(--border-color)',
+                background:
+                  method === 'website_badge'
+                    ? 'rgba(var(--accent-rgb), 0.12)'
+                    : 'var(--bg-muted)',
                 textAlign: 'left',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.4rem',
+                }}
+              >
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: '0.95rem',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                  }}
+                >
                   🌐 Website Badge / Tag
                 </span>
                 {claimed && method === 'website_badge' && (
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      color: '#10b981',
+                      background: 'rgba(16,185,129,0.15)',
+                      padding: '0.1rem 0.45rem',
+                      borderRadius: '999px',
+                    }}
+                  >
                     ✓ Official
                   </span>
                 )}
               </div>
-              <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                Add a personalized meta tag to your site to prove ownership — grants the Official badge after admin review.
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.775rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.45,
+                }}
+              >
+                Add a personalized meta tag to your site to prove ownership —
+                grants the Official badge after admin review.
               </p>
             </button>
 
@@ -647,33 +963,84 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               style={{
                 padding: '1.1rem 1.25rem',
                 borderRadius: '12px',
-                border: method === 'dns' ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                background: method === 'dns' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-muted)',
+                border:
+                  method === 'dns'
+                    ? '2px solid var(--accent-color)'
+                    : '1px solid var(--border-color)',
+                background:
+                  method === 'dns'
+                    ? 'rgba(var(--accent-rgb), 0.12)'
+                    : 'var(--bg-muted)',
                 textAlign: 'left',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.4rem',
+                }}
+              >
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: '0.95rem',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                  }}
+                >
                   ⚡ DNS TXT Record
                 </span>
                 {claimed && method === 'dns' && (
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      color: '#10b981',
+                      background: 'rgba(16,185,129,0.15)',
+                      padding: '0.1rem 0.45rem',
+                      borderRadius: '999px',
+                    }}
+                  >
                     ✓ Official
                   </span>
                 )}
               </div>
-              <p style={{ margin: 0, fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                Publish a TXT record on your domain DNS to prove ownership — reviewed by our team.
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.775rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.45,
+                }}
+              >
+                Publish a TXT record on your domain DNS to prove ownership —
+                reviewed by our team.
               </p>
             </button>
           </div>
         </div>
 
         {/* STEP 2: Configure & Copy Snippet */}
-        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+        <div
+          style={{
+            borderTop: '1px solid var(--border-color)',
+            paddingTop: '1.75rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              marginBottom: '1.25rem',
+            }}
+          >
             <span
               style={{
                 width: '28px',
@@ -690,7 +1057,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             >
               2
             </span>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+            <h2
+              style={{
+                fontSize: '1.2rem',
+                fontWeight: 700,
+                margin: 0,
+                color: 'var(--text-primary)',
+              }}
+            >
               Follow Instructions &amp; Copy Code
             </h2>
           </div>
@@ -714,8 +1088,16 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>
                   Official ownership already confirmed
                 </strong>
-                <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.785rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  You don't need to repeat this unless your repository or DNS settings change.
+                <p
+                  style={{
+                    margin: '0.15rem 0 0 0',
+                    fontSize: '0.785rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  You don't need to repeat this unless your repository or DNS
+                  settings change.
                 </p>
               </div>
             </div>
@@ -723,9 +1105,30 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
           {/* Website URL Field for Website / DNS methods */}
           {(method === 'website_badge' || method === 'dns') && (
-            <div style={{ marginBottom: '1.5rem', padding: '1.15rem', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-muted)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div
+              style={{
+                marginBottom: '1.5rem',
+                padding: '1.15rem',
+                borderRadius: '12px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-muted)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   Product Website URL
                 </label>
                 {claimed && (
@@ -748,8 +1151,16 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 onChange={(e) => setWebsiteUrl(e.target.value)}
                 style={{ width: '100%' }}
               />
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem', marginBottom: 0 }}>
-                This is the website address that will receive the reciprocal dofollow backlink on AllMCPs.
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  marginTop: '0.4rem',
+                  marginBottom: 0,
+                }}
+              >
+                This is the website address that will receive the reciprocal
+                dofollow backlink on AllMCPs.
               </p>
             </div>
           )}
@@ -760,17 +1171,37 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               {/* AI Agent Banner Box */}
               <div
                 style={{
-                  background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
+                  background:
+                    'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
                   border: '1px solid rgba(var(--accent-rgb), 0.3)',
                   borderRadius: '12px',
                   padding: '1.1rem 1.25rem',
                   marginBottom: '1.5rem',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.925rem' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontWeight: 700,
+                      color: 'var(--accent-color)',
+                      fontSize: '0.925rem',
+                    }}
+                  >
                     <Sparkles size={18} />
-                    <span>Have an AI Agent claim &amp; verify this for you!</span>
+                    <span>
+                      Have an AI Agent claim &amp; verify this for you!
+                    </span>
                   </div>
                   {isSignedIn ? (
                     <button
@@ -813,24 +1244,73 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                     </a>
                   )}
                 </div>
-                <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  {isSignedIn
-                    ? <>Copy this prompt into <strong>Cursor</strong>, <strong>Claude Code</strong>, <strong>Windsurf</strong>, or <strong>Antigravity</strong> inside your codebase. The agent will add your personalized badge and push it automatically.</>
-                    : <>Sign in first — the prompt embeds a verification token tied to your account, so it only works once you&apos;re signed in.</>}
+                <p
+                  style={{
+                    margin: '0.4rem 0 0 0',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {isSignedIn ? (
+                    <>
+                      Copy this prompt into <strong>Cursor</strong>,{' '}
+                      <strong>Claude Code</strong>, <strong>Windsurf</strong>,
+                      or <strong>Antigravity</strong> inside your codebase. The
+                      agent will add your personalized badge and push it
+                      automatically.
+                    </>
+                  ) : (
+                    <>
+                      Sign in first — the prompt embeds a verification token
+                      tied to your account, so it only works once you&apos;re
+                      signed in.
+                    </>
+                  )}
                 </p>
               </div>
 
               {/* Badge Configurator */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
+                <h3
+                  style={{
+                    fontSize: '0.95rem',
+                    fontWeight: 700,
+                    marginBottom: '0.75rem',
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   1. Customize your README badge:
                 </h3>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '1.25rem',
+                  }}
+                >
                   {/* Style */}
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Style:</span>
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                        display: 'block',
+                        marginBottom: '0.35rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Style:
+                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.4rem',
+                        flexWrap: 'wrap',
+                      }}
+                    >
                       {REPO_BADGE_STYLES.map((s) => (
                         <button
                           key={s.id}
@@ -840,8 +1320,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                             padding: '0.3rem 0.65rem',
                             borderRadius: '999px',
                             border: '1px solid var(--border-color)',
-                            background: badgeStyle === s.id ? 'rgba(0,229,255,0.15)' : 'transparent',
-                            color: badgeStyle === s.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                            background:
+                              badgeStyle === s.id
+                                ? 'rgba(0,229,255,0.15)'
+                                : 'transparent',
+                            color:
+                              badgeStyle === s.id
+                                ? 'var(--accent-color)'
+                                : 'var(--text-primary)',
                             cursor: 'pointer',
                             fontSize: '0.75rem',
                             fontWeight: badgeStyle === s.id ? 700 : 500,
@@ -855,8 +1341,24 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
                   {/* Metric */}
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Displayed Metric:</span>
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                        display: 'block',
+                        marginBottom: '0.35rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Displayed Metric:
+                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.4rem',
+                        flexWrap: 'wrap',
+                      }}
+                    >
                       {[
                         { id: 'status', label: 'Status' },
                         { id: 'upvotes', label: 'Upvotes' },
@@ -871,8 +1373,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                             padding: '0.3rem 0.65rem',
                             borderRadius: '999px',
                             border: '1px solid var(--border-color)',
-                            background: badgeMetric === m.id ? 'rgba(0,229,255,0.15)' : 'transparent',
-                            color: badgeMetric === m.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                            background:
+                              badgeMetric === m.id
+                                ? 'rgba(0,229,255,0.15)'
+                                : 'transparent',
+                            color:
+                              badgeMetric === m.id
+                                ? 'var(--accent-color)'
+                                : 'var(--text-primary)',
                             cursor: 'pointer',
                             fontSize: '0.75rem',
                             fontWeight: badgeMetric === m.id ? 700 : 500,
@@ -886,8 +1394,24 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
                   {/* Theme */}
                   <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Theme:</span>
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                        display: 'block',
+                        marginBottom: '0.35rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Theme:
+                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.4rem',
+                        flexWrap: 'wrap',
+                      }}
+                    >
                       {(['dark', 'light'] as const).map((t) => (
                         <button
                           key={t}
@@ -897,7 +1421,10 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                             padding: '0.3rem 0.65rem',
                             borderRadius: '999px',
                             border: '1px solid var(--border-color)',
-                            background: badgeTheme === t ? 'rgba(0,229,255,0.15)' : 'transparent',
+                            background:
+                              badgeTheme === t
+                                ? 'rgba(0,229,255,0.15)'
+                                : 'transparent',
                             color: 'var(--text-primary)',
                             cursor: 'pointer',
                             fontSize: '0.75rem',
@@ -924,9 +1451,21 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                     marginBottom: '1.25rem',
                   }}
                 >
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Preview:</span>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Preview:
+                  </span>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={badgeSrc} alt="GitHub badge preview" height={badgeHeight} />
+                  <img
+                    src={badgeSrc}
+                    alt="GitHub badge preview"
+                    height={badgeHeight}
+                  />
                 </div>
               </div>
 
@@ -935,7 +1474,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 <SignInGate href={signInHref} />
               ) : (
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                  <h3
+                    style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      marginBottom: '0.5rem',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     2. Add code to your <code>README.md</code>:
                   </h3>
                   <CopyBlock
@@ -944,8 +1490,16 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                     language="markdown"
                     toastMessage="README badge snippet copied"
                   />
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.45 }}>
-                    🔒 This snippet includes your unique verification signature. It links directly to your project on AllMCPs.
+                  <p
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                      marginTop: '0.5rem',
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    🔒 This snippet includes your unique verification signature.
+                    It links directly to your project on AllMCPs.
                   </p>
                 </div>
               )}
@@ -960,15 +1514,46 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               ) : (
                 <>
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
+                    <h3
+                      style={{
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                        marginBottom: '0.75rem',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
                       1. Customize website badge:
                     </h3>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'repeat(auto-fit, minmax(180px, 1fr))',
+                        gap: '1rem',
+                        marginBottom: '1.25rem',
+                      }}
+                    >
                       {/* Style */}
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Style:</span>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
+                            display: 'block',
+                            marginBottom: '0.35rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Style:
+                        </span>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '0.4rem',
+                            flexWrap: 'wrap',
+                          }}
+                        >
                           {SITE_BADGE_STYLES.map((s) => (
                             <button
                               key={s.id}
@@ -978,8 +1563,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                                 padding: '0.35rem 0.75rem',
                                 borderRadius: '999px',
                                 border: '1px solid var(--border-color)',
-                                background: badgeStyle === s.id ? 'rgba(0,229,255,0.15)' : 'transparent',
-                                color: badgeStyle === s.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                                background:
+                                  badgeStyle === s.id
+                                    ? 'rgba(0,229,255,0.15)'
+                                    : 'transparent',
+                                color:
+                                  badgeStyle === s.id
+                                    ? 'var(--accent-color)'
+                                    : 'var(--text-primary)',
                                 cursor: 'pointer',
                                 fontSize: '0.8rem',
                                 fontWeight: badgeStyle === s.id ? 700 : 500,
@@ -993,8 +1584,24 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
                       {/* Metric */}
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Metric:</span>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
+                            display: 'block',
+                            marginBottom: '0.35rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Metric:
+                        </span>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '0.4rem',
+                            flexWrap: 'wrap',
+                          }}
+                        >
                           {[
                             { id: 'status', label: 'Status' },
                             { id: 'upvotes', label: 'Upvotes' },
@@ -1009,8 +1616,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                                 padding: '0.35rem 0.75rem',
                                 borderRadius: '999px',
                                 border: '1px solid var(--border-color)',
-                                background: badgeMetric === m.id ? 'rgba(0,229,255,0.15)' : 'transparent',
-                                color: badgeMetric === m.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                                background:
+                                  badgeMetric === m.id
+                                    ? 'rgba(0,229,255,0.15)'
+                                    : 'transparent',
+                                color:
+                                  badgeMetric === m.id
+                                    ? 'var(--accent-color)'
+                                    : 'var(--text-primary)',
                                 cursor: 'pointer',
                                 fontSize: '0.8rem',
                                 fontWeight: badgeMetric === m.id ? 700 : 500,
@@ -1024,8 +1637,24 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
                       {/* Theme */}
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>Theme:</span>
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
+                            display: 'block',
+                            marginBottom: '0.35rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Theme:
+                        </span>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '0.4rem',
+                            flexWrap: 'wrap',
+                          }}
+                        >
                           {(['dark', 'light'] as const).map((t) => (
                             <button
                               key={t}
@@ -1035,7 +1664,10 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                                 padding: '0.35rem 0.75rem',
                                 borderRadius: '999px',
                                 border: '1px solid var(--border-color)',
-                                background: badgeTheme === t ? 'rgba(0,229,255,0.15)' : 'transparent',
+                                background:
+                                  badgeTheme === t
+                                    ? 'rgba(0,229,255,0.15)'
+                                    : 'transparent',
                                 color: 'var(--text-primary)',
                                 cursor: 'pointer',
                                 fontSize: '0.8rem',
@@ -1053,7 +1685,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       style={{
                         padding: '1rem 1.25rem',
                         borderRadius: '10px',
-                        background: badgeTheme === 'light' ? '#ffffff' : '#090d16',
+                        background:
+                          badgeTheme === 'light' ? '#ffffff' : '#090d16',
                         border: '1px solid var(--border-color)',
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -1063,26 +1696,78 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={badgeSrc} alt="AllMCPs badge preview" height={badgeHeight} />
+                      <img
+                        src={badgeSrc}
+                        alt="AllMCPs badge preview"
+                        height={badgeHeight}
+                      />
                     </div>
                   </div>
 
                   <div style={{ marginBottom: '1.25rem' }}>
-                    <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>Markdown format:</h3>
-                    <CopyBlock code={badgeMarkdown} title="README.md" language="markdown" toastMessage="Markdown badge copied" />
+                    <h3
+                      style={{
+                        marginBottom: '0.5rem',
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Markdown format:
+                    </h3>
+                    <CopyBlock
+                      code={badgeMarkdown}
+                      title="README.md"
+                      language="markdown"
+                      toastMessage="Markdown badge copied"
+                    />
                   </div>
 
                   <div style={{ marginBottom: '1.25rem' }}>
-                    <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>HTML format:</h3>
-                    <CopyBlock code={badgeHtml} title="badge.html" language="html" toastMessage="HTML badge copied" />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem', lineHeight: 1.5 }}>
-                      This badge includes a reciprocal link back to AllMCPs. Keep it live to qualify for a dofollow backlink to your site.
+                    <h3
+                      style={{
+                        marginBottom: '0.5rem',
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      HTML format:
+                    </h3>
+                    <CopyBlock
+                      code={badgeHtml}
+                      title="badge.html"
+                      language="html"
+                      toastMessage="HTML badge copied"
+                    />
+                    <p
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                        marginTop: '0.4rem',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      This badge includes a reciprocal link back to AllMCPs.
+                      Keep it live to qualify for a dofollow backlink to your
+                      site.
                     </p>
                   </div>
 
                   <div style={{ marginBottom: '1rem' }}>
-                    <h3 style={{ marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>Or HTML Meta Tag (alternative to badge):</h3>
-                    <CopyBlock code={metaTag} title="index.html" language="html" toastMessage="Meta tag copied" />
+                    <h3
+                      style={{
+                        marginBottom: '0.5rem',
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Or HTML Meta Tag (alternative to badge):
+                    </h3>
+                    <CopyBlock
+                      code={metaTag}
+                      title="index.html"
+                      language="html"
+                      toastMessage="Meta tag copied"
+                    />
                   </div>
                 </>
               )}
@@ -1095,9 +1780,26 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               {!isSignedIn ? (
                 <SignInGate href={signInHref} />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0, lineHeight: 1.6 }}>
-                    Publish the following TXT record on <strong style={{ color: 'var(--text-primary)' }}>{apexDomain || 'your domain DNS'}</strong>:
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1.25rem',
+                  }}
+                >
+                  <p
+                    style={{
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.875rem',
+                      margin: 0,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    Publish the following TXT record on{' '}
+                    <strong style={{ color: 'var(--text-primary)' }}>
+                      {apexDomain || 'your domain DNS'}
+                    </strong>
+                    :
                   </p>
 
                   {/* Record fields */}
@@ -1111,15 +1813,30 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       background: 'var(--bg-muted)',
                     }}
                   >
-                    <DnsFieldRow label="Type" value="TXT" onCopy={() => copyText('TXT', 'Type')} />
+                    <DnsFieldRow
+                      label="Type"
+                      value="TXT"
+                      onCopy={() => copyText('TXT', 'Type')}
+                    />
                     <DnsFieldRow
                       label="Name"
                       value="@"
-                      hint={apexDomain ? `or ${apexDomain}` : 'apex / root host'}
+                      hint={
+                        apexDomain ? `or ${apexDomain}` : 'apex / root host'
+                      }
                       onCopy={() => copyText('@', 'Name')}
                     />
-                    <DnsFieldRow label="Value" value={dnsValue} mono onCopy={() => copyText(dnsValue, 'TXT value')} />
-                    <DnsFieldRow label="TTL" value="Auto / 3600" onCopy={() => copyText('3600', 'TTL')} />
+                    <DnsFieldRow
+                      label="Value"
+                      value={dnsValue}
+                      mono
+                      onCopy={() => copyText(dnsValue, 'TXT value')}
+                    />
+                    <DnsFieldRow
+                      label="TTL"
+                      value="Auto / 3600"
+                      onCopy={() => copyText('3600', 'TTL')}
+                    />
                   </div>
 
                   {/* Cloudflare helper */}
@@ -1128,18 +1845,49 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       padding: '1.15rem',
                       borderRadius: '12px',
                       border: '1px solid rgba(249,115,22,0.35)',
-                      background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(59,130,246,0.06))',
+                      background:
+                        'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(59,130,246,0.06))',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        marginBottom: '0.4rem',
+                      }}
+                    >
                       <Cloud size={18} color="#f97316" />
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>Cloudflare (1-Click Setup)</h4>
+                      <h4
+                        style={{
+                          margin: 0,
+                          fontSize: '0.95rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Cloudflare (1-Click Setup)
+                      </h4>
                     </div>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '0.85rem', lineHeight: 1.5 }}>
-                      Open Cloudflare DNS and paste the fields above, or use a scoped API token to auto-create the TXT record in 1 click.
+                    <p
+                      style={{
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.8rem',
+                        marginBottom: '0.85rem',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Open Cloudflare DNS and paste the fields above, or use a
+                      scoped API token to auto-create the TXT record in 1 click.
                     </p>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: showCfToken ? '0.85rem' : 0 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem',
+                        marginBottom: showCfToken ? '0.85rem' : 0,
+                      }}
+                    >
                       <a
                         href="https://dash.cloudflare.com/?to=/:account/:zone/dns/records"
                         target="_blank"
@@ -1156,7 +1904,8 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                         onClick={() => {
                           void copyText(dnsValue, 'TXT value');
                           toast.info('TXT value copied', {
-                            description: 'Paste it as Content when adding the record in Cloudflare.',
+                            description:
+                              'Paste it as Content when adding the record in Cloudflare.',
                           });
                         }}
                       >
@@ -1165,17 +1914,36 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        style={{ fontSize: '0.85rem', padding: '0.55rem 0.9rem' }}
+                        style={{
+                          fontSize: '0.85rem',
+                          padding: '0.55rem 0.9rem',
+                        }}
                         onClick={() => setShowCfToken((v) => !v)}
                       >
-                        {showCfToken ? 'Hide API one-click' : 'One-click with API token'}
+                        {showCfToken
+                          ? 'Hide API one-click'
+                          : 'One-click with API token'}
                       </button>
                     </div>
 
                     {showCfToken && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
-                        <label style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                          Token with template <strong>Edit zone DNS</strong> limited to {apexDomain || 'this domain'}:
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.6rem',
+                          marginTop: '0.75rem',
+                        }}
+                      >
+                        <label
+                          style={{
+                            fontSize: '0.775rem',
+                            color: 'var(--text-secondary)',
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          Token with template <strong>Edit zone DNS</strong>{' '}
+                          limited to {apexDomain || 'this domain'}:
                         </label>
                         <input
                           type="password"
@@ -1184,7 +1952,10 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                           placeholder="Cloudflare API Token"
                           value={cfToken}
                           onChange={(e) => setCfToken(e.target.value)}
-                          style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem' }}
+                          style={{
+                            fontFamily: 'ui-monospace, monospace',
+                            fontSize: '0.85rem',
+                          }}
                         />
                         <button
                           type="button"
@@ -1198,7 +1969,9 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                             opacity: cfLoading ? 0.7 : 1,
                           }}
                         >
-                          {cfLoading ? 'Adding record…' : 'Add TXT record in Cloudflare'}
+                          {cfLoading
+                            ? 'Adding record…'
+                            : 'Add TXT record in Cloudflare'}
                         </button>
                       </div>
                     )}
@@ -1206,10 +1979,24 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
 
                   {/* Other Providers */}
                   <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: 'var(--text-secondary)',
+                        display: 'block',
+                        marginBottom: '0.5rem',
+                      }}
+                    >
                       Other Provider Quick-Links:
                     </span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem',
+                      }}
+                    >
                       {providerLinks
                         .filter((p) => p.id !== 'cloudflare')
                         .map((p) => (
@@ -1248,8 +2035,20 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
         </div>
 
         {/* STEP 3: Confirm & Claim */}
-        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+        <div
+          style={{
+            borderTop: '1px solid var(--border-color)',
+            paddingTop: '1.75rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              marginBottom: '1.25rem',
+            }}
+          >
             <span
               style={{
                 width: '28px',
@@ -1266,7 +2065,14 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
             >
               3
             </span>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+            <h2
+              style={{
+                fontSize: '1.2rem',
+                fontWeight: 700,
+                margin: 0,
+                color: 'var(--text-primary)',
+              }}
+            >
               Confirm &amp; Run Verification
             </h2>
           </div>
@@ -1284,9 +2090,27 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               gap: '0.75rem',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Selected Action:</span>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--accent-color)' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+              }}
+            >
+              <span
+                style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}
+              >
+                Selected Action:
+              </span>
+              <span
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  color: 'var(--accent-color)',
+                }}
+              >
                 {method === 'github'
                   ? 'Verify GitHub Repository README'
                   : method === 'website_badge'
@@ -1295,9 +2119,28 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Target URL:</span>
-              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+              }}
+            >
+              <span
+                style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}
+              >
+                Target URL:
+              </span>
+              <span
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'monospace',
+                }}
+              >
                 {method === 'github' ? repoUrl : websiteUrl || 'Not set yet'}
               </span>
             </div>
@@ -1334,7 +2177,9 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               style={{
                 width: '100%',
                 padding: '1.05rem',
-                background: loading ? '#374151' : 'var(--brand-gradient, var(--accent-color))',
+                background: loading
+                  ? '#374151'
+                  : 'var(--brand-gradient, var(--accent-color))',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '10px',
@@ -1345,7 +2190,9 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                boxShadow: loading ? 'none' : '0 4px 16px rgba(0, 229, 255, 0.25)',
+                boxShadow: loading
+                  ? 'none'
+                  : '0 4px 16px rgba(0, 229, 255, 0.25)',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -1354,7 +2201,9 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
               ) : (
                 <>
                   <ShieldCheck size={20} />
-                  {alreadyOfficial ? 'Re-verify Ownership' : 'Submit Ownership Proof'}
+                  {alreadyOfficial
+                    ? 'Re-verify Ownership'
+                    : 'Submit Ownership Proof'}
                 </>
               )}
             </button>
@@ -1409,7 +2258,15 @@ function DnsFieldRow({
         alignItems: 'center',
       }}
     >
-      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <span
+        style={{
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          color: 'var(--text-secondary)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+        }}
+      >
         {label}
       </span>
       <div style={{ minWidth: 0 }}>
@@ -1419,13 +2276,17 @@ function DnsFieldRow({
             fontSize: mono ? '0.75rem' : '0.85rem',
             color: 'var(--text-primary)',
             wordBreak: 'break-all',
-            fontFamily: mono ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : 'inherit',
+            fontFamily: mono
+              ? 'ui-monospace, SFMono-Regular, Menlo, monospace'
+              : 'inherit',
           }}
         >
           {value}
         </code>
         {hint ? (
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{hint}</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+            {hint}
+          </span>
         ) : null}
       </div>
       <button

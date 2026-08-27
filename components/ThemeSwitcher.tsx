@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { Sun, Moon, Monitor, Check } from 'lucide-react';
+import { Check, Monitor, Moon, Sun } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { trackFeatureUse } from '../lib/gtag';
 
 type ThemeMode = 'dark' | 'light' | 'system';
@@ -22,7 +22,9 @@ function readStoredTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'system';
   try {
     const stored = localStorage.getItem('allmcps-theme');
-    return stored === 'dark' || stored === 'light' || stored === 'system' ? stored : 'system';
+    return stored === 'dark' || stored === 'light' || stored === 'system'
+      ? stored
+      : 'system';
   } catch {
     return 'system';
   }
@@ -52,7 +54,8 @@ export function ThemeSwitcher() {
       let effectiveTheme: 'dark' | 'light' = 'dark';
 
       if (mode === 'system') {
-        effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)')
+          .matches
           ? 'dark'
           : 'light';
       } else {
@@ -80,7 +83,10 @@ export function ThemeSwitcher() {
     if (!isOpen) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -120,7 +126,11 @@ export function ThemeSwitcher() {
   return (
     <div className="theme-switcher-container" ref={containerRef}>
       {isOpen && (
-        <div className="theme-switcher-popover" role="menu" aria-label="Select theme mode">
+        <div
+          className="theme-switcher-popover"
+          role="menu"
+          aria-label="Select theme mode"
+        >
           <button
             type="button"
             className={`theme-switcher-option ${themeMode === 'light' ? 'is-active' : ''}`}

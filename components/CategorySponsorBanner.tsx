@@ -1,8 +1,7 @@
 'use client';
 
-import React from 'react';
+import { Crown, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { Sparkles, Crown } from 'lucide-react';
 
 interface CategorySponsorBannerProps {
   categoryName: string;
@@ -10,7 +9,10 @@ interface CategorySponsorBannerProps {
   sponsor?: { id: string; name: string; until: string } | null;
 }
 
-export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsorBannerProps) {
+export function CategorySponsorBanner({
+  categoryName,
+  sponsor,
+}: CategorySponsorBannerProps) {
   return (
     <div
       className="surface"
@@ -28,7 +30,15 @@ export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsor
         gap: '1rem',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '260px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          flex: 1,
+          minWidth: '260px',
+        }}
+      >
         <div
           style={{
             width: '40px',
@@ -47,33 +57,94 @@ export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsor
         </div>
         {sponsor ? (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--accent-color)' }}>
-                Category Sponsor · until {new Date(sponsor.until).toLocaleDateString()}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                marginBottom: '0.15rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-color)',
+                }}
+              >
+                Category Sponsor · until{' '}
+                {new Date(sponsor.until).toLocaleDateString()}
               </span>
             </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, fontWeight: 600 }}>
+            <p
+              style={{
+                fontSize: '0.875rem',
+                color: 'var(--text-primary)',
+                margin: 0,
+                fontWeight: 600,
+              }}
+            >
               <Link href={`/mcp/${sponsor.id}`} style={{ color: 'inherit' }}>
                 {sponsor.name}
               </Link>{' '}
               is pinned #1 in {categoryName}
             </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
-              The slot reopens when the sponsorship expires — only one sponsor runs per category at a time.
+            <p
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                margin: '0.15rem 0 0',
+                lineHeight: 1.4,
+              }}
+            >
+              The slot reopens when the sponsorship expires — only one sponsor
+              runs per category at a time.
             </p>
           </div>
         ) : (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--accent-color)' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                marginBottom: '0.15rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-color)',
+                }}
+              >
                 Category Sponsorship Available · $18 for 7 Days
               </span>
             </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', margin: 0, fontWeight: 600 }}>
+            <p
+              style={{
+                fontSize: '0.875rem',
+                color: 'var(--text-primary)',
+                margin: 0,
+                fontWeight: 600,
+              }}
+            >
               Sponsor {categoryName} on AllMCPs
             </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
-              Get your MCP server pinned at the top of {categoryName} &amp; featured in category discovery.
+            <p
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                margin: '0.15rem 0 0',
+                lineHeight: 1.4,
+              }}
+            >
+              Get your MCP server pinned at the top of {categoryName} &amp;
+              featured in category discovery.
             </p>
           </div>
         )}
@@ -83,7 +154,12 @@ export function CategorySponsorBanner({ categoryName, sponsor }: CategorySponsor
         <Link
           href={`/pricing?sku=category_sponsor_7d&category=${encodeURIComponent(categoryName)}`}
           className="btn btn-sm btn-primary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            whiteSpace: 'nowrap',
+          }}
         >
           <Sparkles size={14} /> Sponsor for $18 →
         </Link>

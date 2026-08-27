@@ -1,8 +1,8 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { ProtocolInspectorTool } from '../../../components/tools/ProtocolInspectorTool';
+import type { Metadata } from 'next';
+import Link from 'next/link';
 import { LiveMcpInspector } from '../../../components/tools/LiveMcpInspector';
+import { ProtocolInspectorTool } from '../../../components/tools/ProtocolInspectorTool';
 import { FaqSection } from '../../../components/ui/FaqSection';
 
 export const metadata: Metadata = {
@@ -11,7 +11,14 @@ export const metadata: Metadata = {
     'Test, validate, and debug Model Context Protocol (MCP) JSON-RPC messages, tool outputs, resources, and image base64 blobs with a live client renderer.',
   alternates: { canonical: 'https://allmcps.com/tools/protocol-inspector' },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Free MCP Protocol Inspector & Response Debugger | AllMCPs',
     description:
       'Inspect MCP JSON-RPC 2.0 payloads, validate schema compliance, catch protocol errors, and preview client rendering.',
@@ -33,7 +40,11 @@ const webAppJsonLd = {
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'All',
   isAccessibleForFree: true,
-  provider: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
+  provider: {
+    '@type': 'Organization',
+    name: 'AllMCPs',
+    url: 'https://allmcps.com',
+  },
   offers: {
     '@type': 'Offer',
     price: '0',
@@ -47,9 +58,24 @@ const breadcrumbJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-    { '@type': 'ListItem', position: 2, name: 'Tools', item: 'https://allmcps.com/tools' },
-    { '@type': 'ListItem', position: 3, name: 'Protocol Inspector', item: 'https://allmcps.com/tools/protocol-inspector' },
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: 'https://allmcps.com',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Tools',
+      item: 'https://allmcps.com/tools',
+    },
+    {
+      '@type': 'ListItem',
+      position: 3,
+      name: 'Protocol Inspector',
+      item: 'https://allmcps.com/tools/protocol-inspector',
+    },
   ],
 };
 
@@ -111,10 +137,18 @@ export default function ProtocolInspectorPage() {
       <div className="page-shell-inner">
         <nav aria-label="Breadcrumb">
           <ol className="breadcrumb" style={{ marginBottom: '1.5rem' }}>
-            <li><Link href="/">Home</Link></li>
-            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
-            <li><Link href="/tools">Tools</Link></li>
-            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li>
+              <Link href="/">Home</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
+            <li>
+              <Link href="/tools">Tools</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
             <li className="breadcrumb-current">Protocol Inspector</li>
           </ol>
         </nav>
@@ -123,8 +157,9 @@ export default function ProtocolInspectorPage() {
             MCP Protocol Inspector &amp; Response Debugger
           </h1>
           <p className="text-lead" style={{ marginBottom: '2rem' }}>
-            Connect to a live MCP server to list and call its tools, or validate Model Context Protocol (MCP)
-            JSON-RPC 2.0 payloads, verify content block schemas, catch protocol errors, and preview how AI clients
+            Connect to a live MCP server to list and call its tools, or validate
+            Model Context Protocol (MCP) JSON-RPC 2.0 payloads, verify content
+            block schemas, catch protocol errors, and preview how AI clients
             display execution results.
           </p>
 
@@ -132,30 +167,75 @@ export default function ProtocolInspectorPage() {
             <LiveMcpInspector />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0 0 2rem' }}>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              margin: '0 0 2rem',
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                height: '1px',
+                background: 'var(--border-color)',
+              }}
+            />
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Or validate a payload
             </span>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+            <div
+              style={{
+                flex: 1,
+                height: '1px',
+                background: 'var(--border-color)',
+              }}
+            />
           </div>
 
           <ProtocolInspectorTool />
 
           {/* Question-Forward Educational & FAQ Section */}
-          <div style={{ marginTop: '3.5rem', fontSize: '0.925rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-            <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '1rem', fontWeight: 700 }}>
+          <div
+            style={{
+              marginTop: '3.5rem',
+              fontSize: '0.925rem',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.7,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '1.25rem',
+                color: 'var(--text-primary)',
+                marginBottom: '1rem',
+                fontWeight: 700,
+              }}
+            >
               Understanding Model Context Protocol JSON-RPC Specifications
             </h2>
             <p style={{ marginBottom: '1.25rem' }}>
-              The Model Context Protocol communicates over standard JSON-RPC 2.0 transports (stdio pipes or Server-Sent Events).
-              When an AI client like Claude Desktop, Cursor, or Windsurf calls a tool or queries a resource, it expects
-              responses to adhere strictly to protocol schemas.
+              The Model Context Protocol communicates over standard JSON-RPC 2.0
+              transports (stdio pipes or Server-Sent Events). When an AI client
+              like Claude Desktop, Cursor, or Windsurf calls a tool or queries a
+              resource, it expects responses to adhere strictly to protocol
+              schemas.
             </p>
             <p style={{ marginBottom: '2rem' }}>
-              Common integration issues &mdash; such as missing <code>content</code> arrays, unhandled base64 image strings,
-              or omitted <code>mimeType</code> headers &mdash; can cause AI clients to silently drop tool outputs or fail
-              turns. Use this diagnostic inspector during development to verify payload compliance instantly.
+              Common integration issues &mdash; such as missing{' '}
+              <code>content</code> arrays, unhandled base64 image strings, or
+              omitted <code>mimeType</code> headers &mdash; can cause AI clients
+              to silently drop tool outputs or fail turns. Use this diagnostic
+              inspector during development to verify payload compliance
+              instantly.
             </p>
 
             <FaqSection
@@ -165,9 +245,12 @@ export default function ProtocolInspectorPage() {
                   question: 'How do I debug MCP JSON-RPC protocol messages?',
                   answer: (
                     <>
-                      Paste any JSON-RPC request or tool execution response payload into the inspector above. The diagnostic engine
-                      checks specification compliance (<code>jsonrpc: &quot;2.0&quot;</code>, content array structures, MIME types,
-                      isError flags) and renders a live visual preview of how AI clients display the result.
+                      Paste any JSON-RPC request or tool execution response
+                      payload into the inspector above. The diagnostic engine
+                      checks specification compliance (
+                      <code>jsonrpc: &quot;2.0&quot;</code>, content array
+                      structures, MIME types, isError flags) and renders a live
+                      visual preview of how AI clients display the result.
                     </>
                   ),
                 },
@@ -175,16 +258,22 @@ export default function ProtocolInspectorPage() {
                   question: 'What makes an MCP tool call response valid?',
                   answer: (
                     <>
-                      A valid MCP tool call response must contain a <code>content</code> array of objects. Each content object
-                      requires a <code>type</code> property (<code>&quot;text&quot;</code>, <code>&quot;image&quot;</code>, or{' '}
-                      <code>&quot;resource&quot;</code>). Text objects must have a string <code>text</code> property, and image
-                      objects must specify a valid <code>mimeType</code> (e.g. <code>&quot;image/png&quot;</code>) and base64-encoded{' '}
+                      A valid MCP tool call response must contain a{' '}
+                      <code>content</code> array of objects. Each content object
+                      requires a <code>type</code> property (
+                      <code>&quot;text&quot;</code>,{' '}
+                      <code>&quot;image&quot;</code>, or{' '}
+                      <code>&quot;resource&quot;</code>). Text objects must have
+                      a string <code>text</code> property, and image objects
+                      must specify a valid <code>mimeType</code> (e.g.{' '}
+                      <code>&quot;image/png&quot;</code>) and base64-encoded{' '}
                       <code>data</code> string.
                     </>
                   ),
                 },
                 {
-                  question: 'How do images and resources render in Claude Desktop MCP?',
+                  question:
+                    'How do images and resources render in Claude Desktop MCP?',
                   answer:
                     'When a tool returns an image content block with mimeType and base64 data, Claude Desktop and Cursor render the image inline within the conversation turn. Resource content blocks with URIs allow clients to read text or binary files directly.',
                 },
@@ -192,20 +281,45 @@ export default function ProtocolInspectorPage() {
                   question: 'What does isError: true mean in an MCP response?',
                   answer: (
                     <>
-                      Setting <code>isError: true</code> inside a tool call result tells the AI model that the tool execution failed
-                      (e.g. network error, invalid SQL query, or missing file), allowing the model to analyze the error output and
-                      adjust its strategy.
+                      Setting <code>isError: true</code> inside a tool call
+                      result tells the AI model that the tool execution failed
+                      (e.g. network error, invalid SQL query, or missing file),
+                      allowing the model to analyze the error output and adjust
+                      its strategy.
                     </>
                   ),
                 },
               ]}
             />
 
-            <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <Link href="/build-mcp-server" style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600 }}>
+            <div
+              style={{
+                marginTop: '2.5rem',
+                paddingTop: '1.5rem',
+                borderTop: '1px solid var(--border-color)',
+                display: 'flex',
+                gap: '1rem',
+                flexWrap: 'wrap',
+              }}
+            >
+              <Link
+                href="/build-mcp-server"
+                style={{
+                  color: 'var(--accent-color)',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                }}
+              >
                 ← Read How to Build an MCP Server
               </Link>
-              <Link href="/tools/config-validator" style={{ color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600 }}>
+              <Link
+                href="/tools/config-validator"
+                style={{
+                  color: 'var(--accent-color)',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                }}
+              >
                 Validate Config Files →
               </Link>
             </div>

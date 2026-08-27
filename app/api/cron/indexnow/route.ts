@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, desc, eq, gte } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
+import { getAllPosts } from '../../../../lib/blog';
 import { submitIndexNowUrls } from '../../../../lib/indexnow';
 import { INDEXNOW_CORE_PATHS } from '../../../../lib/sitemapHelpers';
-import { getAllPosts } from '../../../../lib/blog';
 
 /**
  * Change-scoped IndexNow safety net. IndexNow is a "this URL just changed"
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    let env;
+    let env: CloudflareEnv | undefined;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
@@ -59,7 +59,9 @@ export async function POST(req: Request) {
     const listingUrls = recent.map((s) => `${HOST}/mcp/${s.id}`);
 
     // 2) Blog posts published in the last 14 days (by filename date)
-    const blogCutoff = new Date(Date.now() - BLOG_LOOKBACK_MS).toISOString().slice(0, 10);
+    const blogCutoff = new Date(Date.now() - BLOG_LOOKBACK_MS)
+      .toISOString()
+      .slice(0, 10);
     let blogUrls: string[] = [];
     try {
       blogUrls = getAllPosts()
@@ -87,7 +89,9 @@ export async function POST(req: Request) {
 
     // 3) New content changed the aggregate hubs (browse/categories/sitemap),
     // so re-ping those — but only because something actually changed.
-    const coreUrls = INDEXNOW_CORE_PATHS.map((p) => (p === '/' ? HOST : `${HOST}${p}`));
+    const coreUrls = INDEXNOW_CORE_PATHS.map((p) =>
+      p === '/' ? HOST : `${HOST}${p}`,
+    );
 
     // Priority order: core hubs → changed listings → new blog (dedupe by URL)
     const seen = new Set<string>();
@@ -111,6 +115,9 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('IndexNow cron error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

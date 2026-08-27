@@ -19,7 +19,11 @@ interface FooterNavSectionProps {
  * keyboard support; the `open` state is only auto-managed at the breakpoint so
  * a manual expand/collapse on mobile is respected until the viewport changes.
  */
-export function FooterNavSection({ ariaLabel, heading, children }: FooterNavSectionProps) {
+export function FooterNavSection({
+  ariaLabel,
+  heading,
+  children,
+}: FooterNavSectionProps) {
   // Start open so SSR and desktop render expanded (no hydration flash on
   // desktop); collapse on mobile after mount.
   const [open, setOpen] = useState(true);

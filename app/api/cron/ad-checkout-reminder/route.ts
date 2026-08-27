@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, eq, isNull, lt } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { sponsorAds } from '@/db/schema';
 import { isAdminAuthorized } from '@/lib/adminAuth';
 import { sendNotificationEmail } from '@/lib/notify';
@@ -22,7 +22,10 @@ export async function POST(req: Request) {
 
     const ctx = await getCloudflareContext();
     if (!ctx?.env?.DB) {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 },
+      );
     }
 
     const db = drizzle(ctx.env.DB);
@@ -40,8 +43,8 @@ export async function POST(req: Request) {
           eq(sponsorAds.status, 'pending_approval'),
           isNull(sponsorAds.stripePaymentIntentId),
           isNull(sponsorAds.abandonedReminderSentAt),
-          lt(sponsorAds.createdAt, cutoff)
-        )
+          lt(sponsorAds.createdAt, cutoff),
+        ),
       )
       .limit(BATCH_SIZE);
 
@@ -58,7 +61,10 @@ export async function POST(req: Request) {
           actionUrl: `${appUrl}/advertise/resume/${ad.id}`,
         });
       } catch (emailErr) {
-        console.error(`[cron/ad-checkout-reminder] email failed for ${ad.id}:`, emailErr);
+        console.error(
+          `[cron/ad-checkout-reminder] email failed for ${ad.id}:`,
+          emailErr,
+        );
       }
 
       // Mark as sent regardless of delivery outcome — a best-effort, once-only

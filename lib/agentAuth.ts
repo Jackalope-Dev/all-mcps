@@ -14,7 +14,10 @@ export type AgentScope = (typeof AGENT_SCOPES)[number];
 export const DEFAULT_AGENT_SCOPES: AgentScope[] = ['listings:claim'];
 
 /** Single source of truth for scope descriptions — reused by /.well-known/oauth-protected-resource, the OpenAPI spec, and /docs/api so they can't drift out of sync. */
-export const AGENT_SCOPE_DETAILS: Record<AgentScope, { description: string; requiredBy: string[] }> = {
+export const AGENT_SCOPE_DETAILS: Record<
+  AgentScope,
+  { description: string; requiredBy: string[] }
+> = {
   'listings:claim': {
     description:
       'Claim ownership of an existing MCP server listing via DNS TXT record, site verification badge, or GitHub README badge proof. Grants no other write access.',
@@ -23,7 +26,10 @@ export const AGENT_SCOPE_DETAILS: Record<AgentScope, { description: string; requ
 };
 
 export function isValidAgentScope(scope: unknown): scope is AgentScope {
-  return typeof scope === 'string' && (AGENT_SCOPES as readonly string[]).includes(scope);
+  return (
+    typeof scope === 'string' &&
+    (AGENT_SCOPES as readonly string[]).includes(scope)
+  );
 }
 
 /** Parses a stored `scopes` JSON column, falling back to the legacy default for null/malformed values (pre-scopes rows). */
@@ -43,7 +49,10 @@ export function serializeAgentScopes(scopes: AgentScope[]): string {
   return JSON.stringify(scopes);
 }
 
-export function hasAgentScope(agent: { scopes: AgentScope[] }, scope: AgentScope): boolean {
+export function hasAgentScope(
+  agent: { scopes: AgentScope[] },
+  scope: AgentScope,
+): boolean {
   return agent.scopes.includes(scope);
 }
 
@@ -59,19 +68,31 @@ export async function sha256Hex(input: string): Promise<string> {
 /** Opaque bearer token for POST /api/v1/agent/claim and /revoke. Prefixed so leaked tokens are greppable/identifiable in logs. */
 export function generateAgentToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return 'amcp_' + Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return (
+    'amcp_' +
+    Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+  );
 }
 
 /** 6-digit email confirmation code for POST /api/v1/agent/register. */
 export function generateRegistrationCode(): string {
-  return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0');
+  return String(
+    crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000,
+  ).padStart(6, '0');
 }
 
 export const AGENT_TOKEN_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 export const REGISTRATION_CODE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export const MAX_CODE_ATTEMPTS = 5;
 
-export type AgentIdentity = { userId: string; email: string | null; tokenHash: string; scopes: AgentScope[] };
+export type AgentIdentity = {
+  userId: string;
+  email: string | null;
+  tokenHash: string;
+  scopes: AgentScope[];
+};
 
 /**
  * Resolves an `Authorization: Bearer <token>` header to the agent's backing
@@ -80,7 +101,7 @@ export type AgentIdentity = { userId: string; email: string | null; tokenHash: s
  */
 export async function resolveAgentAuth(
   db: any,
-  authorizationHeader: string | null
+  authorizationHeader: string | null,
 ): Promise<AgentIdentity | null> {
   const match = authorizationHeader?.match(/^Bearer\s+(\S+)$/i);
   if (!match) return null;
@@ -104,5 +125,10 @@ export async function resolveAgentAuth(
   if (!row || row.revokedAt) return null;
   if (new Date(row.expiresAt).getTime() < Date.now()) return null;
 
-  return { userId: row.userId, email: row.email ?? null, tokenHash, scopes: parseAgentScopes(row.scopes) };
+  return {
+    userId: row.userId,
+    email: row.email ?? null,
+    tokenHash,
+    scopes: parseAgentScopes(row.scopes),
+  };
 }

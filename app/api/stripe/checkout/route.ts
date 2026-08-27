@@ -1,12 +1,17 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { type PaidSku } from '../../../../lib/pricing';
+import type { PaidSku } from '../../../../lib/pricing';
 import { createStripeCheckoutSession } from '../../../../lib/stripeCheckout';
 
 const bodySchema = z.object({
   serverId: z.string().min(1),
-  sku: z.enum(['priority_review', 'featured_7d', 'category_sponsor_7d', 'premium_monthly']),
+  sku: z.enum([
+    'priority_review',
+    'featured_7d',
+    'category_sponsor_7d',
+    'premium_monthly',
+  ]),
   email: z.string().email().optional(),
   coupon: z.string().optional(),
   /** Weeks to purchase — only meaningful for featured_7d / category_sponsor_7d (volume-tiered). */
@@ -25,12 +30,18 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => null);
     if (!body) {
-      return NextResponse.json({ error: 'Invalid or missing JSON body' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid or missing JSON body' },
+        { status: 400 },
+      );
     }
 
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid request payload', details: parsed.error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request payload', details: parsed.error.issues },
+        { status: 400 },
+      );
     }
 
     const { serverId, sku, email, coupon, weeks } = parsed.data;
@@ -47,7 +58,7 @@ export async function POST(req: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.error, hint: result.hint },
-        { status: result.status || 500 }
+        { status: result.status || 500 },
       );
     }
 
@@ -59,7 +70,7 @@ export async function POST(req: Request) {
         error: 'Checkout failed',
         details: e?.message || 'Unknown Stripe API error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

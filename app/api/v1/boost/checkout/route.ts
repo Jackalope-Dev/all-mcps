@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { PAID_PRODUCTS, formatUsd, type PaidSku } from '@/lib/pricing';
+import { NextResponse } from 'next/server';
+import { formatUsd, PAID_PRODUCTS, type PaidSku } from '@/lib/pricing';
 import { createStripeCheckoutSession } from '@/lib/stripeCheckout';
 
 export async function POST(req: Request) {
@@ -14,10 +14,18 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json().catch(() => ({}))) as any;
-    const { serverId, sku = 'featured_7d', email, coupon = 'AGENTREADY' } = body || {};
+    const {
+      serverId,
+      sku = 'featured_7d',
+      email,
+      coupon = 'AGENTREADY',
+    } = body || {};
 
     if (!serverId) {
-      return NextResponse.json({ error: 'serverId parameter is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'serverId parameter is required' },
+        { status: 400 },
+      );
     }
 
     const product = PAID_PRODUCTS[sku as PaidSku];
@@ -26,14 +34,16 @@ export async function POST(req: Request) {
         {
           error: `Invalid SKU "${sku}". Valid options: priority_review, featured_7d, category_sponsor_7d, premium_monthly`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
     const effectiveCoupon = (coupon || 'AGENTREADY').toUpperCase();
     const isAgentReadyPromo = effectiveCoupon === 'AGENTREADY';
-    const discountedCents = isAgentReadyPromo ? Math.round(product.unitAmount * 0.5) : product.unitAmount;
+    const discountedCents = isAgentReadyPromo
+      ? Math.round(product.unitAmount * 0.5)
+      : product.unitAmount;
 
     // Call direct Stripe session creation helper in-memory (no HTTP fetch subrequest overhead)
     const checkoutResult = await createStripeCheckoutSession({
@@ -89,7 +99,7 @@ export async function POST(req: Request) {
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

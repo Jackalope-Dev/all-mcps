@@ -35,7 +35,9 @@ async function main() {
   let totalFixed = 0;
   const allResults = [];
 
-  console.log(`${APPLY ? 'APPLYING' : 'DRY RUN'} — backfilling server names via ${BASE_URL}/api/cron/fix-names\n`);
+  console.log(
+    `${APPLY ? 'APPLYING' : 'DRY RUN'} — backfilling server names via ${BASE_URL}/api/cron/fix-names\n`,
+  );
 
   while (true) {
     call++;
@@ -45,12 +47,17 @@ async function main() {
 
     let data;
     try {
-      const res = await fetch(url, { method: 'POST', headers: { authorization: `Bearer ${SECRET}` } });
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${SECRET}` },
+      });
       const text = await res.text();
       try {
         data = JSON.parse(text);
       } catch {
-        console.error(`Call ${call}: non-JSON response (${res.status}): ${text.slice(0, 200)}`);
+        console.error(
+          `Call ${call}: non-JSON response (${res.status}): ${text.slice(0, 200)}`,
+        );
         break;
       }
       if (!res.ok || !data.success) {
@@ -72,11 +79,13 @@ async function main() {
 
     console.log(
       `Call ${call}: scanned ${data.scanned}, ${data.genericFound} generic, ` +
-        `${data.fixed || data.proposed || 0} ${APPLY ? 'fixed' : 'proposed'} | cursor now ${data.nextCursor}`
+        `${data.fixed || data.proposed || 0} ${APPLY ? 'fixed' : 'proposed'} | cursor now ${data.nextCursor}`,
     );
 
     if (data.ghErrors > 0) {
-      console.warn('  (hit GitHub rate limit this page — pausing before retry)');
+      console.warn(
+        '  (hit GitHub rate limit this page — pausing before retry)',
+      );
       await sleep(DELAY_MS * 10);
       continue; // retry same page (cursor only advances past fully-scanned pages)
     }
@@ -91,10 +100,12 @@ async function main() {
   }
 
   console.log(
-    `\nDone. ${totalScanned} scanned, ${totalGeneric} generic names found, ${totalFixed} ${APPLY ? 'renamed' : 'would be renamed'}.`
+    `\nDone. ${totalScanned} scanned, ${totalGeneric} generic names found, ${totalFixed} ${APPLY ? 'renamed' : 'would be renamed'}.`,
   );
   if (!APPLY) {
-    console.log('This was a dry run — re-run with --apply to write these changes.');
+    console.log(
+      'This was a dry run — re-run with --apply to write these changes.',
+    );
   }
 }
 

@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface SectionKickerProps {
   index?: number | string;
   total?: number;
@@ -12,7 +10,12 @@ function pad(value: number | string, width = 2) {
 }
 
 /** Firecrawl-style section index: `[ 01 / 06 ] · Discovery // Agent Ready` */
-export function SectionKicker({ index, total = 6, label, aside }: SectionKickerProps) {
+export function SectionKicker({
+  index,
+  total = 6,
+  label,
+  aside,
+}: SectionKickerProps) {
   return (
     <p className="section-kicker">
       {index != null ? (

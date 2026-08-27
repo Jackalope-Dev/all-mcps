@@ -16,9 +16,9 @@
  * Usage: npm run submit-index
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -191,7 +191,9 @@ async function submitBatch(urlBatch, label) {
       return true;
     }
     const responseText = await res.text();
-    console.error(`✗ ${label} failed with status ${res.status}: ${responseText}`);
+    console.error(
+      `✗ ${label} failed with status ${res.status}: ${responseText}`,
+    );
     return false;
   } catch (err) {
     console.error(`✗ ${label} network error:`, err.message);
@@ -223,7 +225,7 @@ async function main() {
   console.log('🚀 Gathering site URLs for prioritised IndexNow submission...');
   const { core, listings, secondary } = collectUrlBuckets();
   console.log(
-    `Found core=${core.length}, listings=${listings.length}, secondary=${secondary.length} (total ${core.length + listings.length + secondary.length}).`
+    `Found core=${core.length}, listings=${listings.length}, secondary=${secondary.length} (total ${core.length + listings.length + secondary.length}).`,
   );
 
   // Priority order: core → listings → secondary

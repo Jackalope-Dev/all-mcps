@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { sponsorAds } from '@/db/schema';
 import { isStripeConfigured } from '@/lib/pricing';
-import { getStripe, getAppUrl } from '@/lib/stripe';
+import { getAppUrl, getStripe } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +14,10 @@ export const dynamic = 'force-dynamic';
  * the abandoned-checkout reminder email links here instead of to the original
  * session — every visit gets a live link, however long after the email was sent.
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const appUrl = getAppUrl();
 
@@ -24,7 +27,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   const db = drizzle(ctx.env.DB);
-  const [ad] = await db.select().from(sponsorAds).where(eq(sponsorAds.id, id)).limit(1);
+  const [ad] = await db
+    .select()
+    .from(sponsorAds)
+    .where(eq(sponsorAds.id, id))
+    .limit(1);
 
   if (!ad) {
     return NextResponse.redirect(`${appUrl}/advertise/create`);
@@ -36,7 +43,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   if (!isStripeConfigured(ctx.env)) {
-    return NextResponse.redirect(`${appUrl}/advertise/campaign/${id}?error=payment_unavailable`);
+    return NextResponse.redirect(
+      `${appUrl}/advertise/campaign/${id}?error=payment_unavailable`,
+    );
   }
 
   try {
@@ -79,12 +88,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .where(eq(sponsorAds.id, id));
 
     if (!session.url) {
-      return NextResponse.redirect(`${appUrl}/advertise/campaign/${id}?error=payment_unavailable`);
+      return NextResponse.redirect(
+        `${appUrl}/advertise/campaign/${id}?error=payment_unavailable`,
+      );
     }
 
     return NextResponse.redirect(session.url);
   } catch (err: any) {
     console.error('[advertise/resume] error:', err?.message);
-    return NextResponse.redirect(`${appUrl}/advertise/campaign/${id}?error=payment_unavailable`);
+    return NextResponse.redirect(
+      `${appUrl}/advertise/campaign/${id}?error=payment_unavailable`,
+    );
   }
 }

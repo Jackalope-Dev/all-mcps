@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { and, eq, isNull, lt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
-import { eq, and, isNull, lt } from 'drizzle-orm';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
-import { isSafeFetchTarget } from '../../../../lib/urlSafety';
-import { isPackageInstallable } from '../../../../lib/listingEnrich';
 import { notifyListingIndexed } from '../../../../lib/indexnow';
+import { isPackageInstallable } from '../../../../lib/listingEnrich';
+import { isSafeFetchTarget } from '../../../../lib/urlSafety';
 
 /**
  * Fully-unattended promotion for pending listings that came from our own
@@ -71,21 +71,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    let env;
+    let env: CloudflareEnv | undefined;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
     } catch {
       throw new Error('Could not get Cloudflare context.');
     }
-    const db = drizzle(env.DB as any);
+    const db = drizzle(env?.DB as any);
 
     const dwellCutoff = new Date(Date.now() - PROMOTION_DWELL_MS);
     const candidates = await db
       .select()
       .from(servers)
       .where(
-        and(eq(servers.status, 'pending'), isNull(servers.submitterEmail), lt(servers.createdAt, dwellCutoff))
+        and(
+          eq(servers.status, 'pending'),
+          isNull(servers.submitterEmail),
+          lt(servers.createdAt, dwellCutoff),
+        ),
       )
       .limit(BATCH_SIZE);
 
@@ -98,9 +102,13 @@ export async function POST(req: Request) {
       // reverse): any one working interface is enough to promote.
       const urlAlive = await checkUrlAlive(s.url);
       const packageAlive =
-        !urlAlive && s.installPackage ? await isPackageInstallable(s.installCommand, s.installPackage) : false;
+        !urlAlive && s.installPackage
+          ? await isPackageInstallable(s.installCommand, s.installPackage)
+          : false;
       const remoteAlive =
-        !urlAlive && !packageAlive && s.remoteEndpointUrl ? await checkUrlAlive(s.remoteEndpointUrl) : false;
+        !urlAlive && !packageAlive && s.remoteEndpointUrl
+          ? await checkUrlAlive(s.remoteEndpointUrl)
+          : false;
 
       if (urlAlive || packageAlive || remoteAlive) {
         const result = await db
@@ -110,23 +118,38 @@ export async function POST(req: Request) {
           .returning();
         if (result.length > 0) {
           promoted++;
-          void notifyListingIndexed(s.id, ['/browse', '/sitemap.xml']).catch(() => {});
+          void notifyListingIndexed(s.id, ['/browse', '/sitemap.xml']).catch(
+            () => {},
+          );
         }
         continue;
       }
 
-      const createdAtMs = s.createdAt ? new Date(s.createdAt as unknown as string).getTime() : 0;
+      const createdAtMs = s.createdAt
+        ? new Date(s.createdAt as unknown as string).getTime()
+        : 0;
       if (createdAtMs && Date.now() - createdAtMs >= STALE_REMOVAL_MS) {
-        await db.update(servers).set({ status: 'removed' }).where(eq(servers.id, s.id));
+        await db
+          .update(servers)
+          .set({ status: 'removed' })
+          .where(eq(servers.id, s.id));
         removedCount++;
       } else {
         stillPending++;
       }
     }
 
-    return NextResponse.json({ checked: candidates.length, promoted, removed: removedCount, stillPending });
+    return NextResponse.json({
+      checked: candidates.length,
+      promoted,
+      removed: removedCount,
+      stillPending,
+    });
   } catch (error) {
     console.error('[auto-promote] failed', error);
-    return NextResponse.json({ error: 'Auto-promote failed.' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Auto-promote failed.' },
+      { status: 500 },
+    );
   }
 }

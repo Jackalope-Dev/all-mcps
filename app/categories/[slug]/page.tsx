@@ -1,27 +1,35 @@
+import { ChevronRight, Download, Eye, Heart } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ChevronRight, Eye, Heart, Download } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
-import { Badge } from '../../../components/ui/Badge';
-import { ServerAvatar } from '../../../components/ui/ServerAvatar';
-import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
-import { FaqSection } from '../../../components/ui/FaqSection';
-import { getCategoryServers, getCategoryCounts, relatedRankingScore, type Server } from '../../../lib/servers';
-import {
-  DIRECTORY_CATEGORIES,
-  categoryFromSlug,
-  categorySlug,
-  parseCategoryLabel,
-  getCategoryMeta,
-  categoryIntroCopy,
-} from '../../../lib/categories';
-import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
-import { parseServerName } from '../../../lib/displayName';
-import { formatCompactNumber } from '../../../lib/format';
-import { bestTopicForCategory } from '../../../lib/bestTopics';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
+import { Badge } from '../../../components/ui/Badge';
+import { Card } from '../../../components/ui/Card';
+import { FaqSection } from '../../../components/ui/FaqSection';
+import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
+import { ServerAvatar } from '../../../components/ui/ServerAvatar';
+import { bestTopicForCategory } from '../../../lib/bestTopics';
+import {
+  categoryFromSlug,
+  categoryIntroCopy,
+  categorySlug,
+  DIRECTORY_CATEGORIES,
+  getCategoryMeta,
+  parseCategoryLabel,
+} from '../../../lib/categories';
+import { parseServerName } from '../../../lib/displayName';
+import {
+  isFeaturedListing,
+  isVerifiedListing,
+} from '../../../lib/featuredStatus';
+import { formatCompactNumber } from '../../../lib/format';
+import {
+  getCategoryCounts,
+  getCategoryServers,
+  relatedRankingScore,
+  type Server,
+} from '../../../lib/servers';
 
 const SITE = 'https://allmcps.com';
 
@@ -55,19 +63,32 @@ export async function generateMetadata({
   const title = `${label} MCP Servers`;
   const rawDescription = `Browse and install the best ${label} Model Context Protocol (MCP) servers for AI agents. Compare tools, view install commands, and connect Claude, Cursor, and more.`;
   const description =
-    rawDescription.length > 157 ? `${rawDescription.slice(0, 154)}...` : rawDescription;
+    rawDescription.length > 157
+      ? `${rawDescription.slice(0, 154)}...`
+      : rawDescription;
   const url = `${SITE}/categories/${canonicalSlug}`;
   return {
     title,
     description,
     alternates: { canonical: url },
     openGraph: {
-      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      images: [
+        {
+          url: 'https://allmcps.com/opengraph-image',
+          width: 1200,
+          height: 630,
+          alt: 'AllMCPs',
+        },
+      ],
       title: `${title} | AllMCPs`,
       description,
       url,
     },
-    twitter: { card: 'summary_large_image', title: `${title} | AllMCPs`, description },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | AllMCPs`,
+      description,
+    },
   };
 }
 
@@ -101,16 +122,24 @@ export default async function CategoryLandingPage({
   // guarantees at most one active sponsor per category at a time.
   const now = Date.now();
   const sponsorIdx = byScore.findIndex(
-    (s) => s.categorySponsorUntil && new Date(s.categorySponsorUntil).getTime() > now
+    (s) =>
+      s.categorySponsorUntil &&
+      new Date(s.categorySponsorUntil).getTime() > now,
   );
   const sponsor = sponsorIdx >= 0 ? byScore[sponsorIdx] : null;
   const inCategory = sponsor
-    ? [sponsor, ...byScore.slice(0, sponsorIdx), ...byScore.slice(sponsorIdx + 1)]
+    ? [
+        sponsor,
+        ...byScore.slice(0, sponsorIdx),
+        ...byScore.slice(sponsorIdx + 1),
+      ]
     : byScore;
 
   const total = inCategory.length;
   const cards = inCategory.slice(0, MAX_CARDS);
-  const topNames = inCategory.slice(0, 3).map((s) => parseServerName(s.name).displayName);
+  const topNames = inCategory
+    .slice(0, 3)
+    .map((s) => parseServerName(s.name).displayName);
 
   const intro = categoryIntroCopy(category, total, topNames);
   const url = `${SITE}/categories/${slug}`;
@@ -120,7 +149,12 @@ export default async function CategoryLandingPage({
     .filter(([name]) => name !== category)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
-    .map(([name, count]) => ({ name, count, ...parseCategoryLabel(name), slug: categorySlug(name) }));
+    .map(([name, count]) => ({
+      name,
+      count,
+      ...parseCategoryLabel(name),
+      slug: categorySlug(name),
+    }));
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -175,7 +209,12 @@ export default async function CategoryLandingPage({
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
-          { '@type': 'ListItem', position: 2, name: 'Categories', item: `${SITE}/categories` },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Categories',
+            item: `${SITE}/categories`,
+          },
           { '@type': 'ListItem', position: 3, name: label, item: url },
         ],
       },
@@ -210,7 +249,13 @@ export default async function CategoryLandingPage({
         </nav>
 
         {/* Hero */}
-        <section style={{ margin: '0 auto 2.5rem', maxWidth: '780px', textAlign: 'center' }}>
+        <section
+          style={{
+            margin: '0 auto 2.5rem',
+            maxWidth: '780px',
+            textAlign: 'center',
+          }}
+        >
           {(meta.emoji || emoji) && (
             <div
               className="category-card-emoji"
@@ -233,13 +278,31 @@ export default async function CategoryLandingPage({
             </div>
           )}
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>
-            <span className="text-brand-gradient">{total.toLocaleString()}</span> {label} MCP Servers
+            <span className="text-brand-gradient">
+              {total.toLocaleString()}
+            </span>{' '}
+            {label} MCP Servers
           </h1>
-          <p className="text-lead" style={{ margin: '0 auto 1.5rem', textAlign: 'center' }}>
+          <p
+            className="text-lead"
+            style={{ margin: '0 auto 1.5rem', textAlign: 'center' }}
+          >
             {intro}
           </p>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
-            <Link href={`/browse?category=${encodeURIComponent(category)}`} className="btn btn-secondary" rel="nofollow">
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Link
+              href={`/browse?category=${encodeURIComponent(category)}`}
+              className="btn btn-secondary"
+              rel="nofollow"
+            >
               Open in interactive directory
             </Link>
             {(() => {
@@ -260,7 +323,10 @@ export default async function CategoryLandingPage({
 
         {/* Server grid */}
         {cards.length > 0 ? (
-          <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+          <ul
+            className="directory-grid"
+            style={{ listStyle: 'none', margin: 0, padding: 0 }}
+          >
             {cards.map((server, index) => {
               const { displayName, org } = parseServerName(server.name);
               return (
@@ -271,41 +337,114 @@ export default async function CategoryLandingPage({
                     </li>
                   )}
                   <li>
-                    <ImpressionBeacon serverId={server.id} surface="category_page">
+                    <ImpressionBeacon
+                      serverId={server.id}
+                      surface="category_page"
+                    >
                       <Card
                         href={`/mcp/${server.id}`}
                         className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                          <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
-                          <div className="directory-card-title-block" style={{ marginBottom: 0 }}>
-                            <h2 className="directory-card-title-text" style={{ fontSize: '1.1rem' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            marginBottom: '0.75rem',
+                          }}
+                        >
+                          <ServerAvatar
+                            name={server.name}
+                            logoUrl={server.logoUrl}
+                            size={44}
+                          />
+                          <div
+                            className="directory-card-title-block"
+                            style={{ marginBottom: 0 }}
+                          >
+                            <h2
+                              className="directory-card-title-text"
+                              style={{ fontSize: '1.1rem' }}
+                            >
                               {displayName}
                             </h2>
-                            {org && <div className="directory-card-org-text">{org}</div>}
+                            {org && (
+                              <div className="directory-card-org-text">
+                                {org}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="directory-card-desc-block">
-                          <SafeMarkdown content={server.description || 'No description provided.'} isInline />
+                          <SafeMarkdown
+                            content={
+                              server.description || 'No description provided.'
+                            }
+                            isInline
+                          />
                         </div>
                         <div className="directory-card-footer">
-                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: '0.5rem',
+                              flexWrap: 'wrap',
+                              minWidth: 0,
+                            }}
+                          >
                             {isFeaturedListing(server) && (
-                              <Badge variant="success" className="badge-featured">
+                              <Badge
+                                variant="success"
+                                className="badge-featured"
+                              >
                                 ★ Featured
                               </Badge>
                             )}
-                            {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
+                            {isVerifiedListing(server) && (
+                              <Badge variant="official">Verified</Badge>
+                            )}
                           </div>
-                          <div className="directory-card-stats" style={{ display: 'flex', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.views || 0).toLocaleString()} views`}>
-                              <Eye size={13} /> {formatCompactNumber(server.views || 0)}
+                          <div
+                            className="directory-card-stats"
+                            style={{
+                              display: 'flex',
+                              gap: '0.75rem',
+                              color: 'var(--text-secondary)',
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                              }}
+                              title={`${(server.views || 0).toLocaleString()} views`}
+                            >
+                              <Eye size={13} />{' '}
+                              {formatCompactNumber(server.views || 0)}
                             </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.copies || 0).toLocaleString()} installs`}>
-                              <Download size={13} /> {formatCompactNumber(server.copies || 0)}
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                              }}
+                              title={`${(server.copies || 0).toLocaleString()} installs`}
+                            >
+                              <Download size={13} />{' '}
+                              {formatCompactNumber(server.copies || 0)}
                             </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.upvotes || 0).toLocaleString()} upvotes`}>
-                              <Heart size={13} /> {formatCompactNumber(server.upvotes || 0)}
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                              }}
+                              title={`${(server.upvotes || 0).toLocaleString()} upvotes`}
+                            >
+                              <Heart size={13} />{' '}
+                              {formatCompactNumber(server.upvotes || 0)}
                             </span>
                           </div>
                         </div>
@@ -317,7 +456,10 @@ export default async function CategoryLandingPage({
             })}
           </ul>
         ) : (
-          <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>
+          <div
+            className="surface empty-state"
+            style={{ borderStyle: 'dashed' }}
+          >
             <p className="empty-state-body" style={{ margin: 0 }}>
               No servers are listed in this category yet.{' '}
               <Link href="/submit">Submit one →</Link>
@@ -327,7 +469,11 @@ export default async function CategoryLandingPage({
 
         {total > cards.length && (
           <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-            <Link href={`/browse?category=${encodeURIComponent(category)}`} className="btn btn-primary" rel="nofollow">
+            <Link
+              href={`/browse?category=${encodeURIComponent(category)}`}
+              className="btn btn-primary"
+              rel="nofollow"
+            >
               Browse all {total.toLocaleString()} {label} servers →
             </Link>
           </div>
@@ -336,21 +482,42 @@ export default async function CategoryLandingPage({
         {/* Related categories */}
         {related.length > 0 && (
           <section style={{ marginTop: '4rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>
+            <h2
+              style={{
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                marginBottom: '1.25rem',
+              }}
+            >
               Explore related categories
             </h2>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <ul
+              style={{
+                listStyle: 'none',
+                margin: 0,
+                padding: 0,
+                display: 'flex',
+                gap: '0.6rem',
+                flexWrap: 'wrap',
+              }}
+            >
               {related.map((r) => (
                 <li key={r.slug}>
-                <Link
-                  href={`/categories/${r.slug}`}
-                  className="badge badge-link badge-category"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                >
-                  {r.emoji && <span aria-hidden="true">{r.emoji}</span>}
-                  <span>{r.label}</span>
-                  <span style={{ opacity: 0.6 }}>({r.count.toLocaleString()})</span>
-                </Link>
+                  <Link
+                    href={`/categories/${r.slug}`}
+                    className="badge badge-link badge-category"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                    }}
+                  >
+                    {r.emoji && <span aria-hidden="true">{r.emoji}</span>}
+                    <span>{r.label}</span>
+                    <span style={{ opacity: 0.6 }}>
+                      ({r.count.toLocaleString()})
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -358,7 +525,13 @@ export default async function CategoryLandingPage({
         )}
 
         {/* Query-Forward AEO/SEO Information Section */}
-        <section style={{ marginTop: '4rem', paddingTop: '2.5rem', borderTop: '1px solid var(--border-color)' }}>
+        <section
+          style={{
+            marginTop: '4rem',
+            paddingTop: '2.5rem',
+            borderTop: '1px solid var(--border-color)',
+          }}
+        >
           <FaqSection
             title={`Frequently Asked Questions about ${label} MCP Servers`}
             renderJsonLd={false}
@@ -367,7 +540,11 @@ export default async function CategoryLandingPage({
                 question: `What are ${label} Model Context Protocol (MCP) servers?`,
                 answer: (
                   <p style={{ margin: 0 }}>
-                    Model Context Protocol (MCP) servers in the <strong>{label}</strong> category allow AI assistants (such as Claude Desktop, Cursor, Windsurf, and Cline) to connect directly to {label.toLowerCase()} tools, APIs, and databases without manual copy-pasting.
+                    Model Context Protocol (MCP) servers in the{' '}
+                    <strong>{label}</strong> category allow AI assistants (such
+                    as Claude Desktop, Cursor, Windsurf, and Cline) to connect
+                    directly to {label.toLowerCase()} tools, APIs, and databases
+                    without manual copy-pasting.
                   </p>
                 ),
               },
@@ -375,7 +552,11 @@ export default async function CategoryLandingPage({
                 question: `How do I connect a ${label} MCP server to Claude Desktop or Cursor?`,
                 answer: (
                   <p style={{ margin: 0 }}>
-                    To install a {label} MCP server, select your desired server from the directory, copy the JSON configuration snippet, and add it to your client config file (such as <code>claude_desktop_config.json</code> or <code>.cursor/mcp.json</code>).
+                    To install a {label} MCP server, select your desired server
+                    from the directory, copy the JSON configuration snippet, and
+                    add it to your client config file (such as{' '}
+                    <code>claude_desktop_config.json</code> or{' '}
+                    <code>.cursor/mcp.json</code>).
                   </p>
                 ),
               },
@@ -383,7 +564,9 @@ export default async function CategoryLandingPage({
                 question: `Are ${label} MCP servers free to use?`,
                 answer: (
                   <p style={{ margin: 0 }}>
-                    Yes, all {label} MCP servers listed in this directory are open-source and free to integrate into compatible Model Context Protocol clients.
+                    Yes, all {label} MCP servers listed in this directory are
+                    open-source and free to integrate into compatible Model
+                    Context Protocol clients.
                   </p>
                 ),
               },

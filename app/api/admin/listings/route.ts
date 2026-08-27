@@ -1,7 +1,20 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  isNotNull,
+  isNull,
+  like,
+  ne,
+  or,
+  type SQL,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, asc, count, desc, eq, gt, isNotNull, isNull, like, ne, or } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 import { servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 
@@ -34,10 +47,10 @@ export async function GET(req: Request) {
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
     const limit = Math.min(
       MAX_LIMIT,
-      Math.max(1, Number(url.searchParams.get('limit')) || DEFAULT_LIMIT)
+      Math.max(1, Number(url.searchParams.get('limit')) || DEFAULT_LIMIT),
     );
 
-    let env;
+    let env: CloudflareEnv | undefined;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
@@ -45,7 +58,7 @@ export async function GET(req: Request) {
       throw new Error('Could not get Cloudflare context.');
     }
 
-    if (!env || !env.DB) {
+    if (!env?.DB) {
       throw new Error('Database binding not found');
     }
 
@@ -56,13 +69,17 @@ export async function GET(req: Request) {
       conditions.push(eq(servers.status, status));
     }
     if (search) {
-      conditions.push(or(like(servers.name, `%${search}%`), like(servers.url, `%${search}%`)));
+      conditions.push(
+        or(like(servers.name, `%${search}%`), like(servers.url, `%${search}%`)),
+      );
     }
     if (premium === 'true' || premium === 'false') {
       conditions.push(eq(servers.isPremium, premium === 'true'));
     }
     if (featured === 'true') {
-      conditions.push(or(eq(servers.isPremium, true), gt(servers.featuredUntil, new Date())));
+      conditions.push(
+        or(eq(servers.isPremium, true), gt(servers.featuredUntil, new Date())),
+      );
     }
     if (categorySponsor === 'true') {
       conditions.push(gt(servers.categorySponsorUntil, new Date()));
@@ -102,13 +119,20 @@ export async function GET(req: Request) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    let orderByClause;
+    let orderByClause: SQL;
     const isAsc = sortOrder === 'asc';
-    if (sortBy === 'name') orderByClause = isAsc ? asc(servers.name) : desc(servers.name);
-    else if (sortBy === 'views') orderByClause = isAsc ? asc(servers.views) : desc(servers.views);
-    else if (sortBy === 'upvotes') orderByClause = isAsc ? asc(servers.upvotes) : desc(servers.upvotes);
-    else if (sortBy === 'stars') orderByClause = isAsc ? asc(servers.githubStars) : desc(servers.githubStars);
-    else orderByClause = isAsc ? asc(servers.createdAt) : desc(servers.createdAt);
+    if (sortBy === 'name')
+      orderByClause = isAsc ? asc(servers.name) : desc(servers.name);
+    else if (sortBy === 'views')
+      orderByClause = isAsc ? asc(servers.views) : desc(servers.views);
+    else if (sortBy === 'upvotes')
+      orderByClause = isAsc ? asc(servers.upvotes) : desc(servers.upvotes);
+    else if (sortBy === 'stars')
+      orderByClause = isAsc
+        ? asc(servers.githubStars)
+        : desc(servers.githubStars);
+    else
+      orderByClause = isAsc ? asc(servers.createdAt) : desc(servers.createdAt);
 
     const [items, totalRows] = await Promise.all([
       db
@@ -159,18 +183,32 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({
-      items: items.map((s: typeof items[number]) => ({
+      items: items.map((s: (typeof items)[number]) => ({
         ...s,
-        createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
-        featuredUntil: s.featuredUntil instanceof Date ? s.featuredUntil.toISOString() : s.featuredUntil,
-        categorySponsorUntil: s.categorySponsorUntil instanceof Date ? s.categorySponsorUntil.toISOString() : s.categorySponsorUntil,
-        toolsCheckedAt: s.toolsCheckedAt instanceof Date ? s.toolsCheckedAt.toISOString() : s.toolsCheckedAt,
+        createdAt:
+          s.createdAt instanceof Date
+            ? s.createdAt.toISOString()
+            : String(s.createdAt),
+        featuredUntil:
+          s.featuredUntil instanceof Date
+            ? s.featuredUntil.toISOString()
+            : s.featuredUntil,
+        categorySponsorUntil:
+          s.categorySponsorUntil instanceof Date
+            ? s.categorySponsorUntil.toISOString()
+            : s.categorySponsorUntil,
+        toolsCheckedAt:
+          s.toolsCheckedAt instanceof Date
+            ? s.toolsCheckedAt.toISOString()
+            : s.toolsCheckedAt,
       })),
       total: totalRows[0]?.total ?? 0,
     });
   } catch (error) {
     console.error('Admin listings error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }
-

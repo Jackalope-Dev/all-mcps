@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { FaqSection } from '../ui/FaqSection';
 
 interface FaqItem {

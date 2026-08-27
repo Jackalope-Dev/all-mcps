@@ -1,10 +1,27 @@
-import { getActiveServersForScoring, getCategoryServers } from '@/lib/servers';
-import { computeQualityScore } from '@/lib/qualityScore';
-import { rankServers, hybridRankServers, buildAiSearchText } from '@/lib/search';
-import { logApiAccess, logApiAccessBatch, extractRequestMeta } from '@/lib/accessLog';
-import { resolveInstallConfig, toClaudeConfigSnippet, installConfidenceNote } from '@/lib/installConfig';
+import {
+  extractRequestMeta,
+  logApiAccess,
+  logApiAccessBatch,
+} from '@/lib/accessLog';
 import { fetchActiveSponsorAd } from '@/lib/ads';
-import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '@/lib/rateLimit';
+import {
+  installConfidenceNote,
+  resolveInstallConfig,
+  toClaudeConfigSnippet,
+} from '@/lib/installConfig';
+import { computeQualityScore } from '@/lib/qualityScore';
+import {
+  checkRateLimit,
+  clientKey,
+  rateLimitedResponse,
+  rateLimitHeaders,
+} from '@/lib/rateLimit';
+import {
+  buildAiSearchText,
+  hybridRankServers,
+  rankServers,
+} from '@/lib/search';
+import { getActiveServersForScoring, getCategoryServers } from '@/lib/servers';
 
 export async function GET(request: Request) {
   const rateLimit = checkRateLimit(`v1_search:${clientKey(request)}`, 60, 60);
@@ -16,7 +33,9 @@ export async function GET(request: Request) {
   const limitParam = parseInt(searchParams.get('limit') || '20', 10);
   const limit = Math.min(Math.max(1, limitParam), 100);
 
-  let servers = category ? await getCategoryServers(category) : await getActiveServersForScoring();
+  let servers = category
+    ? await getCategoryServers(category)
+    : await getActiveServersForScoring();
 
   // Rank by relevance when a query is present (falls back to catalog order otherwise).
   if (query) {
@@ -24,9 +43,17 @@ export async function GET(request: Request) {
     try {
       const { getCloudflareContext } = await import('@opennextjs/cloudflare');
       const cfCtx = await getCloudflareContext();
-      if (cfCtx?.env && (cfCtx.env as any).VECTOR_INDEX && (cfCtx.env as any).AI) {
+      if (
+        cfCtx?.env &&
+        (cfCtx.env as any).VECTOR_INDEX &&
+        (cfCtx.env as any).AI
+      ) {
         const { queryVectorIndex } = await import('@/lib/vectorSearch');
-        vectorMatches = await queryVectorIndex(query, cfCtx.env as CloudflareEnv, 40);
+        vectorMatches = await queryVectorIndex(
+          query,
+          cfCtx.env as CloudflareEnv,
+          40,
+        );
       }
     } catch {
       /* Vector search is best-effort fallback */
@@ -42,9 +69,10 @@ export async function GET(request: Request) {
       return { ...s, toolText, extraText };
     });
 
-    servers = vectorMatches.length > 0
-      ? hybridRankServers(withTools, query, vectorMatches)
-      : rankServers(withTools, query);
+    servers =
+      vectorMatches.length > 0
+        ? hybridRankServers(withTools, query, vectorMatches)
+        : rankServers(withTools, query);
   }
 
   const results = servers.slice(0, limit).map((server) => {
@@ -97,7 +125,9 @@ export async function GET(request: Request) {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const cfCtx = await getCloudflareContext();
     if (cfCtx?.env && (cfCtx.env as any).DB) {
-      const logDb = (await import('drizzle-orm/d1')).drizzle((cfCtx.env as any).DB);
+      const logDb = (await import('drizzle-orm/d1')).drizzle(
+        (cfCtx.env as any).DB,
+      );
       const meta = extractRequestMeta(request);
       // Attribute the search to every server it actually surfaced so each
       // owner's "search queries that find you" panel has data to show.
@@ -116,10 +146,12 @@ export async function GET(request: Request) {
               methodOrTool: query || null,
               userAgent: meta.userAgent,
               ipCountry: meta.ipCountry,
-            })
+            }),
       );
     }
-  } catch { /* logging is best-effort */ }
+  } catch {
+    /* logging is best-effort */
+  }
 
   const activeAd = await fetchActiveSponsorAd('all');
 
@@ -145,6 +177,6 @@ export async function GET(request: Request) {
         'Content-Type': 'application/json; charset=utf-8',
         ...rateLimitHeaders(rateLimit),
       },
-    }
+    },
   );
 }

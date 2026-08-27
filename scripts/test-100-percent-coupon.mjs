@@ -9,7 +9,9 @@ async function testFreeCoupon() {
   };
 
   // 1. Test POST /api/v1/boost/checkout
-  console.log('Sending request to POST https://allmcps.com/api/v1/boost/checkout ...');
+  console.log(
+    'Sending request to POST https://allmcps.com/api/v1/boost/checkout ...',
+  );
   const res = await fetch('https://allmcps.com/api/v1/boost/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -21,7 +23,9 @@ async function testFreeCoupon() {
   console.log('Response Payload:\n', JSON.stringify(data, null, 2));
 
   // 2. Test Remote MCP Tool call for boost_mcp_server with coupon parameter
-  console.log('\nTesting Remote MCP Server tool (boost_mcp_server) with coupon ...');
+  console.log(
+    '\nTesting Remote MCP Server tool (boost_mcp_server) with coupon ...',
+  );
   const mcpRes = await fetch('https://allmcps.com/api/mcp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

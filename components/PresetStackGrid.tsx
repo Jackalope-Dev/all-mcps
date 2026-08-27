@@ -1,26 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
 import {
-  Layers,
   ArrowRight,
-  CheckCircle2,
-  Sparkles,
-  Code2,
-  Database,
-  Cloud,
   Bot,
   Briefcase,
+  CheckCircle2,
+  Cloud,
+  Code2,
+  Database,
   Globe,
-  Copy,
-  Terminal,
-  Cpu,
-  Workflow,
-  Search,
+  Sparkles,
 } from 'lucide-react';
-import { saveStackServerIds } from '@/lib/stackStore';
-import { toast } from '@/components/ui/Toast';
+import type React from 'react';
+import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
+import { toast } from '@/components/ui/Toast';
+import { saveStackServerIds } from '@/lib/stackStore';
 
 export interface PresetStack {
   id: string;
@@ -38,14 +33,20 @@ export const PRESET_STACKS: PresetStack[] = [
     id: 'fullstack-dev',
     name: 'Fullstack Web Developer Stack',
     badge: 'Most Popular',
-    description: 'Git repository management, SQL database introspection, headless browser testing, and persistent agent memory.',
+    description:
+      'Git repository management, SQL database introspection, headless browser testing, and persistent agent memory.',
     icon: <Code2 size={22} />,
     // Uses the theme accent token (not a fixed hex like the other presets)
     // because raw #00e5ff cyan text/border reads fine on dark but fails
     // contrast on a white light-theme surface — var(--accent-color) already
     // resolves to a darker, readable blue in light theme everywhere else.
     accentColor: 'var(--accent-color)',
-    servers: ['github-github-mcp-server', 'crystaldba-postgres-mcp', 'automatalabs-mcp-server-playwright', 'basicmachines-co-basic-memory'],
+    servers: [
+      'github-github-mcp-server',
+      'crystaldba-postgres-mcp',
+      'automatalabs-mcp-server-playwright',
+      'basicmachines-co-basic-memory',
+    ],
     displayTools: [
       { name: 'GitHub', tag: 'DevOps' },
       { name: 'PostgreSQL', tag: 'Database' },
@@ -57,10 +58,16 @@ export const PRESET_STACKS: PresetStack[] = [
     id: 'data-science',
     name: 'Data Science & Analytics Stack',
     badge: 'Data & AI',
-    description: 'Query SQLite & BigQuery databases, execute Python data analysis scripts, and parse spreadsheet workbooks.',
+    description:
+      'Query SQLite & BigQuery databases, execute Python data analysis scripts, and parse spreadsheet workbooks.',
     icon: <Database size={22} />,
     accentColor: '#a855f7',
-    servers: ['jparkerweb-mcp-sqlite', 'ergut-mcp-bigquery-server', 'haris-musa-excel-mcp-server', 'kestra-io-mcp-server-python'],
+    servers: [
+      'jparkerweb-mcp-sqlite',
+      'ergut-mcp-bigquery-server',
+      'haris-musa-excel-mcp-server',
+      'kestra-io-mcp-server-python',
+    ],
     displayTools: [
       { name: 'SQLite', tag: 'Database' },
       { name: 'BigQuery', tag: 'Analytics' },
@@ -72,10 +79,16 @@ export const PRESET_STACKS: PresetStack[] = [
     id: 'devops-cloud',
     name: 'DevOps & Cloud Infrastructure Stack',
     badge: 'Infrastructure',
-    description: 'Control Kubernetes clusters, manage AWS S3 storage buckets, orchestrate Docker containers, and Cloudflare workers.',
+    description:
+      'Control Kubernetes clusters, manage AWS S3 storage buckets, orchestrate Docker containers, and Cloudflare workers.',
     icon: <Cloud size={22} />,
     accentColor: '#34d399',
-    servers: ['flux159-mcp-server-kubernetes', 'alexei-led-aws-mcp-server', 'docker-hub-mcp', 'cloudflare-mcp-server-cloudflare'],
+    servers: [
+      'flux159-mcp-server-kubernetes',
+      'alexei-led-aws-mcp-server',
+      'docker-hub-mcp',
+      'cloudflare-mcp-server-cloudflare',
+    ],
     displayTools: [
       { name: 'Kubernetes', tag: 'K8s' },
       { name: 'AWS S3', tag: 'Cloud' },
@@ -87,10 +100,16 @@ export const PRESET_STACKS: PresetStack[] = [
     id: 'ai-power-agent',
     name: 'Autonomous AI Agent Stack',
     badge: 'Superpower',
-    description: 'Equip your AI agent with long-term graph memory, real-time Brave web search, file system tools, and deep context.',
+    description:
+      'Equip your AI agent with long-term graph memory, real-time Brave web search, file system tools, and deep context.',
     icon: <Bot size={22} />,
     accentColor: '#f59e0b',
-    servers: ['basicmachines-co-basic-memory', 'brave-brave-search-mcp-server', 'modelcontextprotocol-server-everything', 'aitytech-agentkits-memory'],
+    servers: [
+      'basicmachines-co-basic-memory',
+      'brave-brave-search-mcp-server',
+      'modelcontextprotocol-server-everything',
+      'aitytech-agentkits-memory',
+    ],
     displayTools: [
       { name: 'Basic Memory', tag: 'Memory' },
       { name: 'Brave Search', tag: 'Search' },
@@ -102,10 +121,16 @@ export const PRESET_STACKS: PresetStack[] = [
     id: 'team-productivity',
     name: 'Productivity & Team Ops Stack',
     badge: 'Collaboration',
-    description: 'Streamline team messaging via Slack, search Notion workspaces, monitor Sentry error tracking, and fetch Figma designs.',
+    description:
+      'Streamline team messaging via Slack, search Notion workspaces, monitor Sentry error tracking, and fetch Figma designs.',
     icon: <Briefcase size={22} />,
     accentColor: '#f43f5e',
-    servers: ['jtalk22-slack-mcp-server', 'badhansen-notion-mcp', 'getsentry-sentry-mcp', 'glips-figma-context-mcp'],
+    servers: [
+      'jtalk22-slack-mcp-server',
+      'badhansen-notion-mcp',
+      'getsentry-sentry-mcp',
+      'glips-figma-context-mcp',
+    ],
     displayTools: [
       { name: 'Slack', tag: 'Chat' },
       { name: 'Notion', tag: 'Docs' },
@@ -117,10 +142,16 @@ export const PRESET_STACKS: PresetStack[] = [
     id: 'web-scraping-research',
     name: 'Web Scraping & Content Research Stack',
     badge: 'Web & Search',
-    description: 'Automate browser navigation, query live web indexes, fetch structured page content, and summarize articles automatically.',
+    description:
+      'Automate browser navigation, query live web indexes, fetch structured page content, and summarize articles automatically.',
     icon: <Globe size={22} />,
     accentColor: '#0ea5e9',
-    servers: ['automatalabs-mcp-server-playwright', 'brave-brave-search-mcp-server', 'ashlrai-webfetch', '0xshellming-mcp-summarizer'],
+    servers: [
+      'automatalabs-mcp-server-playwright',
+      'brave-brave-search-mcp-server',
+      'ashlrai-webfetch',
+      '0xshellming-mcp-summarizer',
+    ],
     displayTools: [
       { name: 'Playwright', tag: 'Scraper' },
       { name: 'Brave Search', tag: 'Web' },
@@ -168,7 +199,8 @@ export function PresetStackGrid() {
         </div>
         <h2 className="preset-stacks-title">Featured Preset Stacks</h2>
         <p className="preset-stacks-subtitle">
-          Click &ldquo;Load Stack&rdquo; to instantly load pre-configured multi-tool suites into your builder.
+          Click &ldquo;Load Stack&rdquo; to instantly load pre-configured
+          multi-tool suites into your builder.
         </p>
       </div>
 
@@ -186,10 +218,19 @@ export function PresetStackGrid() {
             >
               {/* Header Badge & Icon */}
               <div className="preset-card-top">
-                <div className="preset-card-icon-wrap" style={{ color: 'var(--card-accent)' }}>
+                <div
+                  className="preset-card-icon-wrap"
+                  style={{ color: 'var(--card-accent)' }}
+                >
                   {preset.icon}
                 </div>
-                <span className="preset-card-badge" style={{ borderColor: 'var(--card-accent)', color: 'var(--card-accent)' }}>
+                <span
+                  className="preset-card-badge"
+                  style={{
+                    borderColor: 'var(--card-accent)',
+                    color: 'var(--card-accent)',
+                  }}
+                >
                   {preset.badge}
                 </span>
               </div>

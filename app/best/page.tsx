@@ -1,53 +1,57 @@
+import {
+  Activity,
+  ArrowRight,
+  BookOpen,
+  Bot,
+  Box,
+  Brain,
+  Briefcase,
+  CheckSquare,
+  ChevronRight,
+  Cloud,
+  Code2,
+  CreditCard,
+  Database,
+  FileCode2,
+  FileText,
+  FlaskConical,
+  FolderTree,
+  Gamepad2,
+  GitBranch,
+  GitFork,
+  Globe,
+  HardDrive,
+  Layers,
+  type LucideIcon,
+  Mail,
+  MapPin,
+  Megaphone,
+  MessageCircle,
+  MessageSquare,
+  Microscope,
+  MonitorPlay,
+  Network,
+  Plane,
+  Scale,
+  Search,
+  Share2,
+  ShieldCheck,
+  ShoppingCart,
+  Sparkles,
+  Terminal,
+  TrendingUp,
+  Users,
+  Video,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import {
-  ChevronRight,
-  ArrowRight,
-  Database,
-  Code2,
-  Globe,
-  ShieldCheck,
-  Bot,
-  MessageSquare,
-  Brain,
-  TrendingUp,
-  Cloud,
-  Sparkles,
-  Activity,
-  FolderTree,
-  GitBranch,
-  Briefcase,
-  Megaphone,
-  Share2,
-  Users,
-  Layers,
-  Microscope,
-  FlaskConical,
-  Terminal,
-  ShoppingCart,
-  Scale,
-  Video,
-  Gamepad2,
-  MapPin,
-  Plane,
-  HardDrive,
-  GitFork,
-  Box,
-  Network,
-  FileCode2,
-  BookOpen,
-  CheckSquare,
-  Mail,
-  MessageCircle,
-  FileText,
-  CreditCard,
-  MonitorPlay,
-  Search,
-  type LucideIcon,
-} from 'lucide-react';
-import { BEST_TOPICS, CATEGORY_TOPICS, KEYWORD_TOPICS } from '../../lib/bestTopics';
+import { PageHeader, PageShell } from '../../components/PageShell';
 import { Card } from '../../components/ui/Card';
-import { PageShell, PageHeader } from '../../components/PageShell';
+import {
+  BEST_TOPICS,
+  CATEGORY_TOPICS,
+  KEYWORD_TOPICS,
+} from '../../lib/bestTopics';
 
 const SITE = 'https://allmcps.com';
 
@@ -57,7 +61,14 @@ export const metadata: Metadata = {
     'Curated, ranked guides to the best Model Context Protocol (MCP) servers for databases, developers, web search, security, browser automation, and more.',
   alternates: { canonical: `${SITE}/best` },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Best MCP Servers by Use Case | AllMCPs',
     description:
       'Curated, ranked guides to the best MCP servers for databases, developers, web search, security, browser automation, and more.',
@@ -66,7 +77,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Best MCP Servers by Use Case | AllMCPs',
-    description: 'Curated, ranked guides to the best MCP servers for every use case.',
+    description:
+      'Curated, ranked guides to the best MCP servers for every use case.',
   },
 };
 
@@ -162,7 +174,8 @@ export default function BestIndexPage() {
       {
         '@type': 'CollectionPage',
         name: 'Best MCP Servers by Use Case',
-        description: 'Curated, ranked guides to the best MCP servers for every use case.',
+        description:
+          'Curated, ranked guides to the best MCP servers for every use case.',
         url: `${SITE}/best`,
         isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: SITE },
         mainEntity: {
@@ -180,7 +193,12 @@ export default function BestIndexPage() {
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
-          { '@type': 'ListItem', position: 2, name: 'Best MCP Servers', item: `${SITE}/best` },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Best MCP Servers',
+            item: `${SITE}/best`,
+          },
         ],
       },
     ],
@@ -188,12 +206,19 @@ export default function BestIndexPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PageShell variant="default">
         <nav aria-label="Breadcrumb">
           <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
-            <li><Link href="/">Home</Link></li>
-            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li>
+              <Link href="/">Home</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
             <li className="breadcrumb-current">Best MCP Servers</li>
           </ol>
         </nav>
@@ -205,7 +230,10 @@ export default function BestIndexPage() {
         />
 
         {/* Category Topics Grid */}
-        <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        <ul
+          className="directory-grid"
+          style={{ listStyle: 'none', margin: 0, padding: 0 }}
+        >
           {CATEGORY_TOPICS.map((t) => (
             <li key={t.slug}>
               <TopicTile
@@ -220,16 +248,39 @@ export default function BestIndexPage() {
 
         {/* Integration Topics Section */}
         <section style={{ marginTop: '4.5rem' }}>
-          <div style={{ textAlign: 'center', maxWidth: '780px', margin: '0 auto 2.5rem', padding: '0 1rem' }}>
-            <h2 className="text-display" style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', marginBottom: '0.75rem' }}>
+          <div
+            style={{
+              textAlign: 'center',
+              maxWidth: '780px',
+              margin: '0 auto 2.5rem',
+              padding: '0 1rem',
+            }}
+          >
+            <h2
+              className="text-display"
+              style={{
+                fontSize: 'clamp(1.75rem, 3vw, 2.25rem)',
+                marginBottom: '0.75rem',
+              }}
+            >
               By Integration &amp; Tool
             </h2>
-            <p className="text-lead" style={{ margin: '0 auto', maxWidth: '640px', fontSize: '1.05rem' }}>
-              Looking for a specific tool? Jump straight to the best MCP servers for the platforms and
-              databases people connect most.
+            <p
+              className="text-lead"
+              style={{
+                margin: '0 auto',
+                maxWidth: '640px',
+                fontSize: '1.05rem',
+              }}
+            >
+              Looking for a specific tool? Jump straight to the best MCP servers
+              for the platforms and databases people connect most.
             </p>
           </div>
-          <ul className="directory-grid" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+          <ul
+            className="directory-grid"
+            style={{ listStyle: 'none', margin: 0, padding: 0 }}
+          >
             {KEYWORD_TOPICS.map((t) => (
               <li key={t.slug}>
                 <TopicTile

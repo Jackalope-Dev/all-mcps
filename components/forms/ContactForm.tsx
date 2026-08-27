@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { TurnstileWidget } from '../ui/TurnstileWidget';
-import { toast } from '../ui/Toast';
-import { trackContactSubmit } from '../../lib/gtag';
 import { isUserInEU } from '../../lib/consentRegion';
+import { trackContactSubmit } from '../../lib/gtag';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { toast } from '../ui/Toast';
+import { TurnstileWidget } from '../ui/TurnstileWidget';
 
 export function ContactForm() {
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
   const [token, setToken] = useState<string>('');
   const [newsletterOptIn, setNewsletterOptIn] = useState(true);
 
@@ -29,7 +31,9 @@ export function ContactForm() {
 
     setStatus('loading');
     const formData = new FormData(e.currentTarget);
-    const data: Record<string, unknown> = Object.fromEntries(formData.entries());
+    const data: Record<string, unknown> = Object.fromEntries(
+      formData.entries(),
+    );
 
     data['cf-turnstile-response'] = token;
     data.newsletterOptIn = newsletterOptIn;
@@ -45,7 +49,8 @@ export function ContactForm() {
         setStatus('success');
         trackContactSubmit({
           name: typeof data.name === 'string' ? data.name : undefined,
-          messageLength: typeof data.message === 'string' ? data.message.length : 0,
+          messageLength:
+            typeof data.message === 'string' ? data.message.length : 0,
         });
         toast.success('Message sent', {
           description: "We'll get back to you soon.",
@@ -78,13 +83,36 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+    >
       <Input name="name" label="Your Name" placeholder="Jane Doe" required />
-      <Input name="email" label="Email Address" type="email" placeholder="jane@example.com" required />
+      <Input
+        name="email"
+        label="Email Address"
+        type="email"
+        placeholder="jane@example.com"
+        required
+      />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Message</label>
-        <textarea name="message" className="form-input" rows={5} placeholder="How can we help you?" required></textarea>
+        <label
+          style={{
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          Message
+        </label>
+        <textarea
+          name="message"
+          className="form-input"
+          rows={5}
+          placeholder="How can we help you?"
+          required
+        ></textarea>
       </div>
 
       <label className="form-checkbox-row">
@@ -94,12 +122,24 @@ export function ContactForm() {
           checked={newsletterOptIn}
           onChange={(e) => setNewsletterOptIn(e.target.checked)}
         />
-        <span>Keep me posted with the AllMCPs newsletter (new servers, guides, product updates).</span>
+        <span>
+          Keep me posted with the AllMCPs newsletter (new servers, guides,
+          product updates).
+        </span>
       </label>
 
-      <TurnstileWidget onSuccess={setToken} onExpire={() => setToken('')} onError={() => setToken('')} />
+      <TurnstileWidget
+        onSuccess={setToken}
+        onExpire={() => setToken('')}
+        onError={() => setToken('')}
+      />
 
-      <Button variant="primary" type="submit" disabled={status === 'loading'} style={{ marginTop: '1rem', alignSelf: 'flex-start' }}>
+      <Button
+        variant="primary"
+        type="submit"
+        disabled={status === 'loading'}
+        style={{ marginTop: '1rem', alignSelf: 'flex-start' }}
+      >
         {status === 'loading' ? 'Sending...' : 'Send Message'}
       </Button>
     </form>

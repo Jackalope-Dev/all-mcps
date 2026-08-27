@@ -1,32 +1,23 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import {
+  Activity,
+  ArrowUpDown,
+  Award,
+  ExternalLink,
+  Eye,
+  Heart,
+  Mail,
+  Search,
+  ShieldCheck,
+  Star,
+  User,
+  X,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import { DIRECTORY_CATEGORIES } from '../../lib/categories';
-import {
-  Search,
-  ArrowUpDown,
-  Eye,
-  Heart,
-  Download,
-  Star,
-  Info,
-  Edit2,
-  Trash2,
-  ShieldCheck,
-  Award,
-  Activity,
-  Sparkles,
-  Crown,
-  CheckCircle2,
-  X,
-  ExternalLink,
-  Mail,
-  User,
-  Plus,
-  RefreshCw,
-} from 'lucide-react';
 
 export type ListingFilters = {
   status?: string;
@@ -92,34 +83,65 @@ export default function ManageListings({
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState(initialFilters?.status || 'all');
-  const [premiumFilter, setPremiumFilter] = useState(initialFilters?.premium || '');
-  const [featuredFilter, setFeaturedFilter] = useState(initialFilters?.featured || '');
-  const [healthFilter, setHealthFilter] = useState(initialFilters?.health || '');
+  const [statusFilter, setStatusFilter] = useState(
+    initialFilters?.status || 'all',
+  );
+  const [premiumFilter, setPremiumFilter] = useState(
+    initialFilters?.premium || '',
+  );
+  const [featuredFilter, setFeaturedFilter] = useState(
+    initialFilters?.featured || '',
+  );
+  const [healthFilter, setHealthFilter] = useState(
+    initialFilters?.health || '',
+  );
   const [aiFilter, setAiFilter] = useState(initialFilters?.aiEnriched || '');
-  const [toolsFilter, setToolsFilter] = useState(initialFilters?.hasTools || '');
-  const [hasToolsErrorFilter, setHasToolsErrorFilter] = useState(initialFilters?.hasToolsError || '');
-  const [categorySponsorFilter, setCategorySponsorFilter] = useState(initialFilters?.categorySponsor || '');
-  const [pricingModelFilter, setPricingModelFilter] = useState(initialFilters?.pricingModel || '');
-  const [authTypeFilter, setAuthTypeFilter] = useState(initialFilters?.authType || '');
-  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState(initialFilters?.maintenanceStatus || '');
+  const [toolsFilter, setToolsFilter] = useState(
+    initialFilters?.hasTools || '',
+  );
+  const [hasToolsErrorFilter, setHasToolsErrorFilter] = useState(
+    initialFilters?.hasToolsError || '',
+  );
+  const [categorySponsorFilter, setCategorySponsorFilter] = useState(
+    initialFilters?.categorySponsor || '',
+  );
+  const [pricingModelFilter, setPricingModelFilter] = useState(
+    initialFilters?.pricingModel || '',
+  );
+  const [authTypeFilter, setAuthTypeFilter] = useState(
+    initialFilters?.authType || '',
+  );
+  const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState(
+    initialFilters?.maintenanceStatus || '',
+  );
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   // Update internal filter state if parent passes new initialFilters (e.g. from KPI card click)
   useEffect(() => {
     if (initialFilters) {
-      if (initialFilters.status !== undefined) setStatusFilter(initialFilters.status);
-      if (initialFilters.premium !== undefined) setPremiumFilter(initialFilters.premium);
-      if (initialFilters.featured !== undefined) setFeaturedFilter(initialFilters.featured);
-      if (initialFilters.health !== undefined) setHealthFilter(initialFilters.health);
-      if (initialFilters.aiEnriched !== undefined) setAiFilter(initialFilters.aiEnriched);
-      if (initialFilters.hasTools !== undefined) setToolsFilter(initialFilters.hasTools);
-      if (initialFilters.hasToolsError !== undefined) setHasToolsErrorFilter(initialFilters.hasToolsError);
-      if (initialFilters.categorySponsor !== undefined) setCategorySponsorFilter(initialFilters.categorySponsor);
-      if (initialFilters.pricingModel !== undefined) setPricingModelFilter(initialFilters.pricingModel);
-      if (initialFilters.authType !== undefined) setAuthTypeFilter(initialFilters.authType);
-      if (initialFilters.maintenanceStatus !== undefined) setMaintenanceStatusFilter(initialFilters.maintenanceStatus);
+      if (initialFilters.status !== undefined)
+        setStatusFilter(initialFilters.status);
+      if (initialFilters.premium !== undefined)
+        setPremiumFilter(initialFilters.premium);
+      if (initialFilters.featured !== undefined)
+        setFeaturedFilter(initialFilters.featured);
+      if (initialFilters.health !== undefined)
+        setHealthFilter(initialFilters.health);
+      if (initialFilters.aiEnriched !== undefined)
+        setAiFilter(initialFilters.aiEnriched);
+      if (initialFilters.hasTools !== undefined)
+        setToolsFilter(initialFilters.hasTools);
+      if (initialFilters.hasToolsError !== undefined)
+        setHasToolsErrorFilter(initialFilters.hasToolsError);
+      if (initialFilters.categorySponsor !== undefined)
+        setCategorySponsorFilter(initialFilters.categorySponsor);
+      if (initialFilters.pricingModel !== undefined)
+        setPricingModelFilter(initialFilters.pricingModel);
+      if (initialFilters.authType !== undefined)
+        setAuthTypeFilter(initialFilters.authType);
+      if (initialFilters.maintenanceStatus !== undefined)
+        setMaintenanceStatusFilter(initialFilters.maintenanceStatus);
     }
   }, [initialFilters]);
 
@@ -153,7 +175,9 @@ export default function ManageListings({
     Boolean(maintenanceStatusFilter);
 
   const [inspectListing, setInspectListing] = useState<Listing | null>(null);
-  const [boostModalListing, setBoostModalListing] = useState<Listing | null>(null);
+  const [boostModalListing, setBoostModalListing] = useState<Listing | null>(
+    null,
+  );
   const [customBoostDays, setCustomBoostDays] = useState('14');
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -180,17 +204,23 @@ export default function ManageListings({
       if (aiFilter) params.set('aiEnriched', aiFilter);
       if (toolsFilter) params.set('hasTools', toolsFilter);
       if (hasToolsErrorFilter) params.set('hasToolsError', hasToolsErrorFilter);
-      if (categorySponsorFilter) params.set('categorySponsor', categorySponsorFilter);
+      if (categorySponsorFilter)
+        params.set('categorySponsor', categorySponsorFilter);
       if (pricingModelFilter) params.set('pricingModel', pricingModelFilter);
       if (authTypeFilter) params.set('authType', authTypeFilter);
-      if (maintenanceStatusFilter) params.set('maintenanceStatus', maintenanceStatusFilter);
+      if (maintenanceStatusFilter)
+        params.set('maintenanceStatus', maintenanceStatusFilter);
       params.set('sort', sortBy);
       params.set('order', sortOrder);
       params.set('offset', String(nextOffset));
       params.set('limit', String(PAGE_SIZE));
 
       const res = await fetch(`/api/admin/listings?${params.toString()}`);
-      const data = (await res.json()) as { items?: Listing[]; total?: number; error?: string };
+      const data = (await res.json()) as {
+        items?: Listing[];
+        total?: number;
+        error?: string;
+      };
       if (!res.ok) throw new Error(data.error || 'Could not load listings');
 
       if (requestId !== requestIdRef.current) return;
@@ -246,7 +276,7 @@ export default function ManageListings({
       | 'toggle_official'
       | 'toggle_reciprocal_badge'
       | 'check_health',
-    extra?: { fields?: Partial<EditFields>; days?: number }
+    extra?: { fields?: Partial<EditFields>; days?: number },
   ) => {
     setLoadingId(id);
     try {
@@ -270,32 +300,58 @@ export default function ManageListings({
         setTotal((prev) => Math.max(0, prev - 1));
       } else if (action === 'set_premium' || action === 'unset_premium') {
         setItems((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, isPremium: action === 'set_premium' } : s))
+          prev.map((s) =>
+            s.id === id ? { ...s, isPremium: action === 'set_premium' } : s,
+          ),
         );
       } else if (action === 'toggle_official') {
         setItems((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, isOfficial: data.isOfficial ?? !s.isOfficial } : s))
+          prev.map((s) =>
+            s.id === id
+              ? { ...s, isOfficial: data.isOfficial ?? !s.isOfficial }
+              : s,
+          ),
         );
       } else if (action === 'toggle_reciprocal_badge') {
         setItems((prev) =>
           prev.map((s) =>
-            s.id === id ? { ...s, reciprocalBadgeOk: data.reciprocalBadgeOk ?? !s.reciprocalBadgeOk } : s
-          )
+            s.id === id
+              ? {
+                  ...s,
+                  reciprocalBadgeOk:
+                    data.reciprocalBadgeOk ?? !s.reciprocalBadgeOk,
+                }
+              : s,
+          ),
         );
       } else if (action === 'check_health') {
         setItems((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, healthStatus: data.healthStatus ?? s.healthStatus } : s))
+          prev.map((s) =>
+            s.id === id
+              ? { ...s, healthStatus: data.healthStatus ?? s.healthStatus }
+              : s,
+          ),
         );
       } else if (action === 'unpublish' || action === 'republish') {
         setItems((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, status: action === 'unpublish' ? 'removed' : 'active' } : s))
+          prev.map((s) =>
+            s.id === id
+              ? { ...s, status: action === 'unpublish' ? 'removed' : 'active' }
+              : s,
+          ),
         );
       } else if (action === 'edit') {
-        setItems((prev) => prev.map((s) => (s.id === id ? { ...s, ...extra?.fields } : s)));
+        setItems((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, ...extra?.fields } : s)),
+        );
         setEditingId(null);
       } else if (action === 'feature') {
         setItems((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, featuredUntil: data.featuredUntil ?? s.featuredUntil } : s))
+          prev.map((s) =>
+            s.id === id
+              ? { ...s, featuredUntil: data.featuredUntil ?? s.featuredUntil }
+              : s,
+          ),
         );
         setBoostModalListing(null);
       }
@@ -303,7 +359,9 @@ export default function ManageListings({
       toast.success(data.message || 'Done');
       notifyAdminStatsChanged();
     } catch (err: any) {
-      toast.error('Action failed', { description: err?.message || 'Something went wrong.' });
+      toast.error('Action failed', {
+        description: err?.message || 'Something went wrong.',
+      });
     } finally {
       setLoadingId(null);
     }
@@ -357,16 +415,47 @@ export default function ManageListings({
       {/* Search & Filter Toolbar */}
       <div className="admin-card" style={{ padding: '1.25rem' }}>
         {/* Quick Views / Shortcut Pills */}
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.85rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '0.25rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.4rem',
+            flexWrap: 'wrap',
+            marginBottom: '0.85rem',
+            alignItems: 'center',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: 'var(--text-secondary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginRight: '0.25rem',
+            }}
+          >
             Quick Views:
           </span>
           <button
-            onClick={() => { resetAllFilters(); setSortBy('createdAt'); setSortOrder('desc'); }}
+            onClick={() => {
+              resetAllFilters();
+              setSortBy('createdAt');
+              setSortOrder('desc');
+            }}
             className="admin-btn"
             style={{
-              background: sortBy === 'createdAt' && sortOrder === 'desc' && !hasActiveFilters ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
-              color: sortBy === 'createdAt' && sortOrder === 'desc' && !hasActiveFilters ? '#ffffff' : 'var(--text-primary)',
+              background:
+                sortBy === 'createdAt' &&
+                sortOrder === 'desc' &&
+                !hasActiveFilters
+                  ? 'var(--accent-color)'
+                  : 'rgba(128,128,128,0.08)',
+              color:
+                sortBy === 'createdAt' &&
+                sortOrder === 'desc' &&
+                !hasActiveFilters
+                  ? '#ffffff'
+                  : 'var(--text-primary)',
               border: '1px solid var(--border-color)',
               padding: '0.25rem 0.65rem',
               fontSize: '0.78rem',
@@ -376,11 +465,18 @@ export default function ManageListings({
             ⚡ Recently Approved / Newest
           </button>
           <button
-            onClick={() => { resetAllFilters(); setStatusFilter('active'); }}
+            onClick={() => {
+              resetAllFilters();
+              setStatusFilter('active');
+            }}
             className="admin-btn"
             style={{
-              background: statusFilter === 'active' ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
-              color: statusFilter === 'active' ? '#ffffff' : 'var(--text-primary)',
+              background:
+                statusFilter === 'active'
+                  ? 'var(--accent-color)'
+                  : 'rgba(128,128,128,0.08)',
+              color:
+                statusFilter === 'active' ? '#ffffff' : 'var(--text-primary)',
               border: '1px solid var(--border-color)',
               padding: '0.25rem 0.65rem',
               fontSize: '0.78rem',
@@ -389,11 +485,18 @@ export default function ManageListings({
             Active Listings
           </button>
           <button
-            onClick={() => { resetAllFilters(); setStatusFilter('pending'); }}
+            onClick={() => {
+              resetAllFilters();
+              setStatusFilter('pending');
+            }}
             className="admin-btn"
             style={{
-              background: statusFilter === 'pending' ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
-              color: statusFilter === 'pending' ? '#ffffff' : 'var(--text-primary)',
+              background:
+                statusFilter === 'pending'
+                  ? 'var(--accent-color)'
+                  : 'rgba(128,128,128,0.08)',
+              color:
+                statusFilter === 'pending' ? '#ffffff' : 'var(--text-primary)',
               border: '1px solid var(--border-color)',
               padding: '0.25rem 0.65rem',
               fontSize: '0.78rem',
@@ -402,11 +505,20 @@ export default function ManageListings({
             Pending Submissions
           </button>
           <button
-            onClick={() => { resetAllFilters(); setHealthFilter('unhealthy'); }}
+            onClick={() => {
+              resetAllFilters();
+              setHealthFilter('unhealthy');
+            }}
             className="admin-btn"
             style={{
-              background: healthFilter === 'unhealthy' ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
-              color: healthFilter === 'unhealthy' ? '#ffffff' : 'var(--text-primary)',
+              background:
+                healthFilter === 'unhealthy'
+                  ? 'var(--accent-color)'
+                  : 'rgba(128,128,128,0.08)',
+              color:
+                healthFilter === 'unhealthy'
+                  ? '#ffffff'
+                  : 'var(--text-primary)',
               border: '1px solid var(--border-color)',
               padding: '0.25rem 0.65rem',
               fontSize: '0.78rem',
@@ -415,11 +527,18 @@ export default function ManageListings({
             ⚠️ Unhealthy / Offline
           </button>
           <button
-            onClick={() => { resetAllFilters(); setPremiumFilter('true'); }}
+            onClick={() => {
+              resetAllFilters();
+              setPremiumFilter('true');
+            }}
             className="admin-btn"
             style={{
-              background: premiumFilter === 'true' ? 'var(--accent-color)' : 'rgba(128,128,128,0.08)',
-              color: premiumFilter === 'true' ? '#ffffff' : 'var(--text-primary)',
+              background:
+                premiumFilter === 'true'
+                  ? 'var(--accent-color)'
+                  : 'rgba(128,128,128,0.08)',
+              color:
+                premiumFilter === 'true' ? '#ffffff' : 'var(--text-primary)',
               border: '1px solid var(--border-color)',
               padding: '0.25rem 0.65rem',
               fontSize: '0.78rem',
@@ -429,9 +548,26 @@ export default function ManageListings({
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', width: '100%', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.75rem',
+            width: '100%',
+            flexWrap: 'wrap',
+            marginBottom: '0.75rem',
+          }}
+        >
           <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
-            <Search className="w-4 h-4" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+            <Search
+              className="w-4 h-4"
+              style={{
+                position: 'absolute',
+                left: '0.85rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--text-secondary)',
+              }}
+            />
             <input
               className="form-input"
               style={{ paddingLeft: '2.5rem' }}
@@ -456,7 +592,9 @@ export default function ManageListings({
             </select>
 
             <button
-              onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+              onClick={() =>
+                setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))
+              }
               className="admin-btn"
               style={{
                 background: 'rgba(128, 128, 128, 0.08)',
@@ -474,26 +612,46 @@ export default function ManageListings({
         </div>
 
         <div className="admin-filter-selects">
-          <select className="form-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
             <option value="all">Status: All</option>
             <option value="active">Active</option>
             <option value="pending">Pending</option>
             <option value="removed">Removed</option>
           </select>
-          <select className="form-input" value={premiumFilter} onChange={(e) => setPremiumFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={premiumFilter}
+            onChange={(e) => setPremiumFilter(e.target.value)}
+          >
             <option value="">Premium: Any</option>
             <option value="true">Premium only</option>
             <option value="false">Free only</option>
           </select>
-          <select className="form-input" value={featuredFilter} onChange={(e) => setFeaturedFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={featuredFilter}
+            onChange={(e) => setFeaturedFilter(e.target.value)}
+          >
             <option value="">Featured: Any</option>
             <option value="true">Currently Featured</option>
           </select>
-          <select className="form-input" value={categorySponsorFilter} onChange={(e) => setCategorySponsorFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={categorySponsorFilter}
+            onChange={(e) => setCategorySponsorFilter(e.target.value)}
+          >
             <option value="">Category Sponsor: Any</option>
             <option value="true">Category Sponsors only</option>
           </select>
-          <select className="form-input" value={healthFilter} onChange={(e) => setHealthFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={healthFilter}
+            onChange={(e) => setHealthFilter(e.target.value)}
+          >
             <option value="">Health: Any</option>
             <option value="unhealthy">Unhealthy / Offline (All)</option>
             <option value="healthy">Healthy</option>
@@ -501,36 +659,60 @@ export default function ManageListings({
             <option value="archived">Archived</option>
             <option value="offline">Offline</option>
           </select>
-          <select className="form-input" value={aiFilter} onChange={(e) => setAiFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={aiFilter}
+            onChange={(e) => setAiFilter(e.target.value)}
+          >
             <option value="">AI Content: Any</option>
             <option value="true">Enriched</option>
             <option value="false">Not Enriched</option>
           </select>
-          <select className="form-input" value={toolsFilter} onChange={(e) => setToolsFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={toolsFilter}
+            onChange={(e) => setToolsFilter(e.target.value)}
+          >
             <option value="">MCP Tools: Any</option>
             <option value="true">Has Tools</option>
             <option value="false">No Tools</option>
           </select>
-          <select className="form-input" value={hasToolsErrorFilter} onChange={(e) => setHasToolsErrorFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={hasToolsErrorFilter}
+            onChange={(e) => setHasToolsErrorFilter(e.target.value)}
+          >
             <option value="">Introspection Error: Any</option>
             <option value="true">Errors only</option>
             <option value="false">No Errors</option>
           </select>
-          <select className="form-input" value={pricingModelFilter} onChange={(e) => setPricingModelFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={pricingModelFilter}
+            onChange={(e) => setPricingModelFilter(e.target.value)}
+          >
             <option value="">Pricing: Any</option>
             <option value="free">Free</option>
             <option value="freemium">Freemium</option>
             <option value="paid">Paid</option>
             <option value="byok">BYOK</option>
           </select>
-          <select className="form-input" value={authTypeFilter} onChange={(e) => setAuthTypeFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={authTypeFilter}
+            onChange={(e) => setAuthTypeFilter(e.target.value)}
+          >
             <option value="">Auth: Any</option>
             <option value="none">No Auth</option>
             <option value="api_key">API Key</option>
             <option value="oauth">OAuth</option>
             <option value="other">Other</option>
           </select>
-          <select className="form-input" value={maintenanceStatusFilter} onChange={(e) => setMaintenanceStatusFilter(e.target.value)}>
+          <select
+            className="form-input"
+            value={maintenanceStatusFilter}
+            onChange={(e) => setMaintenanceStatusFilter(e.target.value)}
+          >
             <option value="">Maintenance: Any</option>
             <option value="active">Active</option>
             <option value="stable">Stable</option>
@@ -559,17 +741,42 @@ export default function ManageListings({
 
       {/* Directory Listing Cards Layout */}
       {loading ? (
-        <div className="admin-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <div
+          className="admin-card"
+          style={{
+            padding: '3rem',
+            textAlign: 'center',
+            color: 'var(--text-secondary)',
+          }}
+        >
           Loading MCP listings catalog...
         </div>
       ) : items.length === 0 ? (
-        <div className="admin-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <div
+          className="admin-card"
+          style={{
+            padding: '3rem',
+            textAlign: 'center',
+            color: 'var(--text-secondary)',
+          }}
+        >
           No listings match the specified filter criteria.
         </div>
       ) : (
-        <ul role="list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', listStyle: 'none', margin: 0, padding: 0 }}>
+        <ul
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            listStyle: 'none',
+            margin: 0,
+            padding: 0,
+          }}
+        >
           {items.map((listing) => {
-            const featuredUntilDate = listing.featuredUntil ? new Date(listing.featuredUntil) : null;
+            const featuredUntilDate = listing.featuredUntil
+              ? new Date(listing.featuredUntil)
+              : null;
             const featuredDaysLeft = featuredUntilDate
               ? Math.ceil((featuredUntilDate.getTime() - Date.now()) / 86400000)
               : null;
@@ -585,44 +792,112 @@ export default function ManageListings({
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '1rem',
-                  borderLeft: listing.isPremium ? '4px solid var(--accent-color)' : '1px solid var(--border-color)',
+                  borderLeft: listing.isPremium
+                    ? '4px solid var(--accent-color)'
+                    : '1px solid var(--border-color)',
                 }}
               >
                 {/* Header Row: Title, Badges & Links */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>{listing.name}</h3>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontSize: '1.1rem',
+                          fontWeight: 700,
+                          margin: 0,
+                          color: 'var(--text-primary)',
+                        }}
+                      >
+                        {listing.name}
+                      </h3>
 
                       {listing.status === 'removed' && (
-                        <span className="admin-badge" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.12)' }}>
+                        <span
+                          className="admin-badge"
+                          style={{
+                            color: '#ef4444',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                          }}
+                        >
                           REMOVED
                         </span>
                       )}
                       {listing.isPremium && (
-                        <span className="admin-badge" style={{ color: '#0284c7', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.3)' }}>
+                        <span
+                          className="admin-badge"
+                          style={{
+                            color: '#0284c7',
+                            background: 'rgba(2, 132, 199, 0.12)',
+                            border: '1px solid rgba(2, 132, 199, 0.3)',
+                          }}
+                        >
                           PREMIUM
                         </span>
                       )}
                       {listing.isOfficial && (
-                        <span className="admin-badge" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' }}>
+                        <span
+                          className="admin-badge"
+                          style={{
+                            color: '#10b981',
+                            background: 'rgba(16, 185, 129, 0.12)',
+                          }}
+                        >
                           ★ OFFICIAL
                         </span>
                       )}
                       {listing.reciprocalBadgeOk && (
-                        <span className="admin-badge" style={{ color: '#2563eb', background: 'rgba(37, 99, 235, 0.12)' }}>
+                        <span
+                          className="admin-badge"
+                          style={{
+                            color: '#2563eb',
+                            background: 'rgba(37, 99, 235, 0.12)',
+                          }}
+                        >
                           ✓ VERIFIED
                         </span>
                       )}
                       {listing.aiSummary && (
-                        <span className="admin-badge" style={{ color: '#7c3aed', background: 'rgba(124, 58, 237, 0.12)' }}>
+                        <span
+                          className="admin-badge"
+                          style={{
+                            color: '#7c3aed',
+                            background: 'rgba(124, 58, 237, 0.12)',
+                          }}
+                        >
                           AI ENRICHED
                         </span>
                       )}
                       <span
                         className="admin-badge"
                         style={{
-                          color: listing.healthStatus === 'healthy' ? '#10b981' : listing.healthStatus === 'unknown' ? 'var(--text-secondary)' : '#ef4444',
+                          color:
+                            listing.healthStatus === 'healthy'
+                              ? '#10b981'
+                              : listing.healthStatus === 'unknown'
+                                ? 'var(--text-secondary)'
+                                : '#ef4444',
                           background: 'rgba(128, 128, 128, 0.1)',
                           border: '1px solid var(--border-color)',
                         }}
@@ -632,15 +907,56 @@ export default function ManageListings({
                     </div>
 
                     {/* External Links Bar */}
-                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.825rem', marginTop: '0.15rem' }}>
-                      <a href={`/mcp/${listing.id}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '1rem',
+                        fontSize: '0.825rem',
+                        marginTop: '0.15rem',
+                      }}
+                    >
+                      <a
+                        href={`/mcp/${listing.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: 'var(--accent-color)',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          textDecoration: 'none',
+                        }}
+                      >
                         <ExternalLink className="w-3.5 h-3.5" /> Listing Page
                       </a>
-                      <a href={listing.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                      <a
+                        href={listing.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: 'var(--accent-color)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          textDecoration: 'none',
+                        }}
+                      >
                         GitHub Repo
                       </a>
                       {listing.websiteUrl && (
-                        <a href={listing.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                        <a
+                          href={listing.websiteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: 'var(--accent-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            textDecoration: 'none',
+                          }}
+                        >
                           Product Website
                         </a>
                       )}
@@ -648,40 +964,86 @@ export default function ManageListings({
                   </div>
 
                   {/* Boost Status Badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
                     <div
                       style={{
                         padding: '0.35rem 0.75rem',
                         borderRadius: '6px',
-                        background: featuredDaysLeft && featuredDaysLeft > 0 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(128, 128, 128, 0.08)',
-                        border: featuredDaysLeft && featuredDaysLeft > 0 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-color)',
+                        background:
+                          featuredDaysLeft && featuredDaysLeft > 0
+                            ? 'rgba(245, 158, 11, 0.12)'
+                            : 'rgba(128, 128, 128, 0.08)',
+                        border:
+                          featuredDaysLeft && featuredDaysLeft > 0
+                            ? '1px solid rgba(245, 158, 11, 0.4)'
+                            : '1px solid var(--border-color)',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: featuredDaysLeft && featuredDaysLeft > 0 ? '#d97706' : 'var(--text-secondary)',
+                        color:
+                          featuredDaysLeft && featuredDaysLeft > 0
+                            ? '#d97706'
+                            : 'var(--text-secondary)',
                       }}
                     >
-                      {featuredDaysLeft && featuredDaysLeft > 0 ? `★ ${featuredDaysLeft}d boost active` : 'No placement boost'}
+                      {featuredDaysLeft && featuredDaysLeft > 0
+                        ? `★ ${featuredDaysLeft}d boost active`
+                        : 'No placement boost'}
                     </div>
                   </div>
                 </div>
 
                 {/* Inline Edit Form OR Overview details */}
                 {isEditing ? (
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>Edit Listing Metadata</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                  <div
+                    style={{
+                      background: 'rgba(0,0,0,0.3)',
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <h4
+                      style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}
+                    >
+                      Edit Listing Metadata
+                    </h4>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '0.75rem',
+                      }}
+                    >
                       <input
                         className="form-input"
                         value={editForm.name}
-                        onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm((f) => ({ ...f, name: e.target.value }))
+                        }
                         placeholder="Name"
                       />
                       <select
                         className="form-input"
                         value={editForm.category}
-                        onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm((f) => ({
+                            ...f,
+                            category: e.target.value,
+                          }))
+                        }
                       >
-                        {(!editForm.category || DIRECTORY_CATEGORIES.includes(editForm.category)
+                        {(!editForm.category ||
+                        DIRECTORY_CATEGORIES.includes(editForm.category)
                           ? DIRECTORY_CATEGORIES
                           : [editForm.category, ...DIRECTORY_CATEGORIES]
                         ).map((cat) => (
@@ -695,55 +1057,161 @@ export default function ManageListings({
                       className="form-input"
                       rows={2}
                       value={editForm.description}
-                      onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                      onChange={(e) =>
+                        setEditForm((f) => ({
+                          ...f,
+                          description: e.target.value,
+                        }))
+                      }
                       placeholder="Description"
                     />
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '0.75rem',
+                      }}
+                    >
                       <input
                         className="form-input"
                         value={editForm.url}
-                        onChange={(e) => setEditForm((f) => ({ ...f, url: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm((f) => ({ ...f, url: e.target.value }))
+                        }
                         placeholder="GitHub Repo URL"
                       />
                       <input
                         className="form-input"
                         value={editForm.websiteUrl}
-                        onChange={(e) => setEditForm((f) => ({ ...f, websiteUrl: e.target.value }))}
+                        onChange={(e) =>
+                          setEditForm((f) => ({
+                            ...f,
+                            websiteUrl: e.target.value,
+                          }))
+                        }
                         placeholder="Website URL"
                       />
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                      <button onClick={() => saveEdit(listing.id)} disabled={rowLoading} className="admin-btn" style={{ background: '#10b981' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.5rem',
+                        marginTop: '0.25rem',
+                      }}
+                    >
+                      <button
+                        onClick={() => saveEdit(listing.id)}
+                        disabled={rowLoading}
+                        className="admin-btn"
+                        style={{ background: '#10b981' }}
+                      >
                         Save Changes
                       </button>
-                      <button onClick={() => setEditingId(null)} disabled={rowLoading} className="admin-btn" style={{ background: '#64748b' }}>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        disabled={rowLoading}
+                        className="admin-btn"
+                        style={{ background: '#64748b' }}
+                      >
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, marginBottom: '0.5rem', lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: '0.875rem',
+                        color: 'var(--text-secondary)',
+                        margin: 0,
+                        marginBottom: '0.5rem',
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {listing.description}
                     </p>
 
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(128,128,128,0.04)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                      <span>Category: <strong style={{ color: 'var(--text-primary)' }}>{listing.category}</strong></span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '1.25rem',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)',
+                        background: 'rgba(128,128,128,0.04)',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                      }}
+                    >
+                      <span>
+                        Category:{' '}
+                        <strong style={{ color: 'var(--text-primary)' }}>
+                          {listing.category}
+                        </strong>
+                      </span>
                       {listing.submitterEmail && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Mail className="w-3.5 h-3.5" /> Submitter: <strong style={{ color: 'var(--text-primary)' }}>{listing.submitterEmail}</strong>
+                        <span
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                          }}
+                        >
+                          <Mail className="w-3.5 h-3.5" /> Submitter:{' '}
+                          <strong style={{ color: 'var(--text-primary)' }}>
+                            {listing.submitterEmail}
+                          </strong>
                         </span>
                       )}
                       {listing.ownerUserId && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <User className="w-3.5 h-3.5" /> Owner: <strong style={{ color: 'var(--text-primary)' }}>{listing.ownerUserId.slice(0, 8)}...</strong>
+                        <span
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                          }}
+                        >
+                          <User className="w-3.5 h-3.5" /> Owner:{' '}
+                          <strong style={{ color: 'var(--text-primary)' }}>
+                            {listing.ownerUserId.slice(0, 8)}...
+                          </strong>
                         </span>
                       )}
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Eye className="w-3.5 h-3.5" /> {listing.views || 0} views</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Heart className="w-3.5 h-3.5 text-red-400" /> {listing.upvotes || 0} upvotes</span>
-                      {listing.githubStars !== null && listing.githubStars !== undefined && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Star className="w-3.5 h-3.5 text-amber-400" /> {listing.githubStars} stars</span>
-                      )}
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                        }}
+                      >
+                        <Eye className="w-3.5 h-3.5" /> {listing.views || 0}{' '}
+                        views
+                      </span>
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                        }}
+                      >
+                        <Heart className="w-3.5 h-3.5 text-red-400" />{' '}
+                        {listing.upvotes || 0} upvotes
+                      </span>
+                      {listing.githubStars !== null &&
+                        listing.githubStars !== undefined && (
+                          <span
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                          >
+                            <Star className="w-3.5 h-3.5 text-amber-400" />{' '}
+                            {listing.githubStars} stars
+                          </span>
+                        )}
                     </div>
                   </div>
                 )}
@@ -759,8 +1227,23 @@ export default function ManageListings({
                   }}
                 >
                   {/* Action Group 1: Verification & Badges */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', width: '90px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: 'var(--text-secondary)',
+                        textTransform: 'uppercase',
+                        width: '90px',
+                      }}
+                    >
                       Badges:
                     </span>
                     <button
@@ -768,8 +1251,12 @@ export default function ManageListings({
                       disabled={rowLoading}
                       className="admin-btn"
                       style={{
-                        background: listing.isOfficial ? 'rgba(16, 185, 129, 0.15)' : 'rgba(128,128,128,0.08)',
-                        color: listing.isOfficial ? '#10b981' : 'var(--text-secondary)',
+                        background: listing.isOfficial
+                          ? 'rgba(16, 185, 129, 0.15)'
+                          : 'rgba(128,128,128,0.08)',
+                        color: listing.isOfficial
+                          ? '#10b981'
+                          : 'var(--text-secondary)',
                         border: '1px solid var(--border-color)',
                         padding: '0.25rem 0.55rem',
                         fontSize: '0.75rem',
@@ -779,16 +1266,23 @@ export default function ManageListings({
                       }}
                       title="Manually toggle Official Project badge"
                     >
-                      <ShieldCheck className="w-3.5 h-3.5" /> {listing.isOfficial ? 'Official: ON' : 'Make Official'}
+                      <ShieldCheck className="w-3.5 h-3.5" />{' '}
+                      {listing.isOfficial ? 'Official: ON' : 'Make Official'}
                     </button>
 
                     <button
-                      onClick={() => runAction(listing.id, 'toggle_reciprocal_badge')}
+                      onClick={() =>
+                        runAction(listing.id, 'toggle_reciprocal_badge')
+                      }
                       disabled={rowLoading}
                       className="admin-btn"
                       style={{
-                        background: listing.reciprocalBadgeOk ? 'rgba(16, 185, 129, 0.15)' : 'rgba(128,128,128,0.08)',
-                        color: listing.reciprocalBadgeOk ? '#10b981' : 'var(--text-secondary)',
+                        background: listing.reciprocalBadgeOk
+                          ? 'rgba(16, 185, 129, 0.15)'
+                          : 'rgba(128,128,128,0.08)',
+                        color: listing.reciprocalBadgeOk
+                          ? '#10b981'
+                          : 'var(--text-secondary)',
                         border: '1px solid var(--border-color)',
                         padding: '0.25rem 0.55rem',
                         fontSize: '0.75rem',
@@ -798,7 +1292,10 @@ export default function ManageListings({
                       }}
                       title="Manually toggle Verified (reciprocal badge) status"
                     >
-                      <Award className="w-3.5 h-3.5" /> {listing.reciprocalBadgeOk ? 'Verified: YES' : 'Mark Verified'}
+                      <Award className="w-3.5 h-3.5" />{' '}
+                      {listing.reciprocalBadgeOk
+                        ? 'Verified: YES'
+                        : 'Mark Verified'}
                     </button>
 
                     <button
@@ -822,24 +1319,57 @@ export default function ManageListings({
                   </div>
 
                   {/* Action Group 2: Boost & Premium Placements */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', width: '90px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: 'var(--text-secondary)',
+                        textTransform: 'uppercase',
+                        width: '90px',
+                      }}
+                    >
                       Placements:
                     </span>
                     <button
-                      onClick={() => runAction(listing.id, 'feature', { days: 7 })}
+                      onClick={() =>
+                        runAction(listing.id, 'feature', { days: 7 })
+                      }
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(2,132,199,0.15)', color: '#0284c7', border: '1px solid rgba(2,132,199,0.4)', padding: '0.25rem 0.55rem', fontSize: '0.75rem', fontWeight: 700 }}
+                      style={{
+                        background: 'rgba(2,132,199,0.15)',
+                        color: '#0284c7',
+                        border: '1px solid rgba(2,132,199,0.4)',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                      }}
                     >
                       +7d Boost
                     </button>
 
                     <button
-                      onClick={() => runAction(listing.id, 'feature', { days: 30 })}
+                      onClick={() =>
+                        runAction(listing.id, 'feature', { days: 30 })
+                      }
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(245,158,11,0.15)', color: '#d97706', border: '1px solid rgba(245,158,11,0.4)', padding: '0.25rem 0.55rem', fontSize: '0.75rem', fontWeight: 700 }}
+                      style={{
+                        background: 'rgba(245,158,11,0.15)',
+                        color: '#d97706',
+                        border: '1px solid rgba(245,158,11,0.4)',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                      }}
                     >
                       +30d Boost
                     </button>
@@ -848,31 +1378,67 @@ export default function ManageListings({
                       onClick={() => setBoostModalListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                      style={{
+                        background: 'rgba(128,128,128,0.08)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.75rem',
+                      }}
                     >
                       Custom Boost...
                     </button>
 
                     <button
-                      onClick={() => runAction(listing.id, listing.isPremium ? 'unset_premium' : 'set_premium')}
+                      onClick={() =>
+                        runAction(
+                          listing.id,
+                          listing.isPremium ? 'unset_premium' : 'set_premium',
+                        )
+                      }
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: listing.isPremium ? '#64748b' : '#0284c7', color: '#ffffff', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                      style={{
+                        background: listing.isPremium ? '#64748b' : '#0284c7',
+                        color: '#ffffff',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.75rem',
+                      }}
                     >
                       {listing.isPremium ? 'Unset Premium' : 'Make Premium'}
                     </button>
                   </div>
 
                   {/* Action Group 3: Directory Controls */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', width: '90px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: 'var(--text-secondary)',
+                        textTransform: 'uppercase',
+                        width: '90px',
+                      }}
+                    >
                       Management:
                     </span>
                     <button
                       onClick={() => startEdit(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: '#64748b', color: '#ffffff', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                      style={{
+                        background: '#64748b',
+                        color: '#ffffff',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.75rem',
+                      }}
                     >
                       Edit
                     </button>
@@ -881,7 +1447,13 @@ export default function ManageListings({
                       onClick={() => setInspectListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                      style={{
+                        background: 'rgba(128,128,128,0.08)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border-color)',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.75rem',
+                      }}
                     >
                       Inspector
                     </button>
@@ -889,10 +1461,16 @@ export default function ManageListings({
                     {listing.status === 'active' ? (
                       <>
                         <button
-                          onClick={() => runAction(listing.id, 'resend_approval')}
+                          onClick={() =>
+                            runAction(listing.id, 'resend_approval')
+                          }
                           disabled={rowLoading}
                           className="admin-btn"
-                          style={{ background: '#0284c7', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                          style={{
+                            background: '#0284c7',
+                            padding: '0.25rem 0.55rem',
+                            fontSize: '0.75rem',
+                          }}
                           title="Resend approval email"
                         >
                           Resend Email
@@ -901,7 +1479,11 @@ export default function ManageListings({
                           onClick={() => runAction(listing.id, 'unpublish')}
                           disabled={rowLoading}
                           className="admin-btn"
-                          style={{ background: '#d97706', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                          style={{
+                            background: '#d97706',
+                            padding: '0.25rem 0.55rem',
+                            fontSize: '0.75rem',
+                          }}
                         >
                           Unpublish
                         </button>
@@ -911,7 +1493,11 @@ export default function ManageListings({
                         onClick={() => runAction(listing.id, 'republish')}
                         disabled={rowLoading}
                         className="admin-btn"
-                        style={{ background: '#10b981', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                        style={{
+                          background: '#10b981',
+                          padding: '0.25rem 0.55rem',
+                          fontSize: '0.75rem',
+                        }}
                       >
                         Republish
                       </button>
@@ -921,7 +1507,11 @@ export default function ManageListings({
                       onClick={() => deleteListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
-                      style={{ background: '#ef4444', padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                      style={{
+                        background: '#ef4444',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.75rem',
+                      }}
                     >
                       Delete
                     </button>
@@ -989,22 +1579,60 @@ export default function ManageListings({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  margin: 0,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 Grant Placement Boost: {boostModalListing.name}
               </h3>
-              <button onClick={() => setBoostModalListing(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
+              <button
+                onClick={() => setBoostModalListing(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                }}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Grant featured placement duration for this listing on the homepage and search listings.
+            <p
+              style={{
+                fontSize: '0.85rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '1.25rem',
+              }}
+            >
+              Grant featured placement duration for this listing on the homepage
+              and search listings.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '0.35rem',
+                  }}
+                >
                   Number of Days to Add
                 </label>
                 <input
@@ -1012,7 +1640,11 @@ export default function ManageListings({
                   min={1}
                   max={365}
                   className="form-input"
-                  style={{ width: '100%', padding: '0.6rem 0.85rem', fontSize: '0.95rem' }}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.85rem',
+                    fontSize: '0.95rem',
+                  }}
                   value={customBoostDays}
                   onChange={(e) => setCustomBoostDays(e.target.value)}
                 />
@@ -1025,18 +1657,39 @@ export default function ManageListings({
                     type="button"
                     onClick={() => setCustomBoostDays(String(d))}
                     className="admin-btn"
-                    style={{ background: 'rgba(128,128,128,0.08)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                    style={{
+                      background: 'rgba(128,128,128,0.08)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-color)',
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                    }}
                   >
                     {d} days
                   </button>
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <button onClick={() => setBoostModalListing(null)} className="admin-btn" style={{ background: '#64748b', color: '#ffffff' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '0.5rem',
+                  marginTop: '0.5rem',
+                }}
+              >
+                <button
+                  onClick={() => setBoostModalListing(null)}
+                  className="admin-btn"
+                  style={{ background: '#64748b', color: '#ffffff' }}
+                >
                   Cancel
                 </button>
-                <button onClick={() => grantFeaturedModal(boostModalListing.id)} className="admin-btn" style={{ background: '#0284c7', color: '#ffffff' }}>
+                <button
+                  onClick={() => grantFeaturedModal(boostModalListing.id)}
+                  className="admin-btn"
+                  style={{ background: '#0284c7', color: '#ffffff' }}
+                >
                   Grant {customBoostDays} Days Boost
                 </button>
               </div>
@@ -1076,31 +1729,107 @@ export default function ManageListings({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Listing Inspector: {inspectListing.name}</h3>
-              <button onClick={() => setInspectListing(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  margin: 0,
+                  color: 'var(--text-primary)',
+                }}
+              >
+                Listing Inspector: {inspectListing.name}
+              </h3>
+              <button
+                onClick={() => setInspectListing(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                }}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
-              <div><strong>ID:</strong> <code style={{ color: 'var(--accent-color)', fontWeight: 700 }}>{inspectListing.id}</code></div>
-              <div><strong>Submitter Email:</strong> {inspectListing.submitterEmail || 'Not recorded'}</div>
-              <div><strong>Owner User ID:</strong> {inspectListing.ownerUserId || 'Unclaimed'}</div>
-              <div><strong>Official (admin-approved claim):</strong> {inspectListing.isOfficial ? 'Yes' : 'No'}</div>
-              <div><strong>Verified (reciprocal badge, SEO dofollow):</strong> {inspectListing.reciprocalBadgeOk ? 'Yes (Active dofollow)' : 'No (Pending)'}</div>
-              <div><strong>Health Status:</strong> {inspectListing.healthStatus}</div>
-              <div><strong>Created At:</strong> {new Date(inspectListing.createdAt).toLocaleString()}</div>
-              <div><strong>AI Summary:</strong> {inspectListing.aiSummary || 'Not generated yet'}</div>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                fontSize: '0.85rem',
+              }}
+            >
+              <div>
+                <strong>ID:</strong>{' '}
+                <code style={{ color: 'var(--accent-color)', fontWeight: 700 }}>
+                  {inspectListing.id}
+                </code>
+              </div>
+              <div>
+                <strong>Submitter Email:</strong>{' '}
+                {inspectListing.submitterEmail || 'Not recorded'}
+              </div>
+              <div>
+                <strong>Owner User ID:</strong>{' '}
+                {inspectListing.ownerUserId || 'Unclaimed'}
+              </div>
+              <div>
+                <strong>Official (admin-approved claim):</strong>{' '}
+                {inspectListing.isOfficial ? 'Yes' : 'No'}
+              </div>
+              <div>
+                <strong>Verified (reciprocal badge, SEO dofollow):</strong>{' '}
+                {inspectListing.reciprocalBadgeOk
+                  ? 'Yes (Active dofollow)'
+                  : 'No (Pending)'}
+              </div>
+              <div>
+                <strong>Health Status:</strong> {inspectListing.healthStatus}
+              </div>
+              <div>
+                <strong>Created At:</strong>{' '}
+                {new Date(inspectListing.createdAt).toLocaleString()}
+              </div>
+              <div>
+                <strong>AI Summary:</strong>{' '}
+                {inspectListing.aiSummary || 'Not generated yet'}
+              </div>
 
               <div>
                 <strong>Introspected MCP Tools:</strong>
                 {inspectListing.tools ? (
-                  <pre style={{ background: 'rgba(128,128,128,0.06)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.75rem', overflowX: 'auto', marginTop: '0.25rem' }}>
+                  <pre
+                    style={{
+                      background: 'rgba(128,128,128,0.06)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-primary)',
+                      padding: '0.75rem',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      overflowX: 'auto',
+                      marginTop: '0.25rem',
+                    }}
+                  >
                     {JSON.stringify(JSON.parse(inspectListing.tools), null, 2)}
                   </pre>
                 ) : (
-                  <span style={{ color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>None introspected</span>
+                  <span
+                    style={{
+                      color: 'var(--text-secondary)',
+                      marginLeft: '0.5rem',
+                    }}
+                  >
+                    None introspected
+                  </span>
                 )}
               </div>
             </div>

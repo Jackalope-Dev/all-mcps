@@ -20,25 +20,31 @@ export async function GET() {
     capabilities: {
       tools: {
         search_mcp_servers: {
-          description: 'Search the AllMCPs directory for MCP servers by query or category',
+          description:
+            'Search the AllMCPs directory for MCP servers by query or category',
         },
         get_mcp_install_config: {
-          description: 'Get client JSON configurations for specific MCP servers',
+          description:
+            'Get client JSON configurations for specific MCP servers',
         },
         list_mcp_categories: {
           description: 'List directory categories with server counts',
         },
         get_boost_pricing: {
-          description: 'Get pricing and features for boosting an MCP server on AllMCPs.com',
+          description:
+            'Get pricing and features for boosting an MCP server on AllMCPs.com',
         },
         boost_mcp_server: {
-          description: 'Initiate a server boost order via Stripe or x402 protocol',
+          description:
+            'Initiate a server boost order via Stripe or x402 protocol',
         },
         submit_mcp_server: {
-          description: 'Programmatically submit a new MCP repository to AllMCPs.com',
+          description:
+            'Programmatically submit a new MCP repository to AllMCPs.com',
         },
         verify_mcp_claim: {
-          description: 'Verify maintainer ownership via README badge, site badge, or DNS TXT',
+          description:
+            'Verify maintainer ownership via README badge, site badge, or DNS TXT',
         },
       },
     },

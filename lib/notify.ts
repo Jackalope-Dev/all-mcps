@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
-import { NotificationEmail } from '@/components/emails/NotificationEmail';
 import { ListingStatusEmail } from '@/components/emails/ListingStatusEmail';
+import { NotificationEmail } from '@/components/emails/NotificationEmail';
 import { ReceiptEmail } from '@/components/emails/ReceiptEmail';
 
 export async function getEmailEnv() {
@@ -11,7 +11,7 @@ export async function getEmailEnv() {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env) {
+    if (ctx?.env) {
       const env = ctx.env as any;
       if (env.RESEND_API_KEY) apiKey = env.RESEND_API_KEY;
       if (env.RESEND_FROM_EMAIL) fromEmail = env.RESEND_FROM_EMAIL;

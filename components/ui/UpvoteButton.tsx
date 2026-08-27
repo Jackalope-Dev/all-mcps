@@ -1,11 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
-import { toast } from './Toast';
+import { useEffect, useState } from 'react';
 import { trackUpvote } from '../../lib/gtag';
+import { toast } from './Toast';
 
-export function UpvoteButton({ serverId, initialCount }: { serverId: string; initialCount: number }) {
+export function UpvoteButton({
+  serverId,
+  initialCount,
+}: {
+  serverId: string;
+  initialCount: number;
+}) {
   const [upvotes, setUpvotes] = useState(initialCount || 0);
   const [hasUpvoted, setHasUpvoted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -141,13 +147,21 @@ export function UpvoteButton({ serverId, initialCount }: { serverId: string; ini
       title={hasUpvoted ? 'Click to remove upvote' : 'Click to upvote'}
       aria-label={`${hasUpvoted ? 'Remove upvote' : 'Upvote'}. Current count: ${upvotes}`}
     >
-      <Heart 
-        size={16} 
+      <Heart
+        size={16}
         className="upvote-heart-icon text-white"
-        fill={hasUpvoted ? '#ffffff' : (isHovered ? 'rgba(255, 255, 255, 0.5)' : 'transparent')} 
+        fill={
+          hasUpvoted
+            ? '#ffffff'
+            : isHovered
+              ? 'rgba(255, 255, 255, 0.5)'
+              : 'transparent'
+        }
         style={{ transition: 'all 0.2s ease', color: '#ffffff' }}
       />
-      <span>{upvotes} {upvotes === 1 ? 'Upvote' : 'Upvotes'}</span>
+      <span>
+        {upvotes} {upvotes === 1 ? 'Upvote' : 'Upvotes'}
+      </span>
     </button>
   );
 }

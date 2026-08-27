@@ -9,7 +9,10 @@ import { checkIsOwner } from '../../../../../lib/servers';
  * whole detail page to render dynamically on every request instead of being
  * cached/ISR'd.
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const session = await auth();
   const isAdmin = (session?.user as any)?.role === 'admin';

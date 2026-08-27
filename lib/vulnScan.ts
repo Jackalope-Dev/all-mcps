@@ -8,9 +8,10 @@
 export type OsvEcosystem = 'npm' | 'PyPI';
 
 /** Maps a listing's install runner to the OSV ecosystem it should be queried under. Null = not (yet) mappable — never scanned, never penalized. */
-export function mapToOsvEcosystem(
-  server: { installCommand?: string | null; installPackage?: string | null }
-): { ecosystem: OsvEcosystem; name: string } | null {
+export function mapToOsvEcosystem(server: {
+  installCommand?: string | null;
+  installPackage?: string | null;
+}): { ecosystem: OsvEcosystem; name: string } | null {
   const pkg = (server.installPackage || '').trim();
   if (!pkg) return null;
 
@@ -23,20 +24,34 @@ export function mapToOsvEcosystem(
   if (cmd === 'npx' || cmd === 'bunx' || cmd === 'npm') {
     return { ecosystem: 'npm', name };
   }
-  if (cmd === 'uvx' || cmd === 'pip' || cmd === 'pip3' || cmd === 'python' || cmd === 'python3') {
+  if (
+    cmd === 'uvx' ||
+    cmd === 'pip' ||
+    cmd === 'pip3' ||
+    cmd === 'python' ||
+    cmd === 'python3'
+  ) {
     return { ecosystem: 'PyPI', name };
   }
   return null;
 }
 
-type OsvSeverityField = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL' | string | undefined;
+type OsvSeverityField =
+  | 'LOW'
+  | 'MODERATE'
+  | 'HIGH'
+  | 'CRITICAL'
+  | string
+  | undefined;
 
 /**
  * Reads the GHSA-convention `database_specific.severity` field most OSV
  * records carry. Missing/unparseable severity defaults to 'low', never to
  * 'high'/'critical' — ambiguous data must never read as alarming.
  */
-export function classifySeverity(vuln: { database_specific?: { severity?: OsvSeverityField } }): 'critical' | 'high' | 'medium' | 'low' {
+export function classifySeverity(vuln: {
+  database_specific?: { severity?: OsvSeverityField };
+}): 'critical' | 'high' | 'medium' | 'low' {
   const raw = (vuln.database_specific?.severity || '').toUpperCase();
   if (raw === 'CRITICAL') return 'critical';
   if (raw === 'HIGH') return 'high';
@@ -44,17 +59,24 @@ export function classifySeverity(vuln: { database_specific?: { severity?: OsvSev
   return 'low';
 }
 
-export type OsvBatchQueryResult = { vulns?: { id: string; modified?: string }[] };
+export type OsvBatchQueryResult = {
+  vulns?: { id: string; modified?: string }[];
+};
 
 /** One request for the whole batch — OSV's querybatch endpoint accepts many package queries at once. */
 export async function osvQueryBatch(
-  queries: { ecosystem: OsvEcosystem; name: string }[]
+  queries: { ecosystem: OsvEcosystem; name: string }[],
 ): Promise<OsvBatchQueryResult[]> {
   const res = await fetch('https://api.osv.dev/v1/querybatch', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'User-Agent': 'AllMCPs-VulnScan' },
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'AllMCPs-VulnScan',
+    },
     body: JSON.stringify({
-      queries: queries.map((q) => ({ package: { name: q.name, ecosystem: q.ecosystem } })),
+      queries: queries.map((q) => ({
+        package: { name: q.name, ecosystem: q.ecosystem },
+      })),
     }),
     signal: AbortSignal.timeout(20000),
   });
@@ -64,14 +86,21 @@ export async function osvQueryBatch(
 }
 
 /** Severity detail for one advisory id. Returns 'low' (never throws) on any fetch/parse failure — ambiguous data stays calm, per classifySeverity. */
-export async function osvGetSeverity(id: string): Promise<'critical' | 'high' | 'medium' | 'low'> {
+export async function osvGetSeverity(
+  id: string,
+): Promise<'critical' | 'high' | 'medium' | 'low'> {
   try {
-    const res = await fetch(`https://api.osv.dev/v1/vulns/${encodeURIComponent(id)}`, {
-      headers: { 'User-Agent': 'AllMCPs-VulnScan' },
-      signal: AbortSignal.timeout(8000),
-    });
+    const res = await fetch(
+      `https://api.osv.dev/v1/vulns/${encodeURIComponent(id)}`,
+      {
+        headers: { 'User-Agent': 'AllMCPs-VulnScan' },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
     if (!res.ok) return 'low';
-    const vuln = (await res.json()) as { database_specific?: { severity?: OsvSeverityField } };
+    const vuln = (await res.json()) as {
+      database_specific?: { severity?: OsvSeverityField };
+    };
     return classifySeverity(vuln);
   } catch {
     return 'low';

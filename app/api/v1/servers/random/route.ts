@@ -1,6 +1,6 @@
-import { getActiveServersForScoring, getCategoryServers } from '@/lib/servers';
-import { computeQualityScore } from '@/lib/qualityScore';
 import { resolveInstallConfig } from '@/lib/installConfig';
+import { computeQualityScore } from '@/lib/qualityScore';
+import { getActiveServersForScoring, getCategoryServers } from '@/lib/servers';
 
 export const revalidate = 0;
 
@@ -8,10 +8,15 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') || 'random'; // 'random' | 'hidden-gem' | 'superpower' | 'stack'
   const category = searchParams.get('category')?.toLowerCase().trim() || '';
-  const countParam = parseInt(searchParams.get('count') || (mode === 'stack' ? '3' : '1'), 10);
+  const countParam = parseInt(
+    searchParams.get('count') || (mode === 'stack' ? '3' : '1'),
+    10,
+  );
   const count = Math.min(Math.max(1, countParam), 5);
 
-  let pool = category ? await getCategoryServers(category) : await getActiveServersForScoring();
+  let pool = category
+    ? await getCategoryServers(category)
+    : await getActiveServersForScoring();
 
   if (!pool || pool.length === 0) {
     pool = await getActiveServersForScoring();
@@ -33,7 +38,15 @@ export async function GET(request: Request) {
   } else if (mode === 'superpower') {
     // Superpower: Quality score >= 75 (falls back to top scored if pool is small)
     const highQuality = pool.filter((s) => computeQualityScore(s).score >= 75);
-    const candidates = highQuality.length >= count ? highQuality : [...pool].sort((a, b) => computeQualityScore(b).score - computeQualityScore(a).score).slice(0, 20);
+    const candidates =
+      highQuality.length >= count
+        ? highQuality
+        : [...pool]
+            .sort(
+              (a, b) =>
+                computeQualityScore(b).score - computeQualityScore(a).score,
+            )
+            .slice(0, 20);
     selected = shuffle(candidates).slice(0, count);
   } else if (mode === 'stack') {
     // Stack: pick 3 servers from different categories
@@ -58,8 +71,12 @@ export async function GET(request: Request) {
     }
 
     if (stackResult.length < count) {
-      const remaining = pool.filter((s) => !stackResult.some((item) => item.id === s.id));
-      stackResult.push(...shuffle(remaining).slice(0, count - stackResult.length));
+      const remaining = pool.filter(
+        (s) => !stackResult.some((item) => item.id === s.id),
+      );
+      stackResult.push(
+        ...shuffle(remaining).slice(0, count - stackResult.length),
+      );
     }
 
     selected = stackResult;
@@ -115,7 +132,7 @@ export async function GET(request: Request) {
         'Cache-Control': 'no-store, max-age=0, must-revalidate',
         'Content-Type': 'application/json; charset=utf-8',
       },
-    }
+    },
   );
 }
 

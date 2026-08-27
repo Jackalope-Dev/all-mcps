@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
 import { isOutboundHttpUrl, withAllMcpsUtm } from '../../lib/outboundLinks';
 import { CopyBlock } from './CopyBlock';
 
@@ -26,11 +26,7 @@ const customSanitizeSchema = {
       'loading',
       'referrerpolicy',
     ],
-    input: [
-      ...(defaultSchema.attributes?.input || []),
-      'checked',
-      'className',
-    ],
+    input: [...(defaultSchema.attributes?.input || []), 'checked', 'className'],
   },
 };
 
@@ -46,7 +42,11 @@ interface SafeMarkdownProps {
 /**
  * Resolves relative URLs (e.g. `assets/logo.png`, `./LICENSE`) against a repository URL.
  */
-function resolveUrl(url: string | Blob | undefined, repoUrl?: string, isImage?: boolean): string {
+function resolveUrl(
+  url: string | Blob | undefined,
+  repoUrl?: string,
+  isImage?: boolean,
+): string {
   if (!url || typeof url !== 'string') return '';
   if (
     url.startsWith('http://') ||
@@ -58,7 +58,9 @@ function resolveUrl(url: string | Blob | undefined, repoUrl?: string, isImage?: 
     url.startsWith('tel:')
   ) {
     if (isImage && url.includes('github.com/') && url.includes('/blob/')) {
-      return url.replace('github.com/', 'raw.githubusercontent.com/').replace('/blob/', '/');
+      return url
+        .replace('github.com/', 'raw.githubusercontent.com/')
+        .replace('/blob/', '/');
     }
     return url;
   }
@@ -118,8 +120,16 @@ function MarkdownLink({
   utmContent,
   repoUrl,
   ...rest
-}: React.AnchorHTMLAttributes<HTMLAnchorElement> & { utmContent?: string; repoUrl?: string }) {
-  if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+}: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+  utmContent?: string;
+  repoUrl?: string;
+}) {
+  if (
+    !href ||
+    href.startsWith('#') ||
+    href.startsWith('mailto:') ||
+    href.startsWith('tel:')
+  ) {
     return (
       <a href={href} {...rest}>
         {children}
@@ -139,7 +149,12 @@ function MarkdownLink({
   );
 }
 
-export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMarkdownProps) {
+export function SafeMarkdown({
+  content,
+  isInline,
+  utmContent,
+  repoUrl,
+}: SafeMarkdownProps) {
   let processedContent = content;
 
   if (isInline) {
@@ -151,7 +166,9 @@ export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMar
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, customSanitizeSchema]]}
         components={{
-          p: ({ children }) => <span style={{ display: 'inline' }}>{children}</span>,
+          p: ({ children }) => (
+            <span style={{ display: 'inline' }}>{children}</span>
+          ),
           a: ({ children }) => <span>{children}</span>,
           img: ({ src, alt }) => (
             <MarkdownImage src={src} alt={alt} repoUrl={repoUrl} />
@@ -169,12 +186,23 @@ export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMar
       rehypePlugins={[rehypeRaw, [rehypeSanitize, customSanitizeSchema]]}
       components={{
         a: ({ href, children, node: _node, ...props }) => (
-          <MarkdownLink href={href} utmContent={utmContent} repoUrl={repoUrl} {...props}>
+          <MarkdownLink
+            href={href}
+            utmContent={utmContent}
+            repoUrl={repoUrl}
+            {...props}
+          >
             {children}
           </MarkdownLink>
         ),
         img: ({ src, alt, node: _node, style, ...props }) => (
-          <MarkdownImage src={src} alt={alt} repoUrl={repoUrl} style={style} {...props} />
+          <MarkdownImage
+            src={src}
+            alt={alt}
+            repoUrl={repoUrl}
+            style={style}
+            {...props}
+          />
         ),
         iframe: ({ src, title, node: _node, ...props }) => {
           const isAllowedVideo =
@@ -185,7 +213,12 @@ export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMar
           return (
             <div
               className="my-6 w-full overflow-hidden rounded-xl border border-[var(--border-color)] bg-black/5 shadow-sm dark:bg-white/5"
-              style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0 }}
+              style={{
+                position: 'relative',
+                width: '100%',
+                paddingBottom: '56.25%',
+                height: 0,
+              }}
             >
               <iframe
                 src={src}
@@ -208,13 +241,19 @@ export function SafeMarkdown({ content, isInline, utmContent, repoUrl }: SafeMar
         },
         pre: ({ children }) => {
           const codeEl = React.isValidElement(children)
-            ? (children as React.ReactElement<{ className?: string; children?: React.ReactNode }>)
+            ? (children as React.ReactElement<{
+                className?: string;
+                children?: React.ReactNode;
+              }>)
             : null;
           if (!codeEl) return <pre>{children}</pre>;
 
           const className = codeEl.props.className || '';
           const match = /language-(\w+)/.exec(className);
-          const codeString = String(codeEl.props.children ?? '').replace(/\n$/, '');
+          const codeString = String(codeEl.props.children ?? '').replace(
+            /\n$/,
+            '',
+          );
           return <CopyBlock code={codeString} language={match?.[1]} />;
         },
       }}

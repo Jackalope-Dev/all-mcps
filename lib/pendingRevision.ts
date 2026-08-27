@@ -51,17 +51,25 @@ const ARRAY_KEYS = new Set<keyof EditableServerFields>([
   'suggestedInstallArgs',
 ]);
 
-function normalizeForCompare(key: keyof EditableServerFields, value: EditableFieldValue | null | undefined): string {
+function normalizeForCompare(
+  key: keyof EditableServerFields,
+  value: EditableFieldValue | null | undefined,
+): string {
   if (ARRAY_KEYS.has(key)) {
     const arr = Array.isArray(value) ? value.map(String) : [];
-    return JSON.stringify([...arr].map((s) => s.trim()).filter(Boolean).sort());
+    return JSON.stringify(
+      [...arr]
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .sort(),
+    );
   }
   return String(value ?? '').trim();
 }
 
 function normalizeStored(
   key: keyof EditableServerFields,
-  value: EditableFieldValue | null | undefined
+  value: EditableFieldValue | null | undefined,
 ): EditableFieldValue {
   if (ARRAY_KEYS.has(key)) {
     if (!Array.isArray(value)) return [];
@@ -73,7 +81,7 @@ function normalizeStored(
 /** Returns only the fields that actually changed vs. the live row. Empty object if nothing changed. */
 export function diffEditableFields(
   current: Partial<EditableServerFields>,
-  submitted: Partial<EditableServerFields>
+  submitted: Partial<EditableServerFields>,
 ): Partial<EditableServerFields> {
   const diff: Partial<EditableServerFields> = {};
   for (const key of EDITABLE_KEYS) {
@@ -82,23 +90,41 @@ export function diffEditableFields(
     if (!(key in submitted)) continue;
     const nextRaw = submitted[key];
     const prevRaw = current[key];
-    if (normalizeForCompare(key, nextRaw as EditableFieldValue) !== normalizeForCompare(key, prevRaw as EditableFieldValue)) {
-      (diff as Record<string, EditableFieldValue>)[key] = normalizeStored(key, nextRaw as EditableFieldValue);
+    if (
+      normalizeForCompare(key, nextRaw as EditableFieldValue) !==
+      normalizeForCompare(key, prevRaw as EditableFieldValue)
+    ) {
+      (diff as Record<string, EditableFieldValue>)[key] = normalizeStored(
+        key,
+        nextRaw as EditableFieldValue,
+      );
     }
   }
   return diff;
 }
 
-export function serializePendingRevision(proposed: Partial<EditableServerFields>): string {
-  const revision: PendingRevision = { proposed, submittedAt: new Date().toISOString() };
+export function serializePendingRevision(
+  proposed: Partial<EditableServerFields>,
+): string {
+  const revision: PendingRevision = {
+    proposed,
+    submittedAt: new Date().toISOString(),
+  };
   return JSON.stringify(revision);
 }
 
-export function parsePendingRevision(raw: string | null | undefined): PendingRevision | null {
+export function parsePendingRevision(
+  raw: string | null | undefined,
+): PendingRevision | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && parsed.proposed && typeof parsed.proposed === 'object') {
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      parsed.proposed &&
+      typeof parsed.proposed === 'object'
+    ) {
       return parsed as PendingRevision;
     }
   } catch {
@@ -112,10 +138,13 @@ export function parsePendingRevision(raw: string | null | undefined): PendingRev
  * array fields JSON-stringified for text columns.
  */
 export function pendingRevisionToDbPatch(
-  proposed: Partial<EditableServerFields>
+  proposed: Partial<EditableServerFields>,
 ): Record<string, string | null> {
   const patch: Record<string, string | null> = {};
-  for (const [key, value] of Object.entries(proposed) as [keyof EditableServerFields, EditableFieldValue][]) {
+  for (const [key, value] of Object.entries(proposed) as [
+    keyof EditableServerFields,
+    EditableFieldValue,
+  ][]) {
     if (!EDITABLE_KEYS.includes(key)) continue;
     if (ARRAY_KEYS.has(key)) {
       const arr = Array.isArray(value) ? value : [];

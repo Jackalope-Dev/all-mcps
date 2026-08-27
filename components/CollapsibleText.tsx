@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Soft-collapses long body copy (overview paragraphs) so listing pages keep
@@ -46,7 +46,11 @@ export function CollapsibleText({
     <div className="collapsible-text">
       <div
         ref={contentRef}
-        className={expanded ? 'collapsible-text-body is-expanded' : 'collapsible-text-body'}
+        className={
+          expanded
+            ? 'collapsible-text-body is-expanded'
+            : 'collapsible-text-body'
+        }
         style={
           expanded
             ? undefined

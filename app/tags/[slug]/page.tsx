@@ -1,11 +1,10 @@
-import React from 'react';
+import { ChevronRight, Tag } from 'lucide-react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getServersForTag } from '@/lib/tags';
-import { PageShell } from '@/components/PageShell';
+import { notFound } from 'next/navigation';
 import DirectoryGrid from '@/components/DirectoryGrid';
-import { Tag, ChevronRight } from 'lucide-react';
+import { PageShell } from '@/components/PageShell';
+import { getServersForTag } from '@/lib/tags';
 
 // getServersForTag re-derives tags for the whole active catalog via regex extraction
 // (see lib/tags.ts) — expensive to re-run on every request. ISR + the R2-backed
@@ -13,7 +12,11 @@ import { Tag, ChevronRight } from 'lucide-react';
 // other listing pages (categories/[slug], best/[topic]).
 export const revalidate = 3600;
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
   const { servers: matched, rawTag } = await getServersForTag(slug);
 
@@ -35,7 +38,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     alternates: { canonical: url },
     openGraph: {
       type: 'website',
-      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      images: [
+        {
+          url: 'https://allmcps.com/opengraph-image',
+          width: 1200,
+          height: 630,
+          alt: 'AllMCPs',
+        },
+      ],
       title: `${title} | AllMCPs`,
       description,
       url,
@@ -43,7 +53,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function TagDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function TagDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const { servers: matched, rawTag } = await getServersForTag(slug);
 
@@ -61,7 +75,11 @@ export default async function TagDetailPage({ params }: { params: Promise<{ slug
         name: `${rawTag} MCP Servers & Tools`,
         description: `Explore ${matched.length} Model Context Protocol (MCP) servers and tools tagged with ${rawTag}.`,
         url: canonicalUrl,
-        isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: 'https://allmcps.com' },
+        isPartOf: {
+          '@type': 'WebSite',
+          name: 'AllMCPs',
+          url: 'https://allmcps.com',
+        },
         mainEntity: {
           '@type': 'ItemList',
           numberOfItems: matched.length,
@@ -76,9 +94,24 @@ export default async function TagDetailPage({ params }: { params: Promise<{ slug
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Tags', item: 'https://allmcps.com/tags' },
-          { '@type': 'ListItem', position: 3, name: rawTag, item: canonicalUrl },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Tags',
+            item: 'https://allmcps.com/tags',
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: rawTag,
+            item: canonicalUrl,
+          },
         ],
       },
     ],
@@ -90,12 +123,32 @@ export default async function TagDetailPage({ params }: { params: Promise<{ slug
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
+      <div
+        style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}
+      >
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" style={{ marginBottom: '1.5rem' }}>
-          <ol className="breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', listStyle: 'none', padding: 0, margin: 0 }}>
+          <ol
+            className="breadcrumb"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+            }}
+          >
             <li>
-              <Link href="/" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+              <Link
+                href="/"
+                style={{
+                  color: 'var(--text-secondary)',
+                  textDecoration: 'none',
+                }}
+              >
                 Home
               </Link>
             </li>
@@ -103,29 +156,72 @@ export default async function TagDetailPage({ params }: { params: Promise<{ slug
               <ChevronRight size={14} />
             </li>
             <li>
-              <Link href="/tags" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+              <Link
+                href="/tags"
+                style={{
+                  color: 'var(--text-secondary)',
+                  textDecoration: 'none',
+                }}
+              >
                 Tags
               </Link>
             </li>
             <li className="breadcrumb-separator" aria-hidden="true">
               <ChevronRight size={14} />
             </li>
-            <li className="breadcrumb-current" aria-current="page" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+            <li
+              className="breadcrumb-current"
+              aria-current="page"
+              style={{ color: 'var(--text-primary)', fontWeight: 600 }}
+            >
               {rawTag}
             </li>
           </ol>
         </nav>
 
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem', maxWidth: '750px', margin: '0 auto 2.5rem' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: '2.5rem',
+            maxWidth: '750px',
+            margin: '0 auto 2.5rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'var(--accent-color)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              marginBottom: '0.5rem',
+            }}
+          >
             <Tag size={16} /> Tag Topic
           </div>
-          <h1 style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          <h1
+            style={{
+              fontSize: '2.25rem',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              margin: 0,
+            }}
+          >
             {rawTag} MCP Servers & Tools
           </h1>
-          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginTop: '0.6rem', lineHeight: 1.6 }}>
-            Browse {matched.length} curated Model Context Protocol servers tagged with &ldquo;{rawTag}&rdquo;.
-            Connect these servers directly to Claude Desktop, Cursor, or Windsurf to equip your AI agents with verified capabilities.
+          <p
+            style={{
+              fontSize: '1rem',
+              color: 'var(--text-secondary)',
+              marginTop: '0.6rem',
+              lineHeight: 1.6,
+            }}
+          >
+            Browse {matched.length} curated Model Context Protocol servers
+            tagged with &ldquo;{rawTag}&rdquo;. Connect these servers directly
+            to Claude Desktop, Cursor, or Windsurf to equip your AI agents with
+            verified capabilities.
           </p>
         </div>
 

@@ -1,34 +1,38 @@
-import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
-import Link from 'next/link';
 import {
-  Cpu,
-  Tag,
-  ShieldCheck,
-  Eye,
-  Copy,
-  ThumbsUp,
-  Bot,
-  Search,
-  Users,
-  HelpCircle,
-  MessageSquare,
-  Lock,
-  Globe,
   Activity,
-  Radio,
-  Wrench,
   Award,
-  Terminal,
+  Bot,
   CheckCircle2,
+  Copy,
+  Cpu,
+  Eye,
   GitCommit,
+  Globe,
+  HelpCircle,
+  Lock,
+  MessageSquare,
   PieChart,
+  Radio,
+  Search,
+  ShieldCheck,
   Sparkles,
+  Tag,
+  Terminal,
+  ThumbsUp,
+  Users,
+  Wrench,
 } from 'lucide-react';
-import { getSiteStats, AI_SYSTEM_CLASSES } from '../../lib/siteStats';
-import { CALLER_COLORS } from '../../lib/accessLog';
-import type { CallerBreakdown, EndpointBreakdown, CountryBreakdown } from '../../lib/siteStats';
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { TrendChart } from '../../components/TrustCharts';
+import { CALLER_COLORS } from '../../lib/accessLog';
+import type {
+  CallerBreakdown,
+  CountryBreakdown,
+  EndpointBreakdown,
+} from '../../lib/siteStats';
+import { AI_SYSTEM_CLASSES, getSiteStats } from '../../lib/siteStats';
 
 // D1 isn't reachable during build (see lib/siteStats.ts's getSiteStats, same
 // pattern as sitemapHelpers.ts), so anything that gets prerendered at build time
@@ -46,7 +50,14 @@ export const metadata: Metadata = {
     'Live numbers on how people and AI systems use AllMCPs: site visits, installs, and a breakdown of every AI assistant and crawler that reads the directory.',
   alternates: { canonical: 'https://allmcps.com/trust' },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Trust & Traffic Transparency | AllMCPs',
     description:
       'Live, unfiltered numbers on how people and AI systems actually use AllMCPs.',
@@ -65,22 +76,26 @@ function pct(part: number, total: number): string {
 }
 
 function formatCompact(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (n >= 1_000_000)
+    return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`;
   return formatNumber(n);
 }
 
 /** Two-letter country code → flag emoji, via the regional-indicator Unicode trick. */
 function flagEmoji(code: string): string {
-  if (!code || code.length !== 2) return '\u{1F3F3}\u{FE0F}';
+  if (code?.length !== 2) return '\u{1F3F3}\u{FE0F}';
   const upper = code.toUpperCase();
-  return String.fromCodePoint(...[...upper].map((c) => 127397 + c.charCodeAt(0)));
+  return String.fromCodePoint(
+    ...[...upper].map((c) => 127397 + c.charCodeAt(0)),
+  );
 }
 
 let regionNames: Intl.DisplayNames | null = null;
 function countryName(code: string): string {
   try {
-    if (!regionNames) regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+    if (!regionNames)
+      regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
     return regionNames.of(code.toUpperCase()) || code;
   } catch {
     return code;
@@ -138,10 +153,19 @@ function StatTile({
       >
         <Icon size={16} style={{ color }} />
       </span>
-      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+      <div
+        style={{
+          fontSize: '1.4rem',
+          fontWeight: 800,
+          color: 'var(--text-primary)',
+          lineHeight: 1.1,
+        }}
+      >
         {value}
       </div>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{label}</div>
+      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+        {label}
+      </div>
     </div>
   );
 }
@@ -174,11 +198,32 @@ function SectionLabel({
 }) {
   return (
     <div style={{ margin: tight ? '0 0 0.75rem' : '2.25rem 0 0.75rem' }}>
-      <h2 style={{ fontSize: '1.15rem', margin: '0 0 0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        {Icon && <Icon size={17} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />}
+      <h2
+        style={{
+          fontSize: '1.15rem',
+          margin: '0 0 0.2rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+        }}
+      >
+        {Icon && (
+          <Icon
+            size={17}
+            style={{ color: 'var(--brand-cyan)', flexShrink: 0 }}
+          />
+        )}
         {title}
       </h2>
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>{note}</p>
+      <p
+        style={{
+          fontSize: '0.8rem',
+          color: 'var(--text-secondary)',
+          margin: 0,
+        }}
+      >
+        {note}
+      </p>
     </div>
   );
 }
@@ -209,7 +254,13 @@ type TrafficGroup = {
 };
 
 /** Part-to-whole stacked bar for the top-level traffic split, plus a legend with exact counts. */
-function TrafficStackedBar({ groups, total }: { groups: TrafficGroup[]; total: number }) {
+function TrafficStackedBar({
+  groups,
+  total,
+}: {
+  groups: TrafficGroup[];
+  total: number;
+}) {
   if (total <= 0 || groups.length === 0) return null;
 
   return (
@@ -240,7 +291,9 @@ function TrafficStackedBar({ groups, total }: { groups: TrafficGroup[]; total: n
               }}
             >
               {showLabel && (
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: g.ink }}>
+                <span
+                  style={{ fontSize: '0.7rem', fontWeight: 700, color: g.ink }}
+                >
                   {pct(g.hits, total)}
                 </span>
               )}
@@ -261,9 +314,23 @@ function TrafficStackedBar({ groups, total }: { groups: TrafficGroup[]; total: n
         {groups.map((g) => (
           <li
             key={g.key}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+            }}
           >
-            <span style={{ width: 10, height: 10, borderRadius: 3, background: `var(${g.colorVar})`, flexShrink: 0 }} />
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 3,
+                background: `var(${g.colorVar})`,
+                flexShrink: 0,
+              }}
+            />
             {g.label}: {formatNumber(g.hits)} ({pct(g.hits, total)})
           </li>
         ))}
@@ -292,28 +359,90 @@ function Group({
 
   return (
     <div style={{ marginBottom: '1.75rem' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.25rem' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          marginBottom: '0.25rem',
+        }}
+      >
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
           <Icon size={15} style={{ color: iconColor, flexShrink: 0 }} />
           <h3 style={{ fontSize: '1rem', margin: 0 }}>{title}</h3>
         </span>
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-          {formatNumber(groupTotal)} hits &middot; {pct(groupTotal, totalHits)} of traffic
+        <span
+          style={{
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {formatNumber(groupTotal)} hits &middot; {pct(groupTotal, totalHits)}{' '}
+          of traffic
         </span>
       </div>
-      <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem', lineHeight: 1.55 }}>
+      <p
+        style={{
+          fontSize: '0.825rem',
+          color: 'var(--text-secondary)',
+          margin: '0 0 0.75rem',
+          lineHeight: 1.55,
+        }}
+      >
         {description}
       </p>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <ul
+        style={{
+          listStyle: 'none',
+          margin: 0,
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
+        }}
+      >
         {rows.map((row) => (
           <li key={row.class}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{row.label}</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.75rem',
+                marginBottom: '0.25rem',
+              }}
+            >
+              <span
+                style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}
+              >
+                {row.label}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {formatNumber(row.hits)} &middot; {pct(row.hits, totalHits)}
               </span>
             </div>
-            <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-muted)', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: 6,
+                borderRadius: 3,
+                background: 'var(--bg-muted)',
+                overflow: 'hidden',
+              }}
+            >
               <div
                 style={{
                   height: '100%',
@@ -330,29 +459,84 @@ function Group({
   );
 }
 
-type BarItem = { key: string; label: ReactNode; sublabel?: string; value: number; color?: string };
+type BarItem = {
+  key: string;
+  label: ReactNode;
+  sublabel?: string;
+  value: number;
+  color?: string;
+};
 
 function BarList({ items, colorVar }: { items: BarItem[]; colorVar?: string }) {
   if (items.length === 0) {
-    return <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>No traffic recorded yet.</p>;
+    return (
+      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+        No traffic recorded yet.
+      </p>
+    );
   }
   const max = Math.max(...items.map((i) => i.value), 1);
   return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+    <ul
+      style={{
+        listStyle: 'none',
+        margin: 0,
+        padding: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.65rem',
+      }}
+    >
       {items.map((item) => (
         <li key={item.key}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.3rem' }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              marginBottom: '0.3rem',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.875rem',
+                color: 'var(--text-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
               {item.label}
               {item.sublabel && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{item.sublabel}</span>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  {item.sublabel}
+                </span>
               )}
             </span>
-            <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+            <strong
+              style={{
+                fontSize: '0.85rem',
+                color: 'var(--text-primary)',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {formatCompact(item.value)}
             </strong>
           </div>
-          <div style={{ height: 8, borderRadius: 4, background: 'var(--bg-muted)', overflow: 'hidden' }}>
+          <div
+            style={{
+              height: 8,
+              borderRadius: 4,
+              background: 'var(--bg-muted)',
+              overflow: 'hidden',
+            }}
+          >
             <div
               style={{
                 height: '100%',
@@ -388,11 +572,29 @@ function OpennessCard({
         background: 'var(--bg-muted)',
       }}
     >
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: '0.35rem',
+        }}
+      >
         <Icon size={15} style={{ color, flexShrink: 0 }} />
-        <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{title}</strong>
+        <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+          {title}
+        </strong>
       </span>
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{detail}</p>
+      <p
+        style={{
+          fontSize: '0.8rem',
+          color: 'var(--text-secondary)',
+          margin: 0,
+          lineHeight: 1.5,
+        }}
+      >
+        {detail}
+      </p>
     </div>
   );
 }
@@ -400,36 +602,77 @@ function OpennessCard({
 export default async function TrustPage() {
   const stats = await getSiteStats();
 
-  const aiRows = stats.callerBreakdown30d.filter((r) => AI_SYSTEM_CLASSES.includes(r.class));
-  const crawlerRows = stats.callerBreakdown30d.filter(
-    (r) => !AI_SYSTEM_CLASSES.includes(r.class) && r.class !== 'browser' && r.class !== 'unknown'
+  const aiRows = stats.callerBreakdown30d.filter((r) =>
+    AI_SYSTEM_CLASSES.includes(r.class),
   );
-  const browserRows = stats.callerBreakdown30d.filter((r) => r.class === 'browser');
-  const unknownRows = stats.callerBreakdown30d.filter((r) => r.class === 'unknown');
-  const totalHits30d = stats.callerBreakdown30d.reduce((acc, r) => acc + r.hits, 0);
+  const crawlerRows = stats.callerBreakdown30d.filter(
+    (r) =>
+      !AI_SYSTEM_CLASSES.includes(r.class) &&
+      r.class !== 'browser' &&
+      r.class !== 'unknown',
+  );
+  const browserRows = stats.callerBreakdown30d.filter(
+    (r) => r.class === 'browser',
+  );
+  const unknownRows = stats.callerBreakdown30d.filter(
+    (r) => r.class === 'unknown',
+  );
+  const totalHits30d = stats.callerBreakdown30d.reduce(
+    (acc, r) => acc + r.hits,
+    0,
+  );
   const totalAiHits30d = aiRows.reduce((acc, r) => acc + r.hits, 0);
 
-  const endpointItems: BarItem[] = stats.endpointBreakdown30d.map((e: EndpointBreakdown) => ({
-    key: e.endpoint,
-    label: e.label,
-    value: e.hits,
-  }));
+  const endpointItems: BarItem[] = stats.endpointBreakdown30d.map(
+    (e: EndpointBreakdown) => ({
+      key: e.endpoint,
+      label: e.label,
+      value: e.hits,
+    }),
+  );
 
-  const countryItems: BarItem[] = stats.topCountries30d.map((c: CountryBreakdown) => ({
-    key: c.country,
-    label: (
-      <>
-        <span aria-hidden="true">{flagEmoji(c.country)}</span> {countryName(c.country)}
-      </>
-    ),
-    value: c.hits,
-  }));
+  const countryItems: BarItem[] = stats.topCountries30d.map(
+    (c: CountryBreakdown) => ({
+      key: c.country,
+      label: (
+        <>
+          <span aria-hidden="true">{flagEmoji(c.country)}</span>{' '}
+          {countryName(c.country)}
+        </>
+      ),
+      value: c.hits,
+    }),
+  );
 
   const trafficGroups: TrafficGroup[] = [
-    { key: 'ai', label: 'AI assistants', hits: totalAiHits30d, colorVar: '--tv-ai', ink: '#ffffff' },
-    { key: 'crawler', label: 'Other crawlers & bots', hits: crawlerRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-crawler', ink: '#ffffff' },
-    { key: 'browser', label: 'Human browsers', hits: browserRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-browser', ink: '#ffffff' },
-    { key: 'unknown', label: 'Unclassified', hits: unknownRows.reduce((a, r) => a + r.hits, 0), colorVar: '--tv-unknown', ink: '#1a1200' },
+    {
+      key: 'ai',
+      label: 'AI assistants',
+      hits: totalAiHits30d,
+      colorVar: '--tv-ai',
+      ink: '#ffffff',
+    },
+    {
+      key: 'crawler',
+      label: 'Other crawlers & bots',
+      hits: crawlerRows.reduce((a, r) => a + r.hits, 0),
+      colorVar: '--tv-crawler',
+      ink: '#ffffff',
+    },
+    {
+      key: 'browser',
+      label: 'Human browsers',
+      hits: browserRows.reduce((a, r) => a + r.hits, 0),
+      colorVar: '--tv-browser',
+      ink: '#ffffff',
+    },
+    {
+      key: 'unknown',
+      label: 'Unclassified',
+      hits: unknownRows.reduce((a, r) => a + r.hits, 0),
+      colorVar: '--tv-unknown',
+      ink: '#1a1200',
+    },
   ].filter((g) => g.hits > 0);
 
   const jsonLd = {
@@ -440,19 +683,36 @@ export default async function TrustPage() {
         headline: 'AllMCPs Trust & Traffic Transparency',
         description: metadata.description,
         url: 'https://allmcps.com/trust',
-        author: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
+        author: {
+          '@type': 'Organization',
+          name: 'AllMCPs',
+          url: 'https://allmcps.com',
+        },
       },
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Trust & Transparency', item: 'https://allmcps.com/trust' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Trust & Transparency',
+            item: 'https://allmcps.com/trust',
+          },
         ],
       },
     ],
   };
 
-  const totalQualityServers = Object.values(stats.qualityTierBreakdown).reduce((a, b) => a + b, 0);
+  const totalQualityServers = Object.values(stats.qualityTierBreakdown).reduce(
+    (a, b) => a + b,
+    0,
+  );
 
   return (
     <>
@@ -463,30 +723,81 @@ export default async function TrustPage() {
       <main className="page-shell page-shell--tool">
         <div className="page-shell-inner" style={{ maxWidth: 960 }}>
           <div className="surface page-panel">
-            <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto 2.5rem' }}>
-              <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
+            <div
+              style={{
+                textAlign: 'center',
+                maxWidth: 720,
+                margin: '0 auto 2.5rem',
+              }}
+            >
+              <h1
+                className="text-page-title"
+                style={{ marginBottom: '0.75rem' }}
+              >
                 Trust &amp; Traffic Transparency
               </h1>
               <p className="text-lead" style={{ margin: 0 }}>
-                Every number on this page comes from our production database. No vanity
-                metrics, no cherry-picked screenshots. Here&apos;s what&apos;s in the catalog,
-                how people use it, and which AI systems and crawlers actually read it.
+                Every number on this page comes from our production database. No
+                vanity metrics, no cherry-picked screenshots. Here&apos;s
+                what&apos;s in the catalog, how people use it, and which AI
+                systems and crawlers actually read it.
               </p>
             </div>
 
-            <SectionLabel title="The catalog" note="All-time totals across every listed MCP server." />
+            <SectionLabel
+              title="The catalog"
+              note="All-time totals across every listed MCP server."
+            />
             <StatGrid>
-              <StatTile icon={Cpu} color="#34d399" value={formatNumber(stats.totalServers)} label="MCP servers listed" />
-              <StatTile icon={Tag} color="#60a5fa" value={formatNumber(stats.categoryCount)} label="Categories covered" />
-              <StatTile icon={Wrench} color="#a855f7" value={formatNumber(stats.toolsIndexed)} label="Callable tools indexed" />
-              <StatTile icon={ShieldCheck} color="#22d3ee" value={formatNumber(stats.verifiedCount)} label="Verified listings" />
+              <StatTile
+                icon={Cpu}
+                color="#34d399"
+                value={formatNumber(stats.totalServers)}
+                label="MCP servers listed"
+              />
+              <StatTile
+                icon={Tag}
+                color="#60a5fa"
+                value={formatNumber(stats.categoryCount)}
+                label="Categories covered"
+              />
+              <StatTile
+                icon={Wrench}
+                color="#a855f7"
+                value={formatNumber(stats.toolsIndexed)}
+                label="Callable tools indexed"
+              />
+              <StatTile
+                icon={ShieldCheck}
+                color="#22d3ee"
+                value={formatNumber(stats.verifiedCount)}
+                label="Verified listings"
+              />
             </StatGrid>
 
-            <SectionLabel title="How people use it" note="All-time engagement, summed across every listing page." />
+            <SectionLabel
+              title="How people use it"
+              note="All-time engagement, summed across every listing page."
+            />
             <StatGrid>
-              <StatTile icon={Eye} color="#38bdf8" value={formatNumber(stats.totalViews)} label="Listing views" />
-              <StatTile icon={Copy} color="#f472b6" value={formatNumber(stats.totalCopies)} label="Install configs copied" />
-              <StatTile icon={ThumbsUp} color="#fbbf24" value={formatNumber(stats.totalUpvotes)} label="Upvotes cast" />
+              <StatTile
+                icon={Eye}
+                color="#38bdf8"
+                value={formatNumber(stats.totalViews)}
+                label="Listing views"
+              />
+              <StatTile
+                icon={Copy}
+                color="#f472b6"
+                value={formatNumber(stats.totalCopies)}
+                label="Install configs copied"
+              />
+              <StatTile
+                icon={ThumbsUp}
+                color="#fbbf24"
+                value={formatNumber(stats.totalUpvotes)}
+                label="Upvotes cast"
+              />
             </StatGrid>
 
             {/* Feature #1: Tool Schema Verification & Sandbox Pilot */}
@@ -513,15 +824,42 @@ export default async function TrustPage() {
                     background: 'var(--bg-muted)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                    <Sparkles size={16} style={{ color: '#a855f7', flexShrink: 0 }} />
-                    <strong style={{ fontSize: '0.875rem' }}>Live MCP Handshakes</strong>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '0.4rem',
+                    }}
+                  >
+                    <Sparkles
+                      size={16}
+                      style={{ color: '#a855f7', flexShrink: 0 }}
+                    />
+                    <strong style={{ fontSize: '0.875rem' }}>
+                      Live MCP Handshakes
+                    </strong>
                   </div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    {formatNumber(stats.toolsSourceBreakdown.introspected)} servers
+                  <div
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {formatNumber(stats.toolsSourceBreakdown.introspected)}{' '}
+                    servers
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                    Verified via live <code style={{ fontSize: '0.75rem' }}>tools/list</code> protocol handshakes against hosted endpoints.
+                  <div
+                    style={{
+                      fontSize: '0.78rem',
+                      color: 'var(--text-secondary)',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    Verified via live{' '}
+                    <code style={{ fontSize: '0.75rem' }}>tools/list</code>{' '}
+                    protocol handshakes against hosted endpoints.
                   </div>
                 </div>
 
@@ -533,15 +871,40 @@ export default async function TrustPage() {
                     background: 'var(--bg-muted)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                    <Wrench size={16} style={{ color: '#60a5fa', flexShrink: 0 }} />
-                    <strong style={{ fontSize: '0.875rem' }}>README Structured Parsing</strong>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '0.4rem',
+                    }}
+                  >
+                    <Wrench
+                      size={16}
+                      style={{ color: '#60a5fa', flexShrink: 0 }}
+                    />
+                    <strong style={{ fontSize: '0.875rem' }}>
+                      README Structured Parsing
+                    </strong>
                   </div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  <div
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     {formatNumber(stats.toolsSourceBreakdown.readme)} servers
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                    Extracted from repo documentation for stdio/CLI packages where no HTTP endpoint exists.
+                  <div
+                    style={{
+                      fontSize: '0.78rem',
+                      color: 'var(--text-secondary)',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    Extracted from repo documentation for stdio/CLI packages
+                    where no HTTP endpoint exists.
                   </div>
                 </div>
 
@@ -553,15 +916,46 @@ export default async function TrustPage() {
                     background: 'var(--bg-muted)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                    <CheckCircle2 size={16} style={{ color: '#34d399', flexShrink: 0 }} />
-                    <strong style={{ fontSize: '0.875rem' }}>Sandbox Verification</strong>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '0.4rem',
+                    }}
+                  >
+                    <CheckCircle2
+                      size={16}
+                      style={{ color: '#34d399', flexShrink: 0 }}
+                    />
+                    <strong style={{ fontSize: '0.875rem' }}>
+                      Sandbox Verification
+                    </strong>
                   </div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    {pct(stats.stdioPilotStats.okCount, stats.stdioPilotStats.totalTested)} pass rate
+                  <div
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {pct(
+                      stats.stdioPilotStats.okCount,
+                      stats.stdioPilotStats.totalTested,
+                    )}{' '}
+                    pass rate
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                    {formatNumber(stats.stdioPilotStats.totalTested)} stdio packages isolated and tested in automated execution sandboxes (avg latency: {(stats.stdioPilotStats.avgDurationMs / 1000).toFixed(1)}s).
+                  <div
+                    style={{
+                      fontSize: '0.78rem',
+                      color: 'var(--text-secondary)',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    {formatNumber(stats.stdioPilotStats.totalTested)} stdio
+                    packages isolated and tested in automated execution
+                    sandboxes (avg latency:{' '}
+                    {(stats.stdioPilotStats.avgDurationMs / 1000).toFixed(1)}s).
                   </div>
                 </div>
               </div>
@@ -576,46 +970,122 @@ export default async function TrustPage() {
                 note="Deterministic quality tiering (0–100) and repository health signals across all active listings."
               />
               <div style={{ margin: '1rem 0 1rem' }}>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
-                  Listing Quality Tier Distribution ({formatNumber(totalQualityServers)} total active servers):
+                <div
+                  style={{
+                    fontSize: '0.85rem',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '0.65rem',
+                  }}
+                >
+                  Listing Quality Tier Distribution (
+                  {formatNumber(totalQualityServers)} total active servers):
                 </div>
-                <div style={{ display: 'flex', height: 16, borderRadius: 6, overflow: 'hidden', background: 'var(--bg-muted)', gap: 2 }}>
-                  {Object.entries(stats.qualityTierBreakdown).map(([tier, count]) => {
-                    if (count === 0 || totalQualityServers === 0) return null;
-                    const pctVal = (count / totalQualityServers) * 100;
-                    return (
+                <div
+                  style={{
+                    display: 'flex',
+                    height: 16,
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    background: 'var(--bg-muted)',
+                    gap: 2,
+                  }}
+                >
+                  {Object.entries(stats.qualityTierBreakdown).map(
+                    ([tier, count]) => {
+                      if (count === 0 || totalQualityServers === 0) return null;
+                      const pctVal = (count / totalQualityServers) * 100;
+                      return (
+                        <div
+                          key={tier}
+                          title={`${tier}: ${formatNumber(count)} (${pct(count, totalQualityServers)})`}
+                          style={{
+                            width: `${pctVal}%`,
+                            background: TIER_COLORS[tier] || '#64748b',
+                          }}
+                        />
+                      );
+                    },
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.6rem 1.2rem',
+                    marginTop: '0.65rem',
+                    padding: 0,
+                  }}
+                >
+                  {Object.entries(stats.qualityTierBreakdown).map(
+                    ([tier, count]) => (
                       <div
                         key={tier}
-                        title={`${tier}: ${formatNumber(count)} (${pct(count, totalQualityServers)})`}
                         style={{
-                          width: `${pctVal}%`,
-                          background: TIER_COLORS[tier] || '#64748b',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          fontSize: '0.78rem',
+                          color: 'var(--text-secondary)',
                         }}
-                      />
-                    );
-                  })}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem 1.2rem', marginTop: '0.65rem', padding: 0 }}>
-                  {Object.entries(stats.qualityTierBreakdown).map(([tier, count]) => (
-                    <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: TIER_COLORS[tier] || '#64748b' }} />
-                      <strong>{tier}</strong>: {formatNumber(count)} ({pct(count, totalQualityServers)})
-                    </div>
-                  ))}
+                      >
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 2,
+                            background: TIER_COLORS[tier] || '#64748b',
+                          }}
+                        />
+                        <strong>{tier}</strong>: {formatNumber(count)} (
+                        {pct(count, totalQualityServers)})
+                      </div>
+                    ),
+                  )}
                 </div>
               </div>
 
               <div style={{ marginTop: '1rem' }}>
-                <div style={{ padding: '0.85rem 1rem', borderRadius: 12, border: '1px solid var(--border-color)', background: 'var(--bg-muted)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                    <GitCommit size={16} style={{ color: '#34d399', flexShrink: 0 }} />
-                    <strong style={{ fontSize: '0.85rem' }}>Active Codebases (Last 30 Days)</strong>
+                <div
+                  style={{
+                    padding: '0.85rem 1rem',
+                    borderRadius: 12,
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-muted)',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '0.2rem',
+                    }}
+                  >
+                    <GitCommit
+                      size={16}
+                      style={{ color: '#34d399', flexShrink: 0 }}
+                    />
+                    <strong style={{ fontSize: '0.85rem' }}>
+                      Active Codebases (Last 30 Days)
+                    </strong>
                   </div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  <div
+                    style={{
+                      fontSize: '1.15rem',
+                      fontWeight: 800,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     {formatNumber(stats.recentCommitCount30d)} listings
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                    Repositories with active commits or pushes measured by automated health checks.
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    Repositories with active commits or pushes measured by
+                    automated health checks.
                   </div>
                 </div>
               </div>
@@ -660,11 +1130,20 @@ export default async function TrustPage() {
                 title="Who's reading the API"
                 note={`${formatNumber(totalHits30d)} requests from ${formatNumber(stats.countryCount)} countries in the last 30 days.`}
               />
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-                Every request to our search, listing, and <Link href="/llms.txt">llms.txt</Link> endpoints
-                gets classified server-side from its User-Agent. &ldquo;AI assistants&rdquo; only counts
-                named systems. Generic crawlers and unclassified agents are counted separately, so the two
-                numbers never get blended into one.
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '1.25rem',
+                  lineHeight: 1.6,
+                }}
+              >
+                Every request to our search, listing, and{' '}
+                <Link href="/llms.txt">llms.txt</Link> endpoints gets classified
+                server-side from its User-Agent. &ldquo;AI assistants&rdquo;
+                only counts named systems. Generic crawlers and unclassified
+                agents are counted separately, so the two numbers never get
+                blended into one.
               </p>
 
               <TrafficStackedBar groups={trafficGroups} total={totalHits30d} />
@@ -715,20 +1194,36 @@ export default async function TrustPage() {
               >
                 {endpointItems.length > 0 && (
                   <Panel>
-                    <SectionLabel tight icon={Radio} title="What's being requested" note="API surfaces hit in the last 30 days, most-used first." />
+                    <SectionLabel
+                      tight
+                      icon={Radio}
+                      title="What's being requested"
+                      note="API surfaces hit in the last 30 days, most-used first."
+                    />
                     <BarList items={endpointItems} colorVar="var(--tv-ai)" />
                   </Panel>
                 )}
                 {countryItems.length > 0 && (
                   <Panel>
-                    <SectionLabel tight icon={Globe} title="Where requests come from" note="Top request-origin countries in the last 30 days." />
-                    <BarList items={countryItems} colorVar="var(--tv-browser)" />
+                    <SectionLabel
+                      tight
+                      icon={Globe}
+                      title="Where requests come from"
+                      note="Top request-origin countries in the last 30 days."
+                    />
+                    <BarList
+                      items={countryItems}
+                      colorVar="var(--tv-browser)"
+                    />
                   </Panel>
                 )}
               </div>
             )}
 
-            <SectionLabel title="Why we're open about this" note="No login gate, no filtering. This is the same dashboard our team looks at." />
+            <SectionLabel
+              title="Why we're open about this"
+              note="No login gate, no filtering. This is the same dashboard our team looks at."
+            />
             <div
               style={{
                 display: 'grid',
@@ -756,9 +1251,23 @@ export default async function TrustPage() {
                 detail="We set ai-train=no. The catalog is available to read, not to train on."
               />
             </div>
-            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-              See it yourself: <a href="/robots.txt" target="_blank" rel="noopener">robots.txt</a> and{' '}
-              <a href="/llms-full.txt" target="_blank" rel="noopener">llms-full.txt</a>.
+            <p
+              style={{
+                fontSize: '0.825rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.6,
+                margin: 0,
+              }}
+            >
+              See it yourself:{' '}
+              <a href="/robots.txt" target="_blank" rel="noopener">
+                robots.txt
+              </a>{' '}
+              and{' '}
+              <a href="/llms-full.txt" target="_blank" rel="noopener">
+                llms-full.txt
+              </a>
+              .
             </p>
           </div>
         </div>

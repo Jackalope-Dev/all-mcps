@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import { MultiServerCompareView } from '@/components/MultiServerCompareView';
 import { PageShell } from '@/components/PageShell';
 import { getServerById, type Server } from '@/lib/servers';
-import { MultiServerCompareView } from '@/components/MultiServerCompareView';
 
 // No session/auth reads on this page — safe to ISR like the other listing pages
 // instead of re-querying every id from D1 on every single visit.
@@ -12,9 +12,16 @@ function canonicalPair(idA: string, idB: string): [string, string] {
   return idA < idB ? [idA, idB] : [idB, idA];
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slugs: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slugs: string }>;
+}): Promise<Metadata> {
   const { slugs } = await params;
-  const ids = slugs.split(/-vs-|,/).map((s) => s.trim()).filter(Boolean);
+  const ids = slugs
+    .split(/-vs-|,/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   if (ids.length === 2) {
     const [c0, c1] = canonicalPair(ids[0], ids[1]);
@@ -24,9 +31,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slugs: st
     };
   }
 
-  const servers = (await Promise.all(ids.map((id) => getServerById(id)))).filter(
-    (s): s is Server => Boolean(s)
-  );
+  const servers = (
+    await Promise.all(ids.map((id) => getServerById(id)))
+  ).filter((s): s is Server => Boolean(s));
 
   if (servers.length === 0) {
     return { title: 'Comparison Not Found', robots: { index: false } };
@@ -42,7 +49,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slugs: st
     robots: { index: false, follow: true },
     alternates: { canonical: url },
     openGraph: {
-      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      images: [
+        {
+          url: 'https://allmcps.com/opengraph-image',
+          width: 1200,
+          height: 630,
+          alt: 'AllMCPs',
+        },
+      ],
       title: `${title} | AllMCPs`,
       description,
       url,
@@ -50,18 +64,25 @@ export async function generateMetadata({ params }: { params: Promise<{ slugs: st
   };
 }
 
-export default async function CompareMatrixPage({ params }: { params: Promise<{ slugs: string }> }) {
+export default async function CompareMatrixPage({
+  params,
+}: {
+  params: Promise<{ slugs: string }>;
+}) {
   const { slugs } = await params;
-  const ids = slugs.split(/-vs-|,/).map((s) => s.trim()).filter(Boolean);
+  const ids = slugs
+    .split(/-vs-|,/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   if (ids.length === 2) {
     const [c0, c1] = canonicalPair(ids[0], ids[1]);
     redirect(`/mcp/${c0}/vs/${c1}`);
   }
 
-  const servers = (await Promise.all(ids.map((id) => getServerById(id)))).filter(
-    (s): s is Server => Boolean(s)
-  );
+  const servers = (
+    await Promise.all(ids.map((id) => getServerById(id)))
+  ).filter((s): s is Server => Boolean(s));
 
   if (servers.length < 2) {
     notFound();
@@ -78,14 +99,33 @@ export default async function CompareMatrixPage({ params }: { params: Promise<{ 
         name: `${titleNames} — Multi-Server MCP Comparison`,
         description: `Side-by-side comparative analysis of ${titleNames} Model Context Protocol (MCP) servers.`,
         url: canonicalUrl,
-        isPartOf: { '@type': 'WebSite', name: 'AllMCPs', url: 'https://allmcps.com' },
+        isPartOf: {
+          '@type': 'WebSite',
+          name: 'AllMCPs',
+          url: 'https://allmcps.com',
+        },
       },
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://allmcps.com/compare' },
-          { '@type': 'ListItem', position: 3, name: titleNames, item: canonicalUrl },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Compare',
+            item: 'https://allmcps.com/compare',
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: titleNames,
+            item: canonicalUrl,
+          },
         ],
       },
       {
@@ -108,9 +148,11 @@ export default async function CompareMatrixPage({ params }: { params: Promise<{ 
 
   return (
     <PageShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <MultiServerCompareView servers={servers} />
     </PageShell>
   );
 }
-

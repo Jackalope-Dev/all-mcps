@@ -19,7 +19,9 @@ const DELAY_MS = Number(process.env.ALLMCPS_BACKFILL_DELAY_MS || 1500);
 const MAX_IDLE_CALLS = 3;
 
 if (!SECRET) {
-  console.error('Missing ALLMCPS_ADMIN_SECRET (or ADMIN_SECRET) environment variable.');
+  console.error(
+    'Missing ALLMCPS_ADMIN_SECRET (or ADMIN_SECRET) environment variable.',
+  );
   process.exit(1);
 }
 
@@ -44,7 +46,9 @@ async function main() {
       try {
         data = JSON.parse(text);
       } catch {
-        console.error(`Call ${call}: non-JSON response (${res.status}): ${text.slice(0, 200)}`);
+        console.error(
+          `Call ${call}: non-JSON response (${res.status}): ${text.slice(0, 200)}`,
+        );
         break;
       }
       if (!res.ok || data.status !== 'ok') {
@@ -58,7 +62,7 @@ async function main() {
 
     totalIndexed += data.indexed || 0;
     console.log(
-      `Call ${call}: +${data.indexed} indexed, ${data.failed} failed | ~${data.remaining} remaining | ${totalIndexed} total`
+      `Call ${call}: +${data.indexed} indexed, ${data.failed} failed | ~${data.remaining} remaining | ${totalIndexed} total`,
     );
 
     if ((data.indexed || 0) === 0 && (data.claimed || 0) === 0) {

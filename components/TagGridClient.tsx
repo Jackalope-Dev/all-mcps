@@ -1,8 +1,16 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import {
+  Flame,
+  Layers,
+  LayoutGrid,
+  Search,
+  SortAsc,
+  Tag,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
-import { Tag, Search, X, Flame, SortAsc, LayoutGrid, Layers } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { TagWithCount } from '@/lib/tags';
 
 interface TagGridClientProps {
@@ -11,9 +19,13 @@ interface TagGridClientProps {
 
 export function TagGridClient({ tags }: TagGridClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'all' | 'popular' | 'alphabetical'>('all');
+  const [viewMode, setViewMode] = useState<'all' | 'popular' | 'alphabetical'>(
+    'all',
+  );
   const [selectedLetter, setSelectedLetter] = useState<string>('ALL');
-  const [sortBy, setSortBy] = useState<'count-desc' | 'count-asc' | 'alpha-asc' | 'alpha-desc'>('count-desc');
+  const [sortBy, setSortBy] = useState<
+    'count-desc' | 'count-asc' | 'alpha-asc' | 'alpha-desc'
+  >('count-desc');
 
   // Compute list of available first letters
   const availableLetters = useMemo(() => {
@@ -29,7 +41,11 @@ export function TagGridClient({ tags }: TagGridClientProps) {
     return set;
   }, [tags]);
 
-  const allAlphabetLetters = ['ALL', '#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
+  const allAlphabetLetters = [
+    'ALL',
+    '#',
+    ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
+  ];
 
   // Filtered & Sorted Tags
   const processedTags = useMemo(() => {
@@ -39,7 +55,8 @@ export function TagGridClient({ tags }: TagGridClientProps) {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
-        (t) => t.label.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q)
+        (t) =>
+          t.label.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q),
       );
     }
 
@@ -62,8 +79,10 @@ export function TagGridClient({ tags }: TagGridClientProps) {
 
     // 4. Sort
     result.sort((a, b) => {
-      if (sortBy === 'count-desc') return b.count - a.count || a.label.localeCompare(b.label);
-      if (sortBy === 'count-asc') return a.count - b.count || a.label.localeCompare(b.label);
+      if (sortBy === 'count-desc')
+        return b.count - a.count || a.label.localeCompare(b.label);
+      if (sortBy === 'count-asc')
+        return a.count - b.count || a.label.localeCompare(b.label);
       if (sortBy === 'alpha-asc') return a.label.localeCompare(b.label);
       if (sortBy === 'alpha-desc') return b.label.localeCompare(a.label);
       return 0;
@@ -118,7 +137,12 @@ export function TagGridClient({ tags }: TagGridClientProps) {
             aria-label="Search tags"
           />
           {searchQuery && (
-            <button type="button" className="tags-clear-btn" onClick={() => setSearchQuery('')} aria-label="Clear search">
+            <button
+              type="button"
+              className="tags-clear-btn"
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+            >
               <X size={16} />
             </button>
           )}
@@ -126,7 +150,11 @@ export function TagGridClient({ tags }: TagGridClientProps) {
 
         {/* View Mode & Sort Controls */}
         <div className="tags-filter-bar">
-          <div className="tags-view-tabs" role="tablist" aria-label="Tag view mode">
+          <div
+            className="tags-view-tabs"
+            role="tablist"
+            aria-label="Tag view mode"
+          >
             <button
               type="button"
               className={`tags-view-tab ${viewMode === 'all' ? 'active' : ''}`}
@@ -143,7 +171,13 @@ export function TagGridClient({ tags }: TagGridClientProps) {
               role="tab"
               aria-selected={viewMode === 'popular'}
             >
-              <Flame size={15} style={{ color: viewMode === 'popular' ? '#ffffff' : '#ff9800' }} /> Popular
+              <Flame
+                size={15}
+                style={{
+                  color: viewMode === 'popular' ? '#ffffff' : '#ff9800',
+                }}
+              />{' '}
+              Popular
             </button>
             <button
               type="button"
@@ -173,9 +207,14 @@ export function TagGridClient({ tags }: TagGridClientProps) {
         </div>
 
         {/* Alphabet Jump Bar */}
-        <div className="tag-alphabet-bar" aria-label="Alphabetical jump filter">
+        <div
+          className="tag-alphabet-bar"
+          role="group"
+          aria-label="Alphabetical jump filter"
+        >
           {allAlphabetLetters.map((letter) => {
-            const isAvailable = letter === 'ALL' || availableLetters.has(letter);
+            const isAvailable =
+              letter === 'ALL' || availableLetters.has(letter);
             const isActive = selectedLetter === letter;
 
             return (
@@ -196,11 +235,26 @@ export function TagGridClient({ tags }: TagGridClientProps) {
 
       {/* Results Count Summary */}
       {(searchQuery || selectedLetter !== 'ALL' || viewMode === 'popular') && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1.5rem',
+            fontSize: '0.875rem',
+            color: 'var(--text-secondary)',
+          }}
+        >
           <span>
-            Showing <strong style={{ color: 'var(--text-primary)' }}>{processedTags.length}</strong> tags
+            Showing{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>
+              {processedTags.length}
+            </strong>{' '}
+            tags
             {searchQuery && <> matching &ldquo;{searchQuery}&rdquo;</>}
-            {selectedLetter !== 'ALL' && <> starting with &ldquo;{selectedLetter}&rdquo;</>}
+            {selectedLetter !== 'ALL' && (
+              <> starting with &ldquo;{selectedLetter}&rdquo;</>
+            )}
             {viewMode === 'popular' && <> (Popular)</>}
           </span>
           <button
@@ -222,13 +276,21 @@ export function TagGridClient({ tags }: TagGridClientProps) {
       )}
 
       {/* Render Tags: Alphabetical Mode vs Standard Grid */}
-      {viewMode === 'alphabetical' && !searchQuery && selectedLetter === 'ALL' ? (
+      {viewMode === 'alphabetical' &&
+      !searchQuery &&
+      selectedLetter === 'ALL' ? (
         <div>
           {groupedByLetter.map(({ letter, items }) => (
             <div key={letter} className="tag-letter-group">
               <div className="tag-letter-header">
                 <span>{letter}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 500,
+                  }}
+                >
                   ({items.length} {items.length === 1 ? 'tag' : 'tags'})
                 </span>
               </div>
@@ -260,12 +322,34 @@ export function TagGridClient({ tags }: TagGridClientProps) {
             marginTop: '1rem',
           }}
         >
-          <Tag size={36} style={{ color: 'var(--text-secondary)', opacity: 0.5, marginBottom: '1rem' }} />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+          <Tag
+            size={36}
+            style={{
+              color: 'var(--text-secondary)',
+              opacity: 0.5,
+              marginBottom: '1rem',
+            }}
+          />
+          <h3
+            style={{
+              fontSize: '1.2rem',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              marginBottom: '0.5rem',
+            }}
+          >
             No tags found
           </h3>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto 1.5rem' }}>
-            We couldn&apos;t find any topics matching your search or selected letter filter.
+          <p
+            style={{
+              fontSize: '0.9rem',
+              color: 'var(--text-secondary)',
+              maxWidth: '400px',
+              margin: '0 auto 1.5rem',
+            }}
+          >
+            We couldn&apos;t find any topics matching your search or selected
+            letter filter.
           </p>
           <button
             type="button"
@@ -289,7 +373,15 @@ export function TagGridClient({ tags }: TagGridClientProps) {
   );
 }
 
-function TagCard({ slug, label, count }: { slug: string; label: string; count: number }) {
+function TagCard({
+  slug,
+  label,
+  count,
+}: {
+  slug: string;
+  label: string;
+  count: number;
+}) {
   return (
     <Link href={`/tags/${slug}`} className="tag-card">
       <div className="tag-card-info">

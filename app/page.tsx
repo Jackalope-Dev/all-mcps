@@ -1,22 +1,26 @@
 import type { Metadata } from 'next';
+import { BentoShowcase } from '../components/BentoShowcase';
 import DirectoryGrid from '../components/DirectoryGrid';
-import { HeroSection } from '../components/HeroSection';
 import { FeaturedCards } from '../components/FeaturedCards';
 import { FeaturedMarquee } from '../components/FeaturedMarquee';
-import { BentoShowcase } from '../components/BentoShowcase';
-import { StatsBanner } from '../components/StatsBanner';
-import { SectionKicker } from '../components/ui/SectionKicker';
+import { HeroSection } from '../components/HeroSection';
 import {
-  LandingIntents,
-  LandingFaq,
   LandingCta,
+  LandingFaq,
+  LandingIntents,
   LandingMcpPromo,
   LandingNewsletter,
 } from '../components/LandingHome';
+import { StatsBanner } from '../components/StatsBanner';
+import { SectionKicker } from '../components/ui/SectionKicker';
 import { pickDiscoveryServers } from '../lib/featured';
-import { getActiveServersLight, getNewestActiveServers, type Server } from '../lib/servers';
-import { getSiteStats } from '../lib/siteStats';
 import { buildAiSearchText } from '../lib/search';
+import {
+  getActiveServersLight,
+  getNewestActiveServers,
+  type Server,
+} from '../lib/servers';
+import { getSiteStats } from '../lib/siteStats';
 
 export const metadata: Metadata = {
   title: {
@@ -28,7 +32,14 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com',
   },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'AllMCPs — Discover & Install MCP Servers for AI Agents',
     description:
       'Find and install MCP servers for Claude, Cursor, and other AI agents. Search thousands of listings by the job you need done.',
@@ -79,7 +90,7 @@ function toLightCard(s: Server) {
         authType: s.authType,
         compatibleClients: s.compatibleClients,
       },
-      400
+      400,
     ),
   };
 }
@@ -110,11 +121,12 @@ export default async function Home() {
   // Prefer premium / verified / high-engagement for discovery chrome
   // Seed changes every 5 minutes so different visitors see different featured servers
   const discoverySeed = Math.floor(Date.now() / (5 * 60 * 1000));
-  const { marquee: marqueeServers, featured: featuredCards } = pickDiscoveryServers(discoveryPool, {
-    marquee: 15,
-    featured: 3,
-    seed: discoverySeed,
-  });
+  const { marquee: marqueeServers, featured: featuredCards } =
+    pickDiscoveryServers(discoveryPool, {
+      marquee: 15,
+      featured: 3,
+      seed: discoverySeed,
+    });
 
   // Advertise the machine-readable catalog export so agents/answer engines can
   // discover /data.json as a citable structured data source.
@@ -126,8 +138,18 @@ export default async function Home() {
       'Structured export of every active MCP (Model Context Protocol) server on AllMCPs, with categories, descriptions, install identifiers, and directory links.',
     url: 'https://allmcps.com',
     license: 'https://creativecommons.org/publicdomain/zero/1.0/',
-    keywords: ['Model Context Protocol', 'MCP servers', 'AI agents', 'Claude', 'Cursor'],
-    creator: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
+    keywords: [
+      'Model Context Protocol',
+      'MCP servers',
+      'AI agents',
+      'Claude',
+      'Cursor',
+    ],
+    creator: {
+      '@type': 'Organization',
+      name: 'AllMCPs',
+      url: 'https://allmcps.com',
+    },
     isAccessibleForFree: true,
     distribution: [
       {
@@ -175,4 +197,3 @@ export default async function Home() {
     </main>
   );
 }
-

@@ -1,6 +1,12 @@
-import React from 'react';
+import type React from 'react';
 
-type PageShellVariant = 'default' | 'narrow' | 'content' | 'tool' | 'auth' | 'status';
+type PageShellVariant =
+  | 'default'
+  | 'narrow'
+  | 'content'
+  | 'tool'
+  | 'auth'
+  | 'status';
 
 interface PageShellProps {
   children: React.ReactNode;
@@ -51,9 +57,18 @@ interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({ title, description, kicker, badge, centered = false, className = '' }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  kicker,
+  badge,
+  centered = false,
+  className = '',
+}: PageHeaderProps) {
   return (
-    <header className={`page-header ${centered ? 'page-header--centered' : ''} ${className}`.trim()}>
+    <header
+      className={`page-header ${centered ? 'page-header--centered' : ''} ${className}`.trim()}
+    >
       {badge ? (
         <div className="page-header-badge">{badge}</div>
       ) : kicker ? (

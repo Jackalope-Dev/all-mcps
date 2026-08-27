@@ -15,10 +15,12 @@ const DIRECTORY_URLS = [
   'https://microlaunch.net',
   'https://www.launchingnext.com/submit/',
   'https://betalist.com/submit',
-  'https://www.producthunt.com/posts/new'
+  'https://www.producthunt.com/posts/new',
 ];
 
-console.log(`Opening ${DIRECTORY_URLS.length} directory submission pages in your browser...`);
+console.log(
+  `Opening ${DIRECTORY_URLS.length} directory submission pages in your browser...`,
+);
 
 const platform = os.platform();
 

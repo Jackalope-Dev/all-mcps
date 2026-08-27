@@ -4,9 +4,15 @@
  */
 
 import { sendListingStatusEmail } from './notify';
+import {
+  PRODUCT_SUBSCRIBERS_LIST_ID,
+  syncSequenzySubscriber,
+} from './sequenzy';
+import {
+  SEQUENZY_TX,
+  sendSequenzyTransactional,
+} from './sequenzyTransactional';
 import { getAppUrl } from './stripe';
-import { syncSequenzySubscriber, PRODUCT_SUBSCRIBERS_LIST_ID } from './sequenzy';
-import { sendSequenzyTransactional, SEQUENZY_TX } from './sequenzyTransactional';
 
 export type ApprovalNotifyInput = {
   id: string;
@@ -27,13 +33,19 @@ export type ApprovalNotifyResult = {
  * Soft-fails (returns result; never throws for delivery issues).
  */
 export async function notifyListingApproved(
-  server: ApprovalNotifyInput
+  server: ApprovalNotifyInput,
 ): Promise<ApprovalNotifyResult> {
   const submitterEmail =
-    typeof server.submitterEmail === 'string' ? server.submitterEmail.trim().toLowerCase() : '';
+    typeof server.submitterEmail === 'string'
+      ? server.submitterEmail.trim().toLowerCase()
+      : '';
 
   if (!submitterEmail) {
-    return { emailed: false, channel: 'none', reason: 'No submitter email on file.' };
+    return {
+      emailed: false,
+      channel: 'none',
+      reason: 'No submitter email on file.',
+    };
   }
 
   const appUrl = getAppUrl();

@@ -8,9 +8,15 @@ import { getClaimVerificationToken } from './verificationTokens';
  * which account should be credited with ownership. Requiring both means the
  * badge has to be the one this exact signed-in user generated on the claim page.
  */
-export function readmeContainsClaimBadge(readmeText: string, serverId: string, userId: string): boolean {
+export function readmeContainsClaimBadge(
+  readmeText: string,
+  serverId: string,
+  userId: string,
+): boolean {
   const normalized = readmeText.replace(/\s+/g, '').toLowerCase();
-  const hasListingLink = normalized.includes(`allmcps.com/mcp/${serverId}`.toLowerCase());
+  const hasListingLink = normalized.includes(
+    `allmcps.com/mcp/${serverId}`.toLowerCase(),
+  );
   const hasUserToken = normalized.includes(`verify=${userId}`.toLowerCase());
   return hasListingLink && hasUserToken;
 }
@@ -46,7 +52,10 @@ export function relIsDofollow(relValue: string): boolean {
  * Not used for claim proof (see verifyWebsiteHtml) since a generic,
  * unpersonalized badge/link can't tell which account should get credited.
  */
-export function websiteHasReciprocalBadge(html: string, serverId: string): boolean {
+export function websiteHasReciprocalBadge(
+  html: string,
+  serverId: string,
+): boolean {
   const id = serverId.toLowerCase();
   const lower = html.toLowerCase();
   const listingPath = `allmcps.com/mcp/${id}`;
@@ -69,11 +78,15 @@ export function websiteHasReciprocalBadge(html: string, serverId: string): boole
 
   // HTML context → demand a genuine dofollow backlink to our listing/badge.
   for (const [tag] of anchors) {
-    const hrefMatch = tag.match(/href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
-    const href = hrefMatch ? (hrefMatch[1] || hrefMatch[2] || hrefMatch[3] || '') : '';
+    const hrefMatch = tag.match(
+      /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i,
+    );
+    const href = hrefMatch
+      ? hrefMatch[1] || hrefMatch[2] || hrefMatch[3] || ''
+      : '';
     if (!href.includes(listingPath) && !href.includes(badgePath)) continue;
     const relMatch = tag.match(/rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
-    const rel = relMatch ? (relMatch[1] || relMatch[2] || relMatch[3] || '') : '';
+    const rel = relMatch ? relMatch[1] || relMatch[2] || relMatch[3] || '' : '';
     if (relIsDofollow(rel)) return true;
   }
   return false;
@@ -88,10 +101,13 @@ export function websiteHasReciprocalBadge(html: string, serverId: string): boole
 export async function verifyWebsiteHtml(
   websiteUrl: string,
   serverId: string,
-  userId: string
+  userId: string,
 ): Promise<{ ok: boolean; reason?: string }> {
   if (!isSafeSubmissionUrl(websiteUrl)) {
-    return { ok: false, reason: 'Website URL is not a safe public http(s) address.' };
+    return {
+      ok: false,
+      reason: 'Website URL is not a safe public http(s) address.',
+    };
   }
 
   let res: Response;
@@ -107,7 +123,10 @@ export async function verifyWebsiteHtml(
       signal: AbortSignal.timeout(12000),
     });
   } catch {
-    return { ok: false, reason: 'Could not reach the website. Check the URL and try again.' };
+    return {
+      ok: false,
+      reason: 'Could not reach the website. Check the URL and try again.',
+    };
   }
 
   if (!res.ok) {
@@ -115,7 +134,10 @@ export async function verifyWebsiteHtml(
   }
 
   const contentType = res.headers.get('content-type') || '';
-  if (!contentType.includes('text/html') && !contentType.includes('application/xhtml')) {
+  if (
+    !contentType.includes('text/html') &&
+    !contentType.includes('application/xhtml')
+  ) {
     // Still try reading body for simple static hosts
   }
 
@@ -143,10 +165,13 @@ export async function verifyWebsiteHtml(
 export async function verifyDnsTxt(
   websiteUrl: string,
   serverId: string,
-  userId: string
+  userId: string,
 ): Promise<{ ok: boolean; reason?: string }> {
   if (!isSafeSubmissionUrl(websiteUrl)) {
-    return { ok: false, reason: 'Website URL is not a safe public http(s) address.' };
+    return {
+      ok: false,
+      reason: 'Website URL is not a safe public http(s) address.',
+    };
   }
 
   let hostname: string;
@@ -168,7 +193,7 @@ export async function verifyDnsTxt(
         {
           headers: { Accept: 'application/dns-json' },
           signal: AbortSignal.timeout(10000),
-        }
+        },
       );
       if (!res.ok) continue;
       const data = (await res.json()) as {
@@ -177,7 +202,10 @@ export async function verifyDnsTxt(
       const answers = data.Answer || [];
       for (const ans of answers) {
         // TXT data often arrives quoted: "allmcps-site-verification=..."
-        const value = ans.data.replace(/^"|"$/g, '').replace(/" "/g, '').toLowerCase();
+        const value = ans.data
+          .replace(/^"|"$/g, '')
+          .replace(/" "/g, '')
+          .toLowerCase();
         if (value.includes(expected) || value === expected) {
           return { ok: true };
         }
@@ -193,10 +221,18 @@ export async function verifyDnsTxt(
   };
 }
 
-export async function verifyGithubReadme(repoUrl: string, serverId: string, userId: string): Promise<{ ok: boolean; reason?: string }> {
+export async function verifyGithubReadme(
+  repoUrl: string,
+  serverId: string,
+  userId: string,
+): Promise<{ ok: boolean; reason?: string }> {
   const githubMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/#?]+)/);
   if (!githubMatch) {
-    return { ok: false, reason: 'Repository is not a GitHub URL. Use website badge or DNS verification instead.' };
+    return {
+      ok: false,
+      reason:
+        'Repository is not a GitHub URL. Use website badge or DNS verification instead.',
+    };
   }
 
   const owner = githubMatch[1];
@@ -206,9 +242,12 @@ export async function verifyGithubReadme(repoUrl: string, serverId: string, user
   const branches = ['main', 'master'];
   for (const branch of branches) {
     try {
-      const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`, {
-        signal: AbortSignal.timeout(10000),
-      });
+      const res = await fetch(
+        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`,
+        {
+          signal: AbortSignal.timeout(10000),
+        },
+      );
       if (!res.ok) continue;
       const readmeText = await res.text();
       if (readmeContainsClaimBadge(readmeText, serverId, userId)) {
@@ -216,12 +255,16 @@ export async function verifyGithubReadme(repoUrl: string, serverId: string, user
       }
       return {
         ok: false,
-        reason: 'Personalized verification badge not found in README. Copy the badge markdown shown on the claim page (it includes your account link) and try again.',
+        reason:
+          'Personalized verification badge not found in README. Copy the badge markdown shown on the claim page (it includes your account link) and try again.',
       };
     } catch {
       // try next branch
     }
   }
 
-  return { ok: false, reason: 'Could not fetch README from GitHub (main/master).' };
+  return {
+    ok: false,
+    reason: 'Could not fetch README from GitHub (main/master).',
+  };
 }

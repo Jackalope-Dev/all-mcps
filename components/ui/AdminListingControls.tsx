@@ -7,13 +7,10 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  FolderGit2,
-  Globe,
   Loader2,
   ShieldCheck,
   Sparkles,
   Star,
-  Tag,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -492,7 +489,7 @@ export function AdminInlineName({
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          autoFocus
+          ref={(el) => el?.focus()}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSave();
             if (e.key === 'Escape') {
@@ -655,7 +652,7 @@ export function AdminInlineCategory({
             void handleSave(e.target.value);
           }}
           disabled={saving}
-          autoFocus
+          ref={(el) => el?.focus()}
           style={{
             background: 'var(--bg-card, #ffffff)',
             color: 'var(--text-primary, #0f172a)',
@@ -839,7 +836,7 @@ export function AdminInlineDescription({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           maxLength={2000}
-          autoFocus
+          ref={(el) => el?.focus()}
           style={{
             width: '100%',
             background: 'var(--bg-card)',
@@ -1096,7 +1093,7 @@ export function AdminInlineLinkPopover({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://..."
-              autoFocus
+              ref={(el) => el?.focus()}
               style={{
                 width: '100%',
                 background: 'var(--bg-color)',

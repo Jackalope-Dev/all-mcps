@@ -4,7 +4,8 @@ import React from 'react';
 import { trackOutboundClick } from '../../lib/gtag';
 import { withAllMcpsUtm } from '../../lib/outboundLinks';
 
-interface OutboundLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+interface OutboundLinkProps
+  extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
   destinationType: 'github' | 'website' | 'other';
   serverId?: string;
@@ -21,7 +22,8 @@ export function OutboundLink({
 }: OutboundLinkProps) {
   const targetHref = React.useMemo(() => {
     if (destinationType === 'website' || destinationType === 'github') {
-      const campaign = destinationType === 'website' ? 'website_button' : 'github_button';
+      const campaign =
+        destinationType === 'website' ? 'website_button' : 'github_button';
       return withAllMcpsUtm(href, { campaign, content: serverId });
     }
     return href;
@@ -30,12 +32,19 @@ export function OutboundLink({
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     trackOutboundClick({ url: targetHref, destinationType, serverId });
 
-    if (serverId && (destinationType === 'github' || destinationType === 'website')) {
-      const surface = destinationType === 'github' ? 'outbound_github' : 'outbound_website';
+    if (
+      serverId &&
+      (destinationType === 'github' || destinationType === 'website')
+    ) {
+      const surface =
+        destinationType === 'github' ? 'outbound_github' : 'outbound_website';
       const body = JSON.stringify({ impressions: [{ serverId, surface }] });
       try {
         if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
-          navigator.sendBeacon('/api/impressions', new Blob([body], { type: 'application/json' }));
+          navigator.sendBeacon(
+            '/api/impressions',
+            new Blob([body], { type: 'application/json' }),
+          );
         } else {
           fetch('/api/impressions', {
             method: 'POST',

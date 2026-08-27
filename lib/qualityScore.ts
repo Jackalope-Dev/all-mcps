@@ -81,7 +81,8 @@ export function computeQualityScore(server: Server): QualityScore {
     const max = 25;
     const status = server.healthStatus;
     const isDeadRepo = status === 'archived' || status === 'offline';
-    const hasRemoteEndpointSignal = !!server.remoteEndpointUrl && server.remoteEndpointHealthy != null;
+    const hasRemoteEndpointSignal =
+      !!server.remoteEndpointUrl && server.remoteEndpointHealthy != null;
 
     if ((server.isOfficial || server.id === 'allmcps-server') && !isDeadRepo) {
       components.push({
@@ -115,7 +116,10 @@ export function computeQualityScore(server: Server): QualityScore {
               : "Recent automated checks haven't been able to reach this server.",
       });
     } else if (hasRemoteEndpointSignal) {
-      const isHealthy = server.remoteEndpointHealthy || server.isVerifiedActive || server.toolsSource === 'introspected';
+      const isHealthy =
+        server.remoteEndpointHealthy ||
+        server.isVerifiedActive ||
+        server.toolsSource === 'introspected';
       components.push({
         key: 'health',
         label: 'Server availability',
@@ -158,7 +162,8 @@ export function computeQualityScore(server: Server): QualityScore {
   {
     const max = 20;
     let earned = 0;
-    let hint = 'Ownership proven via GitHub, DNS, or site badge. Claim your listing to earn full credit.';
+    let hint =
+      'Ownership proven via GitHub, DNS, or site badge. Claim your listing to earn full credit.';
     if (server.isOfficial) {
       earned = max;
       hint = 'Official maintainer claimed listing.';
@@ -167,15 +172,18 @@ export function computeQualityScore(server: Server): QualityScore {
       hint = 'Premium listing.';
     } else if (server.reciprocalBadgeOk) {
       earned = max * 0.6;
-      hint = 'Verified — AllMCPs reciprocal badge detected on repository or website.';
+      hint =
+        'Verified — AllMCPs reciprocal badge detected on repository or website.';
     } else if (repoHosted) {
-      const isHealthyActive = server.isVerifiedActive || server.healthStatus === 'healthy';
+      const isHealthyActive =
+        server.isVerifiedActive || server.healthStatus === 'healthy';
       if (isHealthyActive) {
         earned = max * 0.5;
         hint = 'Active community repository with verified uptime.';
       } else {
         earned = max * 0.4;
-        hint = 'Valid open-source community repository. Claim your listing to earn full verification credit.';
+        hint =
+          'Valid open-source community repository. Claim your listing to earn full verification credit.';
       }
     }
 
@@ -211,25 +219,42 @@ export function computeQualityScore(server: Server): QualityScore {
   {
     const max = 30;
     const descLen = (server.description || '').trim().length;
-    const descScore = ramp(descLen, 400) * 0.50; // ~400 chars ≈ 50% of max
+    const descScore = ramp(descLen, 400) * 0.5; // ~400 chars ≈ 50% of max
     const toolsCount = server.tools ? server.tools.length : 0;
     const hasTools = toolsCount > 0;
     const toolsIntrospected = hasTools && server.toolsSource === 'introspected';
-    
+
     // Base tools credit + schema richness bonus for tool count
-    const toolsBase = toolsIntrospected ? 0.35 : hasTools ? 0.25 : descLen >= 120 ? 0.15 : 0;
-    const schemaRichnessBonus = hasTools ? ramp(toolsCount, 10) * (toolsIntrospected ? 0.10 : 0.05) : 0;
+    const toolsBase = toolsIntrospected
+      ? 0.35
+      : hasTools
+        ? 0.25
+        : descLen >= 120
+          ? 0.15
+          : 0;
+    const schemaRichnessBonus = hasTools
+      ? ramp(toolsCount, 10) * (toolsIntrospected ? 0.1 : 0.05)
+      : 0;
     const toolsScore = toolsBase + schemaRichnessBonus;
-    
+
     // Ready-to-run install config (npx, uvx, bunx, or remote url)
-    const hasInstallHint = !!(server.installCommand || server.installPackage || server.suggestedInstallCommand);
+    const hasInstallHint = !!(
+      server.installCommand ||
+      server.installPackage ||
+      server.suggestedInstallCommand
+    );
     const installScore = hasInstallHint ? 0.15 : 0;
 
     // Security & Auth disclosure bonus
-    const hasAuthDisclosure = !!(server.authType && server.authType !== 'unknown');
+    const hasAuthDisclosure = !!(
+      server.authType && server.authType !== 'unknown'
+    );
     const authScore = hasAuthDisclosure ? 0.05 : 0;
 
-    const totalDocMag = Math.min(1, descScore + toolsScore + installScore + authScore);
+    const totalDocMag = Math.min(
+      1,
+      descScore + toolsScore + installScore + authScore,
+    );
 
     components.push({
       key: 'docs',
@@ -250,23 +275,28 @@ export function computeQualityScore(server: Server): QualityScore {
     const rawStars = server.githubStars || 0;
     const downloads = server.npmDownloads || 0;
     const installs = server.copies || 0;
-    
+
     let commitAgeDays = -1;
     let recencyWeight = 0;
     if (server.lastCommitAt) {
-      commitAgeDays = (Date.now() - new Date(server.lastCommitAt).getTime()) / (1000 * 60 * 60 * 24);
+      commitAgeDays =
+        (Date.now() - new Date(server.lastCommitAt).getTime()) /
+        (1000 * 60 * 60 * 24);
       if (commitAgeDays <= 30) recencyWeight = 0.25;
       else if (commitAgeDays <= 90) recencyWeight = 0.15;
       else if (commitAgeDays <= 180) recencyWeight = 0.05;
-      else recencyWeight = 0.00;
+      else recencyWeight = 0.0;
     } else {
       recencyWeight = 0.05; // neutral fallback
     }
 
     // Stale star decay: discount stars by 50% if the repository hasn't had a commit in >365 days
-    const stars = (commitAgeDays > 365) ? rawStars * 0.5 : rawStars;
+    const stars = commitAgeDays > 365 ? rawStars * 0.5 : rawStars;
 
-    const adoptionScale = ramp(stars, 1000) * 0.4 + ramp(downloads, 5000) * 0.25 + ramp(installs, 250) * 0.1;
+    const adoptionScale =
+      ramp(stars, 1000) * 0.4 +
+      ramp(downloads, 5000) * 0.25 +
+      ramp(installs, 250) * 0.1;
     const totalMag = Math.min(1, adoptionScale + recencyWeight);
 
     components.push({
@@ -295,9 +325,11 @@ export function computeQualityScore(server: Server): QualityScore {
     const avgRating = server.avgRating || 0;
     const bayesianAvg =
       reviewCount > 0
-        ? (reviewCount * avgRating + REVIEW_SHRINKAGE_C * REVIEW_PRIOR) / (reviewCount + REVIEW_SHRINKAGE_C)
+        ? (reviewCount * avgRating + REVIEW_SHRINKAGE_C * REVIEW_PRIOR) /
+          (reviewCount + REVIEW_SHRINKAGE_C)
         : 0;
-    const reviewScore = reviewCount > 0 ? Math.max(0, Math.min(1, (bayesianAvg - 1) / 4)) : 0;
+    const reviewScore =
+      reviewCount > 0 ? Math.max(0, Math.min(1, (bayesianAvg - 1) / 4)) : 0;
 
     const engagement =
       ramp(server.upvotes || 0, 100) * 0.45 +
@@ -321,7 +353,10 @@ export function computeQualityScore(server: Server): QualityScore {
   const scored = components.filter((c) => c.applicable !== false);
   const totalMax = scored.reduce((sum, c) => sum + c.max, 0);
   const totalEarned = scored.reduce((sum, c) => sum + c.earned, 0);
-  const score = totalMax > 0 ? Math.max(0, Math.min(100, Math.round((totalEarned / totalMax) * 100))) : 0;
+  const score =
+    totalMax > 0
+      ? Math.max(0, Math.min(100, Math.round((totalEarned / totalMax) * 100)))
+      : 0;
   return { score, tier: tierFor(score), components };
 }
 

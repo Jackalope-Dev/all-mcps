@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { and, desc, eq, gte, notInArray, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, eq, gte, desc, notInArray, sql } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { cleanListingDescription } from '../../../../lib/description';
@@ -38,7 +38,10 @@ function truncate(text: string, max: number): string {
 }
 
 function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 const INSTALL_COMMAND_RE =
@@ -53,7 +56,10 @@ function cleanDescription(description: string): string {
 
   const installIdx = text.search(INSTALL_COMMAND_RE);
   if (installIdx !== -1) {
-    text = text.slice(0, installIdx).replace(/[\s.;:,(\-–—]+$/, '').trim();
+    text = text
+      .slice(0, installIdx)
+      .replace(/[\s.;:,(\-–—]+$/, '')
+      .trim();
   }
 
   return text;
@@ -63,11 +69,19 @@ function cleanDescription(description: string): string {
 // stop of each gradient, for contrast with white text) — CSS gradients aren't
 // reliably supported in email clients, but using the same hash keeps a given
 // listing's fallback color consistent between the site and this email.
-const FALLBACK_COLORS = ['#007bff', '#0f172a', '#0369a1', '#1e3a8a', '#164e63', '#1d4ed8'];
+const FALLBACK_COLORS = [
+  '#007bff',
+  '#0f172a',
+  '#0369a1',
+  '#1e3a8a',
+  '#164e63',
+  '#1d4ed8',
+];
 
 function fallbackColor(name: string): string {
   let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < name.length; i++)
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
 }
 
@@ -84,9 +98,9 @@ function listingHeaderHtml(listing: ListingSummary): string {
   const icon = listing.logoUrl
     ? `<img src="${escapeHtml(absoluteUrl(listing.logoUrl))}" width="48" height="48" alt="${name}" style="display:block;border-radius:8px;object-fit:cover" />`
     : `<table role="presentation" width="48" height="48" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" height="48" align="center" valign="middle" style="width:48px;height:48px;border-radius:8px;background-color:${fallbackColor(
-        listing.name
+        listing.name,
       )};color:#ffffff;font-family:Arial,sans-serif;font-size:20px;font-weight:800">${escapeHtml(
-        initialLetter(listing.name)
+        initialLetter(listing.name),
       )}</td></tr></table>`;
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr><td width="48" valign="top" style="width:48px;padding-right:12px">${icon}</td><td valign="top"><div style="font-weight:700;font-size:16px;color:#020617;line-height:1.3;margin-bottom:4px">${name}</div><span style="display:inline-block;background-color:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:9999px;padding:2px 10px;font-size:11px;font-weight:600">${category}</span></td></tr></table>`;
@@ -106,12 +120,16 @@ const LISTING_CARD_STYLES = {
   paddingRight: 20,
 };
 
-function listingBlocks(listing: ListingSummary, blurb?: string): SequenzyBlock[] {
+function listingBlocks(
+  listing: ListingSummary,
+  blurb?: string,
+): SequenzyBlock[] {
   // Prefer the LLM-written editorial blurb ("why it's worth a look"); fall back to the
   // cleaned scrape so the section still reads well when the LLM is unavailable.
-  const copy = blurb && /[\p{L}\p{N}]/u.test(blurb)
-    ? truncate(blurb.trim(), 160)
-    : truncate(cleanDescription(listing.description), 140);
+  const copy =
+    blurb && /[\p{L}\p{N}]/u.test(blurb)
+      ? truncate(blurb.trim(), 160)
+      : truncate(cleanDescription(listing.description), 140);
 
   let content = listingHeaderHtml(listing);
   if (/[\p{L}\p{N}]/u.test(copy)) {
@@ -122,7 +140,7 @@ function listingBlocks(listing: ListingSummary, blurb?: string): SequenzyBlock[]
   // block (rather than a separate `button` block) so it sits flush under the
   // blurb instead of as a visually distinct element under it.
   content += `<a href="${escapeHtml(`${APP_URL}/mcp/${listing.id}`)}" style="display:inline-block;margin-top:14px;font-size:13px;font-weight:600;color:#2563eb;text-decoration:none">${escapeHtml(
-    truncate(listing.name, 30)
+    truncate(listing.name, 30),
   )} →</a>`;
 
   return [
@@ -138,21 +156,38 @@ function listingBlocks(listing: ListingSummary, blurb?: string): SequenzyBlock[]
 // different week to week even if the LLM editorial pass is unavailable.
 
 function isoWeek(d: Date): number {
-  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const date = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  );
   const dayNum = (date.getUTCDay() + 6) % 7;
   date.setUTCDate(date.getUTCDate() - dayNum + 3);
   const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
   const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
   firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
-  return 1 + Math.round((date.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000));
+  return (
+    1 +
+    Math.round(
+      (date.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000),
+    )
+  );
 }
 
 function rotate<T>(arr: T[], week: number): T {
   return arr[((week % arr.length) + arr.length) % arr.length];
 }
 
-const NEW_HEADINGS = ['New this week', 'Fresh arrivals', 'Just added', 'New in the directory'];
-const TRENDING_HEADINGS = ['Trending', 'Community favorites', 'Catching on', 'Most loved right now'];
+const NEW_HEADINGS = [
+  'New this week',
+  'Fresh arrivals',
+  'Just added',
+  'New in the directory',
+];
+const TRENDING_HEADINGS = [
+  'Trending',
+  'Community favorites',
+  'Catching on',
+  'Most loved right now',
+];
 const FALLBACK_INTROS = [
   'Fresh MCP servers and community favorites, hand-picked from the directory.',
   'A few new tools to give your agents this week — plus what the community is loving.',
@@ -161,7 +196,7 @@ const FALLBACK_INTROS = [
 ];
 const FALLBACK_TEASERS = [
   'fresh servers to try',
-  "this week’s standouts",
+  'this week’s standouts',
   'new tools for your agents',
   'what the community is loving',
 ];
@@ -181,7 +216,7 @@ type Editorial = {
 async function generateEditorial(
   week: number,
   newListings: ListingSummary[],
-  trendingListings: ListingSummary[]
+  trendingListings: ListingSummary[],
 ): Promise<Editorial | null> {
   const all = [...newListings, ...trendingListings];
   if (all.length === 0) return null;
@@ -212,7 +247,7 @@ async function generateEditorial(
           'Return JSON with: "intro" (1-2 sentences, under 240 chars, sets up this week\'s picks), ' +
           '"subjectTeaser" (3-6 words, no trailing punctuation, for the email subject line), and ' +
           '"items" (array of {id, blurb} for every listing you are given; blurb is ONE sentence under 130 chars ' +
-          'on what the server does and who\'d want it). Keep every id exactly as provided.',
+          "on what the server does and who'd want it). Keep every id exactly as provided.",
       },
       {
         role: 'user',
@@ -232,7 +267,8 @@ async function generateEditorial(
     }
   }
 
-  const intro = typeof result.data.intro === 'string' ? result.data.intro.trim() : '';
+  const intro =
+    typeof result.data.intro === 'string' ? result.data.intro.trim() : '';
   const subjectTeaser =
     typeof result.data.subjectTeaser === 'string'
       ? result.data.subjectTeaser.trim().replace(/[.!?]+$/, '')
@@ -249,7 +285,7 @@ function buildDigestBlocks(
   newListings: ListingSummary[],
   trendingListings: ListingSummary[],
   week: number,
-  editorial: Editorial | null
+  editorial: Editorial | null,
 ): SequenzyBlock[] {
   const intro = editorial?.intro || rotate(FALLBACK_INTROS, week);
   const blurbs = editorial?.blurbs || {};
@@ -266,22 +302,37 @@ function buildDigestBlocks(
   ];
 
   if (newListings.length > 0) {
-    blocks.push({ type: 'heading', content: rotate(NEW_HEADINGS, week), level: 2 });
+    blocks.push({
+      type: 'heading',
+      content: rotate(NEW_HEADINGS, week),
+      level: 2,
+    });
     blocks.push({ type: 'spacer', height: 4 });
-    for (const listing of newListings) blocks.push(...listingBlocks(listing, blurbs[listing.id]));
+    for (const listing of newListings)
+      blocks.push(...listingBlocks(listing, blurbs[listing.id]));
   }
 
   if (trendingListings.length > 0) {
     // Only when both sections are present — a lone section already reads clearly
     // without a rule separating it from nothing.
     if (newListings.length > 0) blocks.push({ type: 'divider' });
-    blocks.push({ type: 'heading', content: rotate(TRENDING_HEADINGS, week), level: 2 });
+    blocks.push({
+      type: 'heading',
+      content: rotate(TRENDING_HEADINGS, week),
+      level: 2,
+    });
     blocks.push({ type: 'spacer', height: 4 });
-    for (const listing of trendingListings) blocks.push(...listingBlocks(listing, blurbs[listing.id]));
+    for (const listing of trendingListings)
+      blocks.push(...listingBlocks(listing, blurbs[listing.id]));
   }
 
   blocks.push({ type: 'spacer', height: 8 });
-  blocks.push({ type: 'button', text: 'Browse the full directory →', url: `${APP_URL}/browse`, variant: 'primary' });
+  blocks.push({
+    type: 'button',
+    text: 'Browse the full directory →',
+    url: `${APP_URL}/browse`,
+    variant: 'primary',
+  });
   blocks.push({
     type: 'footer',
     address: 'Jackalope Digital \n1500 N GRANT ST # 7225 \nDENVER, CO 80203',
@@ -293,13 +344,19 @@ function buildDigestBlocks(
   return blocks;
 }
 
-async function createSequenzyCampaign(input: { subject: string; blocks: SequenzyBlock[] }): Promise<string> {
+async function createSequenzyCampaign(input: {
+  subject: string;
+  blocks: SequenzyBlock[];
+}): Promise<string> {
   const key = process.env.SEQUENZY_CAMPAIGNS_API_KEY;
   if (!key) throw new Error('SEQUENZY_CAMPAIGNS_API_KEY is not configured');
 
   const res = await fetch('https://api.sequenzy.com/api/v1/campaigns', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({
       name: `Weekly Digest — ${new Date().toISOString().slice(0, 10)}`,
       subject: input.subject,
@@ -327,11 +384,17 @@ async function scheduleSequenzyCampaign(campaignId: string): Promise<void> {
 
   const scheduledAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  const res = await fetch(`https://api.sequenzy.com/api/v1/campaigns/${campaignId}/schedule`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ scheduledAt }),
-  });
+  const res = await fetch(
+    `https://api.sequenzy.com/api/v1/campaigns/${campaignId}/schedule`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ scheduledAt }),
+    },
+  );
 
   if (!res.ok) {
     throw new Error(`Sequenzy campaign scheduling failed: ${res.status}`);
@@ -344,7 +407,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    let env;
+    let env: CloudflareEnv | undefined;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
@@ -356,7 +419,9 @@ export async function POST(req: Request) {
     }
 
     const db = drizzle((env as any).DB);
-    const sinceDate = new Date(Date.now() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const sinceDate = new Date(
+      Date.now() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+    );
 
     const newRows = await db
       .select({
@@ -367,7 +432,9 @@ export async function POST(req: Request) {
         logoUrl: servers.logoUrl,
       })
       .from(servers)
-      .where(and(eq(servers.status, 'active'), gte(servers.createdAt, sinceDate)))
+      .where(
+        and(eq(servers.status, 'active'), gte(servers.createdAt, sinceDate)),
+      )
       .orderBy(desc(servers.createdAt))
       .limit(MAX_PER_SECTION);
 
@@ -385,13 +452,17 @@ export async function POST(req: Request) {
       .where(
         newIds.length > 0
           ? and(eq(servers.status, 'active'), notInArray(servers.id, newIds))
-          : eq(servers.status, 'active')
+          : eq(servers.status, 'active'),
       )
       .orderBy(desc(sql`(${servers.upvotes} * 5 + ${servers.copies})`))
       .limit(MAX_PER_SECTION);
 
     if (newRows.length === 0 && trendingRows.length === 0) {
-      return NextResponse.json({ success: true, skipped: true, message: 'No listings to feature this week.' });
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        message: 'No listings to feature this week.',
+      });
     }
 
     const week = isoWeek(new Date());
@@ -407,8 +478,12 @@ export async function POST(req: Request) {
       subject = `This week on AllMCPs: ${editorial.subjectTeaser}`;
     } else {
       const subjectParts: string[] = [];
-      if (newRows.length > 0) subjectParts.push(`${newRows.length} new server${newRows.length === 1 ? '' : 's'}`);
-      if (trendingRows.length > 0) subjectParts.push(`${trendingRows.length} trending`);
+      if (newRows.length > 0)
+        subjectParts.push(
+          `${newRows.length} new server${newRows.length === 1 ? '' : 's'}`,
+        );
+      if (trendingRows.length > 0)
+        subjectParts.push(`${trendingRows.length} trending`);
       subject = `This week on AllMCPs: ${subjectParts.join(', ')}`;
     }
 
@@ -426,6 +501,9 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('Newsletter digest cron error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

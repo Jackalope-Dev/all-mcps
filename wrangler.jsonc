@@ -18,9 +18,7 @@
     "RESEND_TO_EMAIL": "contact@allmcps.com",
     "RESEND_FROM_EMAIL": "contact@allmcps.com"
   },
-  "routes": [
-    { "pattern": "allmcps.com", "custom_domain": true }
-  ],
+  "routes": [{ "pattern": "allmcps.com", "custom_domain": true }],
   "services": [
     {
       // Self-reference binding required by the R2/DO ISR revalidation queue

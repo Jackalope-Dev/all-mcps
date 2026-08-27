@@ -8,7 +8,14 @@ export const metadata: Metadata = {
     'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations. Includes the AllMCPs OpenAPI spec, CLI, and MCP server.',
   alternates: { canonical: 'https://allmcps.com/docs/api' },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'AllMCPs API Documentation',
     description:
       'Search MCP servers, fetch markdown docs, and integrate the AllMCPs directory into agents and tools.',
@@ -51,7 +58,8 @@ const ENDPOINTS = [
     path: '/api/badge/{id}',
     title: 'SVG badge',
     desc: 'Dynamic badge for READMEs and docs. Use dofollow links when embedding for reciprocal SEO.',
-    example: 'https://allmcps.com/api/badge/github-github-mcp-server?style=shield',
+    example:
+      'https://allmcps.com/api/badge/github-github-mcp-server?style=shield',
   },
   {
     method: 'POST',
@@ -106,7 +114,7 @@ const ENDPOINTS = [
     method: 'GET',
     path: '/api/mcp',
     title: 'Remote MCP server',
-    desc: 'AllMCPs itself as a remote MCP server: search, install configs, categories, boosting, and a fully schema\'d submit_mcp_server tool (call tools/list for the exact category/pricing/auth/maintenance enum values). Also available as the allmcps-server npm package (stdio bridge to this same endpoint).',
+    desc: "AllMCPs itself as a remote MCP server: search, install configs, categories, boosting, and a fully schema'd submit_mcp_server tool (call tools/list for the exact category/pricing/auth/maintenance enum values). Also available as the allmcps-server npm package (stdio bridge to this same endpoint).",
     example: 'https://allmcps.com/api/mcp',
   },
 ] as const;
@@ -120,14 +128,33 @@ export default function ApiDocsPage() {
         headline: 'AllMCPs Directory API Documentation',
         description: metadata.description,
         url: 'https://allmcps.com/docs/api',
-        author: { '@type': 'Organization', name: 'AllMCPs', url: 'https://allmcps.com' },
+        author: {
+          '@type': 'Organization',
+          name: 'AllMCPs',
+          url: 'https://allmcps.com',
+        },
       },
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Documentation', item: 'https://allmcps.com/docs/api' },
-          { '@type': 'ListItem', position: 3, name: 'API Reference', item: 'https://allmcps.com/docs/api' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Documentation',
+            item: 'https://allmcps.com/docs/api',
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: 'API Reference',
+            item: 'https://allmcps.com/docs/api',
+          },
         ],
       },
     ],
@@ -142,17 +169,21 @@ export default function ApiDocsPage() {
       <main className="page-shell page-shell--tool">
         <div className="page-shell-inner" style={{ maxWidth: 880 }}>
           <div className="surface page-panel">
-            <p className="directory-category-kicker" style={{ marginBottom: '0.5rem' }}>
+            <p
+              className="directory-category-kicker"
+              style={{ marginBottom: '0.5rem' }}
+            >
               Developers &amp; agents
             </p>
             <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
               AllMCPs API Documentation
             </h1>
             <p className="text-lead" style={{ marginBottom: '1.5rem' }}>
-              Public, CORS-friendly endpoints for searching MCP servers, embedding badges, and
-              plugging the AllMCPs directory into AI agents. No API key required for read
-              endpoints. Also available as the official{' '}
-              <code>allmcps-server</code> CLI / MCP server on npm, and as a full{' '}
+              Public, CORS-friendly endpoints for searching MCP servers,
+              embedding badges, and plugging the AllMCPs directory into AI
+              agents. No API key required for read endpoints. Also available as
+              the official <code>allmcps-server</code> CLI / MCP server on npm,
+              and as a full{' '}
               <Link href="/api/v1/openapi.json">AllMCPs OpenAPI spec</Link>.
             </p>
 
@@ -164,16 +195,32 @@ export default function ApiDocsPage() {
                 marginBottom: '2rem',
               }}
             >
-              <Link href="/api/v1/openapi.json" className="btn btn-primary" target="_blank">
+              <Link
+                href="/api/v1/openapi.json"
+                className="btn btn-primary"
+                target="_blank"
+              >
                 OpenAPI JSON ↗
               </Link>
-              <Link href="/llms.txt" className="btn btn-secondary" target="_blank">
+              <Link
+                href="/llms.txt"
+                className="btn btn-secondary"
+                target="_blank"
+              >
                 llms.txt ↗
               </Link>
-              <Link href="/.well-known/api-catalog" className="btn btn-secondary" target="_blank">
+              <Link
+                href="/.well-known/api-catalog"
+                className="btn btn-secondary"
+                target="_blank"
+              >
                 API catalog ↗
               </Link>
-              <Link href="/.well-known/oauth-protected-resource" className="btn btn-secondary" target="_blank">
+              <Link
+                href="/.well-known/oauth-protected-resource"
+                className="btn btn-secondary"
+                target="_blank"
+              >
                 OAuth scopes ↗
               </Link>
               <a
@@ -186,13 +233,25 @@ export default function ApiDocsPage() {
               </a>
             </div>
 
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>Quick start</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>
+              Quick start
+            </h2>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                marginBottom: '0.75rem',
+                lineHeight: 1.6,
+              }}
+            >
               Search the directory from any HTTP client or agent:
             </p>
-            <CopyBlock code={`curl "https://allmcps.com/api/v1/search?q=postgres&limit=5"`} />
+            <CopyBlock
+              code={`curl "https://allmcps.com/api/v1/search?q=postgres&limit=5"`}
+            />
 
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 1rem' }}>Endpoints</h2>
+            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 1rem' }}>
+              Endpoints
+            </h2>
             <ul
               style={{
                 listStyle: 'none',
@@ -223,7 +282,11 @@ export default function ApiDocsPage() {
                       }}
                     >
                       <span
-                        className={ep.method === 'GET' ? 'api-method-badge api-method-badge--get' : 'api-method-badge api-method-badge--post'}
+                        className={
+                          ep.method === 'GET'
+                            ? 'api-method-badge api-method-badge--get'
+                            : 'api-method-badge api-method-badge--post'
+                        }
                         style={{
                           fontSize: '0.7rem',
                           fontWeight: 800,
@@ -234,9 +297,18 @@ export default function ApiDocsPage() {
                       >
                         {ep.method}
                       </span>
-                      <code style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>{ep.path}</code>
+                      <code
+                        style={{
+                          fontSize: '0.9rem',
+                          color: 'var(--text-primary)',
+                        }}
+                      >
+                        {ep.path}
+                      </code>
                     </div>
-                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.35rem' }}>{ep.title}</h3>
+                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.35rem' }}>
+                      {ep.title}
+                    </h3>
                     <p
                       style={{
                         fontSize: '0.875rem',
@@ -248,9 +320,17 @@ export default function ApiDocsPage() {
                       {ep.desc}
                     </p>
                     <a
-                      href={ep.example.startsWith('http') ? ep.example : undefined}
-                      style={{ fontSize: '0.8rem', color: 'var(--accent-color)', wordBreak: 'break-all' }}
-                      target={ep.example.startsWith('http') ? '_blank' : undefined}
+                      href={
+                        ep.example.startsWith('http') ? ep.example : undefined
+                      }
+                      style={{
+                        fontSize: '0.8rem',
+                        color: 'var(--accent-color)',
+                        wordBreak: 'break-all',
+                      }}
+                      target={
+                        ep.example.startsWith('http') ? '_blank' : undefined
+                      }
                       rel="noopener noreferrer"
                     >
                       {ep.example}
@@ -260,21 +340,48 @@ export default function ApiDocsPage() {
               ))}
             </ul>
 
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Scoped agent auth</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.6 }}>
-              Read endpoints (search, servers, categories, markdown, health) need no auth at all.
-              Endpoints that mutate a listing require a scoped Bearer token — register via{' '}
-              <code>POST /api/v1/agent/register</code>, requesting only the scopes you need in an
-              optional <code>scopes</code> array (omit it to receive the full set below). A token
-              used against an endpoint it wasn&apos;t granted a scope for gets back{' '}
-              <code>403 {'{'}"error":"insufficient_scope","requiredScope":"...","grantedScopes":[...]{'}'} </code>{' '}
+            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>
+              Scoped agent auth
+            </h2>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                marginBottom: '0.75rem',
+                lineHeight: 1.6,
+              }}
+            >
+              Read endpoints (search, servers, categories, markdown, health)
+              need no auth at all. Endpoints that mutate a listing require a
+              scoped Bearer token — register via{' '}
+              <code>POST /api/v1/agent/register</code>, requesting only the
+              scopes you need in an optional <code>scopes</code> array (omit it
+              to receive the full set below). A token used against an endpoint
+              it wasn&apos;t granted a scope for gets back{' '}
+              <code>
+                403 {'{'}
+                "error":"insufficient_scope","requiredScope":"...","grantedScopes":[...]
+                {'}'}{' '}
+              </code>{' '}
               — never a silent failure or a downgraded response.
             </p>
             <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.85rem',
+                }}
+              >
                 <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
-                    <th style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>Scope</th>
+                  <tr
+                    style={{
+                      textAlign: 'left',
+                      borderBottom: '1px solid var(--border-color)',
+                    }}
+                  >
+                    <th style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>
+                      Scope
+                    </th>
                     <th style={{ padding: '0.5rem 0.75rem' }}>Grants</th>
                     <th style={{ padding: '0.5rem 0' }}>Required by</th>
                   </tr>
@@ -284,44 +391,78 @@ export default function ApiDocsPage() {
                     <td style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>
                       <code>listings:claim</code>
                     </td>
-                    <td style={{ padding: '0.5rem 0.75rem', color: 'var(--text-secondary)' }}>
-                      Claim ownership of an existing listing via DNS TXT, site badge, or GitHub
-                      README proof. No other write access.
+                    <td
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      Claim ownership of an existing listing via DNS TXT, site
+                      badge, or GitHub README proof. No other write access.
                     </td>
                     <td style={{ padding: '0.5rem 0' }}>
                       <code>POST /api/v1/agent/claim</code>
                     </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '0.5rem 0.75rem 0.5rem 0', color: 'var(--text-secondary)' }} colSpan={3}>
-                      <code>POST /api/v1/agent/revoke</code> needs a valid (unrevoked) Bearer token
-                      but no specific scope — any token can always revoke itself.
+                    <td
+                      style={{
+                        padding: '0.5rem 0.75rem 0.5rem 0',
+                        color: 'var(--text-secondary)',
+                      }}
+                      colSpan={3}
+                    >
+                      <code>POST /api/v1/agent/revoke</code> needs a valid
+                      (unrevoked) Bearer token but no specific scope — any token
+                      can always revoke itself.
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, fontSize: '0.9rem' }}>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                marginBottom: '1.5rem',
+                lineHeight: 1.6,
+                fontSize: '0.9rem',
+              }}
+            >
               Machine-readable copies of this table:{' '}
               <Link href="/.well-known/oauth-protected-resource">
                 /.well-known/oauth-protected-resource
               </Link>{' '}
-              (<code>scopes_supported</code>), the <code>components.securitySchemes.agentBearerAuth.flows.clientCredentials.scopes</code>{' '}
-              map in the <Link href="/api/v1/openapi.json">OpenAPI spec</Link>, and{' '}
-              <a href="/auth.md">/auth.md</a>&apos;s frontmatter, for the full registration → claim
-              flow with example requests.
+              (<code>scopes_supported</code>), the{' '}
+              <code>
+                components.securitySchemes.agentBearerAuth.flows.clientCredentials.scopes
+              </code>{' '}
+              map in the <Link href="/api/v1/openapi.json">OpenAPI spec</Link>,
+              and <a href="/auth.md">/auth.md</a>&apos;s frontmatter, for the
+              full registration → claim flow with example requests.
             </p>
 
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Versioning &amp; deprecation policy</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-              The API is URL-versioned (<code>/api/v1/...</code>); fields are added, not removed
-              or repurposed, within a version. If an endpoint is ever deprecated it will carry a{' '}
-              <code>Deprecation: true</code> response header and, once a removal date is set, a{' '}
-              <code>Sunset</code> header, for at least 90 days before removal — announced on the{' '}
-              <Link href="/blog">blog</Link>. Nothing in v1 is currently deprecated.
+            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>
+              Versioning &amp; deprecation policy
+            </h2>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                marginBottom: '1.5rem',
+                lineHeight: 1.6,
+              }}
+            >
+              The API is URL-versioned (<code>/api/v1/...</code>); fields are
+              added, not removed or repurposed, within a version. If an endpoint
+              is ever deprecated it will carry a <code>Deprecation: true</code>{' '}
+              response header and, once a removal date is set, a{' '}
+              <code>Sunset</code> header, for at least 90 days before removal —
+              announced on the <Link href="/blog">blog</Link>. Nothing in v1 is
+              currently deprecated.
             </p>
 
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>Agent discovery</h2>
+            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>
+              Agent discovery
+            </h2>
             <ul
               style={{
                 color: 'var(--text-secondary)',
@@ -331,12 +472,13 @@ export default function ApiDocsPage() {
               }}
             >
               <li>
-                <code>Link</code> response headers on every page point at this docs URL, the API
-                catalog, and OAuth metadata.
+                <code>Link</code> response headers on every page point at this
+                docs URL, the API catalog, and OAuth metadata.
               </li>
               <li>
-                Markdown negotiation: send <code>Accept: text/markdown</code> or append{' '}
-                <code>?format=md</code> / <code>.md</code> to listing, blog, or category URLs.
+                Markdown negotiation: send <code>Accept: text/markdown</code> or
+                append <code>?format=md</code> / <code>.md</code> to listing,
+                blog, or category URLs.
               </li>
               <li>
                 Machine catalog: <Link href="/data.json">/data.json</Link> and{' '}
@@ -344,7 +486,13 @@ export default function ApiDocsPage() {
               </li>
             </ul>
 
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: '0.9rem',
+                lineHeight: 1.6,
+              }}
+            >
               Questions or partnership ideas?{' '}
               <Link href="/contact" style={{ color: 'var(--accent-color)' }}>
                 Contact us

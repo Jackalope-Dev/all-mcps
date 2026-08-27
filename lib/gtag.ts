@@ -1,4 +1,4 @@
-import { PAID_PRODUCTS, PaidSku } from './pricing';
+import { PAID_PRODUCTS, type PaidSku } from './pricing';
 
 declare global {
   interface Window {
@@ -17,7 +17,11 @@ declare global {
  * custom event (e.g. `generate_lead` + `mcp_submission`). We forward only the
  * descriptive twin to PostHog to keep its event taxonomy clean and unambiguous.
  */
-const POSTHOG_SKIP_EVENTS = new Set(['generate_lead', 'select_content', 'click']);
+const POSTHOG_SKIP_EVENTS = new Set([
+  'generate_lead',
+  'select_content',
+  'click',
+]);
 
 /**
  * Generic helper to send an analytics event safely to both Google Analytics
@@ -76,10 +80,7 @@ export function trackPurchase(data: {
  * GA4 Standard Event: begin_checkout
  * Fired when a user initiates Stripe checkout from a button click.
  */
-export function trackBeginCheckout(data: {
-  sku: PaidSku;
-  serverId: string;
-}) {
+export function trackBeginCheckout(data: { sku: PaidSku; serverId: string }) {
   const product = PAID_PRODUCTS[data.sku];
   if (!product) return;
 
@@ -186,10 +187,7 @@ export function trackOutboundClick(data: {
  * GA4 Custom Event: upvote_mcp
  * Fired when a user upvotes an MCP server listing.
  */
-export function trackUpvote(data: {
-  serverId: string;
-  serverName?: string;
-}) {
+export function trackUpvote(data: { serverId: string; serverName?: string }) {
   trackEvent('upvote_mcp', {
     server_id: data.serverId,
     server_name: data.serverName || '',
@@ -216,10 +214,7 @@ export function trackSearch(data: {
  * GA4 Standard Event: share
  * Fired when a user copies share links, badge code, or embed snippets.
  */
-export function trackShare(data: {
-  method: string;
-  serverId: string;
-}) {
+export function trackShare(data: { method: string; serverId: string }) {
   trackEvent('share', {
     method: data.method,
     content_type: 'mcp_server',
@@ -233,7 +228,9 @@ export function trackShare(data: {
  * Mark this as a GA4 "Key Event" in Admin → Events once it has fired at least once —
  * that step can't be done from code/API, only the GA4 Admin UI.
  */
-export function trackNewsletterSignup(data: { source: 'footer' | 'homepage' | 'modal' }) {
+export function trackNewsletterSignup(data: {
+  source: 'footer' | 'homepage' | 'modal';
+}) {
   trackEvent('newsletter_signup', { method: data.source });
 }
 
@@ -242,7 +239,10 @@ export function trackNewsletterSignup(data: { source: 'footer' | 'homepage' | 'm
  * Logs a `feature_used` event with `feature_name` so PostHog can automatically
  * display a breakdown of Top Used Features on a single dashboard insight.
  */
-export function trackFeatureUse(featureName: string, properties?: Record<string, any>) {
+export function trackFeatureUse(
+  featureName: string,
+  properties?: Record<string, any>,
+) {
   trackEvent('feature_used', {
     feature_name: featureName,
     ...properties,
@@ -282,7 +282,6 @@ export function trackSponsorPlaceholderView(params: {
     headline: params.headline,
   });
 }
-
 
 function getDomain(urlStr: string): string {
   try {

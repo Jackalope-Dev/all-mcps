@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { execSync } from 'child_process';
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /**
  * Pulls newly-added listings from other public MCP server lists and stages them
@@ -33,7 +33,13 @@ const AUTO_APPLY = process.argv.includes('--apply');
 function argListFlag(name) {
   const prefix = `--${name}=`;
   const arg = process.argv.find((a) => a.startsWith(prefix));
-  return arg ? arg.slice(prefix.length).split(',').map((s) => s.trim()).filter(Boolean) : null;
+  return arg
+    ? arg
+        .slice(prefix.length)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : null;
 }
 const ONLY_SOURCES = argListFlag('only');
 const SKIP_SOURCES = argListFlag('skip') || [];
@@ -76,7 +82,8 @@ const PULSEMCP_HOST_BLOCKLIST = ['pulsemcp.com', 'www.pulsemcp.com'];
 const SOURCES = [
   {
     name: 'awesome-mcp-servers',
-    readmeUrl: 'https://raw.githubusercontent.com/punkpeye/awesome-mcp-servers/main/README.md',
+    readmeUrl:
+      'https://raw.githubusercontent.com/punkpeye/awesome-mcp-servers/main/README.md',
     // The README also has non-server ## sections (Clients, Tutorials, Community,
     // Frameworks, Tips and Tricks, ...) using the same bullet-link format —
     // restrict parsing to the one ## section that's an actual server list.
@@ -84,7 +91,8 @@ const SOURCES = [
   },
   {
     name: 'modelcontextprotocol/servers',
-    readmeUrl: 'https://raw.githubusercontent.com/modelcontextprotocol/servers/main/README.md',
+    readmeUrl:
+      'https://raw.githubusercontent.com/modelcontextprotocol/servers/main/README.md',
     // Reference servers are listed as repo-relative paths (e.g. `src/everything`)
     // rather than full URLs — resolve those against the repo tree.
     baseTreeUrl: 'https://github.com/modelcontextprotocol/servers/tree/main/',
@@ -95,7 +103,10 @@ const SOURCES = [
 ];
 
 const DIRECTORY_CATEGORIES = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), 'lib', 'category-manifest.json'), 'utf8')
+  fs.readFileSync(
+    path.join(process.cwd(), 'lib', 'category-manifest.json'),
+    'utf8',
+  ),
 );
 const DEFAULT_CATEGORY =
   DIRECTORY_CATEGORIES.find((c) => c.includes('Developer Tools')) ||
@@ -117,7 +128,12 @@ function isSafeSubmissionUrl(urlString) {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
 
   const host = url.hostname.toLowerCase();
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return false;
+  if (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local')
+  )
+    return false;
 
   const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4) {
@@ -145,7 +161,10 @@ function cleanListingDescription(description) {
     const before = text;
     text = text
       .replace(/^(?:\s*(?:!\[[^\]]*\]\([^)]*\)|\[\s*\]\([^)]*\))\s*)+/g, '')
-      .replace(/^[\p{Extended_Pictographic}️‍\u{1F3FB}-\u{1F3FF}\s]+/u, '')
+      .replace(
+        /^(?:[\p{Extended_Pictographic}\s]|[\u{1F3FB}-\u{1F3FF}]|\uFE0F|\u200D)+/u,
+        '',
+      )
       .replace(/^[-–—:|·•]+\s+/, '');
     if (text === before) break;
   }
@@ -162,59 +181,73 @@ function stripEmojiLabel(category) {
 const CATEGORY_RULES = [
   {
     category: '🗄️ Databases',
-    regex: /\b(postgres|postgresql|mysql|sqlite|mongodb|redis|supabase|neon|clickhouse|cassandra|dynamodb|planetscale|cockroachdb|memcached|duckdb|snowflake|bigquery|couchdb|prisma|drizzle|sql|database|datastore|timescaledb|vectordb)\b/i,
+    regex:
+      /\b(postgres|postgresql|mysql|sqlite|mongodb|redis|supabase|neon|clickhouse|cassandra|dynamodb|planetscale|cockroachdb|memcached|duckdb|snowflake|bigquery|couchdb|prisma|drizzle|sql|database|datastore|timescaledb|vectordb)\b/i,
   },
   {
     category: '💬 Communication',
-    regex: /\b(slack|discord|telegram|whatsapp|email|gmail|sendgrid|resend|mailchimp|matrix|teams|twilio|zendesk|intercom|messaging|messenger|outlook)\b/i,
+    regex:
+      /\b(slack|discord|telegram|whatsapp|email|gmail|sendgrid|resend|mailchimp|matrix|teams|twilio|zendesk|intercom|messaging|messenger|outlook)\b/i,
   },
   {
     category: '📂 Browser Automation',
-    regex: /\b(playwright|puppeteer|selenium|browserbase|stagehand|headful|headless-browser|browser-automation|chromedp|web-browser|browser-use)\b/i,
+    regex:
+      /\b(playwright|puppeteer|selenium|browserbase|stagehand|headful|headless-browser|browser-automation|chromedp|web-browser|browser-use)\b/i,
   },
   {
     category: '🔎 Search & Data Extraction',
-    regex: /\b(serper|tavily|brave-search|google-search|bing-search|duckduckgo|web-scraper|scraping|crawling|web-crawler|firecrawl|jina-ai|diffbot|web-extraction|web-search)\b/i,
+    regex:
+      /\b(serper|tavily|brave-search|google-search|bing-search|duckduckgo|web-scraper|scraping|crawling|web-crawler|firecrawl|jina-ai|diffbot|web-extraction|web-search)\b/i,
   },
   {
     category: '🔄 Version Control',
-    regex: /\b(github-api|github-issues|github-pulls|gitlab|bitbucket|gitea|git-repo|git-commit|version-control|subversion|mercurial)\b/i,
+    regex:
+      /\b(github-api|github-issues|github-pulls|gitlab|bitbucket|gitea|git-repo|git-commit|version-control|subversion|mercurial)\b/i,
   },
   {
     category: '☁️ Cloud Platforms',
-    regex: /\b(aws|amazon-web-services|gcp|google-cloud|azure|cloudflare|terraform|kubernetes|k8s|docker|vercel|netlify|digitalocean|heroku|cloud-infrastructure|aws-lambda|s3-bucket)\b/i,
+    regex:
+      /\b(aws|amazon-web-services|gcp|google-cloud|azure|cloudflare|terraform|kubernetes|k8s|docker|vercel|netlify|digitalocean|heroku|cloud-infrastructure|aws-lambda|s3-bucket)\b/i,
   },
   {
     category: '📊 Monitoring',
-    regex: /\b(sentry|datadog|prometheus|grafana|opentelemetry|logrocket|newrelic|pagerduty|uptime|logging|observability|metrics|alerting|statuspage)\b/i,
+    regex:
+      /\b(sentry|datadog|prometheus|grafana|opentelemetry|logrocket|newrelic|pagerduty|uptime|logging|observability|metrics|alerting|statuspage)\b/i,
   },
   {
     category: '🏢 Workplace & Productivity',
-    regex: /\b(jira|linear|trello|asana|notion|clickup|confluence|google-calendar|google-docs|todoist|airtable|workplace|google-sheets|excel)\b/i,
+    regex:
+      /\b(jira|linear|trello|asana|notion|clickup|confluence|google-calendar|google-docs|todoist|airtable|workplace|google-sheets|excel)\b/i,
   },
   {
     category: '💰 Finance & Fintech',
-    regex: /\b(stripe|shopify|plaid|crypto|solana|ethereum|bitcoin|base-chain|x402|stock-market|finance|financial|accounting|hledger|forex|sec-edgar|wallet|token|defi|fintech|sepa|exchange-rate)\b/i,
+    regex:
+      /\b(stripe|shopify|plaid|crypto|solana|ethereum|bitcoin|base-chain|x402|stock-market|finance|financial|accounting|hledger|forex|sec-edgar|wallet|token|defi|fintech|sepa|exchange-rate)\b/i,
   },
   {
     category: '🧠 Knowledge & Memory',
-    regex: /\b(pinecone|weaviate|qdrant|chroma|vector-db|vector-database|rag|memory|knowledge-base|obsidian|roam|logseq|mem0|zotero|notes|note-taking|embeddings)\b/i,
+    regex:
+      /\b(pinecone|weaviate|qdrant|chroma|vector-db|vector-database|rag|memory|knowledge-base|obsidian|roam|logseq|mem0|zotero|notes|note-taking|embeddings)\b/i,
   },
   {
     category: '🔒 Security',
-    regex: /\b(security-scan|vulnerability|vulnerabilities|secrets|vault|snyk|sonar|auth0|okta|pentest|penetration|cve|threat-analysis|cybersecurity|auth-type)\b/i,
+    regex:
+      /\b(security-scan|vulnerability|vulnerabilities|secrets|vault|snyk|sonar|auth0|okta|pentest|penetration|cve|threat-analysis|cybersecurity|auth-type)\b/i,
   },
   {
     category: '🧬 Biology & Bioinformatics',
-    regex: /\b(ncbi|blast|pubchem|dna|protein|bioinformatics|genomics|chembl|pdb|uniprot|medical|healthcare|biology)\b/i,
+    regex:
+      /\b(ncbi|blast|pubchem|dna|protein|bioinformatics|genomics|chembl|pdb|uniprot|medical|healthcare|biology)\b/i,
   },
   {
     category: '🎮 Gaming',
-    regex: /\b(unity|unreal|minecraft|steam|game-engine|chess|poker|gaming|games)\b/i,
+    regex:
+      /\b(unity|unreal|minecraft|steam|game-engine|chess|poker|gaming|games)\b/i,
   },
   {
     category: '🎙️ Speech-to-Text',
-    regex: /\b(whisper|speech-to-text|stt|transcription|transcribe|audio-transcription)\b/i,
+    regex:
+      /\b(whisper|speech-to-text|stt|transcription|transcribe|audio-transcription)\b/i,
   },
   {
     category: '🎧 Text-to-Speech',
@@ -222,7 +255,8 @@ const CATEGORY_RULES = [
   },
   {
     category: '🎥 Multimedia Process',
-    regex: /\b(ffmpeg|video-processing|video-editing|image-processing|opencv|sharp|yt-dlp|youtube-dl|audio-processing|media-processing)\b/i,
+    regex:
+      /\b(ffmpeg|video-processing|video-editing|image-processing|opencv|sharp|yt-dlp|youtube-dl|audio-processing|media-processing)\b/i,
   },
   {
     category: '🏠 Home Automation',
@@ -242,7 +276,8 @@ const CATEGORY_RULES = [
   },
   {
     category: '🌐 Social Media',
-    regex: /\b(twitter|x-api|bluesky|mastodon|reddit|linkedin|facebook|instagram|tiktok|social-media)\b/i,
+    regex:
+      /\b(twitter|x-api|bluesky|mastodon|reddit|linkedin|facebook|instagram|tiktok|social-media)\b/i,
   },
   {
     category: '👨‍💻 Code Execution',
@@ -250,12 +285,16 @@ const CATEGORY_RULES = [
   },
   {
     category: '📂 File Systems',
-    regex: /\b(filesystem|file-system|local-files|directory-tree|file-search|google-drive|dropbox|onedrive)\b/i,
+    regex:
+      /\b(filesystem|file-system|local-files|directory-tree|file-search|google-drive|dropbox|onedrive)\b/i,
   },
 ];
 
 function inferCategoryFromSignals(name, description, rawUrl) {
-  const cleanUrl = (rawUrl || '').replace(/^https?:\/\/(www\.)?github\.com\//i, '');
+  const cleanUrl = (rawUrl || '').replace(
+    /^https?:\/\/(www\.)?github\.com\//i,
+    '',
+  );
   const text = `${name || ''} ${description || ''} ${cleanUrl}`;
   for (const rule of CATEGORY_RULES) {
     if (rule.regex.test(text)) {
@@ -266,8 +305,11 @@ function inferCategoryFromSignals(name, description, rawUrl) {
 }
 
 function normalizeCategoryLite(input, fallbackName, fallbackDesc, fallbackUrl) {
-  if (!input || !input.trim()) {
-    return inferCategoryFromSignals(fallbackName, fallbackDesc, fallbackUrl) || DEFAULT_CATEGORY;
+  if (!input?.trim()) {
+    return (
+      inferCategoryFromSignals(fallbackName, fallbackDesc, fallbackUrl) ||
+      DEFAULT_CATEGORY
+    );
   }
   const raw = input.trim();
   const lower = raw.toLowerCase();
@@ -279,7 +321,9 @@ function normalizeCategoryLite(input, fallbackName, fallbackDesc, fallbackUrl) {
   if (caseMatch) return caseMatch;
 
   const label = stripEmojiLabel(raw).toLowerCase();
-  const labelMatch = DIRECTORY_CATEGORIES.find((c) => stripEmojiLabel(c).toLowerCase() === label);
+  const labelMatch = DIRECTORY_CATEGORIES.find(
+    (c) => stripEmojiLabel(c).toLowerCase() === label,
+  );
   if (labelMatch) return labelMatch;
 
   const partial = DIRECTORY_CATEGORIES.find((c) => {
@@ -288,7 +332,10 @@ function normalizeCategoryLite(input, fallbackName, fallbackDesc, fallbackUrl) {
   });
   if (partial) return partial;
 
-  return inferCategoryFromSignals(fallbackName, fallbackDesc, fallbackUrl) || DEFAULT_CATEGORY;
+  return (
+    inferCategoryFromSignals(fallbackName, fallbackDesc, fallbackUrl) ||
+    DEFAULT_CATEGORY
+  );
 }
 
 // --- dedup key + id slug ----------------------------------------------------
@@ -335,7 +382,10 @@ function normalizePackageKey(ecosystem, packageName) {
 function parseGithubOwnerRepo(url) {
   const m = (url || '').match(/github\.com\/([^/]+)\/([^/#?]+)/i);
   if (!m) return null;
-  return { owner: m[1].toLowerCase(), repo: m[2].replace(/\.git$/i, '').toLowerCase() };
+  return {
+    owner: m[1].toLowerCase(),
+    repo: m[2].replace(/\.git$/i, '').toLowerCase(),
+  };
 }
 
 /** Collapse a listing name to a bare identity key: lowercase, strip "mcp"/"server(s)" filler words and punctuation. */
@@ -361,7 +411,9 @@ function domainOf(url) {
 function websiteDomainOf(url) {
   const d = domainOf(url);
   if (!d) return null;
-  return /(^|\.)github\.com$|(^|\.)github\.io$|(^|\.)gitlab\.com$/i.test(d) ? null : d;
+  return /(^|\.)github\.com$|(^|\.)github\.io$|(^|\.)gitlab\.com$/i.test(d)
+    ? null
+    : d;
 }
 
 /** Bare package name for cross-ecosystem name comparison — excludes remote-install URLs (installPackage there is a URL, not a name). */
@@ -388,7 +440,8 @@ async function fetchReadme(url) {
 }
 
 const HEADING_RE = /^(#{2,4})\s+(.*)$/;
-const ITEM_RE = /^[-*]\s*(?:\*\*)?\[([^\]]+)\]\(([^)]+)\)(?:\*\*)?\s*(?:[-–—:])?\s*(.*)$/;
+const ITEM_RE =
+  /^[-*]\s*(?:\*\*)?\[([^\]]+)\]\(([^)]+)\)(?:\*\*)?\s*(?:[-–—:])?\s*(.*)$/;
 
 function parseServerList(markdown, source) {
   const lines = markdown.split('\n');
@@ -409,13 +462,17 @@ function parseServerList(markdown, source) {
         .trim();
 
       if (level === 2) {
-        inSection = source.sectionHeadingMatch ? source.sectionHeadingMatch(cleaned) : true;
+        inSection = source.sectionHeadingMatch
+          ? source.sectionHeadingMatch(cleaned)
+          : true;
         continue;
       }
 
       if (inSection && cleaned) {
         currentCategory = cleaned;
-        skipCurrentCategory = source.skipCategory ? source.skipCategory(cleaned) : false;
+        skipCurrentCategory = source.skipCategory
+          ? source.skipCategory(cleaned)
+          : false;
       }
       continue;
     }
@@ -444,7 +501,13 @@ function parseServerList(markdown, source) {
       .replace(/[*_~`]/g, '')
       .trim();
 
-    entries.push({ name, url, description, category: currentCategory, source: source.name });
+    entries.push({
+      name,
+      url,
+      description,
+      category: currentCategory,
+      source: source.name,
+    });
   }
 
   return entries;
@@ -464,7 +527,9 @@ async function fetchOfficialRegistryEntries() {
     url.searchParams.set('limit', '100');
     if (cursor) url.searchParams.set('cursor', cursor);
 
-    const res = await fetch(url, { headers: { 'User-Agent': 'AllMCPs-Ingest' } });
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'AllMCPs-Ingest' },
+    });
     if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
     const body = await res.json();
 
@@ -475,7 +540,8 @@ async function fetchOfficialRegistryEntries() {
       // Only ingest servers the registry itself currently considers active —
       // 'deprecated'/'deleted' status typically means spam, malware, or a
       // moderation-policy violation (per the aggregators doc).
-      const registryStatus = entry._meta?.['io.modelcontextprotocol.registry/official']?.status;
+      const registryStatus =
+        entry._meta?.['io.modelcontextprotocol.registry/official']?.status;
       if (registryStatus && registryStatus !== 'active') {
         skippedInactive++;
         continue;
@@ -496,7 +562,10 @@ async function fetchOfficialRegistryEntries() {
         url: primaryUrl,
         description: desc,
         category: inferCategoryFromSignals(name, desc, primaryUrl), // Infers specific category or falls back to DEFAULT_CATEGORY
-        websiteUrl: server.websiteUrl && server.websiteUrl !== primaryUrl ? server.websiteUrl : undefined,
+        websiteUrl:
+          server.websiteUrl && server.websiteUrl !== primaryUrl
+            ? server.websiteUrl
+            : undefined,
         source: 'official-registry',
       });
     }
@@ -506,10 +575,18 @@ async function fetchOfficialRegistryEntries() {
   } while (cursor && page < OFFICIAL_REGISTRY_MAX_PAGES);
 
   if (page >= OFFICIAL_REGISTRY_MAX_PAGES && cursor) {
-    console.warn(`  official-registry: hit the ${OFFICIAL_REGISTRY_MAX_PAGES}-page safety cap with more pages remaining.`);
+    console.warn(
+      `  official-registry: hit the ${OFFICIAL_REGISTRY_MAX_PAGES}-page safety cap with more pages remaining.`,
+    );
   }
-  if (skippedNoUrl) console.log(`  official-registry: skipped ${skippedNoUrl} entries with no usable URL.`);
-  if (skippedInactive) console.log(`  official-registry: skipped ${skippedInactive} non-active entries.`);
+  if (skippedNoUrl)
+    console.log(
+      `  official-registry: skipped ${skippedNoUrl} entries with no usable URL.`,
+    );
+  if (skippedInactive)
+    console.log(
+      `  official-registry: skipped ${skippedInactive} non-active entries.`,
+    );
 
   return entries;
 }
@@ -518,7 +595,9 @@ async function fetchOfficialRegistryEntries() {
 
 function isPulseMcpOwnUrl(url) {
   try {
-    return PULSEMCP_HOST_BLOCKLIST.includes(new URL(url).hostname.toLowerCase());
+    return PULSEMCP_HOST_BLOCKLIST.includes(
+      new URL(url).hostname.toLowerCase(),
+    );
   } catch {
     return false;
   }
@@ -532,7 +611,8 @@ function isPulseMcpOwnUrl(url) {
  */
 function pulseMcpPassesQualityFloor(entry) {
   if ((entry.github_stars ?? 0) >= PULSEMCP_MIN_SIGNAL.stars) return true;
-  if ((entry.package_download_count ?? 0) >= PULSEMCP_MIN_SIGNAL.downloads) return true;
+  if ((entry.package_download_count ?? 0) >= PULSEMCP_MIN_SIGNAL.downloads)
+    return true;
   if (Array.isArray(entry.remotes) && entry.remotes.length > 0) return true;
   if (entry.external_url && !isPulseMcpOwnUrl(entry.external_url)) return true;
   return false;
@@ -556,7 +636,8 @@ function pulseMcpInstallFields(entry) {
     out.installArgs = ['-y', pkg];
     out.installPackage = pkg;
     out.installConfidence = 'high';
-    if (typeof entry.package_download_count === 'number') out.npmDownloads = entry.package_download_count;
+    if (typeof entry.package_download_count === 'number')
+      out.npmDownloads = entry.package_download_count;
   } else if (registry === 'pypi' && pkg) {
     out.installKind = 'stdio';
     out.installCommand = 'uvx';
@@ -593,13 +674,16 @@ async function fetchPulseMcpPage(url) {
   let lastErr;
   for (let attempt = 1; attempt <= PULSEMCP_FETCH_RETRIES; attempt++) {
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': 'AllMCPs-Ingest' } });
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'AllMCPs-Ingest' },
+      });
       if (res.ok) return await res.json();
       lastErr = new Error(`HTTP ${res.status}`);
     } catch (err) {
       lastErr = err;
     }
-    if (attempt < PULSEMCP_FETCH_RETRIES) await sleep(PULSEMCP_RETRY_DELAY_MS * attempt);
+    if (attempt < PULSEMCP_FETCH_RETRIES)
+      await sleep(PULSEMCP_RETRY_DELAY_MS * attempt);
   }
   throw lastErr;
 }
@@ -621,7 +705,9 @@ async function fetchPulseMcpEntries() {
       // caller in main() already isolates this fetch in its own try/catch,
       // but bail out of pagination gracefully here too so a mid-run failure
       // still yields whatever was already collected instead of nothing.
-      console.warn(`  pulsemcp: giving up on pagination after a page failed (${err.message}); keeping ${entries.length} entries collected so far.`);
+      console.warn(
+        `  pulsemcp: giving up on pagination after a page failed (${err.message}); keeping ${entries.length} entries collected so far.`,
+      );
       break;
     }
 
@@ -637,14 +723,19 @@ async function fetchPulseMcpEntries() {
       const primaryUrl =
         entry.source_code_url ||
         remote?.url_direct ||
-        (entry.external_url && !isPulseMcpOwnUrl(entry.external_url) ? entry.external_url : null);
+        (entry.external_url && !isPulseMcpOwnUrl(entry.external_url)
+          ? entry.external_url
+          : null);
       if (!primaryUrl) {
         skippedNoUrl++;
         continue;
       }
 
       const name = entry.name;
-      const desc = entry.short_description || entry.EXPERIMENTAL_ai_generated_description || '';
+      const desc =
+        entry.short_description ||
+        entry.EXPERIMENTAL_ai_generated_description ||
+        '';
       const websiteUrl =
         entry.external_url &&
         entry.external_url !== primaryUrl &&
@@ -660,7 +751,9 @@ async function fetchPulseMcpEntries() {
         category: inferCategoryFromSignals(name, desc, primaryUrl),
         websiteUrl,
         source: 'pulsemcp',
-        githubStars: /github\.com/i.test(primaryUrl) ? entry.github_stars ?? undefined : undefined,
+        githubStars: /github\.com/i.test(primaryUrl)
+          ? (entry.github_stars ?? undefined)
+          : undefined,
         // Sort keys for the per-run cap below — kept separate from githubStars
         // since githubStars is only set for GitHub-primary listings, but the cap
         // should still rank non-GitHub (remote-only) candidates sensibly.
@@ -675,10 +768,18 @@ async function fetchPulseMcpEntries() {
   }
 
   if (page >= PULSEMCP_MAX_PAGES && url) {
-    console.warn(`  pulsemcp: hit the ${PULSEMCP_MAX_PAGES}-page safety cap with more pages remaining.`);
+    console.warn(
+      `  pulsemcp: hit the ${PULSEMCP_MAX_PAGES}-page safety cap with more pages remaining.`,
+    );
   }
-  if (skippedNoUrl) console.log(`  pulsemcp: skipped ${skippedNoUrl} entries with no usable URL.`);
-  if (skippedLowSignal) console.log(`  pulsemcp: skipped ${skippedLowSignal} entries below the quality floor.`);
+  if (skippedNoUrl)
+    console.log(
+      `  pulsemcp: skipped ${skippedNoUrl} entries with no usable URL.`,
+    );
+  if (skippedLowSignal)
+    console.log(
+      `  pulsemcp: skipped ${skippedLowSignal} entries below the quality floor.`,
+    );
 
   return entries;
 }
@@ -728,7 +829,9 @@ const LIVE_CHECK_SOURCES = new Set(['official-registry', 'pulsemcp']);
 async function checkLivenessOfNewCandidates(candidates) {
   const toCheck = candidates.filter((c) => LIVE_CHECK_SOURCES.has(c.source));
   if (toCheck.length === 0) return;
-  console.log(`Live-checking ${toCheck.length} new official-registry/pulsemcp candidates...`);
+  console.log(
+    `Live-checking ${toCheck.length} new official-registry/pulsemcp candidates...`,
+  );
 
   let deadCount = 0;
   for (let i = 0; i < toCheck.length; i += LIVENESS_CONCURRENCY) {
@@ -742,7 +845,9 @@ async function checkLivenessOfNewCandidates(candidates) {
     });
   }
   if (deadCount > 0) {
-    console.log(`  ${deadCount} of ${toCheck.length} appear dead on arrival — landing as 'pending' for review instead of 'active'.`);
+    console.log(
+      `  ${deadCount} of ${toCheck.length} appear dead on arrival — landing as 'pending' for review instead of 'active'.`,
+    );
   }
 }
 
@@ -765,7 +870,7 @@ function queryExisting() {
   } catch (err) {
     console.error(
       'Failed to query the live database via wrangler. Run `npx wrangler login` for the ' +
-        'AllMCPs Cloudflare account (or set CLOUDFLARE_API_TOKEN) and try again.'
+        'AllMCPs Cloudflare account (or set CLOUDFLARE_API_TOKEN) and try again.',
     );
     throw err;
   }
@@ -792,7 +897,9 @@ async function main() {
 
   if (sourceEnabled('official-registry')) {
     const registryEntries = await fetchOfficialRegistryEntries();
-    console.log(`  official-registry: ${registryEntries.length} active entries fetched`);
+    console.log(
+      `  official-registry: ${registryEntries.length} active entries fetched`,
+    );
     allEntries.push(...registryEntries);
   }
 
@@ -807,14 +914,18 @@ async function main() {
   if (sourceEnabled('pulsemcp')) {
     try {
       const pulsemcpEntries = await fetchPulseMcpEntries();
-      console.log(`  pulsemcp: ${pulsemcpEntries.length} entries above the quality floor`);
+      console.log(
+        `  pulsemcp: ${pulsemcpEntries.length} entries above the quality floor`,
+      );
       allEntries.push(...pulsemcpEntries);
     } catch (err) {
       // Isolated deliberately: pulsemcp's API has observed intermittent failures
       // (see fetchPulseMcpPage) and is not a source we're vetting the reliability
       // of the way the official registry has been — a bad run there should never
       // sacrifice the official-registry/README ingestion that already succeeded.
-      console.warn(`  pulsemcp: skipping this run entirely — fetch failed: ${err.message}`);
+      console.warn(
+        `  pulsemcp: skipping this run entirely — fetch failed: ${err.message}`,
+      );
     }
   }
 
@@ -827,7 +938,10 @@ async function main() {
 
     const pkgKey =
       e.installKind === 'stdio'
-        ? normalizePackageKey(installEcosystemFromCommand(e.installCommand), e.installPackage)
+        ? normalizePackageKey(
+            installEcosystemFromCommand(e.installCommand),
+            e.installPackage,
+          )
         : null;
     if (pkgKey && seenPackageKeys.has(pkgKey)) continue;
 
@@ -841,8 +955,13 @@ async function main() {
   const existingUrlKeys = new Set(existing.map((r) => normalizeUrlKey(r.url)));
   const existingPackageKeys = new Set(
     existing
-      .map((r) => normalizePackageKey(installEcosystemFromCommand(r.install_command), r.install_package))
-      .filter(Boolean)
+      .map((r) =>
+        normalizePackageKey(
+          installEcosystemFromCommand(r.install_command),
+          r.install_package,
+        ),
+      )
+      .filter(Boolean),
   );
   const usedIds = new Set(existing.map((r) => r.id));
   console.log(`  ${existing.length} servers already on file.`);
@@ -873,7 +992,11 @@ async function main() {
     }
 
     const websiteDomain = websiteDomainOf(r.website_url);
-    if (websiteDomain) domainUsageCount.set(websiteDomain, (domainUsageCount.get(websiteDomain) || 0) + 1);
+    if (websiteDomain)
+      domainUsageCount.set(
+        websiteDomain,
+        (domainUsageCount.get(websiteDomain) || 0) + 1,
+      );
 
     if (nameKey) {
       if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
@@ -888,7 +1011,8 @@ async function main() {
   // A domain only corroborates identity when it's exclusive to the one
   // existing listing being compared against — not shared by any other
   // unrelated entry already in the catalog.
-  const isDistinctiveDomain = (domain) => !!domain && (domainUsageCount.get(domain) || 0) <= 1;
+  const isDistinctiveDomain = (domain) =>
+    !!domain && (domainUsageCount.get(domain) || 0) <= 1;
 
   function findPossibleDuplicate(candidate) {
     const nameKey = normalizeNameKey(candidate.name);
@@ -898,21 +1022,43 @@ async function main() {
     if (gh) {
       const sameOwner = existingByOwner.get(gh.owner) || [];
       const ownerMatch = sameOwner.find((e) => e.nameKey === nameKey);
-      if (ownerMatch) return { id: ownerMatch.id, url: ownerMatch.url, reason: 'same GitHub owner + same name' };
+      if (ownerMatch)
+        return {
+          id: ownerMatch.id,
+          url: ownerMatch.url,
+          reason: 'same GitHub owner + same name',
+        };
     }
 
     const sameName = existingByNameKey.get(nameKey) || [];
     if (sameName.length === 0) return null;
 
-    const candidateDomain = domainOf(candidate.websiteUrl) || websiteDomainOf(candidate.url);
-    const candidatePackage = barePackageName(candidate.installKind, candidate.installPackage);
+    const candidateDomain =
+      domainOf(candidate.websiteUrl) || websiteDomainOf(candidate.url);
+    const candidatePackage = barePackageName(
+      candidate.installKind,
+      candidate.installPackage,
+    );
 
     const domainMatch =
-      isDistinctiveDomain(candidateDomain) && sameName.find((e) => e.websiteDomain === candidateDomain);
-    if (domainMatch) return { id: domainMatch.id, url: domainMatch.url, reason: 'same name + same website domain' };
+      isDistinctiveDomain(candidateDomain) &&
+      sameName.find((e) => e.websiteDomain === candidateDomain);
+    if (domainMatch)
+      return {
+        id: domainMatch.id,
+        url: domainMatch.url,
+        reason: 'same name + same website domain',
+      };
 
-    const packageMatch = candidatePackage && sameName.find((e) => e.packageName === candidatePackage);
-    if (packageMatch) return { id: packageMatch.id, url: packageMatch.url, reason: 'same name + same package name' };
+    const packageMatch =
+      candidatePackage &&
+      sameName.find((e) => e.packageName === candidatePackage);
+    if (packageMatch)
+      return {
+        id: packageMatch.id,
+        url: packageMatch.url,
+        reason: 'same name + same package name',
+      };
 
     // Name matched but nothing else corroborated it — too weak to flag on its
     // own (see comment above); silently allow it through as a distinct listing.
@@ -920,7 +1066,9 @@ async function main() {
   }
 
   const newCandidates = [...byUrlKey.values()].filter(
-    (c) => !existingUrlKeys.has(c.urlKey) && !(c.packageKey && existingPackageKeys.has(c.packageKey))
+    (c) =>
+      !existingUrlKeys.has(c.urlKey) &&
+      !(c.packageKey && existingPackageKeys.has(c.packageKey)),
   );
   console.log(`${newCandidates.length} candidates are not yet in the catalog.`);
 
@@ -931,22 +1079,36 @@ async function main() {
 
   await checkLivenessOfNewCandidates(newCandidates);
 
-  const deadPulsemcp = newCandidates.filter((c) => c.source === 'pulsemcp' && c.liveCheckFailed).length;
+  const deadPulsemcp = newCandidates.filter(
+    (c) => c.source === 'pulsemcp' && c.liveCheckFailed,
+  ).length;
   if (deadPulsemcp > 0) {
-    console.log(`  pulsemcp: dropping ${deadPulsemcp} dead-on-arrival candidates instead of queuing them for review.`);
+    console.log(
+      `  pulsemcp: dropping ${deadPulsemcp} dead-on-arrival candidates instead of queuing them for review.`,
+    );
   }
-  let finalCandidates = newCandidates.filter((c) => !(c.source === 'pulsemcp' && c.liveCheckFailed));
+  let finalCandidates = newCandidates.filter(
+    (c) => !(c.source === 'pulsemcp' && c.liveCheckFailed),
+  );
 
   const pulsemcpCandidates = finalCandidates
     .filter((c) => c.source === 'pulsemcp')
-    .sort((a, b) => b.sortStars - a.sortStars || b.sortDownloads - a.sortDownloads);
+    .sort(
+      (a, b) => b.sortStars - a.sortStars || b.sortDownloads - a.sortDownloads,
+    );
   if (pulsemcpCandidates.length > PULSEMCP_MAX_NEW_PER_RUN) {
     const heldBack = pulsemcpCandidates.length - PULSEMCP_MAX_NEW_PER_RUN;
     console.log(
-      `  pulsemcp: capping this run to the top ${PULSEMCP_MAX_NEW_PER_RUN} by stars/downloads (${heldBack} held back for a future run).`
+      `  pulsemcp: capping this run to the top ${PULSEMCP_MAX_NEW_PER_RUN} by stars/downloads (${heldBack} held back for a future run).`,
     );
-    const keepUrlKeys = new Set(pulsemcpCandidates.slice(0, PULSEMCP_MAX_NEW_PER_RUN).map((c) => c.urlKey));
-    finalCandidates = finalCandidates.filter((c) => c.source !== 'pulsemcp' || keepUrlKeys.has(c.urlKey));
+    const keepUrlKeys = new Set(
+      pulsemcpCandidates
+        .slice(0, PULSEMCP_MAX_NEW_PER_RUN)
+        .map((c) => c.urlKey),
+    );
+    finalCandidates = finalCandidates.filter(
+      (c) => c.source !== 'pulsemcp' || keepUrlKeys.has(c.urlKey),
+    );
   }
 
   let dupWarningCount = 0;
@@ -968,18 +1130,26 @@ async function main() {
 
     rows.push({
       id,
-      dupWarning: dup ? `possible duplicate of '${dup.id}' (${dup.reason}): ${dup.url}` : null,
+      dupWarning: dup
+        ? `possible duplicate of '${dup.id}' (${dup.reason}): ${dup.url}`
+        : null,
       name: c.name,
       url: c.url,
       websiteUrl: c.websiteUrl,
-      description: cleanListingDescription(c.description) || 'No description provided.',
+      description:
+        cleanListingDescription(c.description) || 'No description provided.',
       category: normalizeCategoryLite(c.category, c.name, c.description, c.url),
-      isOfficial: c.url.toLowerCase().includes('github.com/modelcontextprotocol/servers'),
+      isOfficial: c.url
+        .toLowerCase()
+        .includes('github.com/modelcontextprotocol/servers'),
       // Official-registry candidates are already vetted by the registry's own
       // moderation policy — skip our admin queue and publish them directly,
       // unless the liveness pre-check above found the URL already dead.
       // Everything else keeps going through review, same as /api/submit.
-      status: c.source === 'official-registry' && !c.liveCheckFailed ? 'active' : 'pending',
+      status:
+        c.source === 'official-registry' && !c.liveCheckFailed
+          ? 'active'
+          : 'pending',
       // Structured signals pulsemcp gives us directly — pre-populated now instead
       // of waiting on the health/enrich crons' README-parse heuristics. Every
       // other source simply leaves these undefined, which serializes to NULL below.
@@ -1002,7 +1172,11 @@ async function main() {
       existingByOwner.get(gh.owner).push({ id, url: c.url, nameKey });
     }
     const acceptedDomain = domainOf(c.websiteUrl) || websiteDomainOf(c.url);
-    if (acceptedDomain) domainUsageCount.set(acceptedDomain, (domainUsageCount.get(acceptedDomain) || 0) + 1);
+    if (acceptedDomain)
+      domainUsageCount.set(
+        acceptedDomain,
+        (domainUsageCount.get(acceptedDomain) || 0) + 1,
+      );
     if (nameKey) {
       if (!existingByNameKey.has(nameKey)) existingByNameKey.set(nameKey, []);
       existingByNameKey.get(nameKey).push({
@@ -1014,20 +1188,25 @@ async function main() {
     }
   }
   if (dupWarningCount > 0) {
-    console.log(`  ⚠ ${dupWarningCount} candidate(s) flagged as possible duplicates — review before applying (see comments in the generated SQL).`);
+    console.log(
+      `  ⚠ ${dupWarningCount} candidate(s) flagged as possible duplicates — review before applying (see comments in the generated SQL).`,
+    );
   }
 
   const date = new Date().toISOString().slice(0, 10);
   const sqlPath = path.join(process.cwd(), 'drizzle', `ingest-${date}.sql`);
   const esc = (s) => String(s).replace(/'/g, "''");
   const strOrNull = (s) => (s ? `'${esc(s)}'` : 'NULL');
-  const numOrNull = (n) => (typeof n === 'number' && Number.isFinite(n) ? String(n) : 'NULL');
+  const numOrNull = (n) =>
+    typeof n === 'number' && Number.isFinite(n) ? String(n) : 'NULL';
 
   let sql = '';
   for (const r of rows) {
     // created_at is stored in Unix *seconds* (matches scripts/seed-sql.mjs and the
     // Drizzle submit route) — do not multiply by 1000.
-    const installArgsJson = r.installArgs ? JSON.stringify(r.installArgs) : null;
+    const installArgsJson = r.installArgs
+      ? JSON.stringify(r.installArgs)
+      : null;
     if (r.dupWarning) sql += `-- ⚠ ${r.dupWarning}\n`;
     sql +=
       `INSERT INTO servers (id, name, url, website_url, description, category, is_official, status, ` +
@@ -1050,18 +1229,28 @@ async function main() {
     acc[c.source] = (acc[c.source] || 0) + 1;
     return acc;
   }, {});
-  console.log(`\nWrote ${rows.length} new listings to ${relPath} (${activeCount} auto-active from the official registry, ${rows.length - activeCount} pending review).`);
-  console.log(`  By source: ${Object.entries(bySource).map(([s, n]) => `${s}=${n}`).join(', ')}`);
+  console.log(
+    `\nWrote ${rows.length} new listings to ${relPath} (${activeCount} auto-active from the official registry, ${rows.length - activeCount} pending review).`,
+  );
+  console.log(
+    `  By source: ${Object.entries(bySource)
+      .map(([s, n]) => `${s}=${n}`)
+      .join(', ')}`,
+  );
   console.log('First up to 15 new listings:');
   for (const r of rows.slice(0, 15)) {
-    console.log(`  - ${r.name}  (${r.category})  [${r.status}]  ${r.url}${r.dupWarning ? `  ⚠ ${r.dupWarning}` : ''}`);
+    console.log(
+      `  - ${r.name}  (${r.category})  [${r.status}]  ${r.url}${r.dupWarning ? `  ⚠ ${r.dupWarning}` : ''}`,
+    );
   }
 
   if (AUTO_APPLY) {
     applySql(relPath);
     console.log('Applied.');
   } else {
-    console.log(`\nReview the file, then apply it with:\n  npx wrangler d1 execute ${DB_NAME} --remote --file=${relPath}`);
+    console.log(
+      `\nReview the file, then apply it with:\n  npx wrangler d1 execute ${DB_NAME} --remote --file=${relPath}`,
+    );
   }
 }
 

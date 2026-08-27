@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import { CheckCircle2, Info, X, XCircle } from 'lucide-react';
+import type React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, XCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -30,7 +31,9 @@ const dismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function emit() {
   const snapshot = [...toasts];
-  listeners.forEach((listener) => listener(snapshot));
+  listeners.forEach((listener) => {
+    listener(snapshot);
+  });
 }
 
 function dismissToast(id: string) {
@@ -85,7 +88,9 @@ export const toast = {
     dismissToast(id);
   },
   dismissAll() {
-    dismissTimers.forEach((timer) => clearTimeout(timer));
+    dismissTimers.forEach((timer) => {
+      clearTimeout(timer);
+    });
     dismissTimers.clear();
     toasts = [];
     emit();
@@ -116,7 +121,9 @@ function ToastCard({
       </div>
       <div className="toast-body">
         <p className="toast-title">{item.title}</p>
-        {item.description ? <p className="toast-description">{item.description}</p> : null}
+        {item.description ? (
+          <p className="toast-description">{item.description}</p>
+        ) : null}
       </div>
       <button
         type="button"
@@ -156,6 +163,6 @@ export function ToastProvider() {
         <ToastCard key={item.id} item={item} onDismiss={onDismiss} />
       ))}
     </div>,
-    document.body
+    document.body,
   );
 }

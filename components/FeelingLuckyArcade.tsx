@@ -1,27 +1,27 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
 import {
+  ArrowRight,
+  Check,
+  Copy,
   Dices,
-  Sparkles,
-  Zap,
+  ExternalLink,
   Gem,
   Layers,
-  Volume2,
-  VolumeX,
-  Copy,
-  Check,
-  ExternalLink,
   RotateCw,
+  Server,
+  ShieldCheck,
+  Sparkles,
+  Star,
   Trophy,
   Tv,
-  Star,
-  ShieldCheck,
-  ArrowRight,
+  Volume2,
+  VolumeX,
   Wrench,
-  Server,
+  Zap,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { trackFeatureUse } from '../lib/gtag';
 
 interface ServerResult {
@@ -63,7 +63,10 @@ const REEL_BADGES = [
 ];
 
 // Helper to synthesize Web Audio 8-bit sound effects
-function playSound(type: 'spin' | 'stop' | 'jackpot' | 'coin' | 'click', muted: boolean) {
+function playSound(
+  type: 'spin' | 'stop' | 'jackpot' | 'coin' | 'click',
+  muted: boolean,
+) {
   if (muted || typeof window === 'undefined') return;
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -101,7 +104,10 @@ function playSound(type: 'spin' | 'stop' | 'jackpot' | 'coin' | 'click', muted: 
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.09);
         gain.gain.setValueAtTime(0.12, ctx.currentTime + i * 0.09);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.09 + 0.25);
+        gain.gain.exponentialRampToValueAtTime(
+          0.001,
+          ctx.currentTime + i * 0.09 + 0.25,
+        );
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(ctx.currentTime + i * 0.09);
@@ -143,11 +149,20 @@ function playSound(type: 'spin' | 'stop' | 'jackpot' | 'coin' | 'click', muted: 
 
 function getCategoryIcon(catName: string, iconSize = 24) {
   const lower = (catName || '').toLowerCase();
-  if (lower.includes('ai') || lower.includes('machine') || lower.includes('agent')) return <Sparkles size={iconSize} className="text-cyan-400" />;
-  if (lower.includes('dev') || lower.includes('tool')) return <Wrench size={iconSize} className="text-blue-400" />;
-  if (lower.includes('data') || lower.includes('db') || lower.includes('sql')) return <Layers size={iconSize} className="text-indigo-400" />;
-  if (lower.includes('sec') || lower.includes('auth')) return <ShieldCheck size={iconSize} className="text-emerald-400" />;
-  if (lower.includes('web') || lower.includes('api') || lower.includes('http')) return <ExternalLink size={iconSize} className="text-purple-400" />;
+  if (
+    lower.includes('ai') ||
+    lower.includes('machine') ||
+    lower.includes('agent')
+  )
+    return <Sparkles size={iconSize} className="text-cyan-400" />;
+  if (lower.includes('dev') || lower.includes('tool'))
+    return <Wrench size={iconSize} className="text-blue-400" />;
+  if (lower.includes('data') || lower.includes('db') || lower.includes('sql'))
+    return <Layers size={iconSize} className="text-indigo-400" />;
+  if (lower.includes('sec') || lower.includes('auth'))
+    return <ShieldCheck size={iconSize} className="text-emerald-400" />;
+  if (lower.includes('web') || lower.includes('api') || lower.includes('http'))
+    return <ExternalLink size={iconSize} className="text-purple-400" />;
   return <Server size={iconSize} className="text-amber-400" />;
 }
 
@@ -209,7 +224,10 @@ export function FeelingLuckyArcade() {
   const selectMode = (newMode: SpinMode) => {
     setMode(newMode);
     playSound('click', isMuted);
-    trackFeatureUse('feeling_lucky_arcade', { action: 'select_mode', mode: newMode });
+    trackFeatureUse('feeling_lucky_arcade', {
+      action: 'select_mode',
+      mode: newMode,
+    });
   };
 
   const updateGamification = useCallback(
@@ -237,10 +255,13 @@ export function FeelingLuckyArcade() {
       try {
         localStorage.setItem('allmcps_arcade_spins', String(newCount));
         localStorage.setItem('allmcps_arcade_streak', String(newStreak));
-        localStorage.setItem('allmcps_arcade_achievements', JSON.stringify(unlocked));
+        localStorage.setItem(
+          'allmcps_arcade_achievements',
+          JSON.stringify(unlocked),
+        );
       } catch {}
     },
-    [achievements, streakCount]
+    [achievements, streakCount],
   );
 
   const handleSpin = async () => {
@@ -252,16 +273,22 @@ export function FeelingLuckyArcade() {
     setResults([]);
 
     playSound('click', isMuted);
-    trackFeatureUse('feeling_lucky_arcade', { action: 'spin', mode, spin_count: spinCount + 1 });
+    trackFeatureUse('feeling_lucky_arcade', {
+      action: 'spin',
+      mode,
+      spin_count: spinCount + 1,
+    });
 
     let fetchedServers: ServerResult[] = [];
     const count = mode === 'stack' ? 3 : 1;
 
     const fetchPromise = fetch(
       `/api/v1/servers/random?mode=${mode}&count=${count}&t=${Date.now()}`,
-      { cache: 'no-store' }
+      { cache: 'no-store' },
     )
-      .then((res) => (res.ok ? (res.json() as Promise<{ servers?: ServerResult[] }>) : null))
+      .then((res) =>
+        res.ok ? (res.json() as Promise<{ servers?: ServerResult[] }>) : null,
+      )
       .then((data) => {
         if (data && Array.isArray(data.servers)) {
           fetchedServers = data.servers;
@@ -274,7 +301,9 @@ export function FeelingLuckyArcade() {
       ticks++;
       if (ticks % 3 === 0) playSound('spin', isMuted);
 
-      setReel1Text(REEL_CATEGORIES[Math.floor(Math.random() * REEL_CATEGORIES.length)]);
+      setReel1Text(
+        REEL_CATEGORIES[Math.floor(Math.random() * REEL_CATEGORIES.length)],
+      );
       setReel2Text(REEL_BADGES[Math.floor(Math.random() * REEL_BADGES.length)]);
       setReel3Text('Spinning...');
     }, 60);
@@ -321,7 +350,10 @@ export function FeelingLuckyArcade() {
     navigator.clipboard.writeText(server.installCommand);
     setCopiedId(server.id);
     playSound('coin', isMuted);
-    trackFeatureUse('feeling_lucky_arcade', { action: 'copy_command', server_id: server.id });
+    trackFeatureUse('feeling_lucky_arcade', {
+      action: 'copy_command',
+      server_id: server.id,
+    });
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -902,7 +934,8 @@ export function FeelingLuckyArcade() {
             onClick={toggleMute}
             title={isMuted ? 'Unmute 8-Bit Sounds' : 'Mute 8-Bit Sounds'}
           >
-            {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />} {isMuted ? 'Muted' : 'Sound ON'}
+            {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}{' '}
+            {isMuted ? 'Muted' : 'Sound ON'}
           </button>
         </div>
       </div>
@@ -1000,7 +1033,8 @@ export function FeelingLuckyArcade() {
               <div className="card-top-tags">
                 <span className="card-cat-pill">{server.category}</span>
                 <span className="card-qs-badge">
-                  <Star size={13} fill="#FFD700" /> Quality Score: {server.qualityScore}/100
+                  <Star size={13} fill="#FFD700" /> Quality Score:{' '}
+                  {server.qualityScore}/100
                   {server.isVerifiedActive && (
                     <span className="inline-flex items-center gap-1 text-emerald-400 ml-2">
                       <ShieldCheck size={13} /> Verified

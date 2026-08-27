@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '../components/ui/Button';
-import { PageShell } from '../components/PageShell';
 import { EmptyState } from '../components/EmptyState';
-import { attemptAutoReload, isLikelyTransientLoadError } from '../lib/errorRecovery';
+import { PageShell } from '../components/PageShell';
+import { Button } from '../components/ui/Button';
+import {
+  attemptAutoReload,
+  isLikelyTransientLoadError,
+} from '../lib/errorRecovery';
 
-export default function Error({
+export default function ErrorPage({
   error,
   reset,
 }: {
@@ -16,7 +19,9 @@ export default function Error({
   // Most errors here are transient post-deploy chunk/asset load failures that a
   // refresh fixes. Recover automatically (one guarded reload per URL) only when
   // the error actually matches a network/chunk failure.
-  const [recovering, setRecovering] = useState(() => isLikelyTransientLoadError(error));
+  const [recovering, setRecovering] = useState(() =>
+    isLikelyTransientLoadError(error),
+  );
 
   useEffect(() => {
     console.error('Unhandled app error:', error);

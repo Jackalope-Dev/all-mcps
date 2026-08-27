@@ -1,20 +1,18 @@
 import type { MetadataRoute } from 'next';
-import { getAllPosts } from '../lib/blog';
-import { DIRECTORY_CATEGORIES, categorySlug } from '../lib/categories';
 import { BEST_TOPICS } from '../lib/bestTopics';
+import { getAllPosts } from '../lib/blog';
+import { categorySlug, DIRECTORY_CATEGORIES } from '../lib/categories';
 import { MCP_CLIENTS } from '../lib/clients';
 import { WORKFLOW_PROMPTS } from '../lib/prompts';
-import { getAllTagsWithCounts } from '../lib/tags';
-import { engagementScore } from '../lib/search';
-import { relatedRankingScore } from '../lib/servers';
 import {
-  STATIC_PAGE_LASTMOD,
   getSitemapServers,
   listingLastMod,
   maxServerLastMod,
-  safeDateISO,
   type SitemapServer,
+  STATIC_PAGE_LASTMOD,
+  safeDateISO,
 } from '../lib/sitemapHelpers';
+import { getAllTagsWithCounts } from '../lib/tags';
 
 const BASE = 'https://allmcps.com';
 
@@ -30,7 +28,7 @@ export async function generateSitemaps() {
 function staticEntry(
   path: string,
   changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'],
-  priority: number
+  priority: number,
 ): MetadataRoute.Sitemap[number] {
   const lastMod = STATIC_PAGE_LASTMOD[path] ?? '2026-08-01';
   return {
@@ -41,7 +39,9 @@ function staticEntry(
   };
 }
 
-async function buildCoreSitemap(servers: SitemapServer[]): Promise<MetadataRoute.Sitemap> {
+async function buildCoreSitemap(
+  servers: SitemapServer[],
+): Promise<MetadataRoute.Sitemap> {
   const byCategory = new Map<string, SitemapServer[]>();
   for (const s of servers) {
     const cat = s.category || 'other';
@@ -100,7 +100,9 @@ async function buildCoreSitemap(servers: SitemapServer[]): Promise<MetadataRoute
     for (const post of posts) {
       entries.push({
         url: `${BASE}/blog/${post.slug}`,
-        lastModified: safeDateISO(post.date ? `${post.date}T12:00:00.000Z` : undefined),
+        lastModified: safeDateISO(
+          post.date ? `${post.date}T12:00:00.000Z` : undefined,
+        ),
         changeFrequency: 'monthly',
         priority: 0.7,
       });
@@ -130,7 +132,10 @@ async function buildCoreSitemap(servers: SitemapServer[]): Promise<MetadataRoute
       : [];
     entries.push({
       url: `${BASE}/best/${t.slug}`,
-      lastModified: inCat.length > 0 ? maxServerLastMod(inCat) : safeDateISO(STATIC_PAGE_LASTMOD['/best']),
+      lastModified:
+        inCat.length > 0
+          ? maxServerLastMod(inCat)
+          : safeDateISO(STATIC_PAGE_LASTMOD['/best']),
       changeFrequency: 'weekly',
       priority: 0.85,
     });
@@ -189,7 +194,9 @@ function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
   }));
 }
 
-function buildSecondarySitemap(_servers: SitemapServer[]): MetadataRoute.Sitemap {
+function buildSecondarySitemap(
+  _servers: SitemapServer[],
+): MetadataRoute.Sitemap {
   // Programmatic vs / comparison pages and alternatives pages are kept navigable
   // on-site but noindexed to avoid Google's Scaled Content Abuse penalties for large
   // programmatic matrix doorways. They are not submitted in sitemaps.

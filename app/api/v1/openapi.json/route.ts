@@ -11,23 +11,39 @@ const ErrorSchema = {
   properties: {
     error: {
       type: 'string',
-      description: 'Machine-readable error code, e.g. "not_found", "unauthorized", "insufficient_scope", "invalid_scope".',
+      description:
+        'Machine-readable error code, e.g. "not_found", "unauthorized", "insufficient_scope", "invalid_scope".',
     },
-    message: { type: 'string', description: 'Human-readable explanation suitable for surfacing to a user or logging.' },
+    message: {
+      type: 'string',
+      description:
+        'Human-readable explanation suitable for surfacing to a user or logging.',
+    },
     details: {
       type: 'array',
       items: {},
-      description: 'Optional field-level validation issues (present on 400 responses to malformed request bodies).',
+      description:
+        'Optional field-level validation issues (present on 400 responses to malformed request bodies).',
     },
-    status: { type: 'integer', description: 'Optional echo of the HTTP status code.' },
-    docs: { type: 'string', format: 'uri', description: 'Optional link to the relevant documentation for resolving this error.' },
+    status: {
+      type: 'integer',
+      description: 'Optional echo of the HTTP status code.',
+    },
+    docs: {
+      type: 'string',
+      format: 'uri',
+      description:
+        'Optional link to the relevant documentation for resolving this error.',
+    },
   },
 } as const;
 
 function errorResponse(description: string) {
   return {
     description,
-    content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+    content: {
+      'application/json': { schema: { $ref: '#/components/schemas/Error' } },
+    },
   };
 }
 
@@ -49,7 +65,11 @@ const DEPRECATION_HEADERS = {
   },
 } as const;
 
-function jsonResponse(description: string, schema: Record<string, unknown>, includeDeprecationHeaders = true) {
+function jsonResponse(
+  description: string,
+  schema: Record<string, unknown>,
+  includeDeprecationHeaders = true,
+) {
   return {
     description,
     ...(includeDeprecationHeaders
@@ -104,7 +124,7 @@ export async function GET() {
                 Object.entries(AGENT_SCOPE_DETAILS).map(([scope, detail]) => [
                   scope,
                   `${detail.description} Required by: ${detail.requiredBy.join(', ')}.`,
-                ])
+                ]),
               ),
             },
           },
@@ -119,7 +139,8 @@ export async function GET() {
       '/api/v1/search': {
         get: {
           summary: 'Search and filter MCP servers',
-          description: 'Query active MCP servers by keyword or category with optional limit parameters. Public, unauthenticated.',
+          description:
+            'Query active MCP servers by keyword or category with optional limit parameters. Public, unauthenticated.',
           operationId: 'searchServers',
           parameters: [
             {
@@ -132,7 +153,8 @@ export async function GET() {
             {
               name: 'category',
               in: 'query',
-              description: 'Filter by category name (e.g. Developer Tools, Databases)',
+              description:
+                'Filter by category name (e.g. Developer Tools, Databases)',
               required: false,
               schema: { type: 'string' },
             },
@@ -141,7 +163,12 @@ export async function GET() {
               in: 'query',
               description: 'Maximum results to return (1-100)',
               required: false,
-              schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
+              schema: {
+                type: 'integer',
+                default: 20,
+                minimum: 1,
+                maximum: 100,
+              },
             },
           ],
           responses: {
@@ -150,9 +177,19 @@ export async function GET() {
               headers: {
                 Deprecation: { $ref: '#/components/headers/Deprecation' },
                 Sunset: { $ref: '#/components/headers/Sunset' },
-                'RateLimit-Limit': { schema: { type: 'integer' }, description: 'Requests allowed per window (see rate-limit docs at /docs/api).' },
-                'RateLimit-Remaining': { schema: { type: 'integer' }, description: 'Requests remaining in the current window.' },
-                'RateLimit-Reset': { schema: { type: 'integer' }, description: 'Seconds until the window resets.' },
+                'RateLimit-Limit': {
+                  schema: { type: 'integer' },
+                  description:
+                    'Requests allowed per window (see rate-limit docs at /docs/api).',
+                },
+                'RateLimit-Remaining': {
+                  schema: { type: 'integer' },
+                  description: 'Requests remaining in the current window.',
+                },
+                'RateLimit-Reset': {
+                  schema: { type: 'integer' },
+                  description: 'Seconds until the window resets.',
+                },
               },
               content: {
                 'application/json': {
@@ -193,10 +230,17 @@ export async function GET() {
       '/api/v1/servers/{id}': {
         get: {
           summary: 'Get a single MCP server by ID',
-          description: 'Full public listing detail: quality score, popularity signals, install config. Public, unauthenticated.',
+          description:
+            'Full public listing detail: quality score, popularity signals, install config. Public, unauthenticated.',
           operationId: 'getServerById',
           parameters: [
-            { name: 'id', in: 'path', description: 'Unique server ID', required: true, schema: { type: 'string' } },
+            {
+              name: 'id',
+              in: 'path',
+              description: 'Unique server ID',
+              required: true,
+              schema: { type: 'string' },
+            },
           ],
           responses: {
             '200': {
@@ -217,7 +261,8 @@ export async function GET() {
       '/api/v1/categories': {
         get: {
           summary: 'List directory categories',
-          description: 'Every category AllMCPs accepts, with label, emoji, slug, and group — use to pick a valid "category" value before submitting. Public, unauthenticated.',
+          description:
+            'Every category AllMCPs accepts, with label, emoji, slug, and group — use to pick a valid "category" value before submitting. Public, unauthenticated.',
           operationId: 'listCategories',
           responses: {
             '200': {
@@ -257,25 +302,35 @@ export async function GET() {
       '/api/v1/health': {
         get: {
           summary: 'Service health check',
-          description: 'Lightweight health probe for monitors and agents. Public, unauthenticated.',
+          description:
+            'Lightweight health probe for monitors and agents. Public, unauthenticated.',
           operationId: 'getHealth',
           responses: {
             '200': {
               description: 'Service is healthy',
               content: {
                 'application/json': {
-                  schema: { type: 'object', properties: { status: { type: 'string' }, timestamp: { type: 'string', format: 'date-time' } } },
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      status: { type: 'string' },
+                      timestamp: { type: 'string', format: 'date-time' },
+                    },
+                  },
                 },
               },
             },
-            '500': errorResponse('Service is unhealthy (e.g. database unreachable).'),
+            '500': errorResponse(
+              'Service is unhealthy (e.g. database unreachable).',
+            ),
           },
         },
       },
       '/api/v1/mcp/{id}/markdown': {
         get: {
           summary: 'Get MCP server details as Markdown',
-          description: 'Returns structured LLM-friendly Markdown documentation for an MCP server. Also reachable via `Accept: text/markdown` on `/mcp/{id}`. Public, unauthenticated.',
+          description:
+            'Returns structured LLM-friendly Markdown documentation for an MCP server. Also reachable via `Accept: text/markdown` on `/mcp/{id}`. Public, unauthenticated.',
           operationId: 'getServerMarkdown',
           parameters: [
             {
@@ -302,7 +357,8 @@ export async function GET() {
       '/api/v1/submit': {
         post: {
           summary: 'Submit a new MCP server listing',
-          description: 'Programmatic submission — no CAPTCHA (unlike the human /submit form). Public, unauthenticated; requires a contact email in the body.',
+          description:
+            'Programmatic submission — no CAPTCHA (unlike the human /submit form). Public, unauthenticated; requires a contact email in the body.',
           operationId: 'submitServer',
           requestBody: {
             required: true,
@@ -319,10 +375,22 @@ export async function GET() {
                     email: { type: 'string', format: 'email' },
                     tags: { type: 'array', items: { type: 'string' } },
                     license: { type: 'string' },
-                    authType: { type: 'string', enum: ['none', 'api_key', 'oauth', 'other'] },
-                    pricingModel: { type: 'string', enum: ['free', 'freemium', 'paid', 'byok'] },
-                    maintenanceStatus: { type: 'string', enum: ['active', 'stable', 'experimental', 'archived'] },
-                    compatibleClients: { type: 'array', items: { type: 'string' } },
+                    authType: {
+                      type: 'string',
+                      enum: ['none', 'api_key', 'oauth', 'other'],
+                    },
+                    pricingModel: {
+                      type: 'string',
+                      enum: ['free', 'freemium', 'paid', 'byok'],
+                    },
+                    maintenanceStatus: {
+                      type: 'string',
+                      enum: ['active', 'stable', 'experimental', 'archived'],
+                    },
+                    compatibleClients: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
                     supportUrl: { type: 'string', format: 'uri' },
                   },
                 },
@@ -330,20 +398,32 @@ export async function GET() {
             },
           },
           responses: {
-            '200': jsonResponse('Listing accepted; queued for review (status "pending" until claimed or manually approved).', {
-              type: 'object',
-              properties: {
-                success: { type: 'boolean' },
-                message: { type: 'string' },
-                id: { type: 'string', description: 'Assigned listing ID.' },
-                name: { type: 'string' },
-                url: { type: 'string', format: 'uri' },
-                category: { type: 'string' },
-                status: { type: 'string', enum: ['pending'] },
-                claim_url: { type: 'string', format: 'uri', description: 'Human ownership-verification page — verifying auto-approves the listing.' },
-                badge_markdown: { type: 'string', description: 'Ready-to-paste README badge; placing it also earns a dofollow backlink once detected.' },
+            '200': jsonResponse(
+              'Listing accepted; queued for review (status "pending" until claimed or manually approved).',
+              {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  message: { type: 'string' },
+                  id: { type: 'string', description: 'Assigned listing ID.' },
+                  name: { type: 'string' },
+                  url: { type: 'string', format: 'uri' },
+                  category: { type: 'string' },
+                  status: { type: 'string', enum: ['pending'] },
+                  claim_url: {
+                    type: 'string',
+                    format: 'uri',
+                    description:
+                      'Human ownership-verification page — verifying auto-approves the listing.',
+                  },
+                  badge_markdown: {
+                    type: 'string',
+                    description:
+                      'Ready-to-paste README badge; placing it also earns a dofollow backlink once detected.',
+                  },
+                },
               },
-            }),
+            ),
             '400': errorResponse('Missing or invalid required fields.'),
           },
         },
@@ -351,7 +431,8 @@ export async function GET() {
       '/api/v1/agent/register': {
         post: {
           summary: 'Request an agent registration code',
-          description: 'Step 1 of agent auth: sends a 6-digit email confirmation code. Optionally request a scoped subset of `listings:claim`-family permissions via `scopes`. Public, unauthenticated.',
+          description:
+            'Step 1 of agent auth: sends a 6-digit email confirmation code. Optionally request a scoped subset of `listings:claim`-family permissions via `scopes`. Public, unauthenticated.',
           operationId: 'registerAgent',
           requestBody: {
             required: true,
@@ -366,7 +447,8 @@ export async function GET() {
                     scopes: {
                       type: 'array',
                       items: { type: 'string', enum: ['listings:claim'] },
-                      description: 'Requested scopes. Omit to receive the full default set.',
+                      description:
+                        'Requested scopes. Omit to receive the full default set.',
                     },
                   },
                 },
@@ -380,19 +462,25 @@ export async function GET() {
                 success: { type: 'boolean' },
                 message: { type: 'string' },
                 email: { type: 'string', format: 'email' },
-                scopes: { type: 'array', items: { type: 'string', enum: ['listings:claim'] } },
+                scopes: {
+                  type: 'array',
+                  items: { type: 'string', enum: ['listings:claim'] },
+                },
                 expiresAt: { type: 'string', format: 'date-time' },
                 confirm_url: { type: 'string', format: 'uri' },
               },
             }),
-            '400': errorResponse('Invalid email/payload, or an unsupported scope was requested.'),
+            '400': errorResponse(
+              'Invalid email/payload, or an unsupported scope was requested.',
+            ),
           },
         },
       },
       '/api/v1/agent/register/confirm': {
         post: {
           summary: 'Confirm registration & mint a scoped Bearer token',
-          description: 'Step 2 of agent auth: exchanges the 6-digit code for an `amcp_...` Bearer token carrying the scopes requested in Step 1. Public, unauthenticated.',
+          description:
+            'Step 2 of agent auth: exchanges the 6-digit code for an `amcp_...` Bearer token carrying the scopes requested in Step 1. Public, unauthenticated.',
           operationId: 'confirmAgentRegistration',
           requestBody: {
             required: true,
@@ -401,7 +489,10 @@ export async function GET() {
                 schema: {
                   type: 'object',
                   required: ['email', 'code'],
-                  properties: { email: { type: 'string', format: 'email' }, code: { type: 'string' } },
+                  properties: {
+                    email: { type: 'string', format: 'email' },
+                    code: { type: 'string' },
+                  },
                 },
               },
             },
@@ -412,9 +503,16 @@ export async function GET() {
               properties: {
                 success: { type: 'boolean' },
                 message: { type: 'string' },
-                token: { type: 'string', description: 'Opaque `amcp_...` bearer token — shown once, store it securely.' },
+                token: {
+                  type: 'string',
+                  description:
+                    'Opaque `amcp_...` bearer token — shown once, store it securely.',
+                },
                 tokenType: { type: 'string', enum: ['Bearer'] },
-                scopes: { type: 'array', items: { type: 'string', enum: ['listings:claim'] } },
+                scopes: {
+                  type: 'array',
+                  items: { type: 'string', enum: ['listings:claim'] },
+                },
                 expiresAt: { type: 'string', format: 'date-time' },
                 docs: {
                   type: 'object',
@@ -426,14 +524,17 @@ export async function GET() {
                 },
               },
             }),
-            '400': errorResponse('Missing/expired/incorrect code, or too many attempts.'),
+            '400': errorResponse(
+              'Missing/expired/incorrect code, or too many attempts.',
+            ),
           },
         },
       },
       '/api/v1/agent/claim': {
         post: {
           summary: 'Claim a listing via agent Bearer token',
-          description: 'Claim an existing MCP server listing using DNS TXT, site badge, or GitHub README ownership proof. Requires the `listings:claim` scope.',
+          description:
+            'Claim an existing MCP server listing using DNS TXT, site badge, or GitHub README ownership proof. Requires the `listings:claim` scope.',
           operationId: 'claimListing',
           security: [{ agentBearerAuth: ['listings:claim'] }],
           requestBody: {
@@ -445,7 +546,11 @@ export async function GET() {
                   required: ['id'],
                   properties: {
                     id: { type: 'string' },
-                    method: { type: 'string', enum: ['dns', 'website_badge', 'github'], default: 'dns' },
+                    method: {
+                      type: 'string',
+                      enum: ['dns', 'website_badge', 'github'],
+                      default: 'dns',
+                    },
                     websiteUrl: { type: 'string', format: 'uri' },
                   },
                 },
@@ -459,13 +564,21 @@ export async function GET() {
                 success: { type: 'boolean' },
                 pending: { type: 'boolean', enum: [false] },
                 isOfficial: { type: 'boolean', enum: [true] },
-                reciprocalBadgeOk: { type: 'boolean', description: 'true if a reciprocal AllMCPs badge was detected on the repo README or the website. Website-link dofollow is granted specifically when the badge is on the website (verified separately from the README badge).' },
+                reciprocalBadgeOk: {
+                  type: 'boolean',
+                  description:
+                    'true if a reciprocal AllMCPs badge was detected on the repo README or the website. Website-link dofollow is granted specifically when the badge is on the website (verified separately from the README badge).',
+                },
                 message: { type: 'string' },
               },
             }),
-            '400': errorResponse('Invalid payload or failed ownership verification.'),
+            '400': errorResponse(
+              'Invalid payload or failed ownership verification.',
+            ),
             '401': errorResponse('Missing or invalid Bearer token.'),
-            '403': errorResponse('Token is valid but lacks the required `listings:claim` scope.'),
+            '403': errorResponse(
+              'Token is valid but lacks the required `listings:claim` scope.',
+            ),
             '404': errorResponse('Listing not found.'),
           },
         },
@@ -473,7 +586,8 @@ export async function GET() {
       '/api/v1/agent/revoke': {
         post: {
           summary: 'Revoke the calling agent Bearer token',
-          description: 'Revokes the token used to authenticate this request. Requires a valid (not-yet-revoked) Bearer token — no additional scope needed to revoke your own token.',
+          description:
+            'Revokes the token used to authenticate this request. Requires a valid (not-yet-revoked) Bearer token — no additional scope needed to revoke your own token.',
           operationId: 'revokeAgentToken',
           security: [{ agentBearerAuth: [] }],
           responses: {
@@ -491,7 +605,8 @@ export async function GET() {
       '/api/badge/{id}': {
         get: {
           summary: 'Generate dynamic SVG badge',
-          description: 'Returns dynamic SVG badge for README embeds with dark/light themes and directory/featured styles. Public, unauthenticated.',
+          description:
+            'Returns dynamic SVG badge for README embeds with dark/light themes and directory/featured styles. Public, unauthenticated.',
           operationId: 'getBadgeSvg',
           parameters: [
             {
@@ -506,21 +621,33 @@ export async function GET() {
               in: 'query',
               description: 'Badge style layout',
               required: false,
-              schema: { type: 'string', enum: ['shield', 'flat-square', 'featured', 'directory'], default: 'shield' },
+              schema: {
+                type: 'string',
+                enum: ['shield', 'flat-square', 'featured', 'directory'],
+                default: 'shield',
+              },
             },
             {
               name: 'metric',
               in: 'query',
               description: 'Displayed data metric',
               required: false,
-              schema: { type: 'string', enum: ['status', 'upvotes', 'views', 'installs'], default: 'status' },
+              schema: {
+                type: 'string',
+                enum: ['status', 'upvotes', 'views', 'installs'],
+                default: 'status',
+              },
             },
             {
               name: 'theme',
               in: 'query',
               description: 'Color theme',
               required: false,
-              schema: { type: 'string', enum: ['dark', 'light'], default: 'dark' },
+              schema: {
+                type: 'string',
+                enum: ['dark', 'light'],
+                default: 'dark',
+              },
             },
           ],
           responses: {

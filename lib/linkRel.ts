@@ -12,8 +12,13 @@
  * credit for an unrelated marketing site. The README badge is a separate
  * verification (see db/schema.ts `readmeBadgeOk`).
  */
-export function websiteLinkRel(isPremium: boolean, websiteBacklinkOk: boolean): string {
-  return isPremium || websiteBacklinkOk ? 'noopener noreferrer' : 'noopener noreferrer nofollow';
+export function websiteLinkRel(
+  isPremium: boolean,
+  websiteBacklinkOk: boolean,
+): string {
+  return isPremium || websiteBacklinkOk
+    ? 'noopener noreferrer'
+    : 'noopener noreferrer nofollow';
 }
 
 export function repoLinkRel(isPremium: boolean, isOfficial: boolean): string {
@@ -44,8 +49,9 @@ export function supportLinkRel(
   isPremium: boolean,
   websiteBacklinkOk: boolean,
   supportUrl?: string | null,
-  websiteUrl?: string | null
+  websiteUrl?: string | null,
 ): string {
-  const earned = (isPremium || websiteBacklinkOk) && sameHost(supportUrl, websiteUrl);
+  const earned =
+    (isPremium || websiteBacklinkOk) && sameHost(supportUrl, websiteUrl);
   return earned ? 'noopener noreferrer' : 'noopener noreferrer nofollow';
 }

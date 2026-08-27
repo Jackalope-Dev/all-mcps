@@ -1,17 +1,21 @@
-import type { Metadata, Viewport } from "next";
-import { Suspense } from "react";
-import { Atkinson_Hyperlegible_Next, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
-import Script from "next/script";
-import { SiteHeader } from "../components/SiteHeader";
-import { SiteFooter } from "../components/SiteFooter";
-import { CookieBanner } from "../components/CookieBanner";
-import { ToastProvider } from "../components/ui/Toast";
-import { PurchaseTracker } from "../components/PurchaseTracker";
-import { CommandPaletteLazy } from "../components/CommandPaletteLazy";
-import { PostHogIdentify } from "../components/PostHogIdentify";
-import { ThemeSwitcher } from "../components/ThemeSwitcher";
-import { DeferredChrome } from "../components/DeferredChrome";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next';
+import {
+  Atkinson_Hyperlegible_Next,
+  Geist_Mono,
+  Plus_Jakarta_Sans,
+} from 'next/font/google';
+import Script from 'next/script';
+import { Suspense } from 'react';
+import { CommandPaletteLazy } from '../components/CommandPaletteLazy';
+import { CookieBanner } from '../components/CookieBanner';
+import { DeferredChrome } from '../components/DeferredChrome';
+import { PostHogIdentify } from '../components/PostHogIdentify';
+import { PurchaseTracker } from '../components/PurchaseTracker';
+import { SiteFooter } from '../components/SiteFooter';
+import { SiteHeader } from '../components/SiteHeader';
+import { ThemeSwitcher } from '../components/ThemeSwitcher';
+import { ToastProvider } from '../components/ui/Toast';
+import './globals.css';
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
 // lowercase "l" has a clear tail (not a plain vertical bar). Critical for "AllMCPs".
@@ -25,9 +29,9 @@ import "./globals.css";
 // cascade — an incidental, build-order-dependent outcome that caused an
 // intermittent flash to Tailwind's system-font fallback on some loads.
 const sans = Atkinson_Hyperlegible_Next({
-  subsets: ["latin"],
-  variable: "--font-atkinson",
-  display: "swap",
+  subsets: ['latin'],
+  variable: '--font-atkinson',
+  display: 'swap',
   adjustFontFallback: false,
 });
 
@@ -35,70 +39,70 @@ const sans = Atkinson_Hyperlegible_Next({
 // section kickers, terminal chrome, and tabular figures. Atkinson stays
 // on all UI and prose (see BRAND_GUIDE.md).
 const mono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-geist-mono",
-  display: "swap",
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
+  display: 'swap',
 });
 
 // Plus Jakarta Sans: High-impact geometric display face for the AllMCPs logo/wordmark
 const wordmark = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-wordmark",
-  weight: ["700", "800"],
-  display: "swap",
+  subsets: ['latin'],
+  variable: '--font-wordmark',
+  weight: ['700', '800'],
+  display: 'swap',
 });
 
 export const viewport: Viewport = {
-  width: "device-width",
+  width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
   // Match light/dark shell chrome so browser UI doesn't flash the wrong color.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: dark)', color: '#020617' },
   ],
 };
 
 export const metadata: Metadata = {
   title: {
-    default: "AllMCPs | Directory for Model Context Protocol Servers",
-    template: "%s | AllMCPs",
+    default: 'AllMCPs | Directory for Model Context Protocol Servers',
+    template: '%s | AllMCPs',
   },
   description:
-    "Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.",
-  metadataBase: new URL("https://allmcps.com"),
-  manifest: "/manifest.webmanifest",
+    'Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.',
+  metadataBase: new URL('https://allmcps.com'),
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: [
-      { url: "/favicon-tile.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" },
+      { url: '/favicon-tile.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
     ],
-    shortcut: "/favicon.ico",
-    apple: "/logo-icon.png",
+    shortcut: '/favicon.ico',
+    apple: '/logo-icon.png',
   },
   alternates: {
     types: {
-      "application/rss+xml": "https://allmcps.com/blog/rss.xml",
-      "text/plain": "https://allmcps.com/llms.txt",
-      "application/json": "https://allmcps.com/data.json",
+      'application/rss+xml': 'https://allmcps.com/blog/rss.xml',
+      'text/plain': 'https://allmcps.com/llms.txt',
+      'application/json': 'https://allmcps.com/data.json',
     },
   },
   openGraph: {
-    title: "AllMCPs | Directory for Model Context Protocol Servers",
+    title: 'AllMCPs | Directory for Model Context Protocol Servers',
     description:
-      "Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.",
-    url: "https://allmcps.com",
-    siteName: "AllMCPs",
-    locale: "en_US",
-    type: "website",
+      'Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.',
+    url: 'https://allmcps.com',
+    siteName: 'AllMCPs',
+    locale: 'en_US',
+    type: 'website',
   },
   twitter: {
-    card: "summary_large_image",
-    site: "@AllMCPs",
-    creator: "@AllMCPs",
-    title: "AllMCPs | Directory for Model Context Protocol Servers",
+    card: 'summary_large_image',
+    site: '@AllMCPs',
+    creator: '@AllMCPs',
+    title: 'AllMCPs | Directory for Model Context Protocol Servers',
     description:
-      "Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers.",
+      'Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers.',
   },
 };
 
@@ -108,7 +112,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable} ${wordmark.variable}`} data-theme="dark" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${sans.variable} ${mono.variable} ${wordmark.variable}`}
+      data-theme="dark"
+      suppressHydrationWarning
+    >
       <head>
         {/*
           A plain <script> tag (not next/script) on purpose: this Next.js version's
@@ -245,40 +254,43 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@graph": [
+              '@context': 'https://schema.org',
+              '@graph': [
                 {
-                  "@type": "Organization",
-                  name: "AllMCPs",
-                  url: "https://allmcps.com",
-                  logo: "https://allmcps.com/logo-icon.svg",
-                  sameAs: ["https://x.com/AllMCPs", "https://github.com/Jackalope-Dev"],
+                  '@type': 'Organization',
+                  name: 'AllMCPs',
+                  url: 'https://allmcps.com',
+                  logo: 'https://allmcps.com/logo-icon.svg',
+                  sameAs: [
+                    'https://x.com/AllMCPs',
+                    'https://github.com/Jackalope-Dev',
+                  ],
                   description:
-                    "The definitive directory for discovering and installing Model Context Protocol servers.",
+                    'The definitive directory for discovering and installing Model Context Protocol servers.',
                   contactPoint: {
-                    "@type": "ContactPoint",
-                    email: "contact@allmcps.com",
-                    contactType: "customer support",
-                    url: "https://allmcps.com/contact",
-                    availableLanguage: ["English"],
+                    '@type': 'ContactPoint',
+                    email: 'contact@allmcps.com',
+                    contactType: 'customer support',
+                    url: 'https://allmcps.com/contact',
+                    availableLanguage: ['English'],
                   },
                   address: {
-                    "@type": "PostalAddress",
-                    streetAddress: "1500 N Grant St # 7225",
-                    addressLocality: "Denver",
-                    addressRegion: "CO",
-                    postalCode: "80203",
-                    addressCountry: "US",
+                    '@type': 'PostalAddress',
+                    streetAddress: '1500 N Grant St # 7225',
+                    addressLocality: 'Denver',
+                    addressRegion: 'CO',
+                    postalCode: '80203',
+                    addressCountry: 'US',
                   },
                 },
                 {
-                  "@type": "WebSite",
-                  name: "AllMCPs",
-                  url: "https://allmcps.com",
+                  '@type': 'WebSite',
+                  name: 'AllMCPs',
+                  url: 'https://allmcps.com',
                   potentialAction: {
-                    "@type": "SearchAction",
-                    target: "https://allmcps.com/browse?q={search_term_string}",
-                    "query-input": "required name=search_term_string",
+                    '@type': 'SearchAction',
+                    target: 'https://allmcps.com/browse?q={search_term_string}',
+                    'query-input': 'required name=search_term_string',
                   },
                 },
               ],

@@ -79,13 +79,18 @@ if (!E2B_API_KEY) {
 }
 
 async function fetchBatchOnce() {
-  const res = await fetch(`${BASE_URL}/api/cron/stdio-pilot/batch?batch_size=${BATCH_SIZE}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${SECRET}` },
-  });
+  const res = await fetch(
+    `${BASE_URL}/api/cron/stdio-pilot/batch?batch_size=${BATCH_SIZE}`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SECRET}` },
+    },
+  );
   if (!res.ok) {
     const body = await res.text().catch(() => '<no body>');
-    throw new Error(`batch fetch failed: HTTP ${res.status} - ${body.slice(0, 500)}`);
+    throw new Error(
+      `batch fetch failed: HTTP ${res.status} - ${body.slice(0, 500)}`,
+    );
   }
   return res.json();
 }
@@ -100,8 +105,11 @@ async function fetchBatch() {
       return data.batch || [];
     } catch (e) {
       lastErr = e;
-      console.error(`  ! batch fetch attempt ${attempt}/${RETRIES} failed: ${e.message}`);
-      if (attempt < RETRIES) await new Promise((r) => setTimeout(r, attempt * 3000));
+      console.error(
+        `  ! batch fetch attempt ${attempt}/${RETRIES} failed: ${e.message}`,
+      );
+      if (attempt < RETRIES)
+        await new Promise((r) => setTimeout(r, attempt * 3000));
     }
   }
   throw lastErr;
@@ -110,12 +118,17 @@ async function fetchBatch() {
 async function postResult(result) {
   const res = await fetch(`${BASE_URL}/api/cron/stdio-pilot/result`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${SECRET}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${SECRET}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(result),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '<no body>');
-    console.error(`  ! failed to record result for ${result.serverId}: HTTP ${res.status} - ${body.slice(0, 500)}`);
+    console.error(
+      `  ! failed to record result for ${result.serverId}: HTTP ${res.status} - ${body.slice(0, 500)}`,
+    );
   }
 }
 
@@ -126,10 +139,11 @@ function makeJsonRpcReader() {
 
   function feed(chunk) {
     buffer += chunk;
-    let idx;
-    while ((idx = buffer.indexOf('\n')) >= 0) {
+    let idx = buffer.indexOf('\n');
+    while (idx >= 0) {
       const line = buffer.slice(0, idx).trim();
       buffer = buffer.slice(idx + 1);
+      idx = buffer.indexOf('\n');
       if (!line) continue;
       let msg;
       try {
@@ -183,13 +197,19 @@ function withRunnerBootstrap(command, cmd) {
 
 async function verifyListing(listing) {
   const started = Date.now();
-  const cmd = withRunnerBootstrap(listing.installCommand, [listing.installCommand, ...listing.installArgs].join(' '));
+  const cmd = withRunnerBootstrap(
+    listing.installCommand,
+    [listing.installCommand, ...listing.installArgs].join(' '),
+  );
   let sbx;
   let stderrBuf = '';
   const reader = makeJsonRpcReader();
 
   try {
-    sbx = await Sandbox.create({ apiKey: E2B_API_KEY, timeoutMs: SANDBOX_BOOT_TIMEOUT_MS });
+    sbx = await Sandbox.create({
+      apiKey: E2B_API_KEY,
+      timeoutMs: SANDBOX_BOOT_TIMEOUT_MS,
+    });
 
     const proc = await sbx.commands.run(cmd, {
       background: true,
@@ -213,7 +233,7 @@ async function verifyListing(listing) {
       // timeout, not a generic 'error'.
       await sbx.commands.sendStdin(
         proc.pid,
-        JSON.stringify({
+        `${JSON.stringify({
           jsonrpc: '2.0',
           id: 1,
           method: 'initialize',
@@ -222,16 +242,20 @@ async function verifyListing(listing) {
             capabilities: {},
             clientInfo: { name: 'AllMCPs E2B Pilot', version: '1.0.0' },
           },
-        }) + '\n'
+        })}\n`,
       );
       initMsg = await reader.waitFor(1, HANDSHAKE_TIMEOUT_MS);
     } catch (e) {
       const looksLikeInstallFailure =
-        INSTALL_FAILURE_MARKERS.some((m) => stderrBuf.includes(m)) || /pid \d+ not found/.test(e?.message || '');
+        INSTALL_FAILURE_MARKERS.some((m) => stderrBuf.includes(m)) ||
+        /pid \d+ not found/.test(e?.message || '');
       return {
         serverId: listing.id,
         status: looksLikeInstallFailure ? 'install_failed' : 'timeout',
-        error: (looksLikeInstallFailure ? stderrBuf || e?.message : 'No response to initialize.').slice(0, 500),
+        error: (looksLikeInstallFailure
+          ? stderrBuf || e?.message || 'Install failed.'
+          : 'No response to initialize.'
+        ).slice(0, 500),
         durationMs: Date.now() - started,
       };
     }
@@ -248,11 +272,19 @@ async function verifyListing(listing) {
     try {
       await sbx.commands.sendStdin(
         proc.pid,
-        JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n'
+        `${JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'notifications/initialized',
+        })}\n`,
       );
       await sbx.commands.sendStdin(
         proc.pid,
-        JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }) + '\n'
+        `${JSON.stringify({
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'tools/list',
+          params: {},
+        })}\n`,
       );
       toolsMsg = await reader.waitFor(2, HANDSHAKE_TIMEOUT_MS);
     } catch (e) {
@@ -270,7 +302,9 @@ async function verifyListing(listing) {
       return {
         serverId: listing.id,
         status: 'handshake_failed',
-        error: (toolsMsg.error?.message || 'tools/list returned no tools array.').slice(0, 500),
+        error: (
+          toolsMsg.error?.message || 'tools/list returned no tools array.'
+        ).slice(0, 500),
         durationMs: Date.now() - started,
       };
     }
@@ -281,7 +315,12 @@ async function verifyListing(listing) {
       parameters: t.inputSchema,
     }));
 
-    return { serverId: listing.id, status: 'ok', tools, durationMs: Date.now() - started };
+    return {
+      serverId: listing.id,
+      status: 'ok',
+      tools,
+      durationMs: Date.now() - started,
+    };
   } catch (e) {
     return {
       serverId: listing.id,
@@ -340,7 +379,7 @@ async function main() {
   const work = makeWorkQueue();
 
   console.log(
-    `Draining stdio backlog: concurrency=${CONCURRENCY}, page size=${BATCH_SIZE}, budget=${(RUN_BUDGET_MS / 60000).toFixed(0)}min`
+    `Draining stdio backlog: concurrency=${CONCURRENCY}, page size=${BATCH_SIZE}, budget=${(RUN_BUDGET_MS / 60000).toFixed(0)}min`,
   );
 
   async function worker() {
@@ -353,7 +392,9 @@ async function main() {
         // than throwing through Promise.all — that would abort the whole run
         // (and process.exit() in main's catch would kill other workers'
         // still-in-flight listings before they can post their results).
-        console.error(`  ! worker stopping — could not fetch more work: ${e.message}`);
+        console.error(
+          `  ! worker stopping — could not fetch more work: ${e.message}`,
+        );
         return;
       }
       if (!listing) return; // Backlog exhausted.
@@ -362,13 +403,15 @@ async function main() {
       counts[result.status] = (counts[result.status] || 0) + 1;
       totalProcessed++;
       console.log(
-        `[${totalProcessed}] ${listing.id} -> ${result.status} (${result.durationMs}ms)${result.tools ? `, ${result.tools.length} tools` : ''}`
+        `[${totalProcessed}] ${listing.id} -> ${result.status} (${result.durationMs}ms)${result.tools ? `, ${result.tools.length} tools` : ''}`,
       );
       await postResult(result);
 
       if (totalProcessed % 25 === 0) {
         const elapsedMin = ((Date.now() - startedAt) / 60000).toFixed(1);
-        console.log(`  -- progress: ${totalProcessed} processed in ${elapsedMin}min | ${JSON.stringify(counts)}`);
+        console.log(
+          `  -- progress: ${totalProcessed} processed in ${elapsedMin}min | ${JSON.stringify(counts)}`,
+        );
       }
     }
   }
@@ -376,7 +419,10 @@ async function main() {
   await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
 
   const elapsedMin = ((Date.now() - startedAt) / 60000).toFixed(1);
-  console.log(`\nDone. Processed ${totalProcessed} in ${elapsedMin}min.`, counts);
+  console.log(
+    `\nDone. Processed ${totalProcessed} in ${elapsedMin}min.`,
+    counts,
+  );
 }
 
 main().catch((e) => {

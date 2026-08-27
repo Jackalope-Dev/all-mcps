@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PAID_PRODUCTS, FREE_TIER, formatUsd } from '@/lib/pricing';
+import { FREE_TIER, formatUsd, PAID_PRODUCTS } from '@/lib/pricing';
 
 export async function GET() {
   const tiers = Object.values(PAID_PRODUCTS).map((p) => ({
@@ -32,7 +32,8 @@ export async function GET() {
         agent_exclusive_promo: {
           code: 'AGENTREADY',
           discount_percent: 50,
-          description: 'Exclusive 50% off for AI agents on one-time and subscription server boosting',
+          description:
+            'Exclusive 50% off for AI agents on one-time and subscription server boosting',
         },
         agent_commerce_support: {
           x402_header: true,
@@ -42,7 +43,7 @@ export async function GET() {
         tiers,
       },
       null,
-      2
+      2,
     ),
     {
       status: 200,
@@ -51,6 +52,6 @@ export async function GET() {
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'public, max-age=3600',
       },
-    }
+    },
   );
 }

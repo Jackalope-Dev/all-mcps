@@ -1,7 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Maximize2, X, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Maximize2,
+  X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
 
 interface ScreenshotViewerProps {
@@ -11,7 +17,9 @@ interface ScreenshotViewerProps {
 }
 
 export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
-  const images = Array.isArray(src) ? src.filter(Boolean) : [src].filter(Boolean);
+  const images = Array.isArray(src)
+    ? src.filter(Boolean)
+    : [src].filter(Boolean);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -50,7 +58,7 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
 
   return (
     <>
-      <figure
+      <div
         onClick={handleOpen}
         className="screenshot-preview-container"
         style={{
@@ -72,6 +80,7 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
         title="Click to expand screenshot"
         role="button"
         tabIndex={0}
+        aria-label="Expand screenshot"
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -117,7 +126,10 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
                 onClick={() => setCurrentIndex(idx)}
                 style={{
                   padding: 0,
-                  border: idx === currentIndex ? '2px solid var(--accent-color, #00E5FF)' : '1px solid var(--border-color)',
+                  border:
+                    idx === currentIndex
+                      ? '2px solid var(--accent-color, #00E5FF)'
+                      : '1px solid var(--border-color)',
                   borderRadius: '6px',
                   overflow: 'hidden',
                   background: 'none',
@@ -130,7 +142,12 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
                 <img
                   src={imgUrl}
                   alt={`Thumbnail ${idx + 1}`}
-                  style={{ width: '60px', height: '40px', objectFit: 'cover', display: 'block' }}
+                  style={{
+                    width: '60px',
+                    height: '40px',
+                    objectFit: 'cover',
+                    display: 'block',
+                  }}
                 />
               </button>
             ))}
@@ -161,9 +178,13 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
           }}
         >
           <Maximize2 size={13} style={{ color: '#00E5FF' }} />
-          <span>{hasMultiple ? `Expand (${currentIndex + 1}/${images.length})` : 'Expand screenshot'}</span>
+          <span>
+            {hasMultiple
+              ? `Expand (${currentIndex + 1}/${images.length})`
+              : 'Expand screenshot'}
+          </span>
         </div>
-      </figure>
+      </div>
 
       {/* Lightbox Modal */}
       {isOpen && (
@@ -202,7 +223,14 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
               gap: '1rem',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                minWidth: 0,
+              }}
+            >
               <span
                 style={{
                   color: '#ffffff',
@@ -213,11 +241,19 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {title || alt} {hasMultiple ? `(${currentIndex + 1} of ${images.length})` : ''}
+                {title || alt}{' '}
+                {hasMultiple ? `(${currentIndex + 1} of ${images.length})` : ''}
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                flexShrink: 0,
+              }}
+            >
               <a
                 href={activeSrc}
                 target="_blank"
@@ -237,8 +273,14 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
                   textDecoration: 'none',
                   transition: 'background 0.2s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)')}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background =
+                    'rgba(255, 255, 255, 0.22)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background =
+                    'rgba(255, 255, 255, 0.1)')
+                }
               >
                 <ExternalLink size={14} />
                 <span>Original</span>
@@ -263,11 +305,13 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
+                  e.currentTarget.style.background =
+                    'rgba(255, 255, 255, 0.25)';
                   e.currentTarget.style.transform = 'scale(1.05)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                  e.currentTarget.style.background =
+                    'rgba(255, 255, 255, 0.12)';
                   e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
@@ -292,7 +336,11 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
             {hasMultiple && (
               <button
                 type="button"
-                onClick={() => setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))}
+                onClick={() =>
+                  setCurrentIndex((prev) =>
+                    prev > 0 ? prev - 1 : images.length - 1,
+                  )
+                }
                 title="Previous image (Left Arrow)"
                 aria-label="Previous image"
                 style={{
@@ -314,8 +362,12 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
                   boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                   transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(2, 6, 23, 0.85)')}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = 'rgba(2, 6, 23, 0.85)')
+                }
               >
                 <ChevronLeft size={22} />
               </button>
@@ -332,7 +384,8 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
                 height: 'auto',
                 objectFit: 'contain',
                 borderRadius: '12px',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                boxShadow:
+                  '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)',
                 display: 'block',
               }}
             />
@@ -340,7 +393,11 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
             {hasMultiple && (
               <button
                 type="button"
-                onClick={() => setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))}
+                onClick={() =>
+                  setCurrentIndex((prev) =>
+                    prev < images.length - 1 ? prev + 1 : 0,
+                  )
+                }
                 title="Next image (Right Arrow)"
                 aria-label="Next image"
                 style={{
@@ -362,8 +419,12 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
                   boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                   transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(2, 6, 23, 0.85)')}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = 'rgba(0, 229, 255, 0.3)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = 'rgba(2, 6, 23, 0.85)')
+                }
               >
                 <ChevronRight size={22} />
               </button>

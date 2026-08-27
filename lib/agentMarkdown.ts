@@ -1,19 +1,34 @@
-import { getAllPosts, getPostBySlug, type BlogPost } from './blog';
 import {
-  getActiveServersForScoring,
-  getServersForTopic,
-  getServerById,
-  getRelatedServers,
+  BEST_TOPICS,
+  type BestTopic,
+  bestTopicBySlug,
+  selectServersForTopic,
+} from './bestTopics';
+import { type BlogPost, getAllPosts, getPostBySlug } from './blog';
+import {
+  categoryFromSlug,
+  categoryIntroCopy,
+  categorySlug,
+  DIRECTORY_CATEGORIES,
+  parseCategoryLabel,
+} from './categories';
+import { MCP_CLIENTS, type McpClient, mcpClientBySlug } from './clients';
+import { resolveInstallConfig } from './installConfig';
+import {
+  getWorkflowBySlug,
+  type McpWorkflow,
+  WORKFLOW_PROMPTS,
+} from './prompts';
+import { computeQualityScore } from './qualityScore';
+import {
   formatServerSummaryLine,
+  getActiveServersForScoring,
+  getRelatedServers,
+  getServerById,
+  getServersForTopic,
   relatedRankingScore,
   type Server,
 } from './servers';
-import { DIRECTORY_CATEGORIES, categoryFromSlug, categorySlug, parseCategoryLabel, categoryIntroCopy } from './categories';
-import { BEST_TOPICS, bestTopicBySlug, selectServersForTopic, type BestTopic } from './bestTopics';
-import { MCP_CLIENTS, mcpClientBySlug, type McpClient } from './clients';
-import { WORKFLOW_PROMPTS, getWorkflowBySlug, type McpWorkflow } from './prompts';
-import { computeQualityScore } from './qualityScore';
-import { resolveInstallConfig } from './installConfig';
 
 const SITE = 'https://allmcps.com';
 
@@ -53,10 +68,15 @@ export function formatBlogIndexMarkdown(posts: BlogPost[]): string {
   return md;
 }
 
-export function formatCategoryMarkdown(category: string, servers: Server[]): string {
+export function formatCategoryMarkdown(
+  category: string,
+  servers: Server[],
+): string {
   const { label } = parseCategoryLabel(category);
   const slug = categorySlug(category);
-  const ranked = [...servers].sort((a, b) => relatedRankingScore(b) - relatedRankingScore(a));
+  const ranked = [...servers].sort(
+    (a, b) => relatedRankingScore(b) - relatedRankingScore(a),
+  );
   const topNames = ranked.slice(0, 3).map((s) => s.name);
   const intro = categoryIntroCopy(category, servers.length, topNames);
 
@@ -81,7 +101,9 @@ export function formatCategoryMarkdown(category: string, servers: Server[]): str
   return md;
 }
 
-export function formatCategoryIndexMarkdown(counts: { category: string; count: number }[]): string {
+export function formatCategoryIndexMarkdown(
+  counts: { category: string; count: number }[],
+): string {
   let md = `# AllMCPs Categories\n\n`;
   md += `Browse the full MCP server directory by category.\n\n`;
 
@@ -94,7 +116,9 @@ export function formatCategoryIndexMarkdown(counts: { category: string; count: n
 }
 
 /** Returns null when the slug doesn't match a known post, so the route can 404. */
-export async function renderBlogPostMarkdown(slug: string): Promise<string | null> {
+export async function renderBlogPostMarkdown(
+  slug: string,
+): Promise<string | null> {
   const post = getPostBySlug(slug);
   return post ? formatBlogPostMarkdown(post) : null;
 }
@@ -104,7 +128,9 @@ export async function renderBlogIndexMarkdown(): Promise<string> {
 }
 
 /** Returns null when the slug doesn't match a known category, so the route can 404. */
-export async function renderCategoryMarkdown(slug: string): Promise<string | null> {
+export async function renderCategoryMarkdown(
+  slug: string,
+): Promise<string | null> {
   const category = categoryFromSlug(slug);
   if (!category) return null;
   const servers = await getActiveServersForScoring();
@@ -121,8 +147,13 @@ export async function renderCategoryIndexMarkdown(): Promise<string> {
   return formatCategoryIndexMarkdown(counts);
 }
 
-export function formatBestTopicMarkdown(topic: BestTopic, servers: Server[]): string {
-  const ranked = [...servers].sort((a, b) => relatedRankingScore(b) - relatedRankingScore(a));
+export function formatBestTopicMarkdown(
+  topic: BestTopic,
+  servers: Server[],
+): string {
+  const ranked = [...servers].sort(
+    (a, b) => relatedRankingScore(b) - relatedRankingScore(a),
+  );
 
   let md = `# Best ${topic.title} MCP Servers\n\n`;
   md += `${topic.lead}\n\n`;
@@ -236,7 +267,10 @@ export function formatPromptIndexMarkdown(workflows: McpWorkflow[]): string {
   return md;
 }
 
-export function formatAlternativesMarkdown(server: Server, alternatives: Server[]): string {
+export function formatAlternativesMarkdown(
+  server: Server,
+  alternatives: Server[],
+): string {
   let md = `# Alternatives to ${server.name}\n\n`;
   md += `**Original listing:** ${SITE}/mcp/${server.id}\n`;
   md += `**Category:** ${server.category}\n\n`;
@@ -256,7 +290,11 @@ export function formatAlternativesMarkdown(server: Server, alternatives: Server[
 
 /** Top N tool/feature names for the comparison table. */
 function compareToolNames(s: Server, max = 6): string[] {
-  if (s.tools?.length) return s.tools.map((t) => t.name).filter(Boolean).slice(0, max);
+  if (s.tools?.length)
+    return s.tools
+      .map((t) => t.name)
+      .filter(Boolean)
+      .slice(0, max);
   if (s.aiFeatures?.length) return s.aiFeatures.slice(0, max);
   return [];
 }
@@ -269,11 +307,21 @@ export function formatCompareMarkdown(left: Server, right: Server): string {
   const installLeft = resolveInstallConfig(left);
   const installRight = resolveInstallConfig(right);
 
-  const transportLeft = installLeft.kind === 'remote' ? 'Remote (HTTP/SSE)' : 'Local Subprocess (stdio)';
-  const transportRight = installRight.kind === 'remote' ? 'Remote (HTTP/SSE)' : 'Local Subprocess (stdio)';
+  const transportLeft =
+    installLeft.kind === 'remote'
+      ? 'Remote (HTTP/SSE)'
+      : 'Local Subprocess (stdio)';
+  const transportRight =
+    installRight.kind === 'remote'
+      ? 'Remote (HTTP/SSE)'
+      : 'Local Subprocess (stdio)';
 
-  const authLeft = left.authType ? left.authType.toUpperCase() : 'None declared';
-  const authRight = right.authType ? right.authType.toUpperCase() : 'None declared';
+  const authLeft = left.authType
+    ? left.authType.toUpperCase()
+    : 'None declared';
+  const authRight = right.authType
+    ? right.authType.toUpperCase()
+    : 'None declared';
 
   const pricingLeft = left.pricingModel ? left.pricingModel : 'Free / Open';
   const pricingRight = right.pricingModel ? right.pricingModel : 'Free / Open';
@@ -341,7 +389,9 @@ export function formatCompareMarkdown(left: Server, right: Server): string {
 }
 
 /** Returns null when the slug doesn't match a known topic, so the route can 404. */
-export async function renderBestTopicMarkdown(slug: string): Promise<string | null> {
+export async function renderBestTopicMarkdown(
+  slug: string,
+): Promise<string | null> {
   const topic = bestTopicBySlug(slug);
   if (!topic) return null;
   const servers = await getServersForTopic(topic);
@@ -354,7 +404,9 @@ export async function renderBestIndexMarkdown(): Promise<string> {
 }
 
 /** Returns null when the slug doesn't match a known client, so the route can 404. */
-export async function renderClientMarkdown(slug: string): Promise<string | null> {
+export async function renderClientMarkdown(
+  slug: string,
+): Promise<string | null> {
   const client = mcpClientBySlug(slug);
   return client ? formatClientMarkdown(client) : null;
 }
@@ -364,7 +416,9 @@ export async function renderClientIndexMarkdown(): Promise<string> {
 }
 
 /** Returns null when the slug doesn't match a known workflow, so the route can 404. */
-export async function renderPromptMarkdown(slug: string): Promise<string | null> {
+export async function renderPromptMarkdown(
+  slug: string,
+): Promise<string | null> {
   const workflow = getWorkflowBySlug(slug);
   return workflow ? formatPromptMarkdown(workflow) : null;
 }
@@ -374,7 +428,9 @@ export async function renderPromptIndexMarkdown(): Promise<string> {
 }
 
 /** Returns null when the server id doesn't exist, so the route can 404. */
-export async function renderAlternativesMarkdown(id: string): Promise<string | null> {
+export async function renderAlternativesMarkdown(
+  id: string,
+): Promise<string | null> {
   const server = await getServerById(id);
   if (!server) return null;
   const alternatives = await getRelatedServers(server, 12);
@@ -382,9 +438,15 @@ export async function renderAlternativesMarkdown(id: string): Promise<string | n
 }
 
 /** Returns null when either server id doesn't exist or the ids are identical, so the route can 404. */
-export async function renderCompareMarkdown(idA: string, idB: string): Promise<string | null> {
+export async function renderCompareMarkdown(
+  idA: string,
+  idB: string,
+): Promise<string | null> {
   if (!idA || !idB || idA === idB) return null;
-  const [left, right] = await Promise.all([getServerById(idA), getServerById(idB)]);
+  const [left, right] = await Promise.all([
+    getServerById(idA),
+    getServerById(idB),
+  ]);
   if (!left || !right) return null;
   return formatCompareMarkdown(left, right);
 }

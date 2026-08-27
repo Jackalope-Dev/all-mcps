@@ -6,7 +6,7 @@
 export function computeFeaturedUntil(
   currentFeaturedUntil: Date | null,
   days: number,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): Date {
   const base =
     currentFeaturedUntil && currentFeaturedUntil.getTime() > now.getTime()

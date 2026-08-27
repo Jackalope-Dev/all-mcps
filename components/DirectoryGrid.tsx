@@ -1,28 +1,54 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  BadgeCheck,
+  ChevronRight,
+  Clock,
+  Download,
+  Heart,
+  LayoutGrid,
+  List,
+  Loader2,
+  Search,
+  Star,
+  Wrench,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
-import { Card } from './ui/Card';
-import { Badge } from './ui/Badge';
-import { Button } from './ui/Button';
-
-import { Heart, Download, LayoutGrid, List, X, BadgeCheck, ChevronRight, Search, Star, Loader2, Wrench, Clock } from 'lucide-react';
-import { SafeMarkdown } from './ui/SafeMarkdown';
-import { EmptyState } from './EmptyState';
-import { ServerAvatar } from './ui/ServerAvatar';
-import { IconTooltip } from './ui/IconTooltip';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  categorySlug,
+  DIRECTORY_CATEGORIES,
+  getCategoryMeta,
+  normalizeCategory,
+  parseCategoryLabel,
+} from '../lib/categories';
+import { parseServerName } from '../lib/displayName';
 import {
   isFeaturedListing as isFeaturedListingShared,
   isVerifiedListing as isVerifiedListingShared,
 } from '../lib/featuredStatus';
-import { parseServerName } from '../lib/displayName';
+import {
+  formatCommitAge,
+  formatCompactNumber,
+  formatFullDate,
+} from '../lib/format';
 import { trackSearch } from '../lib/gtag';
-import { ImpressionBeacon } from './ImpressionTracker';
+import {
+  compileQuery,
+  engagementScore,
+  scoreServerMatch,
+  trendingScore,
+} from '../lib/search';
 import { SponsorAdUnit } from './ads/SponsorAdUnit';
-import { DIRECTORY_CATEGORIES, getCategoryMeta, parseCategoryLabel, categorySlug, normalizeCategory } from '../lib/categories';
-import { compileQuery, scoreServerMatch, engagementScore, trendingScore } from '../lib/search';
-import { formatCommitAge, formatFullDate, formatCompactNumber } from '../lib/format';
-
+import { EmptyState } from './EmptyState';
+import { ImpressionBeacon } from './ImpressionTracker';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { IconTooltip } from './ui/IconTooltip';
+import { SafeMarkdown } from './ui/SafeMarkdown';
+import { ServerAvatar } from './ui/ServerAvatar';
 
 type Server = {
   id: string;
@@ -72,7 +98,13 @@ function isFeaturedListing(server: Server): boolean {
 }
 
 type ViewMode = 'grid' | 'list';
-type SortMode = 'relevance' | 'trending' | 'most_upvoted' | 'most_viewed' | 'newest' | 'alpha';
+type SortMode =
+  | 'relevance'
+  | 'trending'
+  | 'most_upvoted'
+  | 'most_viewed'
+  | 'newest'
+  | 'alpha';
 type TechStack = 'all' | 'typescript' | 'python' | 'go' | 'rust';
 type TransportKind = 'all' | 'stdio' | 'remote';
 
@@ -113,21 +145,34 @@ export default function DirectoryGrid({
   // Working dataset: seeded from the server-rendered slice, then replaced by the
   // full feed once `lazyFeedUrl` resolves (browse only).
   const [servers, setServers] = useState<Server[]>(initialServers);
-  const [feedStatus, setFeedStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(
-    lazyFeedUrl ? 'loading' : 'idle'
-  );
+  const [feedStatus, setFeedStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >(lazyFeedUrl ? 'loading' : 'idle');
   const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
-  const [selectedClient, setSelectedClient] = useState<'all' | 'cursor' | 'claude' | 'windsurf' | 'cline'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    initialCategory,
+  );
+  const [selectedClient, setSelectedClient] = useState<
+    'all' | 'cursor' | 'claude' | 'windsurf' | 'cline'
+  >('all');
   const [selectedStack, setSelectedStack] = useState<TechStack>('all');
-  const [selectedTransport, setSelectedTransport] = useState<TransportKind>('all');
-  const [selectedPricing, setSelectedPricing] = useState<'all' | 'free' | 'freemium' | 'paid' | 'byok'>('all');
-  const [selectedAuth, setSelectedAuth] = useState<'all' | 'none' | 'api_key' | 'oauth' | 'other'>('all');
+  const [selectedTransport, setSelectedTransport] =
+    useState<TransportKind>('all');
+  const [selectedPricing, setSelectedPricing] = useState<
+    'all' | 'free' | 'freemium' | 'paid' | 'byok'
+  >('all');
+  const [selectedAuth, setSelectedAuth] = useState<
+    'all' | 'none' | 'api_key' | 'oauth' | 'other'
+  >('all');
   // Default to relevance ordering whenever there's a query (incl. deep links).
-  const [sortMode, setSortMode] = useState<SortMode>(initialQuery.trim() ? 'relevance' : 'trending');
+  const [sortMode, setSortMode] = useState<SortMode>(
+    initialQuery.trim() ? 'relevance' : 'trending',
+  );
   // Landing favors visual discovery (grid); /browse defaults to power-user list.
   // localStorage may override after mount.
-  const [viewMode, setViewMode] = useState<ViewMode>(isBrowse ? 'list' : 'grid');
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    isBrowse ? 'list' : 'grid',
+  );
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(isBrowse ? 30 : 12);
 
@@ -141,7 +186,7 @@ export default function DirectoryGrid({
       'Try searching: "send slack notifications with AI"...',
       'Try searching: "fetch github pull requests & issues"...',
     ],
-    [totalCount]
+    [totalCount],
   );
 
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -150,7 +195,10 @@ export default function DirectoryGrid({
   // so the input isn't constantly changing under the cursor for sensitive users.
   useEffect(() => {
     if (searchQuery.trim()) return;
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
       return;
     }
     const timer = setInterval(() => {
@@ -174,7 +222,7 @@ export default function DirectoryGrid({
   const prevQueryEmptyRef = useRef(!initialQuery.trim());
   const adSlot = useMemo(
     () => stableAdSlot(initialServers[0]?.id ?? 'directory'),
-    [initialServers]
+    [initialServers],
   );
   useEffect(() => {
     const empty = !searchQuery.trim();
@@ -208,7 +256,12 @@ export default function DirectoryGrid({
 
     (async () => {
       const sep = lazyFeedUrl.includes('?') ? '&' : '?';
-      type FeedPage = { servers?: Server[]; total?: number; limit?: number; nextOffset?: number | null };
+      type FeedPage = {
+        servers?: Server[];
+        total?: number;
+        limit?: number;
+        nextOffset?: number | null;
+      };
       const fetchPage = async (offset: number): Promise<FeedPage | null> => {
         try {
           const res = await fetch(`${lazyFeedUrl}${sep}offset=${offset}`);
@@ -228,7 +281,11 @@ export default function DirectoryGrid({
 
         if (first.total && first.limit && first.servers.length < first.total) {
           const offsets: number[] = [];
-          for (let offset = first.servers.length; offset < first.total; offset += first.limit) {
+          for (
+            let offset = first.servers.length;
+            offset < first.total;
+            offset += first.limit
+          ) {
             offsets.push(offset);
           }
           const rest = await Promise.all(offsets.map(fetchPage));
@@ -276,7 +333,10 @@ export default function DirectoryGrid({
 
   // Precompile the query once per keystroke; scoring stays cheap per row.
   const queryTerms = useMemo(() => compileQuery(searchQuery), [searchQuery]);
-  const fullQuery = useMemo(() => queryTerms.map((t) => t.term).join(' '), [queryTerms]);
+  const fullQuery = useMemo(
+    () => queryTerms.map((t) => t.term).join(' '),
+    [queryTerms],
+  );
 
   const filteredServers = useMemo(() => {
     const hasQuery = queryTerms.length > 0;
@@ -287,28 +347,69 @@ export default function DirectoryGrid({
       const desc = (server.description || '').toLowerCase();
       const cmd = (server.installCommand || '').toLowerCase();
       if (selectedStack === 'typescript') {
-        return name.includes('ts') || name.includes('typescript') || desc.includes('typescript') || desc.includes('npm') || desc.includes('npx') || cmd.includes('npx') || cmd.includes('node');
+        return (
+          name.includes('ts') ||
+          name.includes('typescript') ||
+          desc.includes('typescript') ||
+          desc.includes('npm') ||
+          desc.includes('npx') ||
+          cmd.includes('npx') ||
+          cmd.includes('node')
+        );
       }
       if (selectedStack === 'python') {
-        return name.includes('py') || name.includes('python') || desc.includes('python') || desc.includes('uvx') || desc.includes('pip') || cmd.includes('uvx') || cmd.includes('python') || cmd.includes('pip');
+        return (
+          name.includes('py') ||
+          name.includes('python') ||
+          desc.includes('python') ||
+          desc.includes('uvx') ||
+          desc.includes('pip') ||
+          cmd.includes('uvx') ||
+          cmd.includes('python') ||
+          cmd.includes('pip')
+        );
       }
       if (selectedStack === 'go') {
-        return name.includes('go-') || name.includes('-go') || desc.includes('golang') || desc.includes(' go ') || cmd.includes('go ');
+        return (
+          name.includes('go-') ||
+          name.includes('-go') ||
+          desc.includes('golang') ||
+          desc.includes(' go ') ||
+          cmd.includes('go ')
+        );
       }
       if (selectedStack === 'rust') {
-        return name.includes('rust') || desc.includes('rust') || desc.includes('cargo') || cmd.includes('cargo');
+        return (
+          name.includes('rust') ||
+          desc.includes('rust') ||
+          desc.includes('cargo') ||
+          cmd.includes('cargo')
+        );
       }
       return true;
     };
 
     const transportMatch = (server: Server): boolean => {
       if (selectedTransport === 'all') return true;
-      const kind = (server.installConfidence || server.installKind || '').toLowerCase();
+      const kind = (
+        server.installConfidence ||
+        server.installKind ||
+        ''
+      ).toLowerCase();
       if (selectedTransport === 'stdio') {
-        return kind.includes('stdio') || kind.includes('high') || kind.includes('medium') || !kind;
+        return (
+          kind.includes('stdio') ||
+          kind.includes('high') ||
+          kind.includes('medium') ||
+          !kind
+        );
       }
       if (selectedTransport === 'remote') {
-        return kind.includes('sse') || kind.includes('remote') || kind.includes('http');
+        return (
+          kind.includes('sse') ||
+          kind.includes('remote') ||
+          kind.includes('http')
+        );
       }
       return true;
     };
@@ -327,7 +428,11 @@ export default function DirectoryGrid({
     const scored: Array<{ server: Server; relevance: number }> = [];
     const baseFiltered = servers.filter((server) => {
       if (selectedCategory) {
-        if (server.category !== selectedCategory && normalizeCategory(server.category) !== normalizeCategory(selectedCategory)) {
+        if (
+          server.category !== selectedCategory &&
+          normalizeCategory(server.category) !==
+            normalizeCategory(selectedCategory)
+        ) {
           return false;
         }
       }
@@ -338,9 +443,14 @@ export default function DirectoryGrid({
       if (!authMatch(server)) return false;
 
       if (selectedClient !== 'all') {
-        const clients = Array.isArray(server.compatibleClients) ? server.compatibleClients.map((c) => String(c).toLowerCase()) : [];
-        const text = `${server.name} ${server.description} ${server.category}`.toLowerCase();
-        const clientMatch = clients.some((c) => c.includes(selectedClient)) || text.includes(selectedClient);
+        const clients = Array.isArray(server.compatibleClients)
+          ? server.compatibleClients.map((c) => String(c).toLowerCase())
+          : [];
+        const text =
+          `${server.name} ${server.description} ${server.category}`.toLowerCase();
+        const clientMatch =
+          clients.some((c) => c.includes(selectedClient)) ||
+          text.includes(selectedClient);
         if (!clientMatch) return false;
       }
       return true;
@@ -363,7 +473,7 @@ export default function DirectoryGrid({
           },
           queryTerms,
           fullQuery,
-          true
+          true,
         );
         if (relevance > 0) {
           scored.push({ server, relevance });
@@ -383,7 +493,7 @@ export default function DirectoryGrid({
             },
             queryTerms,
             fullQuery,
-            false
+            false,
           );
           if (relevance > 0) {
             scored.push({ server, relevance });
@@ -394,7 +504,8 @@ export default function DirectoryGrid({
 
     // With a query, relevance is meaningful; fall back to trending when the user
     // has cleared the query but the sort state briefly still reads 'relevance'.
-    const effectiveSort: SortMode = sortMode === 'relevance' && !hasQuery ? 'trending' : sortMode;
+    const effectiveSort: SortMode =
+      sortMode === 'relevance' && !hasQuery ? 'trending' : sortMode;
 
     scored.sort((x, y) => {
       const a = x.server;
@@ -404,7 +515,8 @@ export default function DirectoryGrid({
       // the two discovery-oriented modes. Objective modes (alpha, most viewed/upvoted)
       // stay literal, since buyers of a badge shouldn't distort a metric users trust.
       if (effectiveSort === 'relevance' || effectiveSort === 'trending') {
-        const featuredBoost = (isFeaturedListing(b) ? 1 : 0) - (isFeaturedListing(a) ? 1 : 0);
+        const featuredBoost =
+          (isFeaturedListing(b) ? 1 : 0) - (isFeaturedListing(a) ? 1 : 0);
         if (featuredBoost !== 0) return featuredBoost;
       }
       if (effectiveSort === 'relevance') {
@@ -437,7 +549,18 @@ export default function DirectoryGrid({
     });
 
     return scored.map((s) => s.server);
-  }, [servers, queryTerms, fullQuery, selectedCategory, selectedStack, selectedTransport, selectedPricing, selectedAuth, sortMode, verifiedOnly]);
+  }, [
+    servers,
+    queryTerms,
+    fullQuery,
+    selectedCategory,
+    selectedStack,
+    selectedTransport,
+    selectedPricing,
+    selectedAuth,
+    sortMode,
+    verifiedOnly,
+  ]);
 
   const filteredCount = filteredServers.length;
 
@@ -499,7 +622,8 @@ export default function DirectoryGrid({
     const term = q.trim();
     const url = new URL(browseBase, window.location.origin);
     if (term) url.searchParams.set('q', term);
-    if (selectedCategory) url.searchParams.set('category', categorySlug(selectedCategory));
+    if (selectedCategory)
+      url.searchParams.set('category', categorySlug(selectedCategory));
     window.location.assign(url.pathname + url.search);
   };
 
@@ -526,7 +650,14 @@ export default function DirectoryGrid({
   // Reset pagination when searching, filtering, or sorting
   useEffect(() => {
     setVisibleCount(30);
-  }, [searchQuery, selectedCategory, selectedStack, selectedTransport, sortMode, verifiedOnly]);
+  }, [
+    searchQuery,
+    selectedCategory,
+    selectedStack,
+    selectedTransport,
+    sortMode,
+    verifiedOnly,
+  ]);
 
   const visibleServers = filteredServers.slice(0, visibleCount);
   const hasMore = visibleCount < filteredServers.length;
@@ -539,7 +670,9 @@ export default function DirectoryGrid({
     selectedTransport !== 'all' ||
     selectedPricing !== 'all' ||
     selectedAuth !== 'all';
-  const categoryMeta = selectedCategory ? parseCategoryLabel(selectedCategory) : null;
+  const categoryMeta = selectedCategory
+    ? parseCategoryLabel(selectedCategory)
+    : null;
 
   // Width for the category select so long names are never clipped
   const selectLabel = selectedCategory || 'All Categories';
@@ -553,8 +686,16 @@ export default function DirectoryGrid({
           label={`${(server.upvotes || 0).toLocaleString('en-US')} upvotes`}
           asSpan
           trigger={
-            <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Heart size={12} aria-hidden="true" /> {formatCompactNumber(server.upvotes || 0)}
+            <div
+              style={{
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+            >
+              <Heart size={12} aria-hidden="true" />{' '}
+              {formatCompactNumber(server.upvotes || 0)}
             </div>
           }
         >
@@ -571,8 +712,16 @@ export default function DirectoryGrid({
             label={`${server.githubStars.toLocaleString('en-US')} GitHub stars`}
             asSpan
             trigger={
-              <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Star size={12} aria-hidden="true" /> {formatCompactNumber(server.githubStars)}
+              <div
+                style={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <Star size={12} aria-hidden="true" />{' '}
+                {formatCompactNumber(server.githubStars)}
               </div>
             }
           >
@@ -589,13 +738,22 @@ export default function DirectoryGrid({
           label={`${(server.copies || 0).toLocaleString('en-US')} installs`}
           asSpan
           trigger={
-            <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Download size={12} aria-hidden="true" /> {formatCompactNumber(server.copies || 0)}
+            <div
+              style={{
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+            >
+              <Download size={12} aria-hidden="true" />{' '}
+              {formatCompactNumber(server.copies || 0)}
             </div>
           }
         >
           <span className="mcp-icon-tooltip-title">
-            <Download size={13} style={{ color: 'var(--accent-color)' }} /> Installs &amp; Copy Actions
+            <Download size={13} style={{ color: 'var(--accent-color)' }} />{' '}
+            Installs &amp; Copy Actions
           </span>
           <span className="mcp-icon-tooltip-body">
             Total times users copied install commands or configuration snippets.
@@ -607,13 +765,22 @@ export default function DirectoryGrid({
             label={`${server.toolCount} tools`}
             asSpan
             trigger={
-              <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Wrench size={12} aria-hidden="true" /> {formatCompactNumber(server.toolCount)}
+              <div
+                style={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <Wrench size={12} aria-hidden="true" />{' '}
+                {formatCompactNumber(server.toolCount)}
               </div>
             }
           >
             <span className="mcp-icon-tooltip-title">
-              <Wrench size={13} style={{ color: 'var(--accent-color)' }} /> Tool Schemas ({server.toolCount})
+              <Wrench size={13} style={{ color: 'var(--accent-color)' }} /> Tool
+              Schemas ({server.toolCount})
             </span>
             <span className="mcp-icon-tooltip-body">
               {server.toolsSource === 'introspected'
@@ -628,13 +795,22 @@ export default function DirectoryGrid({
             label={`Last commit: ${commitAge}`}
             asSpan
             trigger={
-              <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Clock size={12} aria-hidden="true" /> <span suppressHydrationWarning>{commitAge}</span>
+              <div
+                style={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <Clock size={12} aria-hidden="true" />{' '}
+                <span suppressHydrationWarning>{commitAge}</span>
               </div>
             }
           >
             <span className="mcp-icon-tooltip-title">
-              <Clock size={13} style={{ color: 'var(--accent-color)' }} /> Repository Activity
+              <Clock size={13} style={{ color: 'var(--accent-color)' }} />{' '}
+              Repository Activity
             </span>
             <span className="mcp-icon-tooltip-body">
               {formatFullDate(server.lastCommitAt)
@@ -647,17 +823,23 @@ export default function DirectoryGrid({
     );
   };
 
-
-
   const TransportBadge = ({ server }: { server: Server }) => {
-    const isRemote = server.installKind === 'remote' || (server.url && !server.url.includes('github.com') && !server.url.includes('gitlab.com'));
+    const isRemote =
+      server.installKind === 'remote' ||
+      (server.url &&
+        !server.url.includes('github.com') &&
+        !server.url.includes('gitlab.com'));
     return (
       <Badge
         variant="category"
         style={{
-          background: isRemote ? 'rgba(0, 229, 255, 0.1)' : 'rgba(255, 255, 255, 0.04)',
+          background: isRemote
+            ? 'rgba(0, 229, 255, 0.1)'
+            : 'rgba(255, 255, 255, 0.04)',
           color: isRemote ? '#00E5FF' : 'var(--text-secondary)',
-          borderColor: isRemote ? 'rgba(0, 229, 255, 0.3)' : 'var(--border-color)',
+          borderColor: isRemote
+            ? 'rgba(0, 229, 255, 0.3)'
+            : 'var(--border-color)',
           fontSize: '0.68rem',
         }}
       >
@@ -672,7 +854,13 @@ export default function DirectoryGrid({
     const name = (server.name || '').toLowerCase();
 
     let label = 'Node';
-    if (cmd.includes('uvx') || cmd.includes('python') || cmd.includes('pip') || desc.includes('python') || name.includes('py')) {
+    if (
+      cmd.includes('uvx') ||
+      cmd.includes('python') ||
+      cmd.includes('pip') ||
+      desc.includes('python') ||
+      name.includes('py')
+    ) {
       label = 'Python';
     } else if (cmd.includes('docker') || desc.includes('docker')) {
       label = 'Docker';
@@ -697,16 +885,13 @@ export default function DirectoryGrid({
   const resultSubtitle = (
     <>
       Showing{' '}
-      <strong style={{ color: 'var(--text-primary)' }}>{filteredServers.length.toLocaleString('en-US')}</strong>{' '}
+      <strong style={{ color: 'var(--text-primary)' }}>
+        {filteredServers.length.toLocaleString('en-US')}
+      </strong>{' '}
       {filteredServers.length === 1 ? 'server' : 'servers'}
       {selectedCategory ? ' in this category' : ''}
       {verifiedOnly ? ' (verified only)' : ''}
-      {searchQuery ? (
-        <>
-          {' '}
-          matching &ldquo;{searchQuery}&rdquo;
-        </>
-      ) : null}
+      {searchQuery ? <> matching &ldquo;{searchQuery}&rdquo;</> : null}
     </>
   );
 
@@ -716,11 +901,23 @@ export default function DirectoryGrid({
           unfiltered homepage landing, so the dedicated /browse route needs its own
           single, page-specific <h1> here instead of relying on the "Results" <h2> below. */}
       {isBrowse && (
-        <section className="container animate-fade-in delay-1" style={{ paddingTop: '2.5rem', paddingBottom: '1.25rem', textAlign: 'center' }}>
+        <section
+          className="container animate-fade-in delay-1"
+          style={{
+            paddingTop: '2.5rem',
+            paddingBottom: '1.25rem',
+            textAlign: 'center',
+          }}
+        >
           <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
-            {categoryMeta ? `${categoryMeta.label} MCP Servers` : 'Browse MCP Servers'}
+            {categoryMeta
+              ? `${categoryMeta.label} MCP Servers`
+              : 'Browse MCP Servers'}
           </h1>
-          <p className="text-lead" style={{ margin: '0 auto', maxWidth: '640px' }}>
+          <p
+            className="text-lead"
+            style={{ margin: '0 auto', maxWidth: '640px' }}
+          >
             {categoryMeta
               ? `Model Context Protocol servers in the ${categoryMeta.label} category.`
               : 'Discover, filter, and connect verified Model Context Protocol tools to your AI agents.'}
@@ -730,191 +927,236 @@ export default function DirectoryGrid({
 
       {/* Search Bar & Filters — browse only. The homepage playground owns discovery. */}
       {isBrowse && (
-      <section
-        id="directory-search"
-        className="container animate-fade-in delay-2 directory-search-section"
-      >
-        <div className="directory-filters directory-filters-sticky">
-          <form
-            className="directory-search-bar"
-            role="search"
-            aria-label="Search MCP servers"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!isBrowse) {
-                goToFullDirectorySearch(searchQuery);
-              }
-            }}
-          >
-            <div className="directory-search-input-wrap">
-              <Search size={22} className="directory-search-icon" aria-hidden="true" />
-              <input
-                type="search"
-                name="q"
-                className="directory-search-input"
-                placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isBrowse) {
-                    e.preventDefault();
-                    goToFullDirectorySearch(searchQuery);
-                  }
-                }}
-                aria-label="Search MCP servers"
-                autoComplete="off"
-                enterKeyHint="search"
-              />
-              {searchQuery ? (
-                <button
-                  type="button"
-                  className="directory-search-clear"
-                  onClick={() => handleSearchChange('')}
-                  aria-label="Clear search"
-                  title="Clear search"
-                >
-                  <X size={16} aria-hidden="true" />
-                </button>
-              ) : null}
-            </div>
-
-            <div className="directory-search-divider" aria-hidden="true" />
-
-            <div className="directory-search-category-wrap">
-              <select
-                className="directory-search-category-select"
-                value={selectedCategory || ''}
-                onChange={(e) => handleCategorySelect(e.target.value === '' ? null : e.target.value)}
-                aria-label="Filter by category"
-              >
-                <option value="">All Categories</option>
-                {(DIRECTORY_CATEGORIES.length > 0 ? DIRECTORY_CATEGORIES : categories).map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              className="directory-search-submit-btn"
-              aria-label="Search"
+        <section
+          id="directory-search"
+          className="container animate-fade-in delay-2 directory-search-section"
+        >
+          <div className="directory-filters directory-filters-sticky">
+            <form
+              className="directory-search-bar"
+              role="search"
+              aria-label="Search MCP servers"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!isBrowse) {
+                  goToFullDirectorySearch(searchQuery);
+                }
+              }}
             >
-              <Search size={18} aria-hidden="true" />
-              <span>Search</span>
-            </button>
-          </form>
-
-          {/* Intent chips — popular situational queries */}
-          {!searchQuery.trim() && (
-            <div className="directory-intent-chips" role="group" aria-label="Popular searches">
-              <span className="directory-intent-label">Try searching:</span>
-              {[
-                { q: 'postgres mysql sqlite', label: '🗄️ Databases & SQL' },
-                { q: 'browser playwright puppeteer scrape', label: '🌐 Web Scraping' },
-                { q: 'github git gitlab repository', label: '💻 GitHub & Git' },
-                { q: 'memory vector embeddings rag', label: '🧠 Agent Memory' },
-                { q: 'aws kubernetes docker cloudflare', label: '☁️ Cloud & DevOps' },
-                { q: 'pdf document markdown excel', label: '📄 PDF & Docs' },
-              ].map((chip) => (
-                <button
-                  key={chip.q}
-                  type="button"
-                  className="directory-intent-chip"
-                  onClick={() => {
-                    if (isBrowse) {
-                      handleSearchChange(chip.q);
-                    } else {
-                      goToFullDirectorySearch(chip.q);
+              <div className="directory-search-input-wrap">
+                <Search
+                  size={22}
+                  className="directory-search-icon"
+                  aria-hidden="true"
+                />
+                <input
+                  type="search"
+                  name="q"
+                  className="directory-search-input"
+                  placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !isBrowse) {
+                      e.preventDefault();
+                      goToFullDirectorySearch(searchQuery);
                     }
                   }}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-          )}
+                  aria-label="Search MCP servers"
+                  autoComplete="off"
+                  enterKeyHint="search"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    className="directory-search-clear"
+                    onClick={() => handleSearchChange('')}
+                    aria-label="Clear search"
+                    title="Clear search"
+                  >
+                    <X size={16} aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
 
-          {/* Active filter pills (only shown when active filters exist) */}
-          {isFiltered && (
-            <div className="directory-tags-row" role="group" aria-label="Active filters">
-              {verifiedOnly && (
-                <button
-                  type="button"
-                  className="directory-tag directory-tag-active"
-                  onClick={() => setVerifiedOnly(false)}
-                  aria-label="Remove verified filter"
-                >
-                  <BadgeCheck size={14} aria-hidden="true" />
-                  Verified
-                  <X size={12} aria-hidden="true" />
-                </button>
-              )}
+              <div className="directory-search-divider" aria-hidden="true" />
 
-              {selectedCategory && (
-                <button
-                  type="button"
-                  className="directory-tag directory-tag-active"
-                  onClick={() => handleCategorySelect(null)}
-                  aria-label={`Remove category filter: ${selectedCategory}`}
+              <div className="directory-search-category-wrap">
+                <select
+                  className="directory-search-category-select"
+                  value={selectedCategory || ''}
+                  onChange={(e) =>
+                    handleCategorySelect(
+                      e.target.value === '' ? null : e.target.value,
+                    )
+                  }
+                  aria-label="Filter by category"
                 >
-                  {selectedCategory}
-                  <X size={12} aria-hidden="true" />
-                </button>
-              )}
-
-              {selectedStack !== 'all' && (
-                <button
-                  type="button"
-                  className="directory-tag directory-tag-active"
-                  onClick={() => setSelectedStack('all')}
-                  aria-label={`Remove stack filter: ${selectedStack}`}
-                >
-                  Stack: {selectedStack}
-                  <X size={12} aria-hidden="true" />
-                </button>
-              )}
-
-              {selectedTransport !== 'all' && (
-                <button
-                  type="button"
-                  className="directory-tag directory-tag-active"
-                  onClick={() => setSelectedTransport('all')}
-                  aria-label={`Remove transport filter: ${selectedTransport}`}
-                >
-                  Transport: {selectedTransport}
-                  <X size={12} aria-hidden="true" />
-                </button>
-              )}
+                  <option value="">All Categories</option>
+                  {(DIRECTORY_CATEGORIES.length > 0
+                    ? DIRECTORY_CATEGORIES
+                    : categories
+                  ).map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <button
-                type="button"
-                className="directory-tag"
-                onClick={clearAllFilters}
-                style={{ opacity: 0.8 }}
-                aria-label="Clear all filters"
+                type="submit"
+                className="directory-search-submit-btn"
+                aria-label="Search"
               >
-                Clear all filters
+                <Search size={18} aria-hidden="true" />
+                <span>Search</span>
               </button>
-            </div>
-          )}
-        </div>
-      </section>
+            </form>
+
+            {/* Intent chips — popular situational queries */}
+            {!searchQuery.trim() && (
+              <div
+                className="directory-intent-chips"
+                role="group"
+                aria-label="Popular searches"
+              >
+                <span className="directory-intent-label">Try searching:</span>
+                {[
+                  { q: 'postgres mysql sqlite', label: '🗄️ Databases & SQL' },
+                  {
+                    q: 'browser playwright puppeteer scrape',
+                    label: '🌐 Web Scraping',
+                  },
+                  {
+                    q: 'github git gitlab repository',
+                    label: '💻 GitHub & Git',
+                  },
+                  {
+                    q: 'memory vector embeddings rag',
+                    label: '🧠 Agent Memory',
+                  },
+                  {
+                    q: 'aws kubernetes docker cloudflare',
+                    label: '☁️ Cloud & DevOps',
+                  },
+                  { q: 'pdf document markdown excel', label: '📄 PDF & Docs' },
+                ].map((chip) => (
+                  <button
+                    key={chip.q}
+                    type="button"
+                    className="directory-intent-chip"
+                    onClick={() => {
+                      if (isBrowse) {
+                        handleSearchChange(chip.q);
+                      } else {
+                        goToFullDirectorySearch(chip.q);
+                      }
+                    }}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Active filter pills (only shown when active filters exist) */}
+            {isFiltered && (
+              <div
+                className="directory-tags-row"
+                role="group"
+                aria-label="Active filters"
+              >
+                {verifiedOnly && (
+                  <button
+                    type="button"
+                    className="directory-tag directory-tag-active"
+                    onClick={() => setVerifiedOnly(false)}
+                    aria-label="Remove verified filter"
+                  >
+                    <BadgeCheck size={14} aria-hidden="true" />
+                    Verified
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                )}
+
+                {selectedCategory && (
+                  <button
+                    type="button"
+                    className="directory-tag directory-tag-active"
+                    onClick={() => handleCategorySelect(null)}
+                    aria-label={`Remove category filter: ${selectedCategory}`}
+                  >
+                    {selectedCategory}
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                )}
+
+                {selectedStack !== 'all' && (
+                  <button
+                    type="button"
+                    className="directory-tag directory-tag-active"
+                    onClick={() => setSelectedStack('all')}
+                    aria-label={`Remove stack filter: ${selectedStack}`}
+                  >
+                    Stack: {selectedStack}
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                )}
+
+                {selectedTransport !== 'all' && (
+                  <button
+                    type="button"
+                    className="directory-tag directory-tag-active"
+                    onClick={() => setSelectedTransport('all')}
+                    aria-label={`Remove transport filter: ${selectedTransport}`}
+                  >
+                    Transport: {selectedTransport}
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className="directory-tag"
+                  onClick={clearAllFilters}
+                  style={{ opacity: 0.8 }}
+                  aria-label="Clear all filters"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {/* Directory */}
-      <section className="container animate-fade-in delay-3" style={{ marginBottom: '6rem' }}>
+      <section
+        className="container animate-fade-in delay-3"
+        style={{ marginBottom: '6rem' }}
+      >
         {lazyFeedUrl && feedStatus === 'loading' && (
-          <div className="directory-feed-status" role="status" aria-live="polite">
-            <Loader2 size={16} aria-hidden="true" className="directory-feed-spinner" />
+          <div
+            className="directory-feed-status"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2
+              size={16}
+              aria-hidden="true"
+              className="directory-feed-spinner"
+            />
             Loading full directory so search and filters cover every listing…
           </div>
         )}
         {lazyFeedUrl && feedStatus === 'error' && (
-          <div className="directory-feed-status directory-feed-status--warn" role="status">
-            Showing the initial page of results. Full-catalog search is temporarily unavailable — try
-            refreshing.
+          <div
+            className="directory-feed-status directory-feed-status--warn"
+            role="status"
+          >
+            Showing the initial page of results. Full-catalog search is
+            temporarily unavailable — try refreshing.
           </div>
         )}
 
@@ -928,25 +1170,49 @@ export default function DirectoryGrid({
 
         <div className="directory-toolbar">
           <div>
-            <h2 style={{ marginBottom: 0, fontSize: isBrowse || selectedCategory ? '1.5rem' : undefined }} className={!isBrowse && !isFiltered ? 'landing-section-title' : undefined}>
-              {isBrowse || selectedCategory || isFiltered ? 'Results' : 'New MCP servers'}{' '}
-              <span style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', fontWeight: 500 }}>
-                ({filteredServers.length.toLocaleString('en-US')} {filteredServers.length === 1 ? 'tool' : 'tools'})
+            <h2
+              style={{
+                marginBottom: 0,
+                fontSize: isBrowse || selectedCategory ? '1.5rem' : undefined,
+              }}
+              className={
+                !isBrowse && !isFiltered ? 'landing-section-title' : undefined
+              }
+            >
+              {isBrowse || selectedCategory || isFiltered
+                ? 'Results'
+                : 'New MCP servers'}{' '}
+              <span
+                style={{
+                  color: 'var(--text-secondary)',
+                  fontSize: '1.125rem',
+                  fontWeight: 500,
+                }}
+              >
+                ({filteredServers.length.toLocaleString('en-US')}{' '}
+                {filteredServers.length === 1 ? 'tool' : 'tools'})
                 {lazyFeedUrl && feedStatus === 'loading' ? ' · loading…' : ''}
               </span>
             </h2>
             {sortMode === 'trending' && !searchQuery.trim() && (
-              <p className="directory-sort-hint">Sorted by recent engagement (upvotes, installs, views).</p>
+              <p className="directory-sort-hint">
+                Sorted by recent engagement (upvotes, installs, views).
+              </p>
             )}
             {sortMode === 'relevance' && searchQuery.trim() && (
               <p className="directory-sort-hint">
-                Ranked by name, description, tools, and AI summary match for &ldquo;{searchQuery.trim()}&rdquo;.
+                Ranked by name, description, tools, and AI summary match for
+                &ldquo;{searchQuery.trim()}&rdquo;.
               </p>
             )}
           </div>
 
           <div className="directory-toolbar-controls">
-            <div className="directory-segmented" role="group" aria-label="Client filter">
+            <div
+              className="directory-segmented"
+              role="group"
+              aria-label="Client filter"
+            >
               {(
                 [
                   ['all', 'All Clients'],
@@ -967,7 +1233,11 @@ export default function DirectoryGrid({
                 </button>
               ))}
             </div>
-            <div className="directory-segmented" role="group" aria-label="Tech stack filter">
+            <div
+              className="directory-segmented"
+              role="group"
+              aria-label="Tech stack filter"
+            >
               {(
                 [
                   ['all', 'All Stacks'],
@@ -989,7 +1259,11 @@ export default function DirectoryGrid({
               ))}
             </div>
 
-            <div className="directory-segmented" role="group" aria-label="Transport filter">
+            <div
+              className="directory-segmented"
+              role="group"
+              aria-label="Transport filter"
+            >
               {(
                 [
                   ['all', 'All Transports'],
@@ -1009,7 +1283,11 @@ export default function DirectoryGrid({
               ))}
             </div>
 
-            <div className="directory-segmented" role="group" aria-label="Pricing filter">
+            <div
+              className="directory-segmented"
+              role="group"
+              aria-label="Pricing filter"
+            >
               {(
                 [
                   ['all', 'Any price'],
@@ -1031,7 +1309,11 @@ export default function DirectoryGrid({
               ))}
             </div>
 
-            <div className="directory-segmented" role="group" aria-label="Auth filter">
+            <div
+              className="directory-segmented"
+              role="group"
+              aria-label="Auth filter"
+            >
               {(
                 [
                   ['all', 'Any auth'],
@@ -1052,7 +1334,11 @@ export default function DirectoryGrid({
               ))}
             </div>
 
-            <div className="directory-segmented" role="group" aria-label="Sort order">
+            <div
+              className="directory-segmented"
+              role="group"
+              aria-label="Sort order"
+            >
               {(
                 [
                   // Relevance only applies while searching; hidden otherwise.
@@ -1076,7 +1362,11 @@ export default function DirectoryGrid({
               ))}
             </div>
 
-            <div className="directory-segmented" role="group" aria-label="View mode">
+            <div
+              className="directory-segmented"
+              role="group"
+              aria-label="View mode"
+            >
               <button
                 type="button"
                 onClick={() => handleViewMode('list')}
@@ -1101,67 +1391,78 @@ export default function DirectoryGrid({
           </div>
         </div>
 
-        {!isBrowse && typeof totalCount === 'number' && totalCount > initialServers.length && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-              padding: '0.85rem 1.1rem',
-              marginBottom: '1.5rem',
-              borderRadius: '10px',
-              border: '1px solid rgba(0, 229, 255, 0.25)',
-              background: 'rgba(0, 229, 255, 0.06)',
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <span>
-              {isFiltered
-                ? `Searching only the ${initialServers.length} listings on this page — press Enter or open Browse for the full catalog.`
-                : `Showing the ${initialServers.length} most recently added listings of ${totalCount.toLocaleString('en-US')} total.`}
-            </span>
-            <button
-              type="button"
-              onClick={() => goToFullDirectorySearch(searchQuery)}
+        {!isBrowse &&
+          typeof totalCount === 'number' &&
+          totalCount > initialServers.length && (
+            <div
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '0.3rem',
-                fontWeight: 700,
-                color: 'var(--accent-color)',
-                whiteSpace: 'nowrap',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 'inherit',
-                padding: 0,
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                padding: '0.85rem 1.1rem',
+                marginBottom: '1.5rem',
+                borderRadius: '10px',
+                border: '1px solid rgba(0, 229, 255, 0.25)',
+                background: 'rgba(0, 229, 255, 0.06)',
+                fontSize: '0.85rem',
+                color: 'var(--text-secondary)',
               }}
             >
-              {searchQuery.trim()
-                ? `Search all ${totalCount.toLocaleString('en-US')} for “${searchQuery.trim().slice(0, 32)}${searchQuery.trim().length > 32 ? '…' : ''}”`
-                : `Browse all ${totalCount.toLocaleString('en-US')} servers`}{' '}
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
+              <span>
+                {isFiltered
+                  ? `Searching only the ${initialServers.length} listings on this page — press Enter or open Browse for the full catalog.`
+                  : `Showing the ${initialServers.length} most recently added listings of ${totalCount.toLocaleString('en-US')} total.`}
+              </span>
+              <button
+                type="button"
+                onClick={() => goToFullDirectorySearch(searchQuery)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  fontWeight: 700,
+                  color: 'var(--accent-color)',
+                  whiteSpace: 'nowrap',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 'inherit',
+                  padding: 0,
+                }}
+              >
+                {searchQuery.trim()
+                  ? `Search all ${totalCount.toLocaleString('en-US')} for “${searchQuery.trim().slice(0, 32)}${searchQuery.trim().length > 32 ? '…' : ''}”`
+                  : `Browse all ${totalCount.toLocaleString('en-US')} servers`}{' '}
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
 
         {filteredServers.length === 0 ? (
           <div className="surface" style={{ borderStyle: 'dashed' }}>
             <EmptyState
               icon={<Search size={22} aria-hidden="true" />}
-              title={searchQuery.trim() ? `No servers match “${searchQuery.trim()}”` : 'No tools found'}
+              title={
+                searchQuery.trim()
+                  ? `No servers match “${searchQuery.trim()}”`
+                  : 'No tools found'
+              }
               description={
-                !isBrowse && typeof totalCount === 'number' && totalCount > initialServers.length
+                !isBrowse &&
+                typeof totalCount === 'number' &&
+                totalCount > initialServers.length
                   ? 'Nothing in this homepage preview matches. Try the full directory — or browse a popular category.'
                   : 'Try a broader query, clear filters, or explore a category below.'
               }
               actions={
                 <div className="directory-empty-actions">
                   {!isBrowse && searchQuery.trim() && (
-                    <Button variant="primary" onClick={() => goToFullDirectorySearch(searchQuery)}>
+                    <Button
+                      variant="primary"
+                      onClick={() => goToFullDirectorySearch(searchQuery)}
+                    >
                       Search full directory
                     </Button>
                   )}
@@ -1173,11 +1474,18 @@ export default function DirectoryGrid({
                   <div className="directory-empty-suggestions">
                     {[
                       { href: '/best/databases', label: 'Best for databases' },
-                      { href: '/best/developer-tools', label: 'Best for developers' },
+                      {
+                        href: '/best/developer-tools',
+                        label: 'Best for developers',
+                      },
                       { href: '/categories', label: 'All categories' },
                       { href: '/submit', label: 'Submit a server' },
                     ].map((s) => (
-                      <Link key={s.href} href={s.href} className="directory-intent-chip">
+                      <Link
+                        key={s.href}
+                        href={s.href}
+                        className="directory-intent-chip"
+                      >
                         {s.label}
                       </Link>
                     ))}
@@ -1189,126 +1497,191 @@ export default function DirectoryGrid({
         ) : viewMode === 'grid' ? (
           <div className="directory-grid">
             {visibleServers.map((server, index) => {
-              const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_grid' as const;
+              const surface =
+                isFiltered && searchQuery
+                  ? ('search_results' as const)
+                  : selectedCategory
+                    ? ('category_page' as const)
+                    : ('browse_grid' as const);
               return (
-              <React.Fragment key={server.id}>
-              {index === adSlot && (
-                <SponsorAdUnit placement="directory_inline" />
-              )}
-              <ImpressionBeacon serverId={server.id} surface={surface}>
-              <Card
-                href={`/mcp/${server.id}`}
-                className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''} ${isVerifiedListing(server) ? 'directory-card-verified' : ''}`.trim()}
-              >
-                <div className="directory-card-header">
-                  <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} />
-                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    {isFeaturedListing(server) && (
-                      <Badge variant="success" className="badge-featured">
-                        ★ Featured
-                      </Badge>
-                    )}
-                    {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
-                  </div>
-                </div>
-                {(() => {
-                  const { displayName, org } = parseServerName(server.name);
-                  return (
-                    <div className="directory-card-title-block">
-                      <h3 className="directory-card-title-text">{displayName}</h3>
-                      {org && <div className="directory-card-org-text">{org}</div>}
-                    </div>
-                  );
-                })()}
-                <div className="directory-card-desc-block">
-                  <SafeMarkdown content={server.description || 'No description provided.'} isInline />
-                </div>
-                <div className="directory-card-footer">
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', minWidth: 0, alignItems: 'center' }}>
-                    {(() => {
-                      const catMeta = getCategoryMeta(server.category);
-                      return (
-                        <Badge
-                          variant="category"
+                <React.Fragment key={server.id}>
+                  {index === adSlot && (
+                    <SponsorAdUnit placement="directory_inline" />
+                  )}
+                  <ImpressionBeacon serverId={server.id} surface={surface}>
+                    <Card
+                      href={`/mcp/${server.id}`}
+                      className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''} ${isVerifiedListing(server) ? 'directory-card-verified' : ''}`.trim()}
+                    >
+                      <div className="directory-card-header">
+                        <ServerAvatar
+                          name={server.name}
+                          logoUrl={server.logoUrl}
+                          category={server.category}
+                        />
+                        <div
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
+                            display: 'flex',
+                            gap: '0.35rem',
+                            flexWrap: 'wrap',
+                            justifyContent: 'flex-end',
                           }}
                         >
-                          <span aria-hidden="true">{catMeta.emoji}</span>
-                          {catMeta.label}
-                        </Badge>
-                      );
-                    })()}
-                  </div>
-                  <Stats server={server} />
-                </div>
-              </Card>
-              </ImpressionBeacon>
-              </React.Fragment>
+                          {isFeaturedListing(server) && (
+                            <Badge variant="success" className="badge-featured">
+                              ★ Featured
+                            </Badge>
+                          )}
+                          {isVerifiedListing(server) && (
+                            <Badge variant="official">Verified</Badge>
+                          )}
+                        </div>
+                      </div>
+                      {(() => {
+                        const { displayName, org } = parseServerName(
+                          server.name,
+                        );
+                        return (
+                          <div className="directory-card-title-block">
+                            <h3 className="directory-card-title-text">
+                              {displayName}
+                            </h3>
+                            {org && (
+                              <div className="directory-card-org-text">
+                                {org}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <div className="directory-card-desc-block">
+                        <SafeMarkdown
+                          content={
+                            server.description || 'No description provided.'
+                          }
+                          isInline
+                        />
+                      </div>
+                      <div className="directory-card-footer">
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '0.4rem',
+                            flexWrap: 'wrap',
+                            minWidth: 0,
+                            alignItems: 'center',
+                          }}
+                        >
+                          {(() => {
+                            const catMeta = getCategoryMeta(server.category);
+                            return (
+                              <Badge
+                                variant="category"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                }}
+                              >
+                                <span aria-hidden="true">{catMeta.emoji}</span>
+                                {catMeta.label}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
+                        <Stats server={server} />
+                      </div>
+                    </Card>
+                  </ImpressionBeacon>
+                </React.Fragment>
               );
             })}
           </div>
         ) : (
           <div className="directory-list">
             {visibleServers.map((server, index) => {
-              const surface = isFiltered && searchQuery ? 'search_results' as const : selectedCategory ? 'category_page' as const : 'browse_list' as const;
+              const surface =
+                isFiltered && searchQuery
+                  ? ('search_results' as const)
+                  : selectedCategory
+                    ? ('category_page' as const)
+                    : ('browse_list' as const);
               return (
-              <React.Fragment key={server.id}>
-              {index === adSlot && (
-                <SponsorAdUnit placement="directory_inline" layout="row" />
-              )}
-              <ImpressionBeacon serverId={server.id} surface={surface}>
-              <Link
-                href={`/mcp/${server.id}`}
-                className={`directory-list-row surface-interactive${isFeaturedListing(server) ? ' directory-list-row-featured' : ''}`}
-              >
-                <ServerAvatar name={server.name} logoUrl={server.logoUrl} category={server.category} size={44} />
-                <div className="directory-list-body">
-                  <div className="directory-list-title-row">
-                    {(() => {
-                      const { displayName, org } = parseServerName(server.name);
-                      return (
-                        <div className="directory-list-name-col">
-                          <h3 className="directory-list-name">{displayName}</h3>
-                          {org && <span className="directory-list-org">{org}</span>}
+                <React.Fragment key={server.id}>
+                  {index === adSlot && (
+                    <SponsorAdUnit placement="directory_inline" layout="row" />
+                  )}
+                  <ImpressionBeacon serverId={server.id} surface={surface}>
+                    <Link
+                      href={`/mcp/${server.id}`}
+                      className={`directory-list-row surface-interactive${isFeaturedListing(server) ? ' directory-list-row-featured' : ''}`}
+                    >
+                      <ServerAvatar
+                        name={server.name}
+                        logoUrl={server.logoUrl}
+                        category={server.category}
+                        size={44}
+                      />
+                      <div className="directory-list-body">
+                        <div className="directory-list-title-row">
+                          {(() => {
+                            const { displayName, org } = parseServerName(
+                              server.name,
+                            );
+                            return (
+                              <div className="directory-list-name-col">
+                                <h3 className="directory-list-name">
+                                  {displayName}
+                                </h3>
+                                {org && (
+                                  <span className="directory-list-org">
+                                    {org}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                          {isFeaturedListing(server) && (
+                            <Badge variant="success" className="badge-featured">
+                              ★ Featured
+                            </Badge>
+                          )}
+                          {isVerifiedListing(server) && (
+                            <Badge variant="official">Verified</Badge>
+                          )}
+                          {!selectedCategory &&
+                            (() => {
+                              const catMeta = getCategoryMeta(server.category);
+                              return (
+                                <Badge
+                                  variant="category"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                  }}
+                                >
+                                  <span aria-hidden="true">
+                                    {catMeta.emoji}
+                                  </span>
+                                  {catMeta.label}
+                                </Badge>
+                              );
+                            })()}
                         </div>
-                      );
-                    })()}
-                    {isFeaturedListing(server) && (
-                      <Badge variant="success" className="badge-featured">
-                        ★ Featured
-                      </Badge>
-                    )}
-                    {isVerifiedListing(server) && <Badge variant="official">Verified</Badge>}
-                    {!selectedCategory && (
-                      (() => {
-                        const catMeta = getCategoryMeta(server.category);
-                        return (
-                          <Badge
-                            variant="category"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                            }}
-                          >
-                            <span aria-hidden="true">{catMeta.emoji}</span>
-                            {catMeta.label}
-                          </Badge>
-                        );
-                      })()
-                    )}
-                  </div>
-                  <div className="directory-list-desc">
-                    <SafeMarkdown content={server.description || 'No description provided.'} isInline />
-                  </div>
-                </div>
-                <Stats server={server} />
-              </Link>
-              </ImpressionBeacon>
-              </React.Fragment>
+                        <div className="directory-list-desc">
+                          <SafeMarkdown
+                            content={
+                              server.description || 'No description provided.'
+                            }
+                            isInline
+                          />
+                        </div>
+                      </div>
+                      <Stats server={server} />
+                    </Link>
+                  </ImpressionBeacon>
+                </React.Fragment>
               );
             })}
           </div>
@@ -1316,7 +1689,10 @@ export default function DirectoryGrid({
 
         {filteredServers.length > 0 && hasMore && (
           <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-            <Button variant="secondary" onClick={() => setVisibleCount((v) => v + 30)}>
+            <Button
+              variant="secondary"
+              onClick={() => setVisibleCount((v) => v + 30)}
+            >
               Load More
             </Button>
           </div>

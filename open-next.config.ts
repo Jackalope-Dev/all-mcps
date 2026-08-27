@@ -1,5 +1,5 @@
-import { defineCloudflareConfig } from "@opennextjs/cloudflare";
-import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
+import { defineCloudflareConfig } from '@opennextjs/cloudflare';
+import r2IncrementalCache from '@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache';
 
 // R2-backed ISR cache (binding: NEXT_INC_CACHE_R2_BUCKET, see wrangler.jsonc) so
 // revalidate-based pages (e.g. app/mcp/[id], app/best/[topic], app/clients/[client],
@@ -18,5 +18,5 @@ import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cac
 // call it "not recommended" only at very high scale/traffic; fine here.
 export default defineCloudflareConfig({
   incrementalCache: r2IncrementalCache,
-  queue: "direct",
+  queue: 'direct',
 });

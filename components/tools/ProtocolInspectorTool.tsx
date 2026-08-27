@@ -1,10 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Sparkles, CheckCircle2, AlertTriangle, XCircle, Code, Eye, Bug, ShieldCheck } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Eye,
+  ShieldCheck,
+  Sparkles,
+  XCircle,
+} from 'lucide-react';
+import { useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
 
 interface PresetPayload {
   name: string;
@@ -31,7 +38,7 @@ const PRESET_PAYLOADS: PresetPayload[] = [
         },
       },
       null,
-      2
+      2,
     ),
   },
   {
@@ -56,7 +63,7 @@ const PRESET_PAYLOADS: PresetPayload[] = [
         },
       },
       null,
-      2
+      2,
     ),
   },
   {
@@ -70,7 +77,8 @@ const PRESET_PAYLOADS: PresetPayload[] = [
           tools: [
             {
               name: 'execute_query',
-              description: 'Execute a read-only SQL query against the Postgres database.',
+              description:
+                'Execute a read-only SQL query against the Postgres database.',
               inputSchema: {
                 type: 'object',
                 properties: {
@@ -83,7 +91,7 @@ const PRESET_PAYLOADS: PresetPayload[] = [
         },
       },
       null,
-      2
+      2,
     ),
   },
   {
@@ -105,7 +113,7 @@ const PRESET_PAYLOADS: PresetPayload[] = [
         },
       },
       null,
-      2
+      2,
     ),
   },
 ];
@@ -121,7 +129,13 @@ interface InspectionResult {
   isValidJson: boolean;
   jsonRpcValid: boolean;
   checks: AuditCheck[];
-  extractedContent: Array<{ type: string; text?: string; data?: string; mimeType?: string; raw: any }>;
+  extractedContent: Array<{
+    type: string;
+    text?: string;
+    data?: string;
+    mimeType?: string;
+    raw: any;
+  }>;
   isErrorState: boolean;
   toolsCount?: number;
 }
@@ -170,14 +184,21 @@ function inspectPayload(rawJson: string): InspectionResult {
       id: 'jsonrpc_ver',
       label: 'JSON-RPC Specification',
       status: 'warn',
-      message: 'Missing jsonrpc: "2.0" field. MCP protocol transport requires standard JSON-RPC 2.0 wrappers.',
+      message:
+        'Missing jsonrpc: "2.0" field. MCP protocol transport requires standard JSON-RPC 2.0 wrappers.',
     });
   }
 
   const payloadRoot = parsed.result || parsed;
-  const extractedContent: Array<{ type: string; text?: string; data?: string; mimeType?: string; raw: any }> = [];
+  const extractedContent: Array<{
+    type: string;
+    text?: string;
+    data?: string;
+    mimeType?: string;
+    raw: any;
+  }> = [];
   let isErrorState = false;
-  let toolsCount: number | undefined = undefined;
+  let toolsCount: number | undefined;
 
   // Check tools list
   if (Array.isArray(payloadRoot.tools)) {
@@ -258,7 +279,8 @@ function inspectPayload(rawJson: string): InspectionResult {
               id: `text_content_${idx}`,
               label: `Text Item #${idx + 1}`,
               status: 'fail',
-              message: 'Text content object must contain a string "text" property.',
+              message:
+                'Text content object must contain a string "text" property.',
             });
           } else if (item.type === 'image') {
             if (!item.data || typeof item.data !== 'string') {
@@ -266,7 +288,8 @@ function inspectPayload(rawJson: string): InspectionResult {
                 id: `image_data_${idx}`,
                 label: `Image Item #${idx + 1} Data`,
                 status: 'fail',
-                message: 'Image content object must contain a base64 encoded "data" string.',
+                message:
+                  'Image content object must contain a base64 encoded "data" string.',
               });
             }
             if (!item.mimeType) {
@@ -274,7 +297,8 @@ function inspectPayload(rawJson: string): InspectionResult {
                 id: `image_mime_${idx}`,
                 label: `Image Item #${idx + 1} MIME Type`,
                 status: 'warn',
-                message: 'Missing "mimeType" (e.g. "image/png"). AI clients need mimeType to render images.',
+                message:
+                  'Missing "mimeType" (e.g. "image/png"). AI clients need mimeType to render images.',
               });
             }
           }
@@ -291,7 +315,8 @@ function inspectPayload(rawJson: string): InspectionResult {
         id: 'is_error_flag',
         label: 'Execution Status',
         status: 'warn',
-        message: 'Payload contains isError: true. The AI client will treat this result as a tool execution error.',
+        message:
+          'Payload contains isError: true. The AI client will treat this result as a tool execution error.',
       });
     } else {
       checks.push({
@@ -323,10 +348,25 @@ export function ProtocolInspectorTool() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Preset Banner */}
-      <Card style={{ padding: '1.25rem', background: 'var(--bg-muted)', borderColor: 'var(--border-color)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+      <Card
+        style={{
+          padding: '1.25rem',
+          background: 'var(--bg-muted)',
+          borderColor: 'var(--border-color)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.75rem',
+          }}
+        >
           <Sparkles size={18} style={{ color: 'var(--brand-cyan)' }} />
-          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Load Sample Protocol Payloads</span>
+          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+            Load Sample Protocol Payloads
+          </span>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {PRESET_PAYLOADS.map((preset) => (
@@ -335,7 +375,10 @@ export function ProtocolInspectorTool() {
               variant="secondary"
               size="sm"
               onClick={() => {
-                trackFeatureUse('protocol_inspector', { action: 'load_preset', preset: preset.name });
+                trackFeatureUse('protocol_inspector', {
+                  action: 'load_preset',
+                  preset: preset.name,
+                });
                 setJsonInput(preset.json);
               }}
               style={{ fontSize: '0.85rem' }}
@@ -347,10 +390,22 @@ export function ProtocolInspectorTool() {
       </Card>
 
       {/* Editor & Diagnostic Output Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1.5rem' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+          gap: '1.5rem',
+        }}
+      >
         {/* Left Column: JSON Editor */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <label htmlFor="protocol-inspector-input" style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem' }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
+        >
+          <label
+            htmlFor="protocol-inspector-input"
+            style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem' }}
+          >
             Paste MCP JSON-RPC Payload / Tool Response
           </label>
           <textarea
@@ -377,30 +432,93 @@ export function ProtocolInspectorTool() {
 
         {/* Right Column: Diagnostic Inspection Report */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Card style={{ padding: '1.25rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ShieldCheck size={18} style={{ color: 'var(--accent-color)' }} />
+          <Card
+            style={{
+              padding: '1.25rem',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <ShieldCheck
+                  size={18}
+                  style={{ color: 'var(--accent-color)' }}
+                />
                 Protocol Diagnostic Report
               </h3>
               <div>
                 {failCount > 0 ? (
-                  <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 600 }}>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      color: '#ef4444',
+                      fontWeight: 600,
+                    }}
+                  >
                     {failCount} Error(s)
                   </span>
                 ) : warnCount > 0 ? (
-                  <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }}>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      color: '#f59e0b',
+                      fontWeight: 600,
+                    }}
+                  >
                     {warnCount} Warning(s)
                   </span>
                 ) : (
-                  <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 600 }}>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      color: '#10b981',
+                      fontWeight: 600,
+                    }}
+                  >
                     Valid Protocol Format
                   </span>
                 )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', maxHeight: '380px' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                overflowY: 'auto',
+                maxHeight: '380px',
+              }}
+            >
               {result.checks.map((check) => (
                 <div
                   key={check.id}
@@ -415,14 +533,54 @@ export function ProtocolInspectorTool() {
                     gap: '0.6rem',
                   }}
                 >
-                  {check.status === 'pass' && <CheckCircle2 size={16} style={{ color: '#10b981', flexShrink: 0, marginTop: '2px' }} />}
-                  {check.status === 'warn' && <AlertTriangle size={16} style={{ color: '#f59e0b', flexShrink: 0, marginTop: '2px' }} />}
-                  {check.status === 'fail' && <XCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />}
+                  {check.status === 'pass' && (
+                    <CheckCircle2
+                      size={16}
+                      style={{
+                        color: '#10b981',
+                        flexShrink: 0,
+                        marginTop: '2px',
+                      }}
+                    />
+                  )}
+                  {check.status === 'warn' && (
+                    <AlertTriangle
+                      size={16}
+                      style={{
+                        color: '#f59e0b',
+                        flexShrink: 0,
+                        marginTop: '2px',
+                      }}
+                    />
+                  )}
+                  {check.status === 'fail' && (
+                    <XCircle
+                      size={16}
+                      style={{
+                        color: '#ef4444',
+                        flexShrink: 0,
+                        marginTop: '2px',
+                      }}
+                    />
+                  )}
                   <div>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.15rem', wordBreak: 'break-word' }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        marginBottom: '0.15rem',
+                        wordBreak: 'break-word',
+                      }}
+                    >
                       {check.label}
                     </div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', wordBreak: 'break-word' }}>
+                    <div
+                      style={{
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.8rem',
+                        wordBreak: 'break-word',
+                      }}
+                    >
                       {check.message}
                     </div>
                   </div>
@@ -435,68 +593,196 @@ export function ProtocolInspectorTool() {
 
       {/* Visual AI Client Simulator (Preview Box) */}
       <section>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '1rem',
+          }}
+        >
           <Eye size={20} style={{ color: 'var(--accent-color)' }} />
-          <h2 className="text-section" style={{ margin: 0 }}>Visual AI Client Preview</h2>
+          <h2 className="text-section" style={{ margin: 0 }}>
+            Visual AI Client Preview
+          </h2>
         </div>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-          Simulates how Claude Desktop, Cursor, and Windsurf render this tool output in their chat stream.
+        <p
+          style={{
+            fontSize: '0.85rem',
+            color: 'var(--text-secondary)',
+            marginBottom: '1rem',
+          }}
+        >
+          Simulates how Claude Desktop, Cursor, and Windsurf render this tool
+          output in their chat stream.
         </p>
 
-        <Card style={{ padding: '1.5rem', background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
+        <Card
+          style={{
+            padding: '1.5rem',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-color)',
+          }}
+        >
           {/* Client Header Mock */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: result.isErrorState ? '#ef4444' : '#10b981' }} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+              borderBottom: '1px solid var(--border-color)',
+              paddingBottom: '0.75rem',
+              marginBottom: '1rem',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.85rem',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: result.isErrorState ? '#ef4444' : '#10b981',
+                }}
+              />
               <span>AI Client Tool Execution Window</span>
             </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-secondary)',
+                fontFamily: 'monospace',
+              }}
+            >
               MCP Transport: Stdio / SSE
             </span>
           </div>
 
           {/* Content Rendering Box */}
           {result.isErrorState && (
-            <div style={{ padding: '0.875rem 1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', color: '#ef4444', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div
+              style={{
+                padding: '0.875rem 1rem',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '6px',
+                color: '#ef4444',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
               <AlertTriangle size={18} />
               Tool Executed with Error (isError: true)
             </div>
           )}
 
           {result.extractedContent.length === 0 ? (
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '1.5rem', textAlign: 'center' }}>
+            <div
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: '0.85rem',
+                padding: '1.5rem',
+                textAlign: 'center',
+              }}
+            >
               No visual tool execution content found in payload.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
               {result.extractedContent.map((item, idx) => (
-                <div key={idx} style={{ background: 'var(--bg-muted)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--brand-cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: '0.5rem' }}>
+                <div
+                  key={idx}
+                  style={{
+                    background: 'var(--bg-muted)',
+                    padding: '1rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--brand-cyan)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      fontWeight: 700,
+                      marginBottom: '0.5rem',
+                    }}
+                  >
                     Content Block #{idx + 1} — [{item.type}]
                   </div>
 
                   {item.type === 'text' && (
-                    <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.875rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    <pre
+                      style={{
+                        margin: 0,
+                        fontFamily: 'monospace',
+                        fontSize: '0.875rem',
+                        color: 'var(--text-primary)',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
                       {item.text || '(empty text block)'}
                     </pre>
                   )}
 
                   {item.type === 'image' && (
                     <div>
-                      {item.mimeType && item.data && item.data.length > 20 && !item.data.includes('invalid') ? (
+                      {item.mimeType &&
+                      item.data &&
+                      item.data.length > 20 &&
+                      !item.data.includes('invalid') ? (
                         <div>
                           <img
                             src={`data:${item.mimeType};base64,${item.data}`}
                             alt="MCP Tool Output Preview"
-                            style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '300px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                            }}
                           />
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
+                          <div
+                            style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-secondary)',
+                              marginTop: '0.35rem',
+                            }}
+                          >
                             Rendered Base64 {item.mimeType}
                           </div>
                         </div>
                       ) : (
-                        <div style={{ padding: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', border: '1px dashed #f59e0b', borderRadius: '4px', color: '#f59e0b', fontSize: '0.8rem' }}>
-                          [Image Content Block] MIME Type: {item.mimeType || 'none'} &mdash; Base64 data string placeholder
+                        <div
+                          style={{
+                            padding: '0.75rem',
+                            background: 'rgba(245, 158, 11, 0.1)',
+                            border: '1px dashed #f59e0b',
+                            borderRadius: '4px',
+                            color: '#f59e0b',
+                            fontSize: '0.8rem',
+                          }}
+                        >
+                          [Image Content Block] MIME Type:{' '}
+                          {item.mimeType || 'none'} &mdash; Base64 data string
+                          placeholder
                         </div>
                       )}
                     </div>

@@ -34,7 +34,10 @@ function safeSessionStorage(): Storage | null {
 }
 
 /** Heuristic: does this error look like a chunk/asset/network load failure? */
-export function isLikelyTransientLoadError(error?: { name?: string; message?: string }): boolean {
+export function isLikelyTransientLoadError(error?: {
+  name?: string;
+  message?: string;
+}): boolean {
   const haystack = `${error?.name ?? ''} ${error?.message ?? ''}`.toLowerCase();
   return (
     haystack.includes('chunk') ||

@@ -1,9 +1,12 @@
 'use client';
 
+import { FileText, LayoutGrid, PanelRight, Rows3 } from 'lucide-react';
 import { useState } from 'react';
-import { LayoutGrid, PanelRight, Rows3, FileText } from 'lucide-react';
-import { PlacementContextPreview, type PlacementFrameType } from './PlacementContextPreview';
 import type { SponsorAd } from '@/lib/ads';
+import {
+  PlacementContextPreview,
+  type PlacementFrameType,
+} from './PlacementContextPreview';
 
 interface FormatDef {
   id: PlacementFrameType;
@@ -20,13 +23,16 @@ const FORMATS: FormatDef[] = [
     icon: LayoutGrid,
     tabLabel: 'Directory Card',
     title: 'Directory Native Card',
-    description: 'Inlined seamlessly inside directory search and browse views every ~12 listings.',
+    description:
+      'Inlined seamlessly inside directory search and browse views every ~12 listings.',
     previewAd: {
       title: 'Example AI Cloud',
-      description: 'Deploy serverless LLM backends and MCP tools in under 60 seconds.',
+      description:
+        'Deploy serverless LLM backends and MCP tools in under 60 seconds.',
       ctaText: 'Start Free',
       targetUrl: 'https://example.com',
-      logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
+      logoUrl:
+        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
     },
   },
   {
@@ -34,13 +40,15 @@ const FORMATS: FormatDef[] = [
     icon: PanelRight,
     tabLabel: 'Detail Sidebar',
     title: 'Listing Detail Sidebar',
-    description: 'Dedicated placement alongside install guides, JSON configs, and tool inspectors.',
+    description:
+      'Dedicated placement alongside install guides, JSON configs, and tool inspectors.',
     previewAd: {
       title: 'Example VectorDB',
       description: 'Lightning-fast vector search for agents and MCP tools.',
       ctaText: 'Try It Free',
       targetUrl: 'https://example.com',
-      logoUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&auto=format&fit=crop&q=80',
+      logoUrl:
+        'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100&auto=format&fit=crop&q=80',
     },
   },
   {
@@ -48,13 +56,16 @@ const FORMATS: FormatDef[] = [
     icon: Rows3,
     tabLabel: 'Category Banner',
     title: 'Category Header Banner',
-    description: 'Top-of-page spotlight above category directories like Developer Tools, Cloud Platforms, and Databases.',
+    description:
+      'Top-of-page spotlight above category directories like Developer Tools, Cloud Platforms, and Databases.',
     previewAd: {
       title: 'Example Agent Suite',
-      description: 'Build, monitor, and deploy complex multi-agent workflows with automated evaluation.',
+      description:
+        'Build, monitor, and deploy complex multi-agent workflows with automated evaluation.',
       ctaText: 'Explore Platform',
       targetUrl: 'https://example.com',
-      logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
+      logoUrl:
+        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
     },
   },
   {
@@ -62,13 +73,16 @@ const FORMATS: FormatDef[] = [
     icon: FileText,
     tabLabel: 'Blog Banner',
     title: 'Blog & Guide In-Article Banner',
-    description: 'Embedded in long-form guides, client setups (Cursor, Claude, Windsurf), and technical tutorials.',
+    description:
+      'Embedded in long-form guides, client setups (Cursor, Claude, Windsurf), and technical tutorials.',
     previewAd: {
       title: 'Example AgentOps',
-      description: 'Full-stack observability and cost tracking for autonomous LLM agents.',
+      description:
+        'Full-stack observability and cost tracking for autonomous LLM agents.',
       ctaText: 'Explore Docs',
       targetUrl: 'https://example.com',
-      logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
+      logoUrl:
+        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
     },
   },
 ];
@@ -81,7 +95,12 @@ export function PlacementShowcase() {
     <div>
       <div
         className="directory-segmented"
-        style={{ justifyContent: 'center', margin: '0 auto 1.5rem', width: 'fit-content', flexWrap: 'wrap' }}
+        style={{
+          justifyContent: 'center',
+          margin: '0 auto 1.5rem',
+          width: 'fit-content',
+          flexWrap: 'wrap',
+        }}
         role="tablist"
         aria-label="Ad placement formats"
       >
@@ -95,7 +114,11 @@ export function PlacementShowcase() {
               role="tab"
               aria-selected={isActive}
               className={`directory-segmented-btn ${isActive ? 'is-active' : ''}`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
               onClick={() => setActiveId(format.id)}
             >
               <Icon size={14} /> {format.tabLabel}
@@ -104,14 +127,40 @@ export function PlacementShowcase() {
         })}
       </div>
 
-      <div className="surface" style={{ borderRadius: '16px', padding: '1.75rem', border: '1px solid var(--border-color)' }}>
+      <div
+        className="surface"
+        style={{
+          borderRadius: '16px',
+          padding: '1.75rem',
+          border: '1px solid var(--border-color)',
+        }}
+      >
         <div style={{ marginBottom: '1.25rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.25 }}>{active.title}</h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0', lineHeight: 1.45 }}>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: '1.15rem',
+              fontWeight: 700,
+              lineHeight: 1.25,
+            }}
+          >
+            {active.title}
+          </h3>
+          <p
+            style={{
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+              margin: '0.35rem 0 0',
+              lineHeight: 1.45,
+            }}
+          >
             {active.description}
           </p>
         </div>
-        <PlacementContextPreview placement={active.id} previewAd={active.previewAd} />
+        <PlacementContextPreview
+          placement={active.id}
+          previewAd={active.previewAd}
+        />
       </div>
     </div>
   );

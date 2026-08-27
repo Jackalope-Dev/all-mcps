@@ -1,15 +1,15 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { agentRegistrationCodes, agentTokens, users } from '@/db/schema';
 import {
-  generateAgentToken,
-  sha256Hex,
   AGENT_TOKEN_TTL_MS,
+  generateAgentToken,
   MAX_CODE_ATTEMPTS,
   parseAgentScopes,
+  sha256Hex,
 } from '@/lib/agentAuth';
 
 const confirmSchema = z.object({
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: 'Invalid confirmation payload', details: result.error.issues },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
@@ -43,11 +43,17 @@ export async function POST(req: Request) {
       const ctx = await getCloudflareContext();
       env = ctx.env;
     } catch {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500, headers: CORS_HEADERS });
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500, headers: CORS_HEADERS },
+      );
     }
 
-    if (!env || !env.DB) {
-      return NextResponse.json({ error: 'Database binding not found' }, { status: 500, headers: CORS_HEADERS });
+    if (!env?.DB) {
+      return NextResponse.json(
+        { error: 'Database binding not found' },
+        { status: 500, headers: CORS_HEADERS },
+      );
     }
 
     const db = drizzle(env.DB as any);
@@ -61,24 +67,37 @@ export async function POST(req: Request) {
     const reg = pending[0];
     if (!reg) {
       return NextResponse.json(
-        { error: 'No pending registration found for this email. Request a new code at /api/v1/agent/register.' },
-        { status: 400, headers: CORS_HEADERS }
+        {
+          error:
+            'No pending registration found for this email. Request a new code at /api/v1/agent/register.',
+        },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
     if (new Date(reg.expiresAt).getTime() < Date.now()) {
-      await db.delete(agentRegistrationCodes).where(eq(agentRegistrationCodes.email, email));
+      await db
+        .delete(agentRegistrationCodes)
+        .where(eq(agentRegistrationCodes.email, email));
       return NextResponse.json(
-        { error: 'Confirmation code has expired. Request a new code at /api/v1/agent/register.' },
-        { status: 400, headers: CORS_HEADERS }
+        {
+          error:
+            'Confirmation code has expired. Request a new code at /api/v1/agent/register.',
+        },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
     if (reg.attempts >= MAX_CODE_ATTEMPTS) {
-      await db.delete(agentRegistrationCodes).where(eq(agentRegistrationCodes.email, email));
+      await db
+        .delete(agentRegistrationCodes)
+        .where(eq(agentRegistrationCodes.email, email));
       return NextResponse.json(
-        { error: 'Too many incorrect attempts. Request a new code at /api/v1/agent/register.' },
-        { status: 400, headers: CORS_HEADERS }
+        {
+          error:
+            'Too many incorrect attempts. Request a new code at /api/v1/agent/register.',
+        },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
@@ -90,13 +109,20 @@ export async function POST(req: Request) {
         .where(eq(agentRegistrationCodes.email, email));
 
       return NextResponse.json(
-        { error: 'Incorrect confirmation code.', attemptsRemaining: MAX_CODE_ATTEMPTS - (reg.attempts + 1) },
-        { status: 400, headers: CORS_HEADERS }
+        {
+          error: 'Incorrect confirmation code.',
+          attemptsRemaining: MAX_CODE_ATTEMPTS - (reg.attempts + 1),
+        },
+        { status: 400, headers: CORS_HEADERS },
       );
     }
 
     // Code is valid! Find or create user row
-    const existingUsers = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const existingUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
     let userId: string;
 
     if (existingUsers[0]) {
@@ -126,12 +152,15 @@ export async function POST(req: Request) {
     });
 
     // Delete used registration code
-    await db.delete(agentRegistrationCodes).where(eq(agentRegistrationCodes.email, email));
+    await db
+      .delete(agentRegistrationCodes)
+      .where(eq(agentRegistrationCodes.email, email));
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Agent registered successfully. Use this token in the Authorization header: Authorization: Bearer <token>',
+        message:
+          'Agent registered successfully. Use this token in the Authorization header: Authorization: Bearer <token>',
         token: rawToken,
         tokenType: 'Bearer',
         scopes,
@@ -142,21 +171,25 @@ export async function POST(req: Request) {
           authSpec: 'https://allmcps.com/auth.md',
         },
       },
-      { status: 200, headers: CORS_HEADERS }
+      { status: 200, headers: CORS_HEADERS },
     );
   } catch (e: any) {
     console.error('Agent confirm error:', e);
-    return NextResponse.json({ error: e?.message || 'Internal Server Error' }, { status: 500, headers: CORS_HEADERS });
+    return NextResponse.json(
+      { error: e?.message || 'Internal Server Error' },
+      { status: 500, headers: CORS_HEADERS },
+    );
   }
 }
 
 export async function GET() {
   return NextResponse.json(
     {
-      message: 'Send a POST request with {"email": "your-email@domain.com", "code": "123456"} to verify your email and mint a bearer token.',
+      message:
+        'Send a POST request with {"email": "your-email@domain.com", "code": "123456"} to verify your email and mint a bearer token.',
       docs: 'https://allmcps.com/auth.md',
     },
-    { status: 200, headers: CORS_HEADERS }
+    { status: 200, headers: CORS_HEADERS },
   );
 }
 

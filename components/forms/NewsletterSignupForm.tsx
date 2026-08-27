@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { toast } from '../ui/Toast';
+import { useState } from 'react';
 import { trackNewsletterSignup } from '../../lib/gtag';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { toast } from '../ui/Toast';
 
 const TurnstileWidget = dynamic(
   () => import('../ui/TurnstileWidget').then((m) => m.TurnstileWidget),
-  { ssr: false }
+  { ssr: false },
 );
 
 type NewsletterSource = 'footer' | 'homepage' | 'modal';
@@ -25,7 +25,9 @@ export function NewsletterSignupForm({
 }) {
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
   const [captchaReady, setCaptchaReady] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -54,15 +56,21 @@ export function NewsletterSignupForm({
           'allmcps_subscribed=1; path=/; max-age=31536000; SameSite=Lax';
         onSuccess?.();
       } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         setStatus('error');
-        toast.error('Could not subscribe', { description: data?.error || 'Please try again.' });
+        toast.error('Could not subscribe', {
+          description: data?.error || 'Please try again.',
+        });
         (window as any).turnstile?.reset();
         setToken('');
       }
     } catch {
       setStatus('error');
-      toast.error('Could not subscribe', { description: 'Network error. Please try again.' });
+      toast.error('Could not subscribe', {
+        description: 'Network error. Please try again.',
+      });
       (window as any).turnstile?.reset();
       setToken('');
     }
@@ -70,7 +78,13 @@ export function NewsletterSignupForm({
 
   if (status === 'success') {
     return (
-      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+      <p
+        style={{
+          color: 'var(--text-secondary)',
+          fontSize: '0.9rem',
+          margin: 0,
+        }}
+      >
         You&apos;re subscribed — thanks for joining!
       </p>
     );
@@ -79,7 +93,9 @@ export function NewsletterSignupForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className={compact ? 'newsletter-form newsletter-form-compact' : 'newsletter-form'}
+      className={
+        compact ? 'newsletter-form newsletter-form-compact' : 'newsletter-form'
+      }
     >
       <Input
         name="email"

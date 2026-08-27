@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { servers, stdioVerificationPilot } from '../../../../../db/schema';
 import { isAdminAuthorized } from '../../../../../lib/adminAuth';
@@ -23,7 +23,13 @@ import { isAdminAuthorized } from '../../../../../lib/adminAuth';
  * correct. Falls back to inserting if no pending row is found (e.g. the
  * claim was already reclaimed as stale) so a result is never silently lost.
  */
-const STATUSES = ['ok', 'install_failed', 'handshake_failed', 'timeout', 'error'] as const;
+const STATUSES = [
+  'ok',
+  'install_failed',
+  'handshake_failed',
+  'timeout',
+  'error',
+] as const;
 
 const toolSchema = z.object({
   name: z.string(),
@@ -39,7 +45,10 @@ const resultSchema = z.object({
   durationMs: z.number().int().nonnegative().optional(),
 });
 
-const bodySchema = z.union([resultSchema, z.object({ results: z.array(resultSchema).min(1) })]);
+const bodySchema = z.union([
+  resultSchema,
+  z.object({ results: z.array(resultSchema).min(1) }),
+]);
 
 export async function POST(req: Request) {
   try {
@@ -52,7 +61,8 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
     }
-    const results = 'results' in parsed.data ? parsed.data.results : [parsed.data];
+    const results =
+      'results' in parsed.data ? parsed.data.results : [parsed.data];
 
     let env: any;
     try {
@@ -77,7 +87,12 @@ export async function POST(req: Request) {
           durationMs: r.durationMs ?? null,
           checkedAt: now,
         })
-        .where(and(eq(stdioVerificationPilot.serverId, r.serverId), eq(stdioVerificationPilot.status, 'pending')))
+        .where(
+          and(
+            eq(stdioVerificationPilot.serverId, r.serverId),
+            eq(stdioVerificationPilot.status, 'pending'),
+          ),
+        )
         .returning({ id: stdioVerificationPilot.id });
 
       if (updated.length === 0) {
@@ -97,7 +112,10 @@ export async function POST(req: Request) {
         await db
           .insert(stdioVerificationPilot)
           .values(values)
-          .onConflictDoUpdate({ target: stdioVerificationPilot.serverId, set: values });
+          .onConflictDoUpdate({
+            target: stdioVerificationPilot.serverId,
+            set: values,
+          });
       }
 
       if (r.status === 'ok' && r.tools && r.tools.length > 0) {
@@ -116,6 +134,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, recorded: results.length });
   } catch (error: any) {
     console.error('stdio-pilot result error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

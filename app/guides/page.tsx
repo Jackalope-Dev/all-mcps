@@ -1,23 +1,23 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
 import {
-  BookOpen,
-  Terminal,
-  Cpu,
-  ShieldCheck,
   ArrowRight,
-  CheckCircle2,
-  Layers,
-  Key,
-  Server,
-  Wrench,
+  BookOpen,
   Bug,
-  Search,
+  CheckCircle2,
+  Cpu,
   GitBranch,
+  Key,
+  Layers,
+  Search,
+  Server,
+  ShieldCheck,
+  Terminal,
+  Wrench,
 } from 'lucide-react';
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { PageHeader, PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
-import { PageShell, PageHeader } from '@/components/PageShell';
 
 export const metadata: Metadata = {
   title: 'Model Context Protocol Guides & Tutorials',
@@ -27,7 +27,14 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/guides',
   },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Model Context Protocol Guides & Tutorials | AllMCPs',
     description:
       'MCP guides: what MCP is, install and setup, build and deploy servers, security, and troubleshooting connection failures, zero tools, and timeouts.',
@@ -238,17 +245,20 @@ const troubleshootingDeepDives = [
   {
     href: '/blog/mcp-server-not-connecting-troubleshooting-guide',
     title: 'MCP Server Not Connecting?',
-    description: 'Five failure buckets with exact error text and fixes for Claude Desktop, Claude Code, Cursor, and more.',
+    description:
+      'Five failure buckets with exact error text and fixes for Claude Desktop, Claude Code, Cursor, and more.',
   },
   {
     href: '/blog/testing-and-debugging-mcp-servers',
     title: 'Testing & Debugging MCP Servers',
-    description: 'Inspector, unit tests, integration harnesses, structured logging, and a pre-publish checklist for authors.',
+    description:
+      'Inspector, unit tests, integration harnesses, structured logging, and a pre-publish checklist for authors.',
   },
   {
     href: '/blog/how-to-install-mcp-servers-in-claude-cursor-windsurf-and-vs-code',
     title: 'Install MCP Across Clients',
-    description: 'Clean install paths for Claude, Cursor, Windsurf, and VS Code before you debug a bad config.',
+    description:
+      'Clean install paths for Claude, Cursor, Windsurf, and VS Code before you debug a bad config.',
   },
 ];
 
@@ -301,14 +311,23 @@ export default function GuidesLandingPage() {
                     <div className="guide-card-icon">
                       <Icon size={20} />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
                       <span className="guide-card-time">{guide.readTime}</span>
                       <Badge variant={guide.badgeVariant}>{guide.level}</Badge>
                     </div>
                   </div>
 
                   <h2 className="guide-card-title">
-                    <Link href={guide.href} style={{ color: 'inherit', textDecoration: 'none' }}>
+                    <Link
+                      href={guide.href}
+                      style={{ color: 'inherit', textDecoration: 'none' }}
+                    >
                       {guide.title}
                     </Link>
                   </h2>
@@ -318,9 +337,7 @@ export default function GuidesLandingPage() {
                     <span>{guide.subtitle}</span>
                   </div>
 
-                  <p className="guide-card-description">
-                    {guide.description}
-                  </p>
+                  <p className="guide-card-description">{guide.description}</p>
 
                   <div className="guide-card-highlights">
                     <span className="guide-card-highlights-label">
@@ -328,8 +345,14 @@ export default function GuidesLandingPage() {
                     </span>
                     <ul className="guide-card-highlights-list">
                       {guide.highlights.map((highlight) => (
-                        <li key={highlight} className="guide-card-highlight-item">
-                          <CheckCircle2 size={14} className="guide-card-check" />
+                        <li
+                          key={highlight}
+                          className="guide-card-highlight-item"
+                        >
+                          <CheckCircle2
+                            size={14}
+                            className="guide-card-check"
+                          />
                           <span>{highlight}</span>
                         </li>
                       ))}
@@ -337,10 +360,7 @@ export default function GuidesLandingPage() {
                   </div>
                 </div>
 
-                <Link
-                  href={guide.href}
-                  className="guide-card-cta-btn"
-                >
+                <Link href={guide.href} className="guide-card-cta-btn">
                   <span>Read Guide</span>
                   <ArrowRight size={15} />
                 </Link>
@@ -349,66 +369,135 @@ export default function GuidesLandingPage() {
           })}
         </div>
 
-          {/* Troubleshooting deep dives — long-tail SEO posts linked from the hub */}
-          <section style={{ marginTop: '3.5rem', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              <Bug size={18} style={{ color: 'var(--accent-color)' }} />
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>
-                Troubleshooting deep dives
-              </h2>
-            </div>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', maxWidth: '640px', lineHeight: 1.6 }}>
-              Start with the{' '}
-              <Link href="/mcp-troubleshooting">MCP troubleshooting hub</Link>
-              {' '}for a symptom map, then dig into these focused write-ups when you need more detail.
-            </p>
-            <ul
+        {/* Troubleshooting deep dives — long-tail SEO posts linked from the hub */}
+        <section style={{ marginTop: '3.5rem', marginBottom: '1rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '0.75rem',
+            }}
+          >
+            <Bug size={18} style={{ color: 'var(--accent-color)' }} />
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>
+              Troubleshooting deep dives
+            </h2>
+          </div>
+          <p
+            style={{
+              color: 'var(--text-secondary)',
+              marginBottom: '1.25rem',
+              maxWidth: '640px',
+              lineHeight: 1.6,
+            }}
+          >
+            Start with the{' '}
+            <Link href="/mcp-troubleshooting">MCP troubleshooting hub</Link> for
+            a symptom map, then dig into these focused write-ups when you need
+            more detail.
+          </p>
+          <ul
+            style={{
+              listStyle: 'none',
+              margin: 0,
+              padding: 0,
+              display: 'grid',
+              gap: '0.75rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            }}
+          >
+            {troubleshootingDeepDives.map((item) => (
+              <li key={item.href}>
+                <Card
+                  href={item.href}
+                  padding="sm"
+                  hoverable
+                  style={{ display: 'block', height: '100%' }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 650,
+                      color: 'var(--text-primary)',
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    {item.title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.9rem',
+                      color: 'var(--text-secondary)',
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    {item.description}
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Directory Callout Banner */}
+        <Card
+          padding="lg"
+          accent="var(--accent-color)"
+          className="guide-card-banner"
+        >
+          <div style={{ maxWidth: '600px' }}>
+            <div
               style={{
-                listStyle: 'none',
-                margin: 0,
-                padding: 0,
-                display: 'grid',
-                gap: '0.75rem',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                color: 'var(--accent-color)',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                marginBottom: '0.5rem',
               }}
             >
-              {troubleshootingDeepDives.map((item) => (
-                <li key={item.href}>
-                  <Card href={item.href} padding="sm" hoverable style={{ display: 'block', height: '100%' }}>
-                    <div style={{ fontWeight: 650, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                      {item.title}
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                      {item.description}
-                    </div>
-                  </Card>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* Directory Callout Banner */}
-          <Card padding="lg" accent="var(--accent-color)" className="guide-card-banner">
-            <div style={{ maxWidth: '600px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-color)', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                <Layers size={18} /> Directory &amp; Tools
-              </div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-                Ready to test these guides with real servers?
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', margin: 0, lineHeight: 1.6 }}>
-                Explore thousands of open-source and official MCP servers listed on AllMCPs, or use our free configuration generator tool.
-              </p>
+              <Layers size={18} /> Directory &amp; Tools
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-              <Link href="/browse" className="btn btn-secondary">
-                Browse Servers
-              </Link>
-              <Link href="/submit" className="btn btn-primary">
-                Submit Your MCP
-              </Link>
-            </div>
-          </Card>
+            <h3
+              style={{
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                marginBottom: '0.5rem',
+              }}
+            >
+              Ready to test these guides with real servers?
+            </h3>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: '0.925rem',
+                margin: 0,
+                lineHeight: 1.6,
+              }}
+            >
+              Explore thousands of open-source and official MCP servers listed
+              on AllMCPs, or use our free configuration generator tool.
+            </p>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: '0.75rem',
+              flexShrink: 0,
+            }}
+          >
+            <Link href="/browse" className="btn btn-secondary">
+              Browse Servers
+            </Link>
+            <Link href="/submit" className="btn btn-primary">
+              Submit Your MCP
+            </Link>
+          </div>
+        </Card>
       </PageShell>
     </>
   );

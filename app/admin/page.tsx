@@ -1,17 +1,18 @@
+import { desc, eq, isNotNull } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { drizzle } from 'drizzle-orm/d1';
-import { servers, reports, reviews, users, sponsorAds } from '../../db/schema';
-import { eq, desc, isNotNull } from 'drizzle-orm';
+import { reports, reviews, servers, sponsorAds, users } from '../../db/schema';
+import { type AdminStats, getAdminStats } from '../../lib/adminStats';
 import { auth } from '../../lib/auth';
-import { getAdminStats, type AdminStats } from '../../lib/adminStats';
 import AdminClient from './AdminClient';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Admin Dashboard',
-  description: 'Manage submissions, listings, and system automation on AllMCPs.',
+  description:
+    'Manage submissions, listings, and system automation on AllMCPs.',
   robots: {
     index: false,
     follow: false,
@@ -28,11 +29,25 @@ const EMPTY_STATS: AdminStats = {
   usersCount: 0,
   categorySponsorsCount: 0,
   toolsIntrospectionErrorCount: 0,
-  pendingCounts: { submissions: 0, edits: 0, claims: 0, logos: 0, screenshots: 0, total: 0 },
+  pendingCounts: {
+    submissions: 0,
+    edits: 0,
+    claims: 0,
+    logos: 0,
+    screenshots: 0,
+    total: 0,
+  },
   socialCounts: { queued: 0, sent: 0, failed: 0 },
   callerCounts: {},
   surfaceImpressions: {},
-  logoSourceCounts: { manual: 0, readme: 0, website_favicon: 0, github_org: 0, github_user: 0, none: 0 },
+  logoSourceCounts: {
+    manual: 0,
+    readme: 0,
+    website_favicon: 0,
+    github_org: 0,
+    github_user: 0,
+    none: 0,
+  },
   engagement: { totalViews: 0, totalUpvotes: 0, totalCopies: 0 },
   topByViews: [],
   recentToolsErrors: [],
@@ -42,7 +57,7 @@ async function getAdminData() {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
-    if (ctx && ctx.env && (ctx.env as any).DB) {
+    if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       // Priority-review paid listings first
       const pendingServers = await db
@@ -121,19 +136,38 @@ async function getAdminData() {
         .from(sponsorAds)
         .orderBy(desc(sponsorAds.createdAt));
 
-      const map = (s: typeof pendingServers[0]) => ({
+      const map = (s: (typeof pendingServers)[0]) => ({
         ...s,
-        createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
+        createdAt:
+          s.createdAt instanceof Date
+            ? s.createdAt.toISOString()
+            : String(s.createdAt),
       });
-      const mapRecent = (s: typeof recentlyAdded[0]) => ({
+      const mapRecent = (s: (typeof recentlyAdded)[0]) => ({
         ...s,
-        createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
+        createdAt:
+          s.createdAt instanceof Date
+            ? s.createdAt.toISOString()
+            : String(s.createdAt),
       });
-      const mapAd = (a: typeof ads[0]) => ({
+      const mapAd = (a: (typeof ads)[0]) => ({
         ...a,
-        createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : String(a.createdAt),
-        approvedAt: a.approvedAt instanceof Date ? a.approvedAt.toISOString() : a.approvedAt ? String(a.approvedAt) : null,
-        completedAt: a.completedAt instanceof Date ? a.completedAt.toISOString() : a.completedAt ? String(a.completedAt) : null,
+        createdAt:
+          a.createdAt instanceof Date
+            ? a.createdAt.toISOString()
+            : String(a.createdAt),
+        approvedAt:
+          a.approvedAt instanceof Date
+            ? a.approvedAt.toISOString()
+            : a.approvedAt
+              ? String(a.approvedAt)
+              : null,
+        completedAt:
+          a.completedAt instanceof Date
+            ? a.completedAt.toISOString()
+            : a.completedAt
+              ? String(a.completedAt)
+              : null,
       });
 
       return {
@@ -144,11 +178,17 @@ async function getAdminData() {
         pendingScreenshots: pendingScreenshots.map(map),
         openReports: openReports.map((r) => ({
           ...r,
-          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+          createdAt:
+            r.createdAt instanceof Date
+              ? r.createdAt.toISOString()
+              : String(r.createdAt),
         })),
         pendingReviewComments: pendingReviewComments.map((r) => ({
           ...r,
-          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+          createdAt:
+            r.createdAt instanceof Date
+              ? r.createdAt.toISOString()
+              : String(r.createdAt),
         })),
         recentlyAdded: recentlyAdded.map(mapRecent),
         ads: ads.map(mapAd),
@@ -181,12 +221,26 @@ export default async function AdminPage() {
 
   if ((session.user as any).role !== 'admin') {
     return (
-      <main className="container animate-fade-in" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
+      <main
+        className="container animate-fade-in"
+        style={{ padding: '4rem 1rem', textAlign: 'center' }}
+      >
         <h1 style={{ marginBottom: '1rem' }}>Unauthorized</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>This account doesn&apos;t have admin access.</p>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '1.5rem' }}>
-          Just been granted access? Roles are cached at sign-in, so a stale session won&apos;t pick it up.{' '}
-          <a href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/login?callbackUrl=%2Fadmin')}`}>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          This account doesn&apos;t have admin access.
+        </p>
+        <p
+          style={{
+            color: 'var(--text-secondary)',
+            fontSize: '0.85rem',
+            marginTop: '1.5rem',
+          }}
+        >
+          Just been granted access? Roles are cached at sign-in, so a stale
+          session won&apos;t pick it up.{' '}
+          <a
+            href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/login?callbackUrl=%2Fadmin')}`}
+          >
             Log out and sign in again
           </a>
           .
@@ -209,18 +263,49 @@ export default async function AdminPage() {
   } = await getAdminData();
 
   return (
-    <main className="container animate-fade-in" style={{ padding: '2.5rem 1rem 4rem' }}>
+    <main
+      className="container animate-fade-in"
+      style={{ padding: '2.5rem 1rem 4rem' }}
+    >
       <div style={{ maxWidth: '1100px', margin: '0 auto 2rem' }}>
-        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+        <div
+          style={{
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
           <div>
-            <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.75rem', fontWeight: 800 }}>Admin Console</h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-              Control center for directory moderation, catalog management, social automation, and admin tools.
+            <h1
+              style={{
+                margin: '0 0 0.25rem',
+                fontSize: '1.75rem',
+                fontWeight: 800,
+              }}
+            >
+              Admin Console
+            </h1>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: '0.9rem',
+                margin: 0,
+              }}
+            >
+              Control center for directory moderation, catalog management,
+              social automation, and admin tools.
             </p>
           </div>
           <a
             href={`/api/auth/signout?callbackUrl=${encodeURIComponent('/')}`}
-            style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            }}
           >
             Log out
           </a>
@@ -242,4 +327,3 @@ export default async function AdminPage() {
     </main>
   );
 }
-

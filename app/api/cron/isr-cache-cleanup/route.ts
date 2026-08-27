@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { NextResponse } from 'next/server';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 
 /**
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ skipped: 'no OPEN_NEXT_BUILD_ID' });
     }
 
-    let env;
+    let env: CloudflareEnv | undefined;
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       throw new Error('Could not get Cloudflare context.');
     }
 
-    const bucket = env.NEXT_INC_CACHE_R2_BUCKET;
+    const bucket = env?.NEXT_INC_CACHE_R2_BUCKET;
     if (!bucket) {
       return NextResponse.json({ skipped: 'no R2 bucket binding' });
     }
@@ -47,7 +47,11 @@ export async function POST(req: Request) {
     const staleKeys: string[] = [];
 
     do {
-      const page = await bucket.list({ prefix: CACHE_PREFIX, cursor, limit: 1000 });
+      const page = await bucket.list({
+        prefix: CACHE_PREFIX,
+        cursor,
+        limit: 1000,
+      });
       for (const obj of page.objects) {
         scanned++;
         const rest = obj.key.slice(CACHE_PREFIX.length);

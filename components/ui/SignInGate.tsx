@@ -24,9 +24,25 @@ export function SignInGate({
         background: 'var(--bg-muted)',
       }}
     >
-      <Lock size={28} color="var(--accent-color)" style={{ marginBottom: '0.5rem' }} />
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>{message}</p>
-      <a href={href} className="btn btn-primary" style={{ textDecoration: 'none', padding: '0.6rem 1.25rem' }}>
+      <Lock
+        size={28}
+        color="var(--accent-color)"
+        style={{ marginBottom: '0.5rem' }}
+      />
+      <p
+        style={{
+          color: 'var(--text-secondary)',
+          marginBottom: '1rem',
+          fontSize: '0.9rem',
+        }}
+      >
+        {message}
+      </p>
+      <a
+        href={href}
+        className="btn btn-primary"
+        style={{ textDecoration: 'none', padding: '0.6rem 1.25rem' }}
+      >
         Sign In to Continue
       </a>
     </div>

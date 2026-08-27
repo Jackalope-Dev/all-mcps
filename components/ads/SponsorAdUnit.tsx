@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import { ArrowRight, ExternalLink, Megaphone, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { ExternalLink, Sparkles, Megaphone, ArrowRight } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  getRandomPlaceholderVariant,
   type AdPlacement,
-  type SponsorAd,
+  getRandomPlaceholderVariant,
   type PlaceholderVariant,
+  type SponsorAd,
 } from '@/lib/ads';
 import { trackSponsorCtaClick, trackSponsorPlaceholderView } from '@/lib/gtag';
 
@@ -35,13 +36,20 @@ function getDisplayDomain(url?: string | null): string | null {
   }
 }
 
-export function SponsorAdUnit({ placement, previewAd, className = '', layout = 'card' }: SponsorAdUnitProps) {
+export function SponsorAdUnit({
+  placement,
+  previewAd,
+  className = '',
+  layout = 'card',
+}: SponsorAdUnitProps) {
   const [ad, setAd] = useState<Partial<SponsorAd> | null>(previewAd ?? null);
   const [eventToken, setEventToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(!previewAd);
   const [impressionSent, setImpressionSent] = useState<boolean>(false);
   const [placeholderVariant] = useState<PlaceholderVariant>(() =>
-    getRandomPlaceholderVariant(Array.from(placement).reduce((h, c) => h + c.charCodeAt(0), 0))
+    getRandomPlaceholderVariant(
+      Array.from(placement).reduce((h, c) => h + c.charCodeAt(0), 0),
+    ),
   );
   const [logoError, setLogoError] = useState(false);
   const adRef = useRef<HTMLDivElement | null>(null);
@@ -66,10 +74,18 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
     let isMounted = true;
     async function fetchAd() {
       try {
-        const excludeParam = servedAdIdsOnPage.size > 0 ? `&exclude=${Array.from(servedAdIdsOnPage).join(',')}` : '';
-        const res = await fetch(`/api/ads/serve?placement=${placement}${excludeParam}`);
+        const excludeParam =
+          servedAdIdsOnPage.size > 0
+            ? `&exclude=${Array.from(servedAdIdsOnPage).join(',')}`
+            : '';
+        const res = await fetch(
+          `/api/ads/serve?placement=${placement}${excludeParam}`,
+        );
         if (res.ok) {
-          const data = (await res.json()) as { ad?: Partial<SponsorAd> | null; eventToken?: string | null };
+          const data = (await res.json()) as {
+            ad?: Partial<SponsorAd> | null;
+            eventToken?: string | null;
+          };
           if (isMounted) {
             if (data.ad?.id) {
               servedAdIdsOnPage.add(data.ad.id);
@@ -103,7 +119,12 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
           if (ad?.id) {
             // Track active ad impression
             try {
-              const payload = JSON.stringify({ adId: ad.id, placement, eventType: 'impression', eventToken });
+              const payload = JSON.stringify({
+                adId: ad.id,
+                placement,
+                eventType: 'impression',
+                eventToken,
+              });
               if (navigator.sendBeacon) {
                 navigator.sendBeacon('/api/ads/event', payload);
               } else {
@@ -127,7 +148,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
           observer.disconnect();
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     if (adRef.current) {
@@ -135,12 +156,25 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
     }
 
     return () => observer.disconnect();
-  }, [ad, placement, previewAd, impressionSent, loading, placeholderVariant, eventToken]);
+  }, [
+    ad,
+    placement,
+    previewAd,
+    impressionSent,
+    loading,
+    placeholderVariant,
+    eventToken,
+  ]);
 
   const handleAdClick = () => {
     if (previewAd !== undefined || !ad?.id) return;
     try {
-      const payload = JSON.stringify({ adId: ad.id, placement, eventType: 'click', eventToken });
+      const payload = JSON.stringify({
+        adId: ad.id,
+        placement,
+        eventType: 'click',
+        eventToken,
+      });
       if (navigator.sendBeacon) {
         navigator.sendBeacon('/api/ads/event', payload);
       } else {
@@ -200,10 +234,7 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
     if (placement === 'directory_inline') {
       if (layout === 'row') {
         return (
-          <div
-            ref={adRef}
-            className={`surface ad-promo-row ${className}`}
-          >
+          <div ref={adRef} className={`surface ad-promo-row ${className}`}>
             <div
               style={{
                 width: '44px',
@@ -243,7 +274,15 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
               </div>
               <div className="directory-list-title-row">
                 <div className="directory-list-name-col">
-                  <h4 className="directory-list-name" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  <h4
+                    className="directory-list-name"
+                    style={{
+                      margin: 0,
+                      fontSize: '1.05rem',
+                      fontWeight: 700,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     {placeholderVariant.headline}
                   </h4>
                 </div>
@@ -258,7 +297,11 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
                 href={advertiseHref}
                 onClick={handlePlaceholderCtaClick}
                 className="btn btn-sm btn-primary"
-                style={{ whiteSpace: 'nowrap', gap: '6px', fontSize: '0.825rem' }}
+                style={{
+                  whiteSpace: 'nowrap',
+                  gap: '6px',
+                  fontSize: '0.825rem',
+                }}
               >
                 {placeholderVariant.ctaText} <ArrowRight size={13} />
               </Link>
@@ -268,12 +311,16 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
       }
 
       return (
-        <div
-          ref={adRef}
-          className={`surface ad-promo-inline ${className}`}
-        >
+        <div ref={adRef} className={`surface ad-promo-inline ${className}`}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1rem',
+              }}
+            >
               <span
                 style={{
                   fontSize: '0.65rem',
@@ -293,7 +340,13 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.85rem', marginBottom: '0.75rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.85rem',
+                marginBottom: '0.75rem',
+              }}
+            >
               <div
                 style={{
                   width: '44px',
@@ -311,22 +364,47 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
                 <Megaphone size={20} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                <h4
+                  style={{
+                    margin: 0,
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   {placeholderVariant.headline}
                 </h4>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                <p
+                  style={{
+                    margin: '0.25rem 0 0',
+                    fontSize: '0.825rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.4,
+                  }}
+                >
                   {placeholderVariant.body}
                 </p>
               </div>
             </div>
           </div>
 
-          <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+          <div
+            style={{
+              marginTop: '1rem',
+              paddingTop: '0.75rem',
+              borderTop: '1px solid var(--border-color)',
+            }}
+          >
             <Link
               href={advertiseHref}
               onClick={handlePlaceholderCtaClick}
               className="btn btn-sm btn-primary"
-              style={{ width: '100%', justifyContent: 'center', gap: '6px', fontSize: '0.825rem' }}
+              style={{
+                width: '100%',
+                justifyContent: 'center',
+                gap: '6px',
+                fontSize: '0.825rem',
+              }}
             >
               {placeholderVariant.ctaText} <ArrowRight size={13} />
             </Link>
@@ -337,26 +415,57 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
 
     if (placement === 'detail_sidebar') {
       return (
-        <div
-          ref={adRef}
-          className={`surface ad-promo-sidebar ${className}`}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-color)' }}>
+        <div ref={adRef} className={`surface ad-promo-sidebar ${className}`}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginBottom: '0.5rem',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'var(--accent-color)',
+              }}
+            >
               {placeholderVariant.badgeText}
             </span>
           </div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+          <div
+            style={{
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              marginBottom: '0.25rem',
+            }}
+          >
             {placeholderVariant.headline}
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 0.85rem', lineHeight: 1.45 }}>
+          <p
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+              margin: '0 0 0.85rem',
+              lineHeight: 1.45,
+            }}
+          >
             {placeholderVariant.body}
           </p>
           <Link
             href={advertiseHref}
             onClick={handlePlaceholderCtaClick}
             className="btn btn-sm btn-secondary"
-            style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', gap: '5px' }}
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              fontSize: '0.8rem',
+              gap: '5px',
+            }}
           >
             {placeholderVariant.ctaText} <ArrowRight size={13} />
           </Link>
@@ -366,11 +475,16 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
 
     if (placement === 'blog_guide') {
       return (
-        <div
-          ref={adRef}
-          className={`surface ad-promo-guide ${className}`}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: '240px' }}>
+        <div ref={adRef} className={`surface ad-promo-guide ${className}`}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem',
+              flex: 1,
+              minWidth: '240px',
+            }}
+          >
             <div
               style={{
                 width: '38px',
@@ -388,13 +502,29 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
               <Sparkles size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-color)' }}>
+              <div
+                style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-color)',
+                }}
+              >
                 {placeholderVariant.badgeText}
               </div>
-              <div style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div
+                style={{
+                  fontSize: '0.925rem',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 {placeholderVariant.headline}
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <div
+                style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}
+              >
                 {placeholderVariant.body}
               </div>
             </div>
@@ -413,11 +543,16 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
 
     // Prominent Header / Category Banner placeholder
     return (
-      <div
-        ref={adRef}
-        className={`surface ad-promo-banner ${className}`}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '280px' }}>
+      <div ref={adRef} className={`surface ad-promo-banner ${className}`}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            flex: 1,
+            minWidth: '280px',
+          }}
+        >
           <div
             style={{
               width: '44px',
@@ -435,7 +570,14 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             <Megaphone size={22} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.2rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '0.2rem',
+              }}
+            >
               <span
                 style={{
                   fontSize: '0.68rem',
@@ -454,10 +596,24 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
                 <Sparkles size={10} /> {placeholderVariant.badgeText}
               </span>
             </div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+            <div
+              style={{
+                fontSize: '1rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                lineHeight: 1.3,
+              }}
+            >
               {placeholderVariant.headline}
             </div>
-            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
+            <p
+              style={{
+                fontSize: '0.825rem',
+                color: 'var(--text-secondary)',
+                margin: '0.2rem 0 0',
+                lineHeight: 1.4,
+              }}
+            >
               {placeholderVariant.body}
             </p>
           </div>
@@ -487,16 +643,18 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
   const isPreview = previewAd !== undefined;
   const linkProps = isPreview
     ? { onClick: (e: React.MouseEvent) => e.preventDefault(), href: '#' }
-    : { href: ad.targetUrl || '#', target: '_blank', rel: 'noopener sponsored nofollow', onClick: handleAdClick };
+    : {
+        href: ad.targetUrl || '#',
+        target: '_blank',
+        rel: 'noopener sponsored nofollow',
+        onClick: handleAdClick,
+      };
   const displayDomain = getDisplayDomain(ad.targetUrl);
 
   if (placement === 'directory_inline') {
     if (layout === 'row') {
       return (
-        <div
-          ref={adRef}
-          className={`surface ad-unit-row ${className}`}
-        >
+        <div ref={adRef} className={`surface ad-unit-row ${className}`}>
           {ad.logoUrl && !logoError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -554,11 +712,25 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             </div>
             <div className="directory-list-title-row">
               <div className="directory-list-name-col">
-                <h4 className="directory-list-name" style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                <h4
+                  className="directory-list-name"
+                  style={{
+                    margin: 0,
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   {ad.title || 'Sponsor Title'}
                 </h4>
                 {displayDomain && (
-                  <span className="directory-list-org" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  <span
+                    className="directory-list-org"
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     {displayDomain}
                   </span>
                 )}
@@ -589,7 +761,8 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
         style={{
           borderRadius: '16px',
           border: '1px solid rgba(0, 229, 255, 0.3)',
-          background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.04), rgba(0, 123, 255, 0.04))',
+          background:
+            'linear-gradient(135deg, rgba(0, 229, 255, 0.04), rgba(0, 123, 255, 0.04))',
           padding: '1.5rem',
           display: 'flex',
           flexDirection: 'column',
@@ -623,7 +796,9 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.85rem', marginBottom: '0.75rem' }}>
+          <div
+            style={{ display: 'flex', gap: '0.85rem', marginBottom: '0.75rem' }}
+          >
             {ad.logoUrl && !logoError ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -659,26 +834,59 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
               </div>
             )}
             <div>
-              <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <h4
+                style={{
+                  margin: 0,
+                  fontSize: '1.05rem',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 {ad.title || 'Sponsor Title'}
               </h4>
-              <p style={{ margin: '0.35rem 0 0', fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+              <p
+                style={{
+                  margin: '0.35rem 0 0',
+                  fontSize: '0.825rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.45,
+                }}
+              >
                 {ad.description || 'Sponsored advertisement description.'}
               </p>
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+        <div
+          style={{
+            marginTop: 'auto',
+            paddingTop: '0.85rem',
+            borderTop: '1px solid var(--border-color)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.35rem',
+          }}
+        >
           <a
             {...linkProps}
             className="btn btn-sm btn-primary"
-            style={{ width: '100%', justifyContent: 'center', gap: '6px', fontSize: '0.825rem' }}
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              gap: '6px',
+              fontSize: '0.825rem',
+            }}
           >
             {ad.ctaText || 'Learn More'} <ExternalLink size={13} />
           </a>
           {displayDomain && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{displayDomain}</span>
+            <span
+              style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}
+            >
+              {displayDomain}
+            </span>
           )}
         </div>
       </div>
@@ -694,17 +902,35 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
           borderRadius: '14px',
           border: '1px solid rgba(0, 229, 255, 0.25)',
           padding: '1.15rem',
-          background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.03), rgba(0, 123, 255, 0.03))',
+          background:
+            'linear-gradient(135deg, rgba(0, 229, 255, 0.03), rgba(0, 123, 255, 0.03))',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-          <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-color)' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '0.65rem',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--accent-color)',
+            }}
+          >
             Sponsored
           </span>
           <ExternalLink size={12} style={{ color: 'var(--text-secondary)' }} />
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <div
+          style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}
+        >
           {ad.logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -725,25 +951,54 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             />
           )}
           <div>
-            <div style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div
+              style={{
+                fontSize: '0.925rem',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+              }}
+            >
               {ad.title || 'Sponsor Title'}
             </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
+            <p
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                margin: '0.2rem 0 0',
+                lineHeight: 1.4,
+              }}
+            >
               {ad.description || 'Sponsored advertisement copy.'}
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.35rem',
+          }}
+        >
           <a
             {...linkProps}
             className="btn btn-sm btn-primary"
-            style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', gap: '5px' }}
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              fontSize: '0.8rem',
+              gap: '5px',
+            }}
           >
             {ad.ctaText || 'Visit Sponsor'} <ExternalLink size={12} />
           </a>
           {displayDomain && (
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{displayDomain}</span>
+            <span
+              style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}
+            >
+              {displayDomain}
+            </span>
           )}
         </div>
       </div>
@@ -765,10 +1020,19 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '1.25rem',
-          background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.04), rgba(0, 123, 255, 0.04))',
+          background:
+            'linear-gradient(135deg, rgba(0, 229, 255, 0.04), rgba(0, 123, 255, 0.04))',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '240px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            flex: 1,
+            minWidth: '240px',
+          }}
+        >
           {ad.logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -789,21 +1053,56 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             />
           )}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-color)' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.2rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-color)',
+                }}
+              >
                 Sponsored Partner
               </span>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+              }}
+            >
               {ad.title || 'Sponsor Title'}
             </div>
-            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0.15rem 0 0', lineHeight: 1.4 }}>
+            <p
+              style={{
+                fontSize: '0.825rem',
+                color: 'var(--text-secondary)',
+                margin: '0.15rem 0 0',
+                lineHeight: 1.4,
+              }}
+            >
               {ad.description || 'Sponsored advertisement description.'}
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.3rem',
+          }}
+        >
           <a
             {...linkProps}
             className="btn btn-sm btn-primary"
@@ -812,7 +1111,11 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             {ad.ctaText || 'Learn More'} <ExternalLink size={13} />
           </a>
           {displayDomain && (
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{displayDomain}</span>
+            <span
+              style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}
+            >
+              {displayDomain}
+            </span>
           )}
         </div>
       </div>
@@ -828,7 +1131,8 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
         borderRadius: '16px',
         border: '1px solid rgba(0, 229, 255, 0.35)',
         padding: '1.25rem 1.75rem',
-        background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 123, 255, 0.04), var(--bg-elevated))',
+        background:
+          'linear-gradient(135deg, rgba(0, 229, 255, 0.05), rgba(0, 123, 255, 0.04), var(--bg-elevated))',
         boxShadow: '0 4px 20px -2px rgba(0, 229, 255, 0.08)',
       }}
     >
@@ -852,8 +1156,24 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '280px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1.25rem',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            flex: 1,
+            minWidth: '280px',
+          }}
+        >
           {ad.logoUrl && !logoError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -889,16 +1209,37 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             </div>
           )}
           <div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+            <div
+              style={{
+                fontSize: '1rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                lineHeight: 1.3,
+              }}
+            >
               {ad.title}
             </div>
-            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0', lineHeight: 1.4 }}>
+            <p
+              style={{
+                fontSize: '0.825rem',
+                color: 'var(--text-secondary)',
+                margin: '0.2rem 0 0',
+                lineHeight: 1.4,
+              }}
+            >
               {ad.description}
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.35rem',
+          }}
+        >
           <a
             {...linkProps}
             className="btn btn-primary"
@@ -915,7 +1256,11 @@ export function SponsorAdUnit({ placement, previewAd, className = '', layout = '
             {ad.ctaText || 'Learn More'} <ExternalLink size={14} />
           </a>
           {displayDomain && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{displayDomain}</span>
+            <span
+              style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}
+            >
+              {displayDomain}
+            </span>
           )}
         </div>
       </div>

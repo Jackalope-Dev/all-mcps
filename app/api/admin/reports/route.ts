@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { and, count, desc, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { reports, servers } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 
@@ -25,12 +25,18 @@ export async function GET(req: Request) {
     const status = url.searchParams.get('status') || 'open';
     const reason = url.searchParams.get('reason');
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
-    const limit = Math.min(MAX_LIMIT, Math.max(1, Number(url.searchParams.get('limit')) || DEFAULT_LIMIT));
+    const limit = Math.min(
+      MAX_LIMIT,
+      Math.max(1, Number(url.searchParams.get('limit')) || DEFAULT_LIMIT),
+    );
 
     const ctx = await getCloudflareContext();
     const env = ctx.env;
     if (!env?.DB) {
-      return NextResponse.json({ error: 'Database binding not found' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database binding not found' },
+        { status: 500 },
+      );
     }
     const db = drizzle(env.DB as any);
 
@@ -63,13 +69,22 @@ export async function GET(req: Request) {
     return NextResponse.json({
       items: items.map((r: (typeof items)[number]) => ({
         ...r,
-        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
-        reviewedAt: r.reviewedAt instanceof Date ? r.reviewedAt.toISOString() : r.reviewedAt,
+        createdAt:
+          r.createdAt instanceof Date
+            ? r.createdAt.toISOString()
+            : String(r.createdAt),
+        reviewedAt:
+          r.reviewedAt instanceof Date
+            ? r.reviewedAt.toISOString()
+            : r.reviewedAt,
       })),
       total: totalRows[0]?.total ?? 0,
     });
   } catch (error) {
     console.error('Admin reports error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

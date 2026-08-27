@@ -54,7 +54,9 @@ async function main() {
       try {
         data = JSON.parse(text);
       } catch {
-        console.error(`Call ${call}: non-JSON response (${res.status}): ${text.slice(0, 200)}`);
+        console.error(
+          `Call ${call}: non-JSON response (${res.status}): ${text.slice(0, 200)}`,
+        );
         break;
       }
       if (!res.ok || !data.success) {
@@ -69,11 +71,13 @@ async function main() {
     totalEnriched += data.enriched || 0;
     console.log(
       `Call ${call}: +${data.enriched} enriched, ${data.skippedThin} thin-skipped, ` +
-        `${data.failed} failed | ~${data.remaining} content-remaining, ~${data.installRemaining} install-unchecked | ${totalEnriched} total`
+        `${data.failed} failed | ~${data.remaining} content-remaining, ~${data.installRemaining} install-unchecked | ${totalEnriched} total`,
     );
 
     if (data.budgetStopped) {
-      console.warn('\nEndpoint stopped early (likely LLM budget/outage). Pausing before retry.');
+      console.warn(
+        '\nEndpoint stopped early (likely LLM budget/outage). Pausing before retry.',
+      );
       await sleep(DELAY_MS * 10);
     }
 

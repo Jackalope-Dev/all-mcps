@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface AsciiCodeCanvasProps {
   className?: string;
@@ -20,13 +20,17 @@ interface AsciiCodeCanvasProps {
  * Pointer proximity adds a local heat bloom. Reduced-motion visitors get
  * a single static frame.
  */
-const RAMP = ' .\'`^":;~-_+<>i!lI?/\\|()1{}[]rcvunxzjftLCJUYXZO0Qoahkbdpqwm*WMB8&%$#@';
+const RAMP =
+  ' .\'`^":;~-_+<>i!lI?/\\|()1{}[]rcvunxzjftLCJUYXZO0Qoahkbdpqwm*WMB8&%$#@';
 const HOT_GLYPHS = '{ } [ ] / * # $ > 0 1 m c p'.split(' ');
 
 const FRAME_MS = 85;
 const COOLING = 1.7;
 
-function heatColor(t: number, light: boolean): [number, number, number, number] {
+function heatColor(
+  t: number,
+  light: boolean,
+): [number, number, number, number] {
   // t is 0..1. Dark theme: dim slate → brand blue → cyan → white.
   // Light theme: pale slate → blue → cyan, never blown-out white.
   const stops = light
@@ -63,7 +67,10 @@ function glyphFor(heat: number): string {
   if (heat > 180 && Math.random() < 0.18) {
     return HOT_GLYPHS[(Math.random() * HOT_GLYPHS.length) | 0];
   }
-  const idx = Math.min(RAMP.length - 1, Math.max(0, ((heat / 255) * (RAMP.length - 1)) | 0));
+  const idx = Math.min(
+    RAMP.length - 1,
+    Math.max(0, ((heat / 255) * (RAMP.length - 1)) | 0),
+  );
   return RAMP[idx];
 }
 
@@ -81,7 +88,9 @@ export function AsciiCodeCanvas({
     if (!context) return;
     const ctx = context;
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     let width = 0;
@@ -99,7 +108,8 @@ export function AsciiCodeCanvas({
     let targetX = -1;
     let targetY = -1;
 
-    const isLight = () => document.documentElement.getAttribute('data-theme') === 'light';
+    const isLight = () =>
+      document.documentElement.getAttribute('data-theme') === 'light';
 
     const idx = (x: number, y: number) => y * cols + x;
 
@@ -143,7 +153,10 @@ export function AsciiCodeCanvas({
         const edge = Math.abs(x / cols - 0.5) * 2; // 0 center, 1 edges
         const bias = 0.35 + edge * 0.65;
         if (Math.random() < 0.55 * bias) {
-          heat[idx(x, rows - 1)] = Math.min(255, 160 + ((Math.random() * 95 * bias) | 0));
+          heat[idx(x, rows - 1)] = Math.min(
+            255,
+            160 + ((Math.random() * 95 * bias) | 0),
+          );
         } else if (Math.random() < 0.12) {
           heat[idx(x, rows - 1)] = 20;
         }
@@ -238,7 +251,7 @@ export function AsciiCodeCanvas({
       (entries) => {
         visible = entries[0]?.isIntersecting ?? false;
       },
-      { threshold: 0.05 }
+      { threshold: 0.05 },
     );
     observer.observe(canvas);
 
@@ -283,7 +296,6 @@ export function AsciiCodeCanvas({
   return (
     <canvas
       ref={canvasRef}
-      aria-hidden="true"
       className={`ascii-code-canvas ${className}`}
       style={{
         position: 'absolute',

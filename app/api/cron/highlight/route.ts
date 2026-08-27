@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
-import { servers, socialPosts } from '../../../../db/schema';
 import { and, eq, lt } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
+import serversData from '../../../../data/mcp-servers.json';
+import { servers, socialPosts } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
 import { tweetMcpServer } from '../../../../lib/twitter';
-import serversData from '../../../../data/mcp-servers.json';
 
 // A listing counts as "new" (eligible for the new-server tier) for this many days
 // after it was created.
@@ -18,9 +18,11 @@ const NEW_SHARE = 0.25;
 // tier (e.g. a single paid listing that wins the ~60% featured roll) sits at the top
 // of the rotation every run and gets tweeted over and over. Configurable via env so it
 // can be pushed out to effectively "never repeat" if desired.
-const REPOST_COOLDOWN_DAYS = Number(process.env.TWEET_REPOST_COOLDOWN_DAYS) || 365;
+const REPOST_COOLDOWN_DAYS =
+  Number(process.env.TWEET_REPOST_COOLDOWN_DAYS) || 365;
 const HIGHLIGHT_INTERVAL_HOURS = 4;
-const FEED_RETENTION_DAYS = Number(process.env.TWEET_FEED_RETENTION_DAYS) || 180;
+const FEED_RETENTION_DAYS =
+  Number(process.env.TWEET_FEED_RETENTION_DAYS) || 180;
 
 function getHighlightSlotKey(now: Date): string {
   const slotMs = HIGHLIGHT_INTERVAL_HOURS * 60 * 60 * 1000;
@@ -33,15 +35,21 @@ export async function POST(req: Request) {
     // Validate authorization (via admin auth or CRON_SECRET header)
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.get('authorization');
-    const isCronAuthorized = cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCronAuthorized =
+      cronSecret && authHeader === `Bearer ${cronSecret}`;
 
     if (!isCronAuthorized && !(await isAdminAuthorized(req))) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
     }
 
-    let selectedServer:
-      | { id: string; name: string; description: string; category?: string; isFeatured?: boolean; isNew?: boolean }
-      | null = null;
+    let selectedServer: {
+      id: string;
+      name: string;
+      description: string;
+      category?: string;
+      isFeatured?: boolean;
+      isNew?: boolean;
+    } | null = null;
     // Held so we can stamp `lastTweetedAt` only after a successful enqueue (D1 path only).
     // This is an enqueue-time stamp, not confirmation the tweet was actually posted — see
     // lastFeaturedAt (stamped by /api/cron/social-mark-sent) for that.
@@ -49,24 +57,36 @@ export async function POST(req: Request) {
 
     try {
       const ctx = await getCloudflareContext();
-      if (ctx && ctx.env && (ctx.env as any).DB) {
+      if (ctx?.env && (ctx.env as any).DB) {
         db = drizzle((ctx.env as any).DB);
-        const activeServers = await db.select().from(servers).where(eq(servers.status, 'active'));
+        const activeServers = await db
+          .select()
+          .from(servers)
+          .where(eq(servers.status, 'active'));
 
         if (activeServers.length > 0) {
           const now = new Date();
-          const newCutoff = new Date(now.getTime() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-          const cooldownCutoff = new Date(now.getTime() - REPOST_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+          const newCutoff = new Date(
+            now.getTime() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+          );
+          const cooldownCutoff = new Date(
+            now.getTime() - REPOST_COOLDOWN_DAYS * 24 * 60 * 60 * 1000,
+          );
 
           // Find all servers currently waiting in the queue so we never select a server
           // that is already queued (which would cause duplicate tweets to hit Make.com / Buffer)
           const queuedSocial = await db
             .select({ serverId: socialPosts.serverId })
             .from(socialPosts)
-            .where(and(eq(socialPosts.channel, 'twitter'), eq(socialPosts.status, 'queued')))
+            .where(
+              and(
+                eq(socialPosts.channel, 'twitter'),
+                eq(socialPosts.status, 'queued'),
+              ),
+            )
             .catch(() => []);
           const queuedServerIds = new Set(
-            queuedSocial.map((r: any) => r.serverId).filter(Boolean)
+            queuedSocial.map((r: any) => r.serverId).filter(Boolean),
           );
 
           type Row = (typeof activeServers)[number];
@@ -76,16 +96,21 @@ export async function POST(req: Request) {
                 s.reviewPriority ||
                 s.isOfficial ||
                 s.premiumStatus === 'active' ||
-                (s.featuredUntil && new Date(s.featuredUntil) > now)
+                (s.featuredUntil && new Date(s.featuredUntil) > now),
             );
           const isNewServer = (s: Row) =>
-            !isFeatured(s) && Boolean(s.createdAt && new Date(s.createdAt) > newCutoff);
+            !isFeatured(s) &&
+            Boolean(s.createdAt && new Date(s.createdAt) > newCutoff);
 
           // Never-posted (null) sorts first, then oldest post first — so a full
           // rotation happens before anything repeats.
           const leastRecentlyTweeted = (a: Row, b: Row) => {
-            const ta = a.lastTweetedAt ? new Date(a.lastTweetedAt).getTime() : 0;
-            const tb = b.lastTweetedAt ? new Date(b.lastTweetedAt).getTime() : 0;
+            const ta = a.lastTweetedAt
+              ? new Date(a.lastTweetedAt).getTime()
+              : 0;
+            const tb = b.lastTweetedAt
+              ? new Date(b.lastTweetedAt).getTime()
+              : 0;
             return ta - tb;
           };
 
@@ -97,9 +122,15 @@ export async function POST(req: Request) {
 
           // Full tiers (for the relaxed fallback below), least-recently-tweeted first.
           // Filter out any server already waiting in the queue.
-          const unqueuedServers = activeServers.filter((s) => !queuedServerIds.has(s.id));
-          const featuredAll = unqueuedServers.filter(isFeatured).sort(leastRecentlyTweeted);
-          const newAll = unqueuedServers.filter(isNewServer).sort(leastRecentlyTweeted);
+          const unqueuedServers = activeServers.filter(
+            (s) => !queuedServerIds.has(s.id),
+          );
+          const featuredAll = unqueuedServers
+            .filter(isFeatured)
+            .sort(leastRecentlyTweeted);
+          const newAll = unqueuedServers
+            .filter(isNewServer)
+            .sort(leastRecentlyTweeted);
           const restAll = unqueuedServers
             .filter((s) => !isFeatured(s) && !isNewServer(s))
             .sort(leastRecentlyTweeted);
@@ -129,12 +160,18 @@ export async function POST(req: Request) {
           } else {
             // Every unqueued listing has been tweeted within the cooldown window.
             // Relax the cooldown and pick the one tweeted longest ago among unqueued listings.
-            pool = featuredAll.length ? featuredAll : newAll.length ? newAll : restAll;
+            pool = featuredAll.length
+              ? featuredAll
+              : newAll.length
+                ? newAll
+                : restAll;
             eligible = false;
           }
 
           if (pool && pool.length > 0) {
-            const item = eligible ? pool[Math.floor(Math.random() * pool.length)] : pool[0];
+            const item = eligible
+              ? pool[Math.floor(Math.random() * pool.length)]
+              : pool[0];
             const featuredFlag = isFeatured(item);
 
             selectedServer = {
@@ -149,11 +186,18 @@ export async function POST(req: Request) {
         }
       }
     } catch (e) {
-      console.warn('Could not query Cloudflare D1 for highlight, falling back to static JSON.', e);
+      console.warn(
+        'Could not query Cloudflare D1 for highlight, falling back to static JSON.',
+        e,
+      );
     }
 
     // Fallback to static servers data if D1 is not accessible (no rotation state here).
-    if (!selectedServer && Array.isArray(serversData) && serversData.length > 0) {
+    if (
+      !selectedServer &&
+      Array.isArray(serversData) &&
+      serversData.length > 0
+    ) {
       db = null;
       const randomIndex = Math.floor(Math.random() * serversData.length);
       const item = (serversData as any)[randomIndex];
@@ -168,7 +212,10 @@ export async function POST(req: Request) {
     }
 
     if (!selectedServer) {
-      return NextResponse.json({ error: 'No active MCP servers found to highlight.' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'No active MCP servers found to highlight.' },
+        { status: 404 },
+      );
     }
 
     if (!db) {
@@ -179,22 +226,30 @@ export async function POST(req: Request) {
     }
 
     const now = new Date();
-    const tweetResult = await tweetMcpServer(db, {
-      id: selectedServer.id,
-      name: selectedServer.name,
-      description: selectedServer.description,
-      category: selectedServer.category,
-      isNew: selectedServer.isNew,
-      isFeatured: selectedServer.isFeatured,
-    }, {
-      source: 'highlight_cron',
-      dedupeKey: `highlight:${getHighlightSlotKey(now)}`,
-      now,
-    });
+    const tweetResult = await tweetMcpServer(
+      db,
+      {
+        id: selectedServer.id,
+        name: selectedServer.name,
+        description: selectedServer.description,
+        category: selectedServer.category,
+        isNew: selectedServer.isNew,
+        isFeatured: selectedServer.isFeatured,
+      },
+      {
+        source: 'highlight_cron',
+        dedupeKey: `highlight:${getHighlightSlotKey(now)}`,
+        now,
+      },
+    );
 
     if (!tweetResult.success) {
       return NextResponse.json(
-        { error: tweetResult.error || 'Failed to enqueue tweet item.', server: selectedServer, tweetResult },
+        {
+          error: tweetResult.error || 'Failed to enqueue tweet item.',
+          server: selectedServer,
+          tweetResult,
+        },
         { status: 500 },
       );
     }
@@ -202,11 +257,21 @@ export async function POST(req: Request) {
     // Record rotation only when we successfully created a new queue item.
     if (tweetResult?.success && tweetResult?.queued) {
       try {
-        await db.update(servers).set({ lastTweetedAt: new Date() }).where(eq(servers.id, selectedServer.id));
-        const retentionCutoff = new Date(Date.now() - FEED_RETENTION_DAYS * 24 * 60 * 60 * 1000);
-        await db.delete(socialPosts).where(lt(socialPosts.createdAt, retentionCutoff));
+        await db
+          .update(servers)
+          .set({ lastTweetedAt: new Date() })
+          .where(eq(servers.id, selectedServer.id));
+        const retentionCutoff = new Date(
+          Date.now() - FEED_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+        );
+        await db
+          .delete(socialPosts)
+          .where(lt(socialPosts.createdAt, retentionCutoff));
       } catch (e) {
-        console.warn('Queued highlight but failed post-enqueue housekeeping.', e);
+        console.warn(
+          'Queued highlight but failed post-enqueue housekeeping.',
+          e,
+        );
       }
     }
 
@@ -217,6 +282,9 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('Highlight cron error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

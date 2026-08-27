@@ -31,7 +31,6 @@ import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { ClientConfigTabs } from '../../../components/ClientConfigTabs';
 import { CollapsibleText } from '../../../components/CollapsibleText';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
-import { McpConfigGenerator } from '../../../components/McpConfigGenerator';
 import { MobileInstallBar } from '../../../components/MobileInstallBar';
 import ShareModal from '../../../components/ShareModal';
 import {
@@ -124,8 +123,7 @@ export async function generateMetadata({
   // Prefer the LLM-written one-liner for the meta description — it's a clean, unique
   // sentence, whereas the raw description is often scraped chrome. Better CTR + no
   // duplicate-snippet penalty against the upstream repo.
-  const metaSource =
-    (server.aiSummary && server.aiSummary.trim()) || server.description || '';
+  const metaSource = server.aiSummary?.trim() || server.description || '';
   let cleanSource = metaSource.trim().replace(/\.+$/, '');
   if (cleanSource.length > 100) {
     cleanSource = `${cleanSource.slice(0, 97).trimEnd()}...`;
@@ -149,8 +147,8 @@ export async function generateMetadata({
   // reuses fetchReadme's cache, shared with the page render below.
   const hasEnrichment =
     Boolean(server.aiEnrichedAt) ||
-    Boolean(server.aiSummary && server.aiSummary.trim()) ||
-    Boolean(server.aiOverview && server.aiOverview.trim()) ||
+    Boolean(server.aiSummary?.trim()) ||
+    Boolean(server.aiOverview?.trim()) ||
     (Array.isArray(server.tools) && server.tools.length > 0);
   const hasSubstantialDescription =
     (server.description ?? '').trim().length >= 120;
@@ -1149,9 +1147,7 @@ export default async function MCPDetail({
               <AdminInlineDescription
                 serverId={server.id}
                 initialDescription={
-                  (server.aiSummary && server.aiSummary.trim()) ||
-                  server.description ||
-                  ''
+                  server.aiSummary?.trim() || server.description || ''
                 }
                 repoUrl={server.url}
               />

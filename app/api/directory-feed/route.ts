@@ -23,10 +23,17 @@ const MAX_LIMIT = 1000;
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
-  const parsedOffset = Number.parseInt(url.searchParams.get('offset') ?? '0', 10);
-  const offset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
+  const parsedOffset = Number.parseInt(
+    url.searchParams.get('offset') ?? '0',
+    10,
+  );
+  const offset =
+    Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
 
-  const parsedLimit = Number.parseInt(url.searchParams.get('limit') ?? String(DEFAULT_LIMIT), 10);
+  const parsedLimit = Number.parseInt(
+    url.searchParams.get('limit') ?? String(DEFAULT_LIMIT),
+    10,
+  );
   const limit = Number.isFinite(parsedLimit)
     ? Math.min(Math.max(parsedLimit, 1), MAX_LIMIT)
     : DEFAULT_LIMIT;
@@ -34,7 +41,8 @@ export async function GET(request: Request) {
   const { items, total } = await getDirectoryFeedPage(offset, limit);
 
   // Null once this page reaches the end of the catalog.
-  const nextOffset = offset + items.length < total ? offset + items.length : null;
+  const nextOffset =
+    offset + items.length < total ? offset + items.length : null;
 
   return Response.json(
     { servers: items, total, offset, limit, nextOffset },
@@ -43,6 +51,6 @@ export async function GET(request: Request) {
         'Cache-Control': 'public, max-age=120, s-maxage=600',
         'Content-Type': 'application/json; charset=utf-8',
       },
-    }
+    },
   );
 }

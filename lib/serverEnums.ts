@@ -26,7 +26,12 @@ export const AUTH_TYPE_LABELS: Record<AuthType, string> = {
   other: 'Other',
 };
 
-export const MAINTENANCE_STATUSES = ['active', 'stable', 'experimental', 'archived'] as const;
+export const MAINTENANCE_STATUSES = [
+  'active',
+  'stable',
+  'experimental',
+  'archived',
+] as const;
 export type MaintenanceStatus = (typeof MAINTENANCE_STATUSES)[number];
 export const MAINTENANCE_STATUS_LABELS: Record<MaintenanceStatus, string> = {
   active: 'Actively maintained',
@@ -36,13 +41,18 @@ export const MAINTENANCE_STATUS_LABELS: Record<MaintenanceStatus, string> = {
 };
 
 export function isPricingModel(v: unknown): v is PricingModel {
-  return typeof v === 'string' && (PRICING_MODELS as readonly string[]).includes(v);
+  return (
+    typeof v === 'string' && (PRICING_MODELS as readonly string[]).includes(v)
+  );
 }
 export function isAuthType(v: unknown): v is AuthType {
   return typeof v === 'string' && (AUTH_TYPES as readonly string[]).includes(v);
 }
 export function isMaintenanceStatus(v: unknown): v is MaintenanceStatus {
-  return typeof v === 'string' && (MAINTENANCE_STATUSES as readonly string[]).includes(v);
+  return (
+    typeof v === 'string' &&
+    (MAINTENANCE_STATUSES as readonly string[]).includes(v)
+  );
 }
 
 export const TAG_LIMITS = { maxTags: 5, maxTagLength: 30 } as const;

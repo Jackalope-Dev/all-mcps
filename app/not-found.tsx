@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { Button } from '../components/ui/Button';
-import { PageShell } from '../components/PageShell';
 import { EmptyState } from '../components/EmptyState';
+import { PageShell } from '../components/PageShell';
+import { Button } from '../components/ui/Button';
 
 export const metadata: Metadata = {
   title: '404 - Page Not Found',

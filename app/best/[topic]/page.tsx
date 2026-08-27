@@ -1,17 +1,23 @@
+import { BadgeCheck, ChevronRight, Download, Eye, Heart } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronRight, Eye, Heart, Download, BadgeCheck } from 'lucide-react';
-import { Badge } from '../../../components/ui/Badge';
-import { ServerAvatar } from '../../../components/ui/ServerAvatar';
-import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
-import { getServersForTopic, type Server } from '../../../lib/servers';
-import { engagementScore } from '../../../lib/search';
-import { BEST_TOPICS, bestTopicBySlug, selectServersForTopic } from '../../../lib/bestTopics';
-import { isFeaturedListing, isVerifiedListing } from '../../../lib/featuredStatus';
-import { parseServerName } from '../../../lib/displayName';
-import { formatCompactNumber } from '../../../lib/format';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
+import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
+import { ServerAvatar } from '../../../components/ui/ServerAvatar';
+import {
+  BEST_TOPICS,
+  bestTopicBySlug,
+  selectServersForTopic,
+} from '../../../lib/bestTopics';
+import { parseServerName } from '../../../lib/displayName';
+import {
+  isFeaturedListing,
+  isVerifiedListing,
+} from '../../../lib/featuredStatus';
+import { formatCompactNumber } from '../../../lib/format';
+import { engagementScore } from '../../../lib/search';
+import { getServersForTopic, type Server } from '../../../lib/servers';
 
 const SITE = 'https://allmcps.com';
 const TOP_N = 10;
@@ -50,7 +56,8 @@ export async function generateMetadata({
   if (!t) return { title: 'Not Found' };
   const year = new Date().getFullYear();
   const title = buildBestTitle(t.title, year);
-  const description = t.lead.length > 157 ? `${t.lead.slice(0, 154).trimEnd()}...` : t.lead;
+  const description =
+    t.lead.length > 157 ? `${t.lead.slice(0, 154).trimEnd()}...` : t.lead;
   const url = `${SITE}/best/${t.slug}`;
   return {
     title,
@@ -58,12 +65,23 @@ export async function generateMetadata({
     alternates: { canonical: url },
     openGraph: {
       type: 'article',
-      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      images: [
+        {
+          url: 'https://allmcps.com/opengraph-image',
+          width: 1200,
+          height: 630,
+          alt: 'AllMCPs',
+        },
+      ],
       title: `${title} | AllMCPs`,
       description,
       url,
     },
-    twitter: { card: 'summary_large_image', title: `${title} | AllMCPs`, description },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | AllMCPs`,
+      description,
+    },
   };
 }
 
@@ -128,7 +146,12 @@ export default async function BestTopicPage({
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
-          { '@type': 'ListItem', position: 2, name: 'Best MCP Servers', item: `${SITE}/best` },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Best MCP Servers',
+            item: `${SITE}/best`,
+          },
           { '@type': 'ListItem', position: 3, name: t.title, item: url },
         ],
       },
@@ -137,31 +160,64 @@ export default async function BestTopicPage({
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb">
           <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
-            <li><Link href="/">Home</Link></li>
-            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
-            <li><Link href="/best">Best MCP Servers</Link></li>
-            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li>
+              <Link href="/">Home</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
+            <li>
+              <Link href="/best">Best MCP Servers</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
             <li className="breadcrumb-current">{t.title}</li>
           </ol>
         </nav>
 
         {/* Hero */}
-        <section style={{ marginBottom: '2.5rem', maxWidth: '760px', margin: '0 auto 2.5rem', textAlign: 'center' }}>
+        <section
+          style={{
+            marginBottom: '2.5rem',
+            maxWidth: '760px',
+            margin: '0 auto 2.5rem',
+            textAlign: 'center',
+          }}
+        >
           <h1 className="text-display" style={{ marginBottom: '1rem' }}>
-            {heading} <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>({year})</span>
+            {heading}{' '}
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+              ({year})
+            </span>
           </h1>
-          <p className="text-lead" style={{ margin: '0 auto 1.25rem', textAlign: 'center' }}>{t.lead}</p>
+          <p
+            className="text-lead"
+            style={{ margin: '0 auto 1.25rem', textAlign: 'center' }}
+          >
+            {t.lead}
+          </p>
           {t.categorySlug ? (
-            <Link href={`/categories/${t.categorySlug}`} className="btn btn-secondary">
+            <Link
+              href={`/categories/${t.categorySlug}`}
+              className="btn btn-secondary"
+            >
               Browse all {t.title} servers →
             </Link>
           ) : (
-            <Link href={`/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`} className="btn btn-secondary" rel="nofollow">
+            <Link
+              href={`/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`}
+              className="btn btn-secondary"
+              rel="nofollow"
+            >
               Browse all {t.title} servers →
             </Link>
           )}
@@ -169,7 +225,16 @@ export default async function BestTopicPage({
 
         {/* Ranked list */}
         {ranked.length > 0 ? (
-          <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <ol
+            style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+            }}
+          >
             {ranked.map((server, i) => {
               const { displayName, org } = parseServerName(server.name);
               return (
@@ -177,28 +242,86 @@ export default async function BestTopicPage({
                   <Link
                     href={`/mcp/${server.id}`}
                     className="surface-interactive"
-                    style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', padding: '1.25rem', borderRadius: '12px', textDecoration: 'none', color: 'inherit', border: '1px solid var(--border-color)' }}
+                    style={{
+                      display: 'flex',
+                      gap: '1rem',
+                      alignItems: 'flex-start',
+                      padding: '1.25rem',
+                      borderRadius: '12px',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      border: '1px solid var(--border-color)',
+                    }}
                   >
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-color)', minWidth: '2rem', textAlign: 'center', lineHeight: 1.4 }}>
+                    <div
+                      style={{
+                        fontSize: '1.5rem',
+                        fontWeight: 800,
+                        color: 'var(--accent-color)',
+                        minWidth: '2rem',
+                        textAlign: 'center',
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {i + 1}
                     </div>
-                    <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={44} />
+                    <ServerAvatar
+                      name={server.name}
+                      logoUrl={server.logoUrl}
+                      size={44}
+                    />
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{displayName}</span>
-                        {org && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{org}</span>}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            fontSize: '1.05rem',
+                            color: 'var(--text-primary)',
+                          }}
+                        >
+                          {displayName}
+                        </span>
+                        {org && (
+                          <span
+                            style={{
+                              fontSize: '0.8rem',
+                              color: 'var(--text-secondary)',
+                            }}
+                          >
+                            {org}
+                          </span>
+                        )}
                         {isVerifiedListing(server) && (
                           <IconTooltip
                             label="Verified listing"
                             asSpan
                             trigger={
-                              <span style={{ display: 'inline-flex', cursor: 'pointer' }}>
-                                <BadgeCheck size={15} style={{ color: 'var(--accent-color)' }} />
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <BadgeCheck
+                                  size={15}
+                                  style={{ color: 'var(--accent-color)' }}
+                                />
                               </span>
                             }
                           >
                             <span className="mcp-icon-tooltip-title">
-                              <BadgeCheck size={14} color="var(--accent-color)" /> Verified Listing
+                              <BadgeCheck
+                                size={14}
+                                color="var(--accent-color)"
+                              />{' '}
+                              Verified Listing
                             </span>
                             <span className="mcp-icon-tooltip-body">
                               Ownership or active status confirmed on AllMCPs.
@@ -206,16 +329,78 @@ export default async function BestTopicPage({
                           </IconTooltip>
                         )}
                       </div>
-                      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--accent-color)', margin: '0.35rem 0', fontWeight: 700 }}>
+                      <div
+                        style={{
+                          fontSize: '0.7rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                          color: 'var(--accent-color)',
+                          margin: '0.35rem 0',
+                          fontWeight: 700,
+                        }}
+                      >
                         {reasonFor(server, i)}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
-                        <SafeMarkdown content={server.description || 'No description provided.'} isInline />
+                      <div
+                        style={{
+                          fontSize: '0.875rem',
+                          color: 'var(--text-secondary)',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        <SafeMarkdown
+                          content={
+                            server.description || 'No description provided.'
+                          }
+                          isInline
+                        />
                       </div>
-                      <div style={{ display: 'flex', gap: '0.85rem', color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.6rem' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.views || 0).toLocaleString()} views`}><Eye size={13} /> {formatCompactNumber(server.views || 0)}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.copies || 0).toLocaleString()} installs`}><Download size={13} /> {formatCompactNumber(server.copies || 0)}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title={`${(server.upvotes || 0).toLocaleString()} upvotes`}><Heart size={13} /> {formatCompactNumber(server.upvotes || 0)}</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '0.85rem',
+                          color: 'var(--text-secondary)',
+                          fontSize: '0.8rem',
+                          marginTop: '0.6rem',
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                          }}
+                          title={`${(server.views || 0).toLocaleString()} views`}
+                        >
+                          <Eye size={13} />{' '}
+                          {formatCompactNumber(server.views || 0)}
+                        </span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                          }}
+                          title={`${(server.copies || 0).toLocaleString()} installs`}
+                        >
+                          <Download size={13} />{' '}
+                          {formatCompactNumber(server.copies || 0)}
+                        </span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                          }}
+                          title={`${(server.upvotes || 0).toLocaleString()} upvotes`}
+                        >
+                          <Heart size={13} />{' '}
+                          {formatCompactNumber(server.upvotes || 0)}
+                        </span>
                       </div>
                     </div>
                   </Link>
@@ -224,36 +409,106 @@ export default async function BestTopicPage({
             })}
           </ol>
         ) : (
-          <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>
-            <p className="empty-state-body" style={{ margin: 0 }}>No servers listed for this topic yet.</p>
+          <div
+            className="surface empty-state"
+            style={{ borderStyle: 'dashed' }}
+          >
+            <p className="empty-state-body" style={{ margin: 0 }}>
+              No servers listed for this topic yet.
+            </p>
           </div>
         )}
 
         {/* Query-Forward Selection Guide */}
         <section style={{ marginTop: '3.5rem', maxWidth: '760px' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>
+          <h2
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              marginBottom: '1rem',
+            }}
+          >
             Which {t.title} MCP server should you use?
           </h2>
-          <div className="surface" style={{ padding: '1.5rem', borderRadius: '12px', marginBottom: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div
+            className="surface"
+            style={{
+              padding: '1.5rem',
+              borderRadius: '12px',
+              marginBottom: '2.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+            }}
+          >
             {t.guidance && t.guidance.length > 0 ? (
               t.guidance.map((p, i) => (
-                <p key={i} style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{p}</p>
+                <p
+                  key={i}
+                  style={{
+                    margin: 0,
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {p}
+                </p>
               ))
             ) : (
-              <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                When choosing a Model Context Protocol server for <strong>{t.title}</strong>, select verified or official listings if you need strict API security guarantees. For rapid local dev testing with Claude or Cursor, community-maintained tools offer zero-setup configuration blocks ready to copy-paste.
+              <p
+                style={{
+                  margin: 0,
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.6,
+                }}
+              >
+                When choosing a Model Context Protocol server for{' '}
+                <strong>{t.title}</strong>, select verified or official listings
+                if you need strict API security guarantees. For rapid local dev
+                testing with Claude or Cursor, community-maintained tools offer
+                zero-setup configuration blocks ready to copy-paste.
               </p>
             )}
           </div>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.25rem' }}>
+          <h2
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              marginBottom: '1.25rem',
+            }}
+          >
             Frequently asked questions about {t.title} MCP servers
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+          >
             {t.faq.map((f) => (
-              <div key={f.q} className="surface" style={{ padding: '1.25rem', borderRadius: '12px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: 0, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>{f.q}</h3>
-                <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{f.a}</p>
+              <div
+                key={f.q}
+                className="surface"
+                style={{ padding: '1.25rem', borderRadius: '12px' }}
+              >
+                <h3
+                  style={{
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                    marginTop: 0,
+                    marginBottom: '0.35rem',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {f.q}
+                </h3>
+                <p
+                  style={{
+                    margin: 0,
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {f.a}
+                </p>
               </div>
             ))}
           </div>
@@ -261,21 +516,46 @@ export default async function BestTopicPage({
 
         {/* Related best-of pages */}
         <section style={{ marginTop: '3.5rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>More best-of guides</h2>
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <h2
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 700,
+              marginBottom: '1.25rem',
+            }}
+          >
+            More best-of guides
+          </h2>
+          <ul
+            style={{
+              listStyle: 'none',
+              margin: 0,
+              padding: 0,
+              display: 'flex',
+              gap: '0.6rem',
+              flexWrap: 'wrap',
+            }}
+          >
             {(() => {
               // Curated relations first (e.g. marketing <-> seo) — these disambiguate
               // adjacent-intent topics that would otherwise silently split relevance
               // signals for the same head term — then backfill to 8 with the rest.
               const related = (t.relatedTopicSlugs ?? [])
                 .map((slug) => bestTopicBySlug(slug))
-                .filter((o): o is NonNullable<typeof o> => Boolean(o) && o!.slug !== t.slug);
+                .filter(
+                  (o): o is NonNullable<typeof o> =>
+                    Boolean(o) && o!.slug !== t.slug,
+                );
               const relatedSlugs = new Set(related.map((o) => o.slug));
-              const rest = BEST_TOPICS.filter((o) => o.slug !== t.slug && !relatedSlugs.has(o.slug));
+              const rest = BEST_TOPICS.filter(
+                (o) => o.slug !== t.slug && !relatedSlugs.has(o.slug),
+              );
               return [...related, ...rest].slice(0, 8);
             })().map((o) => (
               <li key={o.slug}>
-                <Link href={`/best/${o.slug}`} className="badge badge-link badge-category">
+                <Link
+                  href={`/best/${o.slug}`}
+                  className="badge badge-link badge-category"
+                >
                   Best for {o.title}
                 </Link>
               </li>

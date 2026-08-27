@@ -1,6 +1,6 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { ContactForm } from '../../components/forms/ContactForm';
-import { PageShell, PageHeader } from '../../components/PageShell';
+import { PageHeader, PageShell } from '../../components/PageShell';
 
 export const metadata: Metadata = {
   title: 'Contact & Support — Listings & Sponsorships',
@@ -10,7 +10,14 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/contact',
   },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Contact & Support — Listings & Sponsorships | AllMCPs',
     description:
       'Get in touch with the AllMCPs team about listing inquiries, sponsorships, support requests, or general feedback on our MCP directory.',
@@ -31,7 +38,8 @@ export default function ContactPage() {
       {
         '@type': 'ContactPage',
         name: 'Contact AllMCPs Team',
-        description: 'Get in touch with the AllMCPs team for listing inquiries, sponsorships, support, or feedback on our MCP directory.',
+        description:
+          'Get in touch with the AllMCPs team for listing inquiries, sponsorships, support, or feedback on our MCP directory.',
         url: 'https://allmcps.com/contact',
       },
       {
@@ -47,8 +55,18 @@ export default function ContactPage() {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Contact', item: 'https://allmcps.com/contact' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Contact',
+            item: 'https://allmcps.com/contact',
+          },
         ],
       },
     ],
@@ -56,7 +74,10 @@ export default function ContactPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PageShell variant="content" panel>
         <PageHeader
           title="Contact Us"

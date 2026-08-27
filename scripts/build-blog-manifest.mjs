@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import matter from 'gray-matter';
 
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
@@ -37,7 +37,9 @@ function getTodayString() {
 function buildManifest() {
   if (!fs.existsSync(BLOG_DIR)) {
     fs.writeFileSync(OUTPUT_FILE, '[]\n', 'utf8');
-    console.log(`BLOG_DIR does not exist. Created empty manifest at ${OUTPUT_FILE}`);
+    console.log(
+      `BLOG_DIR does not exist. Created empty manifest at ${OUTPUT_FILE}`,
+    );
     return;
   }
 
@@ -51,8 +53,10 @@ function buildManifest() {
     .filter((post) => includeFuture || post.date <= today)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
-  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(posts, null, 2) + '\n', 'utf8');
-  console.log(`Generated blog manifest with ${posts.length} post(s) (filtered for date <= ${today}) -> ${OUTPUT_FILE}`);
+  fs.writeFileSync(OUTPUT_FILE, `${JSON.stringify(posts, null, 2)}\n`, 'utf8');
+  console.log(
+    `Generated blog manifest with ${posts.length} post(s) (filtered for date <= ${today}) -> ${OUTPUT_FILE}`,
+  );
 }
 
 buildManifest();

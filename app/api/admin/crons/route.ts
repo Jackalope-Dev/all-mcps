@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { NextResponse } from 'next/server';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 
 export async function POST(req: Request) {
@@ -11,11 +11,17 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { job } = body as { job?: string };
 
-    const validJobs = ['health', 'ai-content', 'enrich', 'highlight', 'indexnow'];
+    const validJobs = [
+      'health',
+      'ai-content',
+      'enrich',
+      'highlight',
+      'indexnow',
+    ];
     if (!job || !validJobs.includes(job)) {
       return NextResponse.json(
         { error: `Invalid job. Allowed: ${validJobs.join(', ')}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -27,7 +33,11 @@ export async function POST(req: Request) {
       // Best-effort context
     }
 
-    const secret = env?.CRON_SECRET || env?.ADMIN_SECRET || process.env.CRON_SECRET || process.env.ADMIN_SECRET;
+    const secret =
+      env?.CRON_SECRET ||
+      env?.ADMIN_SECRET ||
+      process.env.CRON_SECRET ||
+      process.env.ADMIN_SECRET;
     const origin = new URL(req.url).origin;
 
     const cronUrl = `${origin}/api/cron/${job}`;
@@ -37,9 +47,9 @@ export async function POST(req: Request) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    if (cookieHeader) headers['Cookie'] = cookieHeader;
-    if (authHeader) headers['Authorization'] = authHeader;
-    else if (secret) headers['Authorization'] = `Bearer ${secret}`;
+    if (cookieHeader) headers.Cookie = cookieHeader;
+    if (authHeader) headers.Authorization = authHeader;
+    else if (secret) headers.Authorization = `Bearer ${secret}`;
 
     const cronRes = await fetch(cronUrl, {
       method: 'POST',
@@ -61,6 +71,9 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('Admin cron error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

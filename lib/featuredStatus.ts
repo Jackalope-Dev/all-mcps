@@ -5,7 +5,10 @@ export type FeaturedFields = {
   featuredUntil?: Date | string | number | null;
 };
 
-export function isFeaturedListing(server: FeaturedFields, now = new Date()): boolean {
+export function isFeaturedListing(
+  server: FeaturedFields,
+  now = new Date(),
+): boolean {
   if (server.isPremium) return true;
   if (!server.featuredUntil) return false;
   const until =

@@ -19,7 +19,9 @@ const IDENTIFIER = /^[a-zA-Z][\w.-]*$/;
  * included while a sibling "## Installation" section does not.
  */
 function extractToolsSection(readme: string): string | null {
-  const headingMatch = readme.match(/^(#{1,4})[ \t]*(?:available[ \t]+|mcp[ \t]+)*tools?\b.*$/im);
+  const headingMatch = readme.match(
+    /^(#{1,4})[ \t]*(?:available[ \t]+|mcp[ \t]+)*tools?\b.*$/im,
+  );
   if (!headingMatch) return null;
   const level = headingMatch[1].length;
   const start = (headingMatch.index ?? 0) + headingMatch[0].length;
@@ -53,17 +55,28 @@ function fromTables(section: string): ParsedReadmeTool[] {
   for (let i = 0; i < lines.length - 1; i++) {
     const header = lines[i];
     const separator = lines[i + 1];
-    if (!/^\|.*\|\s*$/.test(header) || !/^\|(?:[\s:-]+\|)+\s*$/.test(separator)) continue;
+    if (!/^\|.*\|\s*$/.test(header) || !/^\|(?:[\s:-]+\|)+\s*$/.test(separator))
+      continue;
 
     const headerCells = header.split('|').slice(1, -1).map(cleanCell);
-    if (!/^(tool|tool name|function|function name|name)$/i.test(headerCells[0] || '')) continue;
+    if (
+      !/^(tool|tool name|function|function name|name)$/i.test(
+        headerCells[0] || '',
+      )
+    )
+      continue;
 
     // The description isn't always the last column — a table can carry a trailing
     // "Cost"/"Auth required" column after it (see the x402 sample this was written
     // against) — so prefer a column whose header actually reads as a description,
     // and only fall back to "last column" when none does.
-    const labeledDescIdx = headerCells.findIndex((h) => /^(description|desc|what it does|what does it do|summary|purpose)$/i.test(h));
-    const descIdx = labeledDescIdx >= 0 ? labeledDescIdx : headerCells.length - 1;
+    const labeledDescIdx = headerCells.findIndex((h) =>
+      /^(description|desc|what it does|what does it do|summary|purpose)$/i.test(
+        h,
+      ),
+    );
+    const descIdx =
+      labeledDescIdx >= 0 ? labeledDescIdx : headerCells.length - 1;
 
     let row = i + 2;
     while (row < lines.length && /^\|.*\|\s*$/.test(lines[row])) {
@@ -73,7 +86,9 @@ function fromTables(section: string): ParsedReadmeTool[] {
         const description = cells.length > 1 ? cells[descIdx] : undefined;
         tools.push({
           name,
-          description: description ? truncate(description, MAX_DESCRIPTION_LEN) : undefined,
+          description: description
+            ? truncate(description, MAX_DESCRIPTION_LEN)
+            : undefined,
         });
       }
       row++;
@@ -94,7 +109,9 @@ function fromSubheadings(section: string): ParsedReadmeTool[] {
   const tools: ParsedReadmeTool[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const headingMatch = lines[i].match(/^#{2,6}[ \t]+`([a-zA-Z][\w.-]*)`[ \t]*$/);
+    const headingMatch = lines[i].match(
+      /^#{2,6}[ \t]+`([a-zA-Z][\w.-]*)`[ \t]*$/,
+    );
     if (!headingMatch) continue;
     const name = headingMatch[1];
     if (name.length > MAX_NAME_LEN) continue;
@@ -127,7 +144,10 @@ function fromBulletList(section: string): ParsedReadmeTool[] {
     for (const pattern of patterns) {
       const m = line.match(pattern);
       if (m && m[1].length <= MAX_NAME_LEN) {
-        tools.push({ name: m[1], description: truncate(m[2].trim(), MAX_DESCRIPTION_LEN) });
+        tools.push({
+          name: m[1],
+          description: truncate(m[2].trim(), MAX_DESCRIPTION_LEN),
+        });
         break;
       }
     }
@@ -141,7 +161,8 @@ function fromBulletList(section: string): ParsedReadmeTool[] {
 // heading (see the fixture this guard was written against), and without it strategy 4
 // happily mines "`location_not_found`" out of an *Error Responses* bullet list as if
 // it were a tool name.
-const NON_TOOL_SUBHEADING = /\b(error|response|example|troubleshoot|usage|param)/i;
+const NON_TOOL_SUBHEADING =
+  /\b(error|response|example|troubleshoot|usage|param)/i;
 
 /**
  * Strategy 4 (last resort, name-only): bare `code`-wrapped identifiers inside bullet
@@ -184,7 +205,9 @@ function dedupe(tools: ParsedReadmeTool[]): ParsedReadmeTool[] {
  * doesn't document tools in a recognizable shape, so callers must treat an empty result
  * as "not found," never "this listing has no tools."
  */
-export function parseToolsFromReadme(readme: string | null | undefined): ParsedReadmeTool[] {
+export function parseToolsFromReadme(
+  readme: string | null | undefined,
+): ParsedReadmeTool[] {
   if (!readme) return [];
   const section = extractToolsSection(readme);
   if (!section) return [];

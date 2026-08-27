@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { CopyBlock } from '../ui/CopyBlock';
-import { Download, Code2, Sparkles, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { AlertCircle, Code2, Download, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { CopyBlock } from '../ui/CopyBlock';
+import { Input } from '../ui/Input';
 
 type TargetLanguage = 'typescript' | 'python';
 type AuthType = 'none' | 'bearer' | 'apiKey';
@@ -37,12 +37,14 @@ const SAMPLE_PRESETS: SamplePreset[] = [
             get: {
               operationId: 'findPetsByStatus',
               summary: 'Finds Pets by status',
-              description: 'Multiple status values can be provided with comma separated strings',
+              description:
+                'Multiple status values can be provided with comma separated strings',
               parameters: [
                 {
                   name: 'status',
                   in: 'query',
-                  description: 'Status values that need to be considered for filter',
+                  description:
+                    'Status values that need to be considered for filter',
                   required: true,
                   schema: { type: 'string', default: 'available' },
                 },
@@ -81,7 +83,7 @@ const SAMPLE_PRESETS: SamplePreset[] = [
         },
       },
       null,
-      2
+      2,
     ),
   },
   {
@@ -122,7 +124,7 @@ const SAMPLE_PRESETS: SamplePreset[] = [
         },
       },
       null,
-      2
+      2,
     ),
   },
 ];
@@ -144,14 +146,18 @@ interface ExtractedTool {
 }
 
 function cleanToolName(name: string): string {
-  let cleaned = name.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+  let cleaned = name
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '');
   if (!cleaned) cleaned = 'mcp_tool';
   return cleaned;
 }
 
 function parseOpenApiToTools(specJson: any): ExtractedTool[] {
   const tools: ExtractedTool[] = [];
-  if (!specJson || typeof specJson !== 'object' || !specJson.paths) return tools;
+  if (!specJson || typeof specJson !== 'object' || !specJson.paths)
+    return tools;
 
   const paths = specJson.paths;
   for (const pathKey of Object.keys(paths)) {
@@ -164,17 +170,21 @@ function parseOpenApiToTools(specJson: any): ExtractedTool[] {
       const op = pathItem[m];
       const methodUpper = m.toUpperCase();
 
-      let name = op.operationId || `${m}_${pathKey.replace(/[\/\{\}]/g, '_')}`;
+      let name = op.operationId || `${m}_${pathKey.replace(/[/{}]/g, '_')}`;
       name = cleanToolName(name);
 
-      const description = op.summary || op.description || `${methodUpper} ${pathKey}`;
+      const description =
+        op.summary || op.description || `${methodUpper} ${pathKey}`;
 
       const parameters: ExtractedParam[] = [];
 
       // Extract path & query parameters
-      const rawParams = [...(pathItem.parameters || []), ...(op.parameters || [])];
+      const rawParams = [
+        ...(pathItem.parameters || []),
+        ...(op.parameters || []),
+      ];
       for (const p of rawParams) {
-        if (!p || !p.name) continue;
+        if (!p?.name) continue;
         parameters.push({
           name: p.name,
           in: p.in || 'query',
@@ -194,7 +204,9 @@ function parseOpenApiToTools(specJson: any): ExtractedTool[] {
               name: propKey,
               in: 'body',
               description: prop.description || `${propKey} body property`,
-              required: Array.isArray(bodySchema.required) && bodySchema.required.includes(propKey),
+              required:
+                Array.isArray(bodySchema.required) &&
+                bodySchema.required.includes(propKey),
               type: prop.type || 'string',
             });
           }
@@ -214,7 +226,12 @@ function parseOpenApiToTools(specJson: any): ExtractedTool[] {
   return tools;
 }
 
-function generateTypeScriptCode(tools: ExtractedTool[], baseUrl: string, authType: AuthType, apiKeyHeader: string): string {
+function generateTypeScriptCode(
+  tools: ExtractedTool[],
+  baseUrl: string,
+  authType: AuthType,
+  apiKeyHeader: string,
+): string {
   const serverName = 'mcp-api-server';
 
   let code = `import { Server } from "@modelcontextprotocol/sdk/server/index.js";\n`;
@@ -250,11 +267,18 @@ function generateTypeScriptCode(tools: ExtractedTool[], baseUrl: string, authTyp
     code += `        type: "object",\n`;
     code += `        properties: {\n`;
     tool.parameters.forEach((p) => {
-      const typeStr = p.type === 'integer' || p.type === 'number' ? 'number' : p.type === 'boolean' ? 'boolean' : 'string';
+      const typeStr =
+        p.type === 'integer' || p.type === 'number'
+          ? 'number'
+          : p.type === 'boolean'
+            ? 'boolean'
+            : 'string';
       code += `          ${JSON.stringify(p.name)}: { type: ${JSON.stringify(typeStr)}, description: ${JSON.stringify(p.description)} },\n`;
     });
     code += `        },\n`;
-    const reqList = tool.parameters.filter((p) => p.required).map((p) => JSON.stringify(p.name));
+    const reqList = tool.parameters
+      .filter((p) => p.required)
+      .map((p) => JSON.stringify(p.name));
     code += `        required: [${reqList.join(', ')}],\n`;
     code += `      },\n`;
     code += `    },\n`;
@@ -283,23 +307,28 @@ function generateTypeScriptCode(tools: ExtractedTool[], baseUrl: string, authTyp
 
     // Path replacements
     let pathExpr = `\`${tool.path}\``;
-    tool.parameters.filter(p => p.in === 'path').forEach(p => {
-      pathExpr = pathExpr.replace(`{${p.name}}`, `\${encodeURIComponent(String(args.${p.name} ?? ""))}`);
-    });
+    tool.parameters
+      .filter((p) => p.in === 'path')
+      .forEach((p) => {
+        pathExpr = pathExpr.replace(
+          `{${p.name}}`,
+          `\${encodeURIComponent(String(args.${p.name} ?? ""))}`,
+        );
+      });
 
     code += `      let targetPath = ${pathExpr};\n`;
-    
+
     // Query params
-    const queryParams = tool.parameters.filter(p => p.in === 'query');
+    const queryParams = tool.parameters.filter((p) => p.in === 'query');
     if (queryParams.length > 0) {
       code += `      const queryParams = new URLSearchParams();\n`;
-      queryParams.forEach(qp => {
+      queryParams.forEach((qp) => {
         code += `      if (args.${qp.name} !== undefined) queryParams.append(${JSON.stringify(qp.name)}, String(args.${qp.name}));\n`;
       });
       code += `      if (queryParams.toString()) targetPath += "?" + queryParams.toString();\n`;
     }
 
-    const hasBody = tool.parameters.some(p => p.in === 'body');
+    const hasBody = tool.parameters.some((p) => p.in === 'body');
     const fetchOptions = hasBody
       ? `{ method: "${tool.method}", headers, body: JSON.stringify(args) }`
       : `{ method: "${tool.method}", headers }`;
@@ -333,7 +362,12 @@ function generateTypeScriptCode(tools: ExtractedTool[], baseUrl: string, authTyp
   return code;
 }
 
-function generatePythonCode(tools: ExtractedTool[], baseUrl: string, authType: AuthType, apiKeyHeader: string): string {
+function generatePythonCode(
+  tools: ExtractedTool[],
+  baseUrl: string,
+  authType: AuthType,
+  apiKeyHeader: string,
+): string {
   let code = `from mcp.server.fastmcp import FastMCP\n`;
   code += `import httpx\n`;
   code += `import os\n\n`;
@@ -364,24 +398,35 @@ function generatePythonCode(tools: ExtractedTool[], baseUrl: string, authType: A
     code += `@mcp.tool(name="${tool.name}", description="""${tool.description}""")\n`;
 
     const paramArgs = tool.parameters.map((p) => {
-      const pyType = p.type === 'integer' ? 'int' : p.type === 'number' ? 'float' : p.type === 'boolean' ? 'bool' : 'str';
-      return p.required ? `${p.name}: ${pyType}` : `${p.name}: ${pyType} = None`;
+      const pyType =
+        p.type === 'integer'
+          ? 'int'
+          : p.type === 'number'
+            ? 'float'
+            : p.type === 'boolean'
+              ? 'bool'
+              : 'str';
+      return p.required
+        ? `${p.name}: ${pyType}`
+        : `${p.name}: ${pyType} = None`;
     });
 
     code += `def ${tool.name}(${paramArgs.join(', ')}) -> str:\n`;
     code += `    """Execute ${tool.method} request to ${tool.path}."""\n`;
-    
+
     let pathFString = `f"${tool.path}"`;
-    tool.parameters.filter(p => p.in === 'path').forEach(p => {
-      pathFString = pathFString.replace(`{${p.name}}`, `{${p.name}}`);
-    });
+    tool.parameters
+      .filter((p) => p.in === 'path')
+      .forEach((p) => {
+        pathFString = pathFString.replace(`{${p.name}}`, `{${p.name}}`);
+      });
 
     code += `    url = f"{BASE_URL}" + ${pathFString}\n`;
-    
-    const queryParams = tool.parameters.filter(p => p.in === 'query');
+
+    const queryParams = tool.parameters.filter((p) => p.in === 'query');
     if (queryParams.length > 0) {
       code += `    params = {}\n`;
-      queryParams.forEach(qp => {
+      queryParams.forEach((qp) => {
         code += `    if ${qp.name} is not None:\n`;
         code += `        params["${qp.name}"] = ${qp.name}\n`;
       });
@@ -389,10 +434,10 @@ function generatePythonCode(tools: ExtractedTool[], baseUrl: string, authType: A
       code += `    params = None\n`;
     }
 
-    const bodyParams = tool.parameters.filter(p => p.in === 'body');
+    const bodyParams = tool.parameters.filter((p) => p.in === 'body');
     if (bodyParams.length > 0) {
       code += `    json_data = {}\n`;
-      bodyParams.forEach(bp => {
+      bodyParams.forEach((bp) => {
         code += `    if ${bp.name} is not None:\n`;
         code += `        json_data["${bp.name}"] = ${bp.name}\n`;
       });
@@ -435,26 +480,37 @@ export function OpenApiToMcpTool() {
   } catch (err: any) {
     tools = [];
     if (!parseError) {
-      setParseError('Invalid JSON format. Please ensure your spec is valid OpenAPI JSON.');
+      setParseError(
+        'Invalid JSON format. Please ensure your spec is valid OpenAPI JSON.',
+      );
     }
   }
 
-  const generatedCode = targetLang === 'typescript'
-    ? generateTypeScriptCode(tools, baseUrl, authType, apiKeyHeader)
-    : generatePythonCode(tools, baseUrl, authType, apiKeyHeader);
+  const generatedCode =
+    targetLang === 'typescript'
+      ? generateTypeScriptCode(tools, baseUrl, authType, apiKeyHeader)
+      : generatePythonCode(tools, baseUrl, authType, apiKeyHeader);
 
   function loadPreset(preset: SamplePreset) {
-    trackFeatureUse('openapi_converter', { action: 'load_preset', preset: preset.name });
+    trackFeatureUse('openapi_converter', {
+      action: 'load_preset',
+      preset: preset.name,
+    });
     setSpecInput(preset.spec);
     setBaseUrl(preset.baseUrl);
     setParseError(null);
   }
 
   function handleDownload() {
-    trackFeatureUse('openapi_converter', { action: 'download_code', language: targetLang });
+    trackFeatureUse('openapi_converter', {
+      action: 'download_code',
+      language: targetLang,
+    });
     const ext = targetLang === 'typescript' ? 'ts' : 'py';
     const filename = `mcp-server.${ext}`;
-    const blob = new Blob([generatedCode], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([generatedCode], {
+      type: 'text/plain;charset=utf-8',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -466,10 +522,25 @@ export function OpenApiToMcpTool() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Quick Presets Banner */}
-      <Card style={{ padding: '1.25rem', background: 'var(--bg-muted)', borderColor: 'var(--border-color)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+      <Card
+        style={{
+          padding: '1.25rem',
+          background: 'var(--bg-muted)',
+          borderColor: 'var(--border-color)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.75rem',
+          }}
+        >
           <Sparkles size={18} style={{ color: 'var(--brand-cyan)' }} />
-          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Load Sample OpenAPI Specifications</span>
+          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+            Load Sample OpenAPI Specifications
+          </span>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {SAMPLE_PRESETS.map((preset) => (
@@ -487,11 +558,28 @@ export function OpenApiToMcpTool() {
       </Card>
 
       {/* Inputs Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1.5rem' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+          gap: '1.5rem',
+        }}
+      >
         {/* Left Column: Spec & Configuration */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+        >
           <div>
-            <label htmlFor="openapi-spec-input" style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+            <label
+              htmlFor="openapi-spec-input"
+              style={{
+                display: 'block',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                marginBottom: '0.5rem',
+              }}
+            >
               OpenAPI 3.0 / 3.1 JSON Specification
             </label>
             <textarea
@@ -508,7 +596,9 @@ export function OpenApiToMcpTool() {
                 padding: '0.875rem',
                 borderRadius: '8px',
                 background: 'var(--bg-muted)',
-                border: parseError ? '1px solid #ef4444' : '1px solid var(--border-color)',
+                border: parseError
+                  ? '1px solid #ef4444'
+                  : '1px solid var(--border-color)',
                 color: 'var(--text-primary)',
                 fontFamily: 'monospace',
                 fontSize: '0.85rem',
@@ -518,7 +608,16 @@ export function OpenApiToMcpTool() {
               }}
             />
             {parseError && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#ef4444', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  color: '#ef4444',
+                  fontSize: '0.8rem',
+                  marginTop: '0.35rem',
+                }}
+              >
                 <AlertCircle size={14} />
                 <span>{parseError}</span>
               </div>
@@ -533,7 +632,14 @@ export function OpenApiToMcpTool() {
           />
 
           <div>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+            <label
+              style={{
+                display: 'block',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                marginBottom: '0.5rem',
+              }}
+            >
               Authentication Header Strategy
             </label>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -573,25 +679,77 @@ export function OpenApiToMcpTool() {
 
         {/* Right Column: Parsed Tool Preview */}
         <div>
-          <Card style={{ padding: '1.25rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Card
+            style={{
+              padding: '1.25rem',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
                 <Code2 size={18} style={{ color: 'var(--accent-color)' }} />
                 Parsed MCP Tools ({tools.length})
               </h2>
               {tools.length > 0 && (
-                <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 600 }}>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '4px',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#10b981',
+                    fontWeight: 600,
+                  }}
+                >
                   Ready to compile
                 </span>
               )}
             </div>
 
             {tools.length === 0 ? (
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem 1rem', margin: 'auto' }}>
-                Paste a valid OpenAPI spec on the left to extract tool schemas automatically.
+              <div
+                style={{
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.85rem',
+                  textAlign: 'center',
+                  padding: '2rem 1rem',
+                  margin: 'auto',
+                }}
+              >
+                Paste a valid OpenAPI spec on the left to extract tool schemas
+                automatically.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', maxHeight: '420px', paddingRight: '0.25rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                  overflowY: 'auto',
+                  maxHeight: '420px',
+                  paddingRight: '0.25rem',
+                }}
+              >
                 {tools.map((t, i) => (
                   <div
                     key={i}
@@ -603,20 +761,64 @@ export function OpenApiToMcpTool() {
                       fontSize: '0.85rem',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.35rem' }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-color)', wordBreak: 'break-all' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '0.35rem',
+                        marginBottom: '0.35rem',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: 'monospace',
+                          fontWeight: 700,
+                          color: 'var(--accent-color)',
+                          wordBreak: 'break-all',
+                        }}
+                      >
                         {t.name}
                       </span>
-                      <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', borderRadius: '3px', background: 'var(--bg-muted)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          padding: '0.15rem 0.4rem',
+                          borderRadius: '3px',
+                          background: 'var(--bg-muted)',
+                          fontFamily: 'monospace',
+                          wordBreak: 'break-all',
+                        }}
+                      >
                         {t.method} {t.path}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)',
+                        marginBottom: '0.5rem',
+                      }}
+                    >
                       {t.description}
                     </p>
                     {t.parameters.length > 0 && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
-                        <strong>Params:</strong> {t.parameters.map((p) => `${p.name} (${p.type}${p.required ? '*' : ''})`).join(', ')}
+                      <div
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--text-secondary)',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        <strong>Params:</strong>{' '}
+                        {t.parameters
+                          .map(
+                            (p) =>
+                              `${p.name} (${p.type}${p.required ? '*' : ''})`,
+                          )
+                          .join(', ')}
                       </div>
                     )}
                   </div>
@@ -629,15 +831,39 @@ export function OpenApiToMcpTool() {
 
       {/* Generated Code Section */}
       <section>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            marginBottom: '1rem',
+          }}
+        >
           <div>
-            <h2 className="text-section" style={{ margin: 0 }}>Generated MCP Server Code</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
+            <h2 className="text-section" style={{ margin: 0 }}>
+              Generated MCP Server Code
+            </h2>
+            <p
+              style={{
+                fontSize: '0.85rem',
+                color: 'var(--text-secondary)',
+                margin: '0.25rem 0 0 0',
+              }}
+            >
               Copy or download your complete, runnable MCP server file.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
             <button
               type="button"
               className={`btn btn-sm ${targetLang === 'typescript' ? 'btn-primary' : 'btn-secondary'}`}
@@ -652,7 +878,12 @@ export function OpenApiToMcpTool() {
             >
               Python FastMCP
             </button>
-            <Button variant="secondary" size="sm" onClick={handleDownload} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleDownload}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
               <Download size={15} />
               Download .{targetLang === 'typescript' ? 'ts' : 'py'}
             </Button>
@@ -660,10 +891,23 @@ export function OpenApiToMcpTool() {
         </div>
 
         {/* Required dependencies notice */}
-        <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', background: 'var(--bg-muted)', borderRadius: '6px', fontSize: '0.85rem', border: '1px solid var(--border-color)', wordBreak: 'break-word', overflowX: 'auto' }}>
+        <div
+          style={{
+            marginBottom: '0.75rem',
+            padding: '0.75rem 1rem',
+            background: 'var(--bg-muted)',
+            borderRadius: '6px',
+            fontSize: '0.85rem',
+            border: '1px solid var(--border-color)',
+            wordBreak: 'break-word',
+            overflowX: 'auto',
+          }}
+        >
           <strong>Install dependencies:</strong>{' '}
           <code style={{ color: 'var(--accent-color)' }}>
-            {targetLang === 'typescript' ? 'npm install @modelcontextprotocol/sdk zod' : 'pip install "mcp[cli]" httpx'}
+            {targetLang === 'typescript'
+              ? 'npm install @modelcontextprotocol/sdk zod'
+              : 'pip install "mcp[cli]" httpx'}
           </code>
         </div>
 

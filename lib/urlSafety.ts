@@ -1,7 +1,11 @@
 function isPrivateOrReservedHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
 
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) {
+  if (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local')
+  ) {
     return true;
   }
 
@@ -55,4 +59,3 @@ export function normalizeUrl(urlString: string): string {
 
 /** Defense-in-depth check before the health-check cron fetches a stored URL. */
 export const isSafeFetchTarget = isSafeSubmissionUrl;
-

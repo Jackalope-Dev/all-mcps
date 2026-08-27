@@ -7,13 +7,7 @@
   "authorUrl": "https://github.com/Jackalope-Dev",
   "icon": "https://allmcps.com/logo-icon.png",
   "category": "development",
-  "tags": [
-    "directory",
-    "search",
-    "discovery",
-    "registry",
-    "submission"
-  ],
+  "tags": ["directory", "search", "discovery", "registry", "submission"],
   "tools": [
     {
       "name": "search_mcp_servers",
@@ -47,9 +41,7 @@
             "description": "The server ID (e.g. \"github-mcp\", \"sqlite-mcp\")"
           }
         },
-        "required": [
-          "id"
-        ]
+        "required": ["id"]
       }
     },
     {
@@ -93,9 +85,7 @@
             "description": "Optional contact/billing email"
           }
         },
-        "required": [
-          "id"
-        ]
+        "required": ["id"]
       }
     },
     {
@@ -109,9 +99,7 @@
             "description": "The server ID to check"
           }
         },
-        "required": [
-          "id"
-        ]
+        "required": ["id"]
       }
     },
     {
@@ -153,12 +141,7 @@
           },
           "pricingModel": {
             "type": "string",
-            "enum": [
-              "free",
-              "freemium",
-              "paid",
-              "byok"
-            ],
+            "enum": ["free", "freemium", "paid", "byok"],
             "description": "How this server is priced"
           },
           "pricingNotes": {
@@ -167,12 +150,7 @@
           },
           "authType": {
             "type": "string",
-            "enum": [
-              "none",
-              "api_key",
-              "oauth",
-              "other"
-            ],
+            "enum": ["none", "api_key", "oauth", "other"],
             "description": "Authentication the server requires"
           },
           "license": {
@@ -188,12 +166,7 @@
           },
           "maintenanceStatus": {
             "type": "string",
-            "enum": [
-              "active",
-              "stable",
-              "experimental",
-              "archived"
-            ],
+            "enum": ["active", "stable", "experimental", "archived"],
             "description": "Repository maintenance status"
           },
           "supportUrl": {
@@ -212,11 +185,7 @@
             "description": "Args for the install command"
           }
         },
-        "required": [
-          "name",
-          "url",
-          "email"
-        ]
+        "required": ["name", "url", "email"]
       }
     },
     {
@@ -231,11 +200,7 @@
           },
           "method": {
             "type": "string",
-            "enum": [
-              "github",
-              "website_badge",
-              "dns"
-            ],
+            "enum": ["github", "website_badge", "dns"],
             "description": "Verification method (default: github)"
           },
           "websiteUrl": {
@@ -243,9 +208,7 @@
             "description": "Optional website URL for website/dns verification"
           }
         },
-        "required": [
-          "id"
-        ]
+        "required": ["id"]
       }
     }
   ]

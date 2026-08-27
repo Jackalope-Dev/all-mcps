@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useId, useRef } from 'react';
 import { ChevronDown, HelpCircle } from 'lucide-react';
+import React, { useId, useRef, useState } from 'react';
 
 export interface FaqItem {
   question?: React.ReactNode;
@@ -21,7 +21,8 @@ export interface FaqSectionProps {
 
 /** Recursively extracts plain text from strings and React element nodes for Schema.org JSON-LD */
 function nodeToString(node: React.ReactNode): string {
-  if (node === null || node === undefined || typeof node === 'boolean') return '';
+  if (node === null || node === undefined || typeof node === 'boolean')
+    return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(nodeToString).join(' ').trim();
   if (React.isValidElement(node)) {
@@ -52,7 +53,10 @@ export function FaqSection({
     setOpenIndex(openIndex === index ? null : index);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
     const total = items.length;
     let targetIndex: number | null = null;
 
@@ -105,7 +109,14 @@ export function FaqSection({
       )}
 
       {title && (
-        <h2 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', marginBottom: '1.25rem', fontWeight: 700 }}>
+        <h2
+          style={{
+            fontSize: '1.4rem',
+            color: 'var(--text-primary)',
+            marginBottom: '1.25rem',
+            fontWeight: 700,
+          }}
+        >
           {title}
         </h2>
       )}
@@ -156,8 +167,18 @@ export function FaqSection({
                   cursor: 'pointer',
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <HelpCircle size={18} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} aria-hidden="true" />
+                <span
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                  }}
+                >
+                  <HelpCircle
+                    size={18}
+                    style={{ color: 'var(--brand-cyan)', flexShrink: 0 }}
+                    aria-hidden="true"
+                  />
                   <span>{questionText}</span>
                 </span>
                 <ChevronDown

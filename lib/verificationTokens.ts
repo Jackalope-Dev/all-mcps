@@ -5,6 +5,9 @@
  * or another account's token, which matters since ownership can transfer to
  * whoever next proves control).
  */
-export function getClaimVerificationToken(serverId: string, userId: string): string {
+export function getClaimVerificationToken(
+  serverId: string,
+  userId: string,
+): string {
   return `allmcps-site-verification=${serverId}:${userId}`;
 }

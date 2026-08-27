@@ -102,7 +102,9 @@ export function BrandLogo({
         </span>
       )}
       {showWordmark && (
-        <span className={`wordmark-text brand-logo-wordmark brand-logo-wordmark-${size}`}>
+        <span
+          className={`wordmark-text brand-logo-wordmark brand-logo-wordmark-${size}`}
+        >
           <span className="wordmark-all">All</span>
           <span className="wordmark-mcps">MCPs</span>
         </span>
@@ -112,7 +114,14 @@ export function BrandLogo({
 
   if (href === null) {
     return (
-      <span className={`brand-logo ${className}`.trim()} style={{ display: 'inline-flex', alignItems: 'center', gap: size === 'sm' ? '0.5rem' : '0.75rem' }}>
+      <span
+        className={`brand-logo ${className}`.trim()}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: size === 'sm' ? '0.5rem' : '0.75rem',
+        }}
+      >
         {inner}
       </span>
     );

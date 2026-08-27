@@ -1,26 +1,25 @@
-import { NextResponse } from 'next/server';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { drizzle } from 'drizzle-orm/d1';
-import { servers } from '../../../db/schema';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { isSafeSubmissionUrl, normalizeUrl } from '../../../lib/urlSafety';
-import { findExistingListingByUrl } from '../../../lib/urlDedup';
-import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from '../../../lib/categories';
+import { servers } from '../../../db/schema';
+import { normalizeCategory } from '../../../lib/categories';
+import { getEmailEnv, sendNotificationEmail } from '../../../lib/notify';
 import {
-  syncSequenzySubscriber,
-  PRODUCT_SUBSCRIBERS_LIST_ID,
   NEWSLETTER_SUBSCRIBERS_LIST_ID,
+  PRODUCT_SUBSCRIBERS_LIST_ID,
+  syncSequenzySubscriber,
 } from '../../../lib/sequenzy';
-import { sendNotificationEmail, getEmailEnv } from '../../../lib/notify';
-import { getAppUrl } from '../../../lib/stripe';
 import {
-  isPricingModel,
   isAuthType,
   isMaintenanceStatus,
-  normalizeTags,
+  isPricingModel,
   normalizeCompatibleClients,
+  normalizeTags,
 } from '../../../lib/serverEnums';
+import { getAppUrl } from '../../../lib/stripe';
 import { verifyTurnstileToken } from '../../../lib/turnstile';
+import { findExistingListingByUrl } from '../../../lib/urlDedup';
+import { isSafeSubmissionUrl, normalizeUrl } from '../../../lib/urlSafety';
 
 const submitSchema = z.object({
   url: z.string().optional().or(z.literal('')),
@@ -71,12 +70,12 @@ export async function POST(req: Request) {
     const turnstileResult = await verifyTurnstileToken(
       body['cf-turnstile-response'],
       env,
-      req.headers.get('x-forwarded-for') || ''
+      req.headers.get('x-forwarded-for') || '',
     );
     if (!turnstileResult.ok) {
       return NextResponse.json(
         { success: false, error: turnstileResult.error },
-        { status: turnstileResult.status }
+        { status: turnstileResult.status },
       );
     }
 
@@ -89,19 +88,27 @@ export async function POST(req: Request) {
     let websiteUrl = normalizeUrl(result.data.websiteUrl || '');
     let name = result.data.name || '';
     let description = result.data.description || '';
-    let category = normalizeCategory(result.data.category);
+    const category = normalizeCategory(result.data.category);
     let url = normalizeUrl(result.data.url || '');
 
     const tags = normalizeTags(result.data.tags);
-    const compatibleClients = normalizeCompatibleClients(result.data.compatibleClients);
-    const pricingModel = isPricingModel(result.data.pricingModel) ? result.data.pricingModel : null;
-    const authType = isAuthType(result.data.authType) ? result.data.authType : null;
+    const compatibleClients = normalizeCompatibleClients(
+      result.data.compatibleClients,
+    );
+    const pricingModel = isPricingModel(result.data.pricingModel)
+      ? result.data.pricingModel
+      : null;
+    const authType = isAuthType(result.data.authType)
+      ? result.data.authType
+      : null;
     const maintenanceStatus = isMaintenanceStatus(result.data.maintenanceStatus)
       ? result.data.maintenanceStatus
       : null;
-    const pricingNotes = (result.data.pricingNotes || '').trim().slice(0, 280) || null;
+    const pricingNotes =
+      (result.data.pricingNotes || '').trim().slice(0, 280) || null;
     const license = (result.data.license || '').trim().slice(0, 60) || null;
-    const suggestedInstallCommand = (result.data.suggestedInstallCommand || '').trim().slice(0, 100) || null;
+    const suggestedInstallCommand =
+      (result.data.suggestedInstallCommand || '').trim().slice(0, 100) || null;
     const suggestedInstallArgs = (result.data.suggestedInstallArgs || [])
       .filter((a) => typeof a === 'string' && a.trim())
       .map((a) => a.trim())
@@ -110,7 +117,8 @@ export async function POST(req: Request) {
     let supportUrl = normalizeUrl(result.data.supportUrl || '');
     if (supportUrl && !isSafeSubmissionUrl(supportUrl)) supportUrl = '';
     let remoteEndpointUrl = normalizeUrl(result.data.remoteEndpointUrl || '');
-    if (remoteEndpointUrl && !isSafeSubmissionUrl(remoteEndpointUrl)) remoteEndpointUrl = '';
+    if (remoteEndpointUrl && !isSafeSubmissionUrl(remoteEndpointUrl))
+      remoteEndpointUrl = '';
 
     // Website-only: use website as primary url when repo omitted
     if (!url && websiteUrl) {
@@ -123,16 +131,22 @@ export async function POST(req: Request) {
     if (!url) {
       return NextResponse.json(
         { error: 'Provide a repository URL and/or website URL.' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!isSafeSubmissionUrl(url)) {
-      return NextResponse.json({ error: 'Primary URL must be a public http(s) address.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Primary URL must be a public http(s) address.' },
+        { status: 400 },
+      );
     }
 
     if (websiteUrl && !isSafeSubmissionUrl(websiteUrl)) {
-      return NextResponse.json({ error: 'Website URL must be a public http(s) address.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Website URL must be a public http(s) address.' },
+        { status: 400 },
+      );
     }
 
     const githubMatch = url.match(/github\.com\/([^/]+)\/([^/]+)/);
@@ -142,14 +156,22 @@ export async function POST(req: Request) {
       if (repo.endsWith('.git')) repo = repo.slice(0, -4);
 
       try {
-        const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-          headers: { 'User-Agent': 'AllMCPs-Directory' },
-        });
+        const ghRes = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}`,
+          {
+            headers: { 'User-Agent': 'AllMCPs-Directory' },
+          },
+        );
         if (ghRes.ok) {
           const ghData = (await ghRes.json()) as any;
           if (!name) name = ghData.name;
-          if (!description && ghData.description) description = ghData.description;
-          if (!websiteUrl && ghData.homepage && isSafeSubmissionUrl(ghData.homepage)) {
+          if (!description && ghData.description)
+            description = ghData.description;
+          if (
+            !websiteUrl &&
+            ghData.homepage &&
+            isSafeSubmissionUrl(ghData.homepage)
+          ) {
             websiteUrl = ghData.homepage;
           }
         }
@@ -161,11 +183,15 @@ export async function POST(req: Request) {
     if (!name) {
       return NextResponse.json(
         { error: 'Name could not be auto-filled, please provide it manually.' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `mcp-${Date.now()}`;
+    const id =
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `mcp-${Date.now()}`;
 
     if (!env) {
       try {
@@ -177,7 +203,7 @@ export async function POST(req: Request) {
       }
     }
 
-    if (!env || !env.DB) {
+    if (!env?.DB) {
       throw new Error('Database binding not found');
     }
 
@@ -195,7 +221,7 @@ export async function POST(req: Request) {
           duplicate: true,
           existing: existingByUrl,
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -221,12 +247,16 @@ export async function POST(req: Request) {
         pricingNotes,
         authType,
         license,
-        compatibleClients: compatibleClients.length ? JSON.stringify(compatibleClients) : null,
+        compatibleClients: compatibleClients.length
+          ? JSON.stringify(compatibleClients)
+          : null,
         maintenanceStatus,
         supportUrl: supportUrl || null,
         remoteEndpointUrl: remoteEndpointUrl || null,
         suggestedInstallCommand,
-        suggestedInstallArgs: suggestedInstallArgs.length ? JSON.stringify(suggestedInstallArgs) : null,
+        suggestedInstallArgs: suggestedInstallArgs.length
+          ? JSON.stringify(suggestedInstallArgs)
+          : null,
       })
       .onConflictDoNothing()
       .returning({ id: servers.id });
@@ -235,15 +265,20 @@ export async function POST(req: Request) {
       // Slug collision: another listing already has this id. Nothing was written, so
       // don't sync Sequenzy — the customAttributes would point at someone else's listing.
       return NextResponse.json(
-        { error: 'A listing with a matching name already exists. Please contact us if this is unexpected.' },
-        { status: 409 }
+        {
+          error:
+            'A listing with a matching name already exists. Please contact us if this is unexpected.',
+        },
+        { status: 409 },
       );
     }
 
     const newsletterOptIn = result.data.newsletterOptIn !== false;
     await syncSequenzySubscriber({
       email,
-      tags: newsletterOptIn ? ['submitted-listing', 'newsletter-signup'] : ['submitted-listing'],
+      tags: newsletterOptIn
+        ? ['submitted-listing', 'newsletter-signup']
+        : ['submitted-listing'],
       lists: newsletterOptIn
         ? [PRODUCT_SUBSCRIBERS_LIST_ID, NEWSLETTER_SUBSCRIBERS_LIST_ID]
         : [PRODUCT_SUBSCRIBERS_LIST_ID],
@@ -280,6 +315,9 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('Submission error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

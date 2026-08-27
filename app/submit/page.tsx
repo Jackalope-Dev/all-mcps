@@ -1,6 +1,6 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { SubmitForm } from '../../components/forms/SubmitForm';
-import { PageShell, PageHeader } from '../../components/PageShell';
+import { PageHeader, PageShell } from '../../components/PageShell';
 
 export const metadata: Metadata = {
   title: 'Submit Your MCP Server for Listing & Review',
@@ -10,7 +10,14 @@ export const metadata: Metadata = {
     canonical: 'https://allmcps.com/submit',
   },
   openGraph: {
-    images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+    images: [
+      {
+        url: 'https://allmcps.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AllMCPs',
+      },
+    ],
     title: 'Submit Your MCP Server for Listing & Review | AllMCPs',
     description:
       'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers and agent users.',
@@ -31,14 +38,25 @@ export default function SubmitPage() {
       {
         '@type': 'WebPage',
         name: 'Submit your MCP Server to AllMCPs',
-        description: 'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers and agent users.',
+        description:
+          'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers and agent users.',
         url: 'https://allmcps.com/submit',
       },
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Submit Server', item: 'https://allmcps.com/submit' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Submit Server',
+            item: 'https://allmcps.com/submit',
+          },
         ],
       },
     ],
@@ -46,13 +64,17 @@ export default function SubmitPage() {
 
   return (
     <PageShell variant="content" panel>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PageHeader
         title="Submit an MCP server"
         description={
           <>
-            Free listing review for Model Context Protocol servers. Add a repo or website, we prefill
-            what we can, then you claim ownership after approval.
+            Free listing review for Model Context Protocol servers. Add a repo
+            or website, we prefill what we can, then you claim ownership after
+            approval.
           </>
         }
       />

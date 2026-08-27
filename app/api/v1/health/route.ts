@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { checkRateLimit, clientKey, rateLimitHeaders, rateLimitedResponse } from '@/lib/rateLimit';
+import {
+  checkRateLimit,
+  clientKey,
+  rateLimitedResponse,
+  rateLimitHeaders,
+} from '@/lib/rateLimit';
 
 export async function GET(request: Request) {
   // Generous limit — this is the canonical low-cost probe/monitor endpoint,
@@ -20,6 +25,6 @@ export async function GET(request: Request) {
         'Cache-Control': 'no-store',
         ...rateLimitHeaders(rateLimit),
       },
-    }
+    },
   );
 }

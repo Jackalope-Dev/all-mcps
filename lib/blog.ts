@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import matter from 'gray-matter';
 import blogManifest from './blog-manifest.json';
 
@@ -25,7 +25,9 @@ export type BlogPost = {
 function readPostFile(filename: string): BlogPost {
   const match = filename.match(FILENAME_PATTERN);
   if (!match) {
-    throw new Error(`Blog post filename "${filename}" must match YYYY-MM-DD-slug.md`);
+    throw new Error(
+      `Blog post filename "${filename}" must match YYYY-MM-DD-slug.md`,
+    );
   }
   const [, date, slug] = match;
 
@@ -33,7 +35,9 @@ function readPostFile(filename: string): BlogPost {
   const { data, content } = matter(raw);
 
   if (!data.title || !data.excerpt) {
-    throw new Error(`Blog post "${filename}" is missing required frontmatter (title, excerpt)`);
+    throw new Error(
+      `Blog post "${filename}" is missing required frontmatter (title, excerpt)`,
+    );
   }
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
@@ -62,7 +66,9 @@ export function getAllPosts(): BlogPost[] {
 
   try {
     if (fs.existsSync(BLOG_DIR)) {
-      const filenames = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'));
+      const filenames = fs
+        .readdirSync(BLOG_DIR)
+        .filter((f) => f.endsWith('.md'));
       if (filenames.length > 0) {
         rawPosts = filenames.map(readPostFile);
       }
@@ -91,4 +97,3 @@ export function getAllTags(): string[] {
   }
   return Array.from(tags).sort();
 }
-

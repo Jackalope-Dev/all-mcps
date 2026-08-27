@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { LogIn, LogOut, Menu, Search, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Sparkles, Search, LogIn, LogOut } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { fetchBrowserSession } from '../lib/clientSession';
 import { BrandLogo } from './BrandLogo';
 import { Button } from './ui/Button';
-import { fetchBrowserSession } from '../lib/clientSession';
 
 const NAV = [
   { href: '/browse', label: 'Browse' },
@@ -48,7 +48,9 @@ export function SiteHeader() {
   useEffect(() => {
     setMounted(true);
     try {
-      const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+      const isApple = /Mac|iPhone|iPad|iPod/i.test(
+        navigator.platform || navigator.userAgent,
+      );
       setSearchModKey(isApple ? '⌘' : 'Ctrl');
     } catch {
       setSearchModKey('Ctrl');
@@ -70,7 +72,9 @@ export function SiteHeader() {
 
   const ctaHref = isSignedIn ? '/dashboard' : '/submit';
   const ctaLabel = isSignedIn ? 'Manage' : 'Submit MCP';
-  const mobileCtaLabel = isSignedIn ? 'Manage Your Listings' : 'Submit MCP Server';
+  const mobileCtaLabel = isSignedIn
+    ? 'Manage Your Listings'
+    : 'Submit MCP Server';
   const loginHref =
     pathname === '/login' || pathname === '/verify-request'
       ? '/login'
@@ -111,7 +115,7 @@ export function SiteHeader() {
       const drawer = drawerRef.current;
       if (!drawer) return;
       const focusable = Array.from(
-        drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
       ).filter((el) => !el.hasAttribute('disabled') && el.tabIndex !== -1);
       if (focusable.length === 0) {
         e.preventDefault();
@@ -165,7 +169,7 @@ export function SiteHeader() {
   }, [mobileMenuOpen]);
 
   return (
-    <header className="site-header" role="banner">
+    <header className="site-header">
       <div className="container grid-crosshair grid-crosshair-bl grid-crosshair-br">
         <div className="site-header-inner">
           <div className="flex items-center">
@@ -188,7 +192,12 @@ export function SiteHeader() {
               type="button"
               onClick={() =>
                 window.dispatchEvent(
-                  new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true })
+                  new KeyboardEvent('keydown', {
+                    key: 'k',
+                    metaKey: true,
+                    ctrlKey: true,
+                    bubbles: true,
+                  }),
                 )
               }
               className="header-search-btn"
@@ -197,13 +206,18 @@ export function SiteHeader() {
             >
               <Search size={13} className="text-cyan-400" aria-hidden="true" />
               <span className="header-search-label">Search</span>
-              <kbd className="header-search-kbd" aria-hidden="true">
+              <kbd className="header-search-kbd">
                 {searchModKey === '⌘' ? '⌘K' : 'Ctrl+K'}
               </kbd>
             </button>
             {isSignedIn ? (
               <div className="site-nav-manage-group">
-                <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
+                <Button
+                  href={ctaHref}
+                  variant="primary"
+                  size="sm"
+                  className="site-nav-cta"
+                >
                   <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
                 </Button>
                 <a
@@ -217,10 +231,20 @@ export function SiteHeader() {
               </div>
             ) : (
               <div className="site-nav-auth-group">
-                <Button href={loginHref} variant="secondary" size="sm" className="site-nav-login">
+                <Button
+                  href={loginHref}
+                  variant="secondary"
+                  size="sm"
+                  className="site-nav-login"
+                >
                   <LogIn size={13} aria-hidden="true" /> Log in
                 </Button>
-                <Button href={ctaHref} variant="primary" size="sm" className="site-nav-cta">
+                <Button
+                  href={ctaHref}
+                  variant="primary"
+                  size="sm"
+                  className="site-nav-cta"
+                >
                   <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
                 </Button>
               </div>
@@ -235,9 +259,15 @@ export function SiteHeader() {
             onClick={() => setMobileMenuOpen((open) => !open)}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation"
-            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-label={
+              mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'
+            }
           >
-            {mobileMenuOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
+            {mobileMenuOpen ? (
+              <X size={24} aria-hidden="true" />
+            ) : (
+              <Menu size={24} aria-hidden="true" />
+            )}
           </button>
         </div>
       </div>
@@ -246,91 +276,109 @@ export function SiteHeader() {
           header's backdrop-filter, which establishes a containing block for
           position: fixed descendants and would otherwise collapse the overlay
           to the header's height (making the menu appear to do nothing). */}
-      {mounted && mobileMenuOpen && createPortal(
-        <div
-          className="mobile-menu-overlay"
-          onClick={closeMobileMenu}
-          role="presentation"
-        >
+      {mounted &&
+        mobileMenuOpen &&
+        createPortal(
           <div
-            ref={drawerRef}
-            className="mobile-menu-drawer"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Site navigation"
+            className="mobile-menu-overlay"
+            onClick={closeMobileMenu}
+            role="presentation"
           >
-            <nav id="mobile-navigation" className="mobile-nav-list" aria-label="Mobile">
-              {NAV.map(({ href, label }) => (
+            <div
+              ref={drawerRef}
+              className="mobile-menu-drawer"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Site navigation"
+            >
+              <nav
+                id="mobile-navigation"
+                className="mobile-nav-list"
+                aria-label="Mobile"
+              >
+                {NAV.map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`mobile-nav-link${isActive(pathname, href) ? ' is-active' : ''}`}
+                    aria-current={isActive(pathname, href) ? 'page' : undefined}
+                    onClick={closeMobileMenu}
+                  >
+                    {label}
+                  </Link>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobileMenu();
+                    window.dispatchEvent(
+                      new KeyboardEvent('keydown', { key: 'k', metaKey: true }),
+                    );
+                  }}
+                  className="mobile-nav-link"
+                  style={{
+                    width: '100%',
+                    justifyContent: 'flex-start',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                  aria-label="Search directory"
+                >
+                  <Search
+                    size={18}
+                    className="text-cyan-400"
+                    aria-hidden="true"
+                  />
+                  <span>Search Directory</span>
+                </button>
                 <Link
-                  key={href}
-                  href={href}
-                  className={`mobile-nav-link${isActive(pathname, href) ? ' is-active' : ''}`}
-                  aria-current={isActive(pathname, href) ? 'page' : undefined}
+                  href="/build-mcp-server"
+                  className={`mobile-nav-link${isActive(pathname, '/build-mcp-server') ? ' is-active' : ''}`}
                   onClick={closeMobileMenu}
                 >
-                  {label}
+                  Build an MCP Server
                 </Link>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  closeMobileMenu();
-                  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
-                }}
-                className="mobile-nav-link"
-                style={{ width: '100%', justifyContent: 'flex-start', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                aria-label="Search directory"
-              >
-                <Search size={18} className="text-cyan-400" aria-hidden="true" />
-                <span>Search Directory</span>
-              </button>
-              <Link
-                href="/build-mcp-server"
-                className={`mobile-nav-link${isActive(pathname, '/build-mcp-server') ? ' is-active' : ''}`}
-                onClick={closeMobileMenu}
-              >
-                Build an MCP Server
-              </Link>
-              <div className="mobile-nav-cta-block">
-                {!isSignedIn && (
+                <div className="mobile-nav-cta-block">
+                  {!isSignedIn && (
+                    <Button
+                      href={loginHref}
+                      variant="secondary"
+                      size="md"
+                      className="mobile-nav-cta-btn"
+                      onClick={closeMobileMenu}
+                    >
+                      <LogIn size={16} aria-hidden="true" /> Log in
+                    </Button>
+                  )}
                   <Button
-                    href={loginHref}
-                    variant="secondary"
+                    href={ctaHref}
+                    variant="primary"
                     size="md"
                     className="mobile-nav-cta-btn"
                     onClick={closeMobileMenu}
                   >
-                    <LogIn size={16} aria-hidden="true" /> Log in
+                    <Sparkles size={16} aria-hidden="true" /> {mobileCtaLabel}
                   </Button>
-                )}
-                <Button
-                  href={ctaHref}
-                  variant="primary"
-                  size="md"
-                  className="mobile-nav-cta-btn"
-                  onClick={closeMobileMenu}
-                >
-                  <Sparkles size={16} aria-hidden="true" /> {mobileCtaLabel}
-                </Button>
-                {isSignedIn && (
-                  <Button
-                    href={logoutHref}
-                    variant="secondary"
-                    size="md"
-                    className="mobile-nav-cta-btn"
-                    onClick={closeMobileMenu}
-                  >
-                    <LogOut size={16} aria-hidden="true" /> Log out
-                  </Button>
-                )}
-              </div>
-            </nav>
-          </div>
-        </div>,
-        document.body,
-      )}
+                  {isSignedIn && (
+                    <Button
+                      href={logoutHref}
+                      variant="secondary"
+                      size="md"
+                      className="mobile-nav-cta-btn"
+                      onClick={closeMobileMenu}
+                    >
+                      <LogOut size={16} aria-hidden="true" /> Log out
+                    </Button>
+                  )}
+                </div>
+              </nav>
+            </div>
+          </div>,
+          document.body,
+        )}
     </header>
   );
 }
-

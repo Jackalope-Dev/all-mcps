@@ -1,19 +1,26 @@
+import {
+  ArrowRight,
+  BadgeCheck,
+  CheckCircle2,
+  ChevronRight,
+  Download,
+  Eye,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronRight, Eye, Heart, Download, BadgeCheck, CheckCircle2, ArrowRight } from 'lucide-react';
-import { ServerAvatar } from '../../../components/ui/ServerAvatar';
-import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
-import { Badge } from '../../../components/ui/Badge';
-import { getPopularServers, type Server } from '../../../lib/servers';
-import { isVerifiedListing } from '../../../lib/featuredStatus';
-import { parseServerName } from '../../../lib/displayName';
-import { formatCompactNumber } from '../../../lib/format';
-import { IconTooltip } from '../../../components/ui/IconTooltip';
-import { MCP_CLIENTS, mcpClientBySlug } from '../../../lib/clients';
 import { ClientConfigSection } from '../../../components/clients/ClientConfigSection';
-import { ServerConfigCopyButton } from '../../../components/clients/ServerConfigCopyButton';
 import { ClientFaqAccordion } from '../../../components/clients/ClientFaqAccordion';
+import { ServerConfigCopyButton } from '../../../components/clients/ServerConfigCopyButton';
+import { Badge } from '../../../components/ui/Badge';
+import { IconTooltip } from '../../../components/ui/IconTooltip';
+import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
+import { ServerAvatar } from '../../../components/ui/ServerAvatar';
+import { MCP_CLIENTS, mcpClientBySlug } from '../../../lib/clients';
+import { parseServerName } from '../../../lib/displayName';
+import { isVerifiedListing } from '../../../lib/featuredStatus';
+import { formatCompactNumber } from '../../../lib/format';
+import { getPopularServers } from '../../../lib/servers';
 
 const SITE = 'https://allmcps.com';
 const TOP_N = 12;
@@ -49,7 +56,8 @@ export async function generateMetadata({
       'How to install and configure MCP servers in Claude Desktop on macOS and Windows, including the config file location and JSON shape.',
   };
 
-  const title = metaTitleOverrides[c.slug] ?? `How to Install MCP Servers in ${c.name}`;
+  const title =
+    metaTitleOverrides[c.slug] ?? `How to Install MCP Servers in ${c.name}`;
   const description = metaDescriptionOverrides[c.slug] ?? c.lead;
   const url = `${SITE}/clients/${c.slug}`;
   return {
@@ -58,12 +66,23 @@ export async function generateMetadata({
     alternates: { canonical: url },
     openGraph: {
       type: 'article',
-      images: [{ url: 'https://allmcps.com/opengraph-image', width: 1200, height: 630, alt: 'AllMCPs' }],
+      images: [
+        {
+          url: 'https://allmcps.com/opengraph-image',
+          width: 1200,
+          height: 630,
+          alt: 'AllMCPs',
+        },
+      ],
       title: `${title} | AllMCPs`,
       description,
       url,
     },
-    twitter: { card: 'summary_large_image', title: `${title} | AllMCPs`, description },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | AllMCPs`,
+      description,
+    },
   };
 }
 
@@ -81,12 +100,22 @@ export default async function ClientPage({
   const url = `${SITE}/clients/${c.slug}`;
   const heading = `How to Install MCP Servers in ${c.name}`;
 
-  const hasDedicatedLandingPage = ['claude-desktop', 'cursor', 'cline', 'windsurf'].includes(c.slug);
-  const dedicatedLandingSlug = c.slug === 'claude-desktop' ? 'mcp-for-claude-desktop'
-    : c.slug === 'cursor' ? 'mcp-for-cursor'
-    : c.slug === 'cline' ? 'mcp-for-cline'
-    : c.slug === 'windsurf' ? 'mcp-for-windsurf'
-    : null;
+  const hasDedicatedLandingPage = [
+    'claude-desktop',
+    'cursor',
+    'cline',
+    'windsurf',
+  ].includes(c.slug);
+  const dedicatedLandingSlug =
+    c.slug === 'claude-desktop'
+      ? 'mcp-for-claude-desktop'
+      : c.slug === 'cursor'
+        ? 'mcp-for-cursor'
+        : c.slug === 'cline'
+          ? 'mcp-for-cline'
+          : c.slug === 'windsurf'
+            ? 'mcp-for-windsurf'
+            : null;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -115,7 +144,12 @@ export default async function ClientPage({
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
-          { '@type': 'ListItem', position: 2, name: 'MCP Clients', item: `${SITE}/clients` },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'MCP Clients',
+            item: `${SITE}/clients`,
+          },
           { '@type': 'ListItem', position: 3, name: c.name, item: url },
         ],
       },
@@ -124,31 +158,70 @@ export default async function ClientPage({
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb">
           <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
-            <li><Link href="/">Home</Link></li>
-            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
-            <li><Link href="/clients">MCP Clients</Link></li>
-            <li className="breadcrumb-separator"><ChevronRight size={12} /></li>
+            <li>
+              <Link href="/">Home</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
+            <li>
+              <Link href="/clients">MCP Clients</Link>
+            </li>
+            <li className="breadcrumb-separator">
+              <ChevronRight size={12} />
+            </li>
             <li className="breadcrumb-current">{c.name}</li>
           </ol>
         </nav>
 
         {/* Hero */}
-        <section style={{ marginBottom: '2.5rem', maxWidth: '800px', margin: '0 auto 2.5rem', textAlign: 'center' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <section
+          style={{
+            marginBottom: '2.5rem',
+            maxWidth: '800px',
+            margin: '0 auto 2.5rem',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+              flexWrap: 'wrap',
+            }}
+          >
             <Badge variant="verified">{c.badgeText}</Badge>
             {hasDedicatedLandingPage && dedicatedLandingSlug && (
-              <Link href={`/${dedicatedLandingSlug}`} className="badge badge-link badge-category" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Link
+                href={`/${dedicatedLandingSlug}`}
+                className="badge badge-link badge-category"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
                 Browse {c.name} Servers Directory <ArrowRight size={12} />
               </Link>
             )}
           </div>
-          <h1 className="text-display" style={{ marginBottom: '1rem' }}>{heading}</h1>
-          <p className="text-lead" style={{ margin: '0 auto' }}>{c.lead}</p>
+          <h1 className="text-display" style={{ marginBottom: '1rem' }}>
+            {heading}
+          </h1>
+          <p className="text-lead" style={{ margin: '0 auto' }}>
+            {c.lead}
+          </p>
         </section>
 
         {/* Interactive Config Section */}
@@ -156,11 +229,29 @@ export default async function ClientPage({
 
         {/* Step-by-Step Instructions */}
         <section style={{ marginBottom: '3.5rem', maxWidth: '800px' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <h2
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+            }}
+          >
             <CheckCircle2 size={22} style={{ color: 'var(--accent-color)' }} />
             <span>Step-by-step Installation Guide</span>
           </h2>
-          <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <ol
+            style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+            }}
+          >
             {c.steps.map((s, i) => (
               <li
                 key={s.title}
@@ -193,8 +284,26 @@ export default async function ClientPage({
                   {i + 1}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 0.35rem', color: 'var(--text-primary)' }}>{s.title}</h3>
-                  <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '0.925rem' }}>{s.body}</p>
+                  <h3
+                    style={{
+                      fontSize: '1.05rem',
+                      fontWeight: 700,
+                      margin: '0 0 0.35rem',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {s.title}
+                  </h3>
+                  <p
+                    style={{
+                      margin: 0,
+                      color: 'var(--text-secondary)',
+                      lineHeight: 1.6,
+                      fontSize: '0.925rem',
+                    }}
+                  >
+                    {s.body}
+                  </p>
                 </div>
               </li>
             ))}
@@ -203,17 +312,41 @@ export default async function ClientPage({
 
         {/* Popular servers to try */}
         <section style={{ marginBottom: '3.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Popular MCP servers to try in {c.name}</h2>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
+              Popular MCP servers to try in {c.name}
+            </h2>
             {hasDedicatedLandingPage && dedicatedLandingSlug && (
-              <Link href={`/${dedicatedLandingSlug}`} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
+              <Link
+                href={`/${dedicatedLandingSlug}`}
+                className="btn btn-secondary"
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+              >
                 View All Compatible Servers →
               </Link>
             )}
           </div>
 
           {popular.length > 0 ? (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+            <ul
+              style={{
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '1.25rem',
+              }}
+            >
               {popular.map((server) => {
                 const { displayName, org } = parseServerName(server.name);
                 return (
@@ -229,26 +362,67 @@ export default async function ClientPage({
                       height: '100%',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <ServerAvatar name={server.name} logoUrl={server.logoUrl} size={40} />
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        marginBottom: '0.75rem',
+                      }}
+                    >
+                      <ServerAvatar
+                        name={server.name}
+                        logoUrl={server.logoUrl}
+                        size={40}
+                      />
                       <div style={{ minWidth: 0, flex: 1 }}>
-                        <Link href={`/mcp/${server.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                          <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)', display: 'block' }}>{displayName}</span>
+                        <Link
+                          href={`/mcp/${server.id}`}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              fontSize: '1.05rem',
+                              color: 'var(--text-primary)',
+                              display: 'block',
+                            }}
+                          >
+                            {displayName}
+                          </span>
                         </Link>
-                        {org && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{org}</span>}
+                        {org && (
+                          <span
+                            style={{
+                              fontSize: '0.8rem',
+                              color: 'var(--text-secondary)',
+                            }}
+                          >
+                            {org}
+                          </span>
+                        )}
                       </div>
                       {isVerifiedListing(server) && (
                         <IconTooltip
                           label="Verified listing"
                           asSpan
                           trigger={
-                            <span style={{ display: 'inline-flex', cursor: 'pointer' }}>
-                              <BadgeCheck size={16} style={{ color: 'var(--accent-color)' }} />
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <BadgeCheck
+                                size={16}
+                                style={{ color: 'var(--accent-color)' }}
+                              />
                             </span>
                           }
                         >
                           <span className="mcp-icon-tooltip-title">
-                            <BadgeCheck size={14} color="var(--accent-color)" /> Verified Listing
+                            <BadgeCheck size={14} color="var(--accent-color)" />{' '}
+                            Verified Listing
                           </span>
                           <span className="mcp-icon-tooltip-body">
                             Ownership or active status confirmed on AllMCPs.
@@ -256,40 +430,125 @@ export default async function ClientPage({
                         </IconTooltip>
                       )}
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1rem', flexGrow: 1 }}>
-                      <SafeMarkdown content={server.description || 'No description provided.'} isInline />
+                    <div
+                      style={{
+                        fontSize: '0.875rem',
+                        color: 'var(--text-secondary)',
+                        lineHeight: 1.5,
+                        marginBottom: '1rem',
+                        flexGrow: 1,
+                      }}
+                    >
+                      <SafeMarkdown
+                        content={
+                          server.description || 'No description provided.'
+                        }
+                        isInline
+                      />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                      <div style={{ display: 'flex', gap: '0.65rem', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }} title={`${(server.views || 0).toLocaleString()} views`}><Eye size={12} /> {formatCompactNumber(server.views || 0)}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }} title={`${(server.copies || 0).toLocaleString()} installs`}><Download size={12} /> {formatCompactNumber(server.copies || 0)}</span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: 'auto',
+                        paddingTop: '0.75rem',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '0.65rem',
+                          color: 'var(--text-secondary)',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                          }}
+                          title={`${(server.views || 0).toLocaleString()} views`}
+                        >
+                          <Eye size={12} />{' '}
+                          {formatCompactNumber(server.views || 0)}
+                        </span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                          }}
+                          title={`${(server.copies || 0).toLocaleString()} installs`}
+                        >
+                          <Download size={12} />{' '}
+                          {formatCompactNumber(server.copies || 0)}
+                        </span>
                       </div>
-                      <ServerConfigCopyButton clientSlug={c.slug} serverName={server.name} />
+                      <ServerConfigCopyButton
+                        clientSlug={c.slug}
+                        serverName={server.name}
+                      />
                     </div>
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>
-              <p className="empty-state-body" style={{ margin: 0 }}>No servers to show yet.</p>
+            <div
+              className="surface empty-state"
+              style={{ borderStyle: 'dashed' }}
+            >
+              <p className="empty-state-body" style={{ margin: 0 }}>
+                No servers to show yet.
+              </p>
             </div>
           )}
         </section>
 
         {/* FAQ Section */}
         <section style={{ marginBottom: '3.5rem', maxWidth: '800px' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.25rem' }}>Frequently Asked Questions</h2>
+          <h2
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              marginBottom: '1.25rem',
+            }}
+          >
+            Frequently Asked Questions
+          </h2>
           <ClientFaqAccordion faqList={c.faq} />
         </section>
 
         {/* Other clients navigation */}
         <section style={{ maxWidth: '800px' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Install MCP servers in other clients</h2>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <h2
+            style={{
+              fontSize: '1.2rem',
+              fontWeight: 700,
+              marginBottom: '1rem',
+            }}
+          >
+            Install MCP servers in other clients
+          </h2>
+          <ul
+            style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+              display: 'flex',
+              gap: '0.6rem',
+              flexWrap: 'wrap',
+            }}
+          >
             {MCP_CLIENTS.filter((o) => o.slug !== c.slug).map((o) => (
               <li key={o.slug}>
-                <Link href={`/clients/${o.slug}`} className="badge badge-link badge-category">
+                <Link
+                  href={`/clients/${o.slug}`}
+                  className="badge badge-link badge-category"
+                >
                   {o.name}
                 </Link>
               </li>

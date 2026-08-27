@@ -9,8 +9,8 @@ import {
   Preview,
   Section,
   Text,
-} from "@react-email/components";
-import * as React from "react";
+} from '@react-email/components';
+import type * as React from 'react';
 
 interface BaseLayoutProps {
   previewText: string;
@@ -18,7 +18,7 @@ interface BaseLayoutProps {
   children: React.ReactNode;
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://allmcps.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://allmcps.com';
 
 export const BaseLayout = ({
   previewText,
@@ -72,13 +72,14 @@ export const BaseLayout = ({
             <Text style={footerText}>
               © {new Date().getFullYear()} AllMCPs. All rights reserved.
               <br />
-              The definitive directory for discovering and installing MCP servers.
+              The definitive directory for discovering and installing MCP
+              servers.
             </Text>
             <Text style={footerLinks}>
               <Link href={`${baseUrl}/terms`} style={link}>
                 Terms
-              </Link>{" "}
-              •{" "}
+              </Link>{' '}
+              •{' '}
               <Link href={`${baseUrl}/privacy`} style={link}>
                 Privacy
               </Link>
@@ -93,93 +94,93 @@ export const BaseLayout = ({
 export default BaseLayout;
 
 const main = {
-  backgroundColor: "#020617", // Slate 950
+  backgroundColor: '#020617', // Slate 950
   fontFamily:
     "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  padding: "40px 0",
+  padding: '40px 0',
 };
 
 const container = {
-  margin: "0 auto",
-  padding: "0 20px",
-  maxWidth: "600px",
+  margin: '0 auto',
+  padding: '0 20px',
+  maxWidth: '600px',
 };
 
 const header = {
-  backgroundColor: "#020617", // Slate 950 — explicit so Outlook's per-table
+  backgroundColor: '#020617', // Slate 950 — explicit so Outlook's per-table
   // rendering doesn't default this cell to white and hide the white wordmark.
-  padding: "20px 0",
-  textAlign: "center" as const,
+  padding: '20px 0',
+  textAlign: 'center' as const,
 };
 
 const logo = {
-  margin: "0 auto",
-  display: "block",
+  margin: '0 auto',
+  display: 'block',
 };
 
 const bodyContent = {
-  backgroundColor: "#0f172a", // Slate 900
-  padding: "40px 30px",
-  borderRadius: "12px",
-  border: "1px solid rgba(255, 255, 255, 0.1)",
+  backgroundColor: '#0f172a', // Slate 900
+  padding: '40px 30px',
+  borderRadius: '12px',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
 };
 
 const h1 = {
-  color: "#ffffff",
-  fontSize: "24px",
-  fontWeight: "800",
-  lineHeight: "32px",
-  margin: "0 0 20px 0",
-  letterSpacing: "-1px",
+  color: '#ffffff',
+  fontSize: '24px',
+  fontWeight: '800',
+  lineHeight: '32px',
+  margin: '0 0 20px 0',
+  letterSpacing: '-1px',
 };
 
 const footer = {
-  padding: "32px 0 0 0",
-  textAlign: "center" as const,
+  padding: '32px 0 0 0',
+  textAlign: 'center' as const,
 };
 
 const footerText = {
-  color: "#64748b",
-  fontSize: "14px",
-  lineHeight: "24px",
-  margin: "0 0 12px 0",
+  color: '#64748b',
+  fontSize: '14px',
+  lineHeight: '24px',
+  margin: '0 0 12px 0',
 };
 
 const footerLinks = {
-  margin: "0",
+  margin: '0',
 };
 
 const link = {
-  color: "#94a3b8",
-  textDecoration: "underline",
-  fontSize: "14px",
+  color: '#94a3b8',
+  textDecoration: 'underline',
+  fontSize: '14px',
 };
 
 // Common styles to be exported and used by other templates
 export const textStyle = {
-  color: "#94a3b8",
-  fontSize: "16px",
-  lineHeight: "26px",
-  margin: "0 0 24px 0",
-  fontWeight: "400",
+  color: '#94a3b8',
+  fontSize: '16px',
+  lineHeight: '26px',
+  margin: '0 0 24px 0',
+  fontWeight: '400',
 };
 
 export const highlightTextStyle = {
-  color: "#ffffff",
-  fontWeight: "500",
+  color: '#ffffff',
+  fontWeight: '500',
 };
 
 export const buttonStyle = {
-  backgroundColor: "#00E5FF", // Cyan
-  borderRadius: "6px",
-  color: "#020617", // Dark Slate text for contrast against Cyan
-  fontSize: "16px",
-  fontWeight: "800",
-  textDecoration: "none",
-  textAlign: "center" as const,
-  display: "block",
-  padding: "14px 24px",
-  margin: "32px auto 0",
-  width: "100%",
-  boxSizing: "border-box" as const,
+  backgroundColor: '#00E5FF', // Cyan
+  borderRadius: '6px',
+  color: '#020617', // Dark Slate text for contrast against Cyan
+  fontSize: '16px',
+  fontWeight: '800',
+  textDecoration: 'none',
+  textAlign: 'center' as const,
+  display: 'block',
+  padding: '14px 24px',
+  margin: '32px auto 0',
+  width: '100%',
+  boxSizing: 'border-box' as const,
 };

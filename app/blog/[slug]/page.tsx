@@ -1,14 +1,17 @@
+import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronRight } from 'lucide-react';
+import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
+import { Badge } from '../../../components/ui/Badge';
+import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
+import {
+  TableOfContents,
+  type TocItem,
+} from '../../../components/ui/TableOfContents';
 import { getAllPosts, getPostBySlug } from '../../../lib/blog';
 import { extractToc, withHeadingAnchors } from '../../../lib/blogToc';
-import { truncateTitle, truncateDescription } from '../../../lib/ogHelpers';
-import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
-import { Badge } from '../../../components/ui/Badge';
-import { TableOfContents, TocItem } from '../../../components/ui/TableOfContents';
-import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
+import { truncateDescription, truncateTitle } from '../../../lib/ogHelpers';
 
 export const dynamic = 'force-static';
 export const dynamicParams = true;
@@ -41,7 +44,11 @@ export async function generateMetadata({
   return {
     title: metaTitle,
     description: metaDescription,
-    keywords: [...(Array.isArray(post.tags) ? post.tags : []), 'MCP', 'Model Context Protocol'].join(', '),
+    keywords: [
+      ...(Array.isArray(post.tags) ? post.tags : []),
+      'MCP',
+      'Model Context Protocol',
+    ].join(', '),
     alternates: {
       canonical: url,
     },
@@ -132,8 +139,18 @@ export default async function BlogPostPage({
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://allmcps.com' },
-          { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://allmcps.com/blog' },
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://allmcps.com',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Blog',
+            item: 'https://allmcps.com/blog',
+          },
           { '@type': 'ListItem', position: 3, name: post.title, item: url },
         ],
       },
@@ -157,7 +174,10 @@ export default async function BlogPostPage({
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <main className="page-shell page-shell--default">
         <div className="page-shell-inner">
           {/* marginBottom via inline style, not a Tailwind margin utility: this
@@ -194,12 +214,25 @@ export default async function BlogPostPage({
                     marginBottom: '1rem',
                   }}
                 >
-                  <time dateTime={post.date} className="text-meta" style={{ fontWeight: 600 }}>
+                  <time
+                    dateTime={post.date}
+                    className="text-meta"
+                    style={{ fontWeight: 600 }}
+                  >
                     {formatDate(post.date)}
                   </time>
-                  <span className="text-meta">· {post.readingTime} min read</span>
+                  <span className="text-meta">
+                    · {post.readingTime} min read
+                  </span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    flexWrap: 'wrap',
+                    marginBottom: '1.5rem',
+                  }}
+                >
                   {post.tags.map((tag) => (
                     <Badge key={tag} variant="category">
                       {tag}
@@ -212,7 +245,10 @@ export default async function BlogPostPage({
                 // Spacing via inline style, not Tailwind mb-*/mt-*: this project's unlayered
                 // CSS reset overrides layered margin utilities (they compute to 0), so the
                 // mobile TOC card would otherwise butt right up against the body text.
-                <div className="lg:hidden" style={{ marginTop: '1rem', marginBottom: '2.5rem' }}>
+                <div
+                  className="lg:hidden"
+                  style={{ marginTop: '1rem', marginBottom: '2.5rem' }}
+                >
                   <TableOfContents items={tocItems} />
                 </div>
               )}
@@ -228,11 +264,28 @@ export default async function BlogPostPage({
                   <h2 className="text-section">Frequently asked questions</h2>
                   <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                     {post.faq.map((item) => (
-                      <li key={item.q} style={{ listStyle: 'none', marginBottom: '1.5rem' }}>
-                        <h3 style={{ color: 'var(--text-primary)', fontSize: '1.05rem', marginBottom: '0.4rem' }}>
+                      <li
+                        key={item.q}
+                        style={{ listStyle: 'none', marginBottom: '1.5rem' }}
+                      >
+                        <h3
+                          style={{
+                            color: 'var(--text-primary)',
+                            fontSize: '1.05rem',
+                            marginBottom: '0.4rem',
+                          }}
+                        >
                           {item.q}
                         </h3>
-                        <p style={{ color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{item.a}</p>
+                        <p
+                          style={{
+                            color: 'var(--text-secondary)',
+                            lineHeight: 1.65,
+                            margin: 0,
+                          }}
+                        >
+                          {item.a}
+                        </p>
                       </li>
                     ))}
                   </ul>

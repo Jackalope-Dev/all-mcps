@@ -1,23 +1,27 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { servers } from '@/db/schema';
+import { parseStringArray } from '@/lib/aiContent';
 import { auth } from '@/lib/auth';
-import { diffEditableFields, serializePendingRevision, type EditableServerFields } from '@/lib/pendingRevision';
-import { isSafeSubmissionUrl } from '@/lib/urlSafety';
 import { sendNotificationEmail } from '@/lib/notify';
-import { getAppUrl } from '@/lib/stripe';
+import {
+  diffEditableFields,
+  type EditableServerFields,
+  serializePendingRevision,
+} from '@/lib/pendingRevision';
 import {
   AUTH_TYPES,
   MAINTENANCE_STATUSES,
-  PRICING_MODELS,
   normalizeCompatibleClients,
   normalizeTags,
+  PRICING_MODELS,
   TAG_LIMITS,
 } from '@/lib/serverEnums';
-import { parseStringArray } from '@/lib/aiContent';
+import { getAppUrl } from '@/lib/stripe';
+import { isSafeSubmissionUrl } from '@/lib/urlSafety';
 
 const optionalEnum = <T extends string>(values: readonly T[]) =>
   z
@@ -64,11 +68,17 @@ export async function POST(req: Request) {
     const id = data.id;
     const websiteUrl = (data.websiteUrl || '').trim();
     if (websiteUrl && !isSafeSubmissionUrl(websiteUrl)) {
-      return NextResponse.json({ error: 'Website URL must be a public http(s) address.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Website URL must be a public http(s) address.' },
+        { status: 400 },
+      );
     }
     const supportUrl = (data.supportUrl || '').trim();
     if (supportUrl && !isSafeSubmissionUrl(supportUrl)) {
-      return NextResponse.json({ error: 'Support URL must be a public http(s) address.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Support URL must be a public http(s) address.' },
+        { status: 400 },
+      );
     }
 
     let env: any;
@@ -76,26 +86,44 @@ export async function POST(req: Request) {
       const ctx = await getCloudflareContext();
       env = ctx.env;
     } catch {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 },
+      );
     }
     if (!env?.DB) {
-      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 },
+      );
     }
 
     const db = drizzle(env.DB as any);
-    const rows = await db.select().from(servers).where(eq(servers.id, id)).limit(1);
+    const rows = await db
+      .select()
+      .from(servers)
+      .where(eq(servers.id, id))
+      .limit(1);
     const server = rows[0];
     if (!server) {
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
     }
     if (server.ownerUserId !== userId) {
-      return NextResponse.json({ error: 'You do not own this listing.' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'You do not own this listing.' },
+        { status: 403 },
+      );
     }
 
     const tags = normalizeTags(data.tags ?? []);
-    const compatibleClients = normalizeCompatibleClients(data.compatibleClients ?? []);
+    const compatibleClients = normalizeCompatibleClients(
+      data.compatibleClients ?? [],
+    );
     const suggestedInstallArgs = Array.isArray(data.suggestedInstallArgs)
-      ? data.suggestedInstallArgs.map(String).map((s) => s.trim()).filter(Boolean)
+      ? data.suggestedInstallArgs
+          .map(String)
+          .map((s) => s.trim())
+          .filter(Boolean)
       : [];
 
     const submitted: EditableServerFields = {
@@ -135,7 +163,10 @@ export async function POST(req: Request) {
     const diff = diffEditableFields(current, submitted);
 
     if (Object.keys(diff).length === 0) {
-      return NextResponse.json({ error: 'No changes to submit.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No changes to submit.' },
+        { status: 400 },
+      );
     }
 
     await db
@@ -154,9 +185,15 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Edit submitted for review.' });
+    return NextResponse.json({
+      success: true,
+      message: 'Edit submitted for review.',
+    });
   } catch (error) {
     console.error('Dashboard edit error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

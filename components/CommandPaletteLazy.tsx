@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const CommandPalette = dynamic(
   () => import('./ui/CommandPalette').then((m) => m.CommandPalette),
-  { ssr: false }
+  { ssr: false },
 );
 
 function isPaletteHotkey(e: KeyboardEvent) {
@@ -39,7 +39,9 @@ export function CommandPaletteLazy() {
 
     let cancelIdle: () => void;
     if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(() => arm(false), { timeout: 4000 });
+      const id = window.requestIdleCallback(() => arm(false), {
+        timeout: 4000,
+      });
       cancelIdle = () => window.cancelIdleCallback(id);
     } else {
       const t = window.setTimeout(() => arm(false), 2000);
@@ -57,7 +59,12 @@ export function CommandPaletteLazy() {
     pendingOpen.current = false;
     const t = window.setTimeout(() => {
       window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true })
+        new KeyboardEvent('keydown', {
+          key: 'k',
+          metaKey: true,
+          ctrlKey: true,
+          bubbles: true,
+        }),
       );
     }, 0);
     return () => window.clearTimeout(t);

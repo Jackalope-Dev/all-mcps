@@ -21,28 +21,36 @@ export const WORKFLOW_PROMPTS: McpWorkflow[] = [
     title: 'Full-Stack Web Developer Agent',
     subtitle: 'Postgres + GitHub + Puppeteer / Browser Automation',
     category: 'Software Engineering',
-    description: 'An end-to-end agent workflow for building, testing, and debugging full-stack web applications with direct database access, GitHub repository control, and live browser verification.',
+    description:
+      'An end-to-end agent workflow for building, testing, and debugging full-stack web applications with direct database access, GitHub repository control, and live browser verification.',
     requiredMcps: [
       {
         id: 'modelcontextprotocol-server-postgres',
         name: 'PostgreSQL MCP',
         command: 'npx',
-        args: ['-y', '@modelcontextprotocol/server-postgres', 'postgresql://localhost/mydb'],
-        description: 'Queries schema, executes SELECT/INSERT/UPDATE queries, and verifies database migrations.',
+        args: [
+          '-y',
+          '@modelcontextprotocol/server-postgres',
+          'postgresql://localhost/mydb',
+        ],
+        description:
+          'Queries schema, executes SELECT/INSERT/UPDATE queries, and verifies database migrations.',
       },
       {
         id: 'modelcontextprotocol-server-git',
         name: 'Git MCP',
         command: 'npx',
         args: ['-y', '@modelcontextprotocol/server-git'],
-        description: 'Reads commit logs, checks git status, diffs changes, and commits code changes.',
+        description:
+          'Reads commit logs, checks git status, diffs changes, and commits code changes.',
       },
       {
         id: 'modelcontextprotocol-server-fetch',
         name: 'Fetch & Scrape MCP',
         command: 'npx',
         args: ['-y', '@modelcontextprotocol/server-fetch'],
-        description: 'Fetches web endpoints, inspects API responses, and parses HTML.',
+        description:
+          'Fetches web endpoints, inspects API responses, and parses HTML.',
       },
     ],
     systemPrompt: `You are an expert Full-Stack Senior Software Engineer paired with a developer. You have active access to the project's PostgreSQL database, Git version control system, and HTTP fetch tools via Model Context Protocol (MCP).
@@ -68,14 +76,16 @@ When writing code:
     title: 'Automated Research & Knowledge Agent',
     subtitle: 'Memory + Web Search/Fetch + Obsidian Note Storage',
     category: 'Research & Knowledge Management',
-    description: 'A continuous research assistant that searches the web, synthesizes technical topics, stores persistent notes, and remembers user preferences across sessions.',
+    description:
+      'A continuous research assistant that searches the web, synthesizes technical topics, stores persistent notes, and remembers user preferences across sessions.',
     requiredMcps: [
       {
         id: 'modelcontextprotocol-server-memory',
         name: 'Server Memory MCP',
         command: 'npx',
         args: ['-y', '@modelcontextprotocol/server-memory'],
-        description: 'Persistent knowledge graph and entity memory across chat sessions.',
+        description:
+          'Persistent knowledge graph and entity memory across chat sessions.',
       },
       {
         id: 'modelcontextprotocol-server-fetch',
@@ -103,7 +113,8 @@ Your research procedure:
     title: 'DevOps & Cloud Infrastructure Engineer',
     subtitle: 'Cloudflare + Git + Docker/CLI',
     category: 'Cloud & Infrastructure',
-    description: 'An autonomous cloud engineering workflow for inspecting Workers, managing DNS records, verifying deployments, and troubleshooting build logs.',
+    description:
+      'An autonomous cloud engineering workflow for inspecting Workers, managing DNS records, verifying deployments, and troubleshooting build logs.',
     requiredMcps: [
       {
         id: 'modelcontextprotocol-server-git',
@@ -117,7 +128,8 @@ Your research procedure:
         name: 'API Fetch MCP',
         command: 'npx',
         args: ['-y', '@modelcontextprotocol/server-fetch'],
-        description: 'Pings cloud health check endpoints and deployment monitors.',
+        description:
+          'Pings cloud health check endpoints and deployment monitors.',
       },
     ],
     systemPrompt: `You are a Principal DevOps and Reliability Engineer. You have direct access to git repositories, deployment status endpoints, and infrastructure tools via MCP.
@@ -138,7 +150,8 @@ Your workflow principles:
     title: 'Data Analyst & SQL Scientist Agent',
     subtitle: 'SQLite / Postgres + Data Science & Visualization',
     category: 'Data Science & Analytics',
-    description: 'An AI data analyst capable of writing complex SQL queries, building analytical data pipelines, and outputting charts.',
+    description:
+      'An AI data analyst capable of writing complex SQL queries, building analytical data pipelines, and outputting charts.',
     requiredMcps: [
       {
         id: 'modelcontextprotocol-server-sqlite',
@@ -166,7 +179,8 @@ Analytical process:
     title: 'Product & Operations Coordinator',
     subtitle: 'Slack / Discord + Linear / Jira + Customer Support',
     category: 'Productivity & Operations',
-    description: 'An operational agent that coordinates bug reports, user feedback, and issue tracking across team communication and project management tools.',
+    description:
+      'An operational agent that coordinates bug reports, user feedback, and issue tracking across team communication and project management tools.',
     requiredMcps: [
       {
         id: 'modelcontextprotocol-server-fetch',

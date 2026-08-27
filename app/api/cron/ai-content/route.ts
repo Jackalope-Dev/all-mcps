@@ -1,15 +1,29 @@
-import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { isAdminAuthorized } from '../../../../lib/adminAuth';
-import { fetchGithubReadme, parseGithubUrl } from '../../../../lib/listingEnrich';
-import { getGithubToken } from '../../../../lib/githubAuth';
-import { cleanListingDescription } from '../../../../lib/description';
-import { parseServerTools } from '../../../../lib/servers';
 import { generateListingContent } from '../../../../lib/aiContent';
 import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
+import { cleanListingDescription } from '../../../../lib/description';
+import { getGithubToken } from '../../../../lib/githubAuth';
+import {
+  fetchGithubReadme,
+  parseGithubUrl,
+} from '../../../../lib/listingEnrich';
+import { parseServerTools } from '../../../../lib/servers';
 
 /**
  * AI content pass — writes the unique per-listing content layer (summary, overview,
@@ -86,19 +100,19 @@ export async function POST(req: Request) {
                   isNull(servers.aiEnrichedAt),
                   isNull(servers.authType),
                   isNull(servers.pricingModel),
-                  isNull(servers.installExtractedAt)
-                )
-              )
+                  isNull(servers.installExtractedAt),
+                ),
+              ),
             )
             .orderBy(
               desc(servers.views),
               desc(servers.upvotes),
               sql`${servers.githubStars} IS NULL`,
               desc(servers.githubStars),
-              asc(servers.createdAt)
+              asc(servers.createdAt),
             )
-            .limit(BATCH_SIZE)
-        )
+            .limit(BATCH_SIZE),
+        ),
       )
       .returning({
         id: servers.id,
@@ -128,8 +142,8 @@ export async function POST(req: Request) {
           and(
             eq(servers.status, 'active'),
             isNotNull(servers.aiEnrichedAt),
-            lt(servers.aiEnrichedAt, staleCutoff)
-          )
+            lt(servers.aiEnrichedAt, staleCutoff),
+          ),
         )
         .orderBy(asc(servers.aiEnrichedAt))
         .limit(staleSlots);
@@ -141,8 +155,8 @@ export async function POST(req: Request) {
           .where(
             inArray(
               servers.id,
-              candidates.map((c) => c.id)
-            )
+              candidates.map((c) => c.id),
+            ),
           );
         claimedStale = candidates.map((c) => ({
           id: c.id,
@@ -175,7 +189,9 @@ export async function POST(req: Request) {
       const results = await Promise.all(
         chunk.map(async (server) => {
           const gh = parseGithubUrl(server.url);
-          const readme = gh ? await fetchGithubReadme(gh.owner, gh.repo, githubToken) : null;
+          const readme = gh
+            ? await fetchGithubReadme(gh.owner, gh.repo, githubToken)
+            : null;
           const cleanedDesc = cleanListingDescription(server.description) || '';
 
           if (!readme && cleanedDesc.length < MIN_MATERIAL_CHARS) {
@@ -190,7 +206,7 @@ export async function POST(req: Request) {
             tools: parseServerTools(server.tools),
           });
           return { server, outcome };
-        })
+        }),
       );
 
       for (const r of results) {
@@ -204,25 +220,41 @@ export async function POST(req: Request) {
           const updatePayload: Record<string, unknown> = {
             aiSummary: o.content.summary,
             aiOverview: o.content.overview || null,
-            aiUseCases: o.content.useCases.length ? JSON.stringify(o.content.useCases) : null,
-            aiFeatures: o.content.features.length ? JSON.stringify(o.content.features) : null,
-            aiEnvVars: o.content.envVars.length ? JSON.stringify(o.content.envVars) : null,
+            aiUseCases: o.content.useCases.length
+              ? JSON.stringify(o.content.useCases)
+              : null,
+            aiFeatures: o.content.features.length
+              ? JSON.stringify(o.content.features)
+              : null,
+            aiEnvVars: o.content.envVars.length
+              ? JSON.stringify(o.content.envVars)
+              : null,
             aiFaq: o.content.faq.length ? JSON.stringify(o.content.faq) : null,
             aiFaqAt: claimTime,
           };
 
           // Only ever replaces the *generic default* — never overwrites a category a
           // human submitter, an editor, or a source-list match already set on purpose.
-          if (o.content.category && r.server.category === DEFAULT_SUBMIT_CATEGORY) {
+          if (
+            o.content.category &&
+            r.server.category === DEFAULT_SUBMIT_CATEGORY
+          ) {
             updatePayload.category = o.content.category;
           }
 
-          if (o.content.pricingModel) updatePayload.pricingModel = o.content.pricingModel;
+          if (o.content.pricingModel)
+            updatePayload.pricingModel = o.content.pricingModel;
           if (o.content.authType) updatePayload.authType = o.content.authType;
           if (o.content.license) updatePayload.license = o.content.license;
-          if (o.content.tags && o.content.tags.length > 0) updatePayload.tags = JSON.stringify(o.content.tags);
-          if (o.content.compatibleClients && o.content.compatibleClients.length > 0) {
-            updatePayload.compatibleClients = JSON.stringify(o.content.compatibleClients);
+          if (o.content.tags && o.content.tags.length > 0)
+            updatePayload.tags = JSON.stringify(o.content.tags);
+          if (
+            o.content.compatibleClients &&
+            o.content.compatibleClients.length > 0
+          ) {
+            updatePayload.compatibleClients = JSON.stringify(
+              o.content.compatibleClients,
+            );
           }
 
           // Always mark install-checked, and always replace the cached install
@@ -234,9 +266,12 @@ export async function POST(req: Request) {
           const install = o.content.install;
           if (install) {
             updatePayload.installKind = install.kind;
-            updatePayload.installCommand = install.kind === 'stdio' ? install.command ?? null : null;
+            updatePayload.installCommand =
+              install.kind === 'stdio' ? (install.command ?? null) : null;
             updatePayload.installArgs =
-              install.kind === 'stdio' && install.args && install.args.length > 0
+              install.kind === 'stdio' &&
+              install.args &&
+              install.args.length > 0
                 ? JSON.stringify(install.args)
                 : null;
             updatePayload.installPackage = install.package ?? null;
@@ -267,10 +302,17 @@ export async function POST(req: Request) {
     // priority again); stale re-checks release back to their previous ai_enriched_at, not
     // NULL, so a re-check that keeps failing doesn't masquerade as brand-new backlog.
     const unreleased = claimed.filter((c) => !keep.has(c.id));
-    const releaseNew = unreleased.filter((c) => c.previousEnrichedAt === undefined).map((c) => c.id);
-    const releaseStale = unreleased.filter((c) => c.previousEnrichedAt !== undefined);
+    const releaseNew = unreleased
+      .filter((c) => c.previousEnrichedAt === undefined)
+      .map((c) => c.id);
+    const releaseStale = unreleased.filter(
+      (c) => c.previousEnrichedAt !== undefined,
+    );
     if (releaseNew.length > 0) {
-      await db.update(servers).set({ aiEnrichedAt: null }).where(inArray(servers.id, releaseNew));
+      await db
+        .update(servers)
+        .set({ aiEnrichedAt: null })
+        .where(inArray(servers.id, releaseNew));
     }
     for (const row of releaseStale) {
       await db
@@ -288,7 +330,9 @@ export async function POST(req: Request) {
     const [{ installRemaining }] = await db
       .select({ installRemaining: sql<number>`count(*)` })
       .from(servers)
-      .where(and(eq(servers.status, 'active'), isNull(servers.installExtractedAt)));
+      .where(
+        and(eq(servers.status, 'active'), isNull(servers.installExtractedAt)),
+      );
 
     const staleCutoffNow = new Date(Date.now() - STALE_RECHECK_MS);
     const [{ dueForRecheck }] = await db
@@ -298,8 +342,8 @@ export async function POST(req: Request) {
         and(
           eq(servers.status, 'active'),
           isNotNull(servers.aiEnrichedAt),
-          lt(servers.aiEnrichedAt, staleCutoffNow)
-        )
+          lt(servers.aiEnrichedAt, staleCutoffNow),
+        ),
       );
 
     return NextResponse.json({
@@ -317,6 +361,9 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error('AI content cron error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

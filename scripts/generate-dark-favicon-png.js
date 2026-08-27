@@ -1,6 +1,6 @@
 const Jimp = require('jimp');
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // SVG path points for the geometric M mark in viewBox 0 0 1024 1024
 // We can draw a clean, pixel-perfect dark squircle tile (Slate 950 #020617 + cyan border #00E5FF)
@@ -16,15 +16,27 @@ const path = require('path');
   // Render dark tile squircle background
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const rx = Math.max(0, Math.abs(x - size / 2) - (size / 2 - padding - cornerRadius));
-      const ry = Math.max(0, Math.abs(y - size / 2) - (size / 2 - padding - cornerRadius));
+      const rx = Math.max(
+        0,
+        Math.abs(x - size / 2) - (size / 2 - padding - cornerRadius),
+      );
+      const ry = Math.max(
+        0,
+        Math.abs(y - size / 2) - (size / 2 - padding - cornerRadius),
+      );
       const dist = Math.sqrt(rx * rx + ry * ry);
 
       if (dist <= cornerRadius) {
         if (dist > cornerRadius - strokeWidth) {
           // Cyan glow border #00E5FF with alpha
-          const borderAlpha = Math.round((1 - (dist - (cornerRadius - strokeWidth)) / strokeWidth) * 180);
-          image.setPixelColor(Jimp.rgbaToInt(0, 229, 255, Math.max(60, borderAlpha)), x, y);
+          const borderAlpha = Math.round(
+            (1 - (dist - (cornerRadius - strokeWidth)) / strokeWidth) * 180,
+          );
+          image.setPixelColor(
+            Jimp.rgbaToInt(0, 229, 255, Math.max(60, borderAlpha)),
+            x,
+            y,
+          );
         } else {
           // Dark Slate background (#070d1e -> #020617 vertical gradient)
           const factor = y / size;

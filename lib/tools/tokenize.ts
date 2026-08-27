@@ -16,7 +16,10 @@ export interface ToolSchema {
 export function extractTools(parsed: unknown): ToolSchema[] {
   if (Array.isArray(parsed)) {
     return parsed.filter(
-      (t): t is ToolSchema => !!t && typeof t === 'object' && typeof (t as Record<string, unknown>).name === 'string'
+      (t): t is ToolSchema =>
+        !!t &&
+        typeof t === 'object' &&
+        typeof (t as Record<string, unknown>).name === 'string',
     );
   }
   if (parsed && typeof parsed === 'object') {
@@ -34,7 +37,10 @@ export interface ToolTokenBreakdown {
   tokens: number;
 }
 
-export function computeToolTokens(tools: ToolSchema[]): { breakdown: ToolTokenBreakdown[]; total: number } {
+export function computeToolTokens(tools: ToolSchema[]): {
+  breakdown: ToolTokenBreakdown[];
+  total: number;
+} {
   const breakdown = tools.map((tool) => {
     const serialized = JSON.stringify({
       name: tool.name,

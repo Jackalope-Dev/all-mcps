@@ -1,15 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
 import { Bot, Check } from 'lucide-react';
-import { toast } from './Toast';
+import { useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
+import { toast } from './Toast';
 
-export function AgentPromptButton({ serverId, serverName }: { serverId: string; serverName: string }) {
+export function AgentPromptButton({
+  serverId,
+  serverName,
+}: {
+  serverId: string;
+  serverName: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://allmcps.com';
+    const baseUrl =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://allmcps.com';
     const prompt = `Fetch ${baseUrl}/mcp/${serverId}.md and follow its instructions to install and configure the "${serverName}" MCP server in this environment. Verify the exact install command against the README before running it.`;
 
     try {
@@ -60,15 +69,22 @@ export function AgentPromptButton({ serverId, serverName }: { serverId: string; 
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 28px rgba(var(--accent-rgb), 0.35)';
+        e.currentTarget.style.boxShadow =
+          '0 8px 28px rgba(var(--accent-rgb), 0.35)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.boxShadow = '0 4px 20px var(--accent-glow)';
       }}
     >
-      {copied ? <Check size={18} style={{ flexShrink: 0 }} /> : <Bot size={18} style={{ flexShrink: 0 }} />}
-      <span>{copied ? 'Prompt Copied!' : 'Copy Install Prompt for AI Agents'}</span>
+      {copied ? (
+        <Check size={18} style={{ flexShrink: 0 }} />
+      ) : (
+        <Bot size={18} style={{ flexShrink: 0 }} />
+      )}
+      <span>
+        {copied ? 'Prompt Copied!' : 'Copy Install Prompt for AI Agents'}
+      </span>
     </button>
   );
 }

@@ -14,6 +14,10 @@
       "!**/drizzle",
       "!**/public",
       "!**/content",
+      "!**/email-previews",
+      "!**/data/mcp-servers.json",
+      "!**/lib/blog-manifest.json",
+      "!**/lib/category-manifest.json",
       "!**/cloudflare-env.d.ts",
       "!**/next-env.d.ts"
     ]
@@ -31,18 +35,24 @@
         "noExplicitAny": "off",
         "noArrayIndexKey": "warn"
       },
-      "style": {
-        "noNonNullAssertion": "off"
-      },
       "complexity": {
-        "noBannedTypes": "off",
         "noImportantStyles": "off"
       },
       "security": {
         "noDangerouslySetInnerHtml": "off"
       },
+      "correctness": {
+        "useExhaustiveDependencies": "warn"
+      },
       "a11y": {
-        "noAutofocus": "off"
+        "noAutofocus": "off",
+        "useButtonType": "warn",
+        "noLabelWithoutControl": "warn",
+        "useKeyWithClickEvents": "warn",
+        "useKeyWithMouseEvents": "warn",
+        "noStaticElementInteractions": "warn",
+        "noSvgWithoutTitle": "warn",
+        "useSemanticElements": "warn"
       }
     }
   },

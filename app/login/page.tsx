@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { auth, signIn } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PageShell } from '@/components/PageShell';
-import { syncSequenzySubscriber, NEWSLETTER_SUBSCRIBERS_LIST_ID } from '@/lib/sequenzy';
+import { auth, signIn } from '@/lib/auth';
 import { isUserInEU } from '@/lib/consentRegion';
+import {
+  NEWSLETTER_SUBSCRIBERS_LIST_ID,
+  syncSequenzySubscriber,
+} from '@/lib/sequenzy';
 
 export const metadata: Metadata = {
   title: 'Sign In to Manage Your MCP Server Listings',
@@ -28,13 +31,14 @@ export default async function LoginPage({
   // (e.g. "//evil.com" starts with "/" but browsers treat it as external),
   // and avoid loops to login/verify-request.
   const isValidRedirect =
-    callbackUrl &&
+    typeof callbackUrl === 'string' &&
     callbackUrl.startsWith('/') &&
     !callbackUrl.startsWith('//') &&
     !callbackUrl.startsWith('/login') &&
     !callbackUrl.startsWith('/verify-request');
 
-  const defaultDestination = (session?.user as any)?.role === 'admin' ? '/admin' : '/dashboard';
+  const defaultDestination =
+    (session?.user as any)?.role === 'admin' ? '/admin' : '/dashboard';
   const targetRedirect = isValidRedirect ? callbackUrl : defaultDestination;
 
   if (session?.user) {
@@ -50,7 +54,13 @@ export default async function LoginPage({
   return (
     <PageShell variant="auth" panel>
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '1.25rem',
+          }}
+        >
           <BrandLogo size="lg" href={null} showWordmark={false} />
         </div>
         <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
@@ -117,11 +127,22 @@ export default async function LoginPage({
         <input type="hidden" name="redirectTo" value={targetRedirect} />
 
         <label className="form-checkbox-row">
-          <input type="checkbox" name="newsletterOptIn" defaultChecked={!inEU} />
-          <span>Keep me posted with the AllMCPs newsletter (new servers, guides, product updates).</span>
+          <input
+            type="checkbox"
+            name="newsletterOptIn"
+            defaultChecked={!inEU}
+          />
+          <span>
+            Keep me posted with the AllMCPs newsletter (new servers, guides,
+            product updates).
+          </span>
         </label>
 
-        <button type="submit" className="btn btn-primary btn-full" style={{ padding: '0.65rem 1rem', fontSize: '0.95rem' }}>
+        <button
+          type="submit"
+          className="btn btn-primary btn-full"
+          style={{ padding: '0.65rem 1rem', fontSize: '0.95rem' }}
+        >
           Send Magic Link →
         </button>
       </form>
@@ -134,14 +155,44 @@ export default async function LoginPage({
           textAlign: 'left',
         }}
       >
-        <h2 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <h2
+          style={{
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            marginBottom: '0.6rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
           Developer Dashboard Features
         </h2>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          <li>✓ <strong>Claim &amp; Edit Listings</strong> — Update metadata and verify ownership.</li>
-          <li>✓ <strong>LLM Usage Analytics</strong> — Monitor API hits, impressions, and caller breakdown.</li>
-          <li>✓ <strong>Reciprocal Dofollow Backlinks</strong> — Pass ranking signals to your product site.</li>
-          <li>✓ <strong>Spotlight Boosts</strong> — Feature your MCP at the top of search and category discovery.</li>
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: 0,
+            fontSize: '0.825rem',
+            color: 'var(--text-secondary)',
+            lineHeight: 1.75,
+          }}
+        >
+          <li>
+            ✓ <strong>Claim &amp; Edit Listings</strong> — Update metadata and
+            verify ownership.
+          </li>
+          <li>
+            ✓ <strong>LLM Usage Analytics</strong> — Monitor API hits,
+            impressions, and caller breakdown.
+          </li>
+          <li>
+            ✓ <strong>Reciprocal Dofollow Backlinks</strong> — Pass ranking
+            signals to your product site.
+          </li>
+          <li>
+            ✓ <strong>Spotlight Boosts</strong> — Feature your MCP at the top of
+            search and category discovery.
+          </li>
         </ul>
       </div>
     </PageShell>
