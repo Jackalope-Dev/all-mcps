@@ -62,11 +62,25 @@ Guidelines:
 - Everything else (tag filters, search, RSS feed, sitemap entry, JSON-LD) is generated automatically from the file. No other file needs to change to publish a post.
 - Posts are statically generated, so a new file goes live on the next build/deploy, not instantly — run `npm run build` locally to confirm it compiles before pushing.
 
-# Agent Pre-Handoff Quality Gate
+# Definition of Done
 
-Before completing any task, handing off work to the user, or declaring a change complete, all AI agents MUST run and verify that these checks pass cleanly:
+Run these in order. NEVER report a task complete, hand off, or call a change done
+until every one passes cleanly:
 
-1. `npm run typecheck` — TypeScript verification (`tsc --noEmit`) must exit with 0 errors.
-2. `npm run check` or `npm run format` — Ensure staged/modified files conform to Biome formatting and linter rules.
-3. `npm test` — Ensure all Vitest unit and regression tests pass.
+1. `npm run typecheck` — `tsc --noEmit`, 0 errors.
+2. `npm run check` — Biome format + lint (writes fixes). Must end clean with no
+   remaining lint errors.
+3. `npm test` — Vitest unit + regression, all green.
+4. `npm run build` — required whenever routes, page copy, blog/content, sitemap
+   entries, `STATIC_PAGE_LASTMOD`, config, or env wiring changed. Posts and static
+   pages only go live on build, so this is how you confirm they compile.
+
+`npm run verify` runs typecheck + lint + test in one command (read-only lint); that
+is the minimum gate before finishing. Use `npm run check` to auto-fix formatting/lint.
+
+On failure: fix the cause and re-run the whole chain. Do this autonomously up to
+5 times. Only after 5 failed attempts on the same gate do you stop and ask. Do not
+disable a Biome rule, weaken a type, or skip a test to pass a gate. If a gate fails
+in files you did not touch, a parallel session may be mid-flight — report it, do not
+revert their work.
 
