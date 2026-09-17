@@ -39,7 +39,7 @@
     "gray-matter": "^4.0.3",
     "jimp": "^0.22.12",
     "lucide-react": "^1.27.0",
-    "next": "16.3.0",
+    "next": "16.3.3",
     "next-auth": "^5.0.0-beta.32",
     "potrace": "^2.1.8",
     "react": "^19.2.8",
@@ -57,7 +57,7 @@
     "@biomejs/biome": "^2.5.10",
     "@cloudflare/vitest-pool-workers": "^0.22.0",
     "@cloudflare/workers-types": "^5.20260728.1",
-    "@opennextjs/cloudflare": "1.20.2",
+    "@opennextjs/cloudflare": "1.20.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.1",
     "@types/react": "^19",
@@ -73,7 +73,7 @@
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11",
-    "wrangler": "4.124.0"
+    "wrangler": "4.131.2"
   },
   "optionalDependencies": {
     "@biomejs/cli-win32-x64": "^2.5.10",

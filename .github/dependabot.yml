@@ -2,9 +2,12 @@ version: 2
 
 updates:
   # npm — grouped so a normal week is one reviewable PR rather than a dozen.
-  # Next.js and the OpenNext adapter are deliberately excluded from grouping:
-  # this project tracks a fast-moving Next release (see AGENTS.md) and those
-  # bumps need reading, not batching.
+  #
+  # next, @opennextjs/cloudflare and wrangler are excluded from every group and
+  # always arrive as their own PRs. Partly because this project tracks a
+  # fast-moving Next release (see AGENTS.md), and partly because those three are
+  # version-locked to each other: OpenNext 1.20.3 requires wrangler >=4.125.0,
+  # so they have to move together and a grouped bump would hide that.
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -12,11 +15,20 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     groups:
-      dev-dependencies:
+      # Minor/patch only, on purpose. Grouping majors in here produced a single
+      # PR carrying @types/node 22->26, eslint 9->10 and vitest 4->5 alongside
+      # a set of harmless patches — unreviewable as one unit, and @types/node 26
+      # types against the Node 22 in .nvmrc is an actively wrong combination.
+      # Majors still get their own individual PRs; they just don't ride along.
+      dev-patch-minor:
         dependency-type: development
+        update-types:
+          - minor
+          - patch
         exclude-patterns:
           - 'next'
           - '@opennextjs/*'
+          - 'wrangler'
       production-patch-minor:
         dependency-type: production
         update-types:
@@ -25,6 +37,7 @@ updates:
         exclude-patterns:
           - 'next'
           - '@opennextjs/*'
+          - 'wrangler'
     ignore:
       # Platform-specific binaries live in optionalDependencies on purpose: the
       # dev box forces npm os=linux, and a win32 binary promoted into regular
@@ -40,9 +53,14 @@ updates:
       day: monday
     open-pull-requests-limit: 3
     groups:
-      all:
+      # Same rule as the root: majors get their own PR. Grouping them here put
+      # typescript 5.6 -> 7.0 in with a routine @types/node bump.
+      patch-minor:
         patterns:
           - '*'
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: github-actions
     directory: /
