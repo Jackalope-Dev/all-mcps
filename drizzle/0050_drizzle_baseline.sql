@@ -1,0 +1,28 @@
+-- Drizzle baseline. Intentionally does nothing to the database.
+--
+-- Two ledgers track migrations here and they had drifted apart:
+--
+--   * wrangler's `d1_migrations` table records what has actually been APPLIED.
+--     It is the truth, and it is complete.
+--   * drizzle's `meta/_journal.json` + `meta/NNNN_snapshot.json` record what
+--     drizzle believes the schema looks like, and are what `db:generate`
+--     diffs against to produce a new migration.
+--
+-- Migrations 0034-0048 were hand-written and applied through wrangler without
+-- ever being registered with drizzle, so drizzle's model stopped at 0033 — 15
+-- migrations in the past. `db:generate` therefore emitted CREATE TABLE for a
+-- dozen tables that have existed in production for months (reports, reviews,
+-- sponsor_ads, agent_tokens, stdio verifications...) plus ~18 redundant ADD
+-- COLUMNs, and numbered it 0030, colliding with an existing file. Running that
+-- output would have failed on its first statement.
+--
+-- This file is the fix. The `db:generate` run that produced it also wrote a
+-- fresh snapshot of the real current schema, which is what actually re-baselines
+-- drizzle; the generated SQL was then replaced with this comment because every
+-- statement in it describes something the database already has. From here,
+-- `npm run db:generate` diffs against reality and emits correct incremental
+-- migrations again.
+--
+-- Do not delete this file: wrangler records it in `d1_migrations` on apply, and
+-- its presence is what keeps the two ledgers aligned.
+SELECT 1;

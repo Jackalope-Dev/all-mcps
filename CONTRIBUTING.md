@@ -94,8 +94,27 @@ npm run db:generate       # writes a numbered migration into drizzle/
 npm run db:migrate:local  # apply it to the local D1
 ```
 
-Commit the generated migration. Don't hand-edit files in `drizzle/meta/`, and
-don't add one-off data-fix SQL to the repo — run those against D1 directly.
+Commit the generated migration, and don't add one-off data-fix SQL to the repo —
+run those against D1 directly.
+
+Two ledgers track migrations, and they have to stay in step:
+
+- **wrangler's `d1_migrations` table** records what has actually been applied. It
+  is the source of truth, and it keys off the `.sql` filenames in `drizzle/`.
+- **`drizzle/meta/`** records what drizzle *believes* the schema is, and is what
+  `db:generate` diffs against to produce the next migration.
+
+They drifted once before: migrations `0034`–`0048` were hand-written and applied
+through wrangler without being registered with drizzle, so `db:generate` started
+emitting `CREATE TABLE` for tables that had existed for months.
+`0050_drizzle_baseline.sql` re-synced them and explains the whole thing.
+
+So: prefer `db:generate` over hand-writing, since that keeps both ledgers
+aligned. If you do need to hand-write one (a rename, a data migration, anything
+drizzle can't express), that's fine — but check afterwards that
+`npm run db:generate` still reports **"No schema changes"**. If it wants to
+recreate existing tables, the ledgers have drifted again and need re-baselining
+the same way.
 
 ## Pull requests
 
