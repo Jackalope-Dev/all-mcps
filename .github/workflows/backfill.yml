@@ -1,0 +1,170 @@
+name: 🔁 Backfill (cron endpoint drain)
+
+# Manual-only. Drains one of the catalog cron backlogs by looping its endpoint.
+#
+# The Cloudflare Worker already runs all of these on its own schedule (see
+# custom-worker.ts FAST_JOBS/SLOW_JOBS). This workflow is for catching up fast
+# after a large import — e.g. the weekly registry-sync — instead of waiting for
+# the passive cadence to cycle through every listing.
+#
+# Replaces four near-identical workflows (health, enrich, ai-content, ai-faq).
+# They differed only in endpoint, defaults, and which counters the response
+# returns, which meant every fix had to be made four times — and twice wasn't.
+#
+# Two stop conditions are preserved from the originals:
+#   - The AI endpoints report `remaining`; the loop ends when the backlog is
+#     empty rather than burning the rest of max_calls on no-ops.
+#   - They also report `budgetStopped` when the LLM budget or provider gives
+#     out, which backs off rather than hammering.
+# health/enrich report neither (they are continuous freshness refreshes with no
+# "done" state), so for those the loop is bounded only by max_calls.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Which cron backlog to drain'
+        required: true
+        type: choice
+        options:
+          - health
+          - enrich
+          - ai-content
+          - ai-faq
+      max_calls:
+        description: 'Safety cap on endpoint calls. Blank uses the per-job default (health 200, enrich 600, ai-content 400, ai-faq 400).'
+        required: false
+        default: ''
+      parallel_calls:
+        description: 'Concurrent calls per round. CAUTION: these endpoints run in the same Worker instance as live site traffic, not an isolated queue — raising this has previously correlated with Worker memory-limit/hung-request errors on real page loads during a live run. Keep at 1 until backfill load can be isolated from production.'
+        required: false
+        default: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Drain ${{ github.event.inputs.job }} backlog
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.ADMIN_SECRET }}
+          JOB: ${{ github.event.inputs.job }}
+          MAX_CALLS: ${{ github.event.inputs.max_calls }}
+          PARALLEL_CALLS: ${{ github.event.inputs.parallel_calls }}
+        run: |
+          set -uo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Neither CRON_SECRET nor ADMIN_SECRET repo secret is set."
+            exit 1
+          fi
+
+          case "$JOB" in
+            health)     default_max=200 ;;
+            enrich)     default_max=600 ;;
+            ai-content) default_max=400 ;;
+            ai-faq)     default_max=400 ;;
+            *) echo "::error::Unknown job '$JOB'."; exit 1 ;;
+          esac
+
+          endpoint="https://allmcps.com/api/cron/$JOB"
+          max="${MAX_CALLS:-}"
+          [ -z "$max" ] && max="$default_max"
+          parallel="${PARALLEL_CALLS:-1}"
+
+          echo "Draining $JOB via $endpoint (max $max calls, $parallel parallel)"
+
+          fails=0
+          no_progress=0
+          call=0
+          t_processed=0; t_enriched=0; t_unpublished=0; t_thin=0; t_failed=0
+          t_recategorized=0
+
+          while [ "$call" -lt "$max" ]; do
+            tmpdir=$(mktemp -d)
+            pids=()
+            for _ in $(seq 1 "$parallel"); do
+              call=$((call + 1))
+              if [ "$call" -gt "$max" ]; then break; fi
+              (
+                if ! curl -fsS -X POST "$endpoint" -H "Authorization: Bearer $CRON_SECRET" -o "$tmpdir/$call.json"; then
+                  echo '{"__failed":true}' > "$tmpdir/$call.json"
+                fi
+              ) &
+              pids+=($!)
+            done
+            for pid in "${pids[@]}"; do wait "$pid"; done
+
+            r_processed=0; r_enriched=0; r_unpublished=0; r_thin=0; r_failed=0
+            r_recategorized=0
+            round_errors=0
+            remaining="?"
+            stopped="false"
+
+            for f in "$tmpdir"/*.json; do
+              [ -e "$f" ] || continue
+              resp=$(cat "$f")
+              if [ "$(echo "$resp" | jq -r '.__failed // false')" = "true" ]; then
+                round_errors=$((round_errors + 1))
+                continue
+              fi
+              # Every endpoint returns a subset of these; absent keys read as 0.
+              r_processed=$((r_processed + $(echo "$resp" | jq -r '.processed // 0')))
+              r_enriched=$((r_enriched + $(echo "$resp" | jq -r '.enriched // 0')))
+              r_unpublished=$((r_unpublished + $(echo "$resp" | jq -r '.unpublished // 0')))
+              r_thin=$((r_thin + $(echo "$resp" | jq -r '.skippedThin // 0')))
+              r_failed=$((r_failed + $(echo "$resp" | jq -r '.failed // 0')))
+              r_recategorized=$((r_recategorized + $(echo "$resp" | jq -r '.recategorized // 0')))
+              remaining=$(echo "$resp" | jq -r '.remaining // "?"')
+              [ "$(echo "$resp" | jq -r '.budgetStopped // false')" = "true" ] && stopped="true"
+            done
+            rm -rf "$tmpdir"
+
+            t_processed=$((t_processed + r_processed))
+            t_enriched=$((t_enriched + r_enriched))
+            t_unpublished=$((t_unpublished + r_unpublished))
+            t_thin=$((t_thin + r_thin))
+            t_failed=$((t_failed + r_failed))
+            t_recategorized=$((t_recategorized + r_recategorized))
+
+            echo "call $call/$max | +${r_processed}p +${r_enriched}e +${r_recategorized}c | remaining ${remaining} | totals ${t_processed}p ${t_enriched}e ${t_recategorized}c ${t_unpublished}u ${t_thin}thin ${t_failed}fail"
+
+            if [ "$round_errors" -gt 0 ]; then
+              fails=$((fails + round_errors))
+              if [ "$fails" -ge 5 ]; then
+                echo "::warning::5+ failed calls — likely auth issue or Worker outage. Stopping."
+                break
+              fi
+            else
+              fails=0
+            fi
+
+            # Backlog drained (AI endpoints only — health/enrich report no remaining).
+            if [ "$remaining" != "?" ] && [ "$remaining" -eq 0 ] 2>/dev/null; then
+              echo "Backlog empty — stopping early."
+              break
+            fi
+
+            if [ "$stopped" = "true" ]; then
+              echo "Endpoint stopped early (likely LLM budget/outage) — backing off 30s."
+              sleep 30
+              continue
+            fi
+
+            # Only meaningful where the endpoint reports progress counters.
+            if [ $((r_processed + r_enriched)) -eq 0 ] && [ "$remaining" != "?" ]; then
+              no_progress=$((no_progress + 1))
+              if [ "$no_progress" -ge 4 ]; then
+                echo "::warning::No progress across 4 calls — stopping. Re-run later to continue."
+                break
+              fi
+            else
+              no_progress=0
+            fi
+
+            sleep 2
+          done
+
+          echo "Done ($JOB). processed=$t_processed enriched=$t_enriched recategorized=$t_recategorized unpublished=$t_unpublished skippedThin=$t_thin failed=$t_failed"

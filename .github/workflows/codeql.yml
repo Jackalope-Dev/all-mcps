@@ -1,0 +1,52 @@
+name: 🔎 CodeQL
+
+# Static analysis for the JS/TS surface. Free on public repos.
+#
+# Worth having here specifically: this codebase handles magic-link auth, Stripe
+# webhooks, admin/cron shared-secret checks, and fetches user-submitted URLs and
+# READMEs — the categories where a subtle mistake is a real vulnerability rather
+# than a bug.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so a newly-published rule finds old code without waiting for a push.
+    - cron: '32 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze JavaScript/TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Required to upload results to the Security tab.
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      # No build step: the JS/TS extractor reads source directly, and a full
+      # OpenNext build here would only duplicate what ci.yml already proves.
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript

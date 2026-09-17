@@ -6,6 +6,9 @@ name: 📰 Weekly Newsletter Digest
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   send-digest:
     runs-on: ubuntu-latest

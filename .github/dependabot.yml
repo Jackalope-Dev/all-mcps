@@ -1,0 +1,55 @@
+version: 2
+
+updates:
+  # npm — grouped so a normal week is one reviewable PR rather than a dozen.
+  # Next.js and the OpenNext adapter are deliberately excluded from grouping:
+  # this project tracks a fast-moving Next release (see AGENTS.md) and those
+  # bumps need reading, not batching.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        exclude-patterns:
+          - 'next'
+          - '@opennextjs/*'
+      production-patch-minor:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+        exclude-patterns:
+          - 'next'
+          - '@opennextjs/*'
+    ignore:
+      # Platform-specific binaries live in optionalDependencies on purpose: the
+      # dev box forces npm os=linux, and a win32 binary promoted into regular
+      # dependencies breaks the Cloudflare deploy's `npm ci`.
+      - dependency-name: '@img/sharp-win32-*'
+      - dependency-name: '@rollup/rollup-win32-*'
+
+  # The MCP server ships its own package.json.
+  - package-ecosystem: npm
+    directory: /mcp-server
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      all:
+        patterns:
+          - '*'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns:
+          - '*'

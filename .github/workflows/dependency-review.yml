@@ -1,0 +1,30 @@
+name: 🛡️ Dependency Review
+
+# Blocks a pull request that introduces a dependency with a known vulnerability
+# or a license we can't ship. Runs on the PR diff only, so it costs seconds and
+# says nothing about dependencies already in the tree — Dependabot security
+# updates cover those.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Review dependency changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          # Copyleft licenses would conflict with shipping this under MIT.
+          deny-licenses: AGPL-3.0, GPL-3.0, LGPL-3.0
+          comment-summary-in-pr: on-failure
