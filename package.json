@@ -81,5 +81,15 @@
     "@typescript/typescript-win32-x64": "^7.0.2",
     "lefthook-windows-x64": "^2.1.10",
     "lightningcss-win32-x64-msvc": "^1.33.0"
+  },
+  "comments": {
+    "overrides": "Transitive security fixes with no direct dependency to bump. Each is scoped to the major line that is actually vulnerable — brace-expansion 1.x/2.x are unaffected (the advisory starts at 4.0.0) and forcing them to 5.x would change an API they rely on. Drop an entry once the parent package ships a fix that satisfies it on its own."
+  },
+  "overrides": {
+    "brace-expansion@>=4.0.0": "^5.0.9",
+    "fast-uri": "^3.1.6",
+    "js-yaml@^3.0.0": "^3.15.2",
+    "js-yaml@^4.0.0": "^4.3.2",
+    "sharp": "^0.35.4"
   }
 }
