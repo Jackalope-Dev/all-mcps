@@ -1,34 +1,35 @@
 /**
- * E2B sandbox pilot: verifies stdio MCP listings by actually installing and
+ * E2B sandbox verification: verifies stdio MCP listings by actually installing and
  * running them, instead of trusting README-parsed tool guesses.
  *
  * Why this runs here and not in a Worker cron: E2B's SDK doesn't work inside
  * the Cloudflare Workers runtime (transport layer incompatibility — confirmed
  * against their own docs), so the sandbox orchestration has to run on a real
  * Node.js process. This script is that process, meant to run from the
- * `e2b-stdio-pilot` GitHub Actions workflow (manual dispatch, same shape as
+ * `e2b-stdio-verify` GitHub Actions workflow (manual dispatch, same shape as
  * scripts/backfill-ai-content.mjs).
  *
  * For each listing in a batch: spin up a fresh sandbox, run the cached
  * install command, speak the MCP stdio protocol (initialize -> tools/list)
  * over its stdin/stdout with a hard per-listing timeout, then tear the
- * sandbox down. Results are POSTed to /api/cron/stdio-pilot/result, which
- * writes to the standalone stdio_verification_pilot table — NOT the live
- * servers.tools/tools_source columns. This is a pilot: results get reviewed
- * for success rate/timing/cost before anything here feeds the public site.
+ * sandbox down. Results are POSTed to /api/cron/stdio-verify/result, which
+ * records every outcome in stdio_verifications and promotes an 'ok' result's
+ * tools into servers.tools/tools_source — a sandbox that completed a real
+ * initialize/tools‑list handshake is as authoritative as a live HTTP one.
+ * Failures feed the guessed-install cleanup described in that route.
  *
  * Runs a concurrency pool (default 15, capped below E2B Hobby's 20-concurrent-
- * sandbox limit) that keeps pulling pages from /api/cron/stdio-pilot/batch and
+ * sandbox limit) that keeps pulling pages from /api/cron/stdio-verify/batch and
  * draining them until either the catalog is exhausted or RUN_BUDGET_MS is hit
  * — so one dispatch can walk through most/all of the stdio backlog instead of
  * a single fixed-size batch.
  *
  * Usage:
- *   E2B_API_KEY=xxx ALLMCPS_CRON_SECRET=xxx node scripts/e2b-stdio-pilot.mjs
- *   E2B_API_KEY=xxx ALLMCPS_CRON_SECRET=xxx CONCURRENCY=15 RUN_BUDGET_MS=18000000 node scripts/e2b-stdio-pilot.mjs
+ *   E2B_API_KEY=xxx ALLMCPS_CRON_SECRET=xxx node scripts/e2b-stdio-verify.mjs
+ *   E2B_API_KEY=xxx ALLMCPS_CRON_SECRET=xxx CONCURRENCY=15 RUN_BUDGET_MS=18000000 node scripts/e2b-stdio-verify.mjs
  *
  * Safe to re-run/interrupt — each fetched page only returns listings not yet
- * in the pilot table, so progress is never lost or reprocessed.
+ * in the verifier table, so progress is never lost or reprocessed.
  */
 
 import { Sandbox } from 'e2b';
@@ -57,7 +58,7 @@ const RUN_BUDGET_MS = process.env.RUN_BUDGET_MS
   : Number.parseInt(process.env.RUN_BUDGET_MINUTES || '300', 10) * 60_000;
 
 // Per-listing hard cap: bounds worst-case sandbox time/cost from a hung or
-// oversized install (see the cost discussion this pilot came out of — a
+// oversized install (see the cost discussion this check came out of — a
 // single runaway install shouldn't blow the run's budget). Widened from an
 // initial 45s after the first real batch showed timeouts that were plausibly
 // just slow/uncached npx installs, not genuinely broken servers — a listing
@@ -84,7 +85,7 @@ if (!E2B_API_KEY) {
 
 async function fetchBatchOnce() {
   const res = await fetch(
-    `${BASE_URL}/api/cron/stdio-pilot/batch?batch_size=${BATCH_SIZE}`,
+    `${BASE_URL}/api/cron/stdio-verify/batch?batch_size=${BATCH_SIZE}`,
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${SECRET}` },
@@ -120,7 +121,7 @@ async function fetchBatch() {
 }
 
 async function postResult(result) {
-  const res = await fetch(`${BASE_URL}/api/cron/stdio-pilot/result`, {
+  const res = await fetch(`${BASE_URL}/api/cron/stdio-verify/result`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${SECRET}`,
@@ -186,7 +187,7 @@ function makeJsonRpcReader() {
 
 /**
  * The E2B base sandbox has npx/node but not uv/uvx — confirmed in practice:
- * 23 of 34 install_failed results in one clean pilot batch were the exact
+ * 23 of 34 install_failed results in one clean verification batch were the exact
  * same "uvx: command not found", not 23 different broken listings. Bootstrap
  * it inline (idempotent, cheap if already present) rather than requiring a
  * custom E2B template.
@@ -244,7 +245,7 @@ async function verifyListing(listing) {
           params: {
             protocolVersion: '2025-06-18',
             capabilities: {},
-            clientInfo: { name: 'AllMCPs E2B Pilot', version: '1.0.0' },
+            clientInfo: { name: 'AllMCPs E2B Verification', version: '1.0.0' },
           },
         })}\n`,
       );

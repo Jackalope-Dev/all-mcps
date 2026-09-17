@@ -188,6 +188,18 @@ export const servers = sqliteTable(
      * heuristic-parsed value.
      */
     installExtractedAt: integer('install_extracted_at', { mode: 'timestamp' }),
+    /**
+     * Set when the E2B stdio verifier installed this server successfully but the
+     * MCP handshake never completed — i.e. the install command is *right* and
+     * the server needs configuration (API keys, a path argument) that a bare
+     * sandbox can't supply.
+     *
+     * This exists to stop a handshake failure being read as a bad install. It
+     * is a positive signal about the install command, not a defect: clearing
+     * install hints on these would delete correct data from exactly the servers
+     * that work once configured. See app/api/cron/stdio-verify/result.
+     */
+    installNeedsConfig: integer('install_needs_config', { mode: 'timestamp' }),
     /** JSON array of UPPER_SNAKE_CASE env var names (API keys, tokens) the README/setup
      * instructions say are required to run this server. Generated alongside the rest of
      * the AI content layer (see lib/aiContent.ts) — used to add env placeholders to
@@ -478,14 +490,14 @@ export const impressionLogs = sqliteTable(
 );
 
 /**
- * E2B sandbox verification pilot results for stdio listings — kept separate
+ * E2B sandbox verification results for stdio listings — kept separate
  * from `servers.tools`/`tools_source` until the approach is validated (success
  * rate, timing, cost) rather than feeding unproven data into the live catalog.
- * Populated by the `e2b-stdio-pilot` GitHub Actions workflow via
- * /api/cron/stdio-pilot/result; batches are claimed via /api/cron/stdio-pilot/batch.
+ * Populated by the `e2b-stdio-verify` GitHub Actions workflow via
+ * /api/cron/stdio-verify/result; batches are claimed via /api/cron/stdio-verify/batch.
  */
-export const stdioVerificationPilot = sqliteTable(
-  'stdio_verification_pilot',
+export const stdioVerifications = sqliteTable(
+  'stdio_verifications',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     /**
@@ -503,13 +515,32 @@ export const stdioVerificationPilot = sqliteTable(
     tools: text('tools'),
     error: text('error'),
     durationMs: integer('duration_ms'),
+    /**
+     * Consecutive `install_failed` results for this listing, reset to 0 by any
+     * other outcome.
+     *
+     * A single failure is not evidence a guessed install command is wrong — a
+     * registry outage, a rate limit, or a private package all produce it. Two
+     * failures on separate runs (the guess retest window is days apart) is.
+     * Only used for heuristic guesses; LLM-validated rows are never cleared.
+     */
+    installFailures: integer('install_failures').notNull().default(0),
+    /**
+     * The install package as handed to the sandbox for this attempt.
+     *
+     * The AI install validator runs on its own schedule and rewrites or nulls
+     * these guesses independently. Recording what was actually tested lets the
+     * result endpoint notice the listing changed underneath a slow sandbox run
+     * and discard the now-meaningless verdict instead of acting on it.
+     */
+    testedPackage: text('tested_package'),
     checkedAt: integer('checked_at', { mode: 'timestamp' })
       .notNull()
       .$defaultFn(() => new Date()),
   },
   (table) => ({
-    serverIdx: index('idx_stdio_pilot_server').on(table.serverId),
-    checkedIdx: index('idx_stdio_pilot_checked').on(table.checkedAt),
+    serverIdx: index('idx_stdio_verify_server').on(table.serverId),
+    checkedIdx: index('idx_stdio_verify_checked').on(table.checkedAt),
   }),
 );
 

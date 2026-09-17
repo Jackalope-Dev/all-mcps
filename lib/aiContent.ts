@@ -282,7 +282,7 @@ function clampInstall(value: unknown): AiListingContent['install'] {
     // Backstop for the model forgetting the confirmation flag (prompted for
     // explicitly, but don't rely on compliance alone) — without it, npx
     // prompts interactively when the package needs installing and hangs any
-    // non-interactive caller, including our own E2B verification pilot.
+    // non-interactive caller, including our own E2B verification run.
     if (command === 'npx' && args[0] !== '-y') args.unshift('-y');
 
     return { kind: 'stdio', command, args, package: pkg, confidence };

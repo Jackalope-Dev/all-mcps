@@ -17,14 +17,14 @@ function spanLabel(oldest: string | Date): string {
  */
 interface HealthHistoryStripProps {
   history: ServerHealthCheck[];
-  pilotResult?: { status?: string | null } | null;
+  verification?: { status?: string | null } | null;
   hasRemoteEndpoint?: boolean;
   isOfficial?: boolean;
 }
 
 export function HealthHistoryStrip({
   history,
-  pilotResult,
+  verification,
   hasRemoteEndpoint,
   isOfficial,
 }: HealthHistoryStripProps) {
@@ -75,13 +75,13 @@ export function HealthHistoryStrip({
             );
           }
 
-          if (pilotResult) {
+          if (verification) {
             lines.push(
               `• Stdio Sandbox: ${
-                pilotResult.status === 'ok'
+                verification.status === 'ok'
                   ? 'Pass'
-                  : pilotResult.status
-                    ? `Issue (${pilotResult.status})`
+                  : verification.status
+                    ? `Issue (${verification.status})`
                     : 'Pending'
               }`,
             );

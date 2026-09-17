@@ -1,6 +1,6 @@
-name: 🧪 E2B Stdio Verification Pilot
+name: 🧪 E2B Stdio Verification Verification
 
-# Graduated (see app/api/cron/stdio-pilot/result — 'ok' results promote into
+# Graduated (see app/api/cron/stdio-verify/result — 'ok' results promote into
 # servers.tools/tools_source). Verifies stdio MCP listings by actually
 # installing and running them in an E2B sandbox (initialize -> tools/list over
 # stdio), instead of trusting README-parsed tool guesses.
@@ -14,12 +14,12 @@ name: 🧪 E2B Stdio Verification Pilot
 # schema change makes a lot of the catalog newly re-claimable).
 #
 # Runs a concurrency pool that drains up to batch_size (or until
-# run_budget_minutes is hit) — see scripts/e2b-stdio-pilot.mjs. Manual-dispatch
+# run_budget_minutes is hit) — see scripts/e2b-stdio-verify.mjs. Manual-dispatch
 # concurrency default (15) sits a few sandboxes below E2B Hobby's
 # 20-concurrent-sandbox free-tier cap as headroom.
 #
 # Needs the E2B_API_KEY repo secret (E2B's SDK doesn't work inside Cloudflare
-# Workers, so this can't run as a Worker cron — see scripts/e2b-stdio-pilot.mjs).
+# Workers, so this can't run as a Worker cron — see scripts/e2b-stdio-verify.mjs).
 # Manual dispatch: Actions → this workflow → "Run workflow".
 on:
   schedule:
@@ -62,7 +62,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run E2B stdio verification pilot
+      - name: Run E2B stdio verification
         env:
           E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
           ALLMCPS_CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.ADMIN_SECRET }}
@@ -72,4 +72,4 @@ jobs:
           CONCURRENCY: ${{ github.event.inputs.concurrency || '5' }}
           RUN_BUDGET_MINUTES: ${{ github.event.inputs.run_budget_minutes || '15' }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
-        run: node scripts/e2b-stdio-pilot.mjs
+        run: node scripts/e2b-stdio-verify.mjs

@@ -800,7 +800,7 @@ export default async function TrustPage() {
               />
             </StatGrid>
 
-            {/* Feature #1: Tool Schema Verification & Sandbox Pilot */}
+            {/* Feature #1: Tool Schema Verification & Sandbox Checks */}
             <Panel>
               <SectionLabel
                 tight
@@ -940,8 +940,8 @@ export default async function TrustPage() {
                     }}
                   >
                     {pct(
-                      stats.stdioPilotStats.okCount,
-                      stats.stdioPilotStats.totalTested,
+                      stats.stdioVerifyStats.okCount,
+                      stats.stdioVerifyStats.totalTested,
                     )}{' '}
                     pass rate
                   </div>
@@ -952,10 +952,11 @@ export default async function TrustPage() {
                       marginTop: '0.25rem',
                     }}
                   >
-                    {formatNumber(stats.stdioPilotStats.totalTested)} stdio
+                    {formatNumber(stats.stdioVerifyStats.totalTested)} stdio
                     packages isolated and tested in automated execution
                     sandboxes (avg latency:{' '}
-                    {(stats.stdioPilotStats.avgDurationMs / 1000).toFixed(1)}s).
+                    {(stats.stdioVerifyStats.avgDurationMs / 1000).toFixed(1)}
+                    s).
                   </div>
                 </div>
               </div>

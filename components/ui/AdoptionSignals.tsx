@@ -30,7 +30,7 @@ export type AdoptionSignalsProps = {
   npmDownloads?: number | null;
   lastCommitAt?: string | Date | null;
   maintenanceStatus?: string | null;
-  /** 0-100 combined remote-endpoint + stdio-pilot availability, when known. */
+  /** 0-100 combined remote-endpoint + stdio-verify availability, when known. */
   availabilityPct?: number | null;
   /** Result of our automated stdio install check, when it has run. */
   installCheck?:

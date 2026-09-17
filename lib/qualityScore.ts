@@ -94,7 +94,7 @@ export function computeQualityScore(server: Server): QualityScore {
       });
     } else if (server.combinedAvailabilityPct != null) {
       // Rolling remote-endpoint check history combined with a recent E2B
-      // stdio-pilot pass (see computeCombinedAvailabilityPct in
+      // stdio-verify pass (see computeCombinedAvailabilityPct in
       // lib/servers.ts) — a real observed trend, not one live snapshot. Only
       // set by callers with both signals on hand (currently the detail
       // page); every other caller falls through to the branches below

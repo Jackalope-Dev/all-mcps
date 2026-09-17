@@ -94,7 +94,7 @@ import {
   getServerById,
   getServerHealthHistory,
   getServerReviews,
-  getStdioPilotResult,
+  getStdioVerification,
   type Server,
   truncateReadmeExcerpt,
 } from '../../../lib/servers';
@@ -287,7 +287,7 @@ export default async function MCPDetail({
     notFound();
   }
 
-  // Independent I/O (external README fetch, two category/featured lookups, a pilot-check
+  // Independent I/O (external README fetch, two category/featured lookups, a verification-check
   // query) — run concurrently instead of one big sequential waterfall.
   // getRelatedServers and getFeaturedServers use targeted D1 category/featured queries
   // (see lib/servers.ts) to keep memory footprint < 2MB.
@@ -304,35 +304,35 @@ export default async function MCPDetail({
   const [
     readme,
     relatedServers,
-    rawPilotResult,
+    rawVerification,
     featuredPool,
     healthHistory,
     reviewSummary,
   ] = await Promise.all([
     needsReadmeFallback ? fetchReadme(server.url) : Promise.resolve(null),
     getRelatedServers(server as any, 4),
-    getStdioPilotResult(server.id),
+    getStdioVerification(server.id),
     getFeaturedServers(server.id, 10),
     getServerHealthHistory(server.id),
     getServerReviews(server.id),
   ]);
-  // A pilot check is only meaningful for the install command it actually
+  // A verification is only meaningful for the install command it actually
   // tested. install_extracted_at (LLM re-validation) can rewrite that
-  // command after the pilot ran — stale otherwise, showing a mismatched
+  // command after the verification ran — stale otherwise, showing a mismatched
   // command/error pairing that never actually happened together.
-  const pilotResult =
-    rawPilotResult &&
+  const verification =
+    rawVerification &&
     (!server.installExtractedAt ||
-      new Date(rawPilotResult.checkedAt).getTime() >=
+      new Date(rawVerification.checkedAt).getTime() >=
         new Date(server.installExtractedAt).getTime())
-      ? rawPilotResult
+      ? rawVerification
       : null;
-  // Rolling remote-endpoint history combined with a confirmed-fresh pilot
+  // Rolling remote-endpoint history combined with a confirmed-fresh verification
   // pass — see computeCombinedAvailabilityPct in lib/servers.ts for why this
   // takes priority over a single live snapshot in the quality score.
   const combinedAvailabilityPct = computeCombinedAvailabilityPct(
     healthHistory,
-    pilotResult?.status === 'ok',
+    verification?.status === 'ok',
   );
   const serverForScoring: Server = {
     ...server,
@@ -1445,7 +1445,7 @@ export default async function MCPDetail({
                   </div>
                 )}
 
-                {(pilotResult ||
+                {(verification ||
                   (server.installKind === 'stdio' &&
                     server.installCommand)) && (
                   <div
@@ -1485,7 +1485,7 @@ export default async function MCPDetail({
                           directly from your AI agent prompts.
                         </p>
                       </>
-                    ) : !pilotResult ? (
+                    ) : !verification ? (
                       <>
                         <div
                           style={{
@@ -1515,7 +1515,7 @@ export default async function MCPDetail({
                             : "We haven't yet run this listing's install command through our automated sandbox check. This isn't a red flag — we're steadily working through the catalog."}
                         </p>
                       </>
-                    ) : pilotResult.status === 'ok' ? (
+                    ) : verification.status === 'ok' ? (
                       <div
                         style={{
                           display: 'flex',
@@ -1534,10 +1534,10 @@ export default async function MCPDetail({
                             fontSize: '0.8rem',
                           }}
                         >
-                          — started and listed {pilotResult.toolCount ?? 'its'}{' '}
+                          — started and listed {verification.toolCount ?? 'its'}{' '}
                           tools correctly
-                          {formatCommitAge(pilotResult.checkedAt)
-                            ? ` (${formatCommitAge(pilotResult.checkedAt)})`
+                          {formatCommitAge(verification.checkedAt)
+                            ? ` (${formatCommitAge(verification.checkedAt)})`
                             : ''}
                           .
                         </span>
@@ -1578,7 +1578,7 @@ export default async function MCPDetail({
                                 "The install command below didn't complete successfully in our automated test.",
                               error:
                                 'We hit an unexpected error while testing this listing automatically.',
-                            }[pilotResult.status]
+                            }[verification.status]
                           }
                         </p>
                         <code
@@ -1589,7 +1589,7 @@ export default async function MCPDetail({
                             borderRadius: '6px',
                             background: 'var(--bg-muted)',
                             border: '1px solid var(--border-color)',
-                            marginBottom: pilotResult.error ? '0.5rem' : 0,
+                            marginBottom: verification.error ? '0.5rem' : 0,
                             wordBreak: 'break-word',
                           }}
                         >
@@ -1600,7 +1600,7 @@ export default async function MCPDetail({
                             .filter(Boolean)
                             .join(' ')}
                         </code>
-                        {pilotResult.error && (
+                        {verification.error && (
                           <p
                             style={{
                               color: 'var(--text-secondary)',
@@ -1610,7 +1610,7 @@ export default async function MCPDetail({
                               wordBreak: 'break-word',
                             }}
                           >
-                            {pilotResult.error}
+                            {verification.error}
                           </p>
                         )}
                         <p
@@ -1624,8 +1624,8 @@ export default async function MCPDetail({
                           false negatives — missing environment variables, a
                           slow cold install, etc. It doesn&rsquo;t necessarily
                           mean something&rsquo;s wrong.
-                          {formatCommitAge(pilotResult.checkedAt)
-                            ? ` Last checked ${formatCommitAge(pilotResult.checkedAt)}.`
+                          {formatCommitAge(verification.checkedAt)
+                            ? ` Last checked ${formatCommitAge(verification.checkedAt)}.`
                             : ''}{' '}
                           {!server.isOfficial && (
                             <ClaimHintLink serverId={server.id} />
@@ -2210,7 +2210,7 @@ export default async function MCPDetail({
                 lastCommitAt={server.lastCommitAt}
                 maintenanceStatus={server.maintenanceStatus}
                 availabilityPct={combinedAvailabilityPct}
-                installCheck={pilotResult?.status ?? null}
+                installCheck={verification?.status ?? null}
                 toolCount={server.tools?.length ?? null}
                 views={server.views}
                 copies={server.copies}
@@ -2499,7 +2499,7 @@ export default async function MCPDetail({
 
                 <HealthHistoryStrip
                   history={healthHistory}
-                  pilotResult={pilotResult}
+                  verification={verification}
                   hasRemoteEndpoint={!!server.remoteEndpointUrl}
                   isOfficial={
                     server.isOfficial || server.id === 'allmcps-server'

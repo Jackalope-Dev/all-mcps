@@ -13,12 +13,12 @@ import {
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
-import { servers, stdioVerificationPilot } from '../../../../../db/schema';
+import { servers, stdioVerifications } from '../../../../../db/schema';
 import { isCronAuthorized } from '../../../../../lib/cronAuth';
 import { parseArgsJson } from '../../../../../lib/installConfig';
 
 /**
- * Hands the E2B stdio-verification pilot (GitHub Actions runner — E2B's SDK
+ * Hands the E2B stdio verification run (GitHub Actions runner — E2B's SDK
  * doesn't work inside the Workers runtime, see lib/mcpIntrospect.ts's remote-only
  * scope) a batch of stdio listings with a usable cached install hint: either
  * never tested, or due for a retest (see RETEST_STALE_MS below).
@@ -46,7 +46,7 @@ import { parseArgsJson } from '../../../../../lib/installConfig';
  * ceiling entirely since each statement is small, while still executing as
  * one D1 call.
  *
- * A listing isn't excluded forever just because it has a pilot row —
+ * A listing isn't excluded forever just because it has a verification row —
  * eligible for retest when either the LLM install validator re-confirmed
  * its install config since the last check (a real signal something may
  * have changed, not a guess) or the last check is old enough that the
@@ -59,6 +59,15 @@ const MAX_BATCH_SIZE = 100;
 const PENDING_STALE_MS = 10 * 60 * 1000;
 /** Safety-net retest window for listings whose install config hasn't visibly changed. */
 const RETEST_STALE_MS = 30 * 24 * 60 * 60 * 1000;
+/**
+ * Retest window for heuristic guesses, which are retested to *disprove* them
+ * rather than to re-confirm a known-good value. Shorter than RETEST_STALE_MS
+ * because clearing a wrong guess needs two failures on separate runs, and 30
+ * days per attempt would leave a bad install command on the page for two
+ * months. Still long enough that the two attempts can't share one bad night at
+ * a package registry.
+ */
+const GUESS_RETEST_STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: Request) {
   try {
@@ -89,12 +98,12 @@ export async function POST(req: Request) {
     // Release abandoned claims (worker/job died before posting a result) so
     // they're eligible for selection again instead of being stuck forever.
     await db
-      .delete(stdioVerificationPilot)
+      .delete(stdioVerifications)
       .where(
         and(
-          eq(stdioVerificationPilot.status, 'pending'),
+          eq(stdioVerifications.status, 'pending'),
           lt(
-            stdioVerificationPilot.checkedAt,
+            stdioVerifications.checkedAt,
             new Date(Date.now() - PENDING_STALE_MS),
           ),
         ),
@@ -102,10 +111,11 @@ export async function POST(req: Request) {
 
     // Overselect a little — some candidates will lose the claim race under
     // concurrent requests, and we'd rather still return close to batchSize.
-    // LEFT JOIN (not the old notInArray exclusion) so a listing's pilot
+    // LEFT JOIN (not the old notInArray exclusion) so a listing's verification
     // history is visible per-row for the retest-eligibility check below,
     // instead of just being a blanket "already has a row, skip forever".
     const retestCutoff = new Date(Date.now() - RETEST_STALE_MS);
+    const guessRetestCutoff = new Date(Date.now() - GUESS_RETEST_STALE_MS);
     const rows = await db
       .select({
         id: servers.id,
@@ -113,49 +123,59 @@ export async function POST(req: Request) {
         installCommand: servers.installCommand,
         installArgs: servers.installArgs,
         installPackage: servers.installPackage,
-        pilotStatus: stdioVerificationPilot.status,
+        verifyStatus: stdioVerifications.status,
       })
       .from(servers)
-      .leftJoin(
-        stdioVerificationPilot,
-        eq(stdioVerificationPilot.serverId, servers.id),
-      )
+      .leftJoin(stdioVerifications, eq(stdioVerifications.serverId, servers.id))
       .where(
         and(
           eq(servers.status, 'active'),
           eq(servers.installKind, 'stdio'),
           isNotNull(servers.installCommand),
           isNotNull(servers.installPackage),
-          // Only test installs the LLM validator (lib/aiContent.ts) has already
-          // confirmed — it re-checks every listing on its own 4h cron and nulls
-          // installCommand/installKind when unconfident (see installExtractedAt
-          // in db/schema.ts). Skipping this let the pilot burn sandboxes on
-          // stale heuristic guesses the validator was independently discarding
-          // out from under it — confirmed in practice: 80% of one pilot batch's
-          // tested rows had already gone null in servers by the time results
-          // were reviewed.
-          isNotNull(servers.installExtractedAt),
+          // Two tiers, ordered below so LLM-confirmed installs always go first:
+          //
+          //  1. installExtractedAt set — the LLM validator (lib/aiContent.ts)
+          //     confirmed this install config. Testing these proves tools.
+          //  2. installExtractedAt null — a heuristic guess. Testing these
+          //     disproves bad ones: repeated install_failed is what retires a
+          //     guess nothing else would ever catch (see ../result).
+          //
+          // Tier 2 used to be excluded outright, because the validator rewrites
+          // and nulls guesses on its own 4h cron and was discarding rows out
+          // from under a slow sandbox run — 80% of one verification batch had
+          // already gone null in servers by the time results came back. The fix
+          // is not to avoid testing them but to record which package was tested
+          // (tested_package below) so a stale verdict is dropped on arrival
+          // rather than acted on.
           or(
-            isNull(stdioVerificationPilot.id), // never tested
+            isNull(stdioVerifications.id), // never tested
             and(
               // Never reclaim a row another worker/run currently has claimed —
               // PENDING_STALE_MS above already handles abandoned claims.
-              ne(stdioVerificationPilot.status, 'pending'),
+              ne(stdioVerifications.status, 'pending'),
               or(
-                gt(
-                  servers.installExtractedAt,
-                  stdioVerificationPilot.checkedAt,
+                gt(servers.installExtractedAt, stdioVerifications.checkedAt),
+                lt(stdioVerifications.checkedAt, retestCutoff),
+                // Guesses come back around faster, and only while they still
+                // look wrong — an 'ok' result is left alone on the slow window.
+                and(
+                  isNull(servers.installExtractedAt),
+                  eq(stdioVerifications.status, 'install_failed'),
+                  lt(stdioVerifications.checkedAt, guessRetestCutoff),
                 ),
-                lt(stdioVerificationPilot.checkedAt, retestCutoff),
               ),
             ),
           ),
         ),
       )
-      // Never-tested listings first (nothing beats first-time coverage),
-      // then by popularity within each group.
+      // LLM-confirmed installs before heuristic guesses, so a finite sandbox
+      // budget always buys proven tools before it buys speculative cleanup.
+      // Within each tier, never-tested first (nothing beats first-time
+      // coverage), then by popularity.
       .orderBy(
-        sql`CASE WHEN ${stdioVerificationPilot.id} IS NULL THEN 0 ELSE 1 END`,
+        sql`CASE WHEN ${servers.installExtractedAt} IS NULL THEN 1 ELSE 0 END`,
+        sql`CASE WHEN ${stdioVerifications.id} IS NULL THEN 0 ELSE 1 END`,
         desc(servers.views),
         desc(servers.upvotes),
       )
@@ -167,26 +187,38 @@ export async function POST(req: Request) {
 
     const now = new Date();
     const claimStatements = rows.map((r) =>
-      r.pilotStatus == null
+      r.verifyStatus == null
         ? db
-            .insert(stdioVerificationPilot)
-            .values({ serverId: r.id, status: 'pending', checkedAt: now })
-            .onConflictDoNothing({ target: stdioVerificationPilot.serverId })
-            .returning({ serverId: stdioVerificationPilot.serverId })
+            .insert(stdioVerifications)
+            .values({
+              serverId: r.id,
+              status: 'pending',
+              checkedAt: now,
+              // What this attempt is actually about to install. The result
+              // endpoint compares it against the listing's current value and
+              // discards the verdict if the validator moved it meanwhile.
+              testedPackage: r.installPackage,
+            })
+            .onConflictDoNothing({ target: stdioVerifications.serverId })
+            .returning({ serverId: stdioVerifications.serverId })
         : // Retest: atomically flip the existing row back to 'pending' only if
           // no one else already has — same race-safety property as the INSERT's
           // ON CONFLICT DO NOTHING above (whichever request's UPDATE commits
           // first wins; the other's WHERE no longer matches and returns 0 rows).
           db
-            .update(stdioVerificationPilot)
-            .set({ status: 'pending', checkedAt: now })
+            .update(stdioVerifications)
+            .set({
+              status: 'pending',
+              checkedAt: now,
+              testedPackage: r.installPackage,
+            })
             .where(
               and(
-                eq(stdioVerificationPilot.serverId, r.id),
-                ne(stdioVerificationPilot.status, 'pending'),
+                eq(stdioVerifications.serverId, r.id),
+                ne(stdioVerifications.status, 'pending'),
               ),
             )
-            .returning({ serverId: stdioVerificationPilot.serverId }),
+            .returning({ serverId: stdioVerifications.serverId }),
     );
     // db.batch() requires a non-empty tuple type that a dynamically-built
     // array can't structurally satisfy — rows.length > 0 is already
@@ -235,11 +267,11 @@ export async function POST(req: Request) {
     if (strandedIds.length > 0) {
       const releaseStatements = strandedIds.map((id) =>
         db
-          .delete(stdioVerificationPilot)
+          .delete(stdioVerifications)
           .where(
             and(
-              eq(stdioVerificationPilot.serverId, id as string),
-              eq(stdioVerificationPilot.status, 'pending'),
+              eq(stdioVerifications.serverId, id as string),
+              eq(stdioVerifications.status, 'pending'),
             ),
           ),
       );
@@ -248,7 +280,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, batch, count: batch.length });
   } catch (error: any) {
-    console.error('stdio-pilot batch error:', error);
+    console.error('stdio-verify batch error:', error);
     return NextResponse.json(
       { error: error?.message || 'Internal Server Error' },
       { status: 500 },

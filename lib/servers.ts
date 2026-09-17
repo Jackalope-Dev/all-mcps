@@ -6,7 +6,7 @@ import {
   reviews,
   serverHealthChecks,
   servers as serversTable,
-  stdioVerificationPilot,
+  stdioVerifications,
   users,
 } from '../db/schema';
 import { type AiFaqItem, parseFaqArray, parseStringArray } from './aiContent';
@@ -189,7 +189,7 @@ export type Server = {
   /**
    * Combined "we actually observed this server working" signal for the
    * quality score's availability component — max of the rolling
-   * remote-endpoint check history and a recent E2B stdio pilot pass, so a
+   * remote-endpoint check history and a recent E2B stdio verification pass, so a
    * transient failure on one transport doesn't erase a confirmed-working
    * result from the other. Not persisted; computed and attached only where a
    * caller has both signals on hand (currently just the detail page — see
@@ -1016,7 +1016,7 @@ export async function getServerById(id: string): Promise<Server | undefined> {
   return found ? normalizeServer(found) : undefined;
 }
 
-export type StdioPilotResult = {
+export type StdioVerificationResult = {
   status: 'ok' | 'install_failed' | 'handshake_failed' | 'timeout' | 'error';
   toolCount: number | null;
   error: string | null;
@@ -1026,15 +1026,15 @@ export type StdioPilotResult = {
 
 /**
  * Latest E2B sandbox verification attempt for a listing, if any (see the
- * e2b-stdio-pilot GitHub Actions workflow). Deliberately separate from
+ * e2b-stdio-verify GitHub Actions workflow). Deliberately separate from
  * tools/toolsSource — this surfaces the *attempt*, friendly and non-alarming,
  * so a submitter/owner can see exactly what we tried and why it didn't
  * confirm, without us asserting the listing is broken (false negatives from
  * missing env vars, slow cold installs, etc. are expected).
  */
-export async function getStdioPilotResult(
+export async function getStdioVerification(
   serverId: string,
-): Promise<StdioPilotResult | null> {
+): Promise<StdioVerificationResult | null> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -1042,22 +1042,22 @@ export async function getStdioPilotResult(
     const db = drizzle((ctx.env as any).DB);
     const rows = await db
       .select({
-        status: stdioVerificationPilot.status,
-        toolCount: stdioVerificationPilot.toolCount,
-        error: stdioVerificationPilot.error,
-        durationMs: stdioVerificationPilot.durationMs,
-        checkedAt: stdioVerificationPilot.checkedAt,
+        status: stdioVerifications.status,
+        toolCount: stdioVerifications.toolCount,
+        error: stdioVerifications.error,
+        durationMs: stdioVerifications.durationMs,
+        checkedAt: stdioVerifications.checkedAt,
       })
-      .from(stdioVerificationPilot)
+      .from(stdioVerifications)
       .where(
         and(
-          eq(stdioVerificationPilot.serverId, serverId),
-          ne(stdioVerificationPilot.status, 'pending'),
+          eq(stdioVerifications.serverId, serverId),
+          ne(stdioVerifications.status, 'pending'),
         ),
       )
-      .orderBy(desc(stdioVerificationPilot.checkedAt))
+      .orderBy(desc(stdioVerifications.checkedAt))
       .limit(1);
-    return (rows[0] as StdioPilotResult) ?? null;
+    return (rows[0] as StdioVerificationResult) ?? null;
   } catch {
     return null;
   }
@@ -1195,7 +1195,7 @@ const MIN_REMOTE_HISTORY_SAMPLES = 4;
 
 /**
  * Combines the rolling remote-endpoint check history with a recent E2B
- * stdio-pilot pass into one 0-100 availability signal — max of the two, not
+ * stdio-verify pass into one 0-100 availability signal — max of the two, not
  * an average: a listing confirmed working via *either* transport shouldn't
  * be dragged down by the other having a bad day (confirmed as a real,
  * reported false-negative: a live remote-endpoint blip showed 0/25 on the
@@ -1205,7 +1205,7 @@ const MIN_REMOTE_HISTORY_SAMPLES = 4;
  */
 export function computeCombinedAvailabilityPct(
   history: ServerHealthCheck[],
-  pilotOk: boolean,
+  verifiedOk: boolean,
 ): number | null {
   const remoteSamples = history.filter((h) => h.remoteHealthy !== null);
   const remotePct =
@@ -1215,8 +1215,8 @@ export function computeCombinedAvailabilityPct(
         100
       : null;
 
-  if (remotePct === null && !pilotOk) return null;
-  return Math.max(remotePct ?? 0, pilotOk ? 100 : 0);
+  if (remotePct === null && !verifiedOk) return null;
+  return Math.max(remotePct ?? 0, verifiedOk ? 100 : 0);
 }
 
 export async function fetchServerReadme(url: string): Promise<string | null> {

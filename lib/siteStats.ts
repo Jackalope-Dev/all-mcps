@@ -10,7 +10,7 @@ import {
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import serversData from '../data/mcp-servers.json';
-import { apiAccessLogs, servers, stdioVerificationPilot } from '../db/schema';
+import { apiAccessLogs, servers, stdioVerifications } from '../db/schema';
 import {
   CALLER_LABELS,
   type CallerClass,
@@ -83,7 +83,7 @@ export type SiteStats = {
     readme: number;
     unparsed: number;
   };
-  stdioPilotStats: {
+  stdioVerifyStats: {
     totalTested: number;
     okCount: number;
     avgDurationMs: number;
@@ -203,7 +203,7 @@ function getSnapshotFallback(): SiteStats {
       readme: snapshotReadme,
       unparsed: snapshotUnparsed,
     },
-    stdioPilotStats: { totalTested: 124, okCount: 98, avgDurationMs: 3420 },
+    stdioVerifyStats: { totalTested: 124, okCount: 98, avgDurationMs: 3420 },
     qualityTierBreakdown: snapshotQualityTiers,
     reciprocalBadgeCount: snapshotReciprocalBadges,
     recentCommitCount30d: snapshotRecentCommits,
@@ -249,7 +249,7 @@ export async function getSiteStats(): Promise<SiteStats> {
       endpointRows,
       topCountryRows,
       serverExtraRows,
-      stdioPilotRows,
+      stdioVerifyRows,
       activeServersRows,
     ] = await Promise.all([
       db
@@ -349,10 +349,10 @@ export async function getSiteStats(): Promise<SiteStats> {
       db
         .select({
           totalTested: count(),
-          okCount: sql<number>`sum(case when ${stdioVerificationPilot.status} = 'ok' then 1 else 0 end)`,
-          avgDurationMs: sql<number>`avg(case when ${stdioVerificationPilot.status} = 'ok' then ${stdioVerificationPilot.durationMs} else null end)`,
+          okCount: sql<number>`sum(case when ${stdioVerifications.status} = 'ok' then 1 else 0 end)`,
+          avgDurationMs: sql<number>`avg(case when ${stdioVerifications.status} = 'ok' then ${stdioVerifications.durationMs} else null end)`,
         })
-        .from(stdioVerificationPilot)
+        .from(stdioVerifications)
         .catch(() => []),
 
       // Only select lightweight columns needed for computeQualityScore — avoids loading heavy text columns (readme, aiOverview, etc.) into worker heap
@@ -499,10 +499,10 @@ export async function getSiteStats(): Promise<SiteStats> {
       (dbTotal || fallback.totalServers) - introspectedCount - readmeCount,
     );
 
-    const pilotTotal = Number(stdioPilotRows[0]?.totalTested ?? 0);
-    const pilotOk = Number(stdioPilotRows[0]?.okCount ?? 0);
-    const pilotAvgMs = Math.round(
-      Number(stdioPilotRows[0]?.avgDurationMs ?? 0),
+    const verifyTotal = Number(stdioVerifyRows[0]?.totalTested ?? 0);
+    const verifyOk = Number(stdioVerifyRows[0]?.okCount ?? 0);
+    const verifyAvgMs = Math.round(
+      Number(stdioVerifyRows[0]?.avgDurationMs ?? 0),
     );
 
     const dbQualityTiers =
@@ -542,10 +542,10 @@ export async function getSiteStats(): Promise<SiteStats> {
         readme: readmeCount,
         unparsed: unparsedCount,
       },
-      stdioPilotStats: {
-        totalTested: pilotTotal > 0 ? pilotTotal : 124,
-        okCount: pilotTotal > 0 ? pilotOk : 98,
-        avgDurationMs: pilotAvgMs > 0 ? pilotAvgMs : 3420,
+      stdioVerifyStats: {
+        totalTested: verifyTotal > 0 ? verifyTotal : 124,
+        okCount: verifyTotal > 0 ? verifyOk : 98,
+        avgDurationMs: verifyAvgMs > 0 ? verifyAvgMs : 3420,
       },
       qualityTierBreakdown: dbQualityTiers,
       reciprocalBadgeCount: dbReciprocalBadges,
