@@ -1,0 +1,72 @@
+name: 💬 Backfill AI FAQ
+
+# Manual-only. Drains the FAQ backlog — listings that were AI-enriched before
+# /api/cron/ai-content started generating FAQ pairs alongside the rest of the
+# content layer (see db column ai_faq_at). The Cloudflare Worker cron already
+# runs this pass every 4h automatically (custom-worker.ts) — this workflow is
+# for draining the initial backlog in one run without waiting weeks. Uses the
+# CRON_SECRET repo secret; the LLM key lives in the Worker, so
+# nothing extra to configure. Trigger it from the GitHub mobile app or web UI:
+# Actions → this workflow → "Run workflow".
+on:
+  workflow_dispatch:
+    inputs:
+      max_calls:
+        description: 'Safety cap on endpoint calls (each processes up to ~24 listings)'
+        required: false
+        default: '400'
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    # Each call runs up to ~24 sequential LLM generations; draining the backlog
+    # is a few hundred calls at most. Well under GitHub's 6h job ceiling, capped
+    # for safety.
+    timeout-minutes: 350
+    steps:
+      - name: Drain AI FAQ backlog
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.ADMIN_SECRET }}
+          MAX_CALLS: ${{ github.event.inputs.max_calls }}
+        run: |
+          set -uo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Neither CRON_SECRET nor ADMIN_SECRET repo secret is set."
+            exit 1
+          fi
+          endpoint="https://allmcps.com/api/cron/ai-faq"
+          max="${MAX_CALLS:-400}"
+          idle=0
+          total=0
+          for i in $(seq 1 "$max"); do
+            resp=$(curl -fsS -X POST "$endpoint" -H "Authorization: Bearer $CRON_SECRET") || {
+              echo "Call $i: request failed, backing off"; sleep 15; continue;
+            }
+            enriched=$(echo "$resp" | jq -r '.enriched // 0')
+            thin=$(echo "$resp" | jq -r '.skippedThin // 0')
+            failed=$(echo "$resp" | jq -r '.failed // 0')
+            remaining=$(echo "$resp" | jq -r '.remaining // "?"')
+            stopped=$(echo "$resp" | jq -r '.budgetStopped // false')
+            total=$((total + enriched))
+            echo "Call $i: +$enriched enriched, $thin thin-skipped, $failed failed | remaining=$remaining | run total=$total"
+
+            if [ "$remaining" = "0" ]; then
+              echo "✓ FAQ backfill complete."
+              break
+            fi
+            if [ "$enriched" = "0" ] && [ "$thin" = "0" ]; then
+              idle=$((idle + 1))
+              if [ "$stopped" = "true" ]; then
+                echo "Endpoint stopped early (likely LLM budget/outage) — backing off 30s."
+                sleep 30
+              fi
+              if [ "$idle" -ge 4 ]; then
+                echo "::warning::No progress across 4 calls — stopping. Re-run later to continue."
+                break
+              fi
+            else
+              idle=0
+            fi
+            sleep 2
+          done
+          echo "Done. $total listings enriched this run."

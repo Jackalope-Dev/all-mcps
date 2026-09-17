@@ -1,0 +1,43 @@
+name: Bug report
+description: Something on the site or in the codebase is broken
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. If this is a **security vulnerability**, please don't file it here —
+        see [SECURITY.md](https://github.com/Jackalope-Dev/all-mcps/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Click '...'
+        3. See the error
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Page or endpoint
+      description: The URL where it happens, if it's on the site.
+      placeholder: https://allmcps.com/mcp/...
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser and OS for site bugs; Node version and OS for local ones.
+      placeholder: Firefox 142 on Windows 11 / Node 22 on macOS 15
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output or error text
+      render: shell

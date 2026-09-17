@@ -1,0 +1,16 @@
+name: 📰 Weekly Newsletter Digest
+
+# Cloudflare Worker cron owns the automatic Monday 12:00 UTC send
+# (custom-worker.ts → /api/cron/newsletter-digest).
+# This workflow is manual-only so we never double-create campaigns on Mondays.
+on:
+  workflow_dispatch:
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Newsletter Digest API
+        run: |
+          curl -f -X POST https://allmcps.com/api/cron/newsletter-digest \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET || secrets.ADMIN_SECRET }}"

@@ -1,0 +1,32 @@
+name: Submit Pages to IndexNow
+
+# Manual-only, on purpose. This job submits the ENTIRE site to IndexNow, which
+# is a one-time bootstrap operation (new site, key rotation, or a fresh
+# re-crawl request) — NOT something to run on a schedule.
+#
+# IndexNow is a "this URL just changed" signal. Resubmitting every URL on a
+# daily cron makes Bing Webmaster classify the key as "batch mode", which Bing
+# explicitly recommends against because it drowns out the real change signal.
+# Day-to-day discovery is handled by real-time pings on approve/republish
+# (lib/indexnow.ts) plus the change-scoped daily cron (app/api/cron/indexnow).
+on:
+  workflow_dispatch:
+
+jobs:
+  indexnow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Submit URLs to IndexNow
+        run: npm run submit-index

@@ -1,0 +1,38 @@
+name: Listing problem
+description: A directory listing is wrong, dead, duplicated, or miscategorised
+labels: ["listing"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Adding a new server?** Use [allmcps.com/submit](https://allmcps.com/submit) instead — listings
+        live in a database, not in this repository. Maintainers can claim an existing listing from its page
+        to edit it directly.
+
+        Use this template when something's wrong with a listing and you can't fix it through the site.
+  - type: input
+    id: listing-url
+    attributes:
+      label: Listing URL
+      placeholder: https://allmcps.com/mcp/...
+    validations:
+      required: true
+  - type: dropdown
+    id: problem-type
+    attributes:
+      label: What's wrong with it?
+      options:
+        - Dead or moved repository link
+        - Wrong category
+        - Duplicate of another listing
+        - Inaccurate description or install instructions
+        - Server no longer exists or is abandoned
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+    validations:
+      required: true

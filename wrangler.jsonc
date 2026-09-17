@@ -1,0 +1,65 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "all-mcps",
+  "main": "./custom-worker.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "limits": {
+    "cpu_ms": 300000
+  },
+  "vars": {
+    "RESEND_TO_EMAIL": "contact@allmcps.com",
+    "RESEND_FROM_EMAIL": "contact@allmcps.com"
+  },
+  "routes": [{ "pattern": "allmcps.com", "custom_domain": true }],
+  "services": [
+    {
+      // Self-reference binding required by the R2/DO ISR revalidation queue
+      // (see @opennextjs/cloudflare) — without it every ISR page fails with
+      // "Failed to revalidate stale page" and just re-renders on every hit.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "all-mcps"
+    }
+  ],
+  "triggers": {
+    // "0 */4 * * *" drives the slow jobs (ai-content, ai-faq, vector-index,
+    // highlight, isr-cache-cleanup, indexnow, newsletter-digest).
+    // "*/15 * * * *" drives health + enrich at the faster cadence they need —
+    // see custom-worker.ts for how the two schedules are split.
+    "crons": ["0 */4 * * *", "*/15 * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "all-mcps",
+      "database_id": "c0e237c4-fa3c-45f0-8400-b2dd44615f94",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "LOGOS",
+      "bucket_name": "all-mcps-logos"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "all-mcps-isr-cache"
+    }
+  ],
+  "vectorize": [
+    {
+      "binding": "VECTOR_INDEX",
+      "index_name": "mcp-servers-index"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  }
+}

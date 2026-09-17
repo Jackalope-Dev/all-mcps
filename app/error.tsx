@@ -1,0 +1,58 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { EmptyState } from '../components/EmptyState';
+import { PageShell } from '../components/PageShell';
+import { Button } from '../components/ui/Button';
+import {
+  attemptAutoReload,
+  isLikelyTransientLoadError,
+} from '../lib/errorRecovery';
+
+export default function ErrorPage({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  // Most errors here are transient post-deploy chunk/asset load failures that a
+  // refresh fixes. Recover automatically (one guarded reload per URL) only when
+  // the error actually matches a network/chunk failure.
+  const [recovering, setRecovering] = useState(() =>
+    isLikelyTransientLoadError(error),
+  );
+
+  useEffect(() => {
+    console.error('Unhandled app error:', error);
+    if (isLikelyTransientLoadError(error) && attemptAutoReload()) {
+      // Reload triggered. Reveal the fallback UI if navigation somehow doesn't
+      // happen within a few seconds, so we never strand the user on a blank page.
+      const t = setTimeout(() => setRecovering(false), 4000);
+      return () => clearTimeout(t);
+    }
+    setRecovering(false);
+  }, [error]);
+
+  // A reload was triggered — render nothing to avoid flashing the error UI.
+  if (recovering) return null;
+
+  return (
+    <PageShell variant="status" panel className="animate-fade-in">
+      <EmptyState
+        title="Something went wrong"
+        description="An unexpected error occurred. Please try reloading the page or return to the main directory."
+        actions={
+          <>
+            <Button onClick={() => reset()} variant="primary">
+              Try Again
+            </Button>
+            <Button href="/" variant="secondary">
+              Go Home
+            </Button>
+          </>
+        }
+      />
+    </PageShell>
+  );
+}

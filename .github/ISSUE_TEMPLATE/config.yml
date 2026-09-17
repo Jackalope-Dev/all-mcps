@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Submit an MCP server
+    url: https://allmcps.com/submit
+    about: Add a server to the directory — no pull request needed.
+  - name: Report a security vulnerability
+    url: https://github.com/Jackalope-Dev/all-mcps/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.

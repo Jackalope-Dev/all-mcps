@@ -1,0 +1,92 @@
+name: 🧹 Backfill Catalog Enrich
+
+# Manual-only. Drains the catalog-quality backlog (websites, logos, install
+# hints, description cleanup, unpublish offline-404/archived GitHub repos) by
+# looping the /api/cron/enrich endpoint. The Cloudflare Worker already runs
+# this every 15 min via its own "*/15 * * * *" cron trigger (see
+# custom-worker.ts FAST_JOBS) — this workflow is for catching up fast after a
+# large import instead of waiting days for the passive 15-min cadence. See
+# backfill-health.yml for why this loops a fixed number
+# of rounds rather than waiting for a "backlog empty" signal (this endpoint
+# doesn't have one — it's a continuous freshness-refresh cron). Uses the
+# CRON_SECRET repo secret.
+on:
+  workflow_dispatch:
+    inputs:
+      max_calls:
+        description: 'Number of rounds (each processes up to 15 listings, batch size in app/api/cron/enrich/route.ts)'
+        required: false
+        default: '600'
+      parallel_calls:
+        description: 'Concurrent calls per round. CAUTION: this endpoint runs in the same Worker instance as live site traffic, not an isolated queue — raising this has previously correlated with Worker memory-limit/hung-request errors on real page loads during a live run (see backfill-ai-content.yml). Keep at 1 until backfill load can be isolated from production.'
+        required: false
+        default: '1'
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Drain catalog-enrich backlog
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.ADMIN_SECRET }}
+          MAX_CALLS: ${{ github.event.inputs.max_calls }}
+          PARALLEL_CALLS: ${{ github.event.inputs.parallel_calls }}
+        run: |
+          set -uo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Neither CRON_SECRET nor ADMIN_SECRET repo secret is set."
+            exit 1
+          fi
+          endpoint="https://allmcps.com/api/cron/enrich"
+          max="${MAX_CALLS:-600}"
+          parallel="${PARALLEL_CALLS:-1}"
+          fails=0
+          total_processed=0
+          total_unpublished=0
+          call=0
+          while [ "$call" -lt "$max" ]; do
+            tmpdir=$(mktemp -d)
+            pids=()
+            for _ in $(seq 1 "$parallel"); do
+              call=$((call + 1))
+              if [ "$call" -gt "$max" ]; then break; fi
+              (
+                if ! curl -fsS -X POST "$endpoint" -H "Authorization: Bearer $CRON_SECRET" -o "$tmpdir/$call.json"; then
+                  echo '{"__failed":true}' > "$tmpdir/$call.json"
+                fi
+              ) &
+              pids+=($!)
+            done
+            for pid in "${pids[@]}"; do wait "$pid"; done
+
+            round_processed=0
+            round_unpublished=0
+            round_failed=0
+            for f in "$tmpdir"/*.json; do
+              [ -e "$f" ] || continue
+              resp=$(cat "$f")
+              if [ "$(echo "$resp" | jq -r '.__failed // false')" = "true" ]; then
+                round_failed=$((round_failed + 1))
+                continue
+              fi
+              round_processed=$((round_processed + $(echo "$resp" | jq -r '.processed // 0')))
+              round_unpublished=$((round_unpublished + $(echo "$resp" | jq -r '.unpublished // 0')))
+            done
+            rm -rf "$tmpdir"
+            total_processed=$((total_processed + round_processed))
+            total_unpublished=$((total_unpublished + round_unpublished))
+            echo "Through call $call: +$round_processed processed, +$round_unpublished unpublished this round | run totals: $total_processed processed, $total_unpublished unpublished"
+
+            if [ "$round_failed" -gt 0 ]; then
+              fails=$((fails + round_failed))
+              if [ "$fails" -ge 5 ]; then
+                echo "::warning::5+ failed calls — likely auth issue, Worker outage, or GitHub rate limit. Stopping."
+                break
+              fi
+            else
+              fails=0
+            fi
+            sleep 2
+          done
+          echo "Done. $total_processed listings processed, $total_unpublished unpublished (dead/archived) this run."

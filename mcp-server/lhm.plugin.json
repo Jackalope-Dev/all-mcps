@@ -1,0 +1,260 @@
+{
+  "identifier": "jackalope-dev-allmcps-server",
+  "name": "AllMCPs",
+  "description": "Search, browse, get install configs for, and submit Model Context Protocol (MCP) servers to the AllMCPs.com directory.",
+  "version": "2.1.0",
+  "author": "Jackalope Digital",
+  "authorUrl": "https://github.com/Jackalope-Dev",
+  "icon": "https://allmcps.com/logo-icon.png",
+  "category": "development",
+  "tags": ["directory", "search", "discovery", "registry", "submission"],
+  "tools": [
+    {
+      "name": "search_mcp_servers",
+      "description": "Search the AllMCPs directory for Model Context Protocol (MCP) servers by keyword or category.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search term (e.g., \"github\", \"postgres\", \"slack\", \"database\")"
+          },
+          "category": {
+            "type": "string",
+            "description": "Optional category name to filter by"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Max number of results to return (default: 10)"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_mcp_install_config",
+      "description": "Get the exact claude_desktop_config.json setup snippet and documentation for a specific MCP server by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The server ID (e.g. \"github-mcp\", \"sqlite-mcp\")"
+          }
+        },
+        "required": ["id"]
+      }
+    },
+    {
+      "name": "list_mcp_categories",
+      "description": "List all categories available in the AllMCPs directory along with server counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_boost_pricing",
+      "description": "Get pricing and features for boosting / featuring an MCP server on AllMCPs.com.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "boost_mcp_server",
+      "description": "Initiate a sponsorship / boost order for an MCP server by ID, returning a Stripe checkout session URL and x402 invoice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The server ID to boost (e.g. \"github-mcp\")"
+          },
+          "sku": {
+            "type": "string",
+            "enum": [
+              "featured_7d",
+              "category_sponsor_7d",
+              "premium_monthly",
+              "priority_review"
+            ],
+            "description": "Sponsorship tier (default: featured_7d)"
+          },
+          "email": {
+            "type": "string",
+            "description": "Optional contact/billing email"
+          }
+        },
+        "required": ["id"]
+      }
+    },
+    {
+      "name": "get_boost_status",
+      "description": "Check current boost status, verified badge level, and sponsorship expiration for an MCP server by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The server ID to check"
+          }
+        },
+        "required": ["id"]
+      }
+    },
+    {
+      "name": "submit_mcp_server",
+      "description": "Programmatically submit a new MCP server repository to AllMCPs.com for indexing and review. Supports optional enrichment fields (tags, pricing, auth, license, compatible clients, maintenance status, install command) for a fully flushed-out listing — call tools/list for the exact enum values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Server name (e.g., \"PostgreSQL MCP\")"
+          },
+          "url": {
+            "type": "string",
+            "description": "GitHub repository or website URL"
+          },
+          "description": {
+            "type": "string",
+            "description": "Short summary of what this MCP server does"
+          },
+          "category": {
+            "type": "string",
+            "description": "Best-matching category from the AllMCPs directory (see list_mcp_categories)"
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email for listing verification & status updates"
+          },
+          "websiteUrl": {
+            "type": "string",
+            "description": "Optional official website URL"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Up to 5 short lowercase keywords"
+          },
+          "pricingModel": {
+            "type": "string",
+            "enum": ["free", "freemium", "paid", "byok"],
+            "description": "How this server is priced"
+          },
+          "pricingNotes": {
+            "type": "string",
+            "description": "Short free-text pricing detail"
+          },
+          "authType": {
+            "type": "string",
+            "enum": ["none", "api_key", "oauth", "other"],
+            "description": "Authentication the server requires"
+          },
+          "license": {
+            "type": "string",
+            "description": "SPDX license identifier, e.g. \"MIT\""
+          },
+          "compatibleClients": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "MCP clients confirmed to work with this server"
+          },
+          "maintenanceStatus": {
+            "type": "string",
+            "enum": ["active", "stable", "experimental", "archived"],
+            "description": "Repository maintenance status"
+          },
+          "supportUrl": {
+            "type": "string",
+            "description": "Optional issues/discussions/docs URL"
+          },
+          "suggestedInstallCommand": {
+            "type": "string",
+            "description": "Command to run the server, e.g. \"npx\""
+          },
+          "suggestedInstallArgs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Args for the install command"
+          }
+        },
+        "required": ["name", "url", "email"]
+      }
+    },
+    {
+      "name": "verify_mcp_claim",
+      "description": "Verify ownership and claim an MCP server listing by checking GitHub README badge, website badge, or DNS TXT record. Works unattended if given agentToken (from confirm_mcp_agent); otherwise requires an active sign-in session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The server ID to claim & verify (e.g. \"github-mcp\")"
+          },
+          "method": {
+            "type": "string",
+            "enum": ["github", "website_badge", "dns"],
+            "description": "Verification method (default: github)"
+          },
+          "websiteUrl": {
+            "type": "string",
+            "description": "Optional website URL for website/dns verification"
+          },
+          "agentToken": {
+            "type": "string",
+            "description": "Bearer token from confirm_mcp_agent, for unattended verification with no sign-in. Requires the \"listings:claim\" scope."
+          }
+        },
+        "required": ["id"]
+      }
+    },
+    {
+      "name": "register_mcp_agent",
+      "description": "Start unattended-agent registration: emails a 6-digit confirmation code to the given address. Follow up with confirm_mcp_agent to get a bearer token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address to register — must receive mail you can read to retrieve the confirmation code."
+          },
+          "agentName": {
+            "type": "string",
+            "description": "Optional label for this agent/integration."
+          },
+          "scopes": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["listings:claim"] },
+            "description": "Optional — permissions to request. Defaults to the full supported set if omitted."
+          }
+        },
+        "required": ["email"]
+      }
+    },
+    {
+      "name": "confirm_mcp_agent",
+      "description": "Exchange the 6-digit code emailed by register_mcp_agent for a durable bearer token (90-day TTL), used as agentToken on verify_mcp_claim.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Same email address passed to register_mcp_agent."
+          },
+          "code": {
+            "type": "string",
+            "description": "The 6-digit code received by email."
+          }
+        },
+        "required": ["email", "code"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,1258 @@
+[
+  {
+    "id": "prompts",
+    "name": ".prompts",
+    "description": ".prompts, the home to all your AI prompts, everywhere you need them.",
+    "category": "💻 Developer Tools",
+    "url": "https://dotprompts.com",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "alter",
+    "name": "~alter",
+    "description": "Identity infrastructure for the AI economy. Verify humans, query traits, earn USDC via x402.",
+    "category": "💰 Finance & Fintech",
+    "url": "https://github.com/true-alter/alter-identity",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "youtube-transcript-youtube-search-mcp-for-ai-agents",
+    "name": "💯 YouTube Transcript + YouTube Search MCP for AI Agents",
+    "description": "The fastest YouTube transcript + YouTube search MCP for AI agents. Try for free.",
+    "category": "💻 Developer Tools",
+    "url": "https://github.com/ZeroPointRepo/youtube-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "0x1abin-matter-controller-mcp",
+    "name": "0x1abin/matter-controller-mcp",
+    "url": "https://github.com/0x1abin/matter-controller-mcp",
+    "description": "An MCP server for Matter Controller, enabling AI agents to control and interact with Matter devices.",
+    "category": "📟 Embedded System",
+    "isOfficial": false
+  },
+  {
+    "id": "1claw-vault",
+    "name": "1Claw Vault",
+    "description": "HSM-backed vault secrets for AI agents (JIT fetch) plus prompt-injection and threat scanning.",
+    "category": "🔒 Security",
+    "url": "https://github.com/1clawAI/1claw-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "1clickreport",
+    "name": "1ClickReport",
+    "description": "40 tools for marketing analytics, campaign management, and AI monitoring across 6 platforms.",
+    "category": "📊 Monitoring",
+    "url": "https://github.com/1clickreport/mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "1inch-mcp",
+    "name": "1inch MCP",
+    "description": "Doc search, intent & cross-chain swaps, limit orders, portfolio, spot prices, gas & all APIs.",
+    "category": "💰 Finance & Fintech",
+    "url": "https://github.com/1inch/1inch-ai",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "1password",
+    "name": "1password",
+    "description": "MCP server for 1Password service accounts",
+    "category": "🧠 Knowledge & Memory",
+    "url": "https://github.com/CakeRepository/1Password-MCP.git",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "2captcha-mcp",
+    "name": "2Captcha MCP",
+    "description": "Full 2Captcha API (43 tools) for Claude Code: 31 captcha solvers + management + webhook.",
+    "category": "💬 Communication",
+    "url": "https://github.com/aruxojuyu665/2Captcha-MCP",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "2ools",
+    "name": "2ools",
+    "description": "Build, version, review, and export websites, web apps, and games from a conversation.",
+    "category": "🎮 Gaming",
+    "url": "https://2ools.app/connect-ai",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "2ools-2",
+    "name": "2ools",
+    "description": "Build, version, review, and export websites, web apps, and games from a conversation.",
+    "category": "🎮 Gaming",
+    "url": "https://github.com/2ools/mcp-server",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "370-ai-ai-gateway-video-seedance-2-0-wan-happyhorse-image-speech-100-chat-models",
+    "name": "370.ai — AI Gateway: Video (Seedance 2.0, Wan, HappyHorse), Image, Speech + 100+ Chat Models",
+    "description": "One key, 100+ models — chat with any LLM and generate video, images, speech. Free trial at 370.ai.",
+    "category": "☁️ Cloud Platforms",
+    "url": "https://370.ai",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "3dpack-ing-container-truck-load-planning",
+    "name": "3DPACK.ING — Container & Truck Load Planning",
+    "description": "Plain-English shipment input for freight & logistics: containers your cargo fits, 3D load plan.",
+    "category": "☁️ Cloud Platforms",
+    "url": "https://github.com/OnurGumus/3dpacking-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "4da-mcp-server",
+    "name": "4da-mcp-server",
+    "description": "Dependency intelligence for AI agents. CVE scanning, health checks, upgrade planning.",
+    "category": "🔒 Security",
+    "url": "https://github.com/4DA-Systems/4DA",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "6ducklearn-mcp",
+    "name": "6DuckLearn MCP",
+    "description": "Connect agents to 6DuckLearn memory, approvals, and runtime control.",
+    "category": "🧠 Knowledge & Memory",
+    "url": "https://github.com/kit18/6ducklearn-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "930m310n-geomelon-mcp",
+    "name": "930m310n/geomelon-mcp",
+    "url": "https://github.com/930m310n/geomelon-mcp",
+    "description": "Cities, countries, regions, and languages with multilingual names (50 languages) and a free keyless autocomplete tool. Also runs a public hosted instance at https://mcp.geomelon.dev/mcp, no signup required.",
+    "category": "🗺️ Location Services",
+    "isOfficial": false
+  },
+  {
+    "id": "98lukehall-renoun-mcp",
+    "name": "98lukehall/renoun-mcp",
+    "url": "https://github.com/98lukehall/renoun-mcp",
+    "description": "Structural observability for AI conversations. Detects loops, stuck states, breakthroughs, and convergence across 17 channels without analyzing content.",
+    "category": "🧮 Data Science Tools",
+    "isOfficial": false
+  },
+  {
+    "id": "a11y-check",
+    "name": "A11y Check",
+    "description": "Web accessibility scanning (WCAG 2.2 AA + KWCAG 2.2) with Korean remediation guides",
+    "category": "📂 Browser Automation",
+    "url": "https://github.com/IsaacEryn/a11ychk",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "a11y-check-2",
+    "name": "a11y-check",
+    "description": "Check a web page for accessibility problems in a real browser, with the code that fixes each one.",
+    "category": "📂 Browser Automation",
+    "url": "https://nexaaly.com/mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "a2atlassian",
+    "name": "a2atlassian",
+    "description": "Jira & Confluence for AI agents. Pre-configured connections, compact output.",
+    "category": "🏢 Workplace & Productivity",
+    "url": "https://github.com/agentic-eng/a2atlassian",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "a2db",
+    "name": "a2db",
+    "description": "Safe, read-only database access for AI agents. 5 databases, batch queries, SQLGlot.",
+    "category": "🗄️ Databases",
+    "url": "https://github.com/agentic-eng/a2db",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "abhiphile-fermat-mcp",
+    "name": "abhiphile/fermat-mcp",
+    "url": "https://github.com/abhiphile/fermat-mcp",
+    "description": "The ultimate math engine unifying SymPy, NumPy & Matplotlib in one powerful server. Perfect for developers & researchers needing symbolic algebra, numerical computing, and data visualization.",
+    "category": "🧮 Data Science Tools",
+    "isOfficial": false
+  },
+  {
+    "id": "abm-mcp",
+    "name": "abm-mcp",
+    "description": "Account-based marketing for AI agents. A great rep once knew every account. Now your agents do.",
+    "category": "🎯 Marketing",
+    "url": "https://abm.dev",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "abm-mcp-2",
+    "name": "abm-mcp",
+    "description": "Account-based marketing for AI agents. A great rep once knew every account. Now your agents do.",
+    "category": "🎯 Marketing",
+    "url": "https://github.com/abm-dev-git/abm-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "abnormal-security-mcp",
+    "name": "Abnormal Security MCP",
+    "description": "Abnormal Security email threats, cases, and reporting in your terminal and your AI agents.",
+    "category": "💬 Communication",
+    "url": "https://github.com/servosity/msp-skills",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "abscissa",
+    "name": "Abscissa",
+    "description": "Safety-aware MCP server for Linear issues, projects, cycles, and dependencies.",
+    "category": "🏢 Workplace & Productivity",
+    "url": "https://github.com/KazKozDev/abscissa",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "academic-research-mcp",
+    "name": "academic-research-mcp",
+    "description": "Scholarly search: OpenAlex, Crossref, arXiv, OpenCitations and PubMed in one endpoint.",
+    "category": "🔬 Research",
+    "url": "https://github.com/themineworks/mcp-servers",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "academic-research-mcp-server",
+    "name": "academic-research-mcp-server",
+    "description": "ArXiv preprints + Google Scholar papers, with citation counts in one query.",
+    "category": "🔬 Research",
+    "url": "https://apify.com/nexgendata/academic-research-mcp-server",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "acf-mcp",
+    "name": "acf-mcp",
+    "description": "Official ACF® MCP server — Agentic Commerce Framework® governance copilot for AI assistants.",
+    "category": "🤖 Coding Agents",
+    "url": "https://github.com/aiconsulting06000-tech/acfstandard",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "acf-mcp-2",
+    "name": "acf-mcp",
+    "description": "Official ACF® MCP server — Agentic Commerce Framework® governance copilot for AI assistants.",
+    "category": "🤖 Coding Agents",
+    "url": "https://github.com/aiconsulting06000-tech/acf-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "acquis",
+    "name": "acquis",
+    "description": "Verified EU law: verbatim, signed provisions with EUR-Lex links. Read-only, not legal advice.",
+    "category": "⚖️ Legal",
+    "url": "https://github.com/capybarist/acquis-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "actuallycare",
+    "name": "ActuallyCare",
+    "description": "Real-estate platform for agents: escrows, listings, clients, leads, and commissions. OAuth login.",
+    "category": "👤 Customer Data Platforms",
+    "url": "https://docs.actuallycare.com/mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "actvt",
+    "name": "Actvt",
+    "description": "Query live Mac system metrics, listening ports, and Claude Code and Codex session history.",
+    "category": "📊 Monitoring",
+    "url": "https://github.com/oye-collective/actvt-macos-releases",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "ad-spy",
+    "name": "ad-spy",
+    "description": "Facebook/Meta ad-spy: search 1B+ new ads/mo with AI creative categories across 360 niches.",
+    "category": "🌐 Social Media",
+    "url": "https://spytrend.com",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "adcrunch",
+    "name": "AdCrunch",
+    "description": "Ask AI about your ads — query Meta, TikTok, and Google Ads performance in natural language.",
+    "category": "🌐 Social Media",
+    "url": "https://github.com/adcrunchdev/mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "adityarya24-astro-skill",
+    "name": "adityarya24/astro-skill",
+    "url": "https://github.com/adityarya24/astro-skill",
+    "description": "Open-source Vedic astrology engine and stdio MCP server — deterministic kundali, Vimshottari dasha (maha/antar/pratyantar), panchang, gochar + Sade Sati, ashtakavarga, guna milan, divisional charts, and 12-page Hindi janma patrika PDFs. Bundled Swiss Ephemeris, SQLite client storage, no API key.",
+    "category": "🔮 Spirituality & Esoterica",
+    "isOfficial": false
+  },
+  {
+    "id": "adomcp",
+    "name": "AdoMcp",
+    "description": "Database MCP server for schema discovery, comments, and SQL queries.",
+    "category": "🗄️ Databases",
+    "url": "https://github.com/John0King/AdoMCP",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "adsturbo-creative-mcp",
+    "name": "AdsTurbo Creative MCP",
+    "description": "Local-only MCP server and CLI for AI video ad briefs, UGC scripts, storyboards, and prompts.",
+    "category": "🎥 Multimedia Process",
+    "url": "https://github.com/AdsTurbo/adsturbo-creative-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "aegis-gov-contracts",
+    "name": "Aegis Gov Contracts",
+    "description": "SAM.gov federal contracts: search, details, AI bid analysis. 33k+ live opportunities.",
+    "category": "⚖️ Legal",
+    "url": "https://github.com/AEGISGOVDAO/aegisgov-contracts-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agent-preflight",
+    "name": "Agent Preflight",
+    "description": "URL intelligence for AI agents before browsing, buying, scraping, downloading, booking, or applying.",
+    "category": "🔎 Search & Data Extraction",
+    "url": "https://preflight.lorensaisolutions.com",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agent-workspace-mcp",
+    "name": "Agent Workspace MCP",
+    "description": "A sandboxed, agentic workspace providing secure filesystem, bash, and uv-powered Python execution.",
+    "category": "📂 File Systems",
+    "url": "https://github.com/HrRodan/agent-workspace-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agenthook",
+    "name": "agenthook",
+    "description": "Character-consistent UGC video, images, and captions from any MCP client, via the AgentHook API.",
+    "category": "🎥 Multimedia Process",
+    "url": "https://github.com/AvivK5498/agenthook",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agentic-mermaid",
+    "name": "Agentic Mermaid",
+    "description": "Render, verify, describe, and safely edit Mermaid diagrams through MCP.",
+    "category": "📊 Data Visualization",
+    "url": "https://github.com/adewale/agentic-mermaid",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agentic-sdlc-mcp",
+    "name": "Agentic SDLC MCP",
+    "description": "Agentic SDLC governance and security controls for AI coding agents working with GitHub.",
+    "category": "🔄 Version Control",
+    "url": "https://github.com/SakuraCianna/agentic-sdlc-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agentic-shelf",
+    "name": "Agentic Shelf",
+    "description": "Hosted MCP for e-commerce: live product catalog, stock, and pricing for AI agents.",
+    "category": "🛒 E-Commerce",
+    "url": "https://github.com/vboykoCTO/agentic-shelf",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agentic-ops",
+    "name": "agentic-ops",
+    "description": "AI ops for Salesforce, ServiceNow & HubSpot — assess, fix & deploy safely via your own AI.",
+    "category": "👤 Customer Data Platforms",
+    "url": "https://github.com/SparkSMB-Tim/buildforce-lovable",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agentic-payments",
+    "name": "agentic-payments",
+    "description": "Public MCP discovery for Blocksize market data, pricing, and docs.",
+    "category": "🔄 Version Control",
+    "url": "https://gitlab.com/jfocke/agentic-payments",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "agentmart",
+    "name": "agentmart",
+    "description": "First AI Agent e-commerce marketplace with 74+ AI products, MCP protocol, and Alipay payments",
+    "category": "🛒 E-Commerce",
+    "url": "https://github.com/ai-gaoqian/agentmart-mcp-server",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "aidc2026ai-melon-aidc-ai-mcp",
+    "name": "aidc2026ai-melon/aidc-ai-mcp",
+    "url": "https://github.com/aidc2026ai-melon/aidc-ai-mcp",
+    "description": "Deterministic AI data-center design engine exposed as MCP tools (design, validate, layout): rack count, design PUE, total MVA, liquid/air cooling split, CDU planning, cost & timeline. NVIDIA Rubin-era, 22.9 kV intake, Korea. Remote Streamable HTTP at https://aidc-ai.io/api/mcp; no key for the anonymous tier.",
+    "category": "📐 Architecture & Design",
+    "isOfficial": false
+  },
+  {
+    "id": "aikts-yandex-tracker-mcp",
+    "name": "aikts/yandex-tracker-mcp",
+    "url": "https://github.com/aikts/yandex-tracker-mcp",
+    "description": "MCP Server for Yandex Tracker. Provides tools for searching and retrieving information about issues, queues, users.",
+    "category": "🎧 Support & Service Management",
+    "isOfficial": false
+  },
+  {
+    "id": "alepha188838884-context-firewall",
+    "name": "Alepha188838884/context-firewall",
+    "description": "Local proxy that collapses N downstream MCP servers into 4 meta-tools with progressive tool discovery (measured: 122 tools → 4, 28.6K tokens of definitions saved), compresses large tool outputs (HTML→Markdown, JSON structure summarization, base64 stripping — 60–95% measured on real pages/APIs) with full-output retrieval via readmore, and prints a per-session token-savings report. Security-relevant outputs are never silently compressed. Install: npx -y context-firewall --config config.json",
+    "category": "🔗 Aggregators",
+    "url": "https://github.com/Alepha188838884/context-firewall",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-07T21:44:41.201Z"
+  },
+  {
+    "id": "aliafsahnoudeh-wildfire-mcp-server",
+    "name": "aliafsahnoudeh/wildfire-mcp-server",
+    "url": "https://github.com/aliafsahnoudeh/wildfire-mcp-server",
+    "description": "MCP server for detecting, monitoring, and analyzing potential wildfires globally using multiple data sources including NASA FIRMS, OpenWeatherMap, and Google Earth Engine.",
+    "category": "🌳 Environment & Nature",
+    "isOfficial": false
+  },
+  {
+    "id": "allmcps-server",
+    "name": "AllMCPs Server",
+    "url": "https://github.com/Jackalope-Dev/allmcps-server",
+    "description": "The official MCP server for AllMCPs.com - submit and manage tools directly from your AI. The open directory for MCP servers. Connect Claude, Cursor, Windsurf, and AI agents to databases, tools, files, and APIs. Explore 10,000+ servers. AllMCPs is the premier, open directory for discovering, evaluating, and installing Model Context Protocol (MCP) servers to equip AI agents and LLMs with real-world superpowers.",
+    "category": "🔗 Aggregators",
+    "isOfficial": true,
+    "isPremium": true,
+    "websiteVerified": true,
+    "remoteEndpointUrl": "https://allmcps.com/api/mcp",
+    "installKind": "stdio",
+    "installCommand": "npx",
+    "installPackage": "allmcps-server",
+    "installConfidence": "high",
+    "tools": [
+      {
+        "name": "search_mcp_servers",
+        "description": "Search the AllMCPs directory for Model Context Protocol (MCP) servers by keyword or category.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search term (e.g. 'github', 'postgres', 'slack', 'database')"
+            },
+            "category": {
+              "type": "string",
+              "description": "Optional category name to filter by"
+            },
+            "limit": {
+              "type": "number",
+              "description": "Max number of results to return (default: 10)"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_mcp_install_config",
+        "description": "Get the exact claude_desktop_config.json setup snippet and documentation for a specific MCP server by ID.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The server ID (e.g. 'github-mcp', 'sqlite-mcp')"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        }
+      },
+      {
+        "name": "list_mcp_categories",
+        "description": "List all categories available in the AllMCPs directory along with server counts.",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "submit_mcp_server",
+        "description": "Programmatically submit a new MCP server repository to AllMCPs.com for indexing and review.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Server name (e.g., 'PostgreSQL MCP')"
+            },
+            "url": {
+              "type": "string",
+              "description": "GitHub repository or website URL"
+            },
+            "email": {
+              "type": "string",
+              "description": "Contact email for listing verification & status updates"
+            },
+            "description": {
+              "type": "string",
+              "description": "Short summary of what this MCP server does"
+            },
+            "category": {
+              "type": "string",
+              "description": "Category (e.g., 'Databases', 'Developer Tools')"
+            },
+            "websiteUrl": {
+              "type": "string",
+              "description": "Optional official website URL"
+            }
+          },
+          "required": [
+            "name",
+            "url",
+            "email"
+          ]
+        }
+      },
+      {
+        "name": "verify_mcp_claim",
+        "description": "Verify ownership and claim an MCP server listing by checking GitHub README badge, website badge, or DNS TXT record.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The server ID to claim & verify"
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "github",
+                "website_badge",
+                "dns"
+              ],
+              "description": "Verification method"
+            },
+            "websiteUrl": {
+              "type": "string",
+              "description": "Optional website URL for website/dns verification"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        }
+      },
+      {
+        "name": "get_boost_pricing",
+        "description": "Get pricing and features for boosting / featuring an MCP server on AllMCPs.com.",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "boost_mcp_server",
+        "description": "Initiate a sponsorship / boost order for an MCP server by ID, returning a Stripe checkout session URL.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The server ID to boost"
+            },
+            "sku": {
+              "type": "string",
+              "enum": [
+                "featured_7d",
+                "category_sponsor_7d",
+                "premium_monthly",
+                "priority_review"
+              ],
+              "description": "Sponsorship tier"
+            },
+            "email": {
+              "type": "string",
+              "description": "Optional contact/billing email"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        }
+      },
+      {
+        "name": "get_boost_status",
+        "description": "Check current boost status, verified badge level, and sponsorship expiration for an MCP server by ID.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The server ID to check"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "aiSummary": "Official AllMCPs meta server enabling AI agents to search 1,000+ servers, get install configs, verify claims, and submit new MCP tools programmatically.",
+    "aiOverview": "The official AllMCPs meta server provides a complete set of MCP tools for AI coding assistants (Claude Desktop, Cursor, Windsurf, Antigravity, Cline) to discover, query, verify, and submit Model Context Protocol server repositories directly over standard MCP transport.",
+    "aiUseCases": [
+      "Search 1,000+ indexed MCP servers by keyword or category straight from your AI coding prompt",
+      "Retrieve instant JSON configuration snippets for Claude Desktop, Cursor, or Windsurf",
+      "Programmatically submit newly created MCP server repositories to AllMCPs.com",
+      "Verify repository ownership and check listing boost/sponsorship status via agent automation"
+    ],
+    "aiFeatures": [
+      "search_mcp_servers: Natural-language and category search across the entire AllMCPs catalog",
+      "get_mcp_install_config: Instant client configuration generation for any server ID",
+      "submit_mcp_server: Automated repository submission and verification pipeline",
+      "verify_mcp_claim: Programmatic ownership validation via GitHub, web badges, or DNS",
+      "Zero-config installation with `npx -y allmcps-server`"
+    ]
+  },
+  {
+    "id": "alm-x-mcp-server",
+    "name": "ALM X++ MCP Server",
+    "description": "Cloud MCP server for Dynamics 365 F&O developers. 40+ AI tools via HTTPS.",
+    "category": "📋 Product Management",
+    "url": "https://github.com/alimbenhelal-pro/ALM-XPP-MCP",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "alpha-sophia",
+    "name": "Alpha Sophia",
+    "description": "Claims-grounded provider, market, and KOL intelligence for healthcare AI agents via Alpha Sophia",
+    "category": "🧬 Biology & Bioinformatics",
+    "url": "https://alphasophia.com",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "ammawla-encode-toolkit",
+    "name": "ammawla/encode-toolkit",
+    "url": "https://github.com/ammawla/encode-toolkit",
+    "description": "MCP server and Claude Plugin for a full ENCODE Project genomic data and analysis toolkit — search, download, track, and analyze functional genomics experiments.",
+    "category": "Biology, Medicine and Bioinformatics",
+    "isOfficial": false
+  },
+  {
+    "id": "andyliszewski-grounding-ai",
+    "name": "andyliszewski/grounding-ai",
+    "url": "https://github.com/andyliszewski/grounding-ai",
+    "description": "Build a searchable index from PDFs, EPUBs, and Word docs. Claude queries it via MCP and pulls grounded answers with exact page-and-section citations. Local-first, no cloud dependency.",
+    "category": "🔎 end to end RAG platforms",
+    "isOfficial": false
+  },
+  {
+    "id": "anteos-booking",
+    "name": "anteos-booking",
+    "description": "Book medical appointments with French doctors by specialty and city via AI agents.",
+    "category": "🧬 Biology & Bioinformatics",
+    "url": "https://github.com/Anteos-Health/illunay",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "anup-shesh-garmin-local-mcp",
+    "name": "anup-shesh/garmin-local-mcp",
+    "url": "https://github.com/anup-shesh/garmin-local-mcp",
+    "description": "Local-first Garmin data warehouse: incremental sync into SQLite you own, with server-side trends, lag-aware correlations, personal baselines, and anomaly detection returned as compact tables. Analysis keeps working offline when Garmin's API breaks, and a zero-auth FIT-bundle import fills gaps with no login at all.",
+    "category": "🏃 Sports",
+    "isOfficial": false
+  },
+  {
+    "id": "api-quant-m2m",
+    "name": "API-Quant-M2M",
+    "description": "Web scraping and crypto price oracle MCP. Pay 1 USDC on Base for 1h access.",
+    "category": "🔎 Search & Data Extraction",
+    "url": "https://github.com/Quant-M2M/API-Quant-M2M",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "apple-calendar",
+    "name": "Apple Calendar",
+    "description": "List, create, update, and delete events in Apple Calendar on macOS.",
+    "category": "🖥️ OS Automation",
+    "url": "https://github.com/JonathanRReed/Apple-MCPs",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "arjunkmrm-tutorials",
+    "name": "arjunkmrm-tutorials",
+    "description": "Analyze stocks and SEC filings to surface key insights, from price and volume to insider activity…",
+    "category": "🎓 Education",
+    "url": "https://github.com/arjunkmrm/tutorials",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "arthurpanhku-dragonmcp",
+    "name": "arthurpanhku/DragonMCP",
+    "url": "https://github.com/arthurpanhku/DragonMCP",
+    "description": "MCP server for Greater China local life services: Meituan/Ele.me food delivery, Didi/Meituan ride-hailing, WeChat Pay/Alipay, Amap/Baidu Maps, 12306 high-speed rail, Taobao/JD/Xianyu e-commerce, Hong Kong government e-services, and more.",
+    "category": "🔒 Delivery",
+    "isOfficial": false
+  },
+  {
+    "id": "arturlys-ao3-mcp",
+    "name": "ArturLys/ao3-mcp",
+    "description": "Search the Archive of Our Own (AO3) and delegate full-fic reading to a secondary model (Gemini), so the agent recommends from the actual text, not the author's blurb. pip install ao3-mcp",
+    "category": "🎨 Art & Culture",
+    "url": "https://github.com/ArturLys/ao3-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-07T21:44:41.201Z"
+  },
+  {
+    "id": "arturogarrido-claudinho",
+    "name": "arturogarrido/claudinho",
+    "url": "https://github.com/arturogarrido/claudinho",
+    "description": "Live scores, fixtures, standings, and read-only prediction-market signals for the 2026 World Cup. No API keys.",
+    "category": "🏃 Sports",
+    "isOfficial": false
+  },
+  {
+    "id": "ashev87-propstack-mcp",
+    "name": "ashev87/propstack-mcp",
+    "url": "https://github.com/ashev87/propstack-mcp",
+    "description": "Propstack CRM MCP: search contacts, manage properties, track deals, schedule viewings for real estate agents (Makler).",
+    "category": "🏠 Real Estate",
+    "isOfficial": false
+  },
+  {
+    "id": "astroway-astroway-mcp",
+    "name": "astroway/astroway-mcp",
+    "url": "https://github.com/astroway/astroway-mcp",
+    "description": "Comprehensive astrology MCP exposing every endpoint of the AstroWay Calculation API — natal charts, synastry, transits, Vedic dashas (Vimshottari, Yogini, Ashtottari, Kalachakra), 16 Vargas, Tarot (Rider-Waite-Smith / Marseille / Lenormand), Numerology (5 systems), Human Design, AI horoscopes. Sub-arcsecond Swiss Ephemeris precision, 10 000 free credits/month. Install: npx @astroway/mcp.",
+    "category": "🔮 Spirituality & Esoterica",
+    "isOfficial": false
+  },
+  {
+    "id": "atmospore-atmospore-mcp",
+    "name": "atmospore/atmospore-mcp",
+    "url": "https://github.com/atmospore/atmospore-mcp",
+    "description": "Per-species pollen forecasts at any point on Earth, seven days ahead, via the Atmospore API. Tools: getpollen, gettopspecies, getareaaverage, listsupportedspecies. Free tier (100 calls/day, no credit card). Hosted variant at mcp.atmospore.com.",
+    "category": "🌳 Environment & Nature",
+    "isOfficial": false
+  },
+  {
+    "id": "auteng-mcp-markdown-publishing-document-share-links",
+    "name": "AutEng MCP - Markdown Publishing & Document Share Links",
+    "description": "Publish markdown documents as public share links with mermaid diagram support. Built by AutEng.ai",
+    "category": "📊 Data Visualization",
+    "url": "https://auteng.ai",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "berckan-bugherd-mcp",
+    "name": "Berckan/bugherd-mcp",
+    "url": "https://github.com/Berckan/bugherd-mcp",
+    "description": "MCP server for BugHerd bug tracking. List projects, view tasks with filtering by status/priority/tags, get task details, and read comments.",
+    "category": "🎧 Support & Service Management",
+    "isOfficial": false
+  },
+  {
+    "id": "bobaba99-motionlint",
+    "name": "bobaba99/motionlint",
+    "description": "Catch bad animations before they ship. 13 deterministic checks on the live page (duration, easing, stagger, exits, reduced-motion, touch-gated hover) with no API key or LLM, plus optional vision-LLM UX review across viewports. Install via NPM: npx -y motionlint mcp",
+    "category": "📐 Architecture & Design",
+    "url": "https://github.com/bobaba99/motionlint",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "bodyegypt-lobbyvoices-mcp",
+    "name": "bodyegypt/lobbyvoices-mcp",
+    "url": "https://github.com/bodyegypt/lobbyvoices-mcp",
+    "description": "Official remote MCP server for Lobby, an AI receptionist for small businesses. Seven free no-auth tools: write business phone scripts and IVR menus (English + Mexican Spanish), generate ElevenLabs agent system prompts, calculate missed-call cost, get a hire-a-receptionist verdict, role-play a call against the live receptionist engine, and get a real demo number to call. Typed structured outputs.",
+    "category": "🗣️ Conversational AI",
+    "isOfficial": false
+  },
+  {
+    "id": "cafferychen777-chatspatial",
+    "name": "cafferychen777/ChatSpatial",
+    "url": "https://github.com/cafferychen777/ChatSpatial",
+    "description": "MCP server for spatial transcriptomics analysis with 60+ integrated methods covering cell annotation, deconvolution, spatial statistics, and visualization.",
+    "category": "Biology, Medicine and Bioinformatics",
+    "isOfficial": false
+  },
+  {
+    "id": "calendarmcp-2",
+    "name": "calendarmcp",
+    "description": "MCP server for macOS Calendar.app — calendar and event management via AppleScript",
+    "category": "🖥️ OS Automation",
+    "url": "https://github.com/aernouddekker/macos-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "cindyloo-dropbox-mcp-server",
+    "name": "cindyloo-dropbox-mcp-server",
+    "description": "Search, browse, and read your Dropbox files. Find documents by name or content, list folders, and…",
+    "category": "📂 File Systems",
+    "url": "https://github.com/cindyloo/dropbox-mcp-server",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "cnslabs-agreements-api-sdk",
+    "name": "CNSLabs/agreements-api-sdk",
+    "url": "https://github.com/CNSLabs/agreements-api-sdk",
+    "description": "Remote Streamable HTTP and local stdio MCP server for defining, validating, deploying, and operating machine-readable agreements with EIP-712 permit preparation, signed participant inputs, state reads, and input history.",
+    "category": "🤝 Agreements & Coordination",
+    "isOfficial": false
+  },
+  {
+    "id": "commercial",
+    "name": "commercial",
+    "description": "Discover DigitalPublic plans, trust, capabilities, ROI, status and verified Sandbox onboarding.",
+    "category": "👨‍💻 Code Execution",
+    "url": "https://github.com/cnavarro/digitalpublic-platform",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "conorbronsdon-op3-mcp",
+    "name": "conorbronsdon/op3-mcp",
+    "url": "https://github.com/conorbronsdon/op3-mcp",
+    "description": "Podcast analytics from OP3, the Open Podcast Prefix Project: downloads over time, listener geography, app share, and per-episode breakdowns. Read-only by design.",
+    "category": "🎙️ Podcasts",
+    "isOfficial": false
+  },
+  {
+    "id": "conorbronsdon-podcastindex-mcp",
+    "name": "conorbronsdon/podcastindex-mcp",
+    "url": "https://github.com/conorbronsdon/podcastindex-mcp",
+    "description": "Search the Podcast Index: podcasts, episodes, guest appearances by person, trending shows, and feed health.",
+    "category": "🎙️ Podcasts",
+    "isOfficial": false
+  },
+  {
+    "id": "consentlayer",
+    "name": "ConsentLayer",
+    "description": "Cookie consent for GDPR/CCPA: scan sites for trackers, configure consent banners, get install code.",
+    "category": "📋 Product Management",
+    "url": "https://consentlayer.com",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "contendeo",
+    "name": "Contendeo",
+    "description": "Multimodal video analysis MCP — transcription, vision, and OCR for any video URL.",
+    "category": "🎙️ Speech-to-Text",
+    "url": "https://github.com/0xKaroshi/contendeo-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "courseprofiler",
+    "name": "CourseProfiler",
+    "description": "Race course profiling, catalog search, course submission, and personalized race plans.",
+    "category": "🎓 Education",
+    "url": "https://courseprofiler.com/mcp.html",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "crispasr-agent-transcriber",
+    "name": "CrispASR Agent Transcriber",
+    "description": "Transcribe local audio and video with CrispASR and local models only.",
+    "category": "🎙️ Speech-to-Text",
+    "url": "https://github.com/EmiyaKatuz/crispasr-agent-transcriber",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "cyclecalcs-astronomy",
+    "name": "CycleCalcs Astronomy",
+    "description": "Astronomy: sun, moon, planet, eclipse, twilight and star position calculations.",
+    "category": "🚀 Aerospace & Astrodynamics",
+    "url": "https://www.cyclecalcs.com/api/mcp.html",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "ddc-ci-control-bridge",
+    "name": "DDC/CI Control Bridge",
+    "description": "Control monitor brightness, contrast, power and input via DDC/CI with MCP and MQTT support.",
+    "category": "🏠 Home Automation",
+    "url": "https://github.com/Defozo/ddc-ci-control-bridge",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "degenlegion-com-waxseal-sdk",
+    "name": "degenlegion-com/waxseal-sdk",
+    "url": "https://github.com/degenlegion-com/waxseal-sdk",
+    "description": "On-chain Ed25519 identity for AI agents — verify seals by fingerprint, validate document signatures, and gate irreversible actions behind human-signed approval tokens. Hosted at api.waxseal.id/mcp; local install (npx @waxseal/mcp) for signing.",
+    "category": "🔑 Cryptography",
+    "isOfficial": false
+  },
+  {
+    "id": "denismaggior8-enigma-python-mcp",
+    "name": "denismaggior8/enigma-python-mcp",
+    "url": "https://github.com/denismaggior8/enigma-python-mcp",
+    "description": "A Model Context Protocol server that brings the capabilities of enigmapython library to LLMs, allowing them to encrypt and decrypt messages using historically accurate Enigma machine emulators.",
+    "category": "🔑 Cryptography",
+    "isOfficial": false
+  },
+  {
+    "id": "departi-mcp-server",
+    "name": "Departi/mcp-server",
+    "description": "Travel compliance and curated booking for digital nomads — visa requirements, tax residency analysis, Schengen 90/180-day tracking, accommodation, transport, and experiences across 189 European destinations. Hosted at https://mcp.departi.eu/v3 (Streamable HTTP, OAuth 2.1).",
+    "category": "🚆 Travel & Transportation",
+    "url": "https://github.com/Departi/mcp-server",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "distribea-mcp",
+    "name": "distribea-mcp",
+    "description": "On-brand, style-locked website imagery from the hosted Distribea engine (subscription key).",
+    "category": "🎧 Text-to-Speech",
+    "url": "https://github.com/Distribea/distribea-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "dudude-bit-yandex-lavka-mcp",
+    "name": "Dudude-bit/yandex-lavka-mcp",
+    "description": "Order groceries from Yandex Lavka (Russia): search the catalog, build a cart, and place an order with a two-step confirmation before any charge. Unofficial (reverse-engineered private web API); local stdio or remote HTTP with OAuth. uvx yandex-lavka-mcp.",
+    "category": "🔒 Delivery",
+    "url": "https://github.com/Dudude-bit/yandex-lavka-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "eterna-mcp",
+    "name": "Eterna MCP",
+    "description": "No-KYC managed MCP for AI agents: sandboxed TypeScript trading SDK, isolated sub-accounts, futures.",
+    "category": "👨‍💻 Code Execution",
+    "url": "https://github.com/EternaHybridExchange/eterna-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "fetch",
+    "name": "Fetch",
+    "description": "Web content fetching and conversion for efficient LLM usage.",
+    "category": "🛠️ Other Tools and Integrations",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "filesystem",
+    "name": "Filesystem",
+    "description": "Secure file operations with configurable access controls.",
+    "category": "🛠️ Other Tools and Integrations",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "foundrynet-forge-mcp",
+    "name": "FoundryNet/forge-mcp",
+    "url": "https://github.com/FoundryNet/forge-mcp",
+    "description": "Cross-manufacturer industrial MCP server — 14 tools for machine identity, telemetry normalization across 16 OEM families, plain-English automation, and on-chain (MINT) work attestation.",
+    "category": "🏭 Industrial & IoT",
+    "isOfficial": false
+  },
+  {
+    "id": "gemini-mcp",
+    "name": "gemini-mcp",
+    "description": "Gemini 3 MCP server with 30+ tools: images, video, research, TTS, code exec & CLI",
+    "category": "🎧 Text-to-Speech",
+    "url": "https://github.com/RLabs-Inc/gemini-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "geowire-geowire",
+    "name": "geowire/geowire",
+    "description": "Location intelligence gateway across 10 providers (OpenStreetMap, OSRM, Google, Yelp, Foursquare, US Census, Kakao, Naver, Baidu, your own CSV): place search, geocoding, directions + distance matrices, travel-time isochrones, and commercial-area analysis (category density, ratings, demographics). Multi-provider merge + dedup with per-field provenance, cost budgets, and a policy engine that enforces each provider’s caching/attribution terms. Works with zero API keys. npx -y @geowirehq/mcp",
+    "category": "🗺️ Location Services",
+    "url": "https://github.com/geowire/geowire",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "gerard-kanters-mcp-linux-tools",
+    "name": "gerard-kanters/mcp-linux-tools",
+    "description": "Administer a Linux server from an MCP client such as Cursor or VS Code: read files and tail logs, check/reload/restart systemd services, manage cron jobs inside a dedicated crontab section, run read-only MySQL queries, drive WP-CLI on WordPress sites, run safe Git commands, and execute sandboxed Python. Directories, services and WordPress sites are allowlisted in config.json, and every tool returns a uniform {success, data, error, meta} response. Runs as a systemd service over HTTP.",
+    "category": "🖥️ Command Line",
+    "url": "https://github.com/gerard-kanters/mcp-linux-tools",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "gogabrielordonez-mcp-ragchat",
+    "name": "gogabrielordonez/mcp-ragchat",
+    "url": "https://github.com/gogabrielordonez/mcp-ragchat",
+    "description": "Add RAG-powered AI chat to any website with one command. Local vector store, multi-provider LLM (OpenAI/Anthropic/Gemini), self-contained chat server and embeddable widget.",
+    "category": "🔎 end to end RAG platforms",
+    "isOfficial": false
+  },
+  {
+    "id": "great-question",
+    "name": "Great Question",
+    "description": "Run user research from any AI tool. Create studies, recruit participants, query insights.",
+    "category": "📊 Data Platforms",
+    "url": "https://github.com/GreatQuestion/mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "ground-motion",
+    "name": "ground-motion",
+    "description": "Measured ground motion (mm/yr, sinking or uplift) per US address, from NASA Sentinel-1 InSAR",
+    "category": "🚀 Aerospace & Astrodynamics",
+    "url": "https://github.com/james-sib/sibfly-api",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "home-assistant-mcp",
+    "name": "home-assistant-mcp",
+    "description": "Vibecode your Home Assistant setup from your IDE: automations, dashboards, themes and configs",
+    "category": "🏠 Home Automation",
+    "url": "https://github.com/Coolver/home-assistant-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "humanforai-humanforai-mcp",
+    "name": "humanforai/humanforai-mcp",
+    "url": "https://github.com/humanforai/humanforai-mcp",
+    "description": "Hire a real human operator for tasks that need physical presence, perception, or judgment: real-world verification, product testing, AI output review, data collection, and local errands. Remote streamable HTTP at https://humanforai.dev/mcp or local stdio via npx -y humanforai.",
+    "category": "🤝 Agreements & Coordination",
+    "isOfficial": false
+  },
+  {
+    "id": "kyanitelabs-dialectos",
+    "name": "KyaniteLabs/DialectOS",
+    "url": "https://github.com/KyaniteLabs/DialectOS",
+    "description": "Spanish dialect localization server and CLI. Translates and QA-checks across 25 regional variants with register control, structure preservation, and adversarial quality gates.",
+    "category": "🌎 Translation Services",
+    "isOfficial": false
+  },
+  {
+    "id": "lacs-project-sysknife",
+    "name": "lacs-project/sysknife",
+    "description": "Security-hardened MCP server for Linux system administration via 189 typed actions instead of shell strings, with an Ed25519-signed hash-chain audit log, one-time TTL approval receipts, and automatic rollback. Works with Claude Code, Cursor, and Codex CLI.",
+    "category": "🖥️ Command Line",
+    "url": "https://github.com/lacs-project/sysknife",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "lpigeon-unitree-go2-mcp-server",
+    "name": "lpigeon/unitree-go2-mcp-server",
+    "url": "https://github.com/lpigeon/unitree-go2-mcp-server",
+    "description": "The Unitree Go2 MCP Server is a server built on the MCP that enables users to control the Unitree Go2 robot using natural language commands interpreted by a LLM.",
+    "category": "🏭 Industrial & IoT",
+    "isOfficial": false
+  },
+  {
+    "id": "lxman-obsbot-mcp",
+    "name": "lxman/obsbot-mcp",
+    "description": "Control an OBSBOT Tiny 2 webcam over USB — pan/tilt/zoom the motorized gimbal in degrees, AI subject tracking, presets, focus/exposure/white-balance, snapshots and recording. Point it at a pixel, or zoom to fit a region of a snapshot it just took. 35 tools (34 on Linux), speaking UVC and the vendor protocol directly with no vendor SDK and no cloud; prebuilt native helpers for Windows, macOS and Linux. npx obsbot-mcp",
+    "category": "📟 Embedded System",
+    "url": "https://github.com/lxman/obsbot-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-07T21:44:41.201Z"
+  },
+  {
+    "id": "mmntm-weblate-mcp",
+    "name": "mmntm/weblate-mcp",
+    "url": "https://github.com/mmntm/weblate-mcp",
+    "description": "Comprehensive Model Context Protocol server for Weblate translation management, enabling AI assistants to perform translation tasks, project management, and content discovery with smart format transformations.",
+    "category": "🌎 Translation Services",
+    "isOfficial": false
+  },
+  {
+    "id": "modelcontextprotocol-server-everything",
+    "name": "modelcontextprotocol/server-everything",
+    "url": "https://github.com/modelcontextprotocol/servers/tree/main/src/everything",
+    "description": "MCP server that exercises all the features of the MCP protocol",
+    "category": "🛠️ Other Tools and Integrations",
+    "isOfficial": true
+  },
+  {
+    "id": "ogasurfproject-jpg-horizon-shield-2",
+    "name": "ogasurfproject-jpg/horizon-shield",
+    "description": "Audit Japanese construction and renovation estimates for overcharge: fair price ranges by work type, sales tactic red flags, and signed recomputable verdicts (KIRA). Includes an agent intake desk and a directory of independently audited contractors. Remote server, no API key required.",
+    "category": "🏠 Real Estate",
+    "url": "https://github.com/ogasurfproject-jpg/horizon-shield/tree/main/workers/hs-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "oh-my-posh-validator",
+    "name": "Oh My Posh Validator",
+    "description": "Validate oh-my-posh configurations and segment snippets against the official schema.",
+    "category": "📊 Data Platforms",
+    "url": "https://github.com/JanDeDobbeleer/oh-my-posh",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "rekordcloud-sonovault-mcp",
+    "name": "rekordcloud/sonovault-mcp",
+    "description": "Music metadata search over 90M+ tracks, artists, labels, and releases: genre, release dates, ISRC/ISWC codes, and cross-platform IDs (Spotify, Apple Music, Tidal, Beatport, Discogs, MusicBrainz, YouTube). npx -y sonovault-mcp",
+    "category": "🎨 Art & Culture",
+    "url": "https://github.com/rekordcloud/sonovault-mcp",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "tollcalc-calculate-the-road-toll-for-trucks-in-europe",
+    "name": "TollCalc - Calculate the road toll for trucks in europe",
+    "description": "Calculate the road toll for trucks in Europe. Nearly any country is supported.",
+    "category": "🚆 Travel & Transportation",
+    "url": "https://app.tollcalc.eu",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-07T21:44:41.201Z"
+  },
+  {
+    "id": "tsvetang2-cognigy-ai-mcp-management-server",
+    "name": "TsvetanG2/cognigy-ai-mcp-management-server",
+    "description": "Management and automation server for the Cognigy.AI conversational AI platform, exposing 132 tools across flows, agents, snapshots, NLU, functions, and deployment. Published to the official MCP Registry. npx mcp-cognigy",
+    "category": "🗣️ Conversational AI",
+    "url": "https://github.com/TsvetanG2/cognigy-ai-mcp-management-server",
+    "isOfficial": false,
+    "status": "active",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  }
+]

@@ -1,0 +1,13 @@
+-- Normalize servers.created_at to Unix *seconds*.
+--
+-- The schema declares created_at with Drizzle's mode:'timestamp' (Unix seconds),
+-- and the live submit route writes `createdAt: new Date()` -> seconds. But the
+-- seed script previously inserted `strftime('%s','now') * 1000` (milliseconds),
+-- so most seeded rows were stored in ms. Read back through mode:'timestamp'
+-- (new Date(value * 1000)) those land in the year ~58000 and sort ahead of every
+-- genuinely-recent listing, breaking the homepage "Newest" filter.
+--
+-- Divide the millisecond rows down to seconds. Guarded so it only touches values
+-- that are clearly milliseconds (> 1e11 ~= year 5138 in seconds), leaving correct
+-- second-based rows untouched. Idempotent: re-running is a no-op once normalized.
+UPDATE servers SET created_at = created_at / 1000 WHERE created_at > 100000000000;

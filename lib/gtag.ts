@@ -1,0 +1,293 @@
+import { PAID_PRODUCTS, type PaidSku } from './pricing';
+
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+    posthog?: {
+      capture?: (event: string, properties?: Record<string, any>) => void;
+      opt_in_capturing?: () => void;
+      opt_out_capturing?: () => void;
+      [key: string]: any;
+    };
+  }
+}
+
+/**
+ * GA-standard event names that we always fire alongside a more descriptive
+ * custom event (e.g. `generate_lead` + `mcp_submission`). We forward only the
+ * descriptive twin to PostHog to keep its event taxonomy clean and unambiguous.
+ */
+const POSTHOG_SKIP_EVENTS = new Set([
+  'generate_lead',
+  'select_content',
+  'click',
+]);
+
+/**
+ * Generic helper to send an analytics event safely to both Google Analytics
+ * and PostHog when they're loaded. PostHog respects its own opt-in/opt-out
+ * consent state, so this is a no-op there until consent is granted.
+ */
+export function trackEvent(eventName: string, params?: Record<string, any>) {
+  if (typeof window === 'undefined') return;
+
+  if (typeof window.gtag === 'function') {
+    window.gtag('event', eventName, params);
+  }
+
+  if (
+    !POSTHOG_SKIP_EVENTS.has(eventName) &&
+    window.posthog &&
+    typeof window.posthog.capture === 'function'
+  ) {
+    window.posthog.capture(eventName, params);
+  }
+}
+
+/**
+ * GA4 Standard Event: purchase
+ * Fired when a user successfully completes checkout for listing promotion / upgrade.
+ */
+export function trackPurchase(data: {
+  transactionId: string;
+  sku: PaidSku;
+  serverId: string;
+}) {
+  const product = PAID_PRODUCTS[data.sku];
+  if (!product) return;
+
+  const value = product.unitAmount / 100;
+
+  trackEvent('purchase', {
+    transaction_id: data.transactionId,
+    value,
+    currency: 'USD',
+    sku: data.sku,
+    server_id: data.serverId,
+    items: [
+      {
+        item_id: data.sku,
+        item_name: product.name,
+        item_category: 'MCP Listing Upgrade',
+        price: value,
+        quantity: 1,
+      },
+    ],
+  });
+}
+
+/**
+ * GA4 Standard Event: begin_checkout
+ * Fired when a user initiates Stripe checkout from a button click.
+ */
+export function trackBeginCheckout(data: { sku: PaidSku; serverId: string }) {
+  const product = PAID_PRODUCTS[data.sku];
+  if (!product) return;
+
+  const value = product.unitAmount / 100;
+
+  trackEvent('begin_checkout', {
+    value,
+    currency: 'USD',
+    sku: data.sku,
+    server_id: data.serverId,
+    items: [
+      {
+        item_id: data.sku,
+        item_name: product.name,
+        item_category: 'MCP Listing Upgrade',
+        price: value,
+        quantity: 1,
+      },
+    ],
+  });
+}
+
+/**
+ * GA4 Standard Event: generate_lead (and mcp_submission custom event)
+ * Fired when a new MCP server is submitted.
+ */
+export function trackSubmitLead(data: {
+  serverName: string;
+  category: string;
+  url?: string;
+}) {
+  trackEvent('generate_lead', {
+    lead_type: 'mcp_server_submission',
+    server_name: data.serverName,
+    category: data.category,
+  });
+
+  trackEvent('mcp_submission', {
+    server_name: data.serverName,
+    category: data.category,
+    url: data.url || '',
+  });
+}
+
+/**
+ * GA4 Standard Event: generate_lead (and contact_submission custom event)
+ * Fired when a contact form is submitted.
+ */
+export function trackContactSubmit(data: {
+  name?: string;
+  messageLength?: number;
+}) {
+  trackEvent('generate_lead', {
+    lead_type: 'contact_form',
+  });
+
+  trackEvent('contact_submission', {
+    message_length: data.messageLength || 0,
+  });
+}
+
+/**
+ * GA4 Event: select_content / copy_install_config
+ * Fired when a user copies an MCP server command, code block, or config.
+ */
+export function trackCopyConfig(data: {
+  serverId?: string;
+  snippetType?: string;
+}) {
+  trackEvent('select_content', {
+    content_type: 'install_config',
+    item_id: data.serverId || 'general',
+  });
+
+  trackEvent('copy_install_config', {
+    server_id: data.serverId || 'general',
+    snippet_type: data.snippetType || 'code',
+  });
+}
+
+/**
+ * GA4 Event: click / outbound_click
+ * Fired when a user clicks an external link (GitHub repo, author website, etc.).
+ */
+export function trackOutboundClick(data: {
+  url: string;
+  destinationType: 'github' | 'website' | 'other';
+  serverId?: string;
+}) {
+  trackEvent('click', {
+    link_url: data.url,
+    link_domain: getDomain(data.url),
+    outbound: true,
+  });
+
+  trackEvent('outbound_click', {
+    url: data.url,
+    destination_type: data.destinationType,
+    server_id: data.serverId || '',
+  });
+}
+
+/**
+ * GA4 Custom Event: upvote_mcp
+ * Fired when a user upvotes an MCP server listing.
+ */
+export function trackUpvote(data: { serverId: string; serverName?: string }) {
+  trackEvent('upvote_mcp', {
+    server_id: data.serverId,
+    server_name: data.serverName || '',
+  });
+}
+
+/**
+ * GA4 Standard Event: search
+ * Fired when a user searches or filters in the directory grid.
+ */
+export function trackSearch(data: {
+  searchTerm: string;
+  category?: string | null;
+  resultCount?: number;
+}) {
+  trackEvent('search', {
+    search_term: data.searchTerm,
+    category: data.category || 'all',
+    result_count: data.resultCount,
+  });
+}
+
+/**
+ * GA4 Standard Event: share
+ * Fired when a user copies share links, badge code, or embed snippets.
+ */
+export function trackShare(data: { method: string; serverId: string }) {
+  trackEvent('share', {
+    method: data.method,
+    content_type: 'mcp_server',
+    item_id: data.serverId,
+  });
+}
+
+/**
+ * GA4 Custom Event: newsletter_signup
+ * Fired when a user subscribes via the footer, homepage, or popup modal form.
+ * Mark this as a GA4 "Key Event" in Admin → Events once it has fired at least once —
+ * that step can't be done from code/API, only the GA4 Admin UI.
+ */
+export function trackNewsletterSignup(data: {
+  source: 'footer' | 'homepage' | 'modal';
+}) {
+  trackEvent('newsletter_signup', { method: data.source });
+}
+
+/**
+ * Standardized feature usage event for PostHog & GA4 dashboard analytics.
+ * Logs a `feature_used` event with `feature_name` so PostHog can automatically
+ * display a breakdown of Top Used Features on a single dashboard insight.
+ */
+export function trackFeatureUse(
+  featureName: string,
+  properties?: Record<string, any>,
+) {
+  trackEvent('feature_used', {
+    feature_name: featureName,
+    ...properties,
+  });
+}
+
+/**
+ * Track sponsor CTA click in PostHog & GA4 with the specific A/B copy variant.
+ */
+export function trackSponsorCtaClick(params: {
+  placement: string;
+  variantId: string;
+  headline: string;
+  ctaText: string;
+  destination: string;
+}) {
+  trackEvent('sponsor_cta_clicked', {
+    placement: params.placement,
+    variant_id: params.variantId,
+    headline: params.headline,
+    cta_text: params.ctaText,
+    destination: params.destination,
+  });
+}
+
+/**
+ * Track when a sponsor placeholder is viewed in PostHog & GA4 with the variant tested.
+ */
+export function trackSponsorPlaceholderView(params: {
+  placement: string;
+  variantId: string;
+  headline: string;
+}) {
+  trackEvent('sponsor_placeholder_viewed', {
+    placement: params.placement,
+    variant_id: params.variantId,
+    headline: params.headline,
+  });
+}
+
+function getDomain(urlStr: string): string {
+  try {
+    const parsed = new URL(urlStr);
+    return parsed.hostname;
+  } catch {
+    return '';
+  }
+}

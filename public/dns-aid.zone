@@ -1,0 +1,15 @@
+; DNS for AI Discovery (DNS-AID) Zone Configuration for allmcps.com
+; RFC 9460 & draft-mozleywilliams-dnsop-dnsaid
+
+$TTL 86400
+@       IN  SOA  ns1.cloudflare.com. hostmaster.allmcps.com. (
+                2026072901 ; serial
+                3600       ; refresh
+                1800       ; retry
+                604800     ; expire
+                86400 )    ; minimum TTL
+
+; DNS-AID ServiceMode SVCB/HTTPS Records for Agent Discovery
+_index._agents.allmcps.com. IN HTTPS 1 . alpn="h2,h3" port="443" uri="https://allmcps.com/.well-known/agent-skills/index.json"
+_a2a._agents.allmcps.com.   IN HTTPS 1 . alpn="h2,h3" port="443" uri="https://allmcps.com/.well-known/api-catalog"
+_mcp._agents.allmcps.com.   IN HTTPS 1 . alpn="h2,h3" port="443" uri="https://allmcps.com/.well-known/mcp/server-card.json"

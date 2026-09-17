@@ -1,0 +1,809 @@
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
+
+export const servers = sqliteTable(
+  'servers',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    url: text('url').notNull(),
+    description: text('description').notNull(),
+    category: text('category').notNull(),
+    /** Optional product/marketing website (separate from the repo `url`). */
+    websiteUrl: text('website_url'),
+    /** Email the submitter gave at submit time. Used for status notices and the submission upsell sequence. */
+    submitterEmail: text('submitter_email'),
+    /** Paid/premium listings get dofollow website backlinks; free listings use nofollow. */
+    isPremium: integer('is_premium', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    /**
+     * Legacy — no longer written by the claim flow (kept for backward-compat reads
+     * of old rows only). "Verified" now means `reciprocalBadgeOk`; "Official"
+     * ownership is `isOfficial`. Do not use this column for new logic.
+     */
+    websiteVerified: integer('website_verified', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    /** "Official" — admin-approved ownership claim (proof via GitHub README, site badge, or DNS, but the grant itself always goes through admin review; see approve_claim/reject_claim). Grants edit rights and the Official badge. */
+    isOfficial: integer('is_official', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    claimedAt: integer('claimed_at', { mode: 'timestamp' }),
+    /** Auth.js user id after claim (optional until owners sign in). */
+    ownerUserId: text('owner_user_id'),
+    /** Set whenever a claim proof (GitHub README, site badge, or DNS) succeeds — every method awaits admin approval before ownerUserId/isOfficial/websiteUrl take effect (see approve_claim/reject_claim). */
+    pendingClaimUserId: text('pending_claim_user_id'),
+    /** The site the pending claimant proved control of. Null for a GitHub-proven claim (no website was part of that proof). */
+    pendingClaimWebsiteUrl: text('pending_claim_website_url'),
+    /** Timed featured placement (e.g. 7-day boost). */
+    featuredUntil: integer('featured_until', { mode: 'timestamp' }),
+    /** Timed #1-in-category pin from a category_sponsor_7d purchase. Distinct from featuredUntil so a category sponsorship doesn't get confused with a plain featured boost — category ranking checks this field specifically. Scoped to `category` as of purchase time. */
+    categorySponsorUntil: integer('category_sponsor_until', {
+      mode: 'timestamp',
+    }),
+    /** Paid priority in the admin review queue. */
+    reviewPriority: integer('review_priority', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    stripeCustomerId: text('stripe_customer_id'),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    /** free | active | past_due | canceled */
+    premiumStatus: text('premium_status').notNull().default('free'),
+    /** JSON blob of pending owner edits awaiting admin approval. */
+    pendingRevision: text('pending_revision'),
+    /** Live, admin-approved logo URL (e.g. `/logos/<id>`). Null = use the generated gradient avatar. */
+    logoUrl: text('logo_url'),
+    /** Source of logo: 'readme' | 'website_favicon' | 'github_org' | 'github_user' | 'manual' */
+    logoSource: text('logo_source'),
+    /** R2 key of an uploaded logo awaiting admin approval (e.g. `pending/<id>.png`). Null = nothing pending. */
+    pendingLogoKey: text('pending_logo_key'),
+    status: text('status').notNull().default('pending'),
+    lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
+    isVerifiedActive: integer('is_verified_active', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    healthStatus: text('health_status').notNull().default('unknown'),
+    /**
+     * "Verified" badge shown across the site. Derived aggregate: true when either
+     * the repo README badge (`readmeBadgeOk`) OR the custom-website backlink
+     * (`websiteBacklinkOk`) is currently live. Kept as the single field most
+     * consumers read (quality score, ranking, site stats, admin/dashboard badges).
+     * Fully automatic, independent of claim/Official status. NOTE: this aggregate
+     * does NOT by itself grant website dofollow — that is gated specifically on
+     * `websiteBacklinkOk`, since a repo README badge can't earn ranking credit for
+     * an unrelated marketing site (see lib/linkRel.ts).
+     */
+    reciprocalBadgeOk: integer('reciprocal_badge_ok', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    /**
+     * The source repo's README currently carries our AllMCPs badge/link (a
+     * reciprocal backlink from the repo). Tracked separately from the website
+     * backlink so the two verifications never clobber each other on listings that
+     * have both a repo and a custom site. Set by the health cron and on GitHub
+     * claim. Feeds the `reciprocalBadgeOk` aggregate.
+     */
+    readmeBadgeOk: integer('readme_badge_ok', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    /**
+     * The custom website (`websiteUrl`) currently carries a genuine dofollow
+     * backlink to us. This — not the repo README badge — is what earns the
+     * listing's website/support links dofollow (see lib/linkRel.ts). Reset to
+     * false whenever the website is retargeted (old domain's proof doesn't carry
+     * over). Set by the health cron and on website/DNS claim. Feeds the
+     * `reciprocalBadgeOk` aggregate.
+     */
+    websiteBacklinkOk: integer('website_backlink_ok', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    /** Last time the reciprocal-badge recheck ran for this listing (set alongside lastCheckedAt by the health cron). */
+    badgeLastCheckedAt: integer('badge_last_checked_at', { mode: 'timestamp' }),
+    /** GitHub stargazers, refreshed by the health cron. Null = not measured yet. */
+    githubStars: integer('github_stars'),
+    /** Repo's `pushed_at` from the GitHub API (last commit/push), refreshed by the health cron. Null = not a GitHub-linked listing or not measured yet. Surfaced so visitors can judge staleness without cloning the repo. */
+    lastCommitAt: integer('last_commit_at', { mode: 'timestamp' }),
+    /** npm last-month downloads for the package, refreshed by the health cron. Null = not an npm package or not measured. */
+    npmDownloads: integer('npm_downloads'),
+    /** Ecosystem the vuln-scan cron resolved installPackage to for OSV.dev querying —
+     * 'npm' | 'PyPI'. Null = not (yet) mappable to a scannable ecosystem (docker/go/
+     * remote-only listings, or no installPackage yet) — never scanned, never penalized. */
+    vulnEcosystem: text('vuln_ecosystem'),
+    /**
+     * OSV.dev advisory counts by severity for installPackage, queried without a pinned
+     * version (see lib/vulnScan.ts, /api/cron/vuln-scan) — i.e. "advisories ever filed
+     * against any version of this package," not "vulnerable right now." All null until
+     * first scanned; the quality score treats that as neutral, never as a negative
+     * signal (see lib/qualityScore.ts).
+     */
+    vulnCriticalCount: integer('vuln_critical_count'),
+    vulnHighCount: integer('vuln_high_count'),
+    vulnMediumCount: integer('vuln_medium_count'),
+    vulnLowCount: integer('vuln_low_count'),
+    /** Last time the vuln-scan cron resolved this listing's full advisory id set. Null = never scanned. */
+    vulnScannedAt: integer('vuln_scanned_at', { mode: 'timestamp' }),
+    /** JSON array of {name, description} captured when a listing exposes a callable MCP endpoint. Null = tools not introspected. */
+    tools: text('tools'),
+    /** Last time we attempted MCP tool introspection for this listing. */
+    toolsCheckedAt: integer('tools_checked_at', { mode: 'timestamp' }),
+    /** Error from the last tools/list attempt (e.g. "Connection timed out."). Null on success or before first attempt — lets us see *why* introspection is failing instead of just that `tools` is empty. */
+    toolsError: text('tools_error'),
+    /** How `tools` was obtained: 'introspected' (live MCP tools/list handshake) or 'readme' (best-effort static parse of the repo README, for the vast majority of listings that are npx/uvx/pip stdio packages, not a live HTTP endpoint). Null = not yet attempted. */
+    toolsSource: text('tools_source'),
+    /**
+     * LLM-generated, human-readable content that turns a scraped README-mirror page into a
+     * unique, useful listing (see /api/cron/ai-content). All nullable — absence means the
+     * page falls back to the raw description/README. This is the content layer that makes
+     * each /mcp/[id] page distinct from the upstream repo for both readers and search.
+     */
+    /** One clean sentence — replaces scraped chrome in cards, meta descriptions, and the digest. */
+    aiSummary: text('ai_summary'),
+    /** 2-4 sentence plain-language overview: what it does and when you'd reach for it. */
+    aiOverview: text('ai_overview'),
+    /** JSON string array of concrete use cases ("Let an agent query your Postgres database"). */
+    aiUseCases: text('ai_use_cases'),
+    /** JSON string array of key capabilities/features surfaced from the README. */
+    aiFeatures: text('ai_features'),
+    /** When the AI content was last generated. Null = never enriched. */
+    aiEnrichedAt: integer('ai_enriched_at', { mode: 'timestamp' }),
+    /** JSON array of {q, a} grounded Q&A pairs for the /mcp/[id] FAQ section and its
+     * FAQPage schema (see /api/cron/ai-faq, /api/cron/ai-content). Null = not
+     * generated yet — the page falls back to generic boilerplate questions. */
+    aiFaq: text('ai_faq'),
+    /** When the FAQ was last generated. Deliberately separate from aiEnrichedAt so
+     * the already-enriched backlog can be backfilled without re-running the rest
+     * of the content pipeline. */
+    aiFaqAt: integer('ai_faq_at', { mode: 'timestamp' }),
+    /** Long-form, restructured markdown writeup of the listing — original,
+     * paraphrased prose under our own `##` headings, grounded strictly in the
+     * README/description. This is the body content that replaced mirroring the
+     * raw upstream README on /mcp/[id] (the README moved to /mcp/[id]/readme,
+     * noindex). Null = not generated yet — the page falls back to the short
+     * ai_overview + a link to the README route. See lib/aiContent.ts. */
+    aiDoc: text('ai_doc'),
+    /** When ai_doc was last generated. Separate backfill clock, same rationale
+     * as aiFaqAt / installExtractedAt — lets the already-enriched catalog be
+     * backfilled with the writeup without re-running the whole pipeline, and
+     * feeds the listing's honest content-freshness lastmod (see
+     * lib/sitemapHelpers.ts listingLastMod). */
+    aiDocAt: integer('ai_doc_at', { mode: 'timestamp' }),
+    /**
+     * When the LLM last extracted/validated install_kind/install_command/
+     * install_args/install_package for this listing (see lib/aiContent.ts,
+     * /api/cron/ai-content). Deliberately separate from aiEnrichedAt so the
+     * already-enriched backlog can be backfilled for install-field re-checks
+     * without re-running the rest of the content pipeline — same pattern as
+     * aiFaqAt. The regex/heuristic README parser this replaces as the primary
+     * source routinely mistook mentioned third-party tools (installer CLIs,
+     * debugging utilities, generic framework/library dependencies) for the
+     * listing's own install command; an LLM reading the README with context
+     * can tell those apart. Null = not yet LLM-validated, still on the
+     * heuristic-parsed value.
+     */
+    installExtractedAt: integer('install_extracted_at', { mode: 'timestamp' }),
+    /** JSON array of UPPER_SNAKE_CASE env var names (API keys, tokens) the README/setup
+     * instructions say are required to run this server. Generated alongside the rest of
+     * the AI content layer (see lib/aiContent.ts) — used to add env placeholders to
+     * generated mcpServers configs instead of silently omitting required secrets. */
+    aiEnvVars: text('ai_env_vars'),
+    /** When this listing's semantic embedding was last pushed to Cloudflare Vectorize
+     * (see /api/cron/vector-index, lib/vectorSearch.ts). Null = never indexed. Lets
+     * the cron atomically claim a bounded batch per tick instead of walking the
+     * full catalog every run — same shape as aiFaqAt above. */
+    vectorSyncedAt: integer('vector_synced_at', { mode: 'timestamp' }),
+    /**
+     * Optional secondary connection method: a live hosted MCP endpoint offered
+     * *in addition to* the primary stdio/remote install already described by
+     * installKind/installCommand/etc. Common when a server ships both a hosted
+     * endpoint and a stdio wrapper/bridge package for clients without native
+     * remote-MCP support. When set, the health cron prefers a live tools/list
+     * handshake against this URL over README-parsing.
+     */
+    remoteEndpointUrl: text('remote_endpoint_url'),
+    /**
+     * Live health of remoteEndpointUrl specifically, from the same handshake the
+     * health cron already runs to verify its tools (see the cron's remoteEndpointUrl
+     * block). Deliberately separate from healthStatus/isVerifiedActive, which track
+     * the *primary* url (for allmcps-server that's the GitHub repo, not this
+     * endpoint) — conflating the two would mean a transient remote-endpoint outage
+     * could trip the primary-url unpublish logic, which only makes sense for a
+     * genuinely archived/dead repo. Null = never checked (no remoteEndpointUrl, or
+     * not yet reached by the cron).
+     */
+    remoteEndpointHealthy: integer('remote_endpoint_healthy', {
+      mode: 'boolean',
+    }),
+    remoteEndpointCheckedAt: integer('remote_endpoint_checked_at', {
+      mode: 'timestamp',
+    }),
+    /** stdio | remote — cached install transport from README/description parse. */
+    installKind: text('install_kind'),
+    /** Runner binary for stdio installs (npx, uvx, bunx). */
+    installCommand: text('install_command'),
+    /** JSON string array of CLI args for stdio installs. */
+    installArgs: text('install_args'),
+    /** Package name or remote URL used in install configs. */
+    installPackage: text('install_package'),
+    /** high | medium | low — how trustworthy the cached install hint is. */
+    installConfidence: text('install_confidence'),
+    views: integer('views').notNull().default(0),
+    copies: integer('copies').notNull().default(0),
+    upvotes: integer('upvotes').notNull().default(0),
+    /** Last time this listing was *queued* for X/Twitter (highlight cron, new-listing announce, or admin manual queue) — stamped at enqueue, before Buffer/X ever confirms the post. Drives least-recently-queued rotation so the same listing isn't re-queued before we even know the prior post went out. Not proof a tweet was actually published — see lastFeaturedAt for that. */
+    lastTweetedAt: integer('last_tweeted_at', { mode: 'timestamp' }),
+    /** Last time a queued tweet for this listing was *confirmed* sent (social_posts.status flipped to 'sent' via the mark-sent callback). This is the honest "actually posted on X" signal — use it for owner-facing copy ("✓ Highlighted on @AllMCPs") instead of lastTweetedAt. Null if never confirmed, even if lastTweetedAt is set. */
+    lastFeaturedAt: integer('last_featured_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    /** JSON string array of freeform submitter-chosen keywords (max 5, ≤30 chars each). Distinct from the single curated `category`. */
+    tags: text('tags'),
+    /** free | freemium | paid | byok — self-declared cost model of *using* this MCP server (not directory pricing). */
+    pricingModel: text('pricing_model'),
+    /** Optional free-text elaboration on pricing, e.g. "Free tier: 100 req/day". */
+    pricingNotes: text('pricing_notes'),
+    /** none | api_key | oauth | other — self-declared auth requirement. */
+    authType: text('auth_type'),
+    /** Free-text license identifier, e.g. "MIT", "Apache-2.0". */
+    license: text('license'),
+    /** JSON string array of MCP_CLIENTS slugs this server is confirmed compatible with. */
+    compatibleClients: text('compatible_clients'),
+    /** active | stable | experimental | archived — self-declared maintenance status, distinct from the auto `healthStatus`. */
+    maintenanceStatus: text('maintenance_status'),
+    /** Support/community link (Discord, docs site), distinct from `url` (repo) and `websiteUrl`. */
+    supportUrl: text('support_url'),
+    /** Live, admin-approved screenshot URL (e.g. `/screenshots/<id>`). Null = no screenshot shown. */
+    screenshotUrl: text('screenshot_url'),
+    /** R2 key of an uploaded screenshot awaiting admin approval (e.g. `screenshots/pending/<id>.png`). Null = nothing pending. */
+    pendingScreenshotKey: text('pending_screenshot_key'),
+    /** Submitter-suggested install command (e.g. "npx"), used as a hint only when the auto-detected `installConfidence` is low or absent. */
+    suggestedInstallCommand: text('suggested_install_command'),
+    /** JSON string array of args paired with `suggestedInstallCommand`. */
+    suggestedInstallArgs: text('suggested_install_args'),
+  },
+  (table) => ({
+    // `status = 'active'` is the base filter on nearly every catalog read (browse,
+    // category pages, related/featured lookups, sitemap) — at 10k+ rows this was an
+    // unindexed full table scan on every request. The composite indexes below cover
+    // the (status + category) and (status + createdAt) shapes used by
+    // getCategoryServers/getNewestActiveServers so D1 can seek+range-scan instead of
+    // scanning the whole table and sorting in memory; the popularity one similarly
+    // covers getPopularServers' `ORDER BY views DESC, copies DESC, upvotes DESC`.
+    statusIdx: index('idx_servers_status').on(table.status),
+    statusCategoryIdx: index('idx_servers_status_category').on(
+      table.status,
+      table.category,
+    ),
+    statusCreatedIdx: index('idx_servers_status_created').on(
+      table.status,
+      table.createdAt,
+    ),
+    statusPopularityIdx: index('idx_servers_status_popularity').on(
+      table.status,
+      table.views,
+      table.copies,
+      table.upvotes,
+    ),
+  }),
+);
+
+export const upvoteRecords = sqliteTable(
+  'upvote_records',
+  {
+    serverId: text('server_id').notNull(),
+    ipHash: text('ip_hash').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.serverId, table.ipHash] }),
+  }),
+);
+
+/** One unique view per (server, hashed IP) — same gate model as upvote_records. */
+export const viewRecords = sqliteTable(
+  'view_records',
+  {
+    serverId: text('server_id').notNull(),
+    ipHash: text('ip_hash').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.serverId, table.ipHash] }),
+  }),
+);
+
+// Auth.js (NextAuth) Drizzle adapter tables — see lib/auth.ts.
+// Column/table shape follows @auth/drizzle-adapter's SQLite defaults
+// (https://authjs.dev/getting-started/adapters/drizzle), renamed to
+// snake_case columns to match this project's convention.
+export const users = sqliteTable('users', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text('name'),
+  email: text('email').unique(),
+  emailVerified: integer('email_verified', { mode: 'timestamp_ms' }),
+  image: text('image'),
+  /** 'user' | 'admin' — gates /admin and /api/admin/* (see lib/adminAuth.ts). Granted manually in the DB; there is no self-serve upgrade path. */
+  role: text('role').notNull().default('user'),
+});
+
+export const accounts = sqliteTable(
+  'accounts',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    provider: text('provider').notNull(),
+    providerAccountId: text('provider_account_id').notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
+    scope: text('scope'),
+    id_token: text('id_token'),
+    session_state: text('session_state'),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.provider, table.providerAccountId] }),
+  }),
+);
+
+export const sessions = sqliteTable('sessions', {
+  sessionToken: text('session_token').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expires: integer('expires', { mode: 'timestamp_ms' }).notNull(),
+});
+
+export const verificationTokens = sqliteTable(
+  'verification_tokens',
+  {
+    identifier: text('identifier').notNull(),
+    token: text('token').notNull(),
+    expires: integer('expires', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.identifier, table.token] }),
+  }),
+);
+
+/**
+ * Short-lived email confirmation codes for POST /api/v1/agent/register —
+ * proves the registering agent controls `email`'s inbox before a bearer
+ * token is issued for it. One pending code per email; a fresh /register
+ * call overwrites any unused one. Deliberately separate from Auth.js's own
+ * `verificationTokens` table (a different flow with its own lifecycle
+ * managed by the DrizzleAdapter) so agent auth can't interfere with the
+ * human magic-link login path.
+ */
+export const agentRegistrationCodes = sqliteTable('agent_registration_codes', {
+  email: text('email').primaryKey(),
+  codeHash: text('code_hash').notNull(),
+  agentName: text('agent_name'),
+  attempts: integer('attempts').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  /** JSON string array of scopes requested at registration (see lib/agentAuth.ts AGENT_SCOPES) — carried onto the minted agent_tokens row at confirm. Null = pre-scopes registration, defaults to the legacy scope set. */
+  scopes: text('scopes'),
+});
+
+/**
+ * Bearer tokens minted by POST /api/v1/agent/register/confirm — let an
+ * unattended AI agent call POST /api/v1/agent/claim (DNS-TXT ownership
+ * proof) without a human OAuth session. Each token is tied to a `users`
+ * row (found-or-created by email at confirm time) so a claimed listing's
+ * `ownerUserId` and notification email are the same regardless of whether
+ * the owner signed in as a human or registered as an agent.
+ */
+export const agentTokens = sqliteTable(
+  'agent_tokens',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    tokenHash: text('token_hash').notNull().unique(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    agentName: text('agent_name'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+    revokedAt: integer('revoked_at', { mode: 'timestamp' }),
+    lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+    /** JSON string array of granted OAuth-style scopes (see lib/agentAuth.ts AGENT_SCOPES). Null = minted before scopes existed — resolveAgentAuth treats that the same as the legacy default scope set so old tokens keep working. */
+    scopes: text('scopes'),
+  },
+  (table) => ({
+    userIdx: index('idx_agent_tokens_user').on(table.userId),
+  }),
+);
+
+/** API access logs — tracks which LLMs/agents call our programmatic endpoints. */
+export const apiAccessLogs = sqliteTable(
+  'api_access_logs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    serverId: text('server_id'),
+    endpoint: text('endpoint').notNull(),
+    methodOrTool: text('method_or_tool'),
+    userAgent: text('user_agent'),
+    callerClass: text('caller_class').notNull().default('unknown'),
+    ipCountry: text('ip_country'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    serverIdx: index('idx_access_server').on(table.serverId),
+    createdIdx: index('idx_access_created').on(table.createdAt),
+    callerIdx: index('idx_access_caller').on(table.callerClass),
+  }),
+);
+
+/** Impression logs — tracks where listings appear on the site (homepage, search, sidebar, etc.). */
+export const impressionLogs = sqliteTable(
+  'impression_logs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    serverId: text('server_id').notNull(),
+    surface: text('surface').notNull(),
+    sessionHash: text('session_hash'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    serverIdx: index('idx_impression_server').on(table.serverId),
+    createdIdx: index('idx_impression_created').on(table.createdAt),
+    surfaceIdx: index('idx_impression_surface').on(table.surface),
+  }),
+);
+
+/**
+ * E2B sandbox verification pilot results for stdio listings — kept separate
+ * from `servers.tools`/`tools_source` until the approach is validated (success
+ * rate, timing, cost) rather than feeding unproven data into the live catalog.
+ * Populated by the `e2b-stdio-pilot` GitHub Actions workflow via
+ * /api/cron/stdio-pilot/result; batches are claimed via /api/cron/stdio-pilot/batch.
+ */
+export const stdioVerificationPilot = sqliteTable(
+  'stdio_verification_pilot',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /**
+     * Unique — one row per listing, mutated pending -> final in place. This is
+     * what makes /batch's claim-by-insert atomic: a SELECT-then-INSERT gap
+     * between two overlapping requests otherwise lets both claim the same
+     * listing (confirmed in practice, not just theoretical) — only a DB-level
+     * constraint closes that window.
+     */
+    serverId: text('server_id').notNull().unique(),
+    /** ok | install_failed | handshake_failed | timeout | error */
+    status: text('status').notNull(),
+    toolCount: integer('tool_count'),
+    /** JSON array of {name, description, parameters} on success. */
+    tools: text('tools'),
+    error: text('error'),
+    durationMs: integer('duration_ms'),
+    checkedAt: integer('checked_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    serverIdx: index('idx_stdio_pilot_server').on(table.serverId),
+    checkedIdx: index('idx_stdio_pilot_checked').on(table.checkedAt),
+  }),
+);
+
+/**
+ * Bounded per-listing health-check history — the health cron's existing
+ * healthy/unhealthy verdict (primary URL reachability), persisted per pass
+ * instead of only overwriting servers.healthStatus/isVerifiedActive. Lets the
+ * detail page show a trend ("29/30 checks healthy this week") instead of a
+ * single point-in-time badge, which reads as a false alarm on one transient
+ * blip (confirmed in practice: our own listing showed "Unreachable" from a
+ * one-off Worker memory spike, not a real outage).
+ *
+ * Deliberately NOT unbounded: /api/cron/health trims each server_id to the
+ * most recent HEALTH_HISTORY_LIMIT rows right after inserting, so this stays
+ * flat-sized forever rather than growing with total checks performed.
+ */
+export const serverHealthChecks = sqliteTable(
+  'server_health_checks',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    serverId: text('server_id').notNull(),
+    checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
+    healthy: integer('healthy', { mode: 'boolean' }).notNull(),
+    /** Short reason on failure (e.g. "HTTP 522"). Null on success. */
+    detail: text('detail'),
+    /**
+     * The remote-endpoint reading from this same check pass, alongside the
+     * primary `healthy` signal above — lets the quality score's "Server
+     * availability" component use a rolling window instead of a single live
+     * snapshot (see lib/qualityScore.ts). Null when this listing has no
+     * remoteEndpointUrl, or on rows predating this column.
+     */
+    remoteHealthy: integer('remote_healthy', { mode: 'boolean' }),
+  },
+  (table) => ({
+    serverIdx: index('idx_health_checks_server').on(table.serverId),
+    checkedIdx: index('idx_health_checks_checked').on(table.checkedAt),
+  }),
+);
+
+/**
+ * Outbound social queue items (RSS-backed tweet pipeline).
+ *
+ * Retained but no longer written or read: the X/Twitter posting automation was
+ * removed after the account was suspended. The table and its rows are kept in
+ * D1 so the queue history survives and the integration can be restored, so
+ * nothing here should be treated as live.
+ */
+export const socialPosts = sqliteTable(
+  'social_posts',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /** Stable per-item id exposed in RSS <guid>. */
+    guid: text('guid').notNull().unique(),
+    /** Target channel (currently: twitter). */
+    channel: text('channel').notNull().default('twitter'),
+    /** queued | sent | failed */
+    status: text('status').notNull().default('queued'),
+    /** Related listing (when applicable). */
+    serverId: text('server_id'),
+    /** Full tweet body that downstream automation should post. */
+    tweetText: text('tweet_text').notNull(),
+    /** producer source: highlight_cron | approval | ... */
+    source: text('source'),
+    /** Optional idempotency key (e.g. one item per cron slot). */
+    dedupeKey: text('dedupe_key').unique(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    sentAt: integer('sent_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    createdIdx: index('idx_social_posts_created').on(table.createdAt),
+    statusCreatedIdx: index('idx_social_posts_status_created').on(
+      table.status,
+      table.createdAt,
+    ),
+    serverIdx: index('idx_social_posts_server').on(table.serverId),
+  }),
+);
+
+/**
+ * User-submitted star rating + optional written comment for a listing. The
+ * rating publishes immediately (no approval — it feeds the quality score's
+ * community-engagement component right away, see lib/qualityScore.ts) while
+ * a written comment is held behind `commentStatus` until an admin approves
+ * it (spam/abuse gate) — see the approve_review_comment/reject_review_comment
+ * actions in app/api/admin/action/route.ts. `comment` staying non-null after
+ * rejection (rather than being cleared) is deliberate: it lets an admin who
+ * revisits the queue see what was rejected, and lets a user's own composer
+ * show them their last submission even if it never went public.
+ *
+ * One row per (server, user) — a resubmission upserts in place via
+ * onConflictDoUpdate on idx_reviews_server_user rather than appending a new
+ * row, so a user can revise their own review instead of stacking duplicates.
+ * Autoincrement `id` (rather than a bare composite PK like upvote_records)
+ * exists so a single row can be addressed by the plain `id: string` shape
+ * POST /api/admin/action already uses for every other moderation action.
+ */
+export const reviews = sqliteTable(
+  'reviews',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    serverId: text('server_id').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** 1-5. */
+    rating: integer('rating').notNull(),
+    /** Optional written review. Null = rating-only submission. */
+    comment: text('comment'),
+    /** none (no comment given) | pending | approved | rejected. Only gates the
+     * comment *text* — the rating above always counts regardless of this value. */
+    commentStatus: text('comment_status').notNull().default('none'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    serverUserUnique: uniqueIndex('idx_reviews_server_user').on(
+      table.serverId,
+      table.userId,
+    ),
+    serverIdx: index('idx_reviews_server').on(table.serverId),
+    commentStatusIdx: index('idx_reviews_comment_status').on(
+      table.commentStatus,
+    ),
+  }),
+);
+
+/**
+ * Anonymous "something's wrong with this listing" flags — admin triage only,
+ * deliberately never a direct input to the public quality score (see
+ * lib/qualityScore.ts) to avoid a mass-report abuse vector; an admin who
+ * confirms a report acts on the listing itself (edit/unpublish) through the
+ * existing tools, and *that* is what actually moves the score. No login
+ * required (lower friction than reviews — the visitor most motivated to
+ * report is mid-frustration with something broken), so abuse resistance is
+ * Turnstile plus a soft rate limit here rather than a DB-level uniqueness
+ * constraint — multiple genuine reports on one listing are a real signal,
+ * not spam, and must not be deduped away.
+ */
+export const reports = sqliteTable(
+  'reports',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    serverId: text('server_id').notNull(),
+    /** broken_install | misleading | malicious | dead_link | other */
+    reason: text('reason').notNull(),
+    /** Optional free-text elaboration, length-capped by the route. */
+    details: text('details'),
+    /** Salted hash of the reporter's IP (see lib/upvoteHash.ts), scoped to a
+     * fixed 'report' bucket rather than per-listing — used only for the soft
+     * rate limit below, never displayed. Null if the hashing pepper isn't
+     * configured (fails open, same convention as upvote/view dedup). */
+    reporterIpHash: text('reporter_ip_hash'),
+    /** open | reviewed | dismissed — admin triage state. */
+    status: text('status').notNull().default('open'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    serverIdx: index('idx_reports_server').on(table.serverId),
+    statusIdx: index('idx_reports_status').on(table.status),
+    createdIdx: index('idx_reports_created').on(table.createdAt),
+    /** Powers the soft rate-limit lookup: "how many reports has this hashed IP
+     * filed recently" without a full table scan. */
+    ipCreatedIdx: index('idx_reports_ip_created').on(
+      table.reporterIpHash,
+      table.createdAt,
+    ),
+  }),
+);
+
+/**
+ * Universal sponsor advertisements (logo + copy + CTA link across directory, sidebar, articles).
+ * Sold in 1,000 impression credit blocks with weighted CPM bidding.
+ */
+export const sponsorAds = sqliteTable(
+  'sponsor_ads',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    advertiserEmail: text('advertiser_email').notNull(),
+    /** Set when the creator was signed in — links the campaign into their /dashboard alongside MCP listings. Nullable: ad creation never requires login. */
+    advertiserUserId: text('advertiser_user_id'),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+    ctaText: text('cta_text').notNull().default('Learn More'),
+    targetUrl: text('target_url').notNull(),
+    logoUrl: text('logo_url').notNull(),
+    /** 'all' | 'directory_inline' | 'detail_sidebar' | 'blog_guide' | 'header_banner' */
+    placement: text('placement').notNull().default('all'),
+    /** CPM in cents (e.g. 500 = $5.00 / 1k impressions). Multiplies display weight. */
+    bidCpm: integer('bid_cpm').notNull().default(500),
+    /** Total impressions purchased (e.g. 5000) */
+    totalImpressionsPurchased: integer('total_impressions_purchased')
+      .notNull()
+      .default(1000),
+    /** Total impressions served so far */
+    impressionsServed: integer('impressions_served').notNull().default(0),
+    /** Total clicks recorded */
+    clicksCount: integer('clicks_count').notNull().default(0),
+    /** 'pending_approval' | 'active' | 'paused' | 'completed' | 'rejected' */
+    status: text('status').notNull().default('pending_approval'),
+    rejectionReason: text('rejection_reason'),
+    stripeSessionId: text('stripe_session_id'),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    /** Stripe's hosted invoice page (view + download PDF) — set by the webhook once payment completes. */
+    stripeInvoiceUrl: text('stripe_invoice_url'),
+    amountPaidCents: integer('amount_paid_cents').notNull().default(0),
+    /** Set once an abandoned-checkout reminder email has gone out, so it's only ever sent once. */
+    abandonedReminderSentAt: integer('abandoned_reminder_sent_at', {
+      mode: 'timestamp',
+    }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    approvedAt: integer('approved_at', { mode: 'timestamp' }),
+    completedAt: integer('completed_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    statusIdx: index('idx_sponsor_ads_status').on(table.status),
+    placementStatusIdx: index('idx_sponsor_ads_placement_status').on(
+      table.placement,
+      table.status,
+    ),
+    advertiserEmailIdx: index('idx_sponsor_ads_email').on(
+      table.advertiserEmail,
+    ),
+    advertiserUserIdx: index('idx_sponsor_ads_user').on(table.advertiserUserId),
+    createdIdx: index('idx_sponsor_ads_created').on(table.createdAt),
+  }),
+);
+
+/**
+ * Event-level ad analytics for impressions and clicks.
+ */
+export const sponsorAdLogs = sqliteTable(
+  'sponsor_ad_logs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    adId: text('ad_id')
+      .notNull()
+      .references(() => sponsorAds.id, { onDelete: 'cascade' }),
+    /** 'impression' | 'click' | 'ai_injection' */
+    eventType: text('event_type').notNull(),
+    placement: text('placement').notNull(),
+    sessionHash: text('session_hash'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    adIdx: index('idx_ad_logs_ad').on(table.adId),
+    eventIdx: index('idx_ad_logs_event').on(table.eventType),
+    createdIdx: index('idx_ad_logs_created').on(table.createdAt),
+  }),
+);
+
+/**
+ * Back-office admin audit trail (ADR 0006, jackalope-digital-hub).
+ * One row per mutation made through the /api/backoffice/* adapter. Additive and
+ * self-contained — nothing in the app writes here except lib/backoffice.
+ */
+export const adminAudit = sqliteTable(
+  'admin_audit',
+  {
+    id: text('id').primaryKey(),
+    connectorId: text('connector_id').notNull(),
+    actorId: text('actor_id').notNull(),
+    requestId: text('request_id').notNull(),
+    action: text('action').notNull(),
+    targetType: text('target_type').notNull(),
+    targetId: text('target_id').notNull(),
+    /** JSON string, or null. */
+    before: text('before'),
+    /** JSON string, or null. */
+    after: text('after'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    createdIdx: index('idx_admin_audit_created').on(table.createdAt),
+    targetIdx: index('idx_admin_audit_target').on(
+      table.targetType,
+      table.targetId,
+    ),
+  }),
+);

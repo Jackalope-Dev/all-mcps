@@ -1,0 +1,47 @@
+// AUTO: build-only Wrangler config. next.config.ts points
+// initOpenNextCloudflareForDev() here (with remoteBindings: false) during
+// `next build` — the build only needs D1 + R2 for generateStaticParams / SSG,
+// so `ai` / `vectorize` / `services` (WORKER_SELF_REFERENCE, a runtime-only
+// binding for OpenNext's ISR revalidation queue — see open-next.config.ts,
+// never touched at build time) are left out entirely. None of those three
+// have local emulation, so declaring them here would make wrangler try to
+// establish a real Cloudflare connection during the build, which stalls
+// (40s+) when it succeeds and fails closed with nothing to fall back on
+// where there's no interactive wrangler login, like CI. Keep in sync with
+// wrangler.jsonc for DB/R2.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "all-mcps",
+  "main": "./custom-worker.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "limits": {
+    "cpu_ms": 300000
+  },
+  "vars": {
+    "RESEND_TO_EMAIL": "contact@allmcps.com",
+    "RESEND_FROM_EMAIL": "contact@allmcps.com"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "all-mcps",
+      "database_id": "c0e237c4-fa3c-45f0-8400-b2dd44615f94",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "LOGOS",
+      "bucket_name": "all-mcps-logos"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "all-mcps-isr-cache"
+    }
+  ]
+}

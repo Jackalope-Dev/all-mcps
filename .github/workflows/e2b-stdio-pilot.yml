@@ -1,0 +1,72 @@
+name: 🧪 E2B Stdio Verification Pilot
+
+# Graduated (see app/api/cron/stdio-pilot/result — 'ok' results promote into
+# servers.tools/tools_source). Verifies stdio MCP listings by actually
+# installing and running them in an E2B sandbox (initialize -> tools/list over
+# stdio), instead of trusting README-parsed tool guesses.
+#
+# Runs on a small daily schedule sized just for new listings trickling in from
+# the LLM install validator (/batch only selects installExtractedAt-confirmed,
+# not-yet-tested listings, so this never re-drains the whole catalog) — daily
+# defaults are deliberately modest (concurrency 5, 15min budget, batch 20) to
+# keep steady-state E2B cost low and predictable. A manual dispatch with
+# larger inputs is still how to drain a big backlog fast (e.g. right after a
+# schema change makes a lot of the catalog newly re-claimable).
+#
+# Runs a concurrency pool that drains up to batch_size (or until
+# run_budget_minutes is hit) — see scripts/e2b-stdio-pilot.mjs. Manual-dispatch
+# concurrency default (15) sits a few sandboxes below E2B Hobby's
+# 20-concurrent-sandbox free-tier cap as headroom.
+#
+# Needs the E2B_API_KEY repo secret (E2B's SDK doesn't work inside Cloudflare
+# Workers, so this can't run as a Worker cron — see scripts/e2b-stdio-pilot.mjs).
+# Manual dispatch: Actions → this workflow → "Run workflow".
+on:
+  schedule:
+    - cron: '0 6 * * *' # Daily, 06:00 UTC.
+  workflow_dispatch:
+    inputs:
+      concurrency:
+        description: 'Sandboxes to run at once (stay a few below your E2B plan''s concurrent-sandbox cap)'
+        required: false
+        default: '15'
+      run_budget_minutes:
+        description: 'Stop starting new listings after this many minutes (in-flight ones still finish)'
+        required: false
+        default: '300'
+      batch_size:
+        description: 'Listings fetched per page from the backlog (capped at 100 by the endpoint)'
+        required: false
+        default: '100'
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    # Padded above the manual-dispatch run_budget_minutes default so the job
+    # timeout itself is never what cuts a run short — the script's own budget
+    # check is the one meant to bound this.
+    timeout-minutes: 350
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run E2B stdio verification pilot
+        env:
+          E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
+          ALLMCPS_CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.ADMIN_SECRET }}
+          # workflow_dispatch inputs are empty on a schedule trigger, so these
+          # fall back to small daily-appropriate defaults rather than the
+          # much larger manual-dispatch ones above.
+          CONCURRENCY: ${{ github.event.inputs.concurrency || '5' }}
+          RUN_BUDGET_MINUTES: ${{ github.event.inputs.run_budget_minutes || '15' }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
+        run: node scripts/e2b-stdio-pilot.mjs

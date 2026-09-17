@@ -1,0 +1,24 @@
+{
+  "name": "AllMCPs - Model Context Protocol Directory",
+  "short_name": "AllMCPs",
+  "description": "Discover, build, and connect Model Context Protocol (MCP) servers for AI agents & LLMs.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#00E5FF",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/logo-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

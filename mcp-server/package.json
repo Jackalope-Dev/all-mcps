@@ -1,0 +1,48 @@
+{
+  "name": "allmcps-server",
+  "version": "2.1.0",
+  "mcpName": "io.github.Jackalope-Dev/allmcps-server",
+  "description": "The official MCP server and CLI for AllMCPs.com - search, browse, get install configs, and submit MCP servers directly from your AI agent or a shell script.",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "allmcps-server": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build",
+    "version": "node scripts/sync-version.mjs && git add server.json lhm.plugin.json"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "allmcps",
+    "claude",
+    "ai-agent",
+    "cli"
+  ],
+  "homepage": "https://allmcps.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jackalope-Dev/allmcps-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Jackalope-Dev/allmcps-server/issues"
+  },
+  "author": "Jackalope Digital",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

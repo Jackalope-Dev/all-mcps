@@ -1,0 +1,54 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+mcp-server/node_modules
+mcp-server/dist
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# cloudflare
+.wrangler/
+.open-next/
+.dev.vars
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env
+
+# typescript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# one-off generated SQL (scripts/seed-sql.mjs, scripts/ingest-sources.mjs) —
+# not schema migrations, shouldn't live in git history
+drizzle/seed.sql
+drizzle/ingest-*.sql
+
+# generated artifacts (regenerate with the scripts that own them)
+/email-previews
+/public/screenshots
+
+# generated one-off backfill/rollback SQL (scripts/backfill-*.ts) — run against D1, not schema migrations
+drizzle/backfill-*.sql
+drizzle/rollback-*.sql

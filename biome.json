@@ -1,0 +1,72 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**",
+      "!**/.next",
+      "!**/.open-next",
+      "!**/drizzle",
+      "!**/public",
+      "!**/content",
+      "!**/email-previews",
+      "!**/data/mcp-servers.json",
+      "!**/lib/blog-manifest.json",
+      "!**/lib/category-manifest.json",
+      "!**/cloudflare-env.d.ts",
+      "!**/next-env.d.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noArrayIndexKey": "warn"
+      },
+      "complexity": {
+        "noImportantStyles": "off"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "warn"
+      },
+      "a11y": {
+        "noAutofocus": "off",
+        "useButtonType": "warn",
+        "noLabelWithoutControl": "warn",
+        "useKeyWithClickEvents": "warn",
+        "useKeyWithMouseEvents": "warn",
+        "noStaticElementInteractions": "warn",
+        "noSvgWithoutTitle": "warn",
+        "useSemanticElements": "warn"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}
