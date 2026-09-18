@@ -43,6 +43,9 @@ export type ExistingListingMatch = {
   id: string;
   name: string;
   status: string;
+  url?: string;
+  description?: string | null;
+  websiteUrl?: string | null;
 };
 
 /**
@@ -63,12 +66,21 @@ export async function findExistingListingByUrl(
       id: servers.id,
       name: servers.name,
       url: servers.url,
+      description: servers.description,
+      websiteUrl: servers.websiteUrl,
       status: servers.status,
     })
     .from(servers);
   const match = rows.find((r) => normalizeUrlKey(r.url) === key);
   return match
-    ? { id: match.id, name: match.name, status: match.status }
+    ? {
+        id: match.id,
+        name: match.name,
+        status: match.status,
+        url: match.url,
+        description: match.description,
+        websiteUrl: match.websiteUrl,
+      }
     : null;
 }
 
@@ -111,6 +123,8 @@ export async function findExistingListingByNameAndSite(
     .select({
       id: servers.id,
       name: servers.name,
+      url: servers.url,
+      description: servers.description,
       websiteUrl: servers.websiteUrl,
       status: servers.status,
     })
@@ -119,6 +133,112 @@ export async function findExistingListingByNameAndSite(
     (r) => normalizeNameSiteKey(r.name, r.websiteUrl) === key,
   );
   return match
-    ? { id: match.id, name: match.name, status: match.status }
+    ? {
+        id: match.id,
+        name: match.name,
+        status: match.status,
+        url: match.url,
+        description: match.description,
+        websiteUrl: match.websiteUrl,
+      }
     : null;
+}
+
+function listingNameKey(name: string | null | undefined): string {
+  return (name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter((w) => w && w !== 'mcp' && w !== 'server' && w !== 'servers')
+    .join(' ')
+    .trim();
+}
+
+function websiteHost(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    if (
+      /(^|\.)github\.com$|(^|\.)github\.io$|(^|\.)gitlab\.com$|(^|\.)bitbucket\.org$/.test(
+        host,
+      )
+    ) {
+      return null;
+    }
+    return host;
+  } catch {
+    return null;
+  }
+}
+
+function toMatch(row: {
+  id: string;
+  name: string;
+  status: string;
+  url: string;
+  description: string | null;
+  websiteUrl: string | null;
+}): ExistingListingMatch {
+  return {
+    id: row.id,
+    name: row.name,
+    status: row.status,
+    url: row.url,
+    description: row.description,
+    websiteUrl: row.websiteUrl,
+  };
+}
+
+/**
+ * Near-duplicates that are not an exact URL match — same name+site, same
+ * marketing domain, or the same stripped name. Used as Jev pair input.
+ */
+export async function findNearDuplicateCandidates(
+  db: ReturnType<typeof drizzle>,
+  input: { url: string; name: string; websiteUrl?: string | null },
+): Promise<ExistingListingMatch[]> {
+  const urlKey = normalizeUrlKey(input.url);
+  const nameSite = normalizeNameSiteKey(input.name, input.websiteUrl);
+  const nameKey = listingNameKey(input.name);
+  const host = websiteHost(input.websiteUrl) || websiteHost(input.url);
+
+  const rows = await db
+    .select({
+      id: servers.id,
+      name: servers.name,
+      url: servers.url,
+      description: servers.description,
+      websiteUrl: servers.websiteUrl,
+      status: servers.status,
+    })
+    .from(servers);
+
+  const out: ExistingListingMatch[] = [];
+  const seen = new Set<string>();
+  const push = (row: (typeof rows)[number]) => {
+    if (seen.has(row.id)) return;
+    if (normalizeUrlKey(row.url) === urlKey) return;
+    seen.add(row.id);
+    out.push(toMatch(row));
+  };
+
+  if (nameSite) {
+    for (const r of rows) {
+      if (normalizeNameSiteKey(r.name, r.websiteUrl) === nameSite) push(r);
+    }
+  }
+  if (host) {
+    for (const r of rows) {
+      if (websiteHost(r.websiteUrl) === host || websiteHost(r.url) === host) {
+        push(r);
+      }
+    }
+  }
+  if (nameKey) {
+    for (const r of rows) {
+      if (listingNameKey(r.name) === nameKey) push(r);
+    }
+  }
+
+  return out.slice(0, 3);
 }

@@ -496,58 +496,73 @@ function parseJsonConfigHint(text: string): ParsedInstallHint {
   };
 }
 
+function installHintKey(hint: NonNullable<ParsedInstallHint>): string {
+  if ('url' in hint) return `r:${hint.url}`;
+  return `s:${hint.command} ${(hint.args || []).join(' ')}`;
+}
+
+/**
+ * Every plausible install command in the text, capped so a Jev Choice can pick
+ * among them. Order matches parseInstallHint's previous first-match priority.
+ */
+export function collectInstallCandidates(
+  description: string,
+): NonNullable<ParsedInstallHint>[] {
+  if (!description) return [];
+  const out: NonNullable<ParsedInstallHint>[] = [];
+  const seen = new Set<string>();
+  const push = (hint: ParsedInstallHint) => {
+    if (!hint) return;
+    const key = installHintKey(hint);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(hint);
+  };
+
+  for (const match of description.matchAll(RUNNER_INVOCATION_PATTERN)) {
+    const tokens = tokenizeArgs(match[2] || '');
+    const selection = selectFromTokens(tokens);
+    if (!selection) continue;
+    if (selection.kind === 'remote') {
+      push({ url: selection.url });
+      continue;
+    }
+    const args = tokens.slice(0, selection.index).concat(selection.package);
+    if (match[1] === 'npx' && !args.some((a) => a === '-y' || a === '--yes')) {
+      args.unshift('-y');
+    }
+    push({ command: match[1], args, package: selection.installable });
+    if (out.length >= 6) return out;
+  }
+
+  push(parseJsonConfigHint(description));
+  if (out.length >= 6) return out;
+
+  const pipMatch = description.match(PIP_PATTERN);
+  if (pipMatch) {
+    const pkg = trimTrailingPunctuation(pipMatch[1]);
+    if (isPlausibleInstallPackage(pkg)) {
+      push({ command: 'uvx', args: [pkg] });
+    }
+  }
+  if (out.length >= 6) return out;
+
+  for (const match of description.matchAll(new RegExp(URL_PATTERN, 'g'))) {
+    const candidate = trimTrailingPunctuation(match[0]);
+    if (looksLikeMcpEndpointUrl(candidate)) push({ url: candidate });
+    if (out.length >= 6) break;
+  }
+
+  return out;
+}
+
 /**
  * Best-effort extraction of an install command from a directory server's free-text
  * description. Returns null when nothing recognizable is found — callers must treat
  * that as "ask the user," never fall back to a guess.
  */
 export function parseInstallHint(description: string): ParsedInstallHint {
-  if (!description) return null;
-
-  // Every runner invocation, not just the first: a README that opens with
-  // `npx @modelcontextprotocol/inspector` under "Testing" and gives the real command
-  // further down used to resolve to the Inspector and stop looking.
-  for (const match of description.matchAll(RUNNER_INVOCATION_PATTERN)) {
-    const tokens = tokenizeArgs(match[2] || '');
-    const selection = selectFromTokens(tokens);
-    if (!selection) continue;
-    if (selection.kind === 'remote') return { url: selection.url };
-
-    const args = tokens.slice(0, selection.index).concat(selection.package);
-    // npx needs -y to run non-interactively; a README that omits it (or writes the
-    // command mid-sentence) still means the same install.
-    if (match[1] === 'npx' && !args.some((a) => a === '-y' || a === '--yes')) {
-      args.unshift('-y');
-    }
-    return { command: match[1], args, package: selection.installable };
-  }
-
-  const jsonHint = parseJsonConfigHint(description);
-  if (jsonHint) return jsonHint;
-
-  // "pip install X" describes how to *obtain* the package, not how to *run* it as an
-  // MCP stdio server — using "pip"/"install" verbatim as the launch command spawns a
-  // process that installs the package and exits immediately, never a running server.
-  // `uvx <package>` is the standard way to run a Python package's console-script entry
-  // point without a separate install step, so treat this the same as an explicit uvx hint.
-  const pipMatch = description.match(PIP_PATTERN);
-  if (pipMatch) {
-    const pkg = trimTrailingPunctuation(pipMatch[1]);
-    if (isPlausibleInstallPackage(pkg)) return { command: 'uvx', args: [pkg] };
-  }
-
-  // Every URL in the text, not just the first one: a description commonly leads with a
-  // homepage or signup link and mentions the actual endpoint later, and the first match
-  // winning meant the homepage was cached as the endpoint. An endpoint-shaped URL
-  // anywhere in the text beats a non-endpoint one at the front.
-  for (const match of description.matchAll(new RegExp(URL_PATTERN, 'g'))) {
-    const candidate = trimTrailingPunctuation(match[0]);
-    if (looksLikeMcpEndpointUrl(candidate)) {
-      return { url: candidate };
-    }
-  }
-
-  return null;
+  return collectInstallCandidates(description)[0] ?? null;
 }
 
 export function isRemoteHint(hint: ParsedInstallHint): hint is RemoteHint {

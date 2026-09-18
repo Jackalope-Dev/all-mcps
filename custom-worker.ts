@@ -1,8 +1,7 @@
 // Custom Worker entrypoint.
 //
 // OpenNext generates `.open-next/worker.js`, which only exports a `fetch`
-// handler. Our `wrangler.jsonc` also declares two cron triggers
-// ("0 */4 * * *" and "*/15 * * * *"), and Cloudflare invokes cron triggers
+// handler. Our `wrangler.jsonc` also declares cron triggers, and Cloudflare invokes them
 // through a `scheduled()` handler. Because the generated worker has no
 // `scheduled()` export, every cron tick failed with "Handler does not
 // export a scheduled() function".
@@ -62,12 +61,14 @@ const FAST_JOBS: CronJob[] = [
   { path: '/api/cron/enrich', secretVar: 'CRON_SECRET' },
 ];
 
+// Runs every 20 min (wrangler.jsonc "*/20 * * * *") — own schedule so GPT
+// writeups don't sit behind the 4h slow list or block 15-min health/enrich.
+const AI_CONTENT_JOBS: CronJob[] = [
+  { path: '/api/cron/ai-content', secretVar: 'CRON_SECRET' },
+];
+
 // Runs every 4h (wrangler.jsonc "0 */4 * * *").
 const SLOW_JOBS: CronJob[] = [
-  // AI content layer: unique summary/overview/use-cases/features per listing. Every
-  // tick until the catalog is enriched, then no-ops. For the initial backlog, drive
-  // scripts/backfill-ai-content.mjs against this endpoint to drain it faster.
-  { path: '/api/cron/ai-content', secretVar: 'CRON_SECRET' },
   // FAQ backfill for listings enriched before ai-content started generating FAQ
   // pairs. Every tick until the backlog is drained, then permanently no-ops. For
   // the initial backlog, drive scripts/backfill-ai-faq.mjs to drain it faster.
@@ -173,10 +174,14 @@ export default {
     const now = new Date(controller.scheduledTime);
 
     // `controller.cron` is the pattern (from wrangler.jsonc) that fired this
-    // tick, so each schedule only runs its own job list — otherwise the two
-    // triggers would double-run health/enrich every 4h (both patterns match
-    // at :00 past the hour on 4h boundaries).
-    const jobs = controller.cron === '*/15 * * * *' ? FAST_JOBS : SLOW_JOBS;
+    // tick, so each schedule only runs its own job list — otherwise overlapping
+    // patterns would double-run jobs.
+    const jobs =
+      controller.cron === '*/15 * * * *'
+        ? FAST_JOBS
+        : controller.cron === '*/20 * * * *'
+          ? AI_CONTENT_JOBS
+          : SLOW_JOBS;
 
     // Run sequentially so overlapping D1 writes / third-party rate limits stay
     // predictable, and so one failing job never blocks the others.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  collectInstallCandidates,
   type InstallHint,
   isPlausibleInstallPackage,
   isRemoteHint,
@@ -217,6 +218,17 @@ describe('ordinary READMEs still resolve', () => {
 
   it('does not treat a local editable install as a package', () => {
     expect(parseInstallHint('pip install -e .')).toBeNull();
+  });
+
+  it('collects every runner invocation for Jev to choose among', () => {
+    const candidates = collectInstallCandidates(
+      'Debug with npx -y @modelcontextprotocol/inspector\nThen run npx -y weather-mcp',
+    );
+    expect(candidates.length).toBeGreaterThanOrEqual(1);
+    const labels = candidates.map((c) =>
+      'url' in c ? c.url : `${c.command} ${c.args.join(' ')}`,
+    );
+    expect(labels.some((l) => l.includes('weather-mcp'))).toBe(true);
   });
 });
 

@@ -299,6 +299,8 @@ export type ListingContentInput = {
   url: string;
   readme: string | null;
   tools?: { name: string; description?: string }[];
+  /** Jev already filled category/auth/pricing/install — don't ask GPT again. */
+  omitStructured?: boolean;
 };
 
 const README_BUDGET = 9000;
@@ -414,6 +416,7 @@ function buildSystemPrompt(
   focusKeyphrase: string,
   category: string,
   isCategoryConfirmed?: boolean,
+  omitStructured?: boolean,
 ): string {
   let prompt =
     'You are a senior technical writer for AllMCPs, a directory of Model Context Protocol (MCP) servers ' +
@@ -441,26 +444,32 @@ function buildSystemPrompt(
     '"features" (3-6 short capability strings), ' +
     `"faq" (3-5 objects with "q" and "a" keys. Frame the questions exactly how a developer would type them into Google to solve a problem with this tool, e.g. "How do I install the ${name} MCP server?" or "Does ${name} work with Claude Desktop?". Answers must be grounded strictly in the provided material.), ` +
     '"envVars" (0-8 UPPER_SNAKE_CASE environment variable names required to run this server), ' +
-    '"pricingModel" ("free" if open source & no paid API key required; "byok" if requires user\'s own paid API key like OpenAI/GitHub; "freemium" if has free tier + paid upgrade; "paid" if paid service only; null if unknown), ' +
-    '"authType" ("none" if no credentials needed; "api_key" if requires API key/token; "oauth" if uses OAuth; "other"; null if unknown), ' +
     '"license" (short license name like "MIT", "Apache-2.0", or null), ' +
     '"tags" (2-5 short lowercase keyword slugs like ["github", "developer-tools", "issues"]), ' +
-    '"compatibleClients" (array of slugs from ["claude-desktop", "cursor", "windsurf", "cline"] mentioned or compatible), ' +
-    '"category" (the single best-fit category name, copied EXACTLY as written from the "Allowed categories" list provided below — the current category shown may be an unreviewed placeholder, so judge fit from the actual name/description/README rather than assuming it\'s already correct; null only if genuinely none fit reasonably well), ' +
-    '"install" (object or null — the command that runs THIS project\'s OWN MCP server, nothing else). ' +
-    'This field feeds install instructions AI agents execute directly, so accuracy matters more than coverage — a wrong answer is worse than no answer. ' +
-    'Set "install" to null unless you can identify the command with real confidence. Do NOT extract: ' +
-    '(a) third-party installer CLIs the README mentions as ONE way to install (e.g. "@smithery/cli", "@modelcontextprotocol/inspector") — these need the real package name as an argument, which is what you must find instead; ' +
-    '(b) generic debugging/proxy/bridge utilities unrelated to this specific server (e.g. "mcp-remote", "@modelcontextprotocol/inspector"); ' +
-    '(c) framework or library dependencies this project is built WITH, not the project itself (e.g. a Python project built on "fastmcp" is not the "fastmcp" package; a project using psycopg2 is not the "psycopg2-binary" package); ' +
-    "(d) other people's servers mentioned as examples, comparisons, or things this project can proxy to. " +
-    'When "install" is not null: "kind" is "stdio" (runs locally via a package manager) or "remote" (a hosted HTTP/SSE endpoint URL); ' +
-    'for "stdio", "command" is the runner binary alone (e.g. "npx", "uvx", "bunx", "pipx", "docker" — never a flag), "args" is the full real argument list including the actual package/image name as it would be typed, "package" is that same package/image name alone. ' +
-    'A stdio command must be directly runnable with no editing — this rules out two common README patterns: ' +
-    '(i) a bare "npx <package>" with no confirmation flag will prompt interactively when run non-interactively and hang forever — always include "-y" as the first arg for npx (uvx/bunx/pipx do not need it); ' +
-    '(ii) placeholder values in example commands (e.g. "/path/to/your/file", "<YOUR_API_KEY>", "your-project-id") are template text for the human reader to replace, not real arguments — omit them from "args" entirely rather than including the literal placeholder text, unless the exact real value is stated elsewhere in the material. ' +
-    'for "remote", "package" is the endpoint URL and "command"/"args" are omitted; ' +
-    '"confidence" is "high" only if the README states the exact command verbatim, "medium" if you inferred it from strong context (e.g. the npm/PyPI package name matches the repo unambiguously) — use "medium", or null the whole field, for anything less certain.';
+    '"compatibleClients" (array of slugs from ["claude-desktop", "cursor", "windsurf", "cline"] mentioned or compatible)';
+
+  if (!omitStructured) {
+    prompt +=
+      ', "pricingModel" ("free" if open source & no paid API key required; "byok" if requires user\'s own paid API key like OpenAI/GitHub; "freemium" if has free tier + paid upgrade; "paid" if paid service only; null if unknown), ' +
+      '"authType" ("none" if no credentials needed; "api_key" if requires API key/token; "oauth" if uses OAuth; "other"; null if unknown), ' +
+      '"category" (the single best-fit category name, copied EXACTLY as written from the "Allowed categories" list provided below — the current category shown may be an unreviewed placeholder, so judge fit from the actual name/description/README rather than assuming it\'s already correct; null only if genuinely none fit reasonably well), ' +
+      '"install" (object or null — the command that runs THIS project\'s OWN MCP server, nothing else). ' +
+      'This field feeds install instructions AI agents execute directly, so accuracy matters more than coverage — a wrong answer is worse than no answer. ' +
+      'Set "install" to null unless you can identify the command with real confidence. Do NOT extract: ' +
+      '(a) third-party installer CLIs the README mentions as ONE way to install (e.g. "@smithery/cli", "@modelcontextprotocol/inspector") — these need the real package name as an argument, which is what you must find instead; ' +
+      '(b) generic debugging/proxy/bridge utilities unrelated to this specific server (e.g. "mcp-remote", "@modelcontextprotocol/inspector"); ' +
+      '(c) framework or library dependencies this project is built WITH, not the project itself (e.g. a Python project built on "fastmcp" is not the "fastmcp" package; a project using psycopg2 is not the "psycopg2-binary" package); ' +
+      "(d) other people's servers mentioned as examples, comparisons, or things this project can proxy to. " +
+      'When "install" is not null: "kind" is "stdio" (runs locally via a package manager) or "remote" (a hosted HTTP/SSE endpoint URL); ' +
+      'for "stdio", "command" is the runner binary alone (e.g. "npx", "uvx", "bunx", "pipx", "docker" — never a flag), "args" is the full real argument list including the actual package/image name as it would be typed, "package" is that same package/image name alone. ' +
+      'A stdio command must be directly runnable with no editing — this rules out two common README patterns: ' +
+      '(i) a bare "npx <package>" with no confirmation flag will prompt interactively when run non-interactively and hang forever — always include "-y" as the first arg for npx (uvx/bunx/pipx do not need it); ' +
+      '(ii) placeholder values in example commands (e.g. "/path/to/your/file", "<YOUR_API_KEY>", "your-project-id") are template text for the human reader to replace, not real arguments — omit them from "args" entirely rather than including the literal placeholder text, unless the exact real value is stated elsewhere in the material. ' +
+      'for "remote", "package" is the endpoint URL and "command"/"args" are omitted; ' +
+      '"confidence" is "high" only if the README states the exact command verbatim, "medium" if you inferred it from strong context (e.g. the npm/PyPI package name matches the repo unambiguously) — use "medium", or null the whole field, for anything less certain.';
+  } else {
+    prompt += '.';
+  }
 
   return prompt;
 }
@@ -493,6 +502,7 @@ export async function generateListingContent(
     focusKeyphrase,
     input.category,
     input.isCategoryConfirmed,
+    input.omitStructured,
   );
 
   const userContent = [
@@ -504,7 +514,9 @@ export async function generateListingContent(
     input.readme
       ? `README (excerpt):\n${input.readme.slice(0, README_BUDGET)}`
       : 'README: (unavailable)',
-    `Allowed categories (pick exactly one, copied verbatim, for the "category" field):\n${DIRECTORY_CATEGORIES.slice(0, 40).join('\n')}`,
+    input.omitStructured
+      ? ''
+      : `Allowed categories (pick exactly one, copied verbatim, for the "category" field):\n${DIRECTORY_CATEGORIES.slice(0, 40).join('\n')}`,
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -600,6 +612,58 @@ export async function generateListingContent(
       compatibleClients,
       install,
       category,
+    },
+  };
+}
+
+/** FAQ-only pass for the leftover backlog that predated ai-content writing faq. */
+export async function generateListingFaq(
+  input: ListingContentInput,
+): Promise<ListingContentOutcome> {
+  const cleanedDesc =
+    cleanListingDescription(input.description) || input.description || '';
+  const result = await chatJson<{ faq?: unknown }>({
+    model: 'gpt-5.6-luna',
+    temperature: 0.3,
+    maxTokens: 900,
+    timeoutMs: 20_000,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'Write FAQ pairs for an MCP server listing. Return ONLY JSON: {"faq":[{"q":"...","a":"..."}]} with 3-5 grounded Q&A pairs. Questions should match how a developer would search. Do not invent facts.',
+      },
+      {
+        role: 'user',
+        content: [
+          `Name: ${input.name}`,
+          `Description: ${cleanedDesc || '(none)'}`,
+          input.readme
+            ? `README (excerpt):\n${input.readme.slice(0, 4000)}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+      },
+    ],
+  });
+  if (!result.ok) {
+    return BUDGET_REASONS.has(result.reason)
+      ? { status: 'budget', reason: result.reason }
+      : { status: 'skip', reason: result.reason };
+  }
+  const faq = clampFaq(result.data.faq, 5, 150, 400);
+  if (faq.length === 0) return { status: 'skip', reason: 'empty' };
+  return {
+    status: 'ok',
+    content: {
+      summary: '',
+      overview: '',
+      doc: '',
+      useCases: [],
+      features: [],
+      faq,
+      envVars: [],
     },
   };
 }

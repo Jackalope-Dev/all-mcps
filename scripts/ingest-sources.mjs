@@ -887,6 +887,56 @@ async function checkLive(url) {
 // which drops those entirely rather than queuing a dead link for admin review.
 const LIVE_CHECK_SOURCES = new Set(['official-registry', 'pulsemcp']);
 
+/** Same rubric as lib/listingReview.alignListings — null when Jev is unset or errors. */
+async function jevAlignListings(a, b) {
+  const key = (process.env.TYPESAFE_API_KEY || '').trim();
+  if (!key) return null;
+  try {
+    const res = await fetch('https://api.typesafe.ai/v1/systemone', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'jev-latest',
+        state: {
+          listing_a: {
+            name: a.name || '',
+            description: a.description || '',
+            url: a.url || '',
+          },
+          listing_b: {
+            name: b.name || '',
+            description: b.description || '',
+            url: b.url || '',
+          },
+        },
+        questions: {
+          link_state: {
+            type: 'score',
+            instructions:
+              'How do these two directory listings relate as MCP server products?',
+            criteria: [
+              'Different projects — leave them as separate listings.',
+              'Unclear — a human curator should decide before merging.',
+              'Same underlying project, duplicated in the directory.',
+            ],
+          },
+        },
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const score = json?.answers?.link_state?.score;
+    if (typeof score !== 'number') return null;
+    return ['different', 'needs_review', 'same'][Math.round(score)] || null;
+  } catch {
+    return null;
+  }
+}
+
 async function checkLivenessOfNewCandidates(candidates) {
   const toCheck = candidates.filter((c) => LIVE_CHECK_SOURCES.has(c.source));
   if (toCheck.length === 0) return;
@@ -923,7 +973,7 @@ async function checkLivenessOfNewCandidates(candidates) {
 const WRANGLER_ENV = { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID };
 
 function queryExisting() {
-  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "SELECT id, name, url, website_url, install_kind, install_command, install_package FROM servers"`;
+  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "SELECT id, name, url, website_url, description, install_kind, install_command, install_package FROM servers"`;
   let out;
   try {
     out = execSync(cmd, {
@@ -1052,7 +1102,13 @@ async function main() {
     const gh = parseGithubOwnerRepo(r.url);
     if (gh) {
       if (!existingByOwner.has(gh.owner)) existingByOwner.set(gh.owner, []);
-      existingByOwner.get(gh.owner).push({ id: r.id, url: r.url, nameKey });
+      existingByOwner.get(gh.owner).push({
+        id: r.id,
+        url: r.url,
+        nameKey,
+        name: r.name,
+        description: r.description,
+      });
     }
 
     const websiteDomain = websiteDomainOf(r.website_url);
@@ -1069,6 +1125,8 @@ async function main() {
         url: r.url,
         websiteDomain,
         packageName: barePackageName(r.install_kind, r.install_package),
+        name: r.name,
+        description: r.description,
       });
     }
   }
@@ -1090,6 +1148,8 @@ async function main() {
         return {
           id: ownerMatch.id,
           url: ownerMatch.url,
+          name: ownerMatch.name,
+          description: ownerMatch.description,
           reason: 'same GitHub owner + same name',
         };
     }
@@ -1111,6 +1171,8 @@ async function main() {
       return {
         id: domainMatch.id,
         url: domainMatch.url,
+        name: domainMatch.name,
+        description: domainMatch.description,
         reason: 'same name + same website domain',
       };
 
@@ -1121,6 +1183,8 @@ async function main() {
       return {
         id: packageMatch.id,
         url: packageMatch.url,
+        name: packageMatch.name,
+        description: packageMatch.description,
         reason: 'same name + same package name',
       };
 
@@ -1191,7 +1255,27 @@ async function main() {
     // this run (registered into the same maps right after, below) — catches
     // two *new* sources introducing what looks like the same project too.
     const dup = findPossibleDuplicate(c);
-    if (dup) dupWarningCount++;
+    let dupWarning = null;
+    if (dup) {
+      const alignment = await jevAlignListings(
+        { name: c.name, description: c.description, url: c.url },
+        {
+          name: dup.name,
+          description: dup.description,
+          url: dup.url,
+        },
+      );
+      if (alignment !== 'different') {
+        const prefix =
+          alignment === 'same'
+            ? 'Jev: same project as'
+            : alignment === 'needs_review'
+              ? 'Jev: needs review vs'
+              : 'possible duplicate of';
+        dupWarning = `${prefix} '${dup.id}' (${dup.reason}): ${dup.url}`;
+        dupWarningCount++;
+      }
+    }
 
     // Separate from the duplicate check: this catches a candidate pointing at
     // a popular repo that has nothing to do with its name — the shape that put
@@ -1201,9 +1285,7 @@ async function main() {
 
     rows.push({
       id,
-      dupWarning: dup
-        ? `possible duplicate of '${dup.id}' (${dup.reason}): ${dup.url}`
-        : null,
+      dupWarning,
       repoWarning: repoMismatch,
       name: c.name,
       url: c.url,
@@ -1241,7 +1323,13 @@ async function main() {
     const gh = parseGithubOwnerRepo(c.url);
     if (gh) {
       if (!existingByOwner.has(gh.owner)) existingByOwner.set(gh.owner, []);
-      existingByOwner.get(gh.owner).push({ id, url: c.url, nameKey });
+      existingByOwner.get(gh.owner).push({
+        id,
+        url: c.url,
+        nameKey,
+        name: c.name,
+        description: c.description,
+      });
     }
     const acceptedDomain = domainOf(c.websiteUrl) || websiteDomainOf(c.url);
     if (acceptedDomain)
@@ -1256,6 +1344,8 @@ async function main() {
         url: c.url,
         websiteDomain: acceptedDomain,
         packageName: barePackageName(c.installKind, c.installPackage),
+        name: c.name,
+        description: c.description,
       });
     }
   }

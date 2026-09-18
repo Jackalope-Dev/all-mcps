@@ -10,8 +10,12 @@ import {
   resolveInstallFromText,
   toCachedInstallFields,
 } from './installConfig';
-import { chatJson } from './openai';
 import { isSafeSubmissionUrl } from './urlSafety';
+
+export {
+  pickBestWebsiteAndLogo,
+  pickBestWebsiteAndLogoWithLlm,
+} from './listingSignals';
 
 export type GhRepo = {
   full_name?: string;
@@ -497,58 +501,6 @@ export async function isListingTrulyDead(
     if (installable) return false;
   }
   return true;
-}
-
-/**
- * Uses LLM to pick the official website URL and best logo image URL from candidates.
- * Soft fails to null on missing key, quota, or network error.
- */
-export async function pickBestWebsiteAndLogoWithLlm(input: {
-  readmeSnippet: string;
-  ghOwner: string;
-  ghRepo: string;
-  candidateUrls: string[];
-  candidateImages: string[];
-}): Promise<{ websiteUrl?: string; logoUrl?: string } | null> {
-  if (!input.candidateUrls.length && !input.candidateImages.length) return null;
-
-  const result = await chatJson<{
-    websiteUrl?: string;
-    logoUrl?: string;
-  }>({
-    model: 'gpt-5.6-luna',
-    maxTokens: 300,
-    timeoutMs: 10_000,
-    messages: [
-      {
-        role: 'system',
-        content:
-          'You extract the official project marketing/documentation website URL and main project logo image URL for an MCP server listing. Return JSON with optional keys websiteUrl and logoUrl. Pick ONLY from the candidate lists provided, or return null if none are suitable.',
-      },
-      {
-        role: 'user',
-        content: `Repository: ${input.ghOwner}/${input.ghRepo}\nCandidate Websites:\n${input.candidateUrls.join('\n') || 'None'}\nCandidate Logo Images:\n${input.candidateImages.join('\n') || 'None'}\nREADME excerpt:\n${input.readmeSnippet.slice(0, 1500)}`,
-      },
-    ],
-  });
-
-  if (!result.ok) return null;
-
-  const out: { websiteUrl?: string; logoUrl?: string } = {};
-  if (
-    result.data.websiteUrl &&
-    input.candidateUrls.includes(result.data.websiteUrl)
-  ) {
-    out.websiteUrl = result.data.websiteUrl;
-  }
-  if (
-    result.data.logoUrl &&
-    input.candidateImages.includes(result.data.logoUrl)
-  ) {
-    out.logoUrl = result.data.logoUrl;
-  }
-
-  return Object.keys(out).length ? out : null;
 }
 
 /** Given a website URL, extracts favicon, apple-touch-icon, og:image or Google Favicon URL. */

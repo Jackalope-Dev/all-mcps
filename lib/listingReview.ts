@@ -20,6 +20,7 @@ import {
   askJev,
   type JevNoulQuestion,
   type JevScoreQuestion,
+  nearestScoreLevel,
   noulVerdict,
 } from './typesafe';
 
@@ -132,17 +133,47 @@ export function shouldHoldFromAutoPromotion(review: ListingReview): boolean {
 }
 
 /**
- * Are two listings the same underlying project?
- *
- * Used only for pairs the deterministic keys (repo URL, name + website) already
- * consider near-duplicates. Returns null when Jev is unavailable, so the caller
- * keeps whatever its own heuristics decided.
+ * Skip the expensive GPT writeup when Jev already judged the row not worth
+ * original directory copy. Unknown (Jev down) never skips — fail open.
  */
-export async function areListingsDuplicates(
+export function shouldSkipAiWriteup(review: ListingReview): boolean {
+  if (!review.reviewed) return false;
+  if (review.isMcpServer === false) return true;
+  // 0 = useless on LISTING_QUALITY_LEVELS. Thin (1) still gets a writeup.
+  return review.qualityScore !== null && review.qualityScore < 1;
+}
+
+/**
+ * Ordered outcomes for a candidate pair. TypeSafe's entity-alignment pattern:
+ * the levels *are* the actions, so there is no extra noul threshold to fit.
+ */
+export const DUPLICATE_ALIGNMENT_LEVELS = [
+  'different',
+  'needs_review',
+  'same',
+] as const;
+
+export type DuplicateAlignment = (typeof DUPLICATE_ALIGNMENT_LEVELS)[number];
+
+const alignmentQuestion: JevScoreQuestion = {
+  type: 'score',
+  instructions:
+    'How do these two directory listings relate as MCP server products?',
+  criteria: [
+    'Different projects — leave them as separate listings.',
+    'Unclear — a human curator should decide before merging.',
+    'Same underlying project, duplicated in the directory.',
+  ],
+};
+
+/**
+ * Same-project check for a pair the deterministic keys already consider
+ * near-duplicates. Returns null when Jev is unavailable.
+ */
+export async function alignListings(
   a: ListingForReview,
   b: ListingForReview,
-  minProbability = 0.8,
-): Promise<boolean | null> {
+): Promise<DuplicateAlignment | null> {
   const res = await askJev(
     {
       listing_a: {
@@ -156,19 +187,22 @@ export async function areListingsDuplicates(
         url: b.url ?? '',
       },
     },
-    {
-      same_project: {
-        type: 'noul',
-        instructions:
-          'listing_a and listing_b describe the same underlying MCP server project, rather than two different projects that happen to be similar or share a publisher.',
-        criteria: {
-          true: 'Same project, duplicated in the directory',
-          false: 'Genuinely different projects',
-        },
-      },
-    },
+    { link_state: alignmentQuestion },
   );
   if (!res) return null;
+  const level = nearestScoreLevel(
+    res.answers.link_state,
+    DUPLICATE_ALIGNMENT_LEVELS,
+  );
+  return level;
+}
 
-  return noulVerdict(res.answers.same_project, minProbability);
+/** True only for a confident "same project". Null when Jev had no opinion. */
+export async function areListingsDuplicates(
+  a: ListingForReview,
+  b: ListingForReview,
+): Promise<boolean | null> {
+  const alignment = await alignListings(a, b);
+  if (alignment === null) return null;
+  return alignment === 'same';
 }

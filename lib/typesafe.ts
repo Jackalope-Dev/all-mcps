@@ -178,3 +178,15 @@ export function noulVerdict(
   if (typeof answer.noul !== 'number') return null;
   return answer.noul >= trueAtOrAbove;
 }
+
+/** Nearest named level on a Score rubric, or null when the answer is unusable. */
+export function nearestScoreLevel<T extends string>(
+  answer: JevAnswer | undefined,
+  levels: readonly T[],
+): T | null {
+  if (!answer || answer.type !== 'score') return null;
+  if (typeof answer.score !== 'number' || levels.length === 0) return null;
+  const idx = Math.round(answer.score);
+  if (idx < 0 || idx >= levels.length) return null;
+  return levels[idx] ?? null;
+}

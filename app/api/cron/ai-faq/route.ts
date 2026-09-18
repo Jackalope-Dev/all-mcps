@@ -13,7 +13,7 @@ import {
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
-import { generateListingContent } from '../../../../lib/aiContent';
+import { generateListingFaq } from '../../../../lib/aiContent';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { cleanListingDescription } from '../../../../lib/description';
 import { getGithubToken } from '../../../../lib/githubAuth';
@@ -31,11 +31,8 @@ import { parseServerTools } from '../../../../lib/servers';
  * layer, so once this drains the backlog it settles into a permanent no-op —
  * same shape as /api/cron/ai-content's own steady state.
  *
- * Deliberately reuses generateListingContent() (same prompt, same README fetch)
- * rather than a second, leaner prompt: it costs 4 fields' worth of output tokens
- * we discard, but it's a one-time bounded backlog and this way there's no second
- * prompt to keep in sync with the first. Only `faq` from the result is persisted;
- * summary/overview/useCases/features on these rows are left exactly as they are.
+ * FAQ-only prompt — the leftover backlog that was enriched before ai-content
+ * wrote faq in the same pass. New enrichments already persist ai_faq.
  *
  * Same atomic-claim, concurrency, and spend-cap semantics as /api/cron/ai-content
  * — see that file for the reasoning. Auth: ADMIN_SECRET. Runs every Worker cron
@@ -140,7 +137,7 @@ export async function POST(req: Request) {
           if (!readme && cleanedDesc.length < MIN_MATERIAL_CHARS) {
             return { server, thin: true as const };
           }
-          const outcome = await generateListingContent({
+          const outcome = await generateListingFaq({
             name: server.name,
             description: server.description,
             category: server.category,

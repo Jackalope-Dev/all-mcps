@@ -6,13 +6,22 @@ vi.mock('./env', () => ({
   getEnv: async (name: string) => process.env[name] || undefined,
 }));
 
-const { askJev, confidentChoice, noulVerdict, isJevConfigured } = await import(
-  './typesafe'
-);
+const {
+  askJev,
+  confidentChoice,
+  noulVerdict,
+  nearestScoreLevel,
+  isJevConfigured,
+} = await import('./typesafe');
 const { classifyCategory } = await import('./categoryClassifier');
-const { reviewListing, shouldHoldFromAutoPromotion } = await import(
-  './listingReview'
-);
+const {
+  reviewListing,
+  shouldHoldFromAutoPromotion,
+  shouldSkipAiWriteup,
+  alignListings,
+} = await import('./listingReview');
+const { classifyListingFields, pickInstallCommand, pickBestWebsiteAndLogo } =
+  await import('./listingSignals');
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -221,6 +230,47 @@ assert(
   'A high noul value must promote normally',
 );
 assert(accepted.qualityScore === 3.1, 'The quality score must be surfaced');
+assert(
+  shouldSkipAiWriteup(rejected),
+  'A non-MCP listing must skip the GPT writeup',
+);
+assert(
+  !shouldSkipAiWriteup(accepted),
+  'A genuine MCP server must still get a writeup',
+);
+
+globalThis.fetch = (async () =>
+  new Response(
+    JSON.stringify({
+      model: 'jev-latest',
+      answers: {
+        link_state: { type: 'score', score: 2.1, confidence: 0.9 },
+      },
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  )) as typeof fetch;
+assert(
+  (await alignListings(LISTING, {
+    ...LISTING,
+    url: 'https://example.com/fork',
+  })) === 'same',
+  'A score near the top level must read as same project',
+);
+
+globalThis.fetch = (async () =>
+  new Response(
+    JSON.stringify({
+      model: 'jev-latest',
+      answers: {
+        link_state: { type: 'score', score: 0.1, confidence: 0.9 },
+      },
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  )) as typeof fetch;
+assert(
+  (await alignListings(LISTING, LISTING)) === 'different',
+  'A score near 0 must read as different projects',
+);
 
 // ── 5. Helper edge cases ──
 assert(
@@ -234,6 +284,37 @@ assert(
 assert(
   noulVerdict({ type: 'noul' }, 0.5) === null,
   'noulVerdict must tolerate a missing noul value',
+);
+assert(
+  nearestScoreLevel({ type: 'score', score: 1.4 }, ['a', 'b', 'c']) === 'b',
+  'nearestScoreLevel must round to the closest named level',
+);
+assert(
+  nearestScoreLevel({ type: 'noul', noul: 0.9 }, ['a', 'b']) === null,
+  'nearestScoreLevel must reject a noul answer',
+);
+
+process.env.TYPESAFE_API_KEY = '';
+assert(
+  (await classifyListingFields(LISTING)).authType === null,
+  'classifyListingFields must no-op without a key',
+);
+assert(
+  (await pickInstallCommand({
+    ...LISTING,
+    readme: 'npx -y pg-mcp',
+  })) !== null,
+  'pickInstallCommand must still return the regex candidate when Jev is unset',
+);
+assert(
+  (await pickBestWebsiteAndLogo({
+    readmeSnippet: '',
+    ghOwner: 'a',
+    ghRepo: 'b',
+    candidateUrls: ['https://example.com'],
+    candidateImages: [],
+  })) === null,
+  'pickBestWebsiteAndLogo must return null when Jev is unset',
 );
 
 globalThis.fetch = realFetch;

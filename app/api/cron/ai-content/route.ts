@@ -23,6 +23,15 @@ import {
   fetchGithubReadme,
   parseGithubUrl,
 } from '../../../../lib/listingEnrich';
+import {
+  reviewListing,
+  shouldSkipAiWriteup,
+} from '../../../../lib/listingReview';
+import {
+  classifyListingFields,
+  installHintToCache,
+  pickInstallCommand,
+} from '../../../../lib/listingSignals';
 import { parseServerTools } from '../../../../lib/servers';
 
 /**
@@ -64,6 +73,7 @@ type ClaimedRow = {
   category: string;
   tools: string | null;
   previousEnrichedAt?: Date | null;
+  pass: 'writeup' | 'install' | 'metadata';
 };
 
 export async function POST(req: Request) {
@@ -94,7 +104,7 @@ export async function POST(req: Request) {
         ? Math.min(Math.floor(queryBatch), 24)
         : DEFAULT_BATCH_SIZE;
 
-    // Phase 1: atomically claim highest-value never-enriched OR metadata-missing listings
+    // Phase 1: atomically claim highest-value never-enriched or missing-writeup listings
     const claimedNew = (await db
       .update(servers)
       .set({ aiEnrichedAt: claimTime })
@@ -107,15 +117,7 @@ export async function POST(req: Request) {
             .where(
               and(
                 eq(servers.status, 'active'),
-                or(
-                  isNull(servers.aiEnrichedAt),
-                  isNull(servers.authType),
-                  isNull(servers.pricingModel),
-                  isNull(servers.installExtractedAt),
-                  // Backfill the restructured writeup on the same traffic-ranked
-                  // order (see orderBy below) — highest-value pages first.
-                  isNull(servers.aiDoc),
-                ),
+                or(isNull(servers.aiEnrichedAt), isNull(servers.aiDoc)),
               ),
             )
             .orderBy(
@@ -135,7 +137,12 @@ export async function POST(req: Request) {
         description: servers.description,
         category: servers.category,
         tools: servers.tools,
-      })) as ClaimedRow[];
+      })) as Omit<ClaimedRow, 'pass'>[];
+
+    const claimedWriteup: ClaimedRow[] = claimedNew.map((c) => ({
+      ...c,
+      pass: 'writeup' as const,
+    }));
 
     let claimedStale: ClaimedRow[] = [];
     const staleSlots = batchSize - claimedNew.length;
@@ -180,17 +187,99 @@ export async function POST(req: Request) {
           category: c.category,
           tools: c.tools,
           previousEnrichedAt: c.aiEnrichedAt as Date | null,
+          pass: 'writeup' as const,
         }));
       }
     }
 
-    const claimed = [...claimedNew, ...claimedStale];
+    let claimedInstall: ClaimedRow[] = [];
+    let claimedMetadata: ClaimedRow[] = [];
+    const writeupCount = claimedWriteup.length + claimedStale.length;
+    const leftover = batchSize - writeupCount;
+    if (leftover > 0) {
+      const installClaim = (await db
+        .update(servers)
+        .set({ installExtractedAt: claimTime })
+        .where(
+          inArray(
+            servers.id,
+            db
+              .select({ id: servers.id })
+              .from(servers)
+              .where(
+                and(
+                  eq(servers.status, 'active'),
+                  isNotNull(servers.aiEnrichedAt),
+                  isNotNull(servers.aiDoc),
+                  isNull(servers.installExtractedAt),
+                ),
+              )
+              .orderBy(
+                desc(servers.views),
+                desc(servers.upvotes),
+                asc(servers.createdAt),
+              )
+              .limit(leftover),
+          ),
+        )
+        .returning({
+          id: servers.id,
+          name: servers.name,
+          url: servers.url,
+          description: servers.description,
+          category: servers.category,
+          tools: servers.tools,
+        })) as Omit<ClaimedRow, 'pass'>[];
+      claimedInstall = installClaim.map((c) => ({
+        ...c,
+        pass: 'install' as const,
+      }));
+    }
+
+    const leftoverAfterInstall = leftover - claimedInstall.length;
+    if (leftoverAfterInstall > 0) {
+      const metaRows = await db
+        .select({
+          id: servers.id,
+          name: servers.name,
+          url: servers.url,
+          description: servers.description,
+          category: servers.category,
+          tools: servers.tools,
+        })
+        .from(servers)
+        .where(
+          and(
+            eq(servers.status, 'active'),
+            isNotNull(servers.aiDoc),
+            or(isNull(servers.authType), isNull(servers.pricingModel)),
+          ),
+        )
+        .orderBy(desc(servers.views), asc(servers.createdAt))
+        .limit(leftoverAfterInstall);
+      claimedMetadata = metaRows.map((c) => ({
+        ...c,
+        pass: 'metadata' as const,
+      }));
+    }
+
+    const claimed = [
+      ...claimedWriteup,
+      ...claimedStale,
+      ...claimedInstall,
+      ...claimedMetadata,
+    ];
     const stats = {
       claimed: claimed.length,
-      claimedNew: claimedNew.length,
+      claimedNew: claimedWriteup.length,
       claimedStale: claimedStale.length,
+      claimedInstall: claimedInstall.length,
+      claimedMetadata: claimedMetadata.length,
       enriched: 0,
       skippedThin: 0,
+      skippedJev: 0,
+      installPicked: 0,
+      metadataFilled: 0,
       failed: 0,
       budgetStopped: false,
     };
@@ -207,19 +296,51 @@ export async function POST(req: Request) {
             ? await fetchGithubReadme(gh.owner, gh.repo, githubToken)
             : null;
           const cleanedDesc = cleanListingDescription(server.description) || '';
+          const signalInput = {
+            name: server.name,
+            description: server.description,
+            url: server.url,
+            readme,
+          };
+
+          if (server.pass === 'metadata') {
+            const fields = await classifyListingFields(signalInput);
+            return { server, fields };
+          }
+
+          if (server.pass === 'install') {
+            const hint = await pickInstallCommand(signalInput);
+            return { server, hint };
+          }
 
           if (!readme && cleanedDesc.length < MIN_MATERIAL_CHARS) {
             return { server, thin: true as const };
           }
+
+          const review = await reviewListing({
+            name: server.name,
+            description: server.description,
+            url: server.url,
+          });
+          if (shouldSkipAiWriteup(review)) {
+            return { server, skipJev: true as const };
+          }
+
+          const [fields, hint] = await Promise.all([
+            classifyListingFields(signalInput),
+            pickInstallCommand(signalInput),
+          ]);
           const outcome = await generateListingContent({
             name: server.name,
             description: server.description,
-            category: server.category,
+            category: fields.category || server.category,
+            isCategoryConfirmed: Boolean(fields.category),
             url: server.url,
             readme,
             tools: parseServerTools(server.tools),
+            omitStructured: true,
           });
-          return { server, outcome };
+          return { server, outcome, fields, hint };
         }),
       );
 
@@ -229,8 +350,56 @@ export async function POST(req: Request) {
           keep.add(r.server.id);
           continue;
         }
-        const o = r.outcome;
-        if (o.status === 'ok') {
+        if ('skipJev' in r) {
+          stats.skippedJev++;
+          keep.add(r.server.id);
+          continue;
+        }
+        if (r.server.pass === 'metadata' && 'fields' in r && r.fields) {
+          const fields = r.fields;
+          const updatePayload: Record<string, unknown> = {};
+          if (fields.pricingModel)
+            updatePayload.pricingModel = fields.pricingModel;
+          if (fields.authType) updatePayload.authType = fields.authType;
+          if (
+            fields.category &&
+            r.server.category === DEFAULT_SUBMIT_CATEGORY
+          ) {
+            updatePayload.category = fields.category;
+          }
+          if (Object.keys(updatePayload).length > 0) {
+            await db
+              .update(servers)
+              .set(updatePayload as any)
+              .where(eq(servers.id, r.server.id));
+            stats.metadataFilled++;
+          }
+          keep.add(r.server.id);
+          continue;
+        }
+        if ('hint' in r && r.server.pass === 'install') {
+          const cached = r.hint ? installHintToCache(r.hint) : null;
+          await db
+            .update(servers)
+            .set(
+              cached
+                ? { ...cached, installExtractedAt: claimTime }
+                : {
+                    installKind: null,
+                    installCommand: null,
+                    installArgs: null,
+                    installPackage: null,
+                    installConfidence: null,
+                    installExtractedAt: claimTime,
+                  },
+            )
+            .where(eq(servers.id, r.server.id));
+          stats.installPicked++;
+          keep.add(r.server.id);
+          continue;
+        }
+        const o = 'outcome' in r ? r.outcome : undefined;
+        if (o?.status === 'ok') {
           const updatePayload: Record<string, unknown> = {
             aiSummary: o.content.summary,
             aiOverview: o.content.overview || null,
@@ -249,18 +418,18 @@ export async function POST(req: Request) {
             aiFaqAt: claimTime,
           };
 
-          // Only ever replaces the *generic default* — never overwrites a category a
-          // human submitter, an editor, or a source-list match already set on purpose.
-          if (
-            o.content.category &&
-            r.server.category === DEFAULT_SUBMIT_CATEGORY
-          ) {
-            updatePayload.category = o.content.category;
+          const fields = 'fields' in r ? r.fields : undefined;
+          const category = fields?.category || o.content.category;
+          if (category && r.server.category === DEFAULT_SUBMIT_CATEGORY) {
+            updatePayload.category = category;
           }
-
-          if (o.content.pricingModel)
+          if (fields?.pricingModel)
+            updatePayload.pricingModel = fields.pricingModel;
+          else if (o.content.pricingModel)
             updatePayload.pricingModel = o.content.pricingModel;
-          if (o.content.authType) updatePayload.authType = o.content.authType;
+          if (fields?.authType) updatePayload.authType = fields.authType;
+          else if (o.content.authType)
+            updatePayload.authType = o.content.authType;
           if (o.content.license) updatePayload.license = o.content.license;
           if (o.content.tags && o.content.tags.length > 0)
             updatePayload.tags = JSON.stringify(o.content.tags);
@@ -273,14 +442,13 @@ export async function POST(req: Request) {
             );
           }
 
-          // Always mark install-checked, and always replace the cached install
-          // fields with the LLM's verdict — including voiding them to null when
-          // it isn't confident. A stale heuristic guess left in place is worse
-          // than no cached guess: this data feeds install instructions agents
-          // execute directly (see get_mcp_install_config on our own MCP server).
           updatePayload.installExtractedAt = claimTime;
-          const install = o.content.install;
-          if (install) {
+          const hint = 'hint' in r ? r.hint : undefined;
+          const cached = hint ? installHintToCache(hint) : null;
+          const install = cached || o.content.install;
+          if (cached) {
+            Object.assign(updatePayload, cached);
+          } else if (install && 'kind' in install) {
             updatePayload.installKind = install.kind;
             updatePayload.installCommand =
               install.kind === 'stdio' ? (install.command ?? null) : null;
@@ -308,7 +476,7 @@ export async function POST(req: Request) {
           keep.add(r.server.id);
         } else {
           stats.failed++;
-          if (o.status === 'budget') budgetHit = true;
+          if (o?.status === 'budget') budgetHit = true;
         }
       }
     }
@@ -319,11 +487,14 @@ export async function POST(req: Request) {
     // NULL, so a re-check that keeps failing doesn't masquerade as brand-new backlog.
     const unreleased = claimed.filter((c) => !keep.has(c.id));
     const releaseNew = unreleased
-      .filter((c) => c.previousEnrichedAt === undefined)
+      .filter((c) => c.pass === 'writeup' && c.previousEnrichedAt === undefined)
       .map((c) => c.id);
     const releaseStale = unreleased.filter(
-      (c) => c.previousEnrichedAt !== undefined,
+      (c) => c.pass === 'writeup' && c.previousEnrichedAt !== undefined,
     );
+    const releaseInstall = unreleased
+      .filter((c) => c.pass === 'install')
+      .map((c) => c.id);
     if (releaseNew.length > 0) {
       await db
         .update(servers)
@@ -335,6 +506,12 @@ export async function POST(req: Request) {
         .update(servers)
         .set({ aiEnrichedAt: row.previousEnrichedAt })
         .where(eq(servers.id, row.id));
+    }
+    if (releaseInstall.length > 0) {
+      await db
+        .update(servers)
+        .set({ installExtractedAt: null })
+        .where(inArray(servers.id, releaseInstall));
     }
     stats.budgetStopped = budgetHit;
 
@@ -377,7 +554,8 @@ export async function POST(req: Request) {
       githubAuth: Boolean(githubToken),
       message:
         `AI content: enriched ${stats.enriched} (${stats.claimedNew} new, ${stats.claimedStale} re-checked), ` +
-        `skipped-thin ${stats.skippedThin}, failed ${stats.failed}${
+        `install ${stats.installPicked}, metadata ${stats.metadataFilled}, ` +
+        `skipped-thin ${stats.skippedThin}, skipped-jev ${stats.skippedJev}, failed ${stats.failed}${
           stats.budgetStopped ? ' (stopped — LLM spend cap/outage)' : ''
         }. ~${remaining} never-enriched, ~${dueForRecheck} due for re-check, ~${installRemaining} install-unchecked, ~${docRemaining} without a writeup.`,
     });

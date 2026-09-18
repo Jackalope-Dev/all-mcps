@@ -21,8 +21,8 @@ echo 'TYPESAFE_API_KEY=apikey_...' >> .dev.vars
 ```
 
 Also add it as a **GitHub Actions repo secret** under the same name if you want
-`backfill-enrich` to classify while it runs. Without it that workflow still
-works, it just leaves categories alone.
+`backfill-enrich` and `registry-sync` (ingest) to classify/confirm while they
+run. Without it those workflows still work; they just skip the Jev step.
 
 Verify with `npx wrangler secret list`.
 
@@ -30,18 +30,25 @@ Verify with `npx wrangler secret list`.
 
 | Call site | Primitive | Falls back to |
 | --- | --- | --- |
-| `app/api/cron/enrich` — category per listing | `choice` over the 56 directory categories | The listing's existing category |
-| `app/api/cron/auto-promote` — is this really an MCP server? | `noul` | Promoting, exactly as before |
+| `app/api/cron/enrich` — category | `choice` over the 56 directory categories | The listing's existing category |
+| `app/api/cron/enrich` — website/logo among README candidates | `choice` | Heuristic first-candidate / skip |
+| `app/api/cron/auto-promote` — is this really an MCP server? | `noul` + quality `score` | Promoting, exactly as before |
+| Submit / agent intake | same review; category `choice`; duplicate `score` | Accept pending; exact-URL 409 still applies |
+| `scripts/ingest-sources.mjs` — flagged duplicate pairs | `score` (different / needs review / same) | Keep the heuristic SQL comment |
+| `app/api/cron/ai-content` — writeup gate, auth/pricing/category, install pick | `noul`/`score`/`choice` | GPT writeup still runs; regex install still used |
 | `scripts/backfill-categories.ts` — one-off sweep | `choice` | Reports zero changes |
-| `lib/listingReview.ts` — duplicate pairs | `noul` | The caller's own heuristics |
 
-All of it goes through `lib/typesafe.ts`, which owns the timeout, the retry on
-`429`/`529`, and the rule that **every failure returns `null`**. Callers treat
-`null` as "no opinion".
+All Worker/API paths go through `lib/typesafe.ts`, which owns the timeout, the
+retry on `429`/`529`, and the rule that **every failure returns `null`**.
+Callers treat `null` as "no opinion". Ingest talks to the same HTTP API
+directly because that script is plain Node, not the TS Worker bundle.
+
+Jev does **not** write listing copy. Summary, overview, `aiDoc`, and FAQ stay
+on GPT.
 
 ## Confidence thresholds
 
-The two thresholds are the difference between replacing a regex and shuffling
+The thresholds are the difference between replacing a regex and shuffling
 listings at random, so they are named constants rather than inline numbers:
 
 - `CATEGORY_CONFIDENCE_FLOOR` (`lib/categoryClassifier.ts`, **0.75**) — below
@@ -53,6 +60,10 @@ listings at random, so they are named constants rather than inline numbers:
   live listings the two populations sit apart but not symmetrically: a curated
   list scored 0.02, while genuine servers ranged 0.36–0.78. Anything near 0.5
   would have held back a real server.
+- Duplicate alignment (`lib/listingReview.ts`) is a **Score** with three
+  levels: different / needs_review / same. `same` and `needs_review` 409 a
+  submit; `different` lets a sibling listing through. Jev down keeps only the
+  old name+site block.
 
 Raise the category floor if you see bad moves; lower it once you trust it.
 
@@ -79,5 +90,11 @@ rollback file (both gitignored) and only touches the live database with
 
 Measured against live listings: **p50 ~145ms**, range 95–361ms, roughly
 950 input / 565 output tokens per call. Several questions in one request cost
-about the same as one, which is why `lib/listingReview.ts` asks two at a time
-rather than making two calls.
+about the same as one, which is why `lib/listingReview.ts` and
+`lib/listingSignals.ts` batch related questions rather than making one call
+each.
+
+`/api/cron/ai-content` runs on its own `*/20 * * * *` Worker cron so GPT
+writeups neither wait four hours nor block the 15-minute health/enrich tick.
+For a faster drain, `scripts/backfill-ai-content.mjs` still hits that
+endpoint in a loop. Keep `ALLMCPS_BATCH_SIZE` at 6 on the shared Worker.

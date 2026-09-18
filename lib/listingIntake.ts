@@ -1,6 +1,8 @@
 import type { drizzle } from 'drizzle-orm/d1';
-import { normalizeCategory } from './categories';
+import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from './categories';
+import { classifyCategory } from './categoryClassifier';
 import { getGithubToken, githubApiHeaders } from './githubAuth';
+import { alignListings, reviewListing } from './listingReview';
 import { isRepositoryUrl } from './repoUrl';
 import {
   isAuthType,
@@ -11,8 +13,9 @@ import {
 } from './serverEnums';
 import {
   type ExistingListingMatch,
-  findExistingListingByNameAndSite,
   findExistingListingByUrl,
+  findNearDuplicateCandidates,
+  normalizeNameSiteKey,
 } from './urlDedup';
 import { isSafeSubmissionUrl, normalizeUrl } from './urlSafety';
 
@@ -211,19 +214,66 @@ export async function prepareListingIntake(
   // Both dedupe passes run for every entry point. The URL check catches a
   // straight re-submit; the name+website check catches a project that moved
   // orgs, which the URL check cannot see.
-  const existing =
-    (await findExistingListingByUrl(db, url)) ||
-    (await findExistingListingByNameAndSite(db, name, websiteUrl));
-  if (existing) {
+  const existingByUrl = await findExistingListingByUrl(db, url);
+  if (existingByUrl) {
     return {
       ok: false,
       status: 409,
       body: {
-        error: `This server is already listed as "${existing.name}" (${existing.status}). Visit /mcp/${existing.id} to view or claim it instead of submitting a duplicate.`,
+        error: `This server is already listed as "${existingByUrl.name}" (${existingByUrl.status}). Visit /mcp/${existingByUrl.id} to view or claim it instead of submitting a duplicate.`,
         duplicate: true,
-        existing,
+        existing: existingByUrl,
       },
     };
+  }
+
+  const near = await findNearDuplicateCandidates(db, {
+    url,
+    name,
+    websiteUrl,
+  });
+  const submittedNameSite = normalizeNameSiteKey(name, websiteUrl);
+  for (const candidate of near) {
+    const alignment = await alignListings(
+      { name, description, url },
+      {
+        name: candidate.name,
+        description: candidate.description,
+        url: candidate.url,
+      },
+    );
+    if (alignment === 'different') continue;
+    if (alignment === 'same' || alignment === 'needs_review') {
+      return {
+        ok: false,
+        status: 409,
+        body: {
+          error: `This server looks like "${candidate.name}" (${candidate.status}). Visit /mcp/${candidate.id} to view or claim it instead of submitting a duplicate.`,
+          duplicate: true,
+          existing: candidate,
+        },
+      };
+    }
+    // Jev down: only keep the pre-Jev name+site block, not a fuzzy name match.
+    const candidateNameSite = normalizeNameSiteKey(
+      candidate.name,
+      candidate.websiteUrl,
+    );
+    if (
+      submittedNameSite &&
+      candidateNameSite &&
+      submittedNameSite === candidateNameSite
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        body: {
+          error: `This server is already listed as "${candidate.name}" (${candidate.status}). Visit /mcp/${candidate.id} to view or claim it instead of submitting a duplicate.`,
+          duplicate: true,
+          existing: candidate,
+        },
+      };
+    }
   }
 
   const tags = normalizeTags(input.tags);
@@ -235,25 +285,39 @@ export async function prepareListingIntake(
 
   const id = buildListingSlug(name);
 
+  let resolvedCategory = category;
+  if (resolvedCategory === DEFAULT_SUBMIT_CATEGORY) {
+    const classified = await classifyCategory(
+      { name, description, url },
+      resolvedCategory,
+    );
+    if (classified.fromJev) resolvedCategory = classified.category;
+  }
+
+  const review = await reviewListing({ name, description, url });
+  const reviewPriority =
+    (review.reviewed && review.isMcpServer === false) ||
+    (review.qualityScore !== null && review.qualityScore < 2);
+
   return {
     ok: true,
     id,
     name,
     url,
     websiteUrl,
-    category,
+    category: resolvedCategory,
     values: {
       id,
       name,
       url,
       description: description || 'No description provided.',
-      category,
+      category: resolvedCategory,
       websiteUrl: websiteUrl || null,
       submitterEmail: email,
       isPremium: false,
       websiteVerified: false,
       isOfficial: false,
-      reviewPriority: false,
+      reviewPriority,
       premiumStatus: 'free',
       status: 'pending',
       createdAt: new Date(),
