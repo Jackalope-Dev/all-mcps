@@ -19,6 +19,7 @@ type OgServer = {
   description: string;
   category?: string | null;
   logoUrl?: string | null;
+  redirectTo?: string | null;
 };
 
 /**
@@ -66,9 +67,21 @@ async function probeImageUrl(url: string): Promise<string | null> {
   }
 }
 
-async function getServer(rawId: string): Promise<OgServer | null | undefined> {
+const OG_COLUMNS = {
+  id: serversTable.id,
+  name: serversTable.name,
+  description: serversTable.description,
+  category: serversTable.category,
+  logoUrl: serversTable.logoUrl,
+  redirectTo: serversTable.redirectTo,
+} as const;
+
+async function getServer(
+  rawId: string,
+  hops = 0,
+): Promise<OgServer | null | undefined> {
   const id = rawId ? decodeURIComponent(rawId).replace(/^-+/, '') : '';
-  if (!id) return null;
+  if (!id || hops > 5) return null;
 
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
@@ -76,36 +89,40 @@ async function getServer(rawId: string): Promise<OgServer | null | undefined> {
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const dbServers = await db
-        .select({
-          id: serversTable.id,
-          name: serversTable.name,
-          description: serversTable.description,
-          category: serversTable.category,
-          logoUrl: serversTable.logoUrl,
-        })
+        .select(OG_COLUMNS)
         .from(serversTable)
         .where(eq(serversTable.id, id))
         .limit(1);
-      if (dbServers.length > 0) return dbServers[0];
+      if (dbServers.length > 0) {
+        const row = dbServers[0];
+        if (row.redirectTo && row.redirectTo !== id) {
+          return getServer(row.redirectTo, hops + 1);
+        }
+        return row;
+      }
 
       // Try with rawId as fallback
       const altServers = await db
-        .select({
-          id: serversTable.id,
-          name: serversTable.name,
-          description: serversTable.description,
-          category: serversTable.category,
-          logoUrl: serversTable.logoUrl,
-        })
+        .select(OG_COLUMNS)
         .from(serversTable)
         .where(eq(serversTable.id, rawId))
         .limit(1);
-      if (altServers.length > 0) return altServers[0];
+      if (altServers.length > 0) {
+        const row = altServers[0];
+        if (row.redirectTo && row.redirectTo !== rawId) {
+          return getServer(row.redirectTo, hops + 1);
+        }
+        return row;
+      }
     }
   } catch (e) {}
 
   const servers = serversData as OgServer[];
-  return servers.find((s) => s.id === id || s.id === rawId);
+  const found = servers.find((s) => s.id === id || s.id === rawId);
+  if (found?.redirectTo && found.redirectTo !== found.id) {
+    return getServer(found.redirectTo, hops + 1);
+  }
+  return found;
 }
 
 export default async function Image({

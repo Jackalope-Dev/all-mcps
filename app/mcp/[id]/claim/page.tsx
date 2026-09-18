@@ -6,6 +6,7 @@ import serversData from '../../../../data/mcp-servers.json';
 import { servers } from '../../../../db/schema';
 import { auth } from '../../../../lib/auth';
 import { parseServerName } from '../../../../lib/displayName';
+import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
 import ClaimClient from './ClaimClient';
 
 async function getServer(id: string) {
@@ -43,6 +44,7 @@ export async function generateMetadata({
   const { id } = await params;
   const server = await getServer(id);
   if (!server) return { title: 'Claim listing', robots: { index: false } };
+  redirectIfListingMoved(id, server, '/claim');
   const { displayName } = parseServerName(server.name);
   const name =
     displayName.length > 40
@@ -69,6 +71,7 @@ export default async function ClaimPage({
   if (!server) {
     notFound();
   }
+  redirectIfListingMoved(id, server, '/claim');
 
   const session = await auth();
   const { displayName } = parseServerName(server.name);

@@ -1,4 +1,6 @@
+import { NextResponse } from 'next/server';
 import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
+import { listingRedirectTarget } from '@/lib/listingRedirect';
 import {
   checkRateLimit,
   clientKey,
@@ -26,6 +28,18 @@ export async function GET(
   }
 
   const server = await getServerById(id);
+
+  const redirectTarget = listingRedirectTarget(id, server);
+  if (redirectTarget) {
+    const url = new URL(request.url);
+    return NextResponse.redirect(
+      new URL(
+        `/api/v1/mcp/${redirectTarget}/markdown${url.search}`,
+        url.origin,
+      ),
+      308,
+    );
+  }
 
   if (!server) {
     return new Response('# 404 - MCP Server Not Found\n', {

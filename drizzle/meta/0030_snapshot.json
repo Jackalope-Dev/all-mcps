@@ -1399,6 +1399,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "redirect_to": {
+          "name": "redirect_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {

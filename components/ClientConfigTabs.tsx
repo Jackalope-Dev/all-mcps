@@ -5,6 +5,7 @@ import {
   Check,
   Copy,
   Folder,
+  Info,
   Plus,
   Sparkles,
   X,
@@ -31,6 +32,9 @@ interface ServerConfigProps {
     installConfidence?: string | null;
     suggestedInstallCommand?: string | null;
     suggestedInstallArgs?: string | string[] | null;
+    aiEnvVars?: string[] | null;
+    installNote?: string | null;
+    installNoteHref?: string | null;
   };
 }
 
@@ -62,12 +66,20 @@ const TABS: { id: ClientTab; label: string; file: string }[] = [
 
 export function ClientConfigTabs({ server }: ServerConfigProps) {
   const [activeTab, setActiveTab] = useState<ClientTab>('claude');
-  const [showEnvVars, setShowEnvVars] = useState(false);
+  const initialEnvVars = useMemo(() => {
+    if (server.aiEnvVars && server.aiEnvVars.length > 0) {
+      return server.aiEnvVars.map((key) => ({ key, value: '' }));
+    }
+    return [{ key: 'API_KEY', value: '' }];
+  }, [server.aiEnvVars]);
+
+  const [showEnvVars, setShowEnvVars] = useState(
+    Boolean(server.aiEnvVars && server.aiEnvVars.length > 0),
+  );
   const [copiedPath, setCopiedPath] = useState(false);
   const [osMode, setOsMode] = useState<'mac' | 'windows'>('mac');
-  const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>(
-    [{ key: 'API_KEY', value: '' }],
-  );
+  const [envVars, setEnvVars] =
+    useState<Array<{ key: string; value: string }>>(initialEnvVars);
 
   // Robust install configuration derivation supporting stdio, python/uvx, and remote endpoints
   const install = useMemo(
@@ -410,6 +422,52 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
         boxSizing: 'border-box',
       }}
     >
+      {server.installNote ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.65rem',
+            padding: '0.85rem 1rem',
+            marginBottom: '1.15rem',
+            borderRadius: '10px',
+            background: 'rgba(56, 189, 248, 0.08)',
+            border: '1px solid rgba(56, 189, 248, 0.28)',
+            fontSize: '0.82rem',
+            color: 'var(--text-secondary)',
+            lineHeight: 1.5,
+          }}
+        >
+          <Info
+            size={18}
+            style={{ color: '#38bdf8', flexShrink: 0, marginTop: '0.1rem' }}
+            aria-hidden="true"
+          />
+          <div>
+            <strong style={{ color: 'var(--text-primary)' }}>
+              Recommended setup:
+            </strong>{' '}
+            {server.installNote}
+            {server.installNoteHref ? (
+              <>
+                {' '}
+                <a
+                  href={server.installNoteHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'var(--accent-color)',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Open the official setup page
+                </a>
+              </>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {/* Header bar */}
       <div
         style={{

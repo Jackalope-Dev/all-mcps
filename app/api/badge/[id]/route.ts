@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { parseServerName } from '../../../../lib/displayName';
+import { listingRedirectTarget } from '../../../../lib/listingRedirect';
 import { getServerById } from '../../../../lib/servers';
 
 type Theme = 'dark' | 'light';
@@ -259,6 +260,12 @@ export async function GET(
   let serverName = id;
 
   const server = await getServerById(id);
+  const redirectTarget = listingRedirectTarget(id, server);
+  if (redirectTarget) {
+    const dest = new URL(req.url);
+    dest.pathname = `/api/badge/${redirectTarget}`;
+    return NextResponse.redirect(dest, 308);
+  }
   if (server) {
     serverName = server.name || id;
     isOfficial = server.isOfficial || false;

@@ -1254,5 +1254,38 @@
     "isOfficial": false,
     "status": "active",
     "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "screenpipe",
+    "name": "screenpipe",
+    "description": "Local-first workflow memory for AI agents. Screenpipe captures screen and audio with local indexing and MCP tools, allowing AI assistants to search desktop history, summarize meetings, and automate workflows.",
+    "category": "🧠 Knowledge & Memory",
+    "url": "https://github.com/screenpipe/screenpipe",
+    "websiteUrl": "https://screenpipe.com/",
+    "isOfficial": false,
+    "status": "active",
+    "installKind": "stdio",
+    "installCommand": "npx",
+    "installArgs": ["-y", "screenpipe-mcp@latest"],
+    "installPackage": "screenpipe-mcp@latest",
+    "installConfidence": "high",
+    "aiEnvVars": ["SCREENPIPE_LOCAL_API_KEY"],
+    "license": "Screenpipe Commercial License",
+    "pricingModel": "freemium",
+    "installNote": "Install the Screenpipe desktop app and connect Claude Desktop via Settings > Connections. This provisions the bundled runtime and auth token without manual JSON edits.",
+    "installNoteHref": "https://screenpipe.com",
+    "createdAt": "2026-08-11T03:14:43.793Z"
+  },
+  {
+    "id": "mediar-ai-screenpipe",
+    "name": "screenpipe",
+    "description": "Canonical listing moved to /mcp/screenpipe.",
+    "category": "🧠 Knowledge & Memory",
+    "url": "https://github.com/screenpipe/screenpipe",
+    "websiteUrl": "https://screenpipe.com/",
+    "isOfficial": false,
+    "status": "removed",
+    "redirectTo": "screenpipe",
+    "createdAt": "2026-08-11T03:14:43.793Z"
   }
 ]

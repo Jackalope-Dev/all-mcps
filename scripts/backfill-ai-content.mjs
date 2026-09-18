@@ -21,15 +21,43 @@
  */
 
 const BASE_URL = process.env.ALLMCPS_BASE_URL || 'https://allmcps.com';
-const SECRET = process.env.ALLMCPS_ADMIN_SECRET || process.env.ADMIN_SECRET;
-const ENDPOINT = `${BASE_URL}/api/cron/ai-content`;
+const SECRET =
+  process.env.ALLMCPS_ADMIN_SECRET ||
+  process.env.ADMIN_SECRET ||
+  process.env.ALLMCPS_CRON_SECRET ||
+  process.env.CRON_SECRET;
+const BATCH_SIZE = Number(process.env.ALLMCPS_BATCH_SIZE || 6);
+const ENDPOINT = `${BASE_URL}/api/cron/ai-content?batchSize=${BATCH_SIZE}`;
 // Pause between calls so we never hammer the LLM/GitHub or trip rate limits.
 const DELAY_MS = Number(process.env.ALLMCPS_BACKFILL_DELAY_MS || 1500);
 // Stop after this many calls that enriched nothing (outage/budget wall or truly done).
 const MAX_IDLE_CALLS = 3;
 
+function parseLimit() {
+  const envVal = process.env.ALLMCPS_LIMIT || process.env.LIMIT;
+  if (envVal && !Number.isNaN(Number(envVal)) && Number(envVal) > 0) {
+    return Number(envVal);
+  }
+  for (let i = 2; i < process.argv.length; i++) {
+    const arg = process.argv[i];
+    if (arg.startsWith('--limit=')) {
+      const val = Number(arg.slice(8));
+      if (!Number.isNaN(val) && val > 0) return val;
+    }
+    if ((arg === '--limit' || arg === '-l') && process.argv[i + 1]) {
+      const val = Number(process.argv[i + 1]);
+      if (!Number.isNaN(val) && val > 0) return val;
+    }
+  }
+  return Infinity;
+}
+
+const LIMIT = parseLimit();
+
 if (!SECRET) {
-  console.error('Missing ALLMCPS_ADMIN_SECRET (or ADMIN_SECRET) env var.');
+  console.error(
+    'Missing ALLMCPS_ADMIN_SECRET (or ADMIN_SECRET / CRON_SECRET) env var.',
+  );
   process.exit(1);
 }
 
@@ -40,7 +68,9 @@ async function main() {
   let idleCalls = 0;
   let call = 0;
 
-  console.log(`Backfilling AI content via ${ENDPOINT}\n`);
+  console.log(
+    `Backfilling AI content via ${ENDPOINT}${Number.isFinite(LIMIT) ? ` (limit: ${LIMIT} listings)` : ''}\n`,
+  );
 
   while (true) {
     call++;
@@ -96,6 +126,13 @@ async function main() {
     // installRemaining does (see /api/cron/ai-content's claim query).
     if (data.remaining === 0 && data.installRemaining === 0) {
       console.log('\n✓ Catalog fully enriched and install-checked.');
+      break;
+    }
+
+    if (Number.isFinite(LIMIT) && totalEnriched >= LIMIT) {
+      console.log(
+        `\n✓ Reached requested target limit of ${LIMIT} listings (${totalEnriched} enriched). Stopping.`,
+      );
       break;
     }
 

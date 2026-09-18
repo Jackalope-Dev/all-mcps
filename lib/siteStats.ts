@@ -129,7 +129,9 @@ let memoizedSnapshotFallback: SiteStats | null = null;
 function getSnapshotFallback(): SiteStats {
   if (memoizedSnapshotFallback) return memoizedSnapshotFallback;
 
-  const snapshotServers = serversData as any[];
+  const snapshotServers = (serversData as any[]).filter(
+    (s) => s.status !== 'removed',
+  );
   const snapshotTotal = snapshotServers.length;
   const snapshotCategories = new Set(snapshotServers.map((s) => s.category))
     .size;

@@ -8,6 +8,7 @@ import { ServerAvatar } from '../../../../components/ui/ServerAvatar';
 import serversData from '../../../../data/mcp-servers.json';
 import { servers as serversTable } from '../../../../db/schema';
 import { parseServerName } from '../../../../lib/displayName';
+import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
 import { PUBLIC_SERVER_COLUMNS } from '../../../../lib/servers';
 
 type Server = {
@@ -47,6 +48,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const server = await getServer(id);
+  redirectIfListingMoved(id, server, '/embed');
   return {
     title: server ? `${server.name} Widget` : 'MCP Widget',
     robots: { index: false, follow: false },
@@ -68,6 +70,7 @@ export default async function EmbedPage({
 }) {
   const { id } = await params;
   const server = await getServer(id);
+  redirectIfListingMoved(id, server, '/embed');
   const { displayName, org } = server
     ? parseServerName(server.name)
     : { displayName: '', org: null };

@@ -87,6 +87,7 @@ import {
   supportLinkRel,
   websiteLinkRel,
 } from '../../../lib/linkRel';
+import { redirectIfListingMoved } from '../../../lib/listingRedirect';
 import {
   computeCombinedAvailabilityPct,
   getFeaturedServers,
@@ -129,6 +130,8 @@ export async function generateMetadata({
     // noindex here and serve a real 404 from the page component below.
     return { title: 'Not Found', robots: { index: false, follow: false } };
   }
+
+  redirectIfListingMoved(id, server);
 
   // Prefer the LLM-written one-liner for the meta description — it's a clean, unique
   // sentence, whereas the raw description is often scraped chrome. Better CTR + no
@@ -286,6 +289,8 @@ export default async function MCPDetail({
     // an empty URL indexed.
     notFound();
   }
+
+  redirectIfListingMoved(id, server);
 
   // Independent I/O (external README fetch, two category/featured lookups, a verification-check
   // query) — run concurrently instead of one big sequential waterfall.

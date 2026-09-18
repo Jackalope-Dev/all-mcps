@@ -245,7 +245,11 @@ export async function getSitemapServers(): Promise<SitemapServer[]> {
     dbServers = await fetchSitemapServersFromD1();
   }
 
-  const servers = dbServers ?? (serversData as SitemapServer[]);
+  const servers =
+    dbServers ??
+    (serversData as Array<SitemapServer & { status?: string }>).filter(
+      (s) => s.status !== 'removed',
+    );
 
   const seen = new Set<string>();
   const uniqueServers: SitemapServer[] = [];

@@ -67,6 +67,7 @@ type EditFields = {
   category: string;
   url: string;
   websiteUrl: string;
+  targetId?: string;
 };
 
 const PAGE_SIZE = 25;
@@ -270,6 +271,7 @@ export default function ManageListings({
       | 'edit'
       | 'unpublish'
       | 'republish'
+      | 'merge_duplicate'
       | 'delete'
       | 'feature'
       | 'resend_approval'
@@ -332,11 +334,18 @@ export default function ManageListings({
               : s,
           ),
         );
-      } else if (action === 'unpublish' || action === 'republish') {
+      } else if (
+        action === 'unpublish' ||
+        action === 'republish' ||
+        action === 'merge_duplicate'
+      ) {
         setItems((prev) =>
           prev.map((s) =>
             s.id === id
-              ? { ...s, status: action === 'unpublish' ? 'removed' : 'active' }
+              ? {
+                  ...s,
+                  status: action === 'republish' ? 'active' : 'removed',
+                }
               : s,
           ),
         );
@@ -397,6 +406,16 @@ export default function ManageListings({
       return;
     }
     runAction(id, 'feature', { days });
+  };
+
+  const mergeDuplicate = (listing: Listing) => {
+    const targetId = window.prompt(
+      `Canonical listing id to merge "${listing.id}" into. The old URL will 308 to the target.`,
+    );
+    if (!targetId?.trim()) return;
+    runAction(listing.id, 'merge_duplicate', {
+      fields: { targetId: targetId.trim() },
+    });
   };
 
   const deleteListing = (listing: Listing) => {
@@ -1486,6 +1505,19 @@ export default function ManageListings({
                           }}
                         >
                           Unpublish
+                        </button>
+                        <button
+                          onClick={() => mergeDuplicate(listing)}
+                          disabled={rowLoading}
+                          className="admin-btn"
+                          style={{
+                            background: '#7c3aed',
+                            padding: '0.25rem 0.55rem',
+                            fontSize: '0.75rem',
+                          }}
+                          title="Unpublish this listing and 308 its URL to another listing"
+                        >
+                          Merge
                         </button>
                       </>
                     ) : listing.status === 'removed' ? (

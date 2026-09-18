@@ -23,6 +23,7 @@ import {
   fetchGithubReadme,
   parseGithubUrl,
 } from '../../../../lib/listingEnrich';
+import { resolveCanonicalMergeTarget } from '../../../../lib/listingRedirect';
 import {
   sendListingStatusEmail,
   sendNotificationEmail,
@@ -66,6 +67,7 @@ const actionSchema = z.object({
     'delete_review',
     'mark_report_reviewed',
     'dismiss_report',
+    'merge_duplicate',
   ]),
   fields: z
     .object({
@@ -74,6 +76,7 @@ const actionSchema = z.object({
       category: z.string().trim().min(1).max(100).optional(),
       url: z.string().trim().min(1).optional(),
       websiteUrl: z.string().trim().optional(),
+      targetId: z.string().trim().min(1).optional(),
     })
     .optional(),
   days: z.number().int().min(1).max(365).optional(),
@@ -88,6 +91,7 @@ const MESSAGES: Record<string, string> = {
   edit: 'Listing updated.',
   unpublish: 'Listing unpublished.',
   republish: 'Listing republished.',
+  merge_duplicate: 'Listing merged as duplicate and redirected.',
   delete: 'Listing permanently deleted.',
   feature: 'Featured placement granted.',
   unfeature: 'Featured placement removed.',
@@ -328,7 +332,11 @@ export async function POST(req: Request) {
 
       const updateResult = await db
         .update(servers)
-        .set({ status: toStatus })
+        .set(
+          action === 'republish'
+            ? { status: toStatus, redirectTo: null }
+            : { status: toStatus },
+        )
         .where(and(eq(servers.id, id), eq(servers.status, fromStatus)))
         .returning();
 
@@ -342,6 +350,41 @@ export async function POST(req: Request) {
       // Republished listing should re-enter search indexes promptly.
       if (action === 'republish' && updateResult[0]) {
         void notifyListingIndexed(updateResult[0].id).catch(() => {});
+      }
+    } else if (action === 'merge_duplicate') {
+      const targetId = fields?.targetId?.trim() ?? '';
+      const resolved = await resolveCanonicalMergeTarget(
+        id,
+        targetId,
+        async (lookupId) => {
+          const rows = await db
+            .select({
+              id: servers.id,
+              status: servers.status,
+              redirectTo: servers.redirectTo,
+            })
+            .from(servers)
+            .where(eq(servers.id, lookupId))
+            .limit(1);
+          return rows[0];
+        },
+      );
+      if ('error' in resolved) {
+        const status = resolved.error.includes('not found') ? 404 : 400;
+        return NextResponse.json({ error: resolved.error }, { status });
+      }
+
+      const updateResult = await db
+        .update(servers)
+        .set({ status: 'removed', redirectTo: resolved.canonicalId })
+        .where(eq(servers.id, id))
+        .returning();
+
+      if (updateResult.length === 0) {
+        return NextResponse.json(
+          { error: 'Server not found.' },
+          { status: 404 },
+        );
       }
     } else if (action === 'delete') {
       const deleteResult = await db

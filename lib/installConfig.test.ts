@@ -4,6 +4,7 @@ import {
   resolveInstallConfig,
   runtimeLabel,
   toCachedInstallFields,
+  toClaudeConfigSnippet,
   transportLabel,
 } from './installConfig';
 
@@ -384,5 +385,54 @@ describe('toCachedInstallFields refuses to persist a non-server package', () => 
         packageName,
       ).toBeNull();
     }
+  });
+});
+
+describe('Screenpipe installation and config resolution', () => {
+  it('resolves screenpipe-mcp@latest as high-confidence stdio package', () => {
+    const install = resolveInstallConfig({
+      id: 'screenpipe',
+      name: 'screenpipe',
+      url: 'https://github.com/screenpipe/screenpipe',
+      installKind: 'stdio',
+      installCommand: 'npx',
+      installArgs: '["-y","screenpipe-mcp@latest"]',
+      installPackage: 'screenpipe-mcp@latest',
+      installConfidence: 'high',
+    });
+    expect(install.kind).toBe('stdio');
+    if (install.kind === 'stdio') {
+      expect(install.command).toBe('npx');
+      expect(install.args).toEqual(['-y', 'screenpipe-mcp@latest']);
+      expect(install.packageName).toBe('screenpipe-mcp@latest');
+      expect(install.confidence).toBe('high');
+    }
+  });
+
+  it('generates Claude config snippet with SCREENPIPE_LOCAL_API_KEY', () => {
+    const install = resolveInstallConfig({
+      id: 'screenpipe',
+      name: 'screenpipe',
+      url: 'https://github.com/screenpipe/screenpipe',
+      installKind: 'stdio',
+      installCommand: 'npx',
+      installArgs: '["-y","screenpipe-mcp@latest"]',
+      installPackage: 'screenpipe-mcp@latest',
+      installConfidence: 'high',
+    });
+    const snippet = toClaudeConfigSnippet(install, 'screenpipe', [
+      'SCREENPIPE_LOCAL_API_KEY',
+    ]);
+    expect(snippet).toEqual({
+      mcpServers: {
+        screenpipe: {
+          command: 'npx',
+          args: ['-y', 'screenpipe-mcp@latest'],
+          env: {
+            SCREENPIPE_LOCAL_API_KEY: '',
+          },
+        },
+      },
+    });
   });
 });

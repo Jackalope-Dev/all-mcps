@@ -38,7 +38,9 @@ import { parseServerTools } from '../../../../lib/servers';
  * (rather than guessing) when it isn't confident. See installExtractedAt in db/schema.ts.
  */
 
-const BATCH_SIZE = 24;
+// Kept at 6 so a single run executes within Cloudflare's HTTP edge timeout (~100s,
+// each concurrent LLM call takes ~15-20s). Dynamic via ?batchSize= (capped at 24).
+const DEFAULT_BATCH_SIZE = 6;
 // Claim step is a single atomic UPDATE ... WHERE id IN (subquery), so raising
 // this is safe against double-claims even under concurrent callers. Was
 // bumped to 10 for throughput, then reverted: the real constraint isn't
@@ -83,6 +85,15 @@ export async function POST(req: Request) {
     const githubToken = getGithubToken(env);
     const claimTime = new Date();
 
+    const url = new URL(req.url);
+    const queryBatch = Number(
+      url.searchParams.get('batchSize') || url.searchParams.get('limit'),
+    );
+    const batchSize =
+      Number.isFinite(queryBatch) && queryBatch > 0
+        ? Math.min(Math.floor(queryBatch), 24)
+        : DEFAULT_BATCH_SIZE;
+
     // Phase 1: atomically claim highest-value never-enriched OR metadata-missing listings
     const claimedNew = (await db
       .update(servers)
@@ -114,7 +125,7 @@ export async function POST(req: Request) {
               desc(servers.githubStars),
               asc(servers.createdAt),
             )
-            .limit(BATCH_SIZE),
+            .limit(batchSize),
         ),
       )
       .returning({
@@ -127,7 +138,7 @@ export async function POST(req: Request) {
       })) as ClaimedRow[];
 
     let claimedStale: ClaimedRow[] = [];
-    const staleSlots = BATCH_SIZE - claimedNew.length;
+    const staleSlots = batchSize - claimedNew.length;
     if (staleSlots > 0) {
       const staleCutoff = new Date(claimTime.getTime() - STALE_RECHECK_MS);
       const candidates = await db

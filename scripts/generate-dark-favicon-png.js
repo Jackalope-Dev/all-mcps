@@ -1,5 +1,4 @@
-const Jimp = require('jimp');
-const fs = require('node:fs');
+const { Jimp, rgbaToInt } = require('jimp');
 const path = require('node:path');
 
 // SVG path points for the geometric M mark in viewBox 0 0 1024 1024
@@ -8,7 +7,7 @@ const path = require('node:path');
 
 (async () => {
   const size = 512;
-  const image = new Jimp(size, size, 0x00000000);
+  const image = new Jimp({ width: size, height: size, color: 0x00000000 });
   const padding = 24;
   const cornerRadius = 96;
   const strokeWidth = 10;
@@ -33,7 +32,7 @@ const path = require('node:path');
             (1 - (dist - (cornerRadius - strokeWidth)) / strokeWidth) * 180,
           );
           image.setPixelColor(
-            Jimp.rgbaToInt(0, 229, 255, Math.max(60, borderAlpha)),
+            rgbaToInt(0, 229, 255, Math.max(60, borderAlpha)),
             x,
             y,
           );
@@ -43,7 +42,7 @@ const path = require('node:path');
           const r = Math.round(15 * (1 - factor) + 2 * factor);
           const g = Math.round(23 * (1 - factor) + 6 * factor);
           const b = Math.round(42 * (1 - factor) + 23 * factor);
-          image.setPixelColor(Jimp.rgbaToInt(r, g, b, 255), x, y);
+          image.setPixelColor(rgbaToInt(r, g, b, 255), x, y);
         }
       }
     }
@@ -57,7 +56,7 @@ const path = require('node:path');
   ];
 
   for (const outPath of outPaths) {
-    await image.writeAsync(outPath);
+    await image.write(outPath);
   }
   console.log('Saved dark tile PNG favicons successfully!');
 })();

@@ -30,6 +30,7 @@ import {
   isUnverifiedInstall,
   resolveInstallConfig,
 } from '../../../../lib/installConfig';
+import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
 import {
   AUTH_TYPE_LABELS,
   type AuthType,
@@ -71,6 +72,7 @@ export async function generateMetadata({
   const { id } = await params;
   const server = await getServerById(id);
   if (!server) return { title: 'Not Found', robots: { index: false } };
+  redirectIfListingMoved(id, server, '/alternatives');
 
   const { displayName } = parseServerName(server.name);
   const { label: categoryLabel } = parseCategoryLabel(server.category);
@@ -187,6 +189,7 @@ export default async function AlternativesPage({
   const { id } = await params;
   const server = await getServerById(id);
   if (!server) notFound();
+  redirectIfListingMoved(id, server, '/alternatives');
 
   const { displayName } = parseServerName(server.name);
   const catMeta = getCategoryMeta(server.category);

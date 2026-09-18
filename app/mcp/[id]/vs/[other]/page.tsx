@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Badge } from '../../../../../components/ui/Badge';
 import { CopyBlock } from '../../../../../components/ui/CopyBlock';
@@ -35,6 +35,7 @@ import {
   isVerifiedListing,
 } from '../../../../../lib/featuredStatus';
 import { resolveInstallConfig } from '../../../../../lib/installConfig';
+import { compareRedirectPath } from '../../../../../lib/listingRedirect';
 import { computeQualityScore } from '../../../../../lib/qualityScore';
 import {
   getRelatedServers,
@@ -170,6 +171,8 @@ export async function generateMetadata({
   if (id === other) return { title: 'Not Found', robots: { index: false } };
 
   const [a, b] = await Promise.all([getServerById(id), getServerById(other)]);
+  const compareHop = compareRedirectPath(id, other, a, b);
+  if (compareHop) permanentRedirect(compareHop);
   if (!a || !b || a.status !== 'active' || b.status !== 'active') {
     return { title: 'Not Found', robots: { index: false } };
   }
@@ -339,6 +342,8 @@ export default async function ComparePage({
     getServerById(id),
     getServerById(other),
   ]);
+  const compareHop = compareRedirectPath(id, other, left, right);
+  if (compareHop) permanentRedirect(compareHop);
   if (!left || !right) notFound();
   if (left.status !== 'active' || right.status !== 'active') notFound();
 

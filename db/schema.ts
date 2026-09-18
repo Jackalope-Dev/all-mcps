@@ -279,6 +279,8 @@ export const servers = sqliteTable(
     suggestedInstallCommand: text('suggested_install_command'),
     /** JSON string array of args paired with `suggestedInstallCommand`. */
     suggestedInstallArgs: text('suggested_install_args'),
+    /** Canonical server id to 308-redirect to when this listing is retired or merged as a duplicate. */
+    redirectTo: text('redirect_to'),
   },
   (table) => ({
     // `status = 'active'` is the base filter on nearly every catalog read (browse,

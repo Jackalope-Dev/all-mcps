@@ -68,11 +68,13 @@ async function getServers(): Promise<ServerSlim[]> {
   } catch {
     // Fallback to local JSON if not running in wrangler / opennext
   }
-  return (serversData as ServerSlim[]).map((s) => ({
-    id: s.id,
-    name: s.name,
-    category: s.category,
-  }));
+  return (serversData as Array<ServerSlim & { status?: string }>)
+    .filter((s) => s.status !== 'removed')
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      category: s.category,
+    }));
 }
 
 /**

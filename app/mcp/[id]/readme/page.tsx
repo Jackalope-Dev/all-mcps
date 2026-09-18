@@ -7,6 +7,7 @@ import { SafeMarkdown } from '../../../../components/ui/SafeMarkdown';
 import { categorySlug, getCategoryMeta } from '../../../../lib/categories';
 import { parseServerName } from '../../../../lib/displayName';
 import { repoLinkRel } from '../../../../lib/linkRel';
+import { redirectIfListingMoved } from '../../../../lib/listingRedirect';
 import {
   absolutizeReadmeMarkdown,
   fetchServerReadme,
@@ -38,6 +39,7 @@ export async function generateMetadata({
   const { id } = await params;
   const server = await getServerById(id);
   if (!server) return { title: 'Not Found', robots: { index: false } };
+  redirectIfListingMoved(id, server, '/readme');
 
   const { displayName } = parseServerName(server.name, server.url);
   // Deliberately noindex: this page mirrors the upstream README, which Google
@@ -59,6 +61,7 @@ export default async function ListingReadmePage({
   const { id } = await params;
   const server = await getServerById(id);
   if (!server) notFound();
+  redirectIfListingMoved(id, server, '/readme');
 
   const { displayName } = parseServerName(server.name, server.url);
   const catMeta = getCategoryMeta(server.category);

@@ -42,6 +42,15 @@ export function parseServerTools(raw: unknown): ServerTool[] {
   }
 }
 
+function snapshotServers(): Server[] {
+  return serversData as unknown as Server[];
+}
+
+/** Static catalog when D1 is down — omits retired redirect tombstones. */
+function snapshotCatalogServers(): Server[] {
+  return snapshotServers().filter((s) => s.status !== 'removed');
+}
+
 /**
  * Normalizes a raw listing so downstream consumers never see scraped README chrome.
  * Returns a shallow copy — the imported JSON module is shared across requests and
@@ -147,6 +156,7 @@ export const PUBLIC_SERVER_COLUMNS = {
   screenshotUrl: serversTable.screenshotUrl,
   suggestedInstallCommand: serversTable.suggestedInstallCommand,
   suggestedInstallArgs: serversTable.suggestedInstallArgs,
+  redirectTo: serversTable.redirectTo,
 } as const;
 
 export type Server = {
@@ -156,6 +166,10 @@ export type Server = {
   description: string;
   category: string;
   isOfficial: boolean;
+  redirectTo?: string | null;
+  /** Optional setup note shown above install config. JSON-only until persisted. */
+  installNote?: string | null;
+  installNoteHref?: string | null;
   websiteUrl?: string | null;
   logoUrl?: string | null;
   isPremium?: boolean;
@@ -324,7 +338,7 @@ export async function getActiveServersLight(): Promise<Server[]> {
   } catch (e) {
     // Fall back to static JSON
   }
-  return (serversData as unknown as Server[]).map((s) => ({
+  return snapshotCatalogServers().map((s) => ({
     id: s.id,
     name: s.name,
     url: s.url,
@@ -417,7 +431,7 @@ export async function getServersByIds(ids: string[]): Promise<Server[]> {
     // Fall back to static JSON
   }
   if (found.length === 0) {
-    const all = serversData as unknown as Server[];
+    const all = snapshotCatalogServers();
     found = ids
       .map((id) => all.find((s) => s.id === id))
       .filter((s): s is Server => Boolean(s))
@@ -446,7 +460,7 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
   } catch (e) {
     // Fall back to static JSON
   }
-  return (serversData as unknown as Server[])
+  return snapshotCatalogServers()
     .map(normalizeServer)
     .sort((a, b) => toEpoch(b.createdAt) - toEpoch(a.createdAt))
     .slice(0, limit);
@@ -474,8 +488,9 @@ export async function getCategoryServers(category: string): Promise<Server[]> {
     }
   } catch (e) {}
 
-  const all = serversData as unknown as Server[];
-  return all.filter((s) => s.category === category).map(normalizeServer);
+  return snapshotCatalogServers()
+    .filter((s) => s.category === category)
+    .map(normalizeServer);
 }
 
 /** Category counts computed via lightweight SQL GROUP BY for category sidebar links. */
@@ -502,7 +517,7 @@ export async function getCategoryCounts(): Promise<Record<string, number>> {
   } catch (e) {}
 
   const counts: Record<string, number> = {};
-  for (const s of serversData as unknown as Server[]) {
+  for (const s of snapshotCatalogServers()) {
     if (s.category) counts[s.category] = (counts[s.category] || 0) + 1;
   }
   return counts;
@@ -531,7 +546,7 @@ export async function getPopularServers(limit: number): Promise<Server[]> {
     }
   } catch (e) {}
 
-  return (serversData as unknown as Server[])
+  return snapshotCatalogServers()
     .map(normalizeServer)
     .sort(
       (a, b) =>
@@ -547,7 +562,7 @@ export async function getPopularServers(limit: number): Promise<Server[]> {
  * D1 query + normalize pass instead of each re-scanning the whole table.
  */
 export const getActiveServers = cache(async (): Promise<Server[]> => {
-  let servers = serversData as unknown as Server[];
+  let servers = snapshotCatalogServers();
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -621,7 +636,7 @@ const SCORING_SERVER_COLUMNS = {
  * while D1 hands back and drizzle parses the full rows, not afterward.
  */
 export const getActiveServersForScoring = cache(async (): Promise<Server[]> => {
-  let servers = serversData as unknown as Server[];
+  let servers = snapshotCatalogServers();
   let fromDb = false;
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
@@ -704,7 +719,7 @@ export async function getServersForLlmsTxt(): Promise<LlmsTxtServer[]> {
   } catch {
     // Fall back to static JSON
   }
-  return (serversData as unknown as LlmsTxtServer[]).map((s) => ({
+  return snapshotCatalogServers().map((s) => ({
     id: s.id,
     name: s.name,
     description: s.description ?? null,
@@ -915,7 +930,7 @@ export async function getDirectoryFeedPage(
 
   // Static fallback (local dev / DB unavailable): page the bundled snapshot with
   // the same newest-first ordering so behavior matches production.
-  const all = (serversData as unknown as Server[])
+  const all = snapshotCatalogServers()
     .map(normalizeServer)
     .sort((a, b) => toEpoch(b.createdAt) - toEpoch(a.createdAt));
   const total = all.length;
@@ -1011,8 +1026,7 @@ export async function getServerById(id: string): Promise<Server | undefined> {
   } catch (e) {
     // Fall back to static JSON
   }
-  const servers = serversData as unknown as Server[];
-  const found = servers.find((s) => s.id === id);
+  const found = snapshotServers().find((s) => s.id === id);
   return found ? normalizeServer(found) : undefined;
 }
 
@@ -1880,7 +1894,7 @@ async function getSameCategoryActiveServers(
   }
 
   if (sameCategory.length === 0) {
-    const allServers = serversData as unknown as Server[];
+    const allServers = snapshotCatalogServers();
     // Slice before normalizing: normalizeServer parses this row's JSON columns, so
     // mapping the whole category first would allocate exactly what the cap avoids.
     sameCategory = allServers
@@ -1930,8 +1944,7 @@ export const getSameCategoryAlternativesCount = cache(
       // Fall back to static JSON
     }
 
-    const allServers = serversData as unknown as Server[];
-    return allServers.filter(
+    return snapshotCatalogServers().filter(
       (s) => s.id !== currentServer.id && s.category === currentServer.category,
     ).length;
   },
@@ -1987,7 +2000,7 @@ export async function getRelatedServers(
   }
 
   if (fallbackCandidates.length === 0) {
-    const allServers = serversData as unknown as Server[];
+    const allServers = snapshotCatalogServers();
     fallbackCandidates = allServers
       .filter(
         (s) =>
@@ -2039,8 +2052,7 @@ export async function getFeaturedServers(
     // Fall back to static JSON
   }
 
-  const allServers = serversData as unknown as Server[];
-  return allServers
+  return snapshotCatalogServers()
     .map(normalizeServer)
     .filter((s) => s.id !== excludeId && isFeaturedListing(s))
     .slice(0, limit);
