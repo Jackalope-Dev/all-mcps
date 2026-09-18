@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { WORKFLOW_PROMPTS } from '@/lib/prompts';
 
 export const metadata: Metadata = {
@@ -76,7 +77,7 @@ export default function PromptsHubPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main
         className="container page-shell"

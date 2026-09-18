@@ -9,6 +9,7 @@ import {
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type React from 'react';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { PageHeader, PageShell } from '../../components/PageShell';
 
 export const metadata: Metadata = {
@@ -199,7 +200,7 @@ export default function ToolsHubPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageShell variant="default">
         <PageHeader

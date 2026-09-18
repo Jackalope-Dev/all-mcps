@@ -2,6 +2,7 @@ import { ChevronRight, Dices } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FeelingLuckyArcade } from '@/components/FeelingLuckyArcade';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 const SITE = 'https://allmcps.com';
 
@@ -63,7 +64,7 @@ export default function LuckyPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main
         className="container page-shell"

@@ -6,6 +6,7 @@ import {
 } from 'next/font/google';
 import Script from 'next/script';
 import { Suspense } from 'react';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { CommandPaletteLazy } from '../components/CommandPaletteLazy';
 import { CookieBanner } from '../components/CookieBanner';
 import { DeferredChrome } from '../components/DeferredChrome';
@@ -253,7 +254,7 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+            __html: serializeJsonLd({
               '@context': 'https://schema.org',
               '@graph': [
                 {

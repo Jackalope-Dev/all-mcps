@@ -19,6 +19,7 @@ import {
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MCP_CLIENTS } from '@/lib/clients';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { isRepositoryUrl } from '@/lib/repoUrl';
 import {
   AUTH_TYPE_LABELS,
@@ -681,7 +682,7 @@ export default async function MCPDetail({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <AdminProvider serverId={server.id}>
         <main

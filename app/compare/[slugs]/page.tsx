@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { MultiServerCompareView } from '@/components/MultiServerCompareView';
 import { PageShell } from '@/components/PageShell';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { getServerById, type Server } from '@/lib/servers';
 
 // No session/auth reads on this page — safe to ISR like the other listing pages
@@ -150,7 +151,7 @@ export default async function CompareMatrixPage({
     <PageShell>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <MultiServerCompareView servers={servers} />
     </PageShell>

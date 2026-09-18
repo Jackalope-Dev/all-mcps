@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { ContactForm } from '../../components/forms/ContactForm';
 import { PageHeader, PageShell } from '../../components/PageShell';
 
@@ -76,7 +77,7 @@ export default function ContactPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageShell variant="content" panel>
         <PageHeader

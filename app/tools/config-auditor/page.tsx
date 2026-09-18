@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ConfigAuditor } from '@/components/tools/ConfigAuditor';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 export const metadata: Metadata = {
   title: 'MCP Config Auditor & Merger — Combine Configs',
@@ -68,7 +69,7 @@ export default function ConfigAuditorPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main
         className="container page-shell"

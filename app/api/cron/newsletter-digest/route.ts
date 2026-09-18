@@ -38,10 +38,16 @@ function truncate(text: string, max: number): string {
 }
 
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return (
+    text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      // Also used inside quoted attributes (alt/src/href), where an unescaped
+      // quote in a listing name would end the attribute early.
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  );
 }
 
 const INSTALL_COMMAND_RE =

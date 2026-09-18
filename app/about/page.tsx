@@ -1,5 +1,6 @@
 import { type LucideIcon, Rocket, Search, Zap } from 'lucide-react';
 import type { Metadata } from 'next';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { PageHeader, PageShell } from '../../components/PageShell';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -96,7 +97,7 @@ export default function AboutPage() {
     <PageShell variant="content" panel className="animate-fade-in">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(aboutJsonLd) }}
       />
       <PageHeader
         title={

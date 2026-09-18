@@ -2,6 +2,7 @@ import { ArrowRight, Check, Megaphone, Sparkles, X } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { PageHeader, PageShell } from '../../components/PageShell';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -170,7 +171,7 @@ export default async function PricingPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageShell variant="tool">
         <PageHeader

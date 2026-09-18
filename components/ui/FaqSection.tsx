@@ -2,6 +2,7 @@
 
 import { ChevronDown, HelpCircle } from 'lucide-react';
 import React, { useId, useRef, useState } from 'react';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 export interface FaqItem {
   question?: React.ReactNode;
@@ -104,7 +105,7 @@ export function FaqSection({
       {jsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
         />
       )}
 

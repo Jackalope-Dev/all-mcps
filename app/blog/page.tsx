@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { BlogListClient } from '../../components/BlogListClient';
 import { PageHeader, PageShell } from '../../components/PageShell';
 import { getAllPosts, getAllTags } from '../../lib/blog';
@@ -73,7 +74,7 @@ export default function BlogPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageShell variant="default">
         <PageHeader

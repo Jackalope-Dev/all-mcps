@@ -2,6 +2,7 @@ import { BadgeCheck, ChevronRight, Download, Eye, Heart } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
@@ -162,7 +163,7 @@ export default async function BestTopicPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
         {/* Breadcrumb */}

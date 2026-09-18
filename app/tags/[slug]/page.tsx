@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import DirectoryGrid from '@/components/DirectoryGrid';
 import { PageShell } from '@/components/PageShell';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { getServersForTag } from '@/lib/tags';
 
 // getServersForTag re-derives tags for the whole active catalog via regex extraction
@@ -121,7 +122,7 @@ export default async function TagDetailPage({
     <PageShell>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <div
         style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}

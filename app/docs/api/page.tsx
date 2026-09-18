@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 
 export const metadata: Metadata = {
@@ -164,7 +165,7 @@ export default function ApiDocsPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main className="page-shell page-shell--tool">
         <div className="page-shell-inner" style={{ maxWidth: 880 }}>

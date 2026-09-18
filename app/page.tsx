@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { BentoShowcase } from '../components/BentoShowcase';
 import DirectoryGrid from '../components/DirectoryGrid';
 import { FeaturedCards } from '../components/FeaturedCards';
@@ -170,7 +171,7 @@ export default async function Home() {
     <main>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(datasetJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(datasetJsonLd) }}
       />
       {/*
         Marketing chrome lives here (not inside DirectoryGrid) so a hydration

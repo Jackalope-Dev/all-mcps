@@ -1,4 +1,4 @@
-import { isSafeFetchTarget } from './urlSafety';
+import { isSafeFetchTarget, safeFetch } from './urlSafety';
 
 /**
  * Minimal server-side MCP (Streamable HTTP) client used by the live Protocol
@@ -91,7 +91,7 @@ async function rpc(
   };
   if (sessionId) h['Mcp-Session-Id'] = sessionId;
 
-  const res = await fetch(endpoint, {
+  const res = await safeFetch(endpoint, {
     method: 'POST',
     headers: h,
     body: JSON.stringify(body),
@@ -198,7 +198,7 @@ export async function callMcpEndpoint(
 
     // 2. notifications/initialized (best-effort; ignore transport hiccups)
     try {
-      await fetch(targetUrl, {
+      await safeFetch(targetUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -104,14 +104,16 @@ async function enrichWithLlm(input: {
 }
 
 function decodeHtmlEntities(input: string): string {
+  // &amp; goes last: decoding it first would turn a literal "&amp;lt;" into
+  // "&lt;" and then into "<", unescaping the text twice.
   return input
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&#x27;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&amp;/g, '&');
 }
 
 function extractMeta(html: string, names: string[]): string | null {

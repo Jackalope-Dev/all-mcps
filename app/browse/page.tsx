@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import DirectoryGrid from '../../components/DirectoryGrid';
 import {
   categoryFromSlug,
@@ -178,7 +179,7 @@ export default async function BrowsePage({
     <main>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <DirectoryGrid
         initialServers={initialForGrid}

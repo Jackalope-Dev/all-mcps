@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { TokenCalculatorTool } from '../../../components/tools/TokenCalculatorTool';
 import { FaqSection } from '../../../components/ui/FaqSection';
 
@@ -114,15 +115,15 @@ export default function TokenCalculatorPage() {
     <main className="page-shell page-shell--tool">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(webAppJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
 
       <div className="page-shell-inner">

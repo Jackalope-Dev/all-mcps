@@ -2,6 +2,7 @@ import { ChevronRight, Download, Eye, Heart } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 import { Badge } from '../../../components/ui/Badge';
@@ -226,7 +227,7 @@ export default async function CategoryLandingPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
         {/* Breadcrumb */}

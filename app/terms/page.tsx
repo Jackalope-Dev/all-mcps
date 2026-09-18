@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -59,7 +60,7 @@ export default function TermsPage() {
     <main className="page-shell page-shell--content">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <div className="page-shell-inner">
         <div className="surface page-panel">

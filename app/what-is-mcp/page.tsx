@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FaqSection } from '@/components/ui/FaqSection';
 import { TableOfContents, type TocItem } from '@/components/ui/TableOfContents';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 export const metadata: Metadata = {
   title: 'What is Model Context Protocol? (MCP Guide)',
@@ -125,7 +126,7 @@ export default function WhatIsMCPPage() {
       <div className="page-shell-inner">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
         />
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">

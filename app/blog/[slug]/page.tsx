@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { Badge } from '../../../components/ui/Badge';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
@@ -176,7 +177,7 @@ export default async function BlogPostPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main className="page-shell page-shell--default">
         <div className="page-shell-inner">

@@ -226,8 +226,11 @@ export function validateAdPayload(data: {
   if (!data.logoUrl || !isValidLogo) {
     return { valid: false, error: 'Please upload a logo image for your ad.' };
   }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!data.advertiserEmail || !emailRegex.test(data.advertiserEmail.trim())) {
+  // Dot-separated domain labels can't overlap each other, so this stays linear
+  // on hostile input (the older `[^\s@]+\.[^\s@]+` backtracked quadratically).
+  const emailRegex = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+  const advertiserEmail = data.advertiserEmail?.trim() ?? '';
+  if (advertiserEmail.length > 254 || !emailRegex.test(advertiserEmail)) {
     return {
       valid: false,
       error:

@@ -25,6 +25,7 @@ import {
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { TrendChart } from '../../components/TrustCharts';
 import { CALLER_COLORS } from '../../lib/accessLog';
 import type {
@@ -718,7 +719,7 @@ export default async function TrustPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main className="page-shell page-shell--tool">
         <div className="page-shell-inner" style={{ maxWidth: 960 }}>

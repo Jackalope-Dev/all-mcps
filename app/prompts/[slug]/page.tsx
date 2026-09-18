@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { CopyBlock } from '@/components/ui/CopyBlock';
 import { FaqSection } from '@/components/ui/FaqSection';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { getWorkflowBySlug, WORKFLOW_PROMPTS } from '@/lib/prompts';
 
 export function generateStaticParams() {
@@ -127,7 +128,7 @@ export default async function WorkflowDetailPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main
         className="container page-shell"

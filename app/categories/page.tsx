@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { CategoryGrid } from '../../components/CategoryGrid';
 import { PageHeader, PageShell } from '../../components/PageShell';
 import serversData from '../../data/mcp-servers.json';
@@ -179,7 +180,7 @@ export default async function CategoriesPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageShell variant="default">
         {/* Breadcrumb */}

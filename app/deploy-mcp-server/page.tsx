@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CopyBlock } from '@/components/ui/CopyBlock';
 import { FaqSection } from '@/components/ui/FaqSection';
 import { TableOfContents, type TocItem } from '@/components/ui/TableOfContents';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 export const metadata: Metadata = {
   title: 'Deploying & Hosting Remote MCP Servers Guide',
@@ -128,17 +129,19 @@ export default function DeployMCPServerPage() {
       <div className="page-shell-inner">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }}
         />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(techArticleJsonLd),
+            __html: serializeJsonLd(techArticleJsonLd),
           }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd(breadcrumbJsonLd),
+          }}
         />
 
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">

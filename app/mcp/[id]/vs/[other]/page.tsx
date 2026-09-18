@@ -20,6 +20,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { Badge } from '../../../../../components/ui/Badge';
 import { CopyBlock } from '../../../../../components/ui/CopyBlock';
 import { FaqSection } from '../../../../../components/ui/FaqSection';
@@ -476,7 +477,7 @@ export default async function ComparePage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main className="container page-shell" style={{ paddingBottom: '5rem' }}>
         {/* Breadcrumb Navigation */}

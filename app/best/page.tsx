@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { PageHeader, PageShell } from '../../components/PageShell';
 import { Card } from '../../components/ui/Card';
 import {
@@ -208,7 +209,7 @@ export default function BestIndexPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageShell variant="default">
         <nav aria-label="Breadcrumb">

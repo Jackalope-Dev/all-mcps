@@ -9,6 +9,7 @@ import {
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { ClientConfigSection } from '../../../components/clients/ClientConfigSection';
 import { ClientFaqAccordion } from '../../../components/clients/ClientFaqAccordion';
 import { ServerConfigCopyButton } from '../../../components/clients/ServerConfigCopyButton';
@@ -160,7 +161,7 @@ export default async function ClientPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
         {/* Breadcrumb */}

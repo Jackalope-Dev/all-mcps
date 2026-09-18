@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { PageHeader, PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 export const metadata: Metadata = {
   title: 'Model Context Protocol Guides & Tutorials',
@@ -302,7 +303,7 @@ export default function GuidesLandingPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageShell variant="default">
         <PageHeader

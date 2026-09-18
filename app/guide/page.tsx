@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CopyBlock } from '@/components/ui/CopyBlock';
 import { TableOfContents, type TocItem } from '@/components/ui/TableOfContents';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 export const metadata: Metadata = {
   title: 'LLM Agents Setup & Configuration Guide',
@@ -123,15 +124,17 @@ export default function GuidePage() {
       <div className="page-shell-inner">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(articleJsonLd) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd(breadcrumbJsonLd),
+          }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(howToJsonLd) }}
         />
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
           <div className="surface page-panel min-w-0">

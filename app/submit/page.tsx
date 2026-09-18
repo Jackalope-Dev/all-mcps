@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { SubmitForm } from '../../components/forms/SubmitForm';
 import { PageHeader, PageShell } from '../../components/PageShell';
 
@@ -66,7 +67,7 @@ export default function SubmitPage() {
     <PageShell variant="content" panel>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageHeader
         title="Submit an MCP server"

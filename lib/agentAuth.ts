@@ -83,9 +83,15 @@ export function generateAgentToken(): string {
 
 /** 6-digit email confirmation code for POST /api/v1/agent/register. */
 export function generateRegistrationCode(): string {
-  return String(
-    crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000,
-  ).padStart(6, '0');
+  // Rejection sampling: 2^32 isn't a multiple of 1e6, so a bare modulo would
+  // make the low codes slightly more likely. Redraw from the uneven tail.
+  const limit = 2 ** 32 - (2 ** 32 % 1_000_000);
+  const buf = new Uint32Array(1);
+  let n: number;
+  do {
+    n = crypto.getRandomValues(buf)[0];
+  } while (n >= limit);
+  return String(n % 1_000_000).padStart(6, '0');
 }
 
 export const AGENT_TOKEN_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days

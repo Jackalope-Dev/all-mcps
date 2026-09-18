@@ -12,6 +12,7 @@ import {
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { Badge } from '../../../../components/ui/Badge';
 import { FaqSection } from '../../../../components/ui/FaqSection';
 import { SafeMarkdown } from '../../../../components/ui/SafeMarkdown';
@@ -290,7 +291,7 @@ export default async function AlternativesPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main
         className="container page-shell"

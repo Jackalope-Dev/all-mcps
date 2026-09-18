@@ -5,6 +5,7 @@ import { PageHeader, PageShell } from '@/components/PageShell';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { MCP_CLIENTS } from '@/lib/clients';
+import { serializeJsonLd } from '@/lib/jsonLd';
 
 const SITE = 'https://allmcps.com';
 
@@ -79,7 +80,7 @@ export default function ClientsIndexPage() {
     <PageShell variant="default">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
         <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { PageHeader, PageShell } from '../../components/PageShell';
 import { BadgeEmbedBuilder } from '../../components/ui/BadgeEmbedBuilder';
 
@@ -71,7 +72,7 @@ export default function BadgeGeneratorPage() {
     <PageShell variant="tool" panel>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageHeader
         title="MCP Badge & Embed Generator"

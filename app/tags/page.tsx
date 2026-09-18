@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageShell } from '@/components/PageShell';
 import { TagGridClient } from '@/components/TagGridClient';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { getAllTagsWithCounts } from '@/lib/tags';
 
 export const metadata: Metadata = {
@@ -95,7 +96,7 @@ export default async function TagsIndexPage() {
     <PageShell>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <div className="tags-container">
         {/* Breadcrumbs */}

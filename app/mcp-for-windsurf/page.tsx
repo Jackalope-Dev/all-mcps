@@ -9,6 +9,7 @@ import { SafeMarkdown } from '@/components/ui/SafeMarkdown';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
 import { mcpClientBySlug } from '@/lib/clients';
 import { parseServerName } from '@/lib/displayName';
+import { serializeJsonLd } from '@/lib/jsonLd';
 import { getCuratedStarterServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
@@ -89,7 +90,7 @@ export default async function WindsurfMcpPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <main
         className="container page-shell"
