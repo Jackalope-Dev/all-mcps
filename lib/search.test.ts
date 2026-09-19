@@ -1,5 +1,6 @@
 import {
   buildAiSearchText,
+  buildSearchPrefilter,
   compileQuery,
   rankServers,
   scoreServerMatch,
@@ -183,6 +184,72 @@ const rows: Row[] = [
     transitOut.length >= 1 && transitOut[0].name === 'gtfs-transit-mcp',
     'check transit times ranks GTFS Transit MCP first',
   );
+}
+
+// buildSearchPrefilter — the SQL LIKE plan searchActiveServers runs before JS scoring.
+// It must never be *narrower* than scoreServerMatch, or D1 would drop real hits
+// before the ranker ever sees them. Emulate the SQL (substring test on the
+// concatenated fields) and check every strict JS hit survives it.
+{
+  const plan = buildSearchPrefilter('find me a postgres db');
+  assert(
+    JSON.stringify(plan.terms.map((g) => g[0])) ===
+      JSON.stringify(['postgres', 'db']),
+    'prefilter drops stopwords like the scorer does',
+  );
+  assert(
+    plan.terms[0].includes('postgresql') && plan.terms[1].includes('database'),
+    'prefilter term groups carry the synonyms that can satisfy each term',
+  );
+  assert(
+    plan.terms.flat().every((p) => /^[a-z0-9]+$/.test(p)) &&
+      plan.fuzzy.every((p) => /^[a-z0-9]+$/.test(p)),
+    'every LIKE pattern is plain [a-z0-9]+ (no wildcards to escape)',
+  );
+  assert(
+    buildSearchPrefilter('!!!').terms.length === 0,
+    'all-punctuation query yields no terms',
+  );
+  assert(
+    buildSearchPrefilter('postgre').fuzzy.includes('pos') &&
+      buildSearchPrefilter('postgre').fuzzy.includes('gre'),
+    'fuzzy patterns are the leading and trailing trigrams',
+  );
+
+  const rows: Row[] = [
+    {
+      name: 'PG Admin',
+      description: 'Manage PostgreSQL clusters.',
+      category: '🗄️ Databases',
+    },
+    {
+      name: 'Coin Tracker',
+      description: 'Portfolio tools.',
+      category: '💰 Finance',
+      toolText: 'get_bitcoin_price',
+    },
+    {
+      name: 'Notes',
+      description: 'Plain notes.',
+      category: '📝 Productivity',
+      extraText: 'Sync your obsidian vault',
+    },
+  ];
+  const queries = ['postgres', 'crypto', 'obsidian notes', 'pg admin', 'db'];
+  for (const q of queries) {
+    const terms = compileQuery(q);
+    const full = terms.map((t) => t.term).join(' ');
+    const groups = buildSearchPrefilter(q).terms;
+    for (const r of rows) {
+      if (scoreServerMatch(r, terms, full) === 0) continue;
+      const hay =
+        `${r.name} ${r.category} ${r.description} ${r.toolText || ''} ${r.extraText || ''}`.toLowerCase();
+      assert(
+        groups.every((alts) => alts.some((a) => hay.includes(a))),
+        `prefilter keeps strict hit "${r.name}" for "${q}"`,
+      );
+    }
+  }
 }
 
 console.log('✓ all search tests passed');

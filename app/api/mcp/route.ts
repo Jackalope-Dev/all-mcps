@@ -21,11 +21,6 @@ import {
   rateLimitedResponse,
 } from '@/lib/rateLimit';
 import {
-  buildAiSearchText,
-  hybridRankServers,
-  rankServers,
-} from '@/lib/search';
-import {
   AUTH_TYPES,
   COMPATIBLE_CLIENT_SLUGS,
   MAINTENANCE_STATUSES,
@@ -34,10 +29,9 @@ import {
 } from '@/lib/serverEnums';
 import {
   formatServerAsMarkdown,
-  getActiveServersForScoring,
   getCategoryCounts,
-  getCategoryServers,
   getServerById,
+  searchActiveServers,
 } from '@/lib/servers';
 import { submitListing } from '@/lib/submitListing';
 
@@ -520,49 +514,14 @@ export async function POST(request: Request) {
           );
         }
 
-        let servers = category
-          ? await getCategoryServers(category)
-          : await getActiveServersForScoring();
-
-        if (query) {
-          let vectorMatches: Array<{ id: string; score: number }> = [];
-          try {
-            const { getCloudflareContext } = await import(
-              '@opennextjs/cloudflare'
-            );
-            const cfCtx = await getCloudflareContext();
-            if (
-              cfCtx?.env &&
-              (cfCtx.env as any).VECTOR_INDEX &&
-              (cfCtx.env as any).AI
-            ) {
-              const { queryVectorIndex } = await import('@/lib/vectorSearch');
-              vectorMatches = await queryVectorIndex(
-                query,
-                cfCtx.env as CloudflareEnv,
-                30,
-              );
-            }
-          } catch {
-            /* best-effort */
-          }
-
-          const withText = servers.map((s) => {
-            const tools = Array.isArray(s.tools) ? s.tools : [];
-            const toolText = tools
-              .map((t: { name?: string }) => t?.name || '')
-              .filter(Boolean)
-              .join(' ');
-            return { ...s, toolText, extraText: buildAiSearchText(s) };
-          });
-
-          servers =
-            vectorMatches.length > 0
-              ? hybridRankServers(withText, query, vectorMatches)
-              : rankServers(withText, query);
-        }
-
-        const results = servers.slice(0, limit);
+        // Candidate filtering happens in D1. The full catalog no longer fits in
+        // a Worker's memory (see searchActiveServers).
+        const results = await searchActiveServers({
+          query,
+          category,
+          limit,
+          vectorTopK: 30,
+        });
         let textOutput =
           results.length > 0
             ? results.map((s) => formatServerAsMarkdown(s)).join('\n---\n\n')
@@ -645,14 +604,22 @@ export async function POST(request: Request) {
           targetKeywords = ['puppeteer', 'playwright', 'brave', 'fetch'];
         }
 
-        const servers = await getActiveServersForScoring();
-        const matched = servers
-          .filter((s) => {
-            const text =
-              `${s.name} ${s.description} ${s.category}`.toLowerCase();
-            return targetKeywords.some((k) => text.includes(k));
-          })
-          .slice(0, 4);
+        // Best keyword match per slot, so the stack spans the role instead of
+        // repeating one tool. Loading the whole catalog to filter it in JS
+        // exceeded the Worker memory limit.
+        const perKeyword = await Promise.all(
+          targetKeywords.map((k) =>
+            searchActiveServers({ query: k, limit: 2, vectorTopK: 0 }),
+          ),
+        );
+        const seen = new Set<string>();
+        const matched = perKeyword
+          .map((hits) => hits.find((s) => !seen.has(s.id)))
+          .filter((s): s is NonNullable<typeof s> => {
+            if (!s) return false;
+            seen.add(s.id);
+            return true;
+          });
 
         let md = `# Recommended MCP Stack for "${args.role}"\n\n`;
         md += `Here are ${matched.length} top MCP servers recommended for this workflow:\n\n`;

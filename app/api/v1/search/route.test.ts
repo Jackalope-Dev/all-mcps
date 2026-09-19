@@ -9,9 +9,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * every category-filtered search returned 200 with zero results, for slugs and
  * for names alike, while the same listings were reachable by keyword.
  *
- * getCategoryServers is mocked with an exact-equality filter on purpose: that is
- * what D1 does (`category = ?`), so these tests fail if the route ever goes back
- * to passing an unresolved string through.
+ * searchActiveServers is mocked with an exact-equality category filter on
+ * purpose: that is what D1 does (`category = ?`), so these tests fail if the
+ * route ever goes back to passing an unresolved string through.
  */
 
 type FakeServer = {
@@ -60,12 +60,25 @@ const CATALOG: FakeServer[] = [
   },
 ];
 
-vi.mock('@/lib/servers', () => ({
-  getActiveServersForScoring: async () => CATALOG,
-  // Mirrors the D1 query: exact match against the stored category string.
-  getCategoryServers: async (category: string) =>
-    CATALOG.filter((s) => s.category === category),
-}));
+vi.mock('@/lib/servers', async () => {
+  const { rankServers } = await import('@/lib/search');
+  return {
+    // Mirrors the D1 query: exact match against the stored category string,
+    // then the shared ranker over whatever survives.
+    searchActiveServers: async (opts: {
+      query: string;
+      category?: string | null;
+      limit: number;
+    }) => {
+      const pool = opts.category
+        ? CATALOG.filter((s) => s.category === opts.category)
+        : CATALOG;
+      return opts.query
+        ? rankServers(pool, opts.query, { limit: opts.limit })
+        : pool.slice(0, opts.limit);
+    },
+  };
+});
 
 vi.mock('@/lib/ads', () => ({
   fetchActiveSponsorAd: async () => null,

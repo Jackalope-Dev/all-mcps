@@ -17,12 +17,7 @@ import {
   rateLimitedResponse,
   rateLimitHeaders,
 } from '@/lib/rateLimit';
-import {
-  buildAiSearchText,
-  hybridRankServers,
-  rankServers,
-} from '@/lib/search';
-import { getActiveServersForScoring, getCategoryServers } from '@/lib/servers';
+import { searchActiveServers } from '@/lib/servers';
 
 export async function GET(request: Request) {
   const rateLimit = checkRateLimit(`v1_search:${clientKey(request)}`, 60, 60);
@@ -59,49 +54,16 @@ export async function GET(request: Request) {
     );
   }
 
-  let servers = category
-    ? await getCategoryServers(category)
-    : await getActiveServersForScoring();
+  // Candidate filtering happens in D1. The full catalog no longer fits in a
+  // Worker's memory, so it can't be loaded and ranked here (see searchActiveServers).
+  const servers = await searchActiveServers({
+    query,
+    category,
+    limit,
+    vectorTopK: 40,
+  });
 
-  // Rank by relevance when a query is present (falls back to catalog order otherwise).
-  if (query) {
-    let vectorMatches: Array<{ id: string; score: number }> = [];
-    try {
-      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-      const cfCtx = await getCloudflareContext();
-      if (
-        cfCtx?.env &&
-        (cfCtx.env as any).VECTOR_INDEX &&
-        (cfCtx.env as any).AI
-      ) {
-        const { queryVectorIndex } = await import('@/lib/vectorSearch');
-        vectorMatches = await queryVectorIndex(
-          query,
-          cfCtx.env as CloudflareEnv,
-          40,
-        );
-      }
-    } catch {
-      /* Vector search is best-effort fallback */
-    }
-
-    const withTools = servers.map((s) => {
-      const tools = Array.isArray(s.tools) ? s.tools : [];
-      const toolText = tools
-        .map((t: { name?: string }) => t?.name || '')
-        .filter(Boolean)
-        .join(' ');
-      const extraText = buildAiSearchText(s);
-      return { ...s, toolText, extraText };
-    });
-
-    servers =
-      vectorMatches.length > 0
-        ? hybridRankServers(withTools, query, vectorMatches)
-        : rankServers(withTools, query);
-  }
-
-  const results = servers.slice(0, limit).map((server) => {
+  const results = servers.map((server) => {
     const install = resolveInstallConfig({
       id: server.id,
       name: server.name,

@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, ne, or, type SQL, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { cache } from 'react';
 import serversData from '../data/mcp-servers.json';
@@ -15,7 +15,16 @@ import { categoryFromSlug } from './categories';
 import { cleanListingDescription } from './description';
 import { isFeaturedListing } from './featuredStatus';
 import { installConfidenceNote, resolveInstallConfig } from './installConfig';
-import { buildAiSearchText, engagementScore } from './search';
+import {
+  buildAiSearchText,
+  buildSearchPrefilter,
+  type Engagement,
+  engagementScore,
+  hybridRankServers,
+  rankServers,
+  type Searchable,
+  type SearchPrefilter,
+} from './search';
 
 export type ServerTool = {
   name: string;
@@ -665,6 +674,401 @@ export const getActiveServersForScoring = cache(async (): Promise<Server[]> => {
     tools: s.tools?.map((t) => ({ name: t.name, description: t.description })),
   }));
 });
+
+/**
+ * Most rows one search prefilter pass hands back to the Worker. Slim candidate rows
+ * are a few KB each, so this stays far below the Worker memory limit whatever the
+ * query. Name hits and engagement are sorted first so the cut drops the weakest
+ * rows. A broad single term like "ai" matches ~13k listings, and callers only take
+ * up to 100 results.
+ */
+const SEARCH_CANDIDATE_CAP = 1500;
+
+/** D1 rejects statements with more than 100 bound parameters. */
+const D1_ID_CHUNK = 90;
+
+/**
+ * Every column scoreServerMatch can match on, concatenated inside SQLite. Raw
+ * `tools` JSON is a superset of the tool names the JS scorer reads, which is
+ * fine here: extra recall only costs a JS re-score, and missing recall would drop
+ * real hits.
+ */
+const SEARCH_HAYSTACK_SQL = [
+  'name',
+  'category',
+  'description',
+  'ai_summary',
+  'ai_overview',
+  'ai_use_cases',
+  'ai_features',
+  'tags',
+  'license',
+  'pricing_model',
+  'auth_type',
+  'compatible_clients',
+  'tools',
+]
+  .map((c) => `coalesce(${c}, '')`)
+  .join(` || ' ' || `);
+
+/** rankServers' typo fallback only looks at name, category and description. */
+const FUZZY_HAYSTACK_SQL = ['name', 'category', 'description']
+  .map((c) => `coalesce(${c}, '')`)
+  .join(` || ' ' || `);
+
+/**
+ * Just the text rankServers/hybridRankServers score, plus the engagement
+ * tie-breakers. Tool names come out of SQLite as a single string, so tool
+ * schemas never reach the Worker. The AI prose is clipped to buildAiSearchText's
+ * 600-char cap.
+ */
+const SEARCH_CANDIDATE_SELECT_SQL = `s.id AS id, s.name AS name, s.description AS description, s.category AS category,
+  substr(s.ai_summary, 1, 600) AS aiSummary, substr(s.ai_overview, 1, 600) AS aiOverview,
+  s.ai_use_cases AS aiUseCases, s.ai_features AS aiFeatures, s.tags AS tags, s.license AS license,
+  s.pricing_model AS pricingModel, s.auth_type AS authType, s.compatible_clients AS compatibleClients,
+  s.upvotes AS upvotes, s.copies AS copies, s.views AS views,
+  s.github_stars AS githubStars, s.npm_downloads AS npmDownloads,
+  CASE WHEN json_valid(s.tools) THEN (
+    SELECT group_concat(json_extract(je.value, '$.name'), ' ') FROM json_each(s.tools) AS je
+  ) END AS toolText`;
+
+type SearchCandidateRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  aiSummary: string | null;
+  aiOverview: string | null;
+  aiUseCases: string | null;
+  aiFeatures: string | null;
+  tags: string | null;
+  license: string | null;
+  pricingModel: string | null;
+  authType: string | null;
+  compatibleClients: string | null;
+  upvotes: number | null;
+  copies: number | null;
+  views: number | null;
+  githubStars: number | null;
+  npmDownloads: number | null;
+  toolText: string | null;
+};
+
+type SearchCandidate = Searchable &
+  Engagement & {
+    id: string;
+  };
+
+function toSearchCandidate(row: SearchCandidateRow): SearchCandidate {
+  return {
+    id: row.id,
+    name: row.name,
+    description: cleanListingDescription(row.description),
+    category: row.category,
+    toolText: row.toolText,
+    extraText: buildAiSearchText({
+      aiSummary: row.aiSummary,
+      aiOverview: row.aiOverview,
+      aiUseCases: parseStringArray(row.aiUseCases),
+      aiFeatures: parseStringArray(row.aiFeatures),
+      tags: parseStringArray(row.tags),
+      license: row.license,
+      pricingModel: row.pricingModel,
+      authType: row.authType,
+      compatibleClients: parseStringArray(row.compatibleClients),
+    }),
+    upvotes: row.upvotes,
+    copies: row.copies,
+    views: row.views,
+    githubStars: row.githubStars,
+    npmDownloads: row.npmDownloads,
+  };
+}
+
+type D1Drizzle = ReturnType<typeof drizzle>;
+
+/**
+ * One prefilter pass: 'all' = every term group matches (the scorer's strict AND),
+ * 'any' = at least one term matches (its relaxed OR), 'fuzzy' = a typo-tolerant
+ * trigram hit on name/category/description.
+ *
+ * The haystack is concatenated once per row in a MATERIALIZED CTE. Inlined, SQLite
+ * rebuilds it for every LIKE, which is about 2x slower on a synonym-heavy query
+ * (measured ~650ms vs ~310ms on the live catalog).
+ */
+async function prefilterSearchCandidates(
+  db: D1Drizzle,
+  plan: SearchPrefilter,
+  mode: 'all' | 'any' | 'fuzzy',
+  category: string | null,
+): Promise<SearchCandidate[]> {
+  const like = (p: string) => sql`h LIKE ${`%${p}%`}`;
+  let where: SQL;
+  if (mode === 'all') {
+    where = sql.join(
+      plan.terms.map((alts) => sql`(${sql.join(alts.map(like), sql` OR `)})`),
+      sql` AND `,
+    );
+  } else {
+    const patterns = mode === 'any' ? plan.terms.flat() : plan.fuzzy;
+    if (patterns.length === 0) return [];
+    where = sql.join(patterns.map(like), sql` OR `);
+  }
+  const nameHits = sql.join(
+    plan.terms.map(
+      ([term]) => sql`(CASE WHEN name LIKE ${`%${term}%`} THEN 1 ELSE 0 END)`,
+    ),
+    sql` + `,
+  );
+  const haystack = sql.raw(
+    mode === 'fuzzy' ? FUZZY_HAYSTACK_SQL : SEARCH_HAYSTACK_SQL,
+  );
+  const categoryFilter = category ? sql` AND category = ${category}` : sql``;
+
+  const rows = await db.all<SearchCandidateRow>(sql`
+    WITH c AS MATERIALIZED (
+      SELECT id, name, (upvotes * 5 + copies + views * 0.05) AS eng, ${haystack} AS h
+      FROM servers
+      WHERE status = 'active'${categoryFilter}
+    ),
+    m AS (
+      SELECT id FROM c WHERE ${where}
+      ORDER BY ${nameHits} DESC, eng DESC
+      LIMIT ${SEARCH_CANDIDATE_CAP}
+    )
+    SELECT ${sql.raw(SEARCH_CANDIDATE_SELECT_SQL)}
+    FROM servers s JOIN m ON m.id = s.id
+  `);
+  return rows.map(toSearchCandidate);
+}
+
+/** Slim candidate rows for specific ids (vector-search recall), active only. */
+async function searchCandidatesByIds(
+  db: D1Drizzle,
+  ids: string[],
+  category: string | null,
+): Promise<SearchCandidate[]> {
+  const out: SearchCandidate[] = [];
+  const categoryFilter = category ? sql` AND s.category = ${category}` : sql``;
+  for (let i = 0; i < ids.length; i += D1_ID_CHUNK) {
+    const chunk = ids.slice(i, i + D1_ID_CHUNK);
+    const rows = await db.all<SearchCandidateRow>(sql`
+      SELECT ${sql.raw(SEARCH_CANDIDATE_SELECT_SQL)}
+      FROM servers s
+      WHERE s.status = 'active'${categoryFilter}
+        AND s.id IN (${sql.join(
+          chunk.map((id) => sql`${id}`),
+          sql`, `,
+        )})
+    `);
+    out.push(...rows.map(toSearchCandidate));
+  }
+  return out;
+}
+
+/** Full scoring-column rows for the final result ids, in the order given. */
+async function hydrateSearchResults(
+  db: D1Drizzle,
+  ids: string[],
+): Promise<Server[]> {
+  const found = new Map<string, Server>();
+  for (let i = 0; i < ids.length; i += D1_ID_CHUNK) {
+    const rows = await db
+      .select(SCORING_SERVER_COLUMNS)
+      .from(serversTable)
+      .where(
+        and(
+          inArray(serversTable.id, ids.slice(i, i + D1_ID_CHUNK)),
+          eq(serversTable.status, 'active'),
+        ),
+      );
+    for (const r of rows) {
+      found.set(r.id, normalizeServer(r as unknown as Server));
+    }
+  }
+  return ids.map((id) => found.get(id)).filter((s): s is Server => Boolean(s));
+}
+
+async function getSearchDb(): Promise<{
+  db: D1Drizzle;
+  env: CloudflareEnv;
+} | null> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    const env = ctx?.env as CloudflareEnv | undefined;
+    if (env && (env as any).DB) {
+      return { db: drizzle((env as any).DB), env };
+    }
+  } catch {
+    // No Cloudflare context (local dev without bindings, tests)
+  }
+  return null;
+}
+
+/**
+ * Most-engaged active listings, optionally scoped to a category, capped in SQL.
+ * This is the no-query result for /api/v1/search and the MCP search tool.
+ * Those used to load the whole catalog (or a 13k-row category) just to slice off
+ * the first `limit` rows.
+ */
+async function getTopActiveServers(
+  category: string | null,
+  limit: number,
+): Promise<Server[]> {
+  const conn = await getSearchDb();
+  if (conn) {
+    try {
+      const rows = await conn.db
+        .select(SCORING_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(
+          category
+            ? and(
+                eq(serversTable.status, 'active'),
+                eq(serversTable.category, category),
+              )
+            : eq(serversTable.status, 'active'),
+        )
+        .orderBy(
+          desc(serversTable.views),
+          desc(serversTable.copies),
+          desc(serversTable.upvotes),
+        )
+        .limit(limit);
+      if (rows.length > 0) {
+        return rows.map((r) => normalizeServer(r as unknown as Server));
+      }
+    } catch {
+      // Fall back to static JSON
+    }
+  }
+  return snapshotCatalogServers()
+    .filter((s) => !category || s.category === category)
+    .map(normalizeServer)
+    .sort((a, b) => engagementScore(b) - engagementScore(a))
+    .slice(0, limit);
+}
+
+/** Static-snapshot search when D1 isn't reachable. The snapshot is small enough to rank in JS. */
+async function searchSnapshot(
+  query: string,
+  category: string | null,
+  limit: number,
+): Promise<Server[]> {
+  const pool = snapshotCatalogServers()
+    .filter((s) => !category || s.category === category)
+    .map(normalizeServer)
+    .map((s) => ({
+      ...s,
+      toolText: (s.tools || []).map((t) => t.name).join(' '),
+      extraText: buildAiSearchText(s),
+    }));
+  return rankServers(pool, query, { limit });
+}
+
+/**
+ * Keyword + vector search over the active catalog for /api/v1/search and the
+ * MCP `search_mcp_servers` tool. Ranking is the same rankServers /
+ * hybridRankServers every other search surface uses. What changed is where the
+ * candidates come from.
+ *
+ * Both endpoints used to load the entire active catalog (getActiveServersForScoring)
+ * and rank it in JS. At ~22.5k listings and ~23MB of tools JSON that blew the
+ * Worker memory limit on every search (outcome: exceededMemory, ~2.6s wall time),
+ * even for a query matching one row. Now SQLite discards non-matches with a
+ * LIKE prefilter shaped like the scorer's own passes (strict AND, then relaxed OR,
+ * then typo-tolerant), the Worker only scores slim candidate rows, and full rows
+ * are loaded just for the `limit` results that are returned.
+ */
+export async function searchActiveServers(opts: {
+  query: string;
+  category?: string | null;
+  limit: number;
+  /** Vectorize neighbours to blend in; 0 skips the embedding call entirely. */
+  vectorTopK?: number;
+}): Promise<Server[]> {
+  const { query, limit } = opts;
+  const category = opts.category || null;
+  if (!query.trim()) return getTopActiveServers(category, limit);
+
+  const plan = buildSearchPrefilter(query);
+  // All-punctuation query: a real search with no possible matches (see rankServers).
+  if (plan.terms.length === 0) return [];
+
+  const conn = await getSearchDb();
+  if (!conn) return searchSnapshot(query, category, limit);
+  const { db, env } = conn;
+
+  try {
+    const vectorTopK = opts.vectorTopK ?? 40;
+    let vectorMatches: Array<{ id: string; score: number }> = [];
+    if (vectorTopK > 0 && (env as any).VECTOR_INDEX && (env as any).AI) {
+      try {
+        const { queryVectorIndex } = await import('./vectorSearch');
+        vectorMatches = await queryVectorIndex(query, env, vectorTopK);
+      } catch {
+        /* Vector search is best-effort */
+      }
+    }
+
+    let ranked: SearchCandidate[];
+    if (vectorMatches.length > 0) {
+      // hybridRankServers scores in relaxed (OR) mode, so give it partial
+      // matches too, plus the vector hits keyword search can't see.
+      const pool = new Map<string, SearchCandidate>();
+      const add = (rows: SearchCandidate[]) => {
+        for (const r of rows) pool.set(r.id, r);
+      };
+      add(await prefilterSearchCandidates(db, plan, 'all', category));
+      if (plan.terms.length >= 2) {
+        add(await prefilterSearchCandidates(db, plan, 'any', category));
+      }
+      const missing = vectorMatches
+        .map((m) => m.id)
+        .filter((id) => !pool.has(id));
+      add(await searchCandidatesByIds(db, missing, category));
+      ranked = hybridRankServers(
+        Array.from(pool.values()),
+        query,
+        vectorMatches,
+        {
+          limit,
+        },
+      );
+    } else {
+      // Same escalation rankServers does internally, one SQL pass per stage so
+      // each stage only ever pulls its own matches into memory.
+      ranked = rankServers(
+        await prefilterSearchCandidates(db, plan, 'all', category),
+        query,
+        { limit },
+      );
+      if (ranked.length === 0 && plan.terms.length >= 2) {
+        ranked = rankServers(
+          await prefilterSearchCandidates(db, plan, 'any', category),
+          query,
+          { limit },
+        );
+      }
+      if (ranked.length === 0) {
+        ranked = rankServers(
+          await prefilterSearchCandidates(db, plan, 'fuzzy', category),
+          query,
+          { limit },
+        );
+      }
+    }
+
+    return hydrateSearchResults(
+      db,
+      ranked.map((s) => s.id),
+    );
+  } catch (e) {
+    console.error('searchActiveServers: D1 search failed', e);
+    return searchSnapshot(query, category, limit);
+  }
+}
 
 /**
  * Efficient candidate fetch for a curated /best/[topic] page.

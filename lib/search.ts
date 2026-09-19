@@ -248,6 +248,35 @@ export function tokenizeQuery(query: string): string[] {
   return tokens;
 }
 
+/**
+ * LIKE-pattern plan for narrowing the catalog in SQL before scoreServerMatch runs
+ * in JS. The catalog is too big to pull into a Worker whole, so the database has
+ * to discard non-matches first. `terms` mirrors the scorer's strict AND pass: one
+ * group per query term, holding the term plus the synonyms that can satisfy it.
+ * `fuzzy` feeds the typo fallback: a Levenshtein match within 2 edits almost
+ * always keeps the first or last three letters of the term intact.
+ *
+ * Every pattern is `[a-z0-9]+`, so it's safe inside `%…%` with no escaping.
+ */
+export type SearchPrefilter = { terms: string[][]; fuzzy: string[] };
+
+/** Cap on term groups sent to SQL. Very long queries rarely AND-match anyway. */
+const PREFILTER_MAX_TERMS = 6;
+
+export function buildSearchPrefilter(query: string): SearchPrefilter {
+  const tokens = tokenizeQuery(query).slice(0, PREFILTER_MAX_TERMS);
+  const terms = tokens.map((term) =>
+    Array.from(new Set([term, ...(SYNONYMS[term] || [])])),
+  );
+  const fuzzy = new Set<string>();
+  for (const term of tokens) {
+    if (term.length < 3) continue;
+    fuzzy.add(term.slice(0, 3));
+    fuzzy.add(term.slice(-3));
+  }
+  return { terms, fuzzy: Array.from(fuzzy) };
+}
+
 /** Precompile a query once (word-boundary regexes) so scoring stays cheap per row. */
 export function compileQuery(query: string): QueryTerm[] {
   return tokenizeQuery(query).map((term) => ({
