@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { serverHealthChecks, servers } from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
+import { cronServerColumns } from '../../../../lib/cronServerColumns';
 import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
 import {
   resolveInstallConfig,
@@ -116,13 +117,13 @@ export async function POST(req: Request) {
     const half = Math.floor(BATCH_SIZE / 2);
     const [oldest, popular] = await Promise.all([
       db
-        .select()
+        .select(cronServerColumns)
         .from(servers)
         .where(eq(servers.status, 'active'))
         .orderBy(asc(servers.lastCheckedAt))
         .limit(half),
       db
-        .select()
+        .select(cronServerColumns)
         .from(servers)
         .where(eq(servers.status, 'active'))
         .orderBy(

@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { classifyCategory } from '../../../../lib/categoryClassifier';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
+import { cronServerColumns } from '../../../../lib/cronServerColumns';
 import { cleanListingDescription } from '../../../../lib/description';
 import { getGithubToken } from '../../../../lib/githubAuth';
 import {
@@ -117,7 +118,7 @@ export async function POST(req: Request) {
 
     // Prefer listings that still look unenriched or have lower-quality avatars (github_user).
     const candidates = await db
-      .select()
+      .select(cronServerColumns)
       .from(servers)
       .where(
         and(
@@ -143,7 +144,7 @@ export async function POST(req: Request) {
       candidates.length > 0
         ? candidates.slice(0, BATCH_SIZE)
         : await db
-            .select()
+            .select(cronServerColumns)
             .from(servers)
             .where(eq(servers.status, 'active'))
             .orderBy(asc(servers.lastCheckedAt))

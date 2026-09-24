@@ -378,8 +378,11 @@ export async function getSiteStats(): Promise<SiteStats> {
           upvotes: servers.upvotes,
           views: servers.views,
           lastCommitAt: servers.lastCommitAt,
-          description: servers.description,
-          tools: servers.tools,
+          // Truncated/counted in SQL: the score only needs description length
+          // (ramps out at 400 chars) and the tool count, and this query spans
+          // every active listing, so full text/JSON here is a big heap spike.
+          description: sql<string>`substr(${servers.description}, 1, 500)`,
+          toolsCount: sql<number>`case when ${servers.tools} is not null and json_valid(${servers.tools}) then json_array_length(${servers.tools}) else 0 end`,
           installCommand: servers.installCommand,
           installPackage: servers.installPackage,
           suggestedInstallCommand: servers.suggestedInstallCommand,
@@ -509,7 +512,12 @@ export async function getSiteStats(): Promise<SiteStats> {
 
     const dbQualityTiers =
       activeServersRows && activeServersRows.length > 0
-        ? calcQualityTiers(activeServersRows)
+        ? calcQualityTiers(
+            activeServersRows.map((r: any) => ({
+              ...r,
+              tools: new Array(Number(r.toolsCount) || 0),
+            })),
+          )
         : fallback.qualityTierBreakdown;
 
     const dbReciprocalBadges = Number(
