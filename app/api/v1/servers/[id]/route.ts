@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
+import {
+  installConfidenceNote,
+  resolveInstallConfig,
+  toClaudeConfigSnippet,
+} from '@/lib/installConfig';
 import { listingRedirectTarget } from '@/lib/listingRedirect';
 import { computeQualityScore } from '@/lib/qualityScore';
 import {
@@ -48,6 +53,19 @@ export async function GET(
 
   const readme = await fetchServerReadme(server.url);
   const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  // Same resolver the search endpoint and /mcp/[id] use, so a remote server gets its
+  // endpoint URL and a stdio server its real package — never a guessed `npx -y <name>`.
+  const install = resolveInstallConfig({
+    id: server.id,
+    name: server.name,
+    url: server.url,
+    description: server.description,
+    installKind: server.installKind,
+    installCommand: server.installCommand,
+    installArgs: server.installArgs,
+    installPackage: server.installPackage,
+    installConfidence: server.installConfidence,
+  });
   const quality = computeQualityScore(server);
 
   // Log access (best-effort) so premium owners can see agent/LLM traffic per listing.
@@ -79,14 +97,12 @@ export async function GET(
         installName,
         qualityScore: quality.score,
         qualityTier: quality.tier,
-        claudeConfigSnippet: {
-          mcpServers: {
-            [installName]: {
-              command: 'npx',
-              args: ['-y', installName],
-            },
-          },
-        },
+        installNote: installConfidenceNote(install),
+        claudeConfigSnippet: toClaudeConfigSnippet(
+          install,
+          installName,
+          server.aiEnvVars || [],
+        ),
         detailUrl: `https://allmcps.com/mcp/${server.id}`,
         markdownUrl: `https://allmcps.com/mcp/${server.id}.md`,
         readme,
