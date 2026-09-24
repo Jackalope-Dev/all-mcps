@@ -10,7 +10,7 @@ import {
   TableOfContents,
   type TocItem,
 } from '../../../components/ui/TableOfContents';
-import { getAllPosts, getPostBySlug } from '../../../lib/blog';
+import { getAllPosts, getPostBySlug, getRelatedPosts } from '../../../lib/blog';
 import { extractToc, withHeadingAnchors } from '../../../lib/blogToc';
 import { truncateDescription, truncateTitle } from '../../../lib/ogHelpers';
 
@@ -93,6 +93,7 @@ export default async function BlogPostPage({
   }
 
   const url = `https://allmcps.com/blog/${post.slug}`;
+  const relatedPosts = getRelatedPosts(post);
   const rawToc = extractToc(post.content);
   const tocItems: TocItem[] = rawToc.map((entry) => ({
     id: entry.slug,
@@ -291,6 +292,34 @@ export default async function BlogPostPage({
                     ))}
                   </ul>
                 </div>
+              )}
+
+              {relatedPosts.length > 0 && (
+                <nav
+                  aria-label="Related articles"
+                  style={{ marginTop: '2.5rem' }}
+                >
+                  <h2 className="text-section">Related articles</h2>
+                  <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                    {relatedPosts.map((rp) => (
+                      <li key={rp.slug} style={{ marginBottom: '0.6rem' }}>
+                        <Link
+                          href={`/blog/${rp.slug}`}
+                          style={{
+                            color: 'var(--accent-color)',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {rp.title}
+                        </Link>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {' '}
+                          — {rp.excerpt}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
               )}
             </article>
 

@@ -16,6 +16,7 @@ import { cleanListingDescription } from './description';
 import { chatJson } from './openai';
 import {
   type AuthType,
+  COMPATIBLE_CLIENT_SLUGS,
   isAuthType,
   isPricingModel,
   normalizeCompatibleClients,
@@ -442,11 +443,11 @@ function buildSystemPrompt(
     'Paraphrase everything; do not copy README prose; omit any heading you cannot support from the provided material; plain paragraphs and short lists, no marketing language. Use "" if you cannot write a grounded one), ' +
     '"useCases" (3-5 short concrete strings, each starting with a verb), ' +
     '"features" (3-6 short capability strings), ' +
-    `"faq" (3-5 objects with "q" and "a" keys. Frame the questions exactly how a developer would type them into Google to solve a problem with this tool, e.g. "How do I install the ${name} MCP server?" or "Does ${name} work with Claude Desktop?". Answers must be grounded strictly in the provided material.), ` +
+    `"faq" (3-5 objects with "q" and "a" keys. The FIRST item MUST be q: "What is the ${name} MCP server?" with a self-contained 40-60 word answer that opens "${name} is an MCP server that..." and names what it connects to and its main tools — answer engines quote this verbatim, so it must make sense with no surrounding context. Frame the remaining questions exactly how a developer would type them into Google to solve a problem with this tool, e.g. "How do I install the ${name} MCP server?" or "Does ${name} work with Cursor?". Every answer must lead with the direct answer in its first sentence, then add detail. Answers must be grounded strictly in the provided material.), ` +
     '"envVars" (0-8 UPPER_SNAKE_CASE environment variable names required to run this server), ' +
     '"license" (short license name like "MIT", "Apache-2.0", or null), ' +
     '"tags" (2-5 short lowercase keyword slugs like ["github", "developer-tools", "issues"]), ' +
-    '"compatibleClients" (array of slugs from ["claude-desktop", "cursor", "windsurf", "cline"] mentioned or compatible)';
+    `"compatibleClients" (array of slugs from ${JSON.stringify(COMPATIBLE_CLIENT_SLUGS)}: include every client the README names, plus — for a standard stdio or streamable-HTTP server with no client-specific requirements — the general-purpose clients that support any MCP server)`;
 
   if (!omitStructured) {
     prompt +=
@@ -630,8 +631,7 @@ export async function generateListingFaq(
     messages: [
       {
         role: 'system',
-        content:
-          'Write FAQ pairs for an MCP server listing. Return ONLY JSON: {"faq":[{"q":"...","a":"..."}]} with 3-5 grounded Q&A pairs. Questions should match how a developer would search. Do not invent facts.',
+        content: `Write FAQ pairs for an MCP server listing. Return ONLY JSON: {"faq":[{"q":"...","a":"..."}]} with 3-5 grounded Q&A pairs. The first pair MUST be q: "What is the ${input.name} MCP server?" with a self-contained 40-60 word answer opening "${input.name} is an MCP server that...". Other questions should match how a developer would search. Every answer leads with the direct answer in its first sentence. Do not invent facts.`,
       },
       {
         role: 'user',

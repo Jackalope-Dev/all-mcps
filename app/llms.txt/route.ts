@@ -1,5 +1,6 @@
 import { extractRequestMeta, logApiAccess } from '@/lib/accessLog';
 import { BEST_TOPICS } from '@/lib/bestTopics';
+import { getAllPosts } from '@/lib/blog';
 import { categorySlug } from '@/lib/categories';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { WORKFLOW_PROMPTS } from '@/lib/prompts';
@@ -85,6 +86,13 @@ export async function GET(request: Request) {
   content += `1. Open your \`claude_desktop_config.json\`.\n`;
   content += `2. Add \`"server-name": { "command": "npx", "args": ["-y", "package-name"] }\` under \`mcpServers\`.\n\n`;
 
+  // Every article, so answer engines can cite the specific post rather than /blog.
+  content += `## Articles\n`;
+  for (const p of getAllPosts()) {
+    content += `- [${p.title}](https://allmcps.com/blog/${p.slug}): ${p.excerpt}\n`;
+  }
+  content += `\n`;
+
   content += `## Useful Links\n`;
   content += `- Directory Homepage: https://allmcps.com\n`;
   content += `- Best MCP Servers by Use Case: https://allmcps.com/best\n`;
@@ -102,6 +110,7 @@ export async function GET(request: Request) {
   content += `- MCP for SEO & AEO Automation Guide: https://allmcps.com/mcp-for-seo\n`;
   content += `- MCP Protocol Versioning Explained (2026-07-28 stateless revision): https://allmcps.com/mcp-protocol-versioning\n`;
   content += `- MCP Transports Explained (stdio vs Streamable HTTP): https://allmcps.com/mcp-transports\n`;
+  content += `- State of MCP (live ecosystem statistics: server counts, transports, auth, licenses, health): https://allmcps.com/state-of-mcp\n`;
   content += `- Trust & Traffic Transparency: https://allmcps.com/trust\n`;
   content += `- Pricing & Boosting: https://allmcps.com/pricing\n`;
   content += `- Free Developer Tools (Config Auditor, MCP Playground, OpenAPI-to-MCP, Protocol Inspector, Config Generator, Config Validator, Token Calculator): https://allmcps.com/tools\n`;

@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ConfigAuditor } from '@/components/tools/ConfigAuditor';
+import { FaqSection } from '@/components/ui/FaqSection';
 import { serializeJsonLd } from '@/lib/jsonLd';
 
 export const metadata: Metadata = {
@@ -109,6 +110,68 @@ export default function ConfigAuditorPage() {
         </section>
 
         <ConfigAuditor />
+
+        <div
+          style={{
+            marginTop: '3.5rem',
+            maxWidth: '800px',
+            fontSize: '0.925rem',
+            color: 'var(--text-secondary)',
+            lineHeight: 1.7,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '1.25rem',
+              color: 'var(--text-primary)',
+              marginBottom: '1rem',
+              fontWeight: 700,
+            }}
+          >
+            What the Config Auditor Checks
+          </h2>
+          <p style={{ marginBottom: '1.25rem' }}>
+            Paste a Claude Desktop, Cursor, Windsurf, Cline, VS Code or Zed MCP
+            config and the auditor parses it, detects which client format it is,
+            and checks every server entry: that it has a <code>command</code> or{' '}
+            <code>url</code>, that <code>args</code> is an array, and that no
+            argument or environment variable still contains template text such
+            as <code>&lt;YOUR_API_KEY&gt;</code> copied from a README.
+          </p>
+          <p style={{ marginBottom: '1.25rem' }}>
+            The merge panel adds a server from the directory to your existing
+            config without retyping it, so you can build up a working config
+            file in one place and paste it back into your client. For
+            step-by-step setup in each client, see the{' '}
+            <Link href="/clients">MCP client setup guides</Link>.
+          </p>
+          <FaqSection
+            title="Frequently Asked Questions (FAQ)"
+            items={[
+              {
+                question:
+                  'Why does my MCP server not show up after editing the config?',
+                answer:
+                  'The most common causes are a JSON syntax error, a server entry missing its command, args written as a string instead of an array, or a placeholder API key that was never replaced. The auditor flags each of these. Most clients also only reload MCP servers after a full restart.',
+              },
+              {
+                question: 'Which config formats does the auditor support?',
+                answer:
+                  'It reads the mcpServers format used by Claude Desktop, Cursor, Windsurf, Cline and most other clients, the servers key used by VS Code, and the context_servers key used by Zed.',
+              },
+              {
+                question: 'How do I combine two MCP config files?',
+                answer:
+                  'Paste your existing config, then use the merge panel to add servers from the directory. Each server is added under its own key, so existing entries are kept. Review the result for duplicate server names before saving.',
+              },
+              {
+                question: 'Is my configuration sent to a server?',
+                answer:
+                  'No. Auditing and merging run entirely in your browser, so API keys and file paths in the config never leave your device.',
+              },
+            ]}
+          />
+        </div>
       </main>
     </>
   );

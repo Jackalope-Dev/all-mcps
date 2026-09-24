@@ -258,6 +258,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/state-of-mcp" className="nav-link">
+                State of MCP (stats)
+              </Link>
+            </li>
+            <li>
               <Link href="/blog" className="nav-link">
                 Blog &amp; updates
               </Link>

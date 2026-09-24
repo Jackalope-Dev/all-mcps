@@ -3,6 +3,7 @@ import { BEST_TOPICS } from '../lib/bestTopics';
 import { getAllPosts } from '../lib/blog';
 import { categorySlug, DIRECTORY_CATEGORIES } from '../lib/categories';
 import { MCP_CLIENTS } from '../lib/clients';
+import { comparePath, INDEXABLE_COMPARE_PAIRS } from '../lib/comparePairs';
 import { WORKFLOW_PROMPTS } from '../lib/prompts';
 import {
   getSitemapServers,
@@ -75,6 +76,7 @@ async function buildCoreSitemap(
     staticEntry('/mcp-troubleshooting', 'monthly', 0.9),
     staticEntry('/mcp-protocol-versioning', 'monthly', 0.9),
     staticEntry('/mcp-transports', 'monthly', 0.9),
+    staticEntry('/state-of-mcp', 'weekly', 0.9),
     staticEntry('/pricing', 'monthly', 0.7),
     staticEntry('/tools', 'monthly', 0.9),
     staticEntry('/tools/openapi-to-mcp', 'monthly', 0.9),
@@ -140,7 +142,10 @@ async function buildCoreSitemap(
       lastModified:
         inCat.length > 0
           ? maxServerLastMod(inCat)
-          : safeDateISO(STATIC_PAGE_LASTMOD['/best']),
+          : safeDateISO(
+              STATIC_PAGE_LASTMOD[`/best/${t.slug}`] ??
+                STATIC_PAGE_LASTMOD['/best'],
+            ),
       changeFrequency: 'weekly',
       priority: 0.85,
     });
@@ -149,7 +154,10 @@ async function buildCoreSitemap(
   for (const c of MCP_CLIENTS) {
     entries.push({
       url: `${BASE}/clients/${c.slug}`,
-      lastModified: safeDateISO(STATIC_PAGE_LASTMOD['/clients']),
+      lastModified: safeDateISO(
+        STATIC_PAGE_LASTMOD[`/clients/${c.slug}`] ??
+          STATIC_PAGE_LASTMOD['/clients'],
+      ),
       changeFrequency: 'weekly',
       priority: 0.85,
     });
@@ -200,12 +208,29 @@ function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
 }
 
 function buildSecondarySitemap(
-  _servers: SitemapServer[],
+  servers: SitemapServer[],
 ): MetadataRoute.Sitemap {
   // Programmatic vs / comparison pages and alternatives pages are kept navigable
   // on-site but noindexed to avoid Google's Scaled Content Abuse penalties for large
-  // programmatic matrix doorways. They are not submitted in sitemaps.
-  return [];
+  // programmatic matrix doorways. The only exception is the small curated set in
+  // lib/comparePairs.ts, submitted under the same condition the page uses to
+  // allow indexing (both listings active with a writeup).
+  const byId = new Map(servers.map((s) => [s.id, s]));
+  const entries: MetadataRoute.Sitemap = [];
+  for (const pair of INDEXABLE_COMPARE_PAIRS) {
+    const a = byId.get(pair.a);
+    const b = byId.get(pair.b);
+    if (!a?.hasAiDoc || !b?.hasAiDoc) continue;
+    const lastA = listingLastMod(a);
+    const lastB = listingLastMod(b);
+    entries.push({
+      url: `${BASE}${comparePath(pair)}`,
+      lastModified: lastA > lastB ? lastA : lastB,
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    });
+  }
+  return entries;
 }
 
 export default async function sitemap(props: {

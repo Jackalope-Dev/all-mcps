@@ -52,3 +52,4 @@ drizzle/ingest-*.sql
 # generated one-off backfill/rollback SQL (scripts/backfill-*.ts) — run against D1, not schema migrations
 drizzle/backfill-*.sql
 drizzle/rollback-*.sql
+badge-outreach.csv

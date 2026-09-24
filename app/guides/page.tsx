@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  BarChart3,
   BookOpen,
   Bug,
   Cable,
@@ -259,6 +260,27 @@ const guidesList = [
       'What Streamable HTTP changed, and why sessions went away',
       'Why the HTTP+SSE dual-endpoint model was deprecated',
       'Failure modes by transport, and the proxy settings behind them',
+    ],
+  },
+  {
+    slug: 'state-of-mcp',
+    href: '/state-of-mcp',
+    title: 'State of MCP',
+    subtitle: 'Live Ecosystem Statistics',
+    description:
+      'Live numbers on the MCP server ecosystem: how many servers exist, local vs remote transports, npx vs uvx, authentication, licenses, health, and security advisories — computed from the full AllMCPs index.',
+    level: 'Data',
+    readTime: '4 min read',
+    icon: BarChart3,
+    accent: '#a78bfa',
+    lightAccent: '#6d28d9',
+    bentoSize: 'standard' as const,
+    badgeVariant: 'official' as const,
+    highlights: [
+      'How many MCP servers exist, and how fast the index grows',
+      'Local stdio vs remote HTTP, and npx vs uvx',
+      'Auth, pricing and license breakdowns',
+      'Health checks and OSV security advisories',
     ],
   },
 ];

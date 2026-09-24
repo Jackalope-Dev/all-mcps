@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CompareSelector } from '@/components/CompareSelector';
 import { PageShell } from '@/components/PageShell';
+import { comparePath, INDEXABLE_COMPARE_PAIRS } from '@/lib/comparePairs';
 import { getNewestActiveServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
@@ -161,6 +162,28 @@ export default async function CompareIndexPage() {
               </div>
               <ArrowRight size={16} className="compare-popular-card-arrow" />
             </Link>
+
+            {INDEXABLE_COMPARE_PAIRS.map((pair, i) => (
+              <Link
+                key={comparePath(pair)}
+                href={comparePath(pair)}
+                className={`compare-popular-card ${['compare-card-blue', 'compare-card-purple', 'compare-card-green'][i % 3]}`}
+              >
+                <div>
+                  <div className="compare-popular-card-title">{pair.label}</div>
+                  <div
+                    style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--text-secondary)',
+                      marginTop: '0.2rem',
+                    }}
+                  >
+                    {pair.blurb}
+                  </div>
+                </div>
+                <ArrowRight size={16} className="compare-popular-card-arrow" />
+              </Link>
+            ))}
           </div>
         </div>
       </div>

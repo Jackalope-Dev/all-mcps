@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import blogManifest from './blog-manifest.json';
+import { keywordTokens } from './blogPipeline/similarity';
 
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
 const FILENAME_PATTERN = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/;
@@ -96,4 +97,31 @@ export function getAllTags(): string[] {
     for (const tag of post.tags) tags.add(tag);
   }
   return Array.from(tags).sort();
+}
+
+/** Tags on nearly every post — sharing one says nothing about relatedness. */
+const GENERIC_TAGS = new Set(['MCP', 'Guides']);
+
+/**
+ * Posts most related to `post`, for the "Related articles" block: shared
+ * specific tags plus overlap of title intent tokens (same tokenizer the blog
+ * pipeline uses for cannibalization checks), newest first on ties. Gives every
+ * post — including older ones — inbound links from its topical neighbours.
+ */
+export function getRelatedPosts(post: BlogPost, limit = 3): BlogPost[] {
+  const titleTokens = keywordTokens(post.title);
+  const tags = new Set(post.tags.filter((t) => !GENERIC_TAGS.has(t)));
+  return getAllPosts()
+    .filter((p) => p.slug !== post.slug)
+    .map((p) => {
+      let score = 0;
+      for (const t of p.tags) if (tags.has(t)) score += 2;
+      for (const t of keywordTokens(p.title))
+        if (titleTokens.has(t)) score += 1;
+      return { p, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || (a.p.date < b.p.date ? 1 : -1))
+    .slice(0, limit)
+    .map((x) => x.p);
 }

@@ -324,6 +324,308 @@ claude mcp list`,
       },
     ],
   },
+  {
+    slug: 'zed',
+    name: 'Zed',
+    configFilename: 'settings.json',
+    badgeText: 'Code Editor',
+    lead: 'How to add MCP servers to the Zed editor — the context_servers block in settings.json, where the file lives, and how to check the server is running in the Agent Panel.',
+    configKey: 'context_servers',
+    configLocations: [
+      { os: 'macOS / Linux', path: '~/.config/zed/settings.json' },
+      { os: 'Project', path: '.zed/settings.json in your project root' },
+    ],
+    configExample: `{
+  "context_servers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"],
+      "env": {}
+    }
+  }
+}`,
+    steps: [
+      {
+        title: 'Open your Zed settings',
+        body: 'Run "zed: open settings" from the command palette, or open the Agent Panel settings and choose to add a custom server. Zed calls MCP servers "context servers".',
+      },
+      {
+        title: 'Add the server under context_servers',
+        body: 'Add a named entry inside "context_servers" with a "command", its "args", and an optional "env" object for secrets. Zed uses context_servers — not mcpServers — so rename the key if you paste a Claude or Cursor config.',
+      },
+      {
+        title: 'Check the status in the Agent Panel',
+        body: 'Zed starts the server when the settings file is saved. Open the Agent Panel settings: a green indicator next to the server means it is running and its tools are available to the agent.',
+      },
+    ],
+    faq: [
+      {
+        q: 'How do I add an MCP server to Zed?',
+        a: 'Add an entry under "context_servers" in your Zed settings.json with a "command", "args", and optional "env". Zed starts the server on save and lists it in the Agent Panel settings with a status indicator.',
+      },
+      {
+        q: 'Why does Zed use context_servers instead of mcpServers?',
+        a: 'Zed names MCP servers "context servers" in its settings schema. The command, args, and env fields are the same as other clients, so you only need to rename the top-level key when copying a config.',
+      },
+      {
+        q: 'Can Zed extensions provide MCP servers?',
+        a: 'Yes. Some MCP servers are packaged as Zed extensions that you install from the extensions view instead of editing settings.json. Custom servers from any package manager still go in context_servers.',
+      },
+    ],
+  },
+  {
+    slug: 'codex',
+    name: 'OpenAI Codex CLI',
+    configFilename: 'config.toml',
+    badgeText: 'Terminal CLI',
+    lead: 'How to add MCP servers to the OpenAI Codex CLI — the [mcp_servers] tables in ~/.codex/config.toml, the codex mcp add command, and how to confirm tools loaded.',
+    configKey: 'mcp_servers',
+    configLocations: [{ os: 'User (global)', path: '~/.codex/config.toml' }],
+    configExample: `# ~/.codex/config.toml
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+
+[mcp_servers.filesystem.env]
+# API_KEY = "..."`,
+    steps: [
+      {
+        title: 'Add the server with the CLI or config file',
+        body: 'Run "codex mcp add <name> -- <command> [args...]", or add an [mcp_servers.<name>] table to ~/.codex/config.toml. Codex uses TOML, not JSON, so each server is its own table.',
+      },
+      {
+        title: 'Set command, args, and env',
+        body: 'Each server table takes a "command" string and an "args" array. Put secrets in a nested [mcp_servers.<name>.env] table rather than in the args.',
+      },
+      {
+        title: 'Verify inside a session',
+        body: 'Start Codex and run the /mcp command to list configured servers and their tools. If a server is missing, check the TOML syntax — a malformed table silently drops the entry.',
+      },
+    ],
+    faq: [
+      {
+        q: 'How do I add an MCP server to Codex CLI?',
+        a: 'Run codex mcp add <name> -- <command> [args...], or add an [mcp_servers.<name>] table with command and args to ~/.codex/config.toml. Use /mcp inside Codex to confirm it loaded.',
+      },
+      {
+        q: 'Can I reuse a Claude Desktop MCP config in Codex?',
+        a: 'The values carry over but the format does not: Codex reads TOML, so convert each mcpServers JSON entry into an [mcp_servers.<name>] table with the same command, args, and env.',
+      },
+      {
+        q: 'Does Codex support remote MCP servers?',
+        a: 'Codex supports stdio servers and streamable HTTP servers configured with a url field. Check the Codex docs for the current remote and OAuth options, since support has expanded across releases.',
+      },
+    ],
+  },
+  {
+    slug: 'gemini-cli',
+    name: 'Gemini CLI',
+    configFilename: 'settings.json',
+    badgeText: 'Terminal CLI',
+    lead: 'How to add MCP servers to Google Gemini CLI — the mcpServers block in ~/.gemini/settings.json, project-level config, and how to list connected servers.',
+    configKey: 'mcpServers',
+    configLocations: [
+      { os: 'User (global)', path: '~/.gemini/settings.json' },
+      { os: 'Project', path: '.gemini/settings.json in your project root' },
+    ],
+    configExample: mcpServersExample('mcpServers'),
+    steps: [
+      {
+        title: 'Open the Gemini settings file',
+        body: 'Edit ~/.gemini/settings.json for all projects, or .gemini/settings.json in a repository for that project only. Create the file if it does not exist.',
+      },
+      {
+        title: 'Add the server under mcpServers',
+        body: 'Add a named entry with "command", "args", and optional "env". Gemini CLI uses the same mcpServers shape as Claude Desktop and Cursor, so those configs paste in directly. You can also run "gemini mcp add".',
+      },
+      {
+        title: 'Restart and list servers',
+        body: 'Start a new Gemini CLI session and run the /mcp command to see each server, its connection status, and the tools it exposes.',
+      },
+    ],
+    faq: [
+      {
+        q: 'How do I add an MCP server to Gemini CLI?',
+        a: 'Add the server under "mcpServers" in ~/.gemini/settings.json (or a project .gemini/settings.json) with a command and args, or run gemini mcp add. Use /mcp in a session to confirm it connected.',
+      },
+      {
+        q: 'Is the Gemini CLI MCP config compatible with Claude Desktop?',
+        a: 'Yes. Both use an mcpServers object with command, args, and env, so a server block copied from claude_desktop_config.json works in Gemini CLI settings.json unchanged.',
+      },
+      {
+        q: 'How do I see which tools a Gemini CLI MCP server provides?',
+        a: 'Run /mcp inside a Gemini CLI session. It lists every configured server, whether it connected, and the tools each one exposes to the model.',
+      },
+    ],
+  },
+  {
+    slug: 'jetbrains',
+    name: 'JetBrains AI Assistant',
+    configFilename: 'Settings → Tools → AI Assistant → MCP',
+    badgeText: 'IDE Plugin',
+    lead: 'How to add MCP servers to JetBrains IDEs (IntelliJ IDEA, PyCharm, WebStorm) through AI Assistant — the MCP settings page, JSON import, and verifying tools.',
+    configKey: 'mcpServers',
+    configLocations: [
+      {
+        os: 'Any OS',
+        path: 'Settings → Tools → AI Assistant → Model Context Protocol (MCP)',
+      },
+    ],
+    configExample: mcpServersExample('mcpServers'),
+    steps: [
+      {
+        title: 'Open the AI Assistant MCP settings',
+        body: 'In your JetBrains IDE, go to Settings → Tools → AI Assistant → Model Context Protocol (MCP). This requires the AI Assistant plugin to be installed and enabled.',
+      },
+      {
+        title: 'Add a server or paste JSON',
+        body: 'Click Add, then either fill in the command and arguments or switch to the JSON view and paste an mcpServers block. Configs from Claude Desktop can be imported as-is.',
+      },
+      {
+        title: 'Apply and use the tools in chat',
+        body: 'Apply the settings, then open AI Assistant chat. The server status shows on the MCP settings page, and its tools become available to the assistant.',
+      },
+    ],
+    faq: [
+      {
+        q: 'How do I add an MCP server in IntelliJ or PyCharm?',
+        a: 'Open Settings → Tools → AI Assistant → Model Context Protocol (MCP), click Add, and enter the command and args or paste an mcpServers JSON block. The same steps apply to every JetBrains IDE with AI Assistant.',
+      },
+      {
+        q: 'Can I import my Claude Desktop MCP config into JetBrains?',
+        a: 'Yes. AI Assistant accepts the standard mcpServers JSON, so you can paste server blocks from claude_desktop_config.json into the JSON view of the MCP settings page.',
+      },
+      {
+        q: 'Can a JetBrains IDE act as an MCP server?',
+        a: 'Yes — recent JetBrains IDEs include a built-in MCP server that lets external clients such as Claude Desktop or Cursor use IDE features. That is separate from adding MCP servers to AI Assistant.',
+      },
+    ],
+  },
+  {
+    slug: 'roo-code',
+    name: 'Roo Code',
+    configFilename: 'mcp_settings.json / .roo/mcp.json',
+    badgeText: 'IDE Extension',
+    lead: 'How to add MCP servers to Roo Code in VS Code — the global mcp_settings.json, project-level .roo/mcp.json, and managing servers from the MCP panel.',
+    configKey: 'mcpServers',
+    configLocations: [
+      { os: 'Global', path: 'mcp_settings.json (open via the MCP panel)' },
+      { os: 'Project', path: '.roo/mcp.json in your project root' },
+    ],
+    configExample: mcpServersExample('mcpServers'),
+    steps: [
+      {
+        title: 'Open the MCP panel',
+        body: 'In the Roo Code sidebar, click the MCP servers icon. From there choose Edit Global MCP to open mcp_settings.json, or Edit Project MCP to create .roo/mcp.json in the workspace.',
+      },
+      {
+        title: 'Add the server under mcpServers',
+        body: 'Add a named entry with "command", "args", and "env". Roo Code uses the standard mcpServers shape, so configs from Cline or Claude Desktop paste in directly. Project entries override global ones with the same name.',
+      },
+      {
+        title: 'Confirm it is connected',
+        body: 'Save the file. The MCP panel shows each server with a status dot, lets you restart or disable it, and lists its tools with per-tool auto-approve toggles.',
+      },
+    ],
+    faq: [
+      {
+        q: 'How do I add an MCP server to Roo Code?',
+        a: 'Open the MCP panel in the Roo Code sidebar and edit the global mcp_settings.json or the project .roo/mcp.json. Add the server under mcpServers with command, args, and env, then save.',
+      },
+      {
+        q: 'What is the difference between global and project MCP config in Roo Code?',
+        a: 'Global servers in mcp_settings.json are available in every workspace. Project servers in .roo/mcp.json apply to that repository only, can be committed for your team, and take precedence on name conflicts.',
+      },
+      {
+        q: 'Can Roo Code auto-approve MCP tool calls?',
+        a: 'Yes. Each tool can be set to auto-approve from the MCP panel or with an alwaysAllow list in the server config. Only auto-approve read-only tools you trust.',
+      },
+    ],
+  },
+  {
+    slug: 'continue',
+    name: 'Continue',
+    configFilename: '.continue/mcpServers/',
+    badgeText: 'IDE Extension',
+    lead: 'How to add MCP servers to Continue in VS Code and JetBrains — the .continue/mcpServers folder, YAML or JSON configs, and using tools in agent mode.',
+    configKey: 'mcpServers',
+    configLocations: [
+      {
+        os: 'Workspace',
+        path: '.continue/mcpServers/ in your project root (one file per server)',
+      },
+    ],
+    configExample: mcpServersExample('mcpServers'),
+    steps: [
+      {
+        title: 'Create the mcpServers folder',
+        body: 'Create a .continue/mcpServers/ folder at the top level of your workspace. Each server gets its own YAML or JSON file inside it.',
+      },
+      {
+        title: 'Add a server file',
+        body: 'Continue accepts its own YAML block format, and it also reads JSON files in the Claude Desktop / Cursor mcpServers shape — so you can drop an existing mcpServers JSON file into the folder unchanged.',
+      },
+      {
+        title: 'Use the tools in agent mode',
+        body: 'MCP tools are only available in Continue agent mode. Switch the chat to Agent and the server tools appear in the tool list.',
+      },
+    ],
+    faq: [
+      {
+        q: 'How do I add an MCP server to Continue?',
+        a: 'Add a YAML or JSON file for the server in a .continue/mcpServers/ folder at your workspace root. JSON files in the standard mcpServers shape from Claude Desktop or Cursor work as-is.',
+      },
+      {
+        q: 'Why are my MCP tools not showing in Continue?',
+        a: 'MCP tools only work in agent mode. Switch the chat mode to Agent, and check that the server file is in .continue/mcpServers/ at the workspace root, not a subfolder.',
+      },
+      {
+        q: 'Does Continue support MCP in JetBrains IDEs?',
+        a: 'Yes. Continue runs in both VS Code and JetBrains, and the .continue/mcpServers folder works the same way in each.',
+      },
+    ],
+  },
+  {
+    slug: 'lm-studio',
+    name: 'LM Studio',
+    configFilename: 'mcp.json',
+    badgeText: 'Desktop App',
+    lead: 'How to add MCP servers to LM Studio so local models can call tools — the mcp.json file, the Cursor-compatible format, and approving tool calls.',
+    configKey: 'mcpServers',
+    configLocations: [
+      { os: 'macOS / Linux', path: '~/.lmstudio/mcp.json' },
+      { os: 'Windows', path: '%USERPROFILE%\\.lmstudio\\mcp.json' },
+    ],
+    configExample: mcpServersExample('mcpServers'),
+    steps: [
+      {
+        title: 'Open mcp.json from LM Studio',
+        body: 'In LM Studio, open the Program tab in the right sidebar and choose Install → Edit mcp.json. The file opens in the in-app editor.',
+      },
+      {
+        title: 'Add the server under mcpServers',
+        body: 'LM Studio follows Cursor\'s mcp.json notation, so add a named entry with "command", "args", and "env" under "mcpServers". Remote servers can use a "url" field instead.',
+      },
+      {
+        title: 'Load a tool-capable model and approve calls',
+        body: 'Save the file and chat with a model that supports tool use. LM Studio asks you to confirm each tool call by default, which you can review before it runs.',
+      },
+    ],
+    faq: [
+      {
+        q: 'How do I add an MCP server to LM Studio?',
+        a: 'Open the Program tab, choose Install → Edit mcp.json, and add the server under mcpServers with command and args. LM Studio uses the same format as Cursor.',
+      },
+      {
+        q: 'Can local models use MCP servers?',
+        a: 'Yes, if the model supports tool calling. LM Studio passes MCP tools to the loaded model and shows a confirmation dialog before each tool call runs.',
+      },
+      {
+        q: 'Is it safe to use MCP servers with LM Studio?',
+        a: 'MCP servers can run code and access files or APIs on your machine. Only install servers from sources you trust, and keep the per-call confirmation on for tools that write data.',
+      },
+    ],
+  },
 ];
 
 export function mcpClientBySlug(slug: string): McpClient | undefined {
@@ -377,6 +679,33 @@ export function formatServerClientConfig(
       .map(([k, v]) => `-e ${k}=${v}`)
       .join(' ');
     return `claude mcp add ${cleanName} ${envStr ? `${envStr} ` : ''}-- ${command} ${argsStr}`;
+  }
+
+  if (clientSlug === 'zed') {
+    return JSON.stringify(
+      {
+        context_servers: {
+          [cleanName]: { command, args: defaultArgs, env: envObj },
+        },
+      },
+      null,
+      2,
+    );
+  }
+
+  if (clientSlug === 'codex') {
+    const tomlString = (s: string) => JSON.stringify(s);
+    const lines = [
+      `[mcp_servers.${cleanName}]`,
+      `command = ${tomlString(command)}`,
+      `args = [${defaultArgs.map(tomlString).join(', ')}]`,
+    ];
+    const envEntries = Object.entries(envObj);
+    if (envEntries.length > 0) {
+      lines.push('', `[mcp_servers.${cleanName}.env]`);
+      for (const [k, v] of envEntries) lines.push(`${k} = ${tomlString(v)}`);
+    }
+    return lines.join('\n');
   }
 
   return JSON.stringify(

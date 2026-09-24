@@ -30,6 +30,7 @@ import {
   categorySlug,
   parseCategoryLabel,
 } from '../../../../../lib/categories';
+import { isIndexableCompare } from '../../../../../lib/comparePairs';
 import { parseServerName } from '../../../../../lib/displayName';
 import {
   isFeaturedListing,
@@ -190,7 +191,11 @@ export async function generateMetadata({
   return {
     title,
     description,
-    robots: { index: false, follow: true },
+    // Curated pairs only — see lib/comparePairs.ts for why everything else stays noindex.
+    robots: {
+      index: isIndexableCompare(id, other, a, b),
+      follow: true,
+    },
     alternates: { canonical: url },
     openGraph: {
       type: 'article',

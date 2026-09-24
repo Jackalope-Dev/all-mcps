@@ -68,7 +68,10 @@ import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import { InstallsStat, ViewTracker } from '../../../components/ui/ViewTracker';
 import { VulnSignalCard } from '../../../components/ui/VulnSignalCard';
 import serversData from '../../../data/mcp-servers.json';
-import { bestTopicForCategory } from '../../../lib/bestTopics';
+import {
+  bestTopicForCategory,
+  keywordTopicsForServer,
+} from '../../../lib/bestTopics';
 import { categorySlug, getCategoryMeta } from '../../../lib/categories';
 import { parseServerName } from '../../../lib/displayName';
 import {
@@ -2909,6 +2912,9 @@ export default async function MCPDetail({
               {(() => {
                 const catSlug = categorySlug(server.category);
                 const best = bestTopicForCategory(server.category);
+                const keywordHubs = keywordTopicsForServer(server).filter(
+                  (t) => t.slug !== best?.slug,
+                );
                 return (
                   <div className="surface" style={{ padding: '1.5rem' }}>
                     <h3
@@ -2951,6 +2957,19 @@ export default async function MCPDetail({
                           Best MCP servers for {best.title} →
                         </Link>
                       )}
+                      {keywordHubs.map((t) => (
+                        <Link
+                          key={t.slug}
+                          href={`/best/${t.slug}`}
+                          style={{
+                            fontSize: '0.85rem',
+                            color: 'var(--accent-color)',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Best {t.title} MCP servers →
+                        </Link>
+                      ))}
                       <Link
                         href={`/mcp/${server.id}/alternatives`}
                         rel="nofollow"
@@ -2988,6 +3007,15 @@ export default async function MCPDetail({
                         }}
                       >
                         Install in VS Code
+                      </Link>
+                      <Link
+                        href="/clients"
+                        style={{
+                          fontSize: '0.85rem',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        Setup guides for all {MCP_CLIENTS.length} MCP clients
                       </Link>
                     </div>
                   </div>

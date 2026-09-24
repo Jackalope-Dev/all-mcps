@@ -1,6 +1,7 @@
 /**
  * Helper utilities for parsing, auditing, and merging MCP client configuration JSON files.
- * Supports Claude Desktop (mcpServers), Cursor (.cursor/mcp.json), Windsurf, Cline, and Zed formats.
+ * Supports Claude Desktop (mcpServers), Cursor (.cursor/mcp.json), Windsurf, Cline,
+ * VS Code (servers), and Zed (context_servers) formats.
  */
 
 export interface AuditIssue {
@@ -18,6 +19,7 @@ export interface AuditResult {
     | 'windsurf'
     | 'cline'
     | 'zed'
+    | 'vs-code'
     | 'unknown';
   issues: AuditIssue[];
   serverCount: number;
@@ -70,6 +72,23 @@ export function auditMcpConfig(rawJson: string): AuditResult {
     formatDetected = 'claude';
     serversObj = parsed.mcpServers;
   } else if (
+    parsed.context_servers &&
+    typeof parsed.context_servers === 'object' &&
+    !Array.isArray(parsed.context_servers)
+  ) {
+    // Current Zed settings.json shape: { "context_servers": { name: {...} } }
+    formatDetected = 'zed';
+    serversObj = parsed.context_servers;
+  } else if (
+    parsed.servers &&
+    typeof parsed.servers === 'object' &&
+    !Array.isArray(parsed.servers)
+  ) {
+    // VS Code .vscode/mcp.json nests servers under "servers".
+    formatDetected = 'vs-code';
+    serversObj = parsed.servers;
+  } else if (
+    // Legacy Zed shape (array under "experimental").
     parsed.experimental?.context_servers &&
     Array.isArray(parsed.experimental.context_servers)
   ) {

@@ -27,7 +27,9 @@
     "ingest-sources": "node scripts/ingest-sources.mjs",
     "backfill-categories": "tsx scripts/backfill-categories.ts",
     "capture-screenshots": "node scripts/capture-screenshots.mjs",
-    "sync-snapshot": "node scripts/sync-snapshot.mjs"
+    "sync-snapshot": "node scripts/sync-snapshot.mjs",
+    "blog:pull": "node scripts/pull-blog-drafts.mjs",
+    "outreach:badges": "node scripts/badge-outreach.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.41.3",

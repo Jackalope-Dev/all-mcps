@@ -3,7 +3,7 @@
  * Keeps lastmod honest so crawlers can trust change signals.
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { unstable_cache } from 'next/cache';
 import serversData from '../data/mcp-servers.json';
@@ -95,7 +95,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/browse': '2026-08-05',
   '/categories': '2026-08-05',
   '/best': '2026-08-13',
-  '/clients': '2026-08-05',
+  '/clients': '2026-09-23',
   '/about': '2026-07-27',
   '/docs/api': '2026-09-10',
   '/blog': '2026-08-07',
@@ -103,7 +103,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/submit': '2026-08-01',
   '/terms': '2026-07-27',
   '/privacy': '2026-07-27',
-  '/guides': '2026-09-17',
+  '/guides': '2026-09-23',
   '/what-is-mcp': '2026-08-04',
   '/guide': '2026-08-04',
   '/build-mcp-server': '2026-08-04',
@@ -112,6 +112,7 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/mcp-troubleshooting': '2026-08-07',
   '/mcp-protocol-versioning': '2026-08-22',
   '/mcp-transports': '2026-09-17',
+  '/state-of-mcp': '2026-09-23',
   '/pricing': '2026-08-08',
   '/tools': '2026-08-05',
   '/tools/openapi-to-mcp': '2026-08-05',
@@ -119,8 +120,8 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/tools/config-generator': '2026-08-05',
   '/tools/config-validator': '2026-08-05',
   '/tools/token-calculator': '2026-08-05',
-  '/tools/config-auditor': '2026-08-05',
-  '/tools/playground': '2026-08-05',
+  '/tools/config-auditor': '2026-09-23',
+  '/tools/playground': '2026-09-23',
   '/prompts': '2026-08-05',
   '/badge-generator': '2026-08-01',
   '/mcp-for-cursor': '2026-08-05',
@@ -129,12 +130,37 @@ export const STATIC_PAGE_LASTMOD: Record<string, string> = {
   '/mcp-for-cline': '2026-08-05',
   '/trust': '2026-08-07',
   '/stack': '2026-08-10',
-  '/compare': '2026-08-26',
+  '/compare': '2026-09-23',
   '/tags': '2026-08-26',
   '/best/seo': '2026-08-10',
   '/mcp-for-seo': '2026-08-23',
   '/lucky': '2026-08-13',
   '/advertise': '2026-08-13',
+  '/best/figma': '2026-09-23',
+  '/best/obsidian': '2026-09-23',
+  '/best/shopify': '2026-09-23',
+  '/best/gmail': '2026-09-23',
+  '/best/redis': '2026-09-23',
+  '/best/cloudflare': '2026-09-23',
+  '/best/supabase': '2026-09-23',
+  '/best/confluence': '2026-09-23',
+  '/best/bigquery': '2026-09-23',
+  '/best/n8n': '2026-09-23',
+  '/best/salesforce': '2026-09-23',
+  '/best/terraform': '2026-09-23',
+  '/clients/claude-desktop': '2026-08-05',
+  '/clients/cursor': '2026-08-05',
+  '/clients/cline': '2026-08-05',
+  '/clients/windsurf': '2026-08-05',
+  '/clients/claude-code': '2026-08-05',
+  '/clients/vs-code': '2026-08-05',
+  '/clients/zed': '2026-09-23',
+  '/clients/codex': '2026-09-23',
+  '/clients/gemini-cli': '2026-09-23',
+  '/clients/jetbrains': '2026-09-23',
+  '/clients/roo-code': '2026-09-23',
+  '/clients/continue': '2026-09-23',
+  '/clients/lm-studio': '2026-09-23',
 };
 
 export type SitemapServer = {
@@ -156,6 +182,7 @@ export type SitemapServer = {
   views?: number | null;
   copies?: number | null;
   upvotes?: number | null;
+  hasAiDoc?: number | boolean | null;
 };
 
 // Only the columns sitemap.ts (SitemapServer) actually reads — the servers table
@@ -177,6 +204,9 @@ const SITEMAP_SERVER_COLUMNS = {
   views: serversTable.views,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
+  // Boolean, not the doc itself — curated compare pairs are only submitted
+  // when both sides have a writeup (lib/comparePairs.ts).
+  hasAiDoc: sql<number>`${serversTable.aiDoc} IS NOT NULL AND ${serversTable.aiDoc} != ''`,
 };
 
 /** How long a sitemap's D1 read is reused before it's queried again. */
@@ -328,6 +358,7 @@ export const INDEXNOW_CORE_PATHS = [
   '/mcp-troubleshooting',
   '/mcp-protocol-versioning',
   '/mcp-transports',
+  '/state-of-mcp',
   '/tools',
   '/blog',
   '/trust',

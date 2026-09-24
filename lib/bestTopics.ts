@@ -1083,6 +1083,294 @@ export const KEYWORD_TOPICS: BestTopic[] = [
     ],
     relatedTopicSlugs: ['marketing'],
   },
+  {
+    slug: 'figma',
+    match: ['figma'],
+    title: 'Figma',
+    lead: 'The best MCP servers for Figma — give AI coding agents access to frames, components, and design tokens so they can turn designs into code that matches the file.',
+    guidance: [
+      "Figma MCP servers fall into two groups: read-only servers that pull a frame's layout, styles, and variables for design-to-code work, and servers that can also create or edit nodes in a file. For most teams the read-only kind covers the real need — generating components that match the design.",
+      'Output quality depends heavily on how the Figma file is built. Auto layout, named layers, and shared components and variables give the agent structure to map onto your codebase; a flat file of absolutely positioned rectangles produces brittle markup no matter which server you use.',
+      'Use a personal access token scoped to the files the agent needs, and prefer read scopes unless you have a specific reason to let an agent modify designs.',
+    ],
+    faq: [
+      {
+        q: 'What is the best Figma MCP server?',
+        a: 'It depends on whether you need read-only design context or write access. This page ranks Figma MCP servers by real usage across the AllMCPs directory, so start with the most installed option that matches your use case.',
+      },
+      {
+        q: 'Can an AI agent turn a Figma design into code with MCP?',
+        a: "Yes. A Figma MCP server passes the selected frame's layout, styles, and variables to the agent, which then writes components in your framework. Results are best when the file uses auto layout and shared components.",
+      },
+      {
+        q: 'Do Figma MCP servers need an API token?',
+        a: 'Most do. You create a Figma personal access token and pass it to the server through an environment variable. Scope it to read access unless the server needs to edit files.',
+      },
+    ],
+    relatedTopicSlugs: ['developer-tools'],
+  },
+  {
+    slug: 'obsidian',
+    match: ['obsidian'],
+    title: 'Obsidian',
+    lead: 'The best MCP servers for Obsidian — let AI agents search, read, link, and write notes in your local Obsidian vault.',
+    guidance: [
+      "Obsidian MCP servers connect in one of two ways: directly to the vault folder on disk, or through the Obsidian Local REST API community plugin while the app is running. Direct file access works without the app open; the plugin route respects Obsidian's own indexing and link handling.",
+      'Because a vault is plain markdown on your disk, a write-capable server can rename, move, or overwrite notes. Keep the vault under version control or a backup before you let an agent reorganize it, and start with read and search tools.',
+    ],
+    faq: [
+      {
+        q: 'What is the best Obsidian MCP server?',
+        a: 'This page ranks Obsidian MCP servers by real usage across the AllMCPs directory. Choose between servers that read the vault folder directly and servers that use the Local REST API plugin.',
+      },
+      {
+        q: 'Can Claude read my Obsidian notes?',
+        a: 'Yes. Install an Obsidian MCP server in Claude Desktop or Claude Code and point it at your vault path or the Local REST API plugin. Claude can then search and read notes during a conversation.',
+      },
+      {
+        q: 'Does an Obsidian MCP server send my notes to the cloud?',
+        a: 'The server itself runs locally, but any note content the agent reads is sent to the model provider as part of the conversation. Keep sensitive notes in a folder the server cannot access.',
+      },
+    ],
+    relatedTopicSlugs: ['memory-knowledge'],
+  },
+  {
+    slug: 'shopify',
+    match: ['shopify'],
+    title: 'Shopify',
+    lead: 'The best MCP servers for Shopify — connect AI agents to products, orders, customers, and the Admin and Storefront APIs of a Shopify store.',
+    guidance: [
+      'Separate the servers that help you build on Shopify (documentation search, GraphQL schema introspection, theme and app development) from the ones that operate a live store through the Admin API. Development servers are low risk; store-operating servers can change prices, inventory, and orders.',
+      'For anything that touches a live store, create a custom app with the narrowest Admin API scopes the job needs, and test against a development store first.',
+    ],
+    faq: [
+      {
+        q: 'What is the best Shopify MCP server?',
+        a: 'This page ranks Shopify MCP servers by real usage across the AllMCPs directory. Pick a development-focused server for building apps and themes, or an Admin API server for managing store data.',
+      },
+      {
+        q: 'Can an AI agent manage my Shopify store?',
+        a: "Yes, through a server that uses the Shopify Admin API with an access token from a custom app. Limit the app's scopes and keep a human review step for price, inventory, and order changes.",
+      },
+      {
+        q: 'Do I need a Shopify API token for MCP?',
+        a: 'Store-operating servers need an Admin or Storefront API access token. Documentation and schema servers used for development usually need no store credentials.',
+      },
+    ],
+    relatedTopicSlugs: ['e-commerce', 'stripe'],
+  },
+  {
+    slug: 'gmail',
+    match: ['gmail'],
+    title: 'Gmail',
+    lead: 'The best MCP servers for Gmail — let AI agents search, read, label, draft, and send email from a Gmail account.',
+    guidance: [
+      'Gmail servers authenticate with Google OAuth, and the scopes you grant decide the risk: read-only scopes let an agent search and summarize, while send and modify scopes let it act as you. Start read-only and add drafting before full send access.',
+      'Email is a common channel for prompt injection — a message can contain instructions aimed at the agent. Prefer servers and clients that require confirmation before sending, and avoid auto-approving send tools.',
+    ],
+    faq: [
+      {
+        q: 'What is the best Gmail MCP server?',
+        a: 'This page ranks Gmail MCP servers by real usage across the AllMCPs directory. For broader Google access (Calendar, Drive, Docs) see the Google Workspace page.',
+      },
+      {
+        q: 'Can an AI agent send email from my Gmail?',
+        a: 'Yes, if the server has the Gmail send scope. Keep manual approval on for send tools, since an agent that reads untrusted email can be steered by instructions hidden in a message.',
+      },
+      {
+        q: 'How does a Gmail MCP server authenticate?',
+        a: 'Through Google OAuth. You create OAuth credentials in a Google Cloud project, authorize the server once in the browser, and it stores a refresh token locally.',
+      },
+    ],
+    relatedTopicSlugs: ['google-workspace', 'communication'],
+  },
+  {
+    slug: 'redis',
+    match: ['redis', 'valkey'],
+    title: 'Redis',
+    lead: 'The best MCP servers for Redis — let AI agents inspect keys, query data structures, and use Redis as fast memory or a vector store.',
+    guidance: [
+      'Redis MCP servers are used two ways: as an admin and inspection tool for an existing Redis deployment, or as a memory and vector-search backend for the agent itself. Check which one a server is built for before installing it.',
+      'Commands such as FLUSHALL or KEYS on a large production instance can cause outages. Point agents at a replica or a dedicated database number, and use a Redis ACL user limited to the commands and key patterns they need.',
+    ],
+    faq: [
+      {
+        q: 'What is the best Redis MCP server?',
+        a: "This page ranks Redis MCP servers by real usage across the AllMCPs directory. Decide first whether you want to inspect an existing Redis instance or use Redis as the agent's memory store.",
+      },
+      {
+        q: 'Is it safe to connect an AI agent to production Redis?',
+        a: 'Only with a restricted ACL user. Limit the commands (block FLUSHALL, FLUSHDB, and KEYS) and key patterns the user can touch, or connect to a read replica instead.',
+      },
+      {
+        q: 'Can Redis be used as memory for an AI agent via MCP?',
+        a: 'Yes. Several servers store conversation facts or embeddings in Redis and expose tools to save and recall them, using Redis vector search for semantic lookup.',
+      },
+    ],
+    relatedTopicSlugs: ['databases', 'memory-knowledge'],
+  },
+  {
+    slug: 'cloudflare',
+    match: ['cloudflare'],
+    title: 'Cloudflare',
+    lead: 'The best MCP servers for Cloudflare — manage Workers, KV, R2, D1, DNS, and analytics from an AI agent, or deploy your own remote MCP server on Cloudflare.',
+    guidance: [
+      'This category mixes two things: servers that manage your Cloudflare account (Workers, DNS, storage, logs) and MCP servers that are simply hosted on Cloudflare Workers. If you want to operate Cloudflare from an agent, filter for servers that use the Cloudflare API.',
+      'Create a scoped API token for the specific zones and products the agent needs rather than using the global API key, which grants full account access.',
+    ],
+    faq: [
+      {
+        q: 'What is the best Cloudflare MCP server?',
+        a: 'This page ranks Cloudflare-related MCP servers by real usage across the AllMCPs directory, including account-management servers and servers deployed on Cloudflare Workers.',
+      },
+      {
+        q: 'Can I host my own MCP server on Cloudflare Workers?',
+        a: 'Yes. Workers support remote MCP servers over streamable HTTP with OAuth. See the deploy guide on AllMCPs for a step-by-step walkthrough.',
+      },
+      {
+        q: 'What API token does a Cloudflare MCP server need?',
+        a: 'A scoped API token with only the permissions for the zones and products the agent will manage. Avoid the global API key, which grants access to the whole account.',
+      },
+    ],
+    relatedTopicSlugs: ['cloud'],
+  },
+  {
+    slug: 'supabase',
+    match: ['supabase'],
+    title: 'Supabase',
+    lead: 'The best MCP servers for Supabase — let AI agents query Postgres, manage tables and migrations, and work with Supabase projects from your editor.',
+    guidance: [
+      'Supabase servers range from project-management tools (create projects, run migrations, fetch logs) to plain SQL access against the project database. Connect development projects first: an agent that can run migrations can also drop tables.',
+      'Most servers support a read-only mode and project scoping — turn both on unless the task needs writes, and never hand an agent the service_role key for a production project.',
+    ],
+    faq: [
+      {
+        q: 'What is the best Supabase MCP server?',
+        a: 'This page ranks Supabase MCP servers by real usage across the AllMCPs directory. For generic Postgres access without Supabase-specific tools, see the PostgreSQL page.',
+      },
+      {
+        q: 'Can an AI agent run Supabase migrations?',
+        a: 'Yes, with a server that uses the Supabase Management API and a personal access token. Use it against a development branch or project and review migrations before applying them to production.',
+      },
+      {
+        q: 'Should I give an MCP server my Supabase service_role key?',
+        a: 'Not for production. The service_role key bypasses row-level security. Prefer read-only mode, a scoped access token, or a restricted database role.',
+      },
+    ],
+    relatedTopicSlugs: ['postgres', 'databases'],
+  },
+  {
+    slug: 'confluence',
+    match: ['confluence'],
+    title: 'Confluence',
+    lead: 'The best MCP servers for Confluence — let AI agents search, read, and update Confluence spaces and pages alongside Jira.',
+    faq: [
+      {
+        q: 'What is the best Confluence MCP server?',
+        a: 'This page ranks Confluence MCP servers by real usage across the AllMCPs directory. Many also cover Jira, which is useful if your team documents work next to tickets.',
+      },
+      {
+        q: 'How do I connect an AI agent to Confluence?',
+        a: 'Create an Atlassian API token (or use OAuth where the server supports it) and pass it with your site URL and email to the server via environment variables.',
+      },
+      {
+        q: 'Can the agent edit Confluence pages?',
+        a: 'Servers with write tools can create and update pages using your account permissions. Use an account limited to the spaces the agent should change.',
+      },
+    ],
+    relatedTopicSlugs: ['jira', 'workplace-productivity'],
+  },
+  {
+    slug: 'bigquery',
+    match: ['bigquery'],
+    title: 'BigQuery',
+    lead: 'The best MCP servers for Google BigQuery — let AI agents explore datasets, inspect schemas, and run SQL against your data warehouse.',
+    guidance: [
+      'BigQuery bills by bytes scanned, so an agent writing exploratory queries can get expensive. Prefer servers that dry-run queries or cap maximum bytes billed, and point them at partitioned tables.',
+      'Use a service account with BigQuery Data Viewer and Job User roles on specific datasets instead of project-wide editor access.',
+    ],
+    faq: [
+      {
+        q: 'What is the best BigQuery MCP server?',
+        a: 'This page ranks BigQuery MCP servers by real usage across the AllMCPs directory. Prefer servers that support dry runs or byte limits to keep query costs predictable.',
+      },
+      {
+        q: 'How do I limit BigQuery costs when an agent runs queries?',
+        a: 'Set a maximum bytes billed limit, give the service account access only to needed datasets, and use a server that dry-runs queries to estimate cost before executing.',
+      },
+      {
+        q: 'What credentials does a BigQuery MCP server need?',
+        a: 'Usually a Google Cloud service account key or application default credentials, with read and job-run roles on the datasets the agent should query.',
+      },
+    ],
+    relatedTopicSlugs: ['data-platforms', 'databases'],
+  },
+  {
+    slug: 'n8n',
+    match: ['n8n'],
+    title: 'n8n',
+    lead: 'The best MCP servers for n8n — trigger and manage n8n workflows from AI agents, or expose your automations as MCP tools.',
+    faq: [
+      {
+        q: 'What is the best n8n MCP server?',
+        a: 'This page ranks n8n MCP servers by real usage across the AllMCPs directory, including servers that manage workflows and servers that turn workflows into agent tools.',
+      },
+      {
+        q: 'Can n8n act as an MCP server?',
+        a: 'Yes. n8n has an MCP Server Trigger node that exposes a workflow as tools MCP clients can call, and community servers add workflow management through the n8n API.',
+      },
+      {
+        q: 'Do I need an n8n API key?',
+        a: "Servers that list, create, or run workflows through the n8n API need an API key from your n8n instance settings. Workflows exposed through the MCP trigger node use that node's own authentication.",
+      },
+    ],
+    relatedTopicSlugs: ['workplace-productivity'],
+  },
+  {
+    slug: 'salesforce',
+    match: ['salesforce'],
+    title: 'Salesforce',
+    lead: 'The best MCP servers for Salesforce — let AI agents query records with SOQL, update opportunities and contacts, and inspect org metadata.',
+    faq: [
+      {
+        q: 'What is the best Salesforce MCP server?',
+        a: 'This page ranks Salesforce MCP servers by real usage across the AllMCPs directory. Compare them on whether they support SOQL queries, record writes, and metadata or Apex tools.',
+      },
+      {
+        q: 'How do I connect an AI agent to Salesforce?',
+        a: "Most servers authenticate with a connected app (OAuth) or the Salesforce CLI's stored org credentials. Use an integration user with a permission set limited to the objects the agent needs.",
+      },
+      {
+        q: 'Can an agent update Salesforce records?',
+        a: 'Yes, if the server has write tools and the user has edit permission. Test in a sandbox org first and keep human review for bulk updates.',
+      },
+    ],
+    relatedTopicSlugs: ['customer-data-platforms'],
+  },
+  {
+    slug: 'terraform',
+    match: ['terraform', 'opentofu'],
+    title: 'Terraform',
+    lead: 'The best MCP servers for Terraform — give AI agents provider documentation, module search, and plan/state context for infrastructure as code.',
+    guidance: [
+      'The safest Terraform servers give the agent documentation and registry lookups so it writes correct HCL, while you keep running plan and apply yourself. Servers that run apply let an agent change real infrastructure, so gate them behind manual approval.',
+    ],
+    faq: [
+      {
+        q: 'What is the best Terraform MCP server?',
+        a: 'This page ranks Terraform MCP servers by real usage across the AllMCPs directory. Registry and documentation servers are the most common and lowest-risk starting point.',
+      },
+      {
+        q: 'Should an AI agent run terraform apply?',
+        a: 'Only with manual approval. Let the agent write HCL and read plan output, and keep the apply step with a human or a CI pipeline that requires review.',
+      },
+      {
+        q: 'Does a Terraform MCP server need cloud credentials?',
+        a: 'Documentation and registry servers need none. Servers that run plan or read state need the same provider credentials Terraform itself uses.',
+      },
+    ],
+    relatedTopicSlugs: ['cloud', 'aws'],
+  },
 ];
 
 export const BEST_TOPICS: BestTopic[] = [...CATEGORY_TOPICS, ...KEYWORD_TOPICS];
@@ -1124,4 +1412,21 @@ export function selectServersForTopic<
     ? categoryFromSlug(topic.categorySlug)
     : undefined;
   return category ? servers.filter((s) => s.category === category) : [];
+}
+
+/**
+ * Integration hubs (/best/<keyword>) a listing belongs in — the reverse of
+ * selectServersForTopic's keyword mode, so every listing that appears in a hub's
+ * ranking links back to it. Without this, keyword hubs were only reachable from
+ * /best and the sitemap, while their member listings (the pages with the
+ * relevant link equity) never pointed at them.
+ */
+export function keywordTopicsForServer(
+  server: { name: string; description?: string | null },
+  limit = 3,
+): BestTopic[] {
+  const text = `${server.name} ${server.description || ''}`;
+  return KEYWORD_TOPICS.filter(
+    (t) => t.match && t.match.length > 0 && mentionsAny(text, t.match),
+  ).slice(0, limit);
 }

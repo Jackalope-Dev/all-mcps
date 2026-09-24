@@ -840,3 +840,112 @@ export const adminAudit = sqliteTable(
     ),
   }),
 );
+
+/**
+ * Blog content pipeline (lib/blogPipeline). Three tables:
+ *
+ * - `content_index`: every indexable page the pipeline must not cannibalize or
+ *   duplicate — published posts, guides, /best and /clients hubs, and in-flight
+ *   drafts — with a Workers AI embedding for semantic comparison. Fed by the
+ *   pipeline's own sync (blog manifest + static hub registry) and by
+ *   POST /api/cron/blog-corpus for anything else.
+ * - `blog_topics`: the keyword queue (seeded from lib/blogPipeline/seeds.ts and
+ *   topped up by LLM ideation), each checked against content_index before use.
+ * - `blog_drafts`: generated posts moving through write → review → revise until
+ *   `ready` (pulled into content/blog by scripts/pull-blog-drafts.mjs),
+ *   `needs_human`, or `rejected`.
+ */
+export const contentIndex = sqliteTable(
+  'content_index',
+  {
+    /** Site-relative URL path, e.g. /blog/foo or /best/postgres. */
+    url: text('url').primaryKey(),
+    /** 'blog' | 'guide' | 'best' | 'client' | 'draft' | 'external' */
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    primaryKeyword: text('primary_keyword'),
+    excerpt: text('excerpt'),
+    /** JSON number[] (bge-small, 384 dims). Null until embedded. */
+    embedding: text('embedding'),
+    /** Hash of the embedded text so unchanged rows are not re-embedded. */
+    contentHash: text('content_hash').notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    kindIdx: index('idx_content_index_kind').on(table.kind),
+  }),
+);
+
+export const blogTopics = sqliteTable(
+  'blog_topics',
+  {
+    id: text('id').primaryKey(),
+    /** Normalized primary keyword — unique so seeds and ideas never double-queue. */
+    keyword: text('keyword').notNull(),
+    /** JSON string[] of secondary keywords. */
+    secondaryKeywords: text('secondary_keywords'),
+    /** 'informational' | 'comparison' | 'how-to' | 'troubleshooting' | 'news' */
+    intent: text('intent').notNull(),
+    angle: text('angle').notNull(),
+    cluster: text('cluster').notNull(),
+    /** 'seed' | 'ideation' | 'manual' */
+    source: text('source').notNull(),
+    priority: integer('priority').notNull().default(50),
+    /** 'queued' | 'claimed' | 'drafted' | 'blocked' */
+    status: text('status').notNull().default('queued'),
+    /** Why a topic was blocked (e.g. cannibalizes /best/postgres). */
+    blockedReason: text('blocked_reason'),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    claimedAt: integer('claimed_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    keywordIdx: uniqueIndex('idx_blog_topics_keyword').on(table.keyword),
+    statusIdx: index('idx_blog_topics_status').on(table.status, table.priority),
+  }),
+);
+
+export const blogDrafts = sqliteTable(
+  'blog_drafts',
+  {
+    id: text('id').primaryKey(),
+    topicId: text('topic_id').notNull(),
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    excerpt: text('excerpt').notNull(),
+    primaryKeyword: text('primary_keyword').notNull(),
+    /** JSON string[] */
+    tags: text('tags').notNull(),
+    /** JSON {q,a}[] */
+    faq: text('faq').notNull(),
+    /** Markdown body (no frontmatter, no H1). */
+    content: text('content').notNull(),
+    /**
+     * 'review' (awaiting self-review) | 'revise' (has issues to fix) |
+     * 'ready' | 'needs_human' | 'rejected' | 'exported'
+     */
+    status: text('status').notNull(),
+    /** Write + revise passes so far. */
+    iterations: integer('iterations').notNull().default(1),
+    /** JSON: latest review scores, issues, and similarity report. */
+    review: text('review'),
+    /** JSON {url,title,anchor}[] — older pages that should link to this post once live. */
+    backlinkSuggestions: text('backlink_suggestions'),
+    model: text('model'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    exportedAt: integer('exported_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    slugIdx: uniqueIndex('idx_blog_drafts_slug').on(table.slug),
+    statusIdx: index('idx_blog_drafts_status').on(table.status),
+  }),
+);
