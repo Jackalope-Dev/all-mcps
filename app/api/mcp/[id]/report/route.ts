@@ -4,6 +4,8 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { reports, servers } from '../../../../../db/schema';
+import { getEmailEnv, sendNotificationEmail } from '../../../../../lib/notify';
+import { getAppUrl } from '../../../../../lib/stripe';
 import { verifyTurnstileToken } from '../../../../../lib/turnstile';
 import {
   getClientIp,
@@ -148,6 +150,24 @@ export async function POST(
       details,
       reporterIpHash: ipHash,
     });
+
+    // Without this, reports sat unseen until someone happened to open /admin — a
+    // maintainer's correction went nowhere and they fell back to emailing us.
+    // Best-effort: the report is already stored, so a mail failure must not 500.
+    try {
+      const { adminEmail } = await getEmailEnv();
+      await sendNotificationEmail({
+        to: adminEmail,
+        heading: `Listing reported: ${id} (${reason})`,
+        message: details
+          ? `A visitor reported /mcp/${id} as "${reason}": ${details}`
+          : `A visitor reported /mcp/${id} as "${reason}" (no details given).`,
+        actionText: 'Review in Admin Panel',
+        actionUrl: `${getAppUrl()}/admin`,
+      });
+    } catch (err) {
+      console.error('Report admin notification failed:', err);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

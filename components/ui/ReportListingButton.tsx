@@ -3,7 +3,6 @@
 import { Flag, X } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { toast } from './Toast';
 import { TurnstileWidget } from './TurnstileWidget';
 
 const REASONS: { value: string; label: string }[] = [
@@ -27,6 +26,10 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
   const [token, setToken] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  // Shown inside the modal: toasts share its z-index and render underneath the
+  // overlay, so a failed submit used to look like nothing happened at all.
+  const [error, setError] = useState<string | null>(null);
+  const [widgetKey, setWidgetKey] = useState(0);
 
   const close = () => {
     setIsOpen(false);
@@ -36,14 +39,16 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
       setDetails('');
       setToken(null);
       setSubmitted(false);
+      setError(null);
     }, 200);
   };
 
   const handleSubmit = async () => {
     if (!token) {
-      toast.error('Please complete the verification challenge.');
+      setError('Please complete the verification challenge.');
       return;
     }
+    setError(null);
     setSubmitting(true);
     try {
       const res = await fetch(`/api/mcp/${serverId}/report`, {
@@ -59,7 +64,10 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
       if (!res.ok) throw new Error(data.error || 'Could not submit report');
       setSubmitted(true);
     } catch (err: any) {
-      toast.error('Could not submit report', { description: err?.message });
+      setError(err?.message || 'Could not submit report');
+      // The Turnstile token is single-use, so a retry needs a fresh challenge.
+      setToken(null);
+      setWidgetKey((k) => k + 1);
     } finally {
       setSubmitting(false);
     }
@@ -213,10 +221,29 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
               />
 
               <TurnstileWidget
+                key={widgetKey}
                 onSuccess={setToken}
                 onExpire={() => setToken(null)}
+                onError={() =>
+                  setError(
+                    'Verification failed to load. Disable content blockers or try another browser.',
+                  )
+                }
                 compact
               />
+
+              {error && (
+                <p
+                  role="alert"
+                  style={{
+                    color: '#ef4444',
+                    fontSize: '0.85rem',
+                    marginTop: '0.75rem',
+                  }}
+                >
+                  {error}
+                </p>
+              )}
 
               <button
                 type="button"
