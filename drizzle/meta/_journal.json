@@ -232,6 +232,13 @@
       "when": 1790150400000,
       "tag": "0052_blog_pipeline",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1790537859559,
+      "tag": "0053_performance_indexes",
+      "breakpoints": true
     }
   ]
 }

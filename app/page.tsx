@@ -115,7 +115,7 @@ export default async function Home() {
   // into memory just to pick ~20 marquee/featured cards out of thousands.
   const [newestServers, discoveryPool, siteStats] = await Promise.all([
     getNewestActiveServers(48),
-    getActiveServersLight(),
+    getActiveServersLight(200),
     getSiteStats(),
   ]);
   const landingServers = newestServers.map(toLightCard);

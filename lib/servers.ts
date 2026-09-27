@@ -325,16 +325,26 @@ const DISCOVERY_COLUMNS = {
  * sharding for /browse; the homepage needs the same treatment because it
  * scans the whole catalog too (for counts/ranking), not just its own page.
  */
-export async function getActiveServersLight(): Promise<Server[]> {
+export async function getActiveServersLight(limit?: number): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const rows = await db
+      const query = db
         .select(DISCOVERY_COLUMNS)
         .from(serversTable)
         .where(eq(serversTable.status, 'active'));
+      const rows = limit
+        ? await query
+            .orderBy(
+              desc(serversTable.isPremium),
+              desc(serversTable.views),
+              desc(serversTable.copies),
+              desc(serversTable.upvotes),
+            )
+            .limit(limit)
+        : await query;
       if (rows.length > 0) {
         return rows.map((r) => ({
           ...r,
@@ -347,7 +357,9 @@ export async function getActiveServersLight(): Promise<Server[]> {
   } catch (e) {
     // Fall back to static JSON
   }
-  return snapshotCatalogServers().map((s) => ({
+  const base = snapshotCatalogServers();
+  const candidates = limit ? base.slice(0, limit) : base;
+  return candidates.map((s) => ({
     id: s.id,
     name: s.name,
     url: s.url,

@@ -123,6 +123,13 @@ const SLOW_JOBS: CronJob[] = [
     secretVar: 'CRON_SECRET',
     shouldRun: (now) => now.getUTCHours() === 5,
   },
+  // 45-day retention cleanup for impression_logs and api_access_logs to prevent
+  // unbounded table/index growth and D1 Time-Travel WAL storage bloat. Daily at 03:00 UTC.
+  {
+    path: '/api/cron/log-cleanup',
+    secretVar: 'CRON_SECRET',
+    shouldRun: (now) => now.getUTCHours() === 3,
+  },
   // Blog content pipeline: corpus sync, topic dedupe, draft → self-review →
   // revise (lib/blogPipeline). Deliberately LAST — it spends up to ~9 min of
   // its own time budget on LLM calls, so everything above runs first. Stops

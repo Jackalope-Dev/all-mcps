@@ -14,5 +14,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const stats = await getSiteStats();
-  return NextResponse.json(stats, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json(stats, {
+    headers: {
+      'Cache-Control':
+        'public, max-age=300, s-maxage=900, stale-while-revalidate=1800',
+    },
+  });
 }

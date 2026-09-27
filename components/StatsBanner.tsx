@@ -36,8 +36,10 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
 
   // The homepage shell is ISR-cached (see app/page.tsx), so these numbers can
   // be frozen to a stale/zeroed build-time snapshot — see app/api/site-stats.
-  // Refetch live on mount so the banner self-corrects instead of staying stuck.
+  // Refetch live on mount only if initialStats is missing/empty so the banner
+  // self-corrects without querying D1 on every single normal visitor mount.
   useEffect(() => {
+    if (hasCountableStats(initialStats)) return;
     let cancelled = false;
     fetch('/api/site-stats')
       .then((res) => (res.ok ? (res.json() as Promise<SiteStats>) : null))
@@ -52,7 +54,7 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialStats]);
 
   // Keep the homepage proof strip to high-signal metrics; full breakdown lives on /trust.
   const totalServers = stats?.totalServers ?? 0;

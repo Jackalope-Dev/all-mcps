@@ -122,7 +122,7 @@ function calcQualityTiers(serverList: any[]): {
 }
 
 let cachedSiteStats: { data: SiteStats; timestamp: number } | null = null;
-const CACHE_TTL_MS = 60 * 1000; // 60s memory cache to protect Worker memory & D1 budget
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min memory cache to protect Worker memory & D1 budget
 
 let memoizedSnapshotFallback: SiteStats | null = null;
 

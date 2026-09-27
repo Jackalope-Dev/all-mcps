@@ -305,6 +305,14 @@ export const servers = sqliteTable(
       table.copies,
       table.upvotes,
     ),
+    statusLastCheckedIdx: index('idx_servers_status_last_checked').on(
+      table.status,
+      table.lastCheckedAt,
+    ),
+    statusAiEnrichedIdx: index('idx_servers_status_ai_enriched').on(
+      table.status,
+      table.aiEnrichedAt,
+    ),
   }),
 );
 
@@ -469,6 +477,14 @@ export const apiAccessLogs = sqliteTable(
     serverIdx: index('idx_access_server').on(table.serverId),
     createdIdx: index('idx_access_created').on(table.createdAt),
     callerIdx: index('idx_access_caller').on(table.callerClass),
+    serverCreatedIdx: index('idx_access_server_created').on(
+      table.serverId,
+      table.createdAt,
+    ),
+    createdCallerIdx: index('idx_access_created_caller').on(
+      table.createdAt,
+      table.callerClass,
+    ),
   }),
 );
 
@@ -488,6 +504,10 @@ export const impressionLogs = sqliteTable(
     serverIdx: index('idx_impression_server').on(table.serverId),
     createdIdx: index('idx_impression_created').on(table.createdAt),
     surfaceIdx: index('idx_impression_surface').on(table.surface),
+    serverCreatedIdx: index('idx_impression_server_created').on(
+      table.serverId,
+      table.createdAt,
+    ),
   }),
 );
 

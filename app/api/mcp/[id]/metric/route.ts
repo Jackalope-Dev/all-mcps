@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { servers, upvoteRecords, viewRecords } from '../../../../../db/schema';
+import { classifyCaller } from '../../../../../lib/accessLog';
 import {
   getClientIp,
   hashVisitorForServer,
@@ -40,6 +41,12 @@ export async function POST(
     }
 
     const { metric } = result.data;
+
+    const caller = classifyCaller(req.headers.get('user-agent'));
+    const isBot = caller !== 'browser' && caller !== 'unknown';
+    if (isBot && (metric === 'view' || metric === 'copy')) {
+      return NextResponse.json({ success: true, skipped: 'bot' });
+    }
 
     let db: Awaited<ReturnType<typeof getDb>>;
     try {
@@ -181,6 +188,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const caller = classifyCaller(req.headers.get('user-agent'));
+    if (caller !== 'browser' && caller !== 'unknown') {
+      return NextResponse.json({ alreadyVoted: false, alreadyViewed: false });
+    }
+
     const { id } = await params;
 
     let db: Awaited<ReturnType<typeof getDb>>;
