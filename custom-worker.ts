@@ -126,7 +126,7 @@ const SLOW_JOBS: CronJob[] = [
   // Blog content pipeline: corpus sync, topic dedupe, draft → self-review →
   // revise (lib/blogPipeline). Deliberately LAST — it spends up to ~9 min of
   // its own time budget on LLM calls, so everything above runs first. Stops
-  // itself once BACKLOG_CAP drafts are waiting for scripts/pull-blog-drafts.mjs.
+  // itself once BACKLOG_CAP drafts are waiting for review in /admin → Blog Drafts.
   { path: '/api/cron/blog-pipeline', secretVar: 'CRON_SECRET' },
 ];
 

@@ -8,17 +8,18 @@
  *        │ cannibalization check (lexical + semantic vs content_index)
  *        ├─ overlap → topic 'blocked' (reason stored)
  *        ▼
- *   write → blog_drafts('review') ─► review ─► 'ready' ─► pull-blog-drafts.mjs
- *                                     │  ▲                (human reads the diff,
- *                                     ▼  │                 commits, deploys)
+ *   write → blog_drafts('review') ─► review ─► 'ready' ─► /admin → Blog Drafts
+ *                                     │  ▲                (human reads, approves;
+ *                                     ▼  │                 ./publish.ts commits to
+ *                                                          main, which deploys)
  *                                 'revise' (≤ MAX_ITERATIONS passes)
  *                                     └─► 'needs_human' | 'rejected'
  *
  * Why drafts stop at 'ready' instead of auto-publishing: posts are statically
- * built from content/blog, deploys are run by hand, and mass-published
+ * built from content/blog, every publish is a deploy, and mass-published
  * unreviewed AI content is exactly what search engines' scaled-content policies
  * target. The pipeline does the research, dedupe, writing and editing; a human
- * spends two minutes reading the diff before it ships.
+ * spends two minutes reading it before it ships.
  */
 
 import { and, asc, count, desc, eq, gte, inArray } from 'drizzle-orm';

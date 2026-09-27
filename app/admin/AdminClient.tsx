@@ -3,6 +3,7 @@
 import {
   BarChart3,
   Clock,
+  FileText,
   List,
   Mail,
   Megaphone,
@@ -16,6 +17,7 @@ import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import { parsePendingRevision } from '../../lib/pendingRevision';
 import { AdminAdsControl } from './AdminAdsControl';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
+import { AdminBlogDrafts } from './AdminBlogDrafts';
 import { AdminToolsControl } from './AdminCronsControl';
 import ManageListings, { type ListingFilters } from './ManageListings';
 import { type KpiCardSelection, StatsBar } from './StatsBar';
@@ -104,6 +106,7 @@ export default function AdminClient({
   initialPendingReviewComments = [],
   recentlyAdded = [],
   initialAds = [],
+  initialBlogReadyCount = 0,
   stats,
 }: {
   initialPending: Server[];
@@ -115,6 +118,7 @@ export default function AdminClient({
   initialPendingReviewComments?: ReviewCommentItem[];
   recentlyAdded?: RecentServer[];
   initialAds?: any[];
+  initialBlogReadyCount?: number;
   stats: AdminStats;
 }) {
   const [pending, setPending] = useState<Server[]>(initialPending);
@@ -133,6 +137,7 @@ export default function AdminClient({
     ReviewCommentItem[]
   >(initialPendingReviewComments);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [blogReadyCount, setBlogReadyCount] = useState(initialBlogReadyCount);
 
   // Rejection Reason Modal State
   const [rejectingItem, setRejectingItem] = useState<{
@@ -171,6 +176,7 @@ export default function AdminClient({
     | 'moderation'
     | 'listings'
     | 'ads'
+    | 'blog'
     | 'analytics'
     | 'crons'
     | 'tools'
@@ -340,6 +346,13 @@ export default function AdminClient({
         initialAds.filter((a) => a.status === 'pending_approval').length ||
         undefined,
       badgeColor: '#00E5FF',
+    },
+    {
+      id: 'blog',
+      label: 'Blog Drafts',
+      icon: FileText,
+      badge: blogReadyCount > 0 ? blogReadyCount : undefined,
+      badgeColor: '#10b981',
     },
     { id: 'analytics', label: 'Analytics & Logs', icon: BarChart3 },
     { id: 'tools', label: 'Admin Tools & Actions', icon: Wrench },
@@ -795,6 +808,20 @@ export default function AdminClient({
             </p>
           </div>
           <AdminAdsControl initialAds={initialAds} />
+        </section>
+      )}
+
+      {/* TAB: BLOG DRAFTS */}
+      {activeTab === 'blog' && (
+        <section>
+          <div style={{ marginBottom: '1rem' }}>
+            <h2 className="admin-section-title">Blog Drafts</h2>
+            <p className="admin-section-desc">
+              Posts written and self-reviewed by the blog pipeline. Read one,
+              then approve to commit it to main and deploy.
+            </p>
+          </div>
+          <AdminBlogDrafts onCountChange={setBlogReadyCount} />
         </section>
       )}
 

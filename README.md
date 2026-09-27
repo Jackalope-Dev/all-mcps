@@ -130,7 +130,8 @@ and report security issues privately per [SECURITY.md](./SECURITY.md).
 Source code is [MIT licensed](./LICENSE).
 
 The catalog data in `data/mcp-servers.json` describes third-party projects and
-remains the property of their authors. The AllMCPs name, logo, and
+remains the property of their authors. Blog posts in `content/blog/` are
+© Jackalope Digital, all rights reserved. The AllMCPs name, logo, and
 `brand-assets/` are trademarks of Jackalope Digital and aren't covered by the
 MIT grant — see [LICENSE](./LICENSE).
 
