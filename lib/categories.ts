@@ -267,7 +267,8 @@ export function categorySlug(category: string): string {
     .label.toLowerCase()
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
 }
 
 /** slug -> canonical stored category string, built once from the catalog. */

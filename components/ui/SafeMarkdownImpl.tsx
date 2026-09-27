@@ -57,10 +57,21 @@ function resolveUrl(
     url.startsWith('mailto:') ||
     url.startsWith('tel:')
   ) {
-    if (isImage && url.includes('github.com/') && url.includes('/blob/')) {
-      return url
-        .replace('github.com/', 'raw.githubusercontent.com/')
-        .replace('/blob/', '/');
+    if (isImage) {
+      try {
+        const parsed = new URL(url.startsWith('//') ? `https:${url}` : url);
+        if (
+          (parsed.hostname === 'github.com' ||
+            parsed.hostname === 'www.github.com') &&
+          parsed.pathname.includes('/blob/')
+        ) {
+          parsed.hostname = 'raw.githubusercontent.com';
+          parsed.pathname = parsed.pathname.replace('/blob/', '/');
+          return parsed.toString();
+        }
+      } catch {
+        // fallback
+      }
     }
     return url;
   }

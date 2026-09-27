@@ -675,10 +675,6 @@ export default function DirectoryGrid({
     ? parseCategoryLabel(selectedCategory)
     : null;
 
-  // Width for the category select so long names are never clipped
-  const selectLabel = selectedCategory || 'All Categories';
-  const selectMinCh = Math.min(Math.max(selectLabel.length + 4, 16), 48);
-
   const Stats = ({ server }: { server: Server }) => {
     const commitAge = formatCommitAge(server.lastCommitAt);
     return (
@@ -823,76 +819,6 @@ export default function DirectoryGrid({
       </div>
     );
   };
-
-  const TransportBadge = ({ server }: { server: Server }) => {
-    const isRemote =
-      server.installKind === 'remote' ||
-      (server.url && !isRepositoryUrl(server.url));
-    return (
-      <Badge
-        variant="category"
-        style={{
-          background: isRemote
-            ? 'rgba(0, 229, 255, 0.1)'
-            : 'rgba(255, 255, 255, 0.04)',
-          color: isRemote ? '#00E5FF' : 'var(--text-secondary)',
-          borderColor: isRemote
-            ? 'rgba(0, 229, 255, 0.3)'
-            : 'var(--border-color)',
-          fontSize: '0.68rem',
-        }}
-      >
-        {isRemote ? 'SSE' : 'STDIO'}
-      </Badge>
-    );
-  };
-
-  const RuntimeBadge = ({ server }: { server: Server }) => {
-    const cmd = (server.installCommand || '').toLowerCase();
-    const desc = (server.description || '').toLowerCase();
-    const name = (server.name || '').toLowerCase();
-
-    let label = 'Node';
-    if (
-      cmd.includes('uvx') ||
-      cmd.includes('python') ||
-      cmd.includes('pip') ||
-      desc.includes('python') ||
-      name.includes('py')
-    ) {
-      label = 'Python';
-    } else if (cmd.includes('docker') || desc.includes('docker')) {
-      label = 'Docker';
-    } else if (cmd.includes('go') || desc.includes('golang')) {
-      label = 'Go';
-    }
-
-    return (
-      <Badge
-        variant="category"
-        style={{
-          background: 'var(--bg-muted)',
-          color: 'var(--text-secondary)',
-          fontSize: '0.68rem',
-        }}
-      >
-        {label}
-      </Badge>
-    );
-  };
-
-  const resultSubtitle = (
-    <>
-      Showing{' '}
-      <strong style={{ color: 'var(--text-primary)' }}>
-        {filteredServers.length.toLocaleString('en-US')}
-      </strong>{' '}
-      {filteredServers.length === 1 ? 'server' : 'servers'}
-      {selectedCategory ? ' in this category' : ''}
-      {verifiedOnly ? ' (verified only)' : ''}
-      {searchQuery ? <> matching &ldquo;{searchQuery}&rdquo;</> : null}
-    </>
-  );
 
   return (
     <>

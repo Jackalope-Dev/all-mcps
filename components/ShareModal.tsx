@@ -24,10 +24,8 @@ export default function ShareModal({
     {},
   );
   const [mounted, setMounted] = useState(false);
-  const [badgeStyle, setBadgeStyle] = useState<'featured' | 'directory'>(
-    'featured',
-  );
-  const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
+  const [badgeStyle] = useState<'featured' | 'directory'>('featured');
+  const [badgeTheme] = useState<'dark' | 'light'>('dark');
   const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {

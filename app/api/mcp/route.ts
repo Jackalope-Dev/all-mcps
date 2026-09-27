@@ -699,7 +699,6 @@ export async function POST(request: Request) {
       if (toolName === 'boost_mcp_server') {
         const serverId = args.id;
         const sku = (args.sku || 'featured_7d') as PaidSku;
-        const email = args.email;
 
         const server = await getServerById(serverId);
         if (!server) {
@@ -897,89 +896,7 @@ ${data.badge_markdown}
       }
 
       if (toolName === 'verify_mcp_claim') {
-        const { id, method = 'github', websiteUrl, agentToken } = args;
-
-        // Prefer a resolved agent bearer token (header, or the `agentToken`
-        // arg for clients that can't set custom headers per call) so this
-        // works fully unattended — see register_mcp_agent/confirm_mcp_agent.
-        // Falls back to a browser session cookie (claimListing's default)
-        // when neither is present.
-        const authDb = await getAgentAuthDb();
-        const agent = authDb
-          ? await resolveAgentAuthFlexible(
-              authDb,
-              request.headers.get('Authorization'),
-              typeof agentToken === 'string' ? agentToken : null,
-            )
-          : null;
-
-        if (agent && !hasAgentScope(agent, 'listings:claim')) {
-          return Response.json(
-            {
-              jsonrpc: '2.0',
-              id,
-              result: {
-                content: [
-                  {
-                    type: 'text',
-                    text: `Verification failed: this agent token was not granted the "listings:claim" scope (granted: ${agent.scopes.join(', ') || 'none'}). Re-register with register_mcp_agent requesting scopes: ["listings:claim"].`,
-                  },
-                ],
-                isError: true,
-              },
-            },
-            { headers: { 'Access-Control-Allow-Origin': '*' } },
-          );
-        }
-
-        // In-process, not a self-`fetch()` — see lib/submitListing.ts for why.
-        const outcome = await claimListing(
-          { id, method, websiteUrl },
-          agent ? { userId: agent.userId, email: agent.email } : undefined,
-        );
-
-        if (outcome.ok) {
-          const data = outcome.body as any;
-          const md = `# Listing Verification Result for "${id}"
-
-- **Server ID**: ${id}
-- **Method**: ${method}
-- **Status**: ${data.pending ? '⏳ Under Admin Review' : '✅ Verified & Claimed!'}
-- **Message**: ${data.message}
-`;
-          await logMcp(id, `verify_mcp_claim method:${method}`);
-          return Response.json(
-            {
-              jsonrpc: '2.0',
-              id,
-              result: {
-                content: [{ type: 'text', text: md }],
-              },
-            },
-            { headers: { 'Access-Control-Allow-Origin': '*' } },
-          );
-        }
-
-        const errMsg =
-          typeof outcome.body?.error === 'string'
-            ? outcome.body.error
-            : 'Proof not found or sign-in required.';
-        return Response.json(
-          {
-            jsonrpc: '2.0',
-            id,
-            result: {
-              content: [
-                {
-                  type: 'text',
-                  text: `Verification failed: ${errMsg}`,
-                },
-              ],
-              isError: true,
-            },
-          },
-          { headers: { 'Access-Control-Allow-Origin': '*' } },
-        );
+        return handleVerifyMcpClaim(id, args, request, logMcp);
       }
 
       if (toolName === 'register_mcp_agent') {
@@ -1060,4 +977,100 @@ Save this token — pass it as \`agentToken\` on \`verify_mcp_claim\` calls (or 
       { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } },
     );
   }
+}
+
+async function handleVerifyMcpClaim(
+  rpcId: unknown,
+  args: any,
+  request: Request,
+  logMcp: (serverId: string | null, tool: string) => Promise<void>,
+): Promise<Response> {
+  const {
+    id: serverId,
+    method = 'github',
+    websiteUrl,
+    agentToken,
+  } = args || {};
+
+  // Prefer a resolved agent bearer token (header, or the `agentToken`
+  // arg for clients that can't set custom headers per call) so this
+  // works fully unattended — see register_mcp_agent/confirm_mcp_agent.
+  // Falls back to a browser session cookie (claimListing's default)
+  // when neither is present.
+  const authDb = await getAgentAuthDb();
+  const agent = authDb
+    ? await resolveAgentAuthFlexible(
+        authDb,
+        request.headers.get('Authorization'),
+        typeof agentToken === 'string' ? agentToken : null,
+      )
+    : null;
+
+  if (agent && !hasAgentScope(agent, 'listings:claim')) {
+    return Response.json(
+      {
+        jsonrpc: '2.0',
+        id: rpcId,
+        result: {
+          content: [
+            {
+              type: 'text',
+              text: `Verification failed: this agent token was not granted the "listings:claim" scope (granted: ${agent.scopes.join(', ') || 'none'}). Re-register with register_mcp_agent requesting scopes: ["listings:claim"].`,
+            },
+          ],
+          isError: true,
+        },
+      },
+      { headers: { 'Access-Control-Allow-Origin': '*' } },
+    );
+  }
+
+  // In-process, not a self-`fetch()` — see lib/submitListing.ts for why.
+  const outcome = await claimListing(
+    { id: serverId, method, websiteUrl },
+    agent ? { userId: agent.userId, email: agent.email } : undefined,
+  );
+
+  if (outcome.ok) {
+    const data = outcome.body as any;
+    const md = `# Listing Verification Result for "${serverId}"
+
+- **Server ID**: ${serverId}
+- **Method**: ${method}
+- **Status**: ${data.pending ? '⏳ Under Admin Review' : '✅ Verified & Claimed!'}
+- **Message**: ${data.message}
+`;
+    await logMcp(serverId, `verify_mcp_claim method:${method}`);
+    return Response.json(
+      {
+        jsonrpc: '2.0',
+        id: rpcId,
+        result: {
+          content: [{ type: 'text', text: md }],
+        },
+      },
+      { headers: { 'Access-Control-Allow-Origin': '*' } },
+    );
+  }
+
+  const errMsg =
+    typeof outcome.body?.error === 'string'
+      ? outcome.body.error
+      : 'Proof not found or sign-in required.';
+  return Response.json(
+    {
+      jsonrpc: '2.0',
+      id: rpcId,
+      result: {
+        content: [
+          {
+            type: 'text',
+            text: `Verification failed: ${errMsg}`,
+          },
+        ],
+        isError: true,
+      },
+    },
+    { headers: { 'Access-Control-Allow-Origin': '*' } },
+  );
 }

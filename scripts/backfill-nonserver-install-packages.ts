@@ -34,7 +34,7 @@
  * Usage: npx tsx scripts/backfill-nonserver-install-packages.ts [--apply]
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -45,6 +45,7 @@ import {
 import { isPlausibleInstallPackage } from '../lib/tools/parseInstallHint';
 
 const DB_NAME = 'all-mcps';
+const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const STAMP = '2026-09-17';
 // Deliberately no CLOUDFLARE_ACCOUNT_ID override here (the older backfill scripts set
 // one): with the current OAuth login, forcing the account tag makes the D1 API reject the
@@ -73,16 +74,23 @@ function fetchStdioServers(): Row[] {
   // Description is truncated: it is only used to re-parse an install hint (which always
   // appears early), and the untruncated column across ~11k rows blows past the JSON
   // response size wrangler will hand back.
-  const cmd =
-    `npx wrangler d1 execute ${DB_NAME} --remote --json --command ` +
-    `"SELECT id, name, url, substr(description, 1, 4000) AS description, install_kind, ` +
-    `install_command, install_args, install_package, install_confidence, ` +
-    `install_extracted_at, remote_endpoint_url FROM servers ` +
-    `WHERE install_kind = 'stdio' AND install_package IS NOT NULL"`;
-  const out = execSync(cmd, {
-    cwd: process.cwd(),
-    maxBuffer: 1024 * 1024 * 200,
-  }).toString();
+  const out = execFileSync(
+    npxCmd,
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      DB_NAME,
+      '--remote',
+      '--json',
+      "--command=SELECT id, name, url, substr(description, 1, 4000) AS description, install_kind, install_command, install_args, install_package, install_confidence, install_extracted_at, remote_endpoint_url FROM servers WHERE install_kind = 'stdio' AND install_package IS NOT NULL",
+    ],
+    {
+      cwd: process.cwd(),
+      maxBuffer: 1024 * 1024 * 200,
+      encoding: 'utf8',
+    },
+  );
   const parsed = JSON.parse(out);
   return (parsed[0]?.results ?? []) as Row[];
 }
@@ -217,11 +225,15 @@ function main() {
   }
 
   console.log('\nApplying to the live DB...');
-  execSync(`npx wrangler d1 execute ${DB_NAME} --remote --file=${outPath}`, {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-    maxBuffer: 1024 * 1024 * 20,
-  });
+  execFileSync(
+    npxCmd,
+    ['wrangler', 'd1', 'execute', DB_NAME, '--remote', `--file=${outPath}`],
+    {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      maxBuffer: 1024 * 1024 * 20,
+    },
+  );
   console.log('\nDone.');
 }
 

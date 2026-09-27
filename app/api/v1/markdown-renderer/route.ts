@@ -24,26 +24,7 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  // middleware.ts passes the target path via this header (see the comment there for
-  // why a query param on the rewrite target doesn't reach this handler); the query
-  // param fallback just keeps direct/manual calls to this route convenient.
-  const path =
-    req.headers.get('x-agent-markdown-path') || searchParams.get('path') || '/';
-
-  const blogPostMatch = path.match(/^\/blog\/([^/]+)\/?$/);
-  const categoryMatch = path.match(/^\/categories\/([^/]+)\/?$/);
-  const bestTopicMatch = path.match(/^\/best\/([^/]+)\/?$/);
-  const clientMatch = path.match(/^\/clients\/([^/]+)\/?$/);
-  const promptMatch = path.match(/^\/prompts\/([^/]+)\/?$/);
-  const compareMatch = path.match(/^\/mcp\/([^/]+)\/vs\/([^/]+)\/?$/);
-  const alternativesMatch = path.match(/^\/mcp\/([^/]+)\/alternatives\/?$/);
-
-  let markdown: string | null;
-
-  if (path === '/' || path === '') {
-    markdown = `# AllMCPs - The Model Context Protocol Directory & Search Engine
+const HOME_MARKDOWN = `# AllMCPs - The Model Context Protocol Directory & Search Engine
 
 Welcome to AllMCPs.com, the premier index of Model Context Protocol (MCP) servers, web tools, and AI agent integrations.
 
@@ -67,40 +48,77 @@ Welcome to AllMCPs.com, the premier index of Model Context Protocol (MCP) server
 Perform programmatic queries against our directory:
 \`GET https://allmcps.com/api/v1/search?q={query}&category={category}&limit=10\`
 `;
-  } else if (path === '/blog' || path === '/blog/') {
-    markdown = await renderBlogIndexMarkdown();
-  } else if (blogPostMatch) {
-    markdown = await renderBlogPostMarkdown(blogPostMatch[1]);
-  } else if (path === '/categories' || path === '/categories/') {
-    markdown = await renderCategoryIndexMarkdown();
-  } else if (categoryMatch) {
-    markdown = await renderCategoryMarkdown(categoryMatch[1]);
-  } else if (path === '/best' || path === '/best/') {
-    markdown = await renderBestIndexMarkdown();
-  } else if (bestTopicMatch) {
-    markdown = await renderBestTopicMarkdown(bestTopicMatch[1]);
-  } else if (path === '/clients' || path === '/clients/') {
-    markdown = await renderClientIndexMarkdown();
-  } else if (clientMatch) {
-    markdown = await renderClientMarkdown(clientMatch[1]);
-  } else if (path === '/prompts' || path === '/prompts/') {
-    markdown = await renderPromptIndexMarkdown();
-  } else if (promptMatch) {
-    markdown = await renderPromptMarkdown(promptMatch[1]);
-  } else if (compareMatch) {
-    markdown = await renderCompareMarkdown(compareMatch[1], compareMatch[2]);
-  } else if (alternativesMatch) {
-    markdown = await renderAlternativesMarkdown(alternativesMatch[1]);
-  } else {
-    markdown = `# AllMCPs - Path: ${path}
+
+async function resolveMarkdownForPath(path: string): Promise<string | null> {
+  const normalized = path.replace(/\/+$/, '') || '/';
+
+  if (normalized === '/') {
+    return HOME_MARKDOWN;
+  }
+  if (normalized === '/blog') {
+    return renderBlogIndexMarkdown();
+  }
+  const blogPostMatch = normalized.match(/^\/blog\/([^/]+)$/);
+  if (blogPostMatch) {
+    return renderBlogPostMarkdown(blogPostMatch[1]);
+  }
+  if (normalized === '/categories') {
+    return renderCategoryIndexMarkdown();
+  }
+  const categoryMatch = normalized.match(/^\/categories\/([^/]+)$/);
+  if (categoryMatch) {
+    return renderCategoryMarkdown(categoryMatch[1]);
+  }
+  if (normalized === '/best') {
+    return renderBestIndexMarkdown();
+  }
+  const bestTopicMatch = normalized.match(/^\/best\/([^/]+)$/);
+  if (bestTopicMatch) {
+    return renderBestTopicMarkdown(bestTopicMatch[1]);
+  }
+  if (normalized === '/clients') {
+    return renderClientIndexMarkdown();
+  }
+  const clientMatch = normalized.match(/^\/clients\/([^/]+)$/);
+  if (clientMatch) {
+    return renderClientMarkdown(clientMatch[1]);
+  }
+  if (normalized === '/prompts') {
+    return renderPromptIndexMarkdown();
+  }
+  const promptMatch = normalized.match(/^\/prompts\/([^/]+)$/);
+  if (promptMatch) {
+    return renderPromptMarkdown(promptMatch[1]);
+  }
+  const compareMatch = normalized.match(/^\/mcp\/([^/]+)\/vs\/([^/]+)$/);
+  if (compareMatch) {
+    return renderCompareMarkdown(compareMatch[1], compareMatch[2]);
+  }
+  const alternativesMatch = normalized.match(/^\/mcp\/([^/]+)\/alternatives$/);
+  if (alternativesMatch) {
+    return renderAlternativesMarkdown(alternativesMatch[1]);
+  }
+
+  return `# AllMCPs - Path: ${normalized}
 
 Content requested in Markdown format for AI Agents.
 
-- **URL**: https://allmcps.com${path}
+- **URL**: https://allmcps.com${normalized}
 - **API Catalog**: https://allmcps.com/.well-known/api-catalog
 - **Documentation**: https://allmcps.com/docs/api
 `;
-  }
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  // middleware.ts passes the target path via this header (see the comment there for
+  // why a query param on the rewrite target doesn't reach this handler); the query
+  // param fallback just keeps direct/manual calls to this route convenient.
+  const rawPath =
+    req.headers.get('x-agent-markdown-path') || searchParams.get('path') || '/';
+  const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+
+  const markdown = await resolveMarkdownForPath(path);
 
   if (markdown === null) {
     return new NextResponse(

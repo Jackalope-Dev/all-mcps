@@ -7,8 +7,13 @@
  */
 export function cleanText(input: string | null | undefined): string {
   if (!input) return '';
-  return input
-    .replace(/<[^>]*>/g, '') // remove HTML tags
+  let str = input;
+  let prev = '';
+  while (str !== prev) {
+    prev = str;
+    str = str.replace(/<[^>]*>/g, ''); // remove HTML tags
+  }
+  return str
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // replace markdown links with label
     .replace(/[*_`~#]/g, '') // strip markdown syntax
     .replace(/₿/g, 'BTC') // replace Bitcoin symbol (U+20BF) to avoid Satori font fetch

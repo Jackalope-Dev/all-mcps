@@ -1,6 +1,8 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+
+const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 /**
  * Finds and retires duplicate MCP listings on the remote Cloudflare D1 DB.
@@ -376,8 +378,19 @@ function pickKeeper(rows) {
 }
 
 function q(sql) {
-  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "${sql.replace(/"/g, '\\"')}"`;
-  const out = execSync(cmd, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const out = execFileSync(
+    npxCmd,
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      DB_NAME,
+      '--remote',
+      '--json',
+      `--command=${sql}`,
+    ],
+    { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  );
   return JSON.parse(out)[0]?.results ?? [];
 }
 
@@ -555,9 +568,13 @@ async function main() {
   fs.writeFileSync(sqlFile, `${lines.join('\n')}\n`, 'utf8');
   console.log(`\nWrote ${lines.length} statements to ${sqlFile}`);
 
-  execSync(`npx wrangler d1 execute ${DB_NAME} --remote --file=${sqlFile}`, {
-    stdio: 'inherit',
-  });
+  execFileSync(
+    npxCmd,
+    ['wrangler', 'd1', 'execute', DB_NAME, '--remote', `--file=${sqlFile}`],
+    {
+      stdio: 'inherit',
+    },
+  );
   console.log(
     '\n✅ Done. Retired listings stay reachable at /mcp/<id> but drop out of search, browse, API, and the sitemap.',
   );

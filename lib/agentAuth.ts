@@ -170,10 +170,8 @@ export async function resolveAgentAuthFlexible(
   authorizationHeader: string | null,
   rawTokenArg?: string | null,
 ): Promise<AgentIdentity | null> {
-  const viaHeader = await resolveAgentAuth(db, authorizationHeader);
-  if (viaHeader) return viaHeader;
-  if (rawTokenArg?.trim()) {
-    return resolveAgentAuth(db, `Bearer ${rawTokenArg.trim()}`);
-  }
-  return null;
+  const headerToken = authorizationHeader?.match(/^Bearer\s+(\S+)$/i)?.[1];
+  const token = (headerToken || rawTokenArg || '').trim();
+  const bearerHeader = token ? `Bearer ${token}` : null;
+  return resolveAgentAuth(db, bearerHeader);
 }

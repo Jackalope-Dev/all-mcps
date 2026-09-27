@@ -279,11 +279,13 @@ export function buildSearchPrefilter(query: string): SearchPrefilter {
 
 /** Precompile a query once (word-boundary regexes) so scoring stays cheap per row. */
 export function compileQuery(query: string): QueryTerm[] {
-  return tokenizeQuery(query).map((term) => ({
-    term,
-    // term is [a-z0-9]+ so it needs no regex escaping.
-    boundary: new RegExp(`\\b${term}\\b`),
-  }));
+  return tokenizeQuery(query).map((term) => {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return {
+      term,
+      boundary: new RegExp(`\\b${escaped}\\b`),
+    };
+  });
 }
 
 /** Engagement tie-breaker, combining directory interactions (upvotes, installs, views) with external adoption signals (GitHub stars, npm downloads). */

@@ -169,7 +169,7 @@ export default function DashboardClient({
 }: Props) {
   const [servers, setServers] = useState(initialServers);
   const [ads] = useState(initialAds);
-  const [analytics, setAnalytics] = useState(initialAnalytics);
+  const [analytics] = useState(initialAnalytics);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTabMap, setActiveTabMap] = useState<Record<string, TabType>>({});
   const [detailAnalytics, setDetailAnalytics] = useState<
@@ -578,7 +578,6 @@ export default function DashboardClient({
         {servers.map((server) => {
           const pending = parsePendingRevision(server.pendingRevision);
           const activeTab = getActiveTab(server.id);
-          const isEditing = activeTab === 'edit';
           const summary = analytics[server.id];
           const detail = detailAnalytics[server.id];
           const isLoadingDetail = Boolean(loadingDetailMap[server.id]);
@@ -3146,153 +3145,6 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
 
 /* ─── Styles ─── */
 
-const globalSummaryContainerStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(172px, 1fr))',
-  gap: '1rem',
-};
-
-const summaryMetricCardStyle: CSSProperties = {
-  background: 'var(--card-bg)',
-  border: '1px solid var(--border-color)',
-  borderRadius: '12px',
-  padding: '1rem 1.25rem',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.35rem',
-};
-
-// Fixed height + nowrap/ellipsis so every card's label occupies identical
-// vertical space regardless of text length — otherwise a longer label (e.g.
-// "Claimed Listings") wraps to two lines on narrow cards and pushes that
-// card's number down relative to its neighbors.
-const summaryLabelStyle: CSSProperties = {
-  fontSize: '0.75rem',
-  color: 'var(--text-secondary)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  fontWeight: 600,
-  height: '1rem',
-  lineHeight: '1rem',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-};
-
-const summaryValueStyle: CSSProperties = {
-  fontSize: '1.5rem',
-  fontWeight: 800,
-  color: 'var(--text-primary)',
-  lineHeight: 1.2,
-};
-
-const cardStyle: CSSProperties = {
-  background: 'var(--card-bg)',
-  border: '1px solid var(--border-color)',
-  borderRadius: '14px',
-  padding: '1.5rem',
-};
-
-const logoPlaceholderStyle: CSSProperties = {
-  width: 44,
-  height: 44,
-  borderRadius: 10,
-  background: 'rgba(var(--accent-rgb), 0.1)',
-  border: '1px solid rgba(var(--accent-rgb), 0.25)',
-  color: 'var(--accent-color)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontWeight: 800,
-  fontSize: '1.2rem',
-  flexShrink: 0,
-};
-
-const categoryBadgeStyle: CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 600,
-  padding: '0.25rem 0.6rem',
-  borderRadius: '6px',
-  background: 'rgba(128, 128, 128, 0.12)',
-  border: '1px solid var(--border-color)',
-  color: 'var(--text-secondary)',
-};
-
-const rankBadgeStyle: CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  padding: '0.25rem 0.6rem',
-  borderRadius: '6px',
-  background: 'rgba(245, 158, 11, 0.15)',
-  border: '1px solid rgba(245, 158, 11, 0.4)',
-  color: '#d97706',
-};
-
-const pendingBadgeStyle: CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  padding: '0.25rem 0.6rem',
-  borderRadius: '6px',
-  background: 'rgba(245, 158, 11, 0.15)',
-  border: '1px solid rgba(245, 158, 11, 0.4)',
-  color: '#d97706',
-};
-
-const boostBadgeStyle: CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  padding: '0.25rem 0.6rem',
-  borderRadius: '6px',
-  background: 'rgba(var(--accent-rgb), 0.12)',
-  border: '1px solid rgba(var(--accent-rgb), 0.3)',
-  color: 'var(--accent-color)',
-};
-
-const premiumBadgeStyle: CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  color: 'var(--accent-color)',
-  background: 'rgba(var(--accent-rgb), 0.12)',
-  border: '1px solid rgba(var(--accent-rgb), 0.3)',
-  borderRadius: '6px',
-  padding: '0.25rem 0.6rem',
-  whiteSpace: 'nowrap',
-};
-
-const tabContainerStyle: CSSProperties = {
-  display: 'flex',
-  gap: '0.4rem',
-  borderBottom: '1px solid var(--border-color)',
-  paddingBottom: '0.5rem',
-  overflowX: 'auto',
-};
-
-function getTabButtonStyle(isActive: boolean): CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.4rem',
-    padding: '0.45rem 0.85rem',
-    borderRadius: '8px',
-    border: 'none',
-    background: isActive ? 'rgba(var(--accent-rgb), 0.12)' : 'transparent',
-    color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
-    fontWeight: isActive ? 700 : 500,
-    fontSize: '0.825rem',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    transition: 'all 0.15s ease',
-  };
-}
-
-const tabBadgeAlertStyle: CSSProperties = {
-  width: 6,
-  height: 6,
-  borderRadius: '50%',
-  background: '#34d399',
-  display: 'inline-block',
-};
-
 const quickStatsRowStyle: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
@@ -3318,25 +3170,6 @@ const fieldLabelStyle: CSSProperties = {
   fontWeight: 600,
   color: 'var(--text-secondary)',
   marginBottom: '0.4rem',
-};
-
-const premiumBannerStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  padding: '0.75rem 1rem',
-  borderRadius: '10px',
-  background:
-    'linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(var(--accent-secondary-rgb), 0.04))',
-  border: '1px solid rgba(var(--accent-rgb), 0.2)',
-};
-
-const backlinkAlertBannerStyle: CSSProperties = {
-  padding: '1rem 1.15rem',
-  borderRadius: 12,
-  border:
-    '1px solid color-mix(in srgb, var(--accent-color) 30%, var(--border-color))',
-  background: 'color-mix(in srgb, var(--accent-color) 8%, var(--bg-elevated))',
 };
 
 const backlinkActiveContainerStyle: CSSProperties = {
@@ -3378,23 +3211,4 @@ const queryChipStyle: CSSProperties = {
   border: '1px solid rgba(var(--accent-rgb), 0.15)',
   color: 'var(--text-secondary)',
   whiteSpace: 'nowrap',
-};
-
-const emptyStateCardStyle: CSSProperties = {
-  textAlign: 'center',
-  padding: '3.5rem 1.5rem',
-  background: 'var(--card-bg)',
-  border: '1px solid var(--border-color)',
-  borderRadius: '16px',
-};
-
-const onboardingActionCardStyle: CSSProperties = {
-  background: 'rgba(255,255,255,0.02)',
-  border: '1px solid var(--border-color)',
-  borderRadius: '12px',
-  padding: '1.25rem',
-  textAlign: 'left',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'space-between',
 };

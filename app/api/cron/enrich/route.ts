@@ -30,6 +30,23 @@ import {
   processLogoUpload,
 } from '../../../../lib/logoImage';
 
+function isGithubUrl(urlString: string): boolean {
+  if (!urlString) return false;
+  try {
+    const parsed = new URL(
+      urlString.startsWith('//') ? `https:${urlString}` : urlString,
+    );
+    return (
+      parsed.hostname === 'github.com' ||
+      parsed.hostname.endsWith('.github.com')
+    );
+  } catch {
+    return /^https?:\/\/(?:[a-zA-Z0-9-]+\.)*github\.com(?::\d+)?(?:\/|$)/i.test(
+      urlString,
+    );
+  }
+}
+
 /**
  * Catalog quality pass for scrape/import listings.
  *
@@ -348,10 +365,7 @@ export async function POST(req: Request) {
             // Derive website from README if current is missing or points to github.com
             const derivedWebsite =
               llmChoice?.websiteUrl || candidateWebsites[0];
-            if (
-              derivedWebsite &&
-              (!websiteUrl || /github\.com/i.test(websiteUrl))
-            ) {
+            if (derivedWebsite && (!websiteUrl || isGithubUrl(websiteUrl))) {
               websiteUrl = derivedWebsite;
               updates.websiteUrl = websiteUrl;
               // New website domain — reset the website backlink, keep the repo README badge.

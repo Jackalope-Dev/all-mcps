@@ -156,7 +156,12 @@ async function main() {
       );
       continue;
     }
-    const file = path.join(BLOG_DIR, `${date}-${d.slug}.md`);
+    const safeSlug = path.basename(d.slug || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!safeSlug) continue;
+    const file = path.join(BLOG_DIR, `${date}-${safeSlug}.md`);
+    if (!path.resolve(file).startsWith(path.resolve(BLOG_DIR))) {
+      throw new Error(`Invalid destination path for slug: ${d.slug}`);
+    }
     fs.writeFileSync(file, toMarkdown(d), 'utf8');
     await api('POST', '', { id: d.id, status: 'exported' });
     console.log(`    ✓ wrote ${path.relative(process.cwd(), file)}`);

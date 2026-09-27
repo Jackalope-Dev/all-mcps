@@ -56,9 +56,19 @@ function tierFor(score: number): QualityTier {
   return 'Emerging';
 }
 
-/** Does the listing point at a GitHub repo (as opposed to a hosted MCP endpoint we can handshake)? */
 function isRepoHosted(url: string): boolean {
-  return /github\.com/i.test(url || '');
+  if (!url) return false;
+  try {
+    const parsed = new URL(url.startsWith('//') ? `https:${url}` : url);
+    return (
+      parsed.hostname === 'github.com' ||
+      parsed.hostname.endsWith('.github.com')
+    );
+  } catch {
+    return /^https?:\/\/(?:[a-zA-Z0-9-]+\.)*github\.com(?::\d+)?(?:\/|$)/i.test(
+      url,
+    );
+  }
 }
 
 export function computeQualityScore(server: Server): QualityScore {

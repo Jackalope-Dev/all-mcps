@@ -21,14 +21,19 @@ const ALLOWED_METHODS = new Set([
 
 function sanitizeHeaders(input: unknown): Record<string, string> {
   const out: Record<string, string> = {};
-  if (!input || typeof input !== 'object') return out;
-  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return out;
+  for (const [rawKey, v] of Object.entries(input as Record<string, unknown>)) {
     if (typeof v !== 'string') continue;
-    const key = k.toLowerCase();
+    const k = rawKey.trim();
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+      continue;
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(k)) continue;
+    const lowerKey = k.toLowerCase();
     if (
-      key === 'authorization' ||
-      key.startsWith('x-') ||
-      key === 'mcp-session-id'
+      lowerKey === 'authorization' ||
+      lowerKey.startsWith('x-') ||
+      lowerKey === 'mcp-session-id'
     ) {
       out[k] = v.slice(0, 4096);
     }
@@ -47,7 +52,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const url = typeof body?.url === 'string' ? body.url.trim() : '';
+  const rawUrl = typeof body?.url === 'string' ? body.url.trim() : '';
   const method = typeof body?.method === 'string' ? body.method : 'tools/list';
   if (!ALLOWED_METHODS.has(method)) {
     return NextResponse.json(
@@ -55,14 +60,32 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  if (url.length > 2048) {
+  if (!rawUrl || rawUrl.length > 2048) {
     return NextResponse.json(
-      { ok: false, error: 'URL too long.' },
+      { ok: false, error: 'Invalid or missing URL.' },
       { status: 400 },
     );
   }
 
-  const result = await callMcpEndpoint(url, {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(rawUrl);
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: 'Invalid URL format.' },
+      { status: 400 },
+    );
+  }
+
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    return NextResponse.json(
+      { ok: false, error: 'Only http and https URLs are allowed.' },
+      { status: 400 },
+    );
+  }
+
+  const cleanUrl = parsedUrl.href;
+  const result = await callMcpEndpoint(cleanUrl, {
     method,
     params: body?.params,
     headers: sanitizeHeaders(body?.headers),

@@ -11,10 +11,19 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { job } = body as { job?: string };
 
-    const validJobs = ['health', 'ai-content', 'enrich', 'indexnow'];
-    if (!job || !validJobs.includes(job)) {
+    const CRON_PATHS: Record<string, string> = {
+      health: '/api/cron/health',
+      'ai-content': '/api/cron/ai-content',
+      enrich: '/api/cron/enrich',
+      indexnow: '/api/cron/indexnow',
+    };
+
+    const cronPath = typeof job === 'string' ? CRON_PATHS[job] : undefined;
+    if (!cronPath) {
       return NextResponse.json(
-        { error: `Invalid job. Allowed: ${validJobs.join(', ')}` },
+        {
+          error: `Invalid job. Allowed: ${Object.keys(CRON_PATHS).join(', ')}`,
+        },
         { status: 400 },
       );
     }
@@ -32,9 +41,19 @@ export async function POST(req: Request) {
       env?.ADMIN_SECRET ||
       process.env.CRON_SECRET ||
       process.env.ADMIN_SECRET;
-    const origin = new URL(req.url).origin;
 
-    const cronUrl = `${origin}/api/cron/${job}`;
+    const allowedOrigins = new Set([
+      'https://allmcps.com',
+      'https://www.allmcps.com',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ]);
+    const reqOrigin = new URL(req.url).origin;
+    const origin = allowedOrigins.has(reqOrigin)
+      ? reqOrigin
+      : 'https://allmcps.com';
+
+    const cronUrl = new URL(cronPath, origin).toString();
     const cookieHeader = req.headers.get('cookie');
     const authHeader = req.headers.get('authorization');
 

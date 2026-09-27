@@ -26,7 +26,7 @@
  * Usage: npx tsx scripts/backfill-install-hints.ts
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -35,6 +35,7 @@ import {
 } from '../lib/installConfig';
 
 const DB_NAME = 'all-mcps';
+const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 // wrangler.jsonc has no `account_id`, and this Cloudflare login has more than one
 // account, so a non-interactive `wrangler d1` call fails closed (7403) without this.
 // Same value as scripts/ingest-sources.mjs.
@@ -74,14 +75,24 @@ function argsLastElemHasTrailingPunctuation(argsJson: string | null): boolean {
 }
 
 function fetchAllServers(): Row[] {
-  const cmd =
-    `npx wrangler d1 execute ${DB_NAME} --remote --json --command ` +
-    `"SELECT id, name, url, description, install_kind, install_command, install_args, install_package, install_confidence FROM servers"`;
-  const out = execSync(cmd, {
-    cwd: process.cwd(),
-    env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID },
-    maxBuffer: 1024 * 1024 * 100,
-  }).toString();
+  const out = execFileSync(
+    npxCmd,
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      DB_NAME,
+      '--remote',
+      '--json',
+      '--command=SELECT id, name, url, description, install_kind, install_command, install_args, install_package, install_confidence FROM servers',
+    ],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID },
+      maxBuffer: 1024 * 1024 * 100,
+      encoding: 'utf8',
+    },
+  );
   const parsed = JSON.parse(out);
   return (parsed[0]?.results ?? []) as Row[];
 }
@@ -162,12 +173,16 @@ function main() {
   );
 
   console.log('\nApplying to the live DB...');
-  execSync(`npx wrangler d1 execute ${DB_NAME} --remote --file=${outPath}`, {
-    cwd: process.cwd(),
-    env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID },
-    stdio: 'inherit',
-    maxBuffer: 1024 * 1024 * 20,
-  });
+  execFileSync(
+    npxCmd,
+    ['wrangler', 'd1', 'execute', DB_NAME, '--remote', `--file=${outPath}`],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID },
+      stdio: 'inherit',
+      maxBuffer: 1024 * 1024 * 20,
+    },
+  );
   console.log('\nDone.');
 }
 

@@ -37,6 +37,7 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { getGithubToken } from '../lib/githubAuth';
 import {
   deriveServerName,
@@ -51,8 +52,18 @@ type Row = { id: string; name: string; url: string; is_official: number };
 const DELAY_MS = 150;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+function cleanControlChars(str: string): string {
+  return Array.from(str)
+    .filter((ch) => {
+      const code = ch.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join('');
+}
+
 function sqlString(s: string): string {
-  return `'${s.replace(/'/g, "''")}'`;
+  const clean = cleanControlChars(s).replace(/'/g, "''");
+  return `'${clean}'`;
 }
 
 async function main() {
@@ -63,7 +74,8 @@ async function main() {
     );
     process.exit(1);
   }
-  mkdirSync(outDir, { recursive: true });
+  const resolvedOutDir = path.resolve(process.cwd(), outDir);
+  mkdirSync(resolvedOutDir, { recursive: true });
 
   const wrangled = JSON.parse(readFileSync(rowsPath, 'utf-8'));
   const rows: Row[] = wrangled[0]?.results ?? [];
@@ -106,6 +118,8 @@ async function main() {
       readme,
     });
     if (newName && newName !== row.name) {
+      const cleanNewName = cleanControlChars(newName).trim().slice(0, 80);
+      const cleanId = cleanControlChars(row.id).trim().slice(0, 200);
       const readmeTitle = extractReadmeTitle(readme);
       const source =
         readmeTitle && readmeTitle.slice(0, 80) === newName
@@ -113,9 +127,14 @@ async function main() {
           : gh
             ? 'slug'
             : 'hostname';
-      results.push({ id: row.id, oldName: row.name, newName, source });
+      results.push({
+        id: cleanId,
+        oldName: row.name,
+        newName: cleanNewName,
+        source,
+      });
       console.log(
-        `  [${i + 1}/${candidates.length}] ${row.id}: "${row.name}" -> "${newName}" (${source})`,
+        `  [${i + 1}/${candidates.length}] ${cleanId}: "${row.name}" -> "${cleanNewName}" (${source})`,
       );
     } else {
       skipped.push({ id: row.id, name: row.name, url: row.url });
@@ -127,12 +146,12 @@ async function main() {
   }
 
   writeFileSync(
-    `${outDir}/proposed-renames.json`,
+    path.join(resolvedOutDir, 'proposed-renames.json'),
     JSON.stringify(results, null, 2),
     'utf-8',
   );
   writeFileSync(
-    `${outDir}/skipped.json`,
+    path.join(resolvedOutDir, 'skipped.json'),
     JSON.stringify(skipped, null, 2),
     'utf-8',
   );
@@ -143,7 +162,7 @@ async function main() {
         `UPDATE servers SET name = ${sqlString(r.newName)} WHERE id = ${sqlString(r.id)};`,
     )
     .join('\n');
-  writeFileSync(`${outDir}/updates.sql`, sql, 'utf-8');
+  writeFileSync(path.join(resolvedOutDir, 'updates.sql'), sql, 'utf-8');
 
   const bySource = results.reduce<Record<string, number>>((acc, r) => {
     acc[r.source] = (acc[r.source] || 0) + 1;
@@ -155,7 +174,7 @@ async function main() {
   );
   console.log(`By source: ${JSON.stringify(bySource)}`);
   console.log(
-    `\nWrote:\n  ${outDir}/proposed-renames.json\n  ${outDir}/skipped.json\n  ${outDir}/updates.sql`,
+    `\nWrote:\n  ${path.join(resolvedOutDir, 'proposed-renames.json')}\n  ${path.join(resolvedOutDir, 'skipped.json')}\n  ${path.join(resolvedOutDir, 'updates.sql')}`,
   );
 }
 

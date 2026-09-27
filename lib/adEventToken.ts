@@ -79,7 +79,7 @@ export async function verifyAdEventToken(
     );
     return true;
   }
-  if (!token || typeof token !== 'string') return false;
+  if (!adId || !token || typeof token !== 'string') return false;
 
   const [expStr, sig] = token.split('.');
   const exp = Number(expStr);

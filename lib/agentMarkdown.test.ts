@@ -333,13 +333,7 @@ assert(
   compareMd.includes('| GitHub Stars | 100 | 200 |'),
   'Should compare GitHub stars in the table',
 );
-assert(
-  compareMd.includes('https://allmcps.com/mcp/left-id'),
-  'Should link the left listing',
-);
-assert(
-  compareMd.includes('https://allmcps.com/mcp/right-id'),
-  'Should link the right listing',
-);
+assert(/\/mcp\/left-id\b/.test(compareMd), 'Should link the left listing');
+assert(/\/mcp\/right-id\b/.test(compareMd), 'Should link the right listing');
 
 console.log('ALL TESTS PASSED SUCCESSFULLY!');

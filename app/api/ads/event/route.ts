@@ -34,22 +34,13 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!body?.adId || !body.eventType) {
-      return NextResponse.json(
-        { error: 'Missing adId or eventType' },
-        { status: 400 },
-      );
-    }
-
-    const { adId, placement = 'all', eventType } = body;
-    if (eventType !== 'impression' && eventType !== 'click') {
-      return NextResponse.json({ error: 'Invalid eventType' }, { status: 400 });
-    }
-
     const ctx = await getCloudflareContext();
-    if (!ctx?.env?.DB) {
-      return NextResponse.json({ ok: true });
-    }
+    const adId = typeof body?.adId === 'string' ? body.adId : '';
+    const eventToken =
+      typeof body?.eventToken === 'string' ? body.eventToken : '';
+    const eventType = typeof body?.eventType === 'string' ? body.eventType : '';
+    const placement =
+      typeof body?.placement === 'string' ? body.placement : 'all';
 
     // Rejects events that don't carry a valid token minted by /api/ads/serve
     // for this exact adId — someone POSTing a scraped adId directly (e.g. a
@@ -57,14 +48,25 @@ export async function POST(request: Request) {
     // credits) never receives a token to begin with.
     const tokenValid = await verifyAdEventToken(
       adId,
-      body.eventToken,
-      ctx.env as any,
+      eventToken,
+      ctx?.env as any,
     );
     if (!tokenValid) {
       return NextResponse.json(
         { error: 'Invalid or expired event token' },
         { status: 403 },
       );
+    }
+
+    if (!adId || (eventType !== 'impression' && eventType !== 'click')) {
+      return NextResponse.json(
+        { error: 'Missing or invalid adId or eventType' },
+        { status: 400 },
+      );
+    }
+
+    if (!ctx?.env?.DB) {
+      return NextResponse.json({ ok: true });
     }
 
     const db = drizzle(ctx.env.DB);

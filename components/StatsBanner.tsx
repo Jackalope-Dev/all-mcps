@@ -61,7 +61,6 @@ export function StatsBanner({ stats: initialStats }: { stats?: SiteStats }) {
   const aiReads = stats?.aiReads30d ?? 0;
   const toolsIndexed = stats?.toolsIndexed ?? 0;
   const totalViews = stats?.totalViews ?? 0;
-  const hasCountStat = totalServers > 0 || toolsIndexed > 0 || totalViews > 0;
 
   // The Trust link is always rendered — including mid-load and even if every
   // count comes back zero — so this pill never disappears out from under a

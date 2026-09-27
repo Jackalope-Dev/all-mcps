@@ -28,7 +28,7 @@
  * back and the script correctly reports zero changes.
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -38,6 +38,7 @@ import {
 import { isJevConfigured } from '../lib/typesafe';
 
 const DB_NAME = 'all-mcps';
+const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const STAMP = new Date().toISOString().slice(0, 10);
 // Deliberately no CLOUDFLARE_ACCOUNT_ID override: with the current OAuth login,
 // forcing the account tag makes the D1 API reject the call with 7403.
@@ -65,14 +66,23 @@ function fetchRows(onlyDefaultBucket: boolean, limit: number | null): Row[] {
   const where = onlyDefaultBucket
     ? `WHERE status = 'active' AND category LIKE '%Developer Tools%'`
     : `WHERE status = 'active'`;
-  const cmd =
-    `npx wrangler d1 execute ${DB_NAME} --remote --json --command ` +
-    `"SELECT id, name, url, substr(description, 1, 2000) AS description, category ` +
-    `FROM servers ${where}${limit ? ` LIMIT ${limit}` : ''}"`;
-  const out = execSync(cmd, {
-    cwd: process.cwd(),
-    maxBuffer: 1024 * 1024 * 200,
-  }).toString();
+  const out = execFileSync(
+    npxCmd,
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      DB_NAME,
+      '--remote',
+      '--json',
+      `--command=SELECT id, name, url, substr(description, 1, 2000) AS description, category FROM servers ${where}${limit ? ` LIMIT ${limit}` : ''}`,
+    ],
+    {
+      cwd: process.cwd(),
+      maxBuffer: 1024 * 1024 * 200,
+      encoding: 'utf8',
+    },
+  );
   const parsed = JSON.parse(out);
   return (parsed[0]?.results ?? []) as Row[];
 }
@@ -183,11 +193,15 @@ async function main() {
   }
 
   console.log('\nApplying to the live DB...');
-  execSync(`npx wrangler d1 execute ${DB_NAME} --remote --file=${outPath}`, {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-    maxBuffer: 1024 * 1024 * 20,
-  });
+  execFileSync(
+    npxCmd,
+    ['wrangler', 'd1', 'execute', DB_NAME, '--remote', `--file=${outPath}`],
+    {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      maxBuffer: 1024 * 1024 * 20,
+    },
+  );
   console.log('\nDone.');
 }
 

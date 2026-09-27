@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -16,7 +16,7 @@ import path from 'node:path';
 
 const APPLY = process.argv.includes('--apply');
 const DB_NAME = 'all-mcps';
-const ACCOUNT_ID = '1a04a617cf42aaaba19b44365dd7c882';
+const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 // High-precision category rules (tested against MCP registry descriptions)
 const CATEGORY_RULES = [
@@ -194,12 +194,22 @@ async function main() {
   );
   const query =
     "SELECT id, name, description, url, tools FROM servers WHERE category = '💻 Developer Tools';";
-  const fetchCmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "${query}"`;
-
-  const rawOut = execSync(fetchCmd, {
-    encoding: 'utf8',
-    maxBuffer: 50 * 1024 * 1024,
-  });
+  const rawOut = execFileSync(
+    npxCmd,
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      DB_NAME,
+      '--remote',
+      '--json',
+      `--command=${query}`,
+    ],
+    {
+      encoding: 'utf8',
+      maxBuffer: 50 * 1024 * 1024,
+    },
+  );
   const parsed = JSON.parse(rawOut);
   const rows = parsed[0]?.results || [];
 
@@ -264,8 +274,11 @@ async function main() {
   console.log(`Wrote ${sqlLines.length} SQL statements to ${sqlFile}`);
 
   console.log('Executing SQL migration on D1...');
-  const applyCmd = `npx wrangler d1 execute ${DB_NAME} --remote --file=${sqlFile}`;
-  execSync(applyCmd, { stdio: 'inherit' });
+  execFileSync(
+    npxCmd,
+    ['wrangler', 'd1', 'execute', DB_NAME, '--remote', `--file=${sqlFile}`],
+    { stdio: 'inherit' },
+  );
 
   console.log('\n🎉 Successfully updated categories in production database!');
 }

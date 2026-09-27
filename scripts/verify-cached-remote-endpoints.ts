@@ -26,7 +26,7 @@
  * Usage: npx tsx scripts/verify-cached-remote-endpoints.ts [--apply] [--limit N] [--concurrency N]
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -35,6 +35,7 @@ import {
 } from '../lib/tools/verifyRemoteEndpoint';
 
 const DB_NAME = 'all-mcps';
+const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const STAMP = '2026-09-17';
 
 type Row = {
@@ -60,15 +61,23 @@ function sqlStr(v: string | null): string {
 }
 
 function fetchRemoteListings(limit: number): Row[] {
-  const cmd =
-    `npx wrangler d1 execute ${DB_NAME} --remote --json --command ` +
-    `"SELECT id, name, install_package, install_kind, install_command, install_args, ` +
-    `install_confidence FROM servers WHERE status = 'active' AND install_kind = 'remote' ` +
-    `AND install_package IS NOT NULL AND remote_endpoint_url IS NULL LIMIT ${limit}"`;
-  const out = execSync(cmd, {
-    cwd: process.cwd(),
-    maxBuffer: 1024 * 1024 * 200,
-  }).toString();
+  const out = execFileSync(
+    npxCmd,
+    [
+      'wrangler',
+      'd1',
+      'execute',
+      DB_NAME,
+      '--remote',
+      '--json',
+      `--command=SELECT id, name, install_package, install_kind, install_command, install_args, install_confidence FROM servers WHERE status = 'active' AND install_kind = 'remote' AND install_package IS NOT NULL AND remote_endpoint_url IS NULL LIMIT ${limit}`,
+    ],
+    {
+      cwd: process.cwd(),
+      maxBuffer: 1024 * 1024 * 200,
+      encoding: 'utf8',
+    },
+  );
   return (JSON.parse(out)[0]?.results ?? []) as Row[];
 }
 
@@ -228,11 +237,15 @@ async function main() {
   }
 
   console.log('\nApplying to the live DB...');
-  execSync(`npx wrangler d1 execute ${DB_NAME} --remote --file=${outPath}`, {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-    maxBuffer: 1024 * 1024 * 20,
-  });
+  execFileSync(
+    npxCmd,
+    ['wrangler', 'd1', 'execute', DB_NAME, '--remote', `--file=${outPath}`],
+    {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      maxBuffer: 1024 * 1024 * 20,
+    },
+  );
   console.log('\nDone.');
 }
 

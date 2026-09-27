@@ -46,8 +46,24 @@ export function ServerAvatar({
   // actual display size instead of downloading its full-resolution default
   // (typically 460x460) for a 40-48px card icon — this page can render dozens
   // of these per grid.
-  const activeLogoUrl =
-    logoUrl || (org ? `https://github.com/${org}.png?size=${size * 2}` : null);
+  const isSafeImageUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    } catch {
+      return false;
+    }
+  };
+
+  const resolvedLogoUrl =
+    logoUrl ||
+    (org
+      ? `https://github.com/${encodeURIComponent(org)}.png?size=${size * 2}`
+      : null);
+  const activeLogoUrl = isSafeImageUrl(resolvedLogoUrl)
+    ? resolvedLogoUrl
+    : null;
 
   if (activeLogoUrl && !imgFailed) {
     return (

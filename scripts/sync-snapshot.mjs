@@ -37,45 +37,81 @@ async function syncSnapshot() {
 
     // Read existing file to preserve rich field data if snapshot is formatted as full server objects
     let existingServers = [];
-    if (fs.existsSync(targetPath)) {
-      try {
-        existingServers = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
-      } catch (e) {
-        console.warn(
-          'Could not parse existing mcp-servers.json; overwriting completely.',
-        );
-      }
+    try {
+      existingServers = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+    } catch {
+      console.warn(
+        'Could not read or parse existing mcp-servers.json; starting fresh.',
+      );
     }
 
-    const existingMap = new Map(existingServers.map((s) => [s.id, s]));
+    const existingMap = new Map(
+      Array.isArray(existingServers)
+        ? existingServers
+            .filter((s) => s && typeof s.id === 'string')
+            .map((s) => [s.id, s])
+        : [],
+    );
     const seen = new Set();
     const merged = [];
 
-    for (const server of payload.servers) {
-      if (!server.id || seen.has(server.id)) continue;
-      seen.add(server.id);
+    const sanitizeUrl = (raw) => {
+      if (typeof raw !== 'string') return '';
+      try {
+        const u = new URL(raw);
+        if (u.protocol === 'http:' || u.protocol === 'https:') {
+          return u.href.slice(0, 500);
+        }
+      } catch {
+        // invalid
+      }
+      return '';
+    };
 
-      const existing = existingMap.get(server.id);
+    for (const server of payload.servers) {
+      if (!server || typeof server.id !== 'string') continue;
+      const cleanId = server.id.trim();
+      if (!/^[a-zA-Z0-9_.-]+$/.test(cleanId) || seen.has(cleanId)) continue;
+      seen.add(cleanId);
+
+      const cleanName =
+        typeof server.name === 'string' ? server.name.slice(0, 200) : cleanId;
+      const cleanDesc =
+        typeof server.description === 'string'
+          ? server.description.slice(0, 2000)
+          : '';
+      const cleanCategory =
+        typeof server.category === 'string'
+          ? server.category.slice(0, 100)
+          : '';
+      const cleanUrl =
+        sanitizeUrl(server.repository) || `https://github.com/${cleanId}`;
+
+      const existing = existingMap.get(cleanId);
       if (existing) {
         // Update existing record with latest core fields while keeping schema fields intact
         merged.push({
           ...existing,
-          name: server.name || existing.name,
-          description: server.description || existing.description,
-          category: server.category || existing.category,
-          url: server.repository || existing.url,
+          id: cleanId,
+          name: cleanName || existing.name,
+          description: cleanDesc || existing.description,
+          category: cleanCategory || existing.category,
+          url: cleanUrl || existing.url,
         });
       } else {
         // Add new record from live catalog
         merged.push({
-          id: server.id,
-          name: server.name,
-          description: server.description,
-          category: server.category,
-          url: server.repository || `https://github.com/${server.id}`,
+          id: cleanId,
+          name: cleanName,
+          description: cleanDesc,
+          category: cleanCategory,
+          url: cleanUrl,
           isOfficial: false,
           status: 'active',
-          createdAt: payload.generatedAt || new Date().toISOString(),
+          createdAt:
+            typeof payload.generatedAt === 'string'
+              ? payload.generatedAt.slice(0, 50)
+              : new Date().toISOString(),
         });
       }
     }

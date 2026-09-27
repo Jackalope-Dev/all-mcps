@@ -51,20 +51,21 @@ const candidateWebsites = extractCandidateWebsitesFromReadme(
   'owner',
   'cool-mcp',
 );
+const websiteSet = new Set(candidateWebsites);
 assert(
-  candidateWebsites.includes('https://cool-mcp.example.com'),
+  websiteSet.has('https://cool-mcp.example.com'),
   'Should extract official website',
 );
 assert(
-  candidateWebsites.includes('https://docs.cool-mcp.example.com'),
+  websiteSet.has('https://docs.cool-mcp.example.com'),
   'Should extract docs website',
 );
 assert(
-  !candidateWebsites.some((u) => u.includes('github.com')),
+  !candidateWebsites.some((u) => new URL(u).hostname.endsWith('github.com')),
   'Should filter out github.com',
 );
 assert(
-  !candidateWebsites.some((u) => u.includes('npmjs.com')),
+  !candidateWebsites.some((u) => new URL(u).hostname.endsWith('npmjs.com')),
   'Should filter out npmjs.com',
 );
 
@@ -98,7 +99,7 @@ assert(
   'Light mode logo should be first candidate',
 );
 assert(
-  !candidateImages.some((img) => img.includes('shields.io')),
+  !candidateImages.some((img) => new URL(img).hostname.endsWith('shields.io')),
   'Should filter out shield badges',
 );
 

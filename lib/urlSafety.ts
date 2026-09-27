@@ -89,15 +89,24 @@ export async function safeFetch(
   let current = url;
   let req: RequestInit = { ...init, redirect: 'manual' };
   for (let hop = 0; ; hop++) {
-    if (!isSafeFetchTarget(current)) {
+    let parsed: URL;
+    try {
+      parsed = new URL(current);
+    } catch {
       throw new Error('Redirected to a URL that is not a permitted endpoint.');
     }
-    const res = await fetch(current, req);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('Redirected to a URL that is not a permitted endpoint.');
+    }
+    if (isPrivateOrReservedHost(parsed.hostname)) {
+      throw new Error('Redirected to a URL that is not a permitted endpoint.');
+    }
+    const res = await fetch(parsed.href, req);
     const location = res.headers.get('location');
     if (res.status < 300 || res.status > 399 || !location) return res;
     if (hop >= MAX_REDIRECTS) throw new Error('Too many redirects.');
 
-    const next = new URL(location, current);
+    const next = new URL(location, parsed.href);
     const method = (req.method || 'GET').toUpperCase();
     if (
       res.status === 303 ||
@@ -107,7 +116,7 @@ export async function safeFetch(
     }
     // Same as fetch: credentials meant for one origin don't follow a
     // redirect to another.
-    if (next.origin !== new URL(current).origin) {
+    if (next.origin !== parsed.origin) {
       const headers = new Headers(req.headers);
       headers.delete('authorization');
       req = { ...req, headers };

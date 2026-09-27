@@ -1,6 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+function stripHtml(input) {
+  let s = input || '';
+  let prev = '';
+  while (s !== prev) {
+    prev = s;
+    s = s.replace(/<[^>]*>/g, '');
+  }
+  return s;
+}
+
 async function seedData() {
   console.log('Fetching awesome-mcp-servers README...');
   const res = await fetch(
@@ -16,10 +26,7 @@ async function seedData() {
 
   for (const line of lines) {
     if (line.startsWith('### ')) {
-      currentCategory = line
-        .replace('### ', '')
-        .replace(/<[^>]*>?/gm, '')
-        .trim();
+      currentCategory = stripHtml(line.replace('### ', '')).trim();
       continue;
     }
 
@@ -35,7 +42,7 @@ async function seedData() {
       // Aggressive cleanup for clean plain-text descriptions
       description = description.replace(/!\[.*?\]\(.*?\)/g, ''); // remove images entirely
       description = description.replace(/\[([^\]]+)\]\(.*?\)/g, '$1'); // replace markdown links with just their text
-      description = description.replace(/<[^>]*>?/gm, ''); // remove ALL HTML tags (including anchors)
+      description = stripHtml(description); // remove ALL HTML tags (including anchors)
       description = description.replace(/[*_~`#]/g, ''); // remove formatting characters
       description = description.trim();
       // Skip table of contents or awesome list links

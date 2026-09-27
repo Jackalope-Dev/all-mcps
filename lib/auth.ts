@@ -22,6 +22,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
       verificationTokensTable: verificationTokens,
     }),
     trustHost: true,
+    logger: {
+      error(error) {
+        if (
+          error.name === 'UnknownAction' ||
+          (error as any).type === 'UnknownAction'
+        ) {
+          // Scanner / bot probing non-existent auth actions — suppress console.error
+          // so Cloudflare Workers log drain doesn't trigger false-positive alert incidents.
+          return;
+        }
+        console.error(error);
+      },
+    },
     providers: [
       Resend({
         from: `AllMCPs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,

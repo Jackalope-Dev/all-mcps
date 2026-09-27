@@ -51,16 +51,12 @@ export function ThemeSwitcher() {
 
     const applyTheme = (mode: ThemeMode) => {
       const root = document.documentElement;
-      let effectiveTheme: 'dark' | 'light' = 'dark';
-
-      if (mode === 'system') {
-        effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)')
-          .matches
-          ? 'dark'
-          : 'light';
-      } else {
-        effectiveTheme = mode;
-      }
+      const effectiveTheme: 'dark' | 'light' =
+        mode === 'system'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light'
+          : mode;
 
       window.__allmcpsTheme = effectiveTheme;
       if (root.getAttribute('data-theme') !== effectiveTheme) {

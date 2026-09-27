@@ -207,7 +207,6 @@ export default async function CampaignDashboardPage({
     placementStats,
     dailyTimeline,
     uniqueReach,
-    hasLogData,
     topPlacement,
     aiInjectionCount,
   } = data;

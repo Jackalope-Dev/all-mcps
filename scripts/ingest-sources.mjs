@@ -1,7 +1,29 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { findRepoIdentityMismatch } from './repoIdentity.mjs';
+
+function stripHtml(input) {
+  let s = input || '';
+  let prev = '';
+  while (s !== prev) {
+    prev = s;
+    s = s.replace(/<[^>]*>/g, '');
+  }
+  return s;
+}
+
+function isGithubUrl(u) {
+  if (!u) return false;
+  try {
+    const p = new URL(u.startsWith('//') ? `https:${u}` : u);
+    return p.hostname === 'github.com' || p.hostname.endsWith('.github.com');
+  } catch {
+    return /^https?:\/\/(?:[a-zA-Z0-9-]+\.)*github\.com(?::\d+)?(?:\/|$)/i.test(
+      u,
+    );
+  }
+}
 
 /**
  * Pulls newly-added listings from other public MCP server lists and stages them
@@ -462,10 +484,7 @@ function parseServerList(markdown, source) {
     const heading = line.match(HEADING_RE);
     if (heading) {
       const level = heading[1].length;
-      const cleaned = heading[2]
-        .replace(/<[^>]*>?/gm, '')
-        .replace(/[*_`]/g, '')
-        .trim();
+      const cleaned = stripHtml(heading[2]).replace(/[*_`]/g, '').trim();
 
       if (level === 2) {
         inSection = source.sectionHeadingMatch
@@ -500,10 +519,11 @@ function parseServerList(markdown, source) {
       url = source.baseTreeUrl + url.replace(/^\.?\//, '');
     }
 
-    description = description
-      .replace(/!\[.*?\]\(.*?\)/g, '')
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-      .replace(/<[^>]*>?/gm, '')
+    description = stripHtml(
+      description
+        .replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1'),
+    )
       .replace(/[*_~`]/g, '')
       .trim();
 
@@ -768,7 +788,7 @@ async function fetchPulseMcpEntries() {
         entry.external_url &&
         entry.external_url !== primaryUrl &&
         !isPulseMcpOwnUrl(entry.external_url) &&
-        !/github\.com/i.test(entry.external_url)
+        !isGithubUrl(entry.external_url)
           ? entry.external_url
           : undefined;
 
@@ -779,7 +799,7 @@ async function fetchPulseMcpEntries() {
         category: inferCategoryFromSignals(name, desc, primaryUrl),
         websiteUrl,
         source: 'pulsemcp',
-        githubStars: /github\.com/i.test(primaryUrl)
+        githubStars: isGithubUrl(primaryUrl)
           ? (entry.github_stars ?? undefined)
           : undefined,
         // Sort keys for the per-run cap below — kept separate from githubStars
@@ -973,14 +993,27 @@ async function checkLivenessOfNewCandidates(candidates) {
 const WRANGLER_ENV = { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID };
 
 function queryExisting() {
-  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --json --command "SELECT id, name, url, website_url, description, install_kind, install_command, install_package FROM servers"`;
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
   let out;
   try {
-    out = execSync(cmd, {
-      cwd: process.cwd(),
-      env: WRANGLER_ENV,
-      maxBuffer: 1024 * 1024 * 20,
-    }).toString();
+    out = execFileSync(
+      npxCmd,
+      [
+        'wrangler',
+        'd1',
+        'execute',
+        DB_NAME,
+        '--remote',
+        '--json',
+        '--command=SELECT id, name, url, website_url, description, install_kind, install_command, install_package FROM servers',
+      ],
+      {
+        cwd: process.cwd(),
+        env: WRANGLER_ENV,
+        maxBuffer: 1024 * 1024 * 20,
+        encoding: 'utf8',
+      },
+    );
   } catch (err) {
     console.error(
       'Failed to query the live database via wrangler. Run `npx wrangler login` for the ' +
@@ -993,9 +1026,15 @@ function queryExisting() {
 }
 
 function applySql(relPath) {
-  const cmd = `npx wrangler d1 execute ${DB_NAME} --remote --file=${relPath}`;
-  console.log(`\nApplying via: ${cmd}`);
-  execSync(cmd, { cwd: process.cwd(), env: WRANGLER_ENV, stdio: 'inherit' });
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  console.log(
+    `\nApplying via: npx wrangler d1 execute ${DB_NAME} --remote --file=${relPath}`,
+  );
+  execFileSync(
+    npxCmd,
+    ['wrangler', 'd1', 'execute', DB_NAME, '--remote', `--file=${relPath}`],
+    { cwd: process.cwd(), env: WRANGLER_ENV, stdio: 'inherit' },
+  );
 }
 
 // --- main ------------------------------------------------------------------

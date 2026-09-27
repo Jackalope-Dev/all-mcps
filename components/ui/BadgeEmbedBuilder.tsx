@@ -50,7 +50,6 @@ export function BadgeEmbedBuilder({
 
   // Autocomplete search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [allServers, setAllServers] = useState<IndexedServer[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -72,7 +71,6 @@ export function BadgeEmbedBuilder({
   const fetchIndex = async () => {
     if (allServers.length > 0) return;
     try {
-      setIsSearching(true);
       const res = await fetch('/api/search-index');
       if (res.ok) {
         const data = (await res.json()) as { servers?: IndexedServer[] } | null;
@@ -82,8 +80,6 @@ export function BadgeEmbedBuilder({
       }
     } catch {
       // degrade silently
-    } finally {
-      setIsSearching(false);
     }
   };
 
@@ -123,7 +119,9 @@ export function BadgeEmbedBuilder({
     setDropdownOpen(false);
   };
 
-  const cleanId = customId.trim() || 'allmcps-server';
+  const cleanId =
+    encodeURIComponent(customId.trim().replace(/[^a-zA-Z0-9_.-]/g, '')) ||
+    'allmcps-server';
   const baseUrl =
     typeof window !== 'undefined'
       ? window.location.origin
@@ -143,8 +141,9 @@ export function BadgeEmbedBuilder({
   const badgeHeight =
     badgeStyle === 'directory' ? 40 : badgeStyle === 'featured' ? 32 : 20;
 
+  const safeServerName = selectedServerName.replace(/["<>]/g, '');
   const markdownSnippet = `[![AllMCPs](${badgeSrc})](${targetUrl})`;
-  const htmlSnippet = `<a href="${targetUrl}"><img src="${badgeSrc}" alt="${selectedServerName} on AllMCPs" height="${badgeHeight}" /></a>`;
+  const htmlSnippet = `<a href="${targetUrl}"><img src="${badgeSrc}" alt="${safeServerName} on AllMCPs" height="${badgeHeight}" /></a>`;
 
   const copyToClipboard = async (text: string, key: string) => {
     try {

@@ -80,9 +80,17 @@ function collectUrlBuckets() {
   const seen = new Set();
 
   function add(bucket, url) {
-    if (seen.has(url)) return;
-    seen.add(url);
-    bucket.push(url);
+    try {
+      const parsed = new URL(url);
+      if (parsed.origin !== 'https://allmcps.com') return;
+      if (!/^\/[a-zA-Z0-9/._-]+$/.test(parsed.pathname)) return;
+      const cleanUrl = parsed.toString();
+      if (seen.has(cleanUrl)) return;
+      seen.add(cleanUrl);
+      bucket.push(cleanUrl);
+    } catch {
+      // Ignore invalid URLs
+    }
   }
 
   for (const route of CORE_STATIC) {
@@ -96,7 +104,7 @@ function collectUrlBuckets() {
     const pattern = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/;
     for (const file of files) {
       const match = file.match(pattern);
-      if (match) add(core, `${BASE_URL}/blog/${match[2]}`);
+      if (match) add(core, `${BASE_URL}/blog/${encodeURIComponent(match[2])}`);
     }
   }
 
@@ -111,8 +119,10 @@ function collectUrlBuckets() {
           .toLowerCase()
           .replace(/&/g, ' and ')
           .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '');
-        if (clean) add(core, `${BASE_URL}/categories/${clean}`);
+          .replace(/^-+/, '')
+          .replace(/-+$/, '');
+        if (clean)
+          add(core, `${BASE_URL}/categories/${encodeURIComponent(clean)}`);
       }
     } catch (e) {
       console.error('Error parsing category-manifest.json:', e.message);
@@ -128,7 +138,7 @@ function collectUrlBuckets() {
       const src = fs.readFileSync(clientsPath, 'utf8');
       const slugMatches = src.matchAll(/slug:\s*['"]([a-z0-9-]+)['"]/g);
       for (const m of slugMatches) {
-        add(core, `${BASE_URL}/clients/${m[1]}`);
+        add(core, `${BASE_URL}/clients/${encodeURIComponent(m[1])}`);
       }
     }
   } catch {
@@ -141,7 +151,7 @@ function collectUrlBuckets() {
       const src = fs.readFileSync(bestPath, 'utf8');
       const slugMatches = src.matchAll(/slug:\s*['"]([a-z0-9-]+)['"]/g);
       for (const m of slugMatches) {
-        add(core, `${BASE_URL}/best/${m[1]}`);
+        add(core, `${BASE_URL}/best/${encodeURIComponent(m[1])}`);
       }
     }
   } catch {
@@ -155,8 +165,14 @@ function collectUrlBuckets() {
       const serversData = JSON.parse(fs.readFileSync(serversPath, 'utf8'));
       if (Array.isArray(serversData)) {
         for (const server of serversData) {
-          if (!server.id || server.status === 'removed') continue;
-          add(listings, `${BASE_URL}/mcp/${server.id}`);
+          if (
+            !server?.id ||
+            typeof server.id !== 'string' ||
+            server.status === 'removed'
+          )
+            continue;
+          if (!/^[a-zA-Z0-9_.-]+$/.test(server.id)) continue;
+          add(listings, `${BASE_URL}/mcp/${encodeURIComponent(server.id)}`);
         }
       }
     } catch (err) {
@@ -168,11 +184,23 @@ function collectUrlBuckets() {
 }
 
 async function submitBatch(urlBatch, label) {
+  const safeUrls = urlBatch.filter((u) => {
+    try {
+      const parsed = new URL(u);
+      return (
+        parsed.origin === 'https://allmcps.com' &&
+        /^\/[a-zA-Z0-9/._-]+$/.test(parsed.pathname)
+      );
+    } catch {
+      return false;
+    }
+  });
+
   const payload = {
     host: 'allmcps.com',
     key: INDEXNOW_KEY,
     keyLocation: KEY_LOCATION,
-    urlList: urlBatch,
+    urlList: safeUrls,
   };
 
   console.log(`Submitting ${label} (${urlBatch.length} URLs)...`);

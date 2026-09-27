@@ -75,15 +75,28 @@ export function pickDescription(
   return (cleanedCurrent || cleanedGh || current || '').slice(0, 2000);
 }
 
+function isGithubUrl(urlString: string): boolean {
+  if (!urlString) return false;
+  try {
+    const parsed = new URL(
+      urlString.startsWith('//') ? `https:${urlString}` : urlString,
+    );
+    return (
+      parsed.hostname === 'github.com' ||
+      parsed.hostname.endsWith('.github.com')
+    );
+  } catch {
+    return /^https?:\/\/(?:[a-zA-Z0-9-]+\.)*github\.com(?::\d+)?(?:\/|$)/i.test(
+      urlString,
+    );
+  }
+}
+
 export function pickWebsiteUrl(
   current: string | null | undefined,
   homepage: string | null | undefined,
 ): string | null {
-  if (
-    current &&
-    isSafeSubmissionUrl(current) &&
-    !/github\.com/i.test(current)
-  ) {
+  if (current && isSafeSubmissionUrl(current) && !isGithubUrl(current)) {
     return current;
   }
   const h = (homepage || '').trim();
@@ -93,7 +106,7 @@ export function pickWebsiteUrl(
   if (candidate.startsWith('//')) candidate = `https:${candidate}`;
   if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
   if (!isSafeSubmissionUrl(candidate)) return current || null;
-  if (/github\.com/i.test(candidate)) return current || null;
+  if (isGithubUrl(candidate)) return current || null;
   return candidate;
 }
 
@@ -128,14 +141,25 @@ export async function fetchGithubRepo(
   repo: string,
   token?: string | null,
 ): Promise<{ ok: true; data: GhRepo } | { ok: false; status: number }> {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-    headers: githubApiHeaders(
-      token,
-      'application/vnd.github+json',
-      'AllMCPs-Enricher',
-    ),
-    signal: AbortSignal.timeout(12000),
-  });
+  const safeOwner = owner.trim();
+  const safeRepo = repo.trim();
+  if (
+    !/^[a-zA-Z0-9_.-]+$/.test(safeOwner) ||
+    !/^[a-zA-Z0-9_.-]+$/.test(safeRepo)
+  ) {
+    return { ok: false, status: 400 };
+  }
+  const res = await fetch(
+    `https://api.github.com/repos/${encodeURIComponent(safeOwner)}/${encodeURIComponent(safeRepo)}`,
+    {
+      headers: githubApiHeaders(
+        token,
+        'application/vnd.github+json',
+        'AllMCPs-Enricher',
+      ),
+      signal: AbortSignal.timeout(12000),
+    },
+  );
   if (!res.ok) return { ok: false, status: res.status };
   const data = (await res.json()) as GhRepo;
   return { ok: true, data };
@@ -146,10 +170,21 @@ export async function fetchGithubReadme(
   repo: string,
   token?: string | null,
 ): Promise<string | null> {
+  const safeOwner = owner.trim();
+  const safeRepo = repo.trim();
+  if (
+    !/^[a-zA-Z0-9_.-]+$/.test(safeOwner) ||
+    !/^[a-zA-Z0-9_.-]+$/.test(safeRepo)
+  ) {
+    return null;
+  }
+  const encOwner = encodeURIComponent(safeOwner);
+  const encRepo = encodeURIComponent(safeRepo);
+
   for (const branch of ['main', 'master']) {
     try {
       const res = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`,
+        `https://raw.githubusercontent.com/${encOwner}/${encRepo}/${branch}/README.md`,
         {
           headers: { 'User-Agent': 'AllMCPs-Enricher' },
           signal: AbortSignal.timeout(10000),
@@ -164,7 +199,7 @@ export async function fetchGithubReadme(
   // API fallback (uses token quota when raw is blocked)
   try {
     const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/readme`,
+      `https://api.github.com/repos/${encOwner}/${encRepo}/readme`,
       {
         headers: githubApiHeaders(
           token,
@@ -413,7 +448,7 @@ export async function fetchPackageRegistryMetadata(
     if (
       data.homepage &&
       isSafeSubmissionUrl(data.homepage) &&
-      !/github\.com/i.test(data.homepage)
+      !isGithubUrl(data.homepage)
     ) {
       out.websiteUrl = data.homepage;
     }
@@ -712,7 +747,11 @@ function cleanReadmeHeadingText(line: string): string {
   let s = line.replace(/^#{1,6}\s*/, '');
   s = s.replace(/!\[[^\]]*\]\([^)]*\)/g, ''); // images
   s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1'); // links -> visible text
-  s = s.replace(/<[^>]+>/g, ''); // stray html tags
+  let prev = '';
+  while (s !== prev) {
+    prev = s;
+    s = s.replace(/<[^>]+>/g, ''); // stray html tags
+  }
   s = s.replace(/[`*_~]+/g, ''); // markdown emphasis markers
   s = s.replace(
     /[\u{1F1E6}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}]/gu,
