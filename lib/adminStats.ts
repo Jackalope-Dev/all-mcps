@@ -104,7 +104,7 @@ export async function getAdminStats(db: any): Promise<AdminStats> {
     db
       .select({ total: count() })
       .from(servers)
-      .where(isNotNull(servers.aiSummary)),
+      .where(and(eq(servers.status, 'active'), isNotNull(servers.aiSummary))),
     db.select({ total: count() }).from(servers).where(isNotNull(servers.tools)),
     db
       .select({ total: count() })

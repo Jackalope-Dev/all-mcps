@@ -117,7 +117,13 @@ export async function POST(req: Request) {
             .where(
               and(
                 eq(servers.status, 'active'),
-                or(isNull(servers.aiEnrichedAt), isNull(servers.aiDoc)),
+                // Rows skipped as thin/JEV keep aiEnrichedAt with no aiDoc or
+                // summary; re-claiming them here pinned the same top-view rows
+                // every tick. Only backfill docs for rows that got a summary.
+                or(
+                  isNull(servers.aiEnrichedAt),
+                  and(isNull(servers.aiDoc), isNotNull(servers.aiSummary)),
+                ),
               ),
             )
             .orderBy(
