@@ -24,6 +24,27 @@ function getGradient(str: string, category?: string) {
   }
   return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
 }
+export function isSafeImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+
+  // Site-relative paths (e.g. `/logos/<id>`, `/api/...`)
+  if (
+    trimmed.startsWith('/') &&
+    !trimmed.startsWith('//') &&
+    !trimmed.startsWith('/\\')
+  ) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
 
 /** Logo image when set, otherwise a category-themed or deterministic gradient avatar. */
 export function ServerAvatar({
@@ -41,25 +62,13 @@ export function ServerAvatar({
   const radius = size > 40 ? 12 : 10;
   const { displayName, org } = parseServerName(name);
 
-  // Auto-resolve GitHub org avatar if explicit logoUrl is missing. GitHub's
-  // avatar endpoint honors `?size=`, so ask for a ~2x-density render of the
-  // actual display size instead of downloading its full-resolution default
-  // (typically 460x460) for a 40-48px card icon — this page can render dozens
-  // of these per grid.
-  const isSafeImageUrl = (url: string | null | undefined): boolean => {
-    if (!url) return false;
-    try {
-      const parsed = new URL(url);
-      return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-    } catch {
-      return false;
-    }
-  };
-
+  // Strip leading '@' from scoped package names (e.g. '@modelcontextprotocol' -> 'modelcontextprotocol')
+  // so GitHub org avatar URLs resolve properly.
+  const cleanOrg = org ? org.replace(/^@/, '') : null;
   const resolvedLogoUrl =
-    logoUrl ||
-    (org
-      ? `https://github.com/${encodeURIComponent(org)}.png?size=${size * 2}`
+    logoUrl?.trim() ||
+    (cleanOrg
+      ? `https://github.com/${encodeURIComponent(cleanOrg)}.png?size=${size * 2}`
       : null);
   const activeLogoUrl = isSafeImageUrl(resolvedLogoUrl)
     ? resolvedLogoUrl
