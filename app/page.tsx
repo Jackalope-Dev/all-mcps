@@ -119,6 +119,9 @@ export default async function Home() {
     getSiteStats(),
   ]);
   const landingServers = newestServers.map(toLightCard);
+  // discoveryPool is capped at 200 rows for ranking, so its length is not the
+  // catalog size — use the real active-listing count that StatsBanner shows.
+  const catalogTotal = Math.max(siteStats.totalServers, discoveryPool.length);
 
   // Prefer premium / verified / high-engagement for discovery chrome
   // Seed changes every 5 minutes so different visitors see different featured servers
@@ -178,7 +181,7 @@ export default async function Home() {
         mismatch in the interactive catalog cannot remount the hero. That remount
         was replaying enter-up / fade-in animations and looked like a full reload.
       */}
-      <HeroSection totalCount={discoveryPool.length} />
+      <HeroSection totalCount={catalogTotal} />
       <div className="landing-proof">
         <SectionKicker index={1} label="Proof" aside="Live catalog" />
         <StatsBanner stats={siteStats} />
@@ -193,10 +196,10 @@ export default async function Home() {
       <DirectoryGrid
         initialServers={landingServers}
         variant="landing"
-        totalCount={discoveryPool.length}
+        totalCount={catalogTotal}
       />
       <LandingFaq />
-      <LandingCta totalCount={discoveryPool.length} />
+      <LandingCta totalCount={catalogTotal} />
     </main>
   );
 }
