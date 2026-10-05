@@ -6,6 +6,7 @@ import {
   cacheFileForRoute,
   isrRoutes,
   pruneIsrSeed,
+  routeForCacheFile,
 } from './prune-isr-seed.mjs';
 
 const manifest = {
@@ -60,5 +61,39 @@ describe('prune-isr-seed', () => {
     expect(fs.existsSync(path.join(tmp, '__fetch', 'BUILD123', 'abc'))).toBe(
       true,
     );
+  });
+
+  it('maps both cache layouts back to page routes', () => {
+    const sha = 'a'.repeat(64);
+    expect(routeForCacheFile('index.cache')).toBe('/');
+    expect(routeForCacheFile('mcp/github.cache')).toBe('/mcp/github');
+    expect(routeForCacheFile(`route-cache/APP_PAGE/${sha}/$/index.cache`)).toBe(
+      '/',
+    );
+    expect(
+      routeForCacheFile(`route-cache/APP_PAGE/${sha}/$/best/google.cache`),
+    ).toBe('/best/google');
+    expect(
+      routeForCacheFile(`route-cache/APP_PAGE/${sha}/$/index/index/x.cache`),
+    ).toBe('/index/x');
+    expect(routeForCacheFile('mcp/github.rsc')).toBeNull();
+  });
+
+  it('prunes the route-scoped layout that Next 16.3.8 / OpenNext 4.1 writes', () => {
+    // Regression: the name-based lookup matched nothing in this layout, so
+    // every deploy reseeded the live cache with build-time snapshot pages.
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'prune-isr-'));
+    const build = path.join(tmp, 'BUILD456');
+    const home = `route-cache/APP_PAGE/${'b'.repeat(64)}/$/index.cache`;
+    const mcp = `route-cache/APP_PAGE/${'c'.repeat(64)}/$/mcp/github.cache`;
+    const about = `route-cache/APP_PAGE/${'d'.repeat(64)}/$/about.cache`;
+    for (const f of [home, mcp, about]) touch(path.join(build, f));
+
+    const r = pruneIsrSeed({ manifest, cacheDir: tmp });
+
+    expect(r).toMatchObject({ routes: 2, removed: 2, missing: 0 });
+    expect(fs.existsSync(path.join(build, home))).toBe(false);
+    expect(fs.existsSync(path.join(build, mcp))).toBe(false);
+    expect(fs.existsSync(path.join(build, about))).toBe(true);
   });
 });

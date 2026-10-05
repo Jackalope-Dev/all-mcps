@@ -35,32 +35,73 @@ export function isrRoutes(manifest) {
     .map(([route]) => route);
 }
 
-/** Deletes the ISR entries from every build dir under cacheDir. Returns counts. */
+/**
+ * Route-scoped cache file written by @opennextjs/aws >= 4.1 for Next.js 16.3.8+:
+ * `route-cache/<KIND>/<sha256 of the owning route>/$/<normalized page path>.cache`.
+ */
+const ROUTE_CACHE_FILE =
+  /^route-cache\/(?:PAGES|APP_PAGE|APP_ROUTE)\/[0-9a-f]{64}\/\$\/(.+)\.cache$/;
+
+/** Inverse of Next's normalizePagePath: `/index` -> `/`, `/index/x` -> `/x`. */
+function denormalizePagePath(page) {
+  return /^\/index(\/|$)/.test(page)
+    ? page.slice('/index'.length) || '/'
+    : page;
+}
+
+/**
+ * The page route a cache file (path relative to its build dir, `/`-separated)
+ * holds, for both layouts: the legacy `<route>.cache` (`index.cache` is `/`)
+ * and the route-scoped one above. Null for anything that isn't a page entry.
+ */
+export function routeForCacheFile(relPath) {
+  const scoped = relPath.match(ROUTE_CACHE_FILE);
+  if (scoped) return denormalizePagePath(`/${scoped[1]}`);
+  if (relPath.startsWith('route-cache/') || !relPath.endsWith('.cache')) {
+    return null;
+  }
+  const route = relPath.slice(0, -'.cache'.length);
+  return route === 'index' ? '/' : `/${route}`;
+}
+
+function listFiles(dir, base = dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
+    const full = path.join(dir, d.name);
+    if (d.isDirectory()) return listFiles(full, base);
+    return [path.relative(base, full).split(path.sep).join('/')];
+  });
+}
+
+/**
+ * Deletes the ISR entries from every build dir under cacheDir. Returns counts.
+ *
+ * Walks the files rather than computing expected names: OpenNext's on-disk
+ * layout changed with the Next 16.3.8 upgrade (route-scoped keys), and the
+ * old name-based lookup then silently matched nothing, so every deploy seeded
+ * the live cache with build-time snapshot pages again (homepage: "114 servers").
+ */
 export function pruneIsrSeed({ manifest, cacheDir }) {
-  const routes = isrRoutes(manifest);
+  const routes = new Set(isrRoutes(manifest));
+  const pruned = new Set();
   let removed = 0;
-  let missing = 0;
   const buildDirs = fs
     .readdirSync(cacheDir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && d.name !== '__fetch')
     .map((d) => path.join(cacheDir, d.name));
-
   for (const dir of buildDirs) {
-    for (const route of routes) {
-      const file = path.join(dir, cacheFileForRoute(route));
-      if (fs.existsSync(file)) {
-        fs.rmSync(file);
-        removed++;
-      } else {
-        missing++;
-      }
+    for (const rel of listFiles(dir)) {
+      const route = routeForCacheFile(rel);
+      if (route === null || !routes.has(route)) continue;
+      fs.rmSync(path.join(dir, rel));
+      pruned.add(route);
+      removed++;
     }
   }
   return {
-    routes: routes.length,
+    routes: routes.size,
     buildDirs: buildDirs.length,
     removed,
-    missing,
+    missing: routes.size - pruned.size,
   };
 }
 
