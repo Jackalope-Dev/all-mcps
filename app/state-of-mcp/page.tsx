@@ -238,7 +238,7 @@ export default async function StateOfMcpPage() {
           }}
         />
 
-        <div className="surface page-panel min-w-0">
+        <div className="surface page-panel som-panel min-w-0">
           <nav
             aria-label="Breadcrumb"
             style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}
@@ -255,15 +255,14 @@ export default async function StateOfMcpPage() {
           </nav>
 
           <header className="som-hero">
-            <p className="som-live">
-              <span className="som-live-dot" aria-hidden="true" />
-              Live data · updated {updated}
-            </p>
             <h1 className="som-title">State of MCP</h1>
             <p className="som-hero-figure">
               <span className="som-hero-number">{fmt(stats.total)}</span>
               <span className="som-hero-unit">
                 active Model Context Protocol servers indexed
+              </span>
+              <span className="som-updated">
+                Updated {updated} · refreshes every few hours
               </span>
             </p>
             <p className="text-lead som-lead">
