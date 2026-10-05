@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { servers } from '@/db/schema';
 import { hasAgentScope, resolveAgentAuth } from '@/lib/agentAuth';
+import { claimWebsiteMatchesListing } from '@/lib/claimDomain';
 import { getEmailEnv, sendNotificationEmail } from '@/lib/notify';
 import { isGitHubRepoUrl } from '@/lib/repoUrl';
 import { getAppUrl } from '@/lib/stripe';
@@ -161,6 +162,46 @@ export async function POST(req: Request) {
           },
         },
         { status: 400, headers: CORS_HEADERS },
+      );
+    }
+
+    // A website/DNS proof only shows control of the domain the agent supplied.
+    // Auto-approve only when that domain is bound to this listing and no one
+    // else already owns it; anything else waits in the admin claim queue.
+    const ownedByOther =
+      !!server.ownerUserId && server.ownerUserId !== agent.userId;
+    const domainBound =
+      method === 'github' || claimWebsiteMatchesListing(websiteUrl, server);
+    if (ownedByOther || !domainBound) {
+      await db
+        .update(servers)
+        .set({
+          pendingClaimUserId: agent.userId,
+          pendingClaimWebsiteUrl: method === 'github' ? null : websiteUrl,
+        })
+        .where(eq(servers.id, id));
+
+      const { adminEmail } = await getEmailEnv();
+      if (adminEmail) {
+        await sendNotificationEmail({
+          to: adminEmail,
+          heading: `Agent Claim Needs Review: ${server.name}`,
+          message: `Agent user ${agent.email || agent.userId} proved control of ${method === 'github' ? 'the repo README' : websiteUrl} for "${server.name}" (${server.url}), but it was not auto-approved: ${ownedByOther ? 'the listing is already owned by another account' : "that domain doesn't match the listing"}. Approve or reject it in the admin claim queue.`,
+          actionText: 'Review in Admin',
+          actionUrl: `${getAppUrl()}/admin`,
+        });
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          pending: true,
+          isOfficial: false,
+          message: ownedByOther
+            ? 'This listing is already claimed by another account; the claim was queued for admin review.'
+            : "Proof verified, but the website doesn't match this listing's URL or website; the claim was queued for admin review.",
+        },
+        { status: 202, headers: CORS_HEADERS },
       );
     }
 

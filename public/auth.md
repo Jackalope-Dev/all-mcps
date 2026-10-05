@@ -125,6 +125,10 @@ Content-Type: application/json
 3. **`github`**:
    - Include an AllMCPs badge in your GitHub repository README linking to `allmcps.com/mcp/{id}` with `?verify={userId}`.
 
+### Auto-approval vs. review
+
+A claim is approved instantly only when the proven `websiteUrl` belongs to the listing, meaning it's the same host as the listing's server URL or existing website (or a subdomain/parent of it), and no other account already owns the listing. Otherwise the proof is still checked, but the claim is queued for admin review and the response is `202` with `"pending": true`.
+
 ---
 
 ## Token Revocation

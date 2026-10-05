@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { z } from 'zod';
 import { servers } from '../db/schema';
 import { auth } from './auth';
+import { claimWebsiteMatchesListing } from './claimDomain';
 import { getEmailEnv, sendNotificationEmail } from './notify';
 import { isGitHubRepoUrl } from './repoUrl';
 import { getAppUrl } from './stripe';
@@ -198,6 +199,47 @@ export async function claimListing(
         ok: false,
         status: 400,
         body: { error: verification.reason || 'Verification failed' },
+      };
+    }
+
+    // A website/DNS proof only shows control of the domain the claimant typed
+    // in. Auto-approve only when that domain is bound to this listing and no
+    // one else already owns it; anything else waits in the admin claim queue.
+    const ownedByOther = !!server.ownerUserId && server.ownerUserId !== userId;
+    const domainBound =
+      method === 'github' || claimWebsiteMatchesListing(websiteUrl, server);
+    if (ownedByOther || !domainBound) {
+      await db
+        .update(servers)
+        .set({
+          pendingClaimUserId: userId,
+          pendingClaimWebsiteUrl: method === 'github' ? null : websiteUrl,
+        })
+        .where(eq(servers.id, id));
+
+      const { adminEmail } = await getEmailEnv();
+      if (adminEmail) {
+        const claimant =
+          identityOverride?.email || session?.user?.email || userId;
+        await sendNotificationEmail({
+          to: adminEmail,
+          heading: `Listing Claim Needs Review: ${server.name}`,
+          message: `${claimant} proved control of ${method === 'github' ? 'the repo README' : websiteUrl} for "${server.name}" (${server.url}), but it was not auto-approved: ${ownedByOther ? 'the listing is already owned by another account' : "that domain doesn't match the listing"}. Approve or reject it in the admin claim queue.`,
+          actionText: 'Review in Admin',
+          actionUrl: `${getAppUrl()}/admin`,
+        });
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        body: {
+          success: true,
+          pending: true,
+          message: ownedByOther
+            ? 'This listing is already claimed by another account, so your claim was sent to our team for review.'
+            : "Your proof was verified, but that website doesn't match this listing, so your claim was sent to our team for review.",
+        },
       };
     }
 
