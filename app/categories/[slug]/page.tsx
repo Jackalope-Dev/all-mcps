@@ -27,7 +27,7 @@ import {
 import { formatCompactNumber } from '../../../lib/format';
 import {
   getCategoryCounts,
-  getCategoryServers,
+  getRankingCandidates,
   relatedRankingScore,
   type Server,
 } from '../../../lib/servers';
@@ -112,7 +112,7 @@ export default async function CategoryLandingPage({
   const meta = getCategoryMeta(category);
 
   const [categoryServers, countsObj] = await Promise.all([
-    getCategoryServers(category),
+    getRankingCandidates({ category }),
     getCategoryCounts(),
   ]);
   const byScore = [...categoryServers].sort((a, b) => score(b) - score(a));

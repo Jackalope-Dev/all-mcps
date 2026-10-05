@@ -22,7 +22,8 @@ import {
 import { computeQualityScore } from './qualityScore';
 import {
   formatServerSummaryLine,
-  getActiveServersForScoring,
+  getCategoryCounts,
+  getRankingCandidates,
   getRelatedServers,
   getServerById,
   getServersForTopic,
@@ -133,16 +134,15 @@ export async function renderCategoryMarkdown(
 ): Promise<string | null> {
   const category = categoryFromSlug(slug);
   if (!category) return null;
-  const servers = await getActiveServersForScoring();
-  const inCategory = servers.filter((s) => s.category === category);
+  const inCategory = await getRankingCandidates({ category });
   return formatCategoryMarkdown(category, inCategory);
 }
 
 export async function renderCategoryIndexMarkdown(): Promise<string> {
-  const servers = await getActiveServersForScoring();
+  const byCategory = await getCategoryCounts();
   const counts = DIRECTORY_CATEGORIES.map((category) => ({
     category,
-    count: servers.filter((s) => s.category === category).length,
+    count: byCategory[category] ?? 0,
   }));
   return formatCategoryIndexMarkdown(counts);
 }

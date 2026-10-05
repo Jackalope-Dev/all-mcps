@@ -1,4 +1,15 @@
-import { and, desc, eq, gt, inArray, ne, or, type SQL, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  like,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { cache } from 'react';
 import serversData from '../data/mcp-servers.json';
@@ -487,31 +498,261 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
     .slice(0, limit);
 }
 
-/** Active servers in a single category, bounded at the DB level for category landing pages and search filtering. */
-export async function getCategoryServers(category: string): Promise<Server[]> {
+/**
+ * Every column relatedRankingScore() (without a `current` server) and
+ * engagementScore() read, plus what category cards, /best rows and markdown
+ * summary lines render. No `tools`, no AI text.
+ */
+const RANKING_COLUMNS = {
+  id: serversTable.id,
+  name: serversTable.name,
+  url: serversTable.url,
+  description: serversTable.description,
+  category: serversTable.category,
+  logoUrl: serversTable.logoUrl,
+  createdAt: serversTable.createdAt,
+  views: serversTable.views,
+  copies: serversTable.copies,
+  upvotes: serversTable.upvotes,
+  githubStars: serversTable.githubStars,
+  npmDownloads: serversTable.npmDownloads,
+  installConfidence: serversTable.installConfidence,
+  isOfficial: serversTable.isOfficial,
+  isPremium: serversTable.isPremium,
+  isVerifiedActive: serversTable.isVerifiedActive,
+  healthStatus: serversTable.healthStatus,
+  reciprocalBadgeOk: serversTable.reciprocalBadgeOk,
+  featuredUntil: serversTable.featuredUntil,
+  categorySponsorUntil: serversTable.categorySponsorUntil,
+} as const;
+
+/**
+ * Slim rows (RANKING_COLUMNS only) for ranking a slice of the active catalog:
+ * one category, and/or listings whose name or description mentions a keyword.
+ *
+ * Category and topic pages used to load every matching row with the full
+ * public column set (raw tools JSON + every AI-text column). The catalog is
+ * now ~27k listings carrying ~30MB of tools JSON and ~15MB of AI text, and
+ * "💻 Developer Tools" alone holds ~13.7k of them, so those pages tripped the
+ * Worker memory limit (outcome: exceededMemory on /best/google-workspace, a
+ * keyword topic that scanned the whole catalog). Callers rank these slim rows
+ * and pass only the ids they render to hydrateServersByIds when they need
+ * more than these columns.
+ *
+ * `keywords` is a coarse SQL LIKE prefilter; callers still apply their exact
+ * (word-boundary) match in JS, as selectServersForTopic does.
+ */
+export async function getRankingCandidates(filter: {
+  category?: string | null;
+  keywords?: string[];
+}): Promise<Server[]> {
+  const keywords = (filter.keywords ?? []).filter(Boolean);
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx?.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const conditions: (SQL | undefined)[] = [
+        eq(serversTable.status, 'active'),
+      ];
+      if (filter.category) {
+        conditions.push(eq(serversTable.category, filter.category));
+      }
+      if (keywords.length > 0) {
+        conditions.push(
+          or(
+            ...keywords.flatMap((k) => [
+              like(serversTable.name, `%${k}%`),
+              like(serversTable.description, `%${k}%`),
+            ]),
+          ),
+        );
+      }
+      const rows = await db
+        .select(RANKING_COLUMNS)
+        .from(serversTable)
+        .where(and(...conditions));
+      if (rows.length > 0) {
+        return rows.map((r) => ({
+          ...r,
+          description: cleanListingDescription(r.description),
+        })) as unknown as Server[];
+      }
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+
+  const lowered = keywords.map((k) => k.toLowerCase());
+  return snapshotCatalogServers()
+    .filter(
+      (s) =>
+        (!filter.category || s.category === filter.category) &&
+        (lowered.length === 0 ||
+          lowered.some((k) =>
+            `${s.name} ${s.description || ''}`.toLowerCase().includes(k),
+          )),
+    )
+    .map(normalizeServer);
+}
+
+/**
+ * Full rows (public columns, tools trimmed to name + description) for just the
+ * ids a page renders, in the order given. Pairs with getRankingCandidates.
+ */
+export async function hydrateServersByIds(ids: string[]): Promise<Server[]> {
+  if (ids.length === 0) return [];
+  const searchDb = await getSearchDb();
+  if (searchDb) {
+    try {
+      const rows = await hydrateSearchResults(searchDb.db, ids);
+      if (rows.length > 0) return rows;
+    } catch (e) {
+      // Fall back to static JSON
+    }
+  }
+  const byId = new Map(snapshotCatalogServers().map((s) => [s.id, s]));
+  return ids
+    .map((id) => byId.get(id))
+    .filter((s): s is Server => Boolean(s))
+    .map(normalizeServer);
+}
+
+/**
+ * A uniform random sample of active listings (optionally one category), as full
+ * rows with tools trimmed. Lets "random"/"surprise me" pickers choose from a
+ * bounded pool instead of loading the whole ~27k-row catalog to keep 1-5 rows.
+ */
+export async function getRandomActiveServers(
+  sampleSize: number,
+  category?: string | null,
+): Promise<Server[]> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
-        .select(PUBLIC_SERVER_COLUMNS)
+        .select(SCORING_SERVER_COLUMNS)
         .from(serversTable)
         .where(
           and(
             eq(serversTable.status, 'active'),
-            eq(serversTable.category, category),
+            category ? eq(serversTable.category, category) : undefined,
           ),
-        );
+        )
+        .orderBy(sql`random()`)
+        .limit(sampleSize);
       if (rows.length > 0) {
         return rows.map((r) => normalizeServer(r as unknown as Server));
       }
     }
-  } catch (e) {}
-
+  } catch (e) {
+    // Fall back to static JSON
+  }
   return snapshotCatalogServers()
-    .filter((s) => s.category === category)
+    .filter((s) => !category || s.category === category)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, sampleSize)
     .map(normalizeServer);
+}
+
+/**
+ * Every active listing, `pageSize` full rows (tools trimmed) at a time in id
+ * order, for whole-catalog exports such as /llms-full.txt. Holding the whole
+ * ~27k-row catalog plus the rendered output at once exceeds the Worker memory
+ * limit, so callers stream each page out before asking for the next.
+ */
+export async function* iterateActiveServers(
+  pageSize = 500,
+): AsyncGenerator<Server[]> {
+  const searchDb = await getSearchDb();
+  let after = '';
+  let yielded = false;
+  if (searchDb) {
+    try {
+      for (;;) {
+        const rows = await searchDb.db
+          .select(SCORING_SERVER_COLUMNS)
+          .from(serversTable)
+          .where(
+            and(eq(serversTable.status, 'active'), gt(serversTable.id, after)),
+          )
+          .orderBy(serversTable.id)
+          .limit(pageSize);
+        if (rows.length === 0) break;
+        yielded = true;
+        yield rows.map((r) => normalizeServer(r as unknown as Server));
+        after = rows[rows.length - 1].id;
+        if (rows.length < pageSize) break;
+      }
+    } catch (e) {
+      // Fall back to static JSON only if nothing was streamed yet; a partial
+      // export followed by a different snapshot would duplicate listings.
+      if (yielded) throw e;
+    }
+  }
+  if (!yielded) {
+    const snapshot = snapshotCatalogServers().map(normalizeServer);
+    for (let i = 0; i < snapshot.length; i += pageSize) {
+      yield snapshot.slice(i, i + pageSize);
+    }
+  }
+}
+
+/** Row shape for whole-catalog indexes (/data.json, the Cmd+K search index). */
+export type CatalogIndexRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  url: string;
+  logoUrl: string | null;
+  aiSummary: string | null;
+};
+
+/**
+ * Every active listing with only the columns a catalog index needs. Like
+ * getServersForLlmsTxt, it skips `tools` and the long AI columns that made
+ * getActiveServersForScoring() too heavy for whole-catalog routes.
+ */
+export async function getCatalogIndexRows(): Promise<CatalogIndexRow[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx?.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select({
+          id: serversTable.id,
+          name: serversTable.name,
+          description: serversTable.description,
+          category: serversTable.category,
+          url: serversTable.url,
+          logoUrl: serversTable.logoUrl,
+          aiSummary: serversTable.aiSummary,
+        })
+        .from(serversTable)
+        .where(eq(serversTable.status, 'active'));
+      if (rows.length > 0) {
+        return rows.map((r) => ({
+          ...r,
+          description: cleanListingDescription(r.description),
+        }));
+      }
+    }
+  } catch (e) {
+    // Fall back to static JSON
+  }
+  return snapshotCatalogServers().map((s) => ({
+    id: s.id,
+    name: s.name,
+    description: cleanListingDescription(s.description),
+    category: s.category,
+    url: s.url,
+    logoUrl: s.logoUrl ?? null,
+    aiSummary: s.aiSummary ?? null,
+  }));
 }
 
 /** Category counts computed via lightweight SQL GROUP BY for category sidebar links. */
@@ -577,33 +818,6 @@ export async function getPopularServers(limit: number): Promise<Server[]> {
 }
 
 /**
- * Full active-catalog scan (thousands of rows, every column). Wrapped in React's
- * `cache()` so multiple call sites within the same request/render (e.g. a detail
- * page's related-servers and featured-servers lookups both need it) share one
- * D1 query + normalize pass instead of each re-scanning the whole table.
- */
-export const getActiveServers = cache(async (): Promise<Server[]> => {
-  let servers = snapshotCatalogServers();
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select(PUBLIC_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(eq(serversTable.status, 'active'));
-      if (dbServers.length > 0) {
-        servers = dbServers as unknown as Server[];
-      }
-    }
-  } catch (e) {
-    // Fall back to static JSON
-  }
-  return servers.map(normalizeServer);
-});
-
-/**
  * Trims each row's `tools` JSON down to {name, description} inside SQLite
  * itself, so the full parameter/inputSchema blobs (a few outlier listings
  * carry hundreds of tools, one has 987) never get pulled into the Worker's
@@ -634,58 +848,6 @@ const SCORING_SERVER_COLUMNS = {
   ...SCORING_SERVER_COLUMNS_REST,
   tools: TRIMMED_TOOLS_SQL,
 };
-
-/**
- * Full-catalog scan for the scoring/ranking path only (related servers,
- * featured servers) — a genuinely separate query from getActiveServers(),
- * not a transform of it. Calling getActiveServers() internally would still
- * retain the full heavy result for the rest of the request (React's cache()
- * holds a reference for exactly that reuse purpose), on top of a trimmed
- * copy — worse, not better. This fetches its own lighter column set with
- * `tools` already trimmed to {name, description} by TRIMMED_TOOLS_SQL, so
- * the heavy parameter/inputSchema JSON Schema objects never reach the
- * Worker's JS heap at all.
- *
- * Confirmed as a real cause of Worker OOM crashes in practice: a few
- * outlier listings carry hundreds of tools (one has 987) each with a full
- * parameter schema, and getActiveServers() held that for the *entire*
- * ~3200-row catalog on every single page that computes related/featured
- * servers — not just pages involving those specific outliers, any page,
- * since the whole array is retained for the request regardless of which
- * rows actually get used. An earlier version of this function trimmed
- * `tools` in JS after the fetch, which was too late: the crash happens
- * while D1 hands back and drizzle parses the full rows, not afterward.
- */
-export const getActiveServersForScoring = cache(async (): Promise<Server[]> => {
-  let servers = snapshotCatalogServers();
-  let fromDb = false;
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const dbServers = await db
-        .select(SCORING_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(eq(serversTable.status, 'active'));
-      if (dbServers.length > 0) {
-        servers = dbServers as unknown as Server[];
-        fromDb = true;
-      }
-    }
-  } catch (e) {
-    // Fall back to static JSON
-  }
-  const normalized = servers.map(normalizeServer);
-  // The static-JSON fallback still carries full tool schemas (it's the
-  // small dev-time snapshot, not the live catalog) — trim it in JS too.
-  // The D1 path is already trimmed at the SQL level above.
-  if (fromDb) return normalized;
-  return normalized.map((s) => ({
-    ...s,
-    tools: s.tools?.map((t) => ({ name: t.name, description: t.description })),
-  }));
-});
 
 /**
  * Most rows one search prefilter pass hands back to the Worker. Slim candidate rows
@@ -1083,20 +1245,19 @@ export async function searchActiveServers(opts: {
 }
 
 /**
- * Efficient candidate fetch for a curated /best/[topic] page.
- * For category-bound topics, queries ONLY that single category from D1 (tens of rows
- * instead of ~3,200), preventing Cloudflare Worker OOM memory limit crashes on RSC
- * requests like /best/version-control. For keyword topics, fetches active servers
- * with tools trimmed at the SQL level and heavy aiFaq omitted.
+ * Slim candidate rows for a curated /best/[topic] page: the topic's category,
+ * narrowed by its keywords when it has them (selectServersForTopic applies the
+ * exact word-boundary match on top). See getRankingCandidates for why this
+ * never loads full rows.
  */
 export async function getServersForTopic(topic: BestTopic): Promise<Server[]> {
-  if (topic.categorySlug) {
-    const category = categoryFromSlug(topic.categorySlug);
-    if (category) {
-      return getCategoryServers(category);
-    }
+  const category = topic.categorySlug
+    ? categoryFromSlug(topic.categorySlug)
+    : undefined;
+  if (topic.match && topic.match.length > 0) {
+    return getRankingCandidates({ category, keywords: topic.match });
   }
-  return getActiveServersForScoring();
+  return category ? getRankingCandidates({ category }) : [];
 }
 
 /** Minimal row shape needed by the /llms.txt route. */

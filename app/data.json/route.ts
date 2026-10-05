@@ -1,4 +1,4 @@
-import { getActiveServersForScoring } from '@/lib/servers';
+import { getCatalogIndexRows } from '@/lib/servers';
 
 /**
  * Public, structured export of the whole directory — a single clean pull for
@@ -7,7 +7,7 @@ import { getActiveServersForScoring } from '@/lib/servers';
  * llms.txt so it's discoverable as a citable source.
  */
 export async function GET() {
-  const servers = await getActiveServersForScoring();
+  const servers = await getCatalogIndexRows();
 
   const payload = {
     name: 'AllMCPs — Model Context Protocol Server Directory',

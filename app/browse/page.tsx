@@ -7,7 +7,12 @@ import {
   normalizeCategory,
   parseCategoryLabel,
 } from '../../lib/categories';
-import { getCategoryServers, getNewestActiveServers } from '../../lib/servers';
+import {
+  getNewestActiveServers,
+  getRankingCandidates,
+  hydrateServersByIds,
+  relatedRankingScore,
+} from '../../lib/servers';
 
 // 5-minute ISR caches default /browse views at the Edge CDN for instant page loads.
 export const revalidate = 300;
@@ -97,8 +102,16 @@ export default async function BrowsePage({
     ? resolveCategory(categoryRaw) || categoryRaw
     : null;
 
-  const servers = category
-    ? await getCategoryServers(category)
+  // A category can hold >13k listings: rank slim rows, then load full rows
+  // only for the 60 the grid server-renders (see getRankingCandidates).
+  const candidates = category ? await getRankingCandidates({ category }) : null;
+  const servers = candidates
+    ? await hydrateServersByIds(
+        [...candidates]
+          .sort((a, b) => relatedRankingScore(b) - relatedRankingScore(a))
+          .slice(0, 60)
+          .map((s) => s.id),
+      )
     : await getNewestActiveServers(60);
 
   const label = category ? parseCategoryLabel(category).label : null;
@@ -162,7 +175,7 @@ export default async function BrowsePage({
           ? {
               mainEntity: {
                 '@type': 'ItemList',
-                numberOfItems: relevant.length,
+                numberOfItems: candidates?.length ?? relevant.length,
                 itemListElement: itemList,
               },
             }

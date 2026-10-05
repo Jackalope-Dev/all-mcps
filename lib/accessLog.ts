@@ -155,6 +155,16 @@ export const CALLER_COLORS: Record<CallerClass, string> = {
   unknown: '#4B5563',
 };
 
+/**
+ * Drizzle wraps D1 failures as "Failed query: <sql> params: ..." and keeps the
+ * actual D1 reason (busy, network lost, ...) on `cause`, so log that instead
+ * of the SQL echo.
+ */
+function describeDbError(err: any): string {
+  const cause = err?.cause?.message ?? err?.cause;
+  return cause ? String(cause) : String(err?.message ?? err);
+}
+
 type LogParams = {
   serverId?: string | null;
   endpoint: Endpoint;
@@ -183,7 +193,7 @@ export function logApiAccess(db: any, params: LogParams): Promise<void> {
     })
     .then(() => {})
     .catch((err: any) => {
-      console.error('[accessLog] Failed to insert:', err?.message);
+      console.error('[accessLog] Failed to insert:', describeDbError(err));
     });
 }
 
@@ -235,7 +245,10 @@ export function logApiAccessBatch(
           })),
         )
         .catch((err: any) => {
-          console.error('[accessLog] Failed to batch insert:', err?.message);
+          console.error(
+            '[accessLog] Failed to batch insert:',
+            describeDbError(err),
+          );
         }),
     ),
   ).then(() => {});

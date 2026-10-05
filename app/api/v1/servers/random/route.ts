@@ -1,9 +1,11 @@
 import { resolveCategoryParam } from '@/lib/categories';
 import { resolveInstallConfig } from '@/lib/installConfig';
 import { computeQualityScore } from '@/lib/qualityScore';
-import { getActiveServersForScoring, getCategoryServers } from '@/lib/servers';
+import { getRandomActiveServers } from '@/lib/servers';
 
 export const revalidate = 0;
+
+const RANDOM_POOL_SIZE = 300;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -19,12 +21,12 @@ export async function GET(request: Request) {
   );
   const count = Math.min(Math.max(1, countParam), 5);
 
-  let pool = category
-    ? await getCategoryServers(category)
-    : await getActiveServersForScoring();
+  // A random sample, not the whole catalog: loading all ~27k rows to keep 1-5
+  // blew the Worker memory limit. 300 is plenty for every mode's filters.
+  let pool = await getRandomActiveServers(RANDOM_POOL_SIZE, category);
 
   if (!pool || pool.length === 0) {
-    pool = await getActiveServersForScoring();
+    pool = await getRandomActiveServers(RANDOM_POOL_SIZE);
   }
 
   let selected: typeof pool = [];
@@ -86,7 +88,7 @@ export async function GET(request: Request) {
 
     selected = stackResult;
   } else {
-    // Pure random across the full active catalog
+    // Uniform random: the pool is already a random sample of the catalog
     selected = shuffle(pool).slice(0, count);
   }
 

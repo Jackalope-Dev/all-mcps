@@ -1,5 +1,5 @@
 import { categorySlug, parseCategoryLabel } from '@/lib/categories';
-import { getActiveServersForScoring } from '@/lib/servers';
+import { getCatalogIndexRows } from '@/lib/servers';
 
 /**
  * Lightweight index for the on-site command palette (Cmd+K) and other
@@ -10,7 +10,7 @@ import { getActiveServersForScoring } from '@/lib/servers';
  * without pulling the full catalog JSON into the client bundle.
  */
 export async function GET() {
-  const servers = await getActiveServersForScoring();
+  const servers = await getCatalogIndexRows();
 
   const results = servers.map((s) => ({
     id: s.id,
