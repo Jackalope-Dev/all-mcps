@@ -521,6 +521,13 @@ export async function POST(req: Request) {
         } else {
           stats.failed++;
           if (o?.status === 'budget') budgetHit = true;
+          // The summary line only counts failures; this says which listing
+          // and why (LLM error code, empty/unusable output, budget stop).
+          console.warn(
+            `[ai-content] ${r.server.pass} failed for ${r.server.id}: ${
+              o ? `${o.status} (${o.reason})` : 'no outcome'
+            }`,
+          );
         }
       }
     }
