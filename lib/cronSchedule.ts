@@ -1,0 +1,169 @@
+/**
+ * Cron job tables and the site/jobs Worker split, kept free of the OpenNext
+ * build import so it can be unit-tested. custom-worker.ts dispatches these.
+ */
+
+export type CronJob = {
+  /** Route to invoke (POST). */
+  path: string;
+  /**
+   * Name of the Worker secret whose value authorizes this route as
+   * `Authorization: Bearer <secret>`. This is a runtime secret, not part of
+   * the generated `CloudflareEnv` type, so we read it dynamically.
+   *
+   * Every route checks this via `isCronAuthorized` (lib/cronAuth.ts), which
+   * accepts `CRON_SECRET` and `ADMIN_SECRET` side by side while the rename is
+   * in flight. It grants cron access only — admin routes are gated on the
+   * `role` column, not on any secret.
+   */
+  secretVar: 'CRON_SECRET';
+  /**
+   * Optional gate. Jobs without a gate run on every tick of whichever
+   * schedule they belong to (FAST_JOBS or SLOW_JOBS below). Jobs with a gate
+   * only run on ticks where it also returns true.
+   */
+  shouldRun?: (now: Date) => boolean;
+};
+
+// Runs every 15 min (wrangler.jsonc "*/15 * * * *") — these two used to be
+// driven by a GitHub Actions workflow on the same cadence (health-check.yml,
+// removed) until GH Actions usage limits forced everything cron-shaped onto
+// this Worker instead.
+export const FAST_JOBS: CronJob[] = [
+  // Rechecks listing health, badges, stars and npm downloads.
+  { path: '/api/cron/health', secretVar: 'CRON_SECRET' },
+  // Catalog quality: website/homepage, logos, install hints, clean scrape chrome,
+  // unpublish archived/404 GitHub repos. Every tick until the catalog is enriched.
+  { path: '/api/cron/enrich', secretVar: 'CRON_SECRET' },
+];
+
+// Runs every 20 min ("*/20 * * * *") when a single Worker does everything —
+// own schedule so GPT writeups don't sit behind the 4h slow list or block
+// 15-min health/enrich. Default batch (6) because it shares the isolate with
+// live page traffic.
+export const AI_CONTENT_JOBS: CronJob[] = [
+  { path: '/api/cron/ai-content', secretVar: 'CRON_SECRET' },
+];
+
+// Runs every 10 min ("*/10 * * * *") on the dedicated jobs Worker. Nothing
+// else shares that isolate, so it takes the route's max batch: same 6-wide
+// concurrency per wave, just more waves per run (see the ai-content route).
+export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
+  { path: '/api/cron/ai-content?batchSize=24', secretVar: 'CRON_SECRET' },
+];
+
+// Must run on the Worker that serves pages. It deletes every ISR-cache prefix
+// except the *running* build's (process.env.OPEN_NEXT_BUILD_ID), so on any
+// other Worker a build-ID mismatch would wipe the site's live page cache.
+// Purges R2 ISR-cache entries left behind by previous deploys' build IDs —
+// see the route comment for why this exists alongside the bucket's 7-day
+// lifecycle rule.
+export const SITE_JOBS: CronJob[] = [
+  { path: '/api/cron/isr-cache-cleanup', secretVar: 'CRON_SECRET' },
+];
+
+// Runs every 4h (wrangler.jsonc "0 */4 * * *").
+export const SLOW_JOBS: CronJob[] = [
+  // FAQ backfill for listings enriched before ai-content started generating FAQ
+  // pairs. Every tick until the backlog is drained, then permanently no-ops. For
+  // the initial backlog, drive scripts/backfill-ai-faq.mjs to drain it faster.
+  { path: '/api/cron/ai-faq', secretVar: 'CRON_SECRET' },
+  // Syncs semantic vector embeddings into Cloudflare Vectorize for natural language
+  // search. Bounded batch per tick (see BATCH_SIZE in the route) — an earlier
+  // unbounded version processed the whole catalog per tick and blew the scheduled
+  // handler's time/subrequest budget, taking down every job queued after it. Every
+  // tick until the catalog is indexed, then no-ops. For the initial backlog, drive
+  // scripts/sync-vector-index.mjs against this endpoint to drain it faster.
+  { path: '/api/cron/vector-index', secretVar: 'CRON_SECRET' },
+  // Supply-chain vulnerability signal: OSV.dev existence-check + severity
+  // detail fetch for each listing's install package. Bounded per tick (see
+  // BATCH_SIZE/MAX_DETAIL_FETCHES in the route) so unresolved listings simply
+  // roll to the next tick instead of blowing the scheduled handler's budget.
+  { path: '/api/cron/vuln-scan', secretVar: 'CRON_SECRET' },
+  // IndexNow catch-up for recently changed URLs — daily at 00:00 UTC tick.
+  // Change-scoped (submits nothing on a quiet day) so the key stays out of
+  // Bing's "batch mode". Complements the per-approve ping so fire-and-forget
+  // misses still get indexed.
+  {
+    path: '/api/cron/indexnow',
+    secretVar: 'CRON_SECRET',
+    shouldRun: (now) => now.getUTCHours() === 0,
+  },
+  // "This week on AllMCPs" digest — weekly, not every 4h, or it would send a
+  // campaign on every tick. Runs on the Monday 12:00 UTC tick only.
+  {
+    path: '/api/cron/newsletter-digest',
+    secretVar: 'CRON_SECRET',
+    shouldRun: (now) => now.getUTCDay() === 1 && now.getUTCHours() === 12,
+  },
+  // One-time "complete your purchase" email for sponsor-ad checkouts abandoned
+  // 2+ days ago. Daily (not every 4h) so a given ad's reminder window doesn't
+  // get scanned repeatedly the same day — the route is idempotent regardless
+  // (abandonedReminderSentAt gates re-sends), this just avoids the extra work.
+  {
+    path: '/api/cron/ad-checkout-reminder',
+    secretVar: 'CRON_SECRET',
+    shouldRun: (now) => now.getUTCHours() === 8,
+  },
+  // Promotes ingested (never human-submitted) pending listings to active once
+  // they've sat untouched for a week and a fresh liveness check still finds
+  // them alive — see the route for the full policy. Daily is plenty; the
+  // dwell window is measured in days, not hours.
+  {
+    path: '/api/cron/auto-promote',
+    secretVar: 'CRON_SECRET',
+    shouldRun: (now) => now.getUTCHours() === 5,
+  },
+  // 45-day retention cleanup for impression_logs and api_access_logs to prevent
+  // unbounded table/index growth and D1 Time-Travel WAL storage bloat. Daily at 03:00 UTC.
+  {
+    path: '/api/cron/log-cleanup',
+    secretVar: 'CRON_SECRET',
+    shouldRun: (now) => now.getUTCHours() === 3,
+  },
+  // Blog content pipeline: corpus sync, topic dedupe, draft → self-review →
+  // revise (lib/blogPipeline). Deliberately LAST — it spends up to ~9 min of
+  // its own time budget on LLM calls, so everything above runs first. Stops
+  // itself once BACKLOG_CAP drafts are waiting for review in /admin → Blog Drafts.
+  { path: '/api/cron/blog-pipeline', secretVar: 'CRON_SECRET' },
+];
+
+/**
+ * Which half of the split this deployment is (WORKER_ROLE var, wrangler.jsonc):
+ * - `site`: serves allmcps.com; runs only SITE_JOBS and forwards every other
+ *   /api/cron/* request to the jobs Worker over the JOBS service binding.
+ * - `jobs`: the `all-mcps-jobs` Worker (`env.jobs`); runs every other cron and
+ *   serves nothing but /api/cron/*, so backfills and LLM batches never share
+ *   an isolate (memory, CPU) with page traffic.
+ * - unset: a single Worker doing both, as before the split.
+ */
+export type WorkerRole = 'site' | 'jobs' | 'all';
+
+export type RoleEnv = { WORKER_ROLE?: string; JOBS?: Fetcher };
+
+export function workerRole(env: unknown): WorkerRole {
+  const role = (env as RoleEnv | undefined)?.WORKER_ROLE;
+  return role === 'site' || role === 'jobs' ? role : 'all';
+}
+
+export function jobsForTick(cron: string, role: WorkerRole): CronJob[] {
+  if (role === 'site') return cron === '0 */4 * * *' ? SITE_JOBS : [];
+  switch (cron) {
+    case '*/15 * * * *':
+      return FAST_JOBS;
+    case '*/10 * * * *':
+      return AI_CONTENT_JOBS_DEDICATED;
+    case '*/20 * * * *':
+      return AI_CONTENT_JOBS;
+    default:
+      return role === 'jobs' ? SLOW_JOBS : [...SITE_JOBS, ...SLOW_JOBS];
+  }
+}
+
+/** /api/cron/* routes the site Worker hands to the jobs Worker. */
+export function isOffloadedCronPath(pathname: string): boolean {
+  return (
+    pathname.startsWith('/api/cron/') &&
+    !SITE_JOBS.some((job) => job.path === pathname)
+  );
+}

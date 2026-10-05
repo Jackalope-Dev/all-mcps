@@ -62,5 +62,67 @@
   ],
   "ai": {
     "binding": "AI"
+  },
+  "env": {
+    // Dedicated background-jobs Worker: deploys as `all-mcps-jobs` from the
+    // same build (scripts/deploy-jobs-worker.mjs, run by `deploy:cf` before
+    // the site). It owns every cron except isr-cache-cleanup (see SITE_JOBS in
+    // custom-worker.ts) and serves only /api/cron/*, so LLM batches and
+    // backfills never share an isolate with page traffic. No routes or
+    // workers.dev URL: it's reached by its own cron triggers and by the site
+    // Worker's JOBS service binding.
+    //
+    // Wrangler does not inherit bindings, vars or triggers into an env, so
+    // everything below is repeated from the top level. KEEP IN SYNC with it
+    // (and with wrangler.build.jsonc) when adding or renaming a binding.
+    // Secrets are per-Worker too: set each one on `--env jobs` as well.
+    "jobs": {
+      "routes": [],
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": {
+        "RESEND_TO_EMAIL": "contact@allmcps.com",
+        "RESEND_FROM_EMAIL": "contact@allmcps.com",
+        "WORKER_ROLE": "jobs"
+      },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "all-mcps-jobs"
+        }
+      ],
+      "triggers": {
+        // "*/15" health + enrich, "*/10" ai-content (batch 24), "0 */4" the
+        // slow list. Same patterns custom-worker.ts jobsForTick() switches on.
+        "crons": ["0 */4 * * *", "*/15 * * * *", "*/10 * * * *"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "all-mcps",
+          "database_id": "c0e237c4-fa3c-45f0-8400-b2dd44615f94",
+          "migrations_dir": "drizzle"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "LOGOS",
+          "bucket_name": "all-mcps-logos"
+        },
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "all-mcps-isr-cache"
+        }
+      ],
+      "vectorize": [
+        {
+          "binding": "VECTOR_INDEX",
+          "index_name": "mcp-servers-index"
+        }
+      ],
+      "ai": {
+        "binding": "AI"
+      }
+    }
   }
 }

@@ -64,10 +64,11 @@ export async function POST(req: Request) {
     if (authHeader) headers.Authorization = authHeader;
     else if (secret) headers.Authorization = `Bearer ${secret}`;
 
-    const cronRes = await fetch(cronUrl, {
-      method: 'POST',
-      headers,
-    });
+    // On the split deployment the jobs Worker owns /api/cron/* — call it over
+    // the JOBS service binding rather than looping back through the site.
+    const jobs = env?.JOBS as Fetcher | undefined;
+    const cronReq = new Request(cronUrl, { method: 'POST', headers });
+    const cronRes = jobs ? await jobs.fetch(cronReq) : await fetch(cronReq);
 
     let cronData = {};
     try {

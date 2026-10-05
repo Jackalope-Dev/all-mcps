@@ -49,6 +49,9 @@ import { parseServerTools } from '../../../../lib/servers';
 
 // Kept at 6 so a single run executes within Cloudflare's HTTP edge timeout (~100s,
 // each concurrent LLM call takes ~15-20s). Dynamic via ?batchSize= (capped at 24).
+// The dedicated jobs Worker's cron passes batchSize=24 (custom-worker.ts
+// AI_CONTENT_JOBS_DEDICATED): it calls the route in-process, so the edge
+// timeout doesn't apply, and it runs in its own isolate.
 const DEFAULT_BATCH_SIZE = 6;
 // Claim step is a single atomic UPDATE ... WHERE id IN (subquery), so raising
 // this is safe against double-claims even under concurrent callers. Was
@@ -60,10 +63,41 @@ const DEFAULT_BATCH_SIZE = 6;
 // request errors on real /mcp/[id] page loads during a backfill run. Back to
 // the original conservative value; don't raise this again without a way to
 // isolate backfill load from production traffic (e.g. a separate Worker/
-// queue) rather than just retuning the number.
+// queue) rather than just retuning the number. That isolation now exists
+// (the all-mcps-jobs Worker), but throughput is raised via batch size there,
+// not this per-wave width, which still bounds one isolate's peak memory.
 const CONCURRENCY = 6;
 const MIN_MATERIAL_CHARS = 30;
 const STALE_RECHECK_MS = 90 * 24 * 60 * 60 * 1000;
+
+/**
+ * aiDoc = '' marks "writeup attempted, nothing to write" (thin README / JEV skip).
+ * Without it, a row that already had a summary still matched the doc-backfill
+ * claim (aiDoc IS NULL AND aiSummary IS NOT NULL), so the same few rows were
+ * re-claimed and re-skipped every tick, taking every batch slot while the
+ * never-enriched backlog sat untouched. Every reader treats '' as "no writeup"
+ * (they all trim/compare to ''), and aiDocAt is left alone so sitemap lastmod
+ * stays honest. Rows without a summary are unaffected: aiEnrichedAt already
+ * keeps them out of the claim.
+ */
+async function markWriteupSkipped(
+  db: ReturnType<typeof drizzle>,
+  id: string,
+): Promise<void> {
+  await db
+    .update(servers)
+    .set({ aiDoc: '' })
+    .where(
+      and(
+        eq(servers.id, id),
+        isNull(servers.aiDoc),
+        isNotNull(servers.aiSummary),
+      ),
+    );
+}
+
+/** A real writeup exists (excludes NULL and the '' skip marker). */
+const hasWriteup = sql`${servers.aiDoc} != ''`;
 
 type ClaimedRow = {
   id: string;
@@ -120,6 +154,8 @@ export async function POST(req: Request) {
                 // Rows skipped as thin/JEV keep aiEnrichedAt with no aiDoc or
                 // summary; re-claiming them here pinned the same top-view rows
                 // every tick. Only backfill docs for rows that got a summary.
+                // A summarized row whose doc backfill is skipped gets aiDoc = ''
+                // (markWriteupSkipped), so it drops out of this clause too.
                 or(
                   isNull(servers.aiEnrichedAt),
                   and(isNull(servers.aiDoc), isNotNull(servers.aiSummary)),
@@ -216,7 +252,7 @@ export async function POST(req: Request) {
                 and(
                   eq(servers.status, 'active'),
                   isNotNull(servers.aiEnrichedAt),
-                  isNotNull(servers.aiDoc),
+                  hasWriteup,
                   isNull(servers.installExtractedAt),
                 ),
               )
@@ -257,7 +293,7 @@ export async function POST(req: Request) {
         .where(
           and(
             eq(servers.status, 'active'),
-            isNotNull(servers.aiDoc),
+            hasWriteup,
             or(isNull(servers.authType), isNull(servers.pricingModel)),
           ),
         )
@@ -353,11 +389,13 @@ export async function POST(req: Request) {
       for (const r of results) {
         if ('thin' in r) {
           stats.skippedThin++;
+          await markWriteupSkipped(db, r.server.id);
           keep.add(r.server.id);
           continue;
         }
         if ('skipJev' in r) {
           stats.skippedJev++;
+          await markWriteupSkipped(db, r.server.id);
           keep.add(r.server.id);
           continue;
         }
