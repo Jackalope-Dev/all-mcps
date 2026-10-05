@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { sponsorAds } from '@/db/schema';
 import { mintAdEventToken } from '@/lib/adEventToken';
-import { type AdPlacement, selectWeightedAd } from '@/lib/ads';
+import { type AdPlacement, pickAdForSlot } from '@/lib/ads';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,12 +17,6 @@ export async function GET(request: Request) {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-
-    // Keep self-promotion active: reserve ~15% of views for house sponsor promo cards
-    const HOUSE_PROMO_RATE = 0.15;
-    if (Math.random() < HOUSE_PROMO_RATE) {
-      return NextResponse.json({ ad: null, isHousePromo: true });
-    }
 
     const ctx = await getCloudflareContext();
     if (!ctx?.env?.DB) {
@@ -51,27 +45,11 @@ export async function GET(request: Request) {
         ),
       );
 
-    if (!candidateAds || candidateAds.length === 0) {
-      return NextResponse.json({ ad: null });
-    }
-
-    // Deduplication: Avoid serving an ad that is already active on this page
-    let eligible = candidateAds;
-    if (excludeIds.length > 0) {
-      const notExcluded = candidateAds.filter(
-        (ad) => !excludeIds.includes(ad.id),
-      );
-      if (notExcluded.length > 0) {
-        eligible = notExcluded;
-      } else {
-        // If all candidates are already rendered on this page, show promo unit to prevent duplicate visual clutter
-        return NextResponse.json({ ad: null, isHousePromo: true });
-      }
-    }
-
-    const chosenAd = selectWeightedAd(eligible);
+    // Paid ads always win the slot; the house promo card is only the fallback
+    // when no ad has impressions left (see pickAdForSlot).
+    const chosenAd = pickAdForSlot(candidateAds, excludeIds);
     if (!chosenAd) {
-      return NextResponse.json({ ad: null });
+      return NextResponse.json({ ad: null, isHousePromo: true });
     }
 
     const eventToken = await mintAdEventToken(chosenAd.id, ctx.env as any);

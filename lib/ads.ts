@@ -187,6 +187,24 @@ export function selectWeightedAd<
 }
 
 /**
+ * Picks the paid ad for one slot. Paid ads always outrank the house "promote
+ * your tool" card, which is only the fallback when no ad has impressions left.
+ * Ads not yet on the page are preferred; once every eligible ad is already
+ * showing, one repeats rather than giving the slot to the house card.
+ */
+export function pickAdForSlot<
+  T extends {
+    id: string;
+    bidCpm: number;
+    impressionsServed: number;
+    totalImpressionsPurchased: number;
+  },
+>(ads: T[], excludeIds: string[] = []): T | null {
+  const fresh = ads.filter((ad) => !excludeIds.includes(ad.id));
+  return selectWeightedAd(fresh) ?? selectWeightedAd(ads);
+}
+
+/**
  * Safe ad validation helper.
  */
 export function validateAdPayload(data: {
