@@ -43,7 +43,7 @@
     "gray-matter": "^4.0.3",
     "jimp": "^1.6.1",
     "lucide-react": "^1.46.0",
-    "next": "16.3.3",
+    "next": "16.3.8",
     "next-auth": "^5.0.0-beta.32",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -67,7 +67,7 @@
     "drizzle-kit": "^0.31.10",
     "e2b": "^2.49.1",
     "eslint": "^9.39.5",
-    "eslint-config-next": "16.3.5",
+    "eslint-config-next": "16.3.8",
     "lefthook": "^2.1.14",
     "lightningcss": "^1.33.0",
     "playwright": "^1.63.0",
@@ -95,6 +95,8 @@
     "sharp": "^0.35.4",
     "brace-expansion@^1.0.0": "^1.1.21",
     "brace-expansion@^2.0.0": "^2.0.2",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "undici@^7.0.0": "^7.29.1",
+    "engine.io@^6.0.0": "^6.6.10"
   }
 }
