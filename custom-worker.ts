@@ -75,8 +75,17 @@ async function runCronJob(
 export default {
   async fetch(request, env, ctx) {
     const role = workerRole(env);
-    const { pathname } = new URL(request.url);
-    if (role === 'jobs' && !pathname.startsWith('/api/cron/')) {
+    const { hostname, pathname } = new URL(request.url);
+    // The jobs Worker has no public routes, so this only turns away stray
+    // requests. It never 404s allmcps.com itself: if the jobs config ever lands
+    // on the site Worker (as a Workers Builds name override once nearly did),
+    // the site keeps serving rather than going dark.
+    if (
+      role === 'jobs' &&
+      !pathname.startsWith('/api/cron/') &&
+      hostname !== 'allmcps.com' &&
+      hostname !== 'www.allmcps.com'
+    ) {
       return new Response('Not found', { status: 404 });
     }
     const jobs = (env as unknown as RoleEnv).JOBS;

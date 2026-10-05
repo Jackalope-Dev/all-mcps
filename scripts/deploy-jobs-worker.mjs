@@ -17,10 +17,20 @@ import { spawnSync } from 'node:child_process';
  * Never fails the deploy: a failed jobs deploy leaves the previous jobs
  * version running (crons keep going), and the site still has to ship.
  */
+// Workers Builds sets these for the Worker the repo is connected to (the site,
+// `all-mcps`). WRANGLER_CI_OVERRIDE_NAME makes *every* `wrangler deploy` in the
+// build upload under that name regardless of config, which pushed this jobs
+// config (WORKER_ROLE=jobs) at the live site Worker; WRANGLER_CI_MATCH_TAG then
+// rejects any Worker other than the connected one. Neither applies to this
+// second Worker, so drop both for this child process only.
+const env = { ...process.env, OPEN_NEXT_DEPLOY: 'true' };
+delete env.WRANGLER_CI_OVERRIDE_NAME;
+delete env.WRANGLER_CI_MATCH_TAG;
+
 const result = spawnSync('npx', ['wrangler', 'deploy', '--env', 'jobs'], {
   stdio: 'inherit',
   shell: process.platform === 'win32',
-  env: { ...process.env, OPEN_NEXT_DEPLOY: 'true' },
+  env,
 });
 
 if (result.status !== 0) {
