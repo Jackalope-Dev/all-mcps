@@ -75,7 +75,8 @@
     // Wrangler does not inherit bindings, vars or triggers into an env, so
     // everything below is repeated from the top level. KEEP IN SYNC with it
     // (and with wrangler.build.jsonc) when adding or renaming a binding.
-    // Secrets are per-Worker too: set each one on `--env jobs` as well.
+    // Secrets come from the site over SITE_SECRETS (JOB_SECRET_NAMES in
+    // lib/cronSchedule.ts); add a name there if a cron starts reading a new one.
     "jobs": {
       "routes": [],
       "workers_dev": false,
@@ -89,6 +90,14 @@
         {
           "binding": "WORKER_SELF_REFERENCE",
           "service": "all-mcps-jobs"
+        },
+        {
+          // RPC to the site Worker's SecretRelay entrypoint (custom-worker.ts):
+          // the jobs Worker gets its secrets from the site instead of a second
+          // hand-entered copy. A secret set directly here still wins.
+          "binding": "SITE_SECRETS",
+          "service": "all-mcps",
+          "entrypoint": "SecretRelay"
         }
       ],
       "triggers": {

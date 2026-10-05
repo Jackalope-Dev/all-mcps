@@ -4,7 +4,10 @@ import {
   AI_CONTENT_JOBS_DEDICATED,
   FAST_JOBS,
   isOffloadedCronPath,
+  JOB_SECRET_NAMES,
   jobsForTick,
+  mergeRelayedSecrets,
+  pickJobSecrets,
   SITE_JOBS,
   SLOW_JOBS,
   workerRole,
@@ -72,5 +75,39 @@ describe('isOffloadedCronPath', () => {
     for (const job of SITE_JOBS) {
       expect(isOffloadedCronPath(job.path)).toBe(false);
     }
+  });
+});
+
+describe('secret relay', () => {
+  it('only relays allowlisted, non-empty secrets', () => {
+    expect(
+      pickJobSecrets({
+        CRON_SECRET: 'c',
+        OPEN_AI_API_KEY: 'o',
+        GITHUB_TOKEN: '',
+        STRIPE_SECRET_KEY: 's',
+        AUTH_SECRET: 'a',
+        DB: { binding: true },
+      }),
+    ).toEqual({ CRON_SECRET: 'c', OPEN_AI_API_KEY: 'o' });
+    expect(JOB_SECRET_NAMES).not.toContain('STRIPE_SECRET_KEY');
+  });
+
+  it('fills only what the jobs Worker lacks and never drops its own bindings', () => {
+    const db = { prepare() {} };
+    const merged = mergeRelayedSecrets(
+      { DB: db, CRON_SECRET: 'own', WORKER_ROLE: 'jobs' },
+      { CRON_SECRET: 'site', OPEN_AI_API_KEY: 'k', STRIPE_SECRET_KEY: 'x' },
+    ) as Record<string, unknown>;
+    expect(merged.CRON_SECRET).toBe('own');
+    expect(merged.OPEN_AI_API_KEY).toBe('k');
+    expect(merged.STRIPE_SECRET_KEY).toBeUndefined();
+    expect(merged.DB).toBe(db);
+    expect(merged.WORKER_ROLE).toBe('jobs');
+  });
+
+  it('returns env untouched when nothing is missing', () => {
+    const env = { CRON_SECRET: 'own' };
+    expect(mergeRelayedSecrets(env, { CRON_SECRET: 'site' })).toBe(env);
   });
 });

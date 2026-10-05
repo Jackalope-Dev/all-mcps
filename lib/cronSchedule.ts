@@ -139,7 +139,62 @@ export const SLOW_JOBS: CronJob[] = [
  */
 export type WorkerRole = 'site' | 'jobs' | 'all';
 
-export type RoleEnv = { WORKER_ROLE?: string; JOBS?: Fetcher };
+/**
+ * Secrets the jobs Worker's cron routes read. The site Worker hands these to it
+ * over the SITE_SECRETS RPC binding (SecretRelay in custom-worker.ts), so they
+ * live in one place and never need re-entering per Worker. Allowlist only:
+ * nothing else the site holds (Stripe, auth, Turnstile, ...) crosses over.
+ */
+export const JOB_SECRET_NAMES = [
+  'CRON_SECRET',
+  'ADMIN_SECRET',
+  'OPEN_AI_API_KEY',
+  'GITHUB_TOKEN',
+  'RESEND_API_KEY',
+  'SEQUENZY_API_KEY',
+  'SEQUENZY_CAMPAIGNS_API_KEY',
+  'BLOG_PUBLISH_TOKEN',
+  'LOPEBASE_SIGNING_SECRET',
+] as const;
+
+export type SecretRelayStub = {
+  jobSecrets(): Promise<Record<string, string>>;
+};
+
+export type RoleEnv = {
+  WORKER_ROLE?: string;
+  JOBS?: Fetcher;
+  SITE_SECRETS?: SecretRelayStub;
+};
+
+/** Picks the allowlisted job secrets that are set (non-empty strings) on `env`. */
+export function pickJobSecrets(env: unknown): Record<string, string> {
+  const source = (env ?? {}) as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const name of JOB_SECRET_NAMES) {
+    const value = source[name];
+    if (typeof value === 'string' && value !== '') out[name] = value;
+  }
+  return out;
+}
+
+/**
+ * `env` plus any relayed secret it doesn't already have. A secret set directly
+ * on the jobs Worker wins over the relayed copy; non-allowlisted keys in
+ * `relayed` are ignored.
+ */
+export function mergeRelayedSecrets<E extends object>(
+  env: E,
+  relayed: Record<string, string>,
+): E {
+  const own = env as Record<string, unknown>;
+  const missing = Object.fromEntries(
+    Object.entries(pickJobSecrets(relayed)).filter(
+      ([name]) => typeof own[name] !== 'string' || own[name] === '',
+    ),
+  );
+  return Object.keys(missing).length > 0 ? { ...env, ...missing } : env;
+}
 
 export function workerRole(env: unknown): WorkerRole {
   const role = (env as RoleEnv | undefined)?.WORKER_ROLE;
