@@ -102,8 +102,16 @@ async function runCronJob(
     headers: { authorization: `Bearer ${secret}` },
   });
 
+  // On the split deployment the site schedules and the jobs Worker executes:
+  // hand the job over the JOBS binding so its memory/CPU lands in that isolate.
+  const jobs = (env as unknown as RoleEnv).JOBS;
+  const offload =
+    workerRole(env) === 'site' && jobs && isOffloadedCronPath(job.path);
+
   try {
-    const response = await handler.fetch(request, env, ctx);
+    const response = offload
+      ? await jobs.fetch(request)
+      : await handler.fetch(request, env, ctx);
     if (!response.ok) {
       const body = await response.text().catch(() => '');
       console.error(

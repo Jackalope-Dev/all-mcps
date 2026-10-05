@@ -16,7 +16,10 @@
   },
   "vars": {
     "RESEND_TO_EMAIL": "contact@allmcps.com",
-    "RESEND_FROM_EMAIL": "contact@allmcps.com"
+    "RESEND_FROM_EMAIL": "contact@allmcps.com",
+    // Site half of the Worker split: schedules every cron but sends all jobs
+    // except isr-cache-cleanup to all-mcps-jobs over JOBS (custom-worker.ts).
+    "WORKER_ROLE": "site"
   },
   "routes": [{ "pattern": "allmcps.com", "custom_domain": true }],
   "services": [
@@ -26,15 +29,20 @@
       // "Failed to revalidate stale page" and just re-renders on every hit.
       "binding": "WORKER_SELF_REFERENCE",
       "service": "all-mcps"
+    },
+    {
+      // The background-jobs Worker (env.jobs below). Cron jobs and external
+      // /api/cron/* requests run there, never in the isolate serving pages.
+      "binding": "JOBS",
+      "service": "all-mcps-jobs"
     }
   ],
   "triggers": {
-    // "0 */4 * * *" drives the slow jobs (ai-faq, vector-index,
-    // highlight, isr-cache-cleanup, indexnow, newsletter-digest).
-    // "*/15 * * * *" drives health + enrich.
-    // "*/20 * * * *" drives ai-content alone so GPT writeups don't share
-    // the 15-min health tick or wait 4h between batches.
-    "crons": ["0 */4 * * *", "*/15 * * * *", "*/20 * * * *"]
+    // The site is the only scheduler (custom-worker.ts jobsForTick):
+    // "0 */4 * * *" isr-cache-cleanup (runs here) + the slow list,
+    // "*/15 * * * *" health + enrich, "*/10 * * * *" ai-content at batch 24.
+    // Everything but isr-cache-cleanup executes on all-mcps-jobs.
+    "crons": ["0 */4 * * *", "*/15 * * * *", "*/10 * * * *"]
   },
   "d1_databases": [
     {
@@ -66,11 +74,11 @@
   "env": {
     // Dedicated background-jobs Worker: deploys as `all-mcps-jobs` from the
     // same build (scripts/deploy-jobs-worker.mjs, run by `deploy:cf` before
-    // the site). It owns every cron except isr-cache-cleanup (see SITE_JOBS in
-    // custom-worker.ts) and serves only /api/cron/*, so LLM batches and
-    // backfills never share an isolate with page traffic. No routes or
-    // workers.dev URL: it's reached by its own cron triggers and by the site
-    // Worker's JOBS service binding.
+    // the site). It executes every job except isr-cache-cleanup (see
+    // SITE_JOBS in lib/cronSchedule.ts) and serves only /api/cron/*, so LLM
+    // batches and backfills never share an isolate with page traffic. No
+    // routes or workers.dev URL: it's reached only through the site Worker's
+    // JOBS service binding.
     //
     // Wrangler does not inherit bindings, vars or triggers into an env, so
     // everything below is repeated from the top level. KEEP IN SYNC with it
@@ -100,10 +108,11 @@
           "entrypoint": "SecretRelay"
         }
       ],
+      // No schedules of its own: the site schedules and sends each job here
+      // over JOBS. (This Worker's own crons never fired, and a single
+      // scheduler can't double-run a job.)
       "triggers": {
-        // "*/15" health + enrich, "*/10" ai-content (batch 24), "0 */4" the
-        // slow list. Same patterns custom-worker.ts jobsForTick() switches on.
-        "crons": ["0 */4 * * *", "*/15 * * * *", "*/10 * * * *"]
+        "crons": []
       },
       "d1_databases": [
         {

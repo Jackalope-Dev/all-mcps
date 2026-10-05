@@ -130,11 +130,13 @@ export const SLOW_JOBS: CronJob[] = [
 
 /**
  * Which half of the split this deployment is (WORKER_ROLE var, wrangler.jsonc):
- * - `site`: serves allmcps.com; runs only SITE_JOBS and forwards every other
- *   /api/cron/* request to the jobs Worker over the JOBS service binding.
- * - `jobs`: the `all-mcps-jobs` Worker (`env.jobs`); runs every other cron and
- *   serves nothing but /api/cron/*, so backfills and LLM batches never share
- *   an isolate (memory, CPU) with page traffic.
+ * - `site`: serves allmcps.com and owns every cron schedule, but only runs
+ *   SITE_JOBS itself. Every other job, scheduled or requested over HTTP, is
+ *   sent to the jobs Worker over the JOBS service binding.
+ * - `jobs`: the `all-mcps-jobs` Worker (`env.jobs`). No cron triggers of its
+ *   own (they never fired for it, and one scheduler can't double-run); it
+ *   executes whatever the site sends and serves nothing but /api/cron/*, so
+ *   LLM batches and backfills never share an isolate with page traffic.
  * - unset: a single Worker doing both, as before the split.
  */
 export type WorkerRole = 'site' | 'jobs' | 'all';
@@ -202,23 +204,26 @@ export function workerRole(env: unknown): WorkerRole {
 }
 
 export function jobsForTick(cron: string, role: WorkerRole): CronJob[] {
-  if (role === 'site') return cron === '0 */4 * * *' ? SITE_JOBS : [];
+  // The jobs Worker has no schedules; this only matters if one is ever added.
+  if (role === 'jobs') return [];
   switch (cron) {
     case '*/15 * * * *':
       return FAST_JOBS;
+    // Batch 24 only makes sense when it executes on the jobs Worker, i.e. the
+    // site config that schedules it (WORKER_ROLE=site) also binds JOBS.
     case '*/10 * * * *':
       return AI_CONTENT_JOBS_DEDICATED;
     case '*/20 * * * *':
       return AI_CONTENT_JOBS;
     default:
-      return role === 'jobs' ? SLOW_JOBS : [...SITE_JOBS, ...SLOW_JOBS];
+      return [...SITE_JOBS, ...SLOW_JOBS];
   }
 }
 
 /** /api/cron/* routes the site Worker hands to the jobs Worker. */
 export function isOffloadedCronPath(pathname: string): boolean {
+  const path = pathname.split('?')[0];
   return (
-    pathname.startsWith('/api/cron/') &&
-    !SITE_JOBS.some((job) => job.path === pathname)
+    path.startsWith('/api/cron/') && !SITE_JOBS.some((job) => job.path === path)
   );
 }
