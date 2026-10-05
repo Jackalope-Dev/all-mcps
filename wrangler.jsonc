@@ -38,11 +38,13 @@
     }
   ],
   "triggers": {
-    // The site is the only scheduler (custom-worker.ts jobsForTick):
+    // The site is the only scheduler (lib/cronSchedule.ts jobsForTick):
     // "0 */4 * * *" isr-cache-cleanup (runs here) + the slow list,
-    // "*/15 * * * *" health + enrich, "*/10 * * * *" ai-content at batch 24.
-    // Everything but isr-cache-cleanup executes on all-mcps-jobs.
-    "crons": ["0 */4 * * *", "*/15 * * * *", "*/10 * * * *"]
+    // "*/15 * * * *" health + enrich, "*/20 * * * *" ai-content as two
+    // batch-24 runs. Everything but isr-cache-cleanup executes on
+    // all-mcps-jobs. Keep these patterns stable: Cloudflare kept firing the
+    // previous set for over an hour after a change here.
+    "crons": ["0 */4 * * *", "*/15 * * * *", "*/20 * * * *"]
   },
   "d1_databases": [
     {

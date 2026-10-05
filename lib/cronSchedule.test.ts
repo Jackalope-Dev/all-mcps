@@ -28,7 +28,7 @@ describe('workerRole', () => {
 describe('jobsForTick', () => {
   it('schedules every job on the site, including the site-only cache cleanup', () => {
     expect(jobsForTick('*/15 * * * *', 'site')).toBe(FAST_JOBS);
-    expect(jobsForTick('*/10 * * * *', 'site')).toBe(AI_CONTENT_JOBS_DEDICATED);
+    expect(jobsForTick('*/20 * * * *', 'site')).toBe(AI_CONTENT_JOBS_DEDICATED);
     expect(paths(jobsForTick('0 */4 * * *', 'site'))).toEqual(
       paths([...SITE_JOBS, ...SLOW_JOBS]),
     );
@@ -36,16 +36,22 @@ describe('jobsForTick', () => {
   });
 
   it('never runs anything from the jobs Worker schedule', () => {
-    for (const cron of ['0 */4 * * *', '*/15 * * * *', '*/10 * * * *']) {
+    for (const cron of ['0 */4 * * *', '*/15 * * * *', '*/20 * * * *']) {
       expect(jobsForTick(cron, 'jobs')).toEqual([]);
     }
   });
 
-  it('runs batch 24 on the 10-min tick and the default batch on the shared 20-min one', () => {
+  it('sends two batch-24 AI runs from the site, but keeps the default batch on a single Worker', () => {
     expect(paths(AI_CONTENT_JOBS_DEDICATED)).toEqual([
+      '/api/cron/ai-content?batchSize=24',
       '/api/cron/ai-content?batchSize=24',
     ]);
     expect(jobsForTick('*/20 * * * *', 'all')).toBe(AI_CONTENT_JOBS);
+  });
+
+  it('runs nothing for a schedule it does not recognize', () => {
+    expect(jobsForTick('*/10 * * * *', 'site')).toEqual([]);
+    expect(jobsForTick('*/10 * * * *', 'all')).toEqual([]);
   });
 
   it('keeps the blog pipeline last in the slow list (it spends ~9 min of budget)', () => {

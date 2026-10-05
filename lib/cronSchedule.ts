@@ -45,10 +45,15 @@ export const AI_CONTENT_JOBS: CronJob[] = [
   { path: '/api/cron/ai-content', secretVar: 'CRON_SECRET' },
 ];
 
-// Runs every 10 min ("*/10 * * * *") on the dedicated jobs Worker. Nothing
-// else shares that isolate, so it takes the route's max batch: same 6-wide
-// concurrency per wave, just more waves per run (see the ai-content route).
+// What the site's 20-min ai-content tick sends to the dedicated jobs Worker.
+// Nothing else shares that isolate, so it takes the route's max batch (same
+// 6-wide concurrency per wave, just more waves), twice back to back: claims
+// are atomic, so the second run takes the next 24. 48 per 20 min is the same
+// rate a 10-min schedule would give, without depending on a new cron pattern
+// (Cloudflare kept firing the old "*/20" for over an hour after the site's
+// schedule was changed to "*/10", and never fired the jobs Worker's own).
 export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
+  { path: '/api/cron/ai-content?batchSize=24', secretVar: 'CRON_SECRET' },
   { path: '/api/cron/ai-content?batchSize=24', secretVar: 'CRON_SECRET' },
 ];
 
@@ -209,14 +214,20 @@ export function jobsForTick(cron: string, role: WorkerRole): CronJob[] {
   switch (cron) {
     case '*/15 * * * *':
       return FAST_JOBS;
-    // Batch 24 only makes sense when it executes on the jobs Worker, i.e. the
-    // site config that schedules it (WORKER_ROLE=site) also binds JOBS.
-    case '*/10 * * * *':
-      return AI_CONTENT_JOBS_DEDICATED;
+    // The big batches only make sense when they execute on the jobs Worker,
+    // i.e. the site config that schedules them (WORKER_ROLE=site) also binds
+    // JOBS. A single Worker keeps the default batch it shares with pages.
     case '*/20 * * * *':
-      return AI_CONTENT_JOBS;
-    default:
+      return role === 'site' ? AI_CONTENT_JOBS_DEDICATED : AI_CONTENT_JOBS;
+    case '0 */4 * * *':
       return [...SITE_JOBS, ...SLOW_JOBS];
+    default:
+      // A pattern no longer (or not yet) in wrangler.jsonc, e.g. Cloudflare
+      // firing a stale schedule after a change. Run nothing rather than
+      // guess: falling through to the slow list would run 4-hourly jobs on
+      // whatever cadence the stray pattern has.
+      console.warn(`[cron] no jobs for unrecognized schedule "${cron}"`);
+      return [];
   }
 }
 
