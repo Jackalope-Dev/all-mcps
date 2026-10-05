@@ -320,6 +320,7 @@ export async function POST(req: Request) {
       enriched: 0,
       skippedThin: 0,
       skippedJev: 0,
+      skippedEmpty: 0,
       installPicked: 0,
       metadataFilled: 0,
       failed: 0,
@@ -518,6 +519,15 @@ export async function POST(req: Request) {
             .where(eq(servers.id, r.server.id));
           stats.enriched++;
           keep.add(r.server.id);
+        } else if (o?.status === 'skip' && o.reason === 'empty') {
+          // The model had nothing usable to say about this input. Retrying
+          // the same input next tick gets the same answer, and a released
+          // never-enriched row goes straight back to the top of the claim
+          // order, so treat it like a thin skip: record the attempt (the
+          // 90-day stale re-check picks it up again) instead of releasing it.
+          stats.skippedEmpty++;
+          await markWriteupSkipped(db, r.server.id);
+          keep.add(r.server.id);
         } else {
           stats.failed++;
           if (o?.status === 'budget') budgetHit = true;
@@ -606,7 +616,7 @@ export async function POST(req: Request) {
       message:
         `AI content: enriched ${stats.enriched} (${stats.claimedNew} new, ${stats.claimedStale} re-checked), ` +
         `install ${stats.installPicked}, metadata ${stats.metadataFilled}, ` +
-        `skipped-thin ${stats.skippedThin}, skipped-jev ${stats.skippedJev}, failed ${stats.failed}${
+        `skipped-thin ${stats.skippedThin}, skipped-jev ${stats.skippedJev}, skipped-empty ${stats.skippedEmpty}, failed ${stats.failed}${
           stats.budgetStopped ? ' (stopped — LLM spend cap/outage)' : ''
         }. ~${remaining} never-enriched, ~${dueForRecheck} due for re-check, ~${installRemaining} install-unchecked, ~${docRemaining} without a writeup.`,
     });
