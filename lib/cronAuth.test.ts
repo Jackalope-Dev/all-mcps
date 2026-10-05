@@ -1,10 +1,14 @@
 import { vi } from 'vitest';
 
-// isCronAuthorized short-circuits on a signed-in admin, which would pull in
-// NextAuth and a D1 binding. Stub it out so these assertions cover the secret
-// path — the one a machine actually uses.
+// The signed-in-admin fallback would pull in NextAuth and a D1 binding. Stub it
+// (counting calls) so these assertions cover the secret path, the one a
+// machine actually uses, and can check the session is only a fallback.
+const admin = vi.hoisted(() => ({ calls: 0, email: null as string | null }));
 vi.mock('./adminAuth', () => ({
-  getAuthorizedAdminEmail: async () => null,
+  getAuthorizedAdminEmail: async () => {
+    admin.calls++;
+    return admin.email;
+  },
 }));
 
 const { isCronAuthorized } = await import('./cronAuth');
@@ -97,5 +101,25 @@ assert(
   !(await isCronAuthorized(withHeaders({ authorization: 'Bearer neither' }))),
   'A value matching neither secret must still be rejected',
 );
+
+// 7. A valid secret never touches the session lookup. The jobs Worker runs these
+//    routes without AUTH_SECRET, where initializing Auth.js throws.
+admin.calls = 0;
+assert(
+  await isCronAuthorized(
+    withHeaders({ authorization: `Bearer ${NEW_SECRET}` }),
+  ),
+  'A valid secret must authorize',
+);
+assert(admin.calls === 0, 'A valid secret must not trigger a session lookup');
+
+// 8. A signed-in admin with no secret (the /admin "run job now" path) still
+//    passes, via the fallback.
+admin.email = 'admin@example.com';
+assert(
+  await isCronAuthorized(withHeaders({})),
+  'A signed-in admin must be authorized without a secret',
+);
+admin.email = null;
 
 console.log('All cron authorization tests passed.');

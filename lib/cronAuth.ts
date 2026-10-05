@@ -39,11 +39,8 @@ function getAcceptedCronSecrets(): string[] {
   );
 }
 
-/** True for the scheduler presenting the cron secret, or a signed-in admin. */
-export async function isCronAuthorized(request?: Request): Promise<boolean> {
-  if (await getAuthorizedAdminEmail()) return true;
-  if (!request) return false;
-
+/** True when the request carries a currently accepted cron secret. */
+function presentsCronSecret(request: Request): boolean {
   const secrets = getAcceptedCronSecrets();
   if (secrets.length === 0) return false;
 
@@ -64,4 +61,17 @@ export async function isCronAuthorized(request?: Request): Promise<boolean> {
     }
   }
   return matched;
+}
+
+/**
+ * True for the scheduler presenting the cron secret, or a signed-in admin.
+ *
+ * The secret is checked first and the session only as a fallback: every
+ * scheduled call presents the secret, so this skips an Auth.js session lookup
+ * on each one, and it means the jobs Worker (which runs these routes but holds
+ * no AUTH_SECRET) never has to initialize Auth.js at all.
+ */
+export async function isCronAuthorized(request?: Request): Promise<boolean> {
+  if (request && presentsCronSecret(request)) return true;
+  return Boolean(await getAuthorizedAdminEmail());
 }

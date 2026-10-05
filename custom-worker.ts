@@ -112,13 +112,26 @@ async function runCronJob(
     const response = offload
       ? await jobs.fetch(request)
       : await handler.fetch(request, env, ctx);
+    // Always read the body: an unread response from the JOBS binding shows up
+    // as a "canceled" invocation on the jobs Worker, and the routes' summary
+    // line (e.g. ai-content's "enriched N … failed M") is the only per-run
+    // record of what a job did.
+    const body = await response.text().catch(() => '');
     if (!response.ok) {
-      const body = await response.text().catch(() => '');
       console.error(
         `[cron] ${job.path} responded ${response.status}: ${body.slice(0, 500)}`,
       );
     } else {
-      console.log(`[cron] ${job.path} ok (${response.status})`);
+      let summary = '';
+      try {
+        const parsed = JSON.parse(body) as { message?: unknown };
+        if (typeof parsed.message === 'string') summary = `: ${parsed.message}`;
+      } catch {
+        // Not JSON; the status alone is enough.
+      }
+      console.log(
+        `[cron] ${job.path} ok (${response.status})${summary.slice(0, 400)}`,
+      );
     }
   } catch (error) {
     console.error(`[cron] ${job.path} threw`, error);
