@@ -6,7 +6,10 @@ import type { ImpressionSurface } from '@/lib/impressionLog';
 type PendingImpression = { serverId: string; surface: ImpressionSurface };
 
 let sessionHash: string | null = null;
+// Dedups re-renders and repeated cards within one page view only — coming back
+// to a page later is a new impression, so this resets on every navigation.
 const seen = new Set<string>();
+let seenForPage: string | null = null;
 const pending: PendingImpression[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -55,6 +58,11 @@ function scheduleFlush() {
 }
 
 function enqueue(serverId: string, surface: ImpressionSurface) {
+  const page = window.location.pathname + window.location.search;
+  if (page !== seenForPage) {
+    seen.clear();
+    seenForPage = page;
+  }
   const key = `${serverId}:${surface}`;
   if (seen.has(key)) return;
   seen.add(key);
@@ -85,7 +93,7 @@ export function useImpressionTracker() {
 
 /**
  * Component that auto-tracks an impression when it becomes visible.
- * Wrap it around a listing card and it fires once per session.
+ * Wrap it around a listing card and it fires once per page view.
  */
 export function ImpressionBeacon({
   serverId,
