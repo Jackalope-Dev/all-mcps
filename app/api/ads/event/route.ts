@@ -4,15 +4,16 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { sponsorAdLogs, sponsorAds } from '@/db/schema';
 import { verifyAdEventToken } from '@/lib/adEventToken';
+import { IMPRESSION_CAP_WINDOW_MS, isBillableImpression } from '@/lib/ads';
 import { sendNotificationEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
 import { getClientIp, hashVisitorForServer } from '@/lib/upvoteHash';
 
 export const dynamic = 'force-dynamic';
 
-// Repeated page loads / rage-clicks from the same visitor shouldn't burn through
-// an advertiser's purchased credits or inflate CTR.
-const IMPRESSION_DEDUP_WINDOW_MS = 10 * 60 * 1000;
+// Rage-clicks from the same visitor shouldn't inflate clicks/CTR. Impressions
+// are NOT deduped by visitor — repeat views are real impressions; see
+// isBillableImpression for the narrower double-fire / abuse filter.
 const CLICK_DEDUP_WINDOW_MS = 30 * 1000;
 
 // Backstop against a single leaked/replayed event token being hammered
@@ -95,15 +96,34 @@ export async function POST(request: Request) {
     const ip = getClientIp(request);
     const sessionHash = ip ? await hashVisitorForServer(ip, adId) : null;
 
-    // Check for a recent duplicate from the same visitor before counting it.
-    // Without an IP-derived hash we can't dedup reliably, so those always count.
+    // Filter double-fires / abuse from the same visitor before counting it.
+    // Without an IP-derived hash we can't attribute repeats, so those always count.
     let isDuplicate = false;
-    if (sessionHash) {
-      const dedupWindowMs =
-        eventType === 'impression'
-          ? IMPRESSION_DEDUP_WINDOW_MS
-          : CLICK_DEDUP_WINDOW_MS;
-      const since = new Date(Date.now() - dedupWindowMs);
+    if (sessionHash && eventType === 'impression') {
+      const [recent] = await db
+        .select({
+          count: count(),
+          lastAt: sql<number | null>`max(${sponsorAdLogs.createdAt})`,
+        })
+        .from(sponsorAdLogs)
+        .where(
+          and(
+            eq(sponsorAdLogs.adId, adId),
+            eq(sponsorAdLogs.eventType, eventType),
+            eq(sponsorAdLogs.sessionHash, sessionHash),
+            gt(
+              sponsorAdLogs.createdAt,
+              new Date(Date.now() - IMPRESSION_CAP_WINDOW_MS),
+            ),
+          ),
+        );
+      // created_at is stored as unix seconds; max() returns the raw column.
+      isDuplicate = !isBillableImpression({
+        count: recent?.count ?? 0,
+        lastAt: recent?.lastAt != null ? recent.lastAt * 1000 : null,
+      });
+    } else if (sessionHash) {
+      const since = new Date(Date.now() - CLICK_DEDUP_WINDOW_MS);
       const [recent] = await db
         .select({ id: sponsorAdLogs.id })
         .from(sponsorAdLogs)

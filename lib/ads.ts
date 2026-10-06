@@ -143,6 +143,28 @@ export function calculateCtr(clicks: number, impressions: number): number {
   return Number(((clicks / impressions) * 100).toFixed(2));
 }
 
+/**
+ * Billing filter for sponsor ad impressions. Every real view counts — the same
+ * visitor seeing the same ad on five page loads is five impressions — so this
+ * only rejects what isn't a separate view or is abuse:
+ *  - a repeat inside IMPRESSION_DOUBLE_FIRE_MS is the same render beaconing twice
+ *  - past IMPRESSION_HOURLY_CAP_PER_VISITOR in an hour is a script replaying a
+ *    token to burn the advertiser's purchased credits, not someone browsing
+ * Filtered events are still logged; they just don't bill or count.
+ */
+export const IMPRESSION_DOUBLE_FIRE_MS = 5 * 1000;
+export const IMPRESSION_CAP_WINDOW_MS = 60 * 60 * 1000;
+export const IMPRESSION_HOURLY_CAP_PER_VISITOR = 60;
+
+export function isBillableImpression(
+  recent: { count: number; lastAt: Date | number | null },
+  now: number = Date.now(),
+): boolean {
+  if (recent.count >= IMPRESSION_HOURLY_CAP_PER_VISITOR) return false;
+  if (recent.lastAt == null) return true;
+  return now - new Date(recent.lastAt).getTime() >= IMPRESSION_DOUBLE_FIRE_MS;
+}
+
 /** Format currency */
 export function formatUsdAmount(cents: number): string {
   return new Intl.NumberFormat('en-US', {
