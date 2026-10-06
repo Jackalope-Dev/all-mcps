@@ -3,6 +3,7 @@ import {
   clampFaq,
   parseFaqArray,
   stripBannedOpener,
+  stripDocFiller,
 } from './aiContent';
 
 function assert(condition: boolean, message: string) {
@@ -136,20 +137,20 @@ Set ACME_TOKEN and run the published Acme MCP server package with npx. Optional 
 
 // 15. A well-formed multi-heading writeup passes through.
 assert(
-  clampDoc(goodDoc, 'some unrelated readme text here that is long enough', KP)
+  clampDoc(goodDoc, 'some unrelated readme text here that is long enough')
     .length > 0,
   'Should accept a grounded, multi-heading doc',
 );
 
 // 16. Too few of our headings → rejected.
 assert(
-  clampDoc(`## Random heading\n\n${'word '.repeat(120)}`, null, KP) === '',
+  clampDoc(`## Random heading\n\n${'word '.repeat(120)}`, null) === '',
   'Should reject a doc without at least two recognised headings',
 );
 
 // 17. Too short → rejected.
 assert(
-  clampDoc('## What Acme does\n\nShort.', null, KP) === '',
+  clampDoc('## What Acme does\n\nShort.', null) === '',
   'Should reject a tiny doc',
 );
 
@@ -161,29 +162,28 @@ const readmeBody = Array.from(
 ).join('\n');
 const copiedDoc = `## What Acme does\n\n## How it works\n\n${readmeBody}`;
 assert(
-  clampDoc(copiedDoc, readmeBody, KP) === '',
+  clampDoc(copiedDoc, readmeBody) === '',
   'Should reject a doc that is mostly the README pasted back',
 );
 
-// 19. Missing focus keyphrase → appended as a safe fallback rather than discarded.
-const noKeyphrase = clampDoc(
-  goodDoc.replace(/Acme MCP server/g, 'Acme'),
-  null,
-  KP,
-);
+// 19. Missing focus keyphrase → kept as-is; no generic filler section appended.
+const noKeyphrase = clampDoc(goodDoc.replace(/Acme MCP server/g, 'Acme'), null);
 assert(
-  noKeyphrase.includes(KP),
-  'Should append the focus keyphrase when the model omitted it',
+  noKeyphrase.length > 0 &&
+    !noKeyphrase.includes('Always refer to the official documentation'),
+  'Should keep the doc without appending boilerplate when the keyphrase is missing',
 );
 
+// 19b. stripDocFiller removes the legacy appended section from stored docs.
+const legacy = `${goodDoc}\n\n## Getting started with this ${KP}\nAlways refer to the official documentation for the most accurate and up-to-date information.`;
+assert(
+  stripDocFiller(legacy) === goodDoc.trimEnd(),
+  'Should strip legacy filler',
+);
+assert(stripDocFiller(null) === null, 'stripDocFiller passes null through');
+
 // 20. Non-string input → ''.
-assert(
-  clampDoc(null, null, KP) === '',
-  'null input should return empty string',
-);
-assert(
-  clampDoc(42, null, KP) === '',
-  'number input should return empty string',
-);
+assert(clampDoc(null, null) === '', 'null input should return empty string');
+assert(clampDoc(42, null) === '', 'number input should return empty string');
 
 console.log('ALL TESTS PASSED SUCCESSFULLY!');

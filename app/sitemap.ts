@@ -4,6 +4,7 @@ import { getAllPosts } from '../lib/blog';
 import { categorySlug, DIRECTORY_CATEGORIES } from '../lib/categories';
 import { MCP_CLIENTS } from '../lib/clients';
 import { comparePath, INDEXABLE_COMPARE_PAIRS } from '../lib/comparePairs';
+import { isListingIndexable } from '../lib/listingIndexability';
 import { WORKFLOW_PROMPTS } from '../lib/prompts';
 import {
   getSitemapServers,
@@ -199,12 +200,22 @@ async function buildCoreSitemap(
 }
 
 function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
-  return servers.map((server) => ({
-    url: `${BASE}/mcp/${server.id}`,
-    lastModified: listingLastMod(server),
-    changeFrequency: 'daily' as const,
-    priority: 0.7,
-  }));
+  // Only listings the page itself leaves indexable (see /mcp/[id] metadata).
+  return servers
+    .filter((server) =>
+      isListingIndexable({
+        hasAiDoc: Boolean(server.hasAiDoc),
+        hasTools: Boolean(server.hasTools),
+        githubStars: server.githubStars ?? server.stars,
+        npmDownloads: server.npmDownloads ?? server.downloads,
+      }),
+    )
+    .map((server) => ({
+      url: `${BASE}/mcp/${server.id}`,
+      lastModified: listingLastMod(server),
+      changeFrequency: 'daily' as const,
+      priority: 0.7,
+    }));
 }
 
 function buildSecondarySitemap(

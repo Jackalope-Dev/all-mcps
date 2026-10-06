@@ -20,7 +20,12 @@ import {
   stdioVerifications,
   users,
 } from '../db/schema';
-import { type AiFaqItem, parseFaqArray, parseStringArray } from './aiContent';
+import {
+  type AiFaqItem,
+  parseFaqArray,
+  parseStringArray,
+  stripDocFiller,
+} from './aiContent';
 import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
 import { cleanListingDescription } from './description';
@@ -85,6 +90,7 @@ function normalizeServer<
     aiFeatures?: unknown;
     aiEnvVars?: unknown;
     aiFaq?: unknown;
+    aiDoc?: string | null;
     tags?: unknown;
     compatibleClients?: unknown;
     suggestedInstallArgs?: unknown;
@@ -98,6 +104,7 @@ function normalizeServer<
     aiFeatures: parseStringArray(s.aiFeatures),
     aiEnvVars: parseStringArray(s.aiEnvVars),
     aiFaq: parseFaqArray(s.aiFaq),
+    ...(s.aiDoc !== undefined ? { aiDoc: stripDocFiller(s.aiDoc) } : {}),
     // Submitter-controlled JSON-array columns → typed arrays.
     tags: parseStringArray(s.tags),
     compatibleClients: parseStringArray(s.compatibleClients),

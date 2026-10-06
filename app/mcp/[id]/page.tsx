@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { serializeJsonLd } from '@/lib/jsonLd';
+import { isListingIndexable } from '@/lib/listingIndexability';
 import { isRepositoryUrl } from '@/lib/repoUrl';
 import {
   AUTH_TYPE_LABELS,
@@ -155,37 +156,16 @@ export async function generateMetadata({
   const { displayName } = parseServerName(server.name, server.url);
   const title = buildDetailTitle(displayName);
 
-  // Quality gate: a listing with no AI enrichment, no introspected/parsed tools,
-  // a thin description, AND no fetchable README has nothing unique for Google to
-  // index — such pages just sit in "Crawled - currently not indexed" and dilute
-  // sitewide quality signals. noindex (follow) them until the enrichment pipeline
-  // gives them real content; aiEnrichedAt/aiSummary then flips them back to
-  // indexable automatically, so this self-heals and never permanently buries a
-  // listing. The README probe (the one network call) runs ONLY for the already-
-  // barren minority — the cheap stored signals short-circuit everyone else — and
-  // reuses fetchReadme's cache, shared with the page render below.
-  const hasEnrichment =
-    Boolean(server.aiEnrichedAt) ||
-    Boolean(server.aiSummary?.trim()) ||
-    Boolean(server.aiOverview?.trim()) ||
-    (Array.isArray(server.tools) && server.tools.length > 0);
-  const hasSubstantialDescription =
-    (server.description ?? '').trim().length >= 120;
-  // Real-world popularity is its own proof a listing matters — never noindex one
-  // just because its content fields happen to be empty (e.g. a transient README
-  // fetch miss). Belt-and-suspenders against over-gating.
-  const hasTraction =
-    (server.githubStars ?? 0) >= 25 || (server.npmDownloads ?? 0) >= 100;
-  let isThinListing = false;
-  if (
-    !hasEnrichment &&
-    !hasTraction &&
-    !hasSubstantialDescription &&
-    server.status !== 'removed'
-  ) {
-    const probeReadme = await fetchReadme(server.url).catch(() => null);
-    isThinListing = !(probeReadme && probeReadme.trim().length >= 200);
-  }
+  // Same rule the listings sitemap uses (lib/listingIndexability.ts), so we
+  // never submit a URL this page noindexes. follow stays on so link equity
+  // still flows through noindexed listings.
+  const isThinListing = !isListingIndexable({
+    status: server.status,
+    hasAiDoc: Boolean(server.aiDoc?.trim()),
+    hasTools: Array.isArray(server.tools) && server.tools.length > 0,
+    githubStars: server.githubStars,
+    npmDownloads: server.npmDownloads,
+  });
 
   const robotsOverride =
     server.status === 'removed'

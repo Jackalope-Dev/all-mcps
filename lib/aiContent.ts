@@ -339,6 +339,21 @@ export function stripBannedOpener(text: string): string {
 }
 
 /**
+ * Matches the generic "## Using this … / Always refer to the official
+ * documentation …" section clampDoc used to append when the model skipped the
+ * focus keyphrase. ~2.1k stored writeups end with it — identical text across
+ * thousands of pages is a scaled-content signal, so it's stripped on read
+ * (stripDocFiller) rather than via a data migration.
+ */
+const DOC_FILLER_RE =
+  /\n*#{2,3}\s+(?:Using|Getting started with) this [^\n]*\n+Always refer to the official documentation for the most accurate and up-to-date information[^\n]*/g;
+
+export function stripDocFiller<T extends string | null | undefined>(doc: T): T {
+  if (typeof doc !== 'string') return doc;
+  return doc.replace(DOC_FILLER_RE, '').trimEnd() as T;
+}
+
+/**
  * Validates the model's restructured writeup. Returns '' (caller treats as
  * "none" and falls back to the short overview) on anything that isn't a
  * genuinely original, structured doc: too short, too few of our headings, or a
@@ -347,7 +362,6 @@ export function stripBannedOpener(text: string): string {
 export function clampDoc(
   raw: unknown,
   readme: string | null | undefined,
-  focusKeyphrase: string,
 ): string {
   if (typeof raw !== 'string') return '';
   let doc = raw.trim().replace(/\r\n/g, '\n');
@@ -369,24 +383,6 @@ export function clampDoc(
     ),
   );
   if (matchedHeadings.length < 2) return '';
-
-  // Verify SEO keyphrase presence
-  const escapedKeyphrase = focusKeyphrase.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    '\\$&',
-  );
-  const keyphraseRegex = new RegExp(escapedKeyphrase, 'i');
-  if (!keyphraseRegex.test(doc)) {
-    // LLM completely missed the keyphrase in the body, but instead of discarding
-    // a good document, we append it as a safe fallback.
-    doc += `\n\n## Using this ${focusKeyphrase}\nAlways refer to the official documentation for the most accurate and up-to-date information on how to configure and run this server.`;
-  } else {
-    // Check if it's in at least one heading. If not, append a heading fallback.
-    const headingRegex = new RegExp(`^#{2,3}\\s+.*${escapedKeyphrase}`, 'im');
-    if (!headingRegex.test(doc)) {
-      doc += `\n\n## Getting started with this ${focusKeyphrase}\nAlways refer to the official documentation for the most accurate and up-to-date information.`;
-    }
-  }
 
   // Reject a doc that's mostly the README pasted back. Compare normalized
   // non-heading, non-blank lines against the README's line set.
@@ -560,7 +556,7 @@ export async function generateListingContent(
 
   const summary = stripBannedOpener(clampSentence(result.data.summary, 150));
   const overview = stripBannedOpener(clampSentence(result.data.overview, 900));
-  const doc = clampDoc(result.data.doc, input.readme, focusKeyphrase);
+  const doc = clampDoc(result.data.doc, input.readme);
   const useCases = clampList(result.data.useCases, 5, 120);
   const features = clampList(result.data.features, 6, 100);
   const faq = clampFaq(result.data.faq, 5, 150, 400);
