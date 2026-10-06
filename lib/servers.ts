@@ -2606,23 +2606,34 @@ export async function getFeaturedServers(
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const conditions = [
-        eq(serversTable.status, 'active'),
-        or(
-          eq(serversTable.isPremium, true),
-          gt(serversTable.featuredUntil, sql`CURRENT_TIMESTAMP`),
-        ),
-      ];
-      if (excludeId) {
-        conditions.push(ne(serversTable.id, excludeId));
-      }
-      const rows = await db
-        .select(SCORING_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(and(...conditions))
-        .limit(limit);
-      if (rows.length > 0) {
-        return rows.map((r) => normalizeServer(r as unknown as Server));
+      // One query per index (idx_servers_status_premium / _featured_until):
+      // as a single `is_premium OR featured_until` filter SQLite scanned every
+      // active listing on each page render to find a handful of rows.
+      const select = (match: SQL) =>
+        db
+          .select(SCORING_SERVER_COLUMNS)
+          .from(serversTable)
+          .where(
+            and(
+              eq(serversTable.status, 'active'),
+              match,
+              excludeId ? ne(serversTable.id, excludeId) : undefined,
+            ),
+          )
+          .limit(limit);
+      const [premium, featured] = await Promise.all([
+        select(eq(serversTable.isPremium, true)),
+        // featured_until is unix seconds; it used to be compared to the text
+        // CURRENT_TIMESTAMP, which SQLite sorts above every integer — never true.
+        select(gt(serversTable.featuredUntil, new Date())),
+      ]);
+      const byId = new Map(
+        [...premium, ...featured].map((r) => [r.id, r] as const),
+      );
+      if (byId.size > 0) {
+        return [...byId.values()]
+          .slice(0, limit)
+          .map((r) => normalizeServer(r as unknown as Server));
       }
     }
   } catch (e) {

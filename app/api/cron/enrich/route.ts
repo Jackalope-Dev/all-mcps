@@ -562,10 +562,11 @@ export async function POST(req: Request) {
       message: `Enriched ${stats.processed} listings (websites ${stats.websitesSet}, logos ${stats.logosSet}, install ${stats.installSet}, recategorized ${stats.recategorized}, unpublished ${stats.unpublished}).`,
     });
   } catch (error: any) {
-    console.error('Enrich cron error:', error);
-    return NextResponse.json(
-      { error: error?.message || 'Internal Server Error' },
-      { status: 500 },
+    // Drizzle's message is "Failed query: <sql>"; the D1 reason is on `cause`.
+    const reason = String(
+      error?.cause?.message ?? error?.message ?? 'Internal Server Error',
     );
+    console.error('Enrich cron error:', reason, error);
+    return NextResponse.json({ error: reason }, { status: 500 });
   }
 }

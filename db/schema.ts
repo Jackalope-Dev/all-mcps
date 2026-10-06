@@ -313,6 +313,30 @@ export const servers = sqliteTable(
       table.status,
       table.aiEnrichedAt,
     ),
+    // getRelatedServers' same-category pool (every /mcp/[id] render) orders by
+    // engagement inside one category. With only (status, category) D1 read and
+    // sorted the whole category (~14k rows) per page view — the top query by D1
+    // time, enough to queue the database into "overloaded" errors.
+    statusCategoryPopularityIdx: index(
+      'idx_servers_status_category_popularity',
+    ).on(
+      table.status,
+      table.category,
+      table.views,
+      table.copies,
+      table.upvotes,
+    ),
+    // getFeaturedServers matches a handful of rows by is_premium OR
+    // featured_until and used to scan every active listing per render. SQLite
+    // won't split that OR across indexes here, so it runs one seek per index.
+    statusPremiumIdx: index('idx_servers_status_premium').on(
+      table.status,
+      table.isPremium,
+    ),
+    statusFeaturedUntilIdx: index('idx_servers_status_featured_until').on(
+      table.status,
+      table.featuredUntil,
+    ),
   }),
 );
 
