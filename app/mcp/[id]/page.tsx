@@ -143,9 +143,11 @@ export async function generateMetadata({
   const metaSource = server.aiSummary?.trim() || server.description || '';
   let cleanSource = metaSource.trim().replace(/\.+$/, '');
   if (cleanSource.length > 100) {
-    cleanSource = `${cleanSource.slice(0, 97).trimEnd()}...`;
+    cleanSource = `${cleanSource.slice(0, 97).trimEnd()}…`;
   }
-  let desc = `${cleanSource}. Install & connect to Claude Desktop, Cursor & Windsurf with verified JSON config & tools.`;
+  // Spell out "and" — a raw "&" is serialized as "&amp;", which audit tools that
+  // read the attribute verbatim count as 5 chars, pushing us past ~160.
+  let desc = `${cleanSource}${cleanSource.endsWith('…') ? '' : '.'} Install and connect to Claude Desktop, Cursor and Windsurf with verified JSON config and tools.`;
   if (desc.length > 160) {
     desc = `${desc.slice(0, 157).trimEnd()}...`;
   }
