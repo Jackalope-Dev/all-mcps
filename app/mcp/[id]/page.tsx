@@ -2642,6 +2642,8 @@ export default async function MCPDetail({
                 </div>
               </div>
 
+              <SponsorAdUnit placement="detail_sidebar" />
+
               <VulnSignalCard server={server} />
 
               {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) — rotates between paid
@@ -2880,8 +2882,6 @@ export default async function MCPDetail({
                 featuredUntil={server.featuredUntil}
                 categorySponsorUntil={server.categorySponsorUntil}
               />
-
-              <SponsorAdUnit placement="detail_sidebar" />
 
               <div className="surface" style={{ padding: '1.5rem' }}>
                 <h3

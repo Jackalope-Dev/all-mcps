@@ -52,6 +52,10 @@ export const servers = sqliteTable(
     reviewPriority: integer('review_priority', { mode: 'boolean' })
       .notNull()
       .default(false),
+    /** Intake auto-review flagged as likely non-MCP / low quality — needs an admin look. */
+    reviewFlagged: integer('review_flagged', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     stripeCustomerId: text('stripe_customer_id'),
     stripeSubscriptionId: text('stripe_subscription_id'),
     /** free | active | past_due | canceled */

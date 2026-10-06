@@ -76,7 +76,8 @@ async function getAdminData() {
       // backlog must never crowd genuine admin-review items out of the
       // QUEUE_LIMIT window (see AdminClient.tsx's manualPending/syncPending
       // split, which relies on manual rows actually being present here).
-      // Priority-review paid listings first within each group.
+      // Priority-review paid listings first within each group, then
+      // intake-flagged (likely spam / non-MCP) ones.
       const pendingServers = await db
         .select()
         .from(servers)
@@ -84,6 +85,7 @@ async function getAdminData() {
         .orderBy(
           asc(sql`${servers.submitterEmail} IS NULL`),
           desc(servers.reviewPriority),
+          desc(servers.reviewFlagged),
           desc(servers.createdAt),
         )
         .limit(QUEUE_LIMIT);

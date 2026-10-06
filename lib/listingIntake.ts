@@ -295,7 +295,7 @@ export async function prepareListingIntake(
   }
 
   const review = await reviewListing({ name, description, url });
-  const reviewPriority =
+  const reviewFlagged =
     (review.reviewed && review.isMcpServer === false) ||
     (review.qualityScore !== null && review.qualityScore < 2);
 
@@ -317,7 +317,8 @@ export async function prepareListingIntake(
       isPremium: false,
       websiteVerified: false,
       isOfficial: false,
-      reviewPriority,
+      reviewPriority: false,
+      reviewFlagged,
       premiumStatus: 'free',
       status: 'pending',
       createdAt: new Date(),

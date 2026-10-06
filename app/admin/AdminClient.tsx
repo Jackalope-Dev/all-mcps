@@ -33,6 +33,7 @@ type Server = {
   createdAt: string;
   isPremium?: boolean;
   reviewPriority?: boolean;
+  reviewFlagged?: boolean;
   status?: string;
   pendingRevision?: string | null;
   pendingClaimUserId?: string | null;
@@ -1113,6 +1114,11 @@ function ServerTable({
                       {server.reviewPriority && (
                         <span className="admin-badge admin-badge-priority">
                           PRIORITY
+                        </span>
+                      )}
+                      {server.reviewFlagged && (
+                        <span className="admin-badge admin-badge-flagged">
+                          NEEDS LOOK
                         </span>
                       )}
                       {server.isPremium && (

@@ -7253,6 +7253,12 @@ nav[aria-label="Table of contents"] {
   border-color: #fde68a;
 }
 
+[data-theme="light"] .admin-badge-flagged {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
 [data-theme="light"] .admin-badge-premium {
   color: #0369a1;
   background: #e0f2fe;

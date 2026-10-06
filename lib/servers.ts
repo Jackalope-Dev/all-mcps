@@ -109,7 +109,7 @@ function normalizeServer<
  * Columns safe to expose to anonymous visitors and public API consumers.
  * Deliberately excludes submitterEmail, stripeCustomerId, stripeSubscriptionId,
  * ownerUserId, pendingClaimUserId/WebsiteUrl, premiumStatus, pendingRevision,
- * reviewPriority, claimedAt, badgeLastCheckedAt — never bare `db.select()` a
+ * reviewPriority, reviewFlagged, claimedAt, badgeLastCheckedAt — never bare `db.select()` a
  * server row for a public page or API response; select this instead.
  */
 export const PUBLIC_SERVER_COLUMNS = {
