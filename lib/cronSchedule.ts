@@ -47,15 +47,22 @@ export const AI_CONTENT_JOBS: CronJob[] = [
 
 // What the site's 20-min ai-content tick sends to the dedicated jobs Worker.
 // Nothing else shares that isolate, so it takes the route's max batch (same
-// 6-wide concurrency per wave, just more waves), twice back to back: claims
-// are atomic, so the second run takes the next 24. 48 per 20 min is the same
-// rate a 10-min schedule would give, without depending on a new cron pattern
+// 6-wide concurrency per wave, just more waves), several times back to back:
+// claims are atomic, so each run takes the next 24. Sized from production: a
+// batch-24 run takes ~100s, so 6 runs (~10 min, 144 listings per tick) finish
+// well inside the 15-min cron wall limit and before the next tick. Runs stay
+// sequential so one isolate's peak memory is still a single run's. Raising the
+// run count, not the cadence, avoids depending on a new cron pattern
 // (Cloudflare kept firing the old "*/20" for over an hour after the site's
 // schedule was changed to "*/10", and never fired the jobs Worker's own).
-export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
-  { path: '/api/cron/ai-content?batchSize=24', secretVar: 'CRON_SECRET' },
-  { path: '/api/cron/ai-content?batchSize=24', secretVar: 'CRON_SECRET' },
-];
+export const AI_CONTENT_DEDICATED_RUNS = 6;
+export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = Array.from(
+  { length: AI_CONTENT_DEDICATED_RUNS },
+  () => ({
+    path: '/api/cron/ai-content?batchSize=24',
+    secretVar: 'CRON_SECRET',
+  }),
+);
 
 // Must run on the Worker that serves pages. It deletes every ISR-cache prefix
 // except the *running* build's (process.env.OPEN_NEXT_BUILD_ID), so on any
