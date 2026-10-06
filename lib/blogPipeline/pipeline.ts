@@ -62,7 +62,7 @@ import {
 
 const MODEL = 'gpt-5.6-luna';
 /** Drafts waiting for a human (ready) or still in the loop — stop writing new ones past this. */
-export const BACKLOG_CAP = 6;
+export const BACKLOG_CAP = 3;
 /** New drafts per UTC day. */
 const DAILY_DRAFT_CAP = 2;
 /** Write + revise passes before a draft goes to a human instead. */
