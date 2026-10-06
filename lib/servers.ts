@@ -2606,7 +2606,7 @@ export async function getFeaturedServers(
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      // One query per index (idx_servers_status_premium / _featured_until):
+      // One query per index (idx_servers_status_premium_popularity / _featured_until):
       // as a single `is_premium OR featured_until` filter SQLite scanned every
       // active listing on each page render to find a handful of rows.
       const select = (match: SQL) =>

@@ -329,9 +329,16 @@ export const servers = sqliteTable(
     // getFeaturedServers matches a handful of rows by is_premium OR
     // featured_until and used to scan every active listing per render. SQLite
     // won't split that OR across indexes here, so it runs one seek per index.
-    statusPremiumIdx: index('idx_servers_status_premium').on(
+    // Also covers getActiveServersLight's homepage pool, ordered
+    // is_premium DESC then by engagement.
+    statusPremiumPopularityIdx: index(
+      'idx_servers_status_premium_popularity',
+    ).on(
       table.status,
       table.isPremium,
+      table.views,
+      table.copies,
+      table.upvotes,
     ),
     statusFeaturedUntilIdx: index('idx_servers_status_featured_until').on(
       table.status,

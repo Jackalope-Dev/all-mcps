@@ -121,7 +121,7 @@ function calcQualityTiers(serverList: any[]): {
   return breakdown;
 }
 
-let cachedSiteStats: { data: SiteStats; timestamp: number } | null = null;
+let cachedSiteStats: CachedSiteStats | null = null;
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min memory cache to protect Worker memory & D1 budget
 
 let memoizedSnapshotFallback: SiteStats | null = null;
@@ -219,12 +219,78 @@ function getSnapshotFallback(): SiteStats {
  * Queries D1 database tables (api_access_logs, servers) in production,
  * and derives exact metrics from the static catalog snapshot in dev mode.
  */
+let inflightSiteStats: Promise<SiteStats> | null = null;
+
+// The memory cache above is per isolate, and the site runs many: each cold one
+// recomputed every 30-day api_access_logs aggregate (~300k rows apiece), which
+// added up to hundreds of full runs a day. The Cache API is shared by every
+// isolate in a colo, so one computation serves them all until it expires.
+const SHARED_CACHE_KEY = 'https://allmcps.com/__internal/site-stats/v1';
+
+type CachedSiteStats = { data: SiteStats; timestamp: number };
+
+function sharedCache(): Cache | null {
+  const store = (globalThis as { caches?: { default?: Cache } }).caches;
+  return store?.default ?? null;
+}
+
+async function readSharedSiteStats(): Promise<CachedSiteStats | null> {
+  try {
+    const hit = await sharedCache()?.match(SHARED_CACHE_KEY);
+    if (!hit) return null;
+    const entry = (await hit.json()) as CachedSiteStats;
+    return Date.now() - entry.timestamp < CACHE_TTL_MS ? entry : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeSharedSiteStats(entry: CachedSiteStats): Promise<void> {
+  try {
+    await sharedCache()?.put(
+      SHARED_CACHE_KEY,
+      new Response(JSON.stringify(entry), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': `max-age=${CACHE_TTL_MS / 1000}`,
+        },
+      }),
+    );
+  } catch {
+    // Cache API unavailable (local dev, workers.dev): the memory cache still applies.
+  }
+}
+
 export async function getSiteStats(): Promise<SiteStats> {
-  const now = Date.now();
-  if (cachedSiteStats && now - cachedSiteStats.timestamp < CACHE_TTL_MS) {
+  if (
+    cachedSiteStats &&
+    Date.now() - cachedSiteStats.timestamp < CACHE_TTL_MS
+  ) {
     return cachedSiteStats.data;
   }
+  // Concurrent renders on a cold isolate share one computation.
+  inflightSiteStats ??= loadSiteStats().finally(() => {
+    inflightSiteStats = null;
+  });
+  return inflightSiteStats;
+}
 
+async function loadSiteStats(): Promise<SiteStats> {
+  const shared = await readSharedSiteStats();
+  if (shared) {
+    cachedSiteStats = shared;
+    return shared.data;
+  }
+  const data = await querySiteStats();
+  if (!data) return getSnapshotFallback();
+  cachedSiteStats = { data, timestamp: Date.now() };
+  await writeSharedSiteStats(cachedSiteStats);
+  return data;
+}
+
+/** Live stats from D1, or null when D1 is unreachable (callers fall back to the snapshot). */
+async function querySiteStats(): Promise<SiteStats | null> {
+  const now = Date.now();
   let db: any = null;
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
@@ -236,9 +302,7 @@ export async function getSiteStats(): Promise<SiteStats> {
     // Local dev or no Cloudflare binding
   }
 
-  if (!db) {
-    return getSnapshotFallback();
-  }
+  if (!db) return null;
 
   try {
     const cutoff = new Date(now - 30 * 24 * 60 * 60 * 1000);
@@ -562,10 +626,9 @@ export async function getSiteStats(): Promise<SiteStats> {
       recentCommitCount30d: dbRecentCommits,
     };
 
-    cachedSiteStats = { data: result, timestamp: Date.now() };
     return result;
   } catch (err) {
     console.error('[getSiteStats] Error querying D1:', err);
-    return getSnapshotFallback();
+    return null;
   }
 }

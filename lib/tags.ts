@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { parseCategoryLabel } from './categories';
 import { getActiveServersLight, type Server } from './servers';
 
@@ -170,8 +171,12 @@ export async function getAllTagsWithCounts(): Promise<TagWithCount[]> {
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
-/** Get all active servers matching a tag slug */
-export async function getServersForTag(
+/**
+ * Get all active servers matching a tag slug. Wrapped in React `cache` because
+ * /tags/[slug] calls it from both generateMetadata and the page, and each call
+ * is a full active-catalog scan on D1.
+ */
+export const getServersForTag = cache(async function getServersForTag(
   targetSlug: string,
 ): Promise<{ servers: Server[]; rawTag: string }> {
   const servers = await getActiveServersLight();
@@ -188,4 +193,4 @@ export async function getServersForTag(
   }
 
   return { servers: matched, rawTag: foundLabel };
-}
+});

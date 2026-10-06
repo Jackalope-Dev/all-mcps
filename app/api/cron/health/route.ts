@@ -126,10 +126,12 @@ export async function POST(req: Request) {
         .select(cronServerColumns)
         .from(servers)
         .where(eq(servers.status, 'active'))
+        // Same column order as idx_servers_status_popularity, so D1 walks the
+        // index for 50 rows instead of reading and sorting the whole catalog.
         .orderBy(
           desc(servers.views),
-          desc(servers.upvotes),
           desc(servers.copies),
+          desc(servers.upvotes),
         )
         .limit(half * 2),
     ]);
