@@ -14,7 +14,10 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <PageShell variant="status" panel className="animate-fade-in">
+      {/* h2, not h1: Next serializes this tree into every page's RSC payload, and
+          audit tools that scan it report a second h1 on otherwise-clean pages. */}
       <EmptyState
+        titleAs="h2"
         code="404"
         title="Page Not Found"
         description="We couldn't find the page or MCP server tool you were looking for. It may have been moved or removed."
