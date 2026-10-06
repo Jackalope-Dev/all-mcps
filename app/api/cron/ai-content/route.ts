@@ -162,8 +162,12 @@ export async function POST(req: Request) {
                 ),
               ),
             )
+            // Leads with idx_servers_status_popularity's columns so D1 walks
+            // the index and stops after the batch (~4k rows read) instead of
+            // sorting every active listing (~51k) on each claim.
             .orderBy(
               desc(servers.views),
+              desc(servers.copies),
               desc(servers.upvotes),
               sql`${servers.githubStars} IS NULL`,
               desc(servers.githubStars),

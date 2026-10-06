@@ -295,9 +295,12 @@ export const servers = sqliteTable(
       table.status,
       table.category,
     ),
-    statusCreatedIdx: index('idx_servers_status_created').on(
+    // `id` included so getDirectoryFeedPage's (created_at DESC, id DESC) paging
+    // skips its OFFSET on this index alone — see that function.
+    statusCreatedIdx: index('idx_servers_status_created_id').on(
       table.status,
       table.createdAt,
+      table.id,
     ),
     statusPopularityIdx: index('idx_servers_status_popularity').on(
       table.status,

@@ -17,6 +17,7 @@ import {
   ENDPOINT_LABELS,
   type Endpoint,
 } from './accessLog';
+import { readEdgeCache, writeEdgeCache } from './edgeCache';
 import { computeQualityScore } from './qualityScore';
 
 /**
@@ -223,42 +224,15 @@ let inflightSiteStats: Promise<SiteStats> | null = null;
 
 // The memory cache above is per isolate, and the site runs many: each cold one
 // recomputed every 30-day api_access_logs aggregate (~300k rows apiece), which
-// added up to hundreds of full runs a day. The Cache API is shared by every
+// added up to hundreds of full runs a day. The edge cache is shared by every
 // isolate in a colo, so one computation serves them all until it expires.
-const SHARED_CACHE_KEY = 'https://allmcps.com/__internal/site-stats/v1';
+const SHARED_CACHE_KEY = 'site-stats/v1';
 
 type CachedSiteStats = { data: SiteStats; timestamp: number };
 
-function sharedCache(): Cache | null {
-  const store = (globalThis as { caches?: { default?: Cache } }).caches;
-  return store?.default ?? null;
-}
-
 async function readSharedSiteStats(): Promise<CachedSiteStats | null> {
-  try {
-    const hit = await sharedCache()?.match(SHARED_CACHE_KEY);
-    if (!hit) return null;
-    const entry = (await hit.json()) as CachedSiteStats;
-    return Date.now() - entry.timestamp < CACHE_TTL_MS ? entry : null;
-  } catch {
-    return null;
-  }
-}
-
-async function writeSharedSiteStats(entry: CachedSiteStats): Promise<void> {
-  try {
-    await sharedCache()?.put(
-      SHARED_CACHE_KEY,
-      new Response(JSON.stringify(entry), {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': `max-age=${CACHE_TTL_MS / 1000}`,
-        },
-      }),
-    );
-  } catch {
-    // Cache API unavailable (local dev, workers.dev): the memory cache still applies.
-  }
+  const entry = await readEdgeCache<CachedSiteStats>(SHARED_CACHE_KEY);
+  return entry && Date.now() - entry.timestamp < CACHE_TTL_MS ? entry : null;
 }
 
 export async function getSiteStats(): Promise<SiteStats> {
@@ -284,7 +258,7 @@ async function loadSiteStats(): Promise<SiteStats> {
   const data = await querySiteStats();
   if (!data) return getSnapshotFallback();
   cachedSiteStats = { data, timestamp: Date.now() };
-  await writeSharedSiteStats(cachedSiteStats);
+  await writeEdgeCache(SHARED_CACHE_KEY, cachedSiteStats, CACHE_TTL_MS / 1000);
   return data;
 }
 

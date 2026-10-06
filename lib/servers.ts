@@ -24,6 +24,7 @@ import { type AiFaqItem, parseFaqArray, parseStringArray } from './aiContent';
 import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
 import { cleanListingDescription } from './description';
+import { readEdgeCache, writeEdgeCache } from './edgeCache';
 import { isFeaturedListing } from './featuredStatus';
 import { installConfidenceNote, resolveInstallConfig } from './installConfig';
 import {
@@ -961,10 +962,32 @@ function toSearchCandidate(row: SearchCandidateRow): SearchCandidate {
 
 type D1Drizzle = ReturnType<typeof drizzle>;
 
+type PrefilterMode = 'all' | 'any' | 'fuzzy';
+
+/** WHERE clause over the CTE's haystack `h` for one prefilter mode, or null if it can't match. */
+function prefilterWhere(
+  plan: SearchPrefilter,
+  mode: PrefilterMode,
+): SQL | null {
+  const like = (p: string) => sql`h LIKE ${`%${p}%`}`;
+  if (mode === 'all') {
+    return sql.join(
+      plan.terms.map((alts) => sql`(${sql.join(alts.map(like), sql` OR `)})`),
+      sql` AND `,
+    );
+  }
+  const patterns = mode === 'any' ? plan.terms.flat() : plan.fuzzy;
+  if (patterns.length === 0) return null;
+  return sql.join(patterns.map(like), sql` OR `);
+}
+
 /**
- * One prefilter pass: 'all' = every term group matches (the scorer's strict AND),
- * 'any' = at least one term matches (its relaxed OR), 'fuzzy' = a typo-tolerant
- * trigram hit on name/category/description.
+ * Prefilter passes over one scan: 'all' = every term group matches (the
+ * scorer's strict AND), 'any' = at least one term matches (its relaxed OR),
+ * 'fuzzy' = a typo-tolerant trigram hit on name/category/description. Each
+ * mode keeps its own top-SEARCH_CANDIDATE_CAP; several modes are unioned so
+ * the catalog is scanned once rather than once per mode. 'fuzzy' reads a
+ * different haystack, so it can't share a call with the others.
  *
  * The haystack is concatenated once per row in a MATERIALIZED CTE. Inlined, SQLite
  * rebuilds it for every LIKE, which is about 2x slower on a synonym-heavy query
@@ -973,31 +996,32 @@ type D1Drizzle = ReturnType<typeof drizzle>;
 async function prefilterSearchCandidates(
   db: D1Drizzle,
   plan: SearchPrefilter,
-  mode: 'all' | 'any' | 'fuzzy',
+  modes: PrefilterMode[],
   category: string | null,
 ): Promise<SearchCandidate[]> {
-  const like = (p: string) => sql`h LIKE ${`%${p}%`}`;
-  let where: SQL;
-  if (mode === 'all') {
-    where = sql.join(
-      plan.terms.map((alts) => sql`(${sql.join(alts.map(like), sql` OR `)})`),
-      sql` AND `,
-    );
-  } else {
-    const patterns = mode === 'any' ? plan.terms.flat() : plan.fuzzy;
-    if (patterns.length === 0) return [];
-    where = sql.join(patterns.map(like), sql` OR `);
+  const fuzzy = modes.includes('fuzzy');
+  if (fuzzy && modes.length > 1) {
+    throw new Error('fuzzy prefilter uses its own haystack; run it alone');
   }
+  const wheres = modes
+    .map((mode) => prefilterWhere(plan, mode))
+    .filter((w): w is SQL => w !== null);
+  if (wheres.length === 0) return [];
   const nameHits = sql.join(
     plan.terms.map(
       ([term]) => sql`(CASE WHEN name LIKE ${`%${term}%`} THEN 1 ELSE 0 END)`,
     ),
     sql` + `,
   );
-  const haystack = sql.raw(
-    mode === 'fuzzy' ? FUZZY_HAYSTACK_SQL : SEARCH_HAYSTACK_SQL,
-  );
+  const haystack = sql.raw(fuzzy ? FUZZY_HAYSTACK_SQL : SEARCH_HAYSTACK_SQL);
   const categoryFilter = category ? sql` AND category = ${category}` : sql``;
+  // Wrapped in a subquery so each branch's ORDER BY/LIMIT applies before the UNION.
+  const topMatches = (where: SQL) => sql`
+      SELECT id FROM (
+        SELECT id FROM c WHERE ${where}
+        ORDER BY ${nameHits} DESC, eng DESC
+        LIMIT ${SEARCH_CANDIDATE_CAP}
+      )`;
 
   const rows = await db.all<SearchCandidateRow>(sql`
     WITH c AS MATERIALIZED (
@@ -1005,11 +1029,7 @@ async function prefilterSearchCandidates(
       FROM servers
       WHERE status = 'active'${categoryFilter}
     ),
-    m AS (
-      SELECT id FROM c WHERE ${where}
-      ORDER BY ${nameHits} DESC, eng DESC
-      LIMIT ${SEARCH_CANDIDATE_CAP}
-    )
+    m AS (${sql.join(wheres.map(topMatches), sql` UNION `)})
     SELECT ${sql.raw(SEARCH_CANDIDATE_SELECT_SQL)}
     FROM servers s JOIN m ON m.id = s.id
   `);
@@ -1155,6 +1175,11 @@ async function searchSnapshot(
  * then typo-tolerant), the Worker only scores slim candidate rows, and full rows
  * are loaded just for the `limit` results that are returned.
  */
+/** Ranked search ids are reused this long; new listings show up in search after it. */
+const SEARCH_CACHE_TTL_SECONDS = 10 * 60;
+/** Longer queries skip the cache rather than risk an oversized cache key. */
+const SEARCH_CACHE_MAX_QUERY = 200;
+
 export async function searchActiveServers(opts: {
   query: string;
   category?: string | null;
@@ -1173,9 +1198,28 @@ export async function searchActiveServers(opts: {
   const conn = await getSearchDb();
   if (!conn) return searchSnapshot(query, category, limit);
   const { db, env } = conn;
+  const vectorTopK = opts.vectorTopK ?? 40;
+
+  // Agents and the site re-run the same searches. Caching the ranked ids
+  // (not the rows) skips the embedding call and the full-catalog LIKE scan,
+  // while hydrateSearchResults still reads current listing data by id.
+  const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, ' ');
+  const cacheKey =
+    normalizedQuery.length <= SEARCH_CACHE_MAX_QUERY
+      ? `search/v1/${category ?? ''}/${limit}/${vectorTopK}/${normalizedQuery}`
+      : null;
+  if (cacheKey) {
+    const cachedIds = await readEdgeCache<string[]>(cacheKey);
+    if (cachedIds) {
+      try {
+        return await hydrateSearchResults(db, cachedIds);
+      } catch {
+        // Fall through to a fresh search.
+      }
+    }
+  }
 
   try {
-    const vectorTopK = opts.vectorTopK ?? 40;
     let vectorMatches: Array<{ id: string; score: number }> = [];
     if (vectorTopK > 0 && (env as any).VECTOR_INDEX && (env as any).AI) {
       try {
@@ -1194,10 +1238,14 @@ export async function searchActiveServers(opts: {
       const add = (rows: SearchCandidate[]) => {
         for (const r of rows) pool.set(r.id, r);
       };
-      add(await prefilterSearchCandidates(db, plan, 'all', category));
-      if (plan.terms.length >= 2) {
-        add(await prefilterSearchCandidates(db, plan, 'any', category));
-      }
+      add(
+        await prefilterSearchCandidates(
+          db,
+          plan,
+          plan.terms.length >= 2 ? ['all', 'any'] : ['all'],
+          category,
+        ),
+      );
       const missing = vectorMatches
         .map((m) => m.id)
         .filter((id) => !pool.has(id));
@@ -1214,30 +1262,31 @@ export async function searchActiveServers(opts: {
       // Same escalation rankServers does internally, one SQL pass per stage so
       // each stage only ever pulls its own matches into memory.
       ranked = rankServers(
-        await prefilterSearchCandidates(db, plan, 'all', category),
+        await prefilterSearchCandidates(db, plan, ['all'], category),
         query,
         { limit },
       );
       if (ranked.length === 0 && plan.terms.length >= 2) {
         ranked = rankServers(
-          await prefilterSearchCandidates(db, plan, 'any', category),
+          await prefilterSearchCandidates(db, plan, ['any'], category),
           query,
           { limit },
         );
       }
       if (ranked.length === 0) {
         ranked = rankServers(
-          await prefilterSearchCandidates(db, plan, 'fuzzy', category),
+          await prefilterSearchCandidates(db, plan, ['fuzzy'], category),
           query,
           { limit },
         );
       }
     }
 
-    return hydrateSearchResults(
-      db,
-      ranked.map((s) => s.id),
-    );
+    const rankedIds = ranked.map((s) => s.id);
+    if (cacheKey) {
+      await writeEdgeCache(cacheKey, rankedIds, SEARCH_CACHE_TTL_SECONDS);
+    }
+    return hydrateSearchResults(db, rankedIds);
   } catch (e) {
     console.error('searchActiveServers: D1 search failed', e);
     return searchSnapshot(query, category, limit);
@@ -1451,11 +1500,23 @@ export async function getDirectoryFeedPage(
           >`substr(${serversTable.aiFaq}, 1, ${FEED_AI_TEXT_MAX})`,
         })
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'))
+        // Pick the page's ids on idx_servers_status_created_id first, then read
+        // only those rows. A plain OFFSET walked (and sorted) every earlier row,
+        // so the deep pages the grid fetches in parallel read ~46k rows each.
+        .where(
+          inArray(
+            serversTable.id,
+            db
+              .select({ id: serversTable.id })
+              .from(serversTable)
+              .where(eq(serversTable.status, 'active'))
+              .orderBy(desc(serversTable.createdAt), desc(serversTable.id))
+              .limit(limit)
+              .offset(offset),
+          ),
+        )
         // Deterministic order (newest first, id tiebreaker) keeps paging stable.
-        .orderBy(desc(serversTable.createdAt), desc(serversTable.id))
-        .limit(limit)
-        .offset(offset);
+        .orderBy(desc(serversTable.createdAt), desc(serversTable.id));
 
       const totalRow = await db
         .select({ c: sql<number>`count(*)` })
