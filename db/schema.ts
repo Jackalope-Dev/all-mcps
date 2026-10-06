@@ -68,6 +68,8 @@ export const servers = sqliteTable(
     logoSource: text('logo_source'),
     /** R2 key of an uploaded logo awaiting admin approval (e.g. `pending/<id>.png`). Null = nothing pending. */
     pendingLogoKey: text('pending_logo_key'),
+    /** Last time the enrich cron attempted logo discovery for this listing. Drives the logo-only queue. */
+    logoCheckedAt: integer('logo_checked_at', { mode: 'timestamp' }),
     status: text('status').notNull().default('pending'),
     lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
     isVerifiedActive: integer('is_verified_active', { mode: 'boolean' })
@@ -315,6 +317,10 @@ export const servers = sqliteTable(
     statusLastCheckedIdx: index('idx_servers_status_last_checked').on(
       table.status,
       table.lastCheckedAt,
+    ),
+    statusLogoCheckedIdx: index('idx_servers_status_logo_checked').on(
+      table.status,
+      table.logoCheckedAt,
     ),
     statusAiEnrichedIdx: index('idx_servers_status_ai_enriched').on(
       table.status,

@@ -1,5 +1,5 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
@@ -68,7 +68,14 @@ function isGithubUrl(urlString: string): boolean {
 // written. The Worker's own cron now pings this every 15 min (see
 // custom-worker.ts FAST_JOBS), so a smaller batch still drains the backlog
 // quickly without the risk.
-const BATCH_SIZE = 15;
+const BATCH_SIZE = 12;
+// Slots reserved each tick for listings still missing a real logo, picked by
+// logoCheckedAt rather than lastCheckedAt (which the health cron rewrites every
+// ~15 min, so it never reliably surfaced logo-less listings).
+const LOGO_BATCH_SIZE = 8;
+// Listings stuck on a github_user avatar are re-tried for a better logo at most
+// this often, instead of re-entering the queue every tick.
+const GITHUB_USER_LOGO_RETRY_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Safely writes an asset to R2 without throwing when concurrent jobs write to the same key. */
 async function safeR2Put(
@@ -133,7 +140,34 @@ export async function POST(req: Request) {
     const db = drizzle(env.DB as any);
     const githubToken = getGithubToken(env);
 
-    // Prefer listings that still look unenriched or have lower-quality avatars (github_user).
+    // Logo-only queue: missing logo first (never-tried first), then stale
+    // github_user avatars that may have gained a better README/site logo.
+    const userLogoRetryBefore = new Date(
+      Date.now() - GITHUB_USER_LOGO_RETRY_MS,
+    );
+    const logoBatch = await db
+      .select(cronServerColumns)
+      .from(servers)
+      .where(
+        and(
+          eq(servers.status, 'active'),
+          or(
+            isNull(servers.logoUrl),
+            isNull(servers.logoSource),
+            and(
+              eq(servers.logoSource, 'github_user'),
+              or(
+                isNull(servers.logoCheckedAt),
+                lt(servers.logoCheckedAt, userLogoRetryBefore),
+              ),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(servers.logoCheckedAt))
+      .limit(LOGO_BATCH_SIZE);
+
+    // Prefer listings that still look unenriched.
     const candidates = await db
       .select(cronServerColumns)
       .from(servers)
@@ -144,7 +178,6 @@ export async function POST(req: Request) {
             isNull(servers.websiteUrl),
             isNull(servers.logoUrl),
             isNull(servers.logoSource),
-            eq(servers.logoSource, 'github_user'),
             isNull(servers.installKind),
             isNull(servers.githubStars),
             sql`${servers.description} LIKE '%glama.ai%'`,
@@ -157,7 +190,7 @@ export async function POST(req: Request) {
       .limit(BATCH_SIZE * 2);
 
     // Fallback: any active ordered by last check if filter is empty/saturated
-    const batch =
+    const generalBatch =
       candidates.length > 0
         ? candidates.slice(0, BATCH_SIZE)
         : await db
@@ -166,6 +199,11 @@ export async function POST(req: Request) {
             .where(eq(servers.status, 'active'))
             .orderBy(asc(servers.lastCheckedAt))
             .limit(BATCH_SIZE);
+    const logoIds = new Set(logoBatch.map((s) => s.id));
+    const batch = [
+      ...logoBatch,
+      ...generalBatch.filter((s) => !logoIds.has(s.id)),
+    ];
 
     const stats = {
       processed: 0,
@@ -184,6 +222,7 @@ export async function POST(req: Request) {
       const now = new Date();
       const updates: Record<string, unknown> = {
         lastCheckedAt: now,
+        logoCheckedAt: now,
       };
 
       let description = server.description || '';

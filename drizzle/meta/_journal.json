@@ -267,6 +267,13 @@
       "when": 1791315839200,
       "tag": "0057_review_flagged",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1791316070388,
+      "tag": "0058_logo_checked_at",
+      "breakpoints": true
     }
   ]
 }
