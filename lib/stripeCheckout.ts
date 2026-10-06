@@ -238,6 +238,12 @@ export async function createStripeCheckoutSession(
     };
   } else if (product.mode === 'payment') {
     sessionParams.invoice_creation = { enabled: true };
+    // One-time payments otherwise leave session.customer null, so the webhook
+    // can't record who paid (stripeCustomerId) — always create one. Stripe
+    // rejects customer_creation when an existing customer is passed.
+    if (!sessionParams.customer) {
+      sessionParams.customer_creation = 'always';
+    }
   }
 
   let promoFound = false;
