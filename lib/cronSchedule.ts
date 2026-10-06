@@ -47,15 +47,14 @@ export const AI_CONTENT_JOBS: CronJob[] = [
 
 // What the site's 20-min ai-content tick sends to the dedicated jobs Worker.
 // Nothing else shares that isolate, so it takes the route's max batch (same
-// 6-wide concurrency per wave, just more waves), several times back to back:
-// claims are atomic, so each run takes the next 24. Sized from production: a
-// batch-24 run takes ~100s, so 6 runs (~10 min, 144 listings per tick) finish
-// well inside the 15-min cron wall limit and before the next tick. Runs stay
-// sequential so one isolate's peak memory is still a single run's. Raising the
-// run count, not the cadence, avoids depending on a new cron pattern
-// (Cloudflare kept firing the old "*/20" for over an hour after the site's
-// schedule was changed to "*/10", and never fired the jobs Worker's own).
-export const AI_CONTENT_DEDICATED_RUNS = 6;
+// 6-wide concurrency per wave, just more waves). Claims are atomic, so extra
+// runs back to back would each take the next 24 — throughput scales with
+// AI_CONTENT_DEDICATED_RUNS, and so does OpenAI spend. 6 runs (144 listings
+// per tick, ~10k/day) blew past the OpenAI free daily token allowance; 1 run
+// (24 per tick, ~1.7k/day) keeps us near it. Tune the run count, not the
+// cadence: Cloudflare kept firing the old "*/20" for over an hour after the
+// site's schedule was changed to "*/10", and never fired the jobs Worker's own.
+export const AI_CONTENT_DEDICATED_RUNS = 1;
 export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = Array.from(
   { length: AI_CONTENT_DEDICATED_RUNS },
   () => ({

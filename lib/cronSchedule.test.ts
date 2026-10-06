@@ -43,7 +43,7 @@ describe('jobsForTick', () => {
 
   it('sends six batch-24 AI runs from the site, but keeps the default batch on a single Worker', () => {
     expect(paths(AI_CONTENT_JOBS_DEDICATED)).toEqual(
-      Array(6).fill('/api/cron/ai-content?batchSize=24'),
+      Array(1).fill('/api/cron/ai-content?batchSize=24'),
     );
     expect(jobsForTick('*/20 * * * *', 'all')).toBe(AI_CONTENT_JOBS);
   });
