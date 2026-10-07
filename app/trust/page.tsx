@@ -35,6 +35,26 @@ import type {
 } from '../../lib/siteStats';
 import { AI_SYSTEM_CLASSES, getSiteStats } from '../../lib/siteStats';
 
+// Callers we operate ourselves — their labels link out to the product.
+const CALLER_LINKS: Record<string, string> = {
+  jackalope: 'https://jackalope.dev',
+};
+
+function callerLabel(callerClass: string, label: string): ReactNode {
+  const href = CALLER_LINKS[callerClass];
+  if (!href) return label;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: 'inherit', textDecoration: 'underline' }}
+    >
+      {label}
+    </a>
+  );
+}
+
 // D1 isn't reachable during build (see lib/siteStats.ts's getSiteStats, same
 // pattern as sitemapHelpers.ts), so anything that gets prerendered at build time
 // bakes in the zeroed static-snapshot fallback (0 views/copies/upvotes). Plain
@@ -424,7 +444,7 @@ function Group({
               <span
                 style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}
               >
-                {row.label}
+                {callerLabel(row.class, row.label)}
               </span>
               <span
                 style={{
@@ -1117,7 +1137,7 @@ export default async function TrustPage() {
                 <BarList
                   items={aiRows.map((r) => ({
                     key: r.class,
-                    label: r.label,
+                    label: callerLabel(r.class, r.label),
                     sublabel: `${pct(r.hits, totalAiHits30d)} of AI traffic`,
                     value: r.hits,
                     color: CALLER_COLORS[r.class] || '#3987e5',

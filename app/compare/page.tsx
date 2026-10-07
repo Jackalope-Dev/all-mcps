@@ -1,4 +1,4 @@
-import { ArrowRight, Scale } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CompareSelector } from '@/components/CompareSelector';
@@ -38,23 +38,6 @@ export default async function CompareIndexPage() {
         style={{ maxWidth: '960px', margin: '0 auto', padding: '2.5rem 1rem' }}
       >
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.4rem 0.85rem',
-              borderRadius: '20px',
-              backgroundColor: 'rgba(168, 85, 247, 0.1)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-              color: '#a855f7',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              marginBottom: '1rem',
-            }}
-          >
-            <Scale size={14} /> Side-by-Side Feature Matrix
-          </div>
           <h1
             style={{
               fontSize: '2.5rem',

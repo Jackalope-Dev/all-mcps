@@ -1,4 +1,3 @@
-import { Layers } from 'lucide-react';
 import type { Metadata } from 'next';
 import { PageHeader, PageShell } from '@/components/PageShell';
 import { PresetStackGrid } from '@/components/PresetStackGrid';
@@ -38,11 +37,6 @@ export default async function StackPage() {
       >
         <PageHeader
           centered
-          badge={
-            <>
-              <Layers size={14} /> Multi-Tool Configuration Generator
-            </>
-          }
           title="MCP Stack Builder"
           description={
             <>
