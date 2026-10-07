@@ -1,5 +1,6 @@
 import { defineCloudflareConfig } from '@opennextjs/cloudflare';
 import r2IncrementalCache from '@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache';
+import memoryQueue from '@opennextjs/cloudflare/overrides/queue/memory-queue';
 
 // R2-backed ISR cache (binding: NEXT_INC_CACHE_R2_BUCKET, see wrangler.jsonc) so
 // revalidate-based pages (e.g. app/mcp/[id], app/best/[topic], app/clients/[client],
@@ -8,15 +9,14 @@ import r2IncrementalCache from '@opennextjs/cloudflare/overrides/incremental-cac
 // the default ("dummy") — this codebase never calls revalidateTag/revalidatePath, so
 // there's nothing for a real tag cache to do.
 //
-// queue: "direct" is required alongside the R2 cache — without it, `queue`
-// silently defaults to "dummy", whose .send() unconditionally throws ("Dummy
-// queue is not implemented"). Confirmed in practice: every stale-page hit
-// site-wide was hitting that throw (logged as "Failed to revalidate stale
-// page"), meaning R2-cached pages never actually refreshed in the background
-// once first cached. "direct" uses the WORKER_SELF_REFERENCE service binding
-// (see wrangler.jsonc) to self-trigger regeneration — OpenNext's own docs
-// call it "not recommended" only at very high scale/traffic; fine here.
+// A real queue is required alongside the R2 cache. The default ("dummy") throws
+// on every stale hit, and "direct" (used here until 2026-10) revalidates with a
+// plain global fetch() to https://allmcps.com/..., which never re-enters this
+// Worker — so stale pages were served forever (listings showed missing logos,
+// nofollow on links that had earned dofollow, week-old health checks).
+// memoryQueue sends the revalidation HEAD through the WORKER_SELF_REFERENCE
+// service binding (see wrangler.jsonc), de-duped per isolate.
 export default defineCloudflareConfig({
   incrementalCache: r2IncrementalCache,
-  queue: 'direct',
+  queue: memoryQueue,
 });
