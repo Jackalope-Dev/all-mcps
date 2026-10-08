@@ -322,6 +322,17 @@ export function SiteFooter() {
               </a>
             </li>
             <li>
+              <a
+                href="https://app.lopebase.com/status/all-mcps"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-link"
+              >
+                Status <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </li>
+            <li>
               <Link href="/terms" className="nav-link">
                 Terms
               </Link>
