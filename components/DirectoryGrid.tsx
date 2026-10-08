@@ -119,6 +119,9 @@ function stableAdSlot(seed: string): number {
   return 3 + (Math.abs(h) % 8);
 }
 
+// Max parallel /api/directory-feed page requests (see the lazy-feed effect).
+const FEED_CONCURRENCY = 4;
+
 export default function DirectoryGrid({
   initialServers,
   initialCategory = null,
@@ -289,7 +292,24 @@ export default function DirectoryGrid({
           ) {
             offsets.push(offset);
           }
-          const rest = await Promise.all(offsets.map(fetchPage));
+          // Bounded concurrency + one retry: firing every page at once piled
+          // ~10 concurrent requests onto one Worker isolate, which occasionally
+          // got canceled as "hung" and silently dropped ~1k listings.
+          const rest: (FeedPage | null)[] = new Array(offsets.length);
+          let cursor = 0;
+          const worker = async () => {
+            while (!cancelled && cursor < offsets.length) {
+              const i = cursor++;
+              rest[i] =
+                (await fetchPage(offsets[i])) ?? (await fetchPage(offsets[i]));
+            }
+          };
+          await Promise.all(
+            Array.from(
+              { length: Math.min(FEED_CONCURRENCY, offsets.length) },
+              worker,
+            ),
+          );
           if (cancelled) return;
           for (const page of rest) {
             if (page?.servers?.length) accumulated.push(...page.servers);
