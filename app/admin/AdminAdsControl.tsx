@@ -13,7 +13,19 @@ import {
 import { useState } from 'react';
 import { SponsorAdUnit } from '../../components/ads/SponsorAdUnit';
 import { toast } from '../../components/ui/Toast';
+import {
+  adRevisionToDbPatch,
+  type EditableAdFields,
+  parseAdRevision,
+} from '../../lib/adRevision';
 import { calculateCtr, formatUsdAmount, type SponsorAd } from '../../lib/ads';
+
+const AD_FIELD_LABELS: Record<keyof EditableAdFields, string> = {
+  title: 'Title',
+  description: 'Description',
+  ctaText: 'Button text',
+  targetUrl: 'Destination URL',
+};
 
 interface AdminAdsControlProps {
   initialAds: SponsorAd[];
@@ -21,13 +33,22 @@ interface AdminAdsControlProps {
 
 export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
   const [ads, setAds] = useState<SponsorAd[]>(initialAds || []);
-  const [filter, setFilter] = useState<'pending' | 'active' | 'all'>('pending');
+  const [filter, setFilter] = useState<'pending' | 'edits' | 'active' | 'all'>(
+    'pending',
+  );
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const pendingAds = ads.filter((a) => a.status === 'pending_approval');
   const activeAds = ads.filter((a) => a.status === 'active');
+  const editAds = ads.filter((a) => parseAdRevision(a.pendingRevision));
   const filteredAds =
-    filter === 'pending' ? pendingAds : filter === 'active' ? activeAds : ads;
+    filter === 'pending'
+      ? pendingAds
+      : filter === 'edits'
+        ? editAds
+        : filter === 'active'
+          ? activeAds
+          : ads;
 
   const totalRevenueCents = ads.reduce(
     (sum, a) => sum + (a.amountPaidCents || 0),
@@ -48,6 +69,8 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
       | 'pause'
       | 'resume'
       | 'add_impressions'
+      | 'approve_edit'
+      | 'reject_edit'
       | 'delete',
     params?: any,
   ) => {
@@ -80,6 +103,16 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                 status: 'rejected' as const,
                 rejectionReason: params?.reason,
               };
+            if (action === 'approve_edit') {
+              const revision = parseAdRevision(ad.pendingRevision);
+              return {
+                ...ad,
+                ...(revision ? adRevisionToDbPatch(revision.proposed) : {}),
+                pendingRevision: null,
+              };
+            }
+            if (action === 'reject_edit')
+              return { ...ad, pendingRevision: null };
             if (action === 'add_impressions') {
               return {
                 ...ad,
@@ -260,6 +293,13 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
           style={{ gap: '6px' }}
         >
           Pending Review ({pendingAds.length})
+        </button>
+        <button
+          onClick={() => setFilter('edits')}
+          className={`btn btn-sm ${filter === 'edits' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ gap: '6px' }}
+        >
+          Edits ({editAds.length})
         </button>
         <button
           onClick={() => setFilter('active')}
@@ -509,6 +549,23 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                     </div>
                   </div>
 
+                  <PendingAdEdit
+                    ad={ad}
+                    disabled={isLoading}
+                    onApprove={() => handleAction(ad.id, 'approve_edit')}
+                    onReject={() => {
+                      const reason = prompt(
+                        'Why are these changes not approved? (included in the advertiser email; leave blank for the default)',
+                      );
+                      if (reason !== null)
+                        handleAction(
+                          ad.id,
+                          'reject_edit',
+                          reason ? { reason } : undefined,
+                        );
+                    }}
+                  />
+
                   {/* Moderation Action Buttons */}
                   <div
                     style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}
@@ -653,6 +710,108 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Advertiser-proposed copy/link edit: field diff, preview and approve/reject. */
+function PendingAdEdit({
+  ad,
+  disabled,
+  onApprove,
+  onReject,
+}: {
+  ad: SponsorAd;
+  disabled: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const revision = parseAdRevision(ad.pendingRevision);
+  if (!revision) return null;
+  const proposed = adRevisionToDbPatch(revision.proposed);
+  const keys = Object.keys(proposed) as (keyof EditableAdFields)[];
+
+  return (
+    <div
+      style={{
+        border: '1px solid var(--accent-color)',
+        borderRadius: '10px',
+        padding: '0.85rem',
+        marginBottom: '0.9rem',
+        background: 'var(--bg-muted)',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          color: 'var(--text-primary)',
+          marginBottom: '0.5rem',
+        }}
+      >
+        Pending edit · submitted{' '}
+        {new Date(revision.submittedAt).toLocaleString()}
+      </div>
+      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+        Delivery is unaffected: placement, bid and impressions stay as they are.
+      </div>
+      <dl style={{ margin: '0.6rem 0', fontSize: '0.8rem' }}>
+        {keys.map((key) => (
+          <div key={key} style={{ marginBottom: '0.45rem' }}>
+            <dt style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {AD_FIELD_LABELS[key]}
+            </dt>
+            <dd style={{ margin: 0, wordBreak: 'break-word' }}>
+              <span
+                style={{
+                  textDecoration: 'line-through',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {ad[key]}
+              </span>
+              <br />
+              <span style={{ color: 'var(--admin-ok)' }}>{proposed[key]}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div style={{ marginBottom: '0.6rem' }}>
+        <SponsorAdUnit
+          placement="directory_inline"
+          previewAd={{
+            title: proposed.title ?? ad.title,
+            description: proposed.description ?? ad.description,
+            ctaText: proposed.ctaText ?? ad.ctaText,
+            targetUrl: proposed.targetUrl ?? ad.targetUrl,
+            logoUrl: ad.logoUrl,
+          }}
+        />
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={onApprove}
+          disabled={disabled}
+          className="btn btn-sm btn-primary"
+          style={{ gap: '4px' }}
+        >
+          <CheckCircle2 size={13} /> Approve edit
+        </button>
+        <button
+          type="button"
+          onClick={onReject}
+          disabled={disabled}
+          className="btn btn-sm btn-secondary"
+          style={{
+            color: '#f87171',
+            borderColor: 'rgba(239,68,68,0.3)',
+            gap: '4px',
+          }}
+        >
+          <AlertTriangle size={13} /> Reject edit
+        </button>
+      </div>
     </div>
   );
 }

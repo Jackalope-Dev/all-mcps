@@ -39,6 +39,13 @@ import {
   CALLER_LABELS,
   type CallerClass,
 } from '@/lib/accessLog';
+import {
+  AD_EDITABLE_STATUSES,
+  AD_FIELD_LIMITS,
+  type EditableAdFields,
+  parseAdRevision,
+  serializeAdRevision,
+} from '@/lib/adRevision';
 import type { AnalyticsSummary, ServerAnalytics } from '@/lib/analytics';
 import { DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { MCP_CLIENTS } from '@/lib/clients';
@@ -135,6 +142,8 @@ type Ad = {
   id: string;
   title: string;
   description: string;
+  ctaText: string;
+  targetUrl: string;
   placement: string;
   status: string;
   bidCpm: number;
@@ -143,6 +152,7 @@ type Ad = {
   clicksCount: number;
   stripePaymentIntentId: string | null;
   stripeInvoiceUrl: string | null;
+  pendingRevision: string | null;
   createdAt: string | Date;
 };
 
@@ -1466,7 +1476,9 @@ const PLACEMENT_LABELS: Record<string, string> = {
  * overview/entry point, not a replacement for it.
  */
 function AdCampaignsSection({ ads }: { ads: Ad[] }) {
-  const sorted = [...ads].sort(
+  const [items, setItems] = useState(ads);
+  const [editingAdId, setEditingAdId] = useState<string | null>(null);
+  const sorted = [...items].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
@@ -1659,8 +1671,55 @@ function AdCampaignsSection({ ads }: { ads: Ad[] }) {
                       <CreditCard size={12} /> Invoice
                     </a>
                   )}
+                  {AD_EDITABLE_STATUSES.has(ad.status) && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ gap: '4px' }}
+                      onClick={() =>
+                        setEditingAdId((cur) => (cur === ad.id ? null : ad.id))
+                      }
+                    >
+                      <Edit3 size={12} />{' '}
+                      {editingAdId === ad.id
+                        ? 'Close'
+                        : parseAdRevision(ad.pendingRevision)
+                          ? 'Update pending edit'
+                          : 'Edit ad'}
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {parseAdRevision(ad.pendingRevision) && editingAdId !== ad.id && (
+                <p
+                  style={{
+                    margin: '0.6rem 0 0',
+                    fontSize: '0.78rem',
+                    color: 'var(--status-pending)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Clock size={12} /> Edit pending review. Your ad keeps running
+                  with its current copy until it is approved.
+                </p>
+              )}
+
+              {editingAdId === ad.id && (
+                <AdEditForm
+                  ad={ad}
+                  onSubmitted={(pendingRevision) => {
+                    setItems((prev) =>
+                      prev.map((a) =>
+                        a.id === ad.id ? { ...a, pendingRevision } : a,
+                      ),
+                    );
+                    setEditingAdId(null);
+                  }}
+                />
+              )}
 
               {!awaitingPayment && (
                 <div style={{ marginTop: '0.9rem' }}>
@@ -1705,6 +1764,133 @@ function AdCampaignsSection({ ads }: { ads: Ad[] }) {
         })}
       </ul>
     </section>
+  );
+}
+
+/**
+ * Advertiser edit of a campaign's copy and destination. Submits a pending
+ * revision (app/api/ads/edit) that an admin approves; delivery is unaffected.
+ */
+function AdEditForm({
+  ad,
+  onSubmitted,
+}: {
+  ad: Ad;
+  onSubmitted: (pendingRevision: string) => void;
+}) {
+  const pending = parseAdRevision(ad.pendingRevision)?.proposed ?? {};
+  const [form, setForm] = useState<EditableAdFields>({
+    title: pending.title ?? ad.title,
+    description: pending.description ?? ad.description,
+    ctaText: pending.ctaText ?? ad.ctaText,
+    targetUrl: pending.targetUrl ?? ad.targetUrl,
+  });
+  const [saving, setSaving] = useState(false);
+  const update =
+    (key: keyof EditableAdFields) => (e: { target: { value: string } }) =>
+      setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const submit = async (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch('/api/ads/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: ad.id, ...form }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        message?: string;
+        proposed?: Partial<EditableAdFields>;
+      };
+      if (!res.ok) throw new Error(data.error || 'Could not submit edit');
+      toast.success(data.message || 'Edit submitted for review.');
+      onSubmitted(serializeAdRevision(data.proposed ?? {}));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not submit edit');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      style={{
+        marginTop: '0.9rem',
+        display: 'grid',
+        gap: '0.7rem',
+        borderTop: '1px solid var(--border-color)',
+        paddingTop: '0.9rem',
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: '0.8rem',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        Changes go live after a quick review. Until then your ad keeps running
+        with its current copy, and its placement, bid and remaining impressions
+        stay the same
+        {parseAdRevision(ad.pendingRevision)
+          ? '. You already have a pending edit; submitting again replaces it.'
+          : '.'}
+      </p>
+      <div>
+        <label style={fieldLabelStyle}>Headline</label>
+        <input
+          className="form-input"
+          value={form.title}
+          onChange={update('title')}
+          maxLength={AD_FIELD_LIMITS.title.max}
+          required
+        />
+      </div>
+      <div>
+        <label style={fieldLabelStyle}>Description</label>
+        <textarea
+          className="form-input"
+          value={form.description}
+          onChange={update('description')}
+          maxLength={AD_FIELD_LIMITS.description.max}
+          rows={3}
+          required
+        />
+      </div>
+      <div>
+        <label style={fieldLabelStyle}>Button text</label>
+        <input
+          className="form-input"
+          value={form.ctaText}
+          onChange={update('ctaText')}
+          maxLength={AD_FIELD_LIMITS.ctaText.max}
+          required
+        />
+      </div>
+      <div>
+        <label style={fieldLabelStyle}>Destination URL</label>
+        <input
+          className="form-input"
+          type="url"
+          value={form.targetUrl}
+          onChange={update('targetUrl')}
+          placeholder="https://"
+          required
+        />
+      </div>
+      <div>
+        <button
+          type="submit"
+          className="btn btn-primary btn-sm"
+          disabled={saving}
+        >
+          {saving ? 'Submitting…' : 'Submit for review'}
+        </button>
+      </div>
+    </form>
   );
 }
 

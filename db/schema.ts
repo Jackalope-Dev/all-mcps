@@ -833,6 +833,8 @@ export const sponsorAds = sqliteTable(
       .$defaultFn(() => new Date()),
     approvedAt: integer('approved_at', { mode: 'timestamp' }),
     completedAt: integer('completed_at', { mode: 'timestamp' }),
+    /** Advertiser-proposed copy/link edit awaiting admin approval — JSON AdRevision (lib/adRevision.ts). The live fields keep serving until it's approved. */
+    pendingRevision: text('pending_revision'),
   },
   (table) => ({
     statusIdx: index('idx_sponsor_ads_status').on(table.status),

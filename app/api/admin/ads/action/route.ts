@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sponsorAds } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
+import { adRevisionToDbPatch, parseAdRevision } from '@/lib/adRevision';
 import { sendNotificationEmail } from '@/lib/notify';
 import { getAppUrl } from '@/lib/stripe';
 import { formatZodError } from '@/lib/zodError';
@@ -21,6 +22,8 @@ const adAdminActionSchema = z.object({
     'add_impressions',
     'update_bid',
     'edit',
+    'approve_edit',
+    'reject_edit',
     'delete',
   ]),
   reason: z.string().trim().optional(),
@@ -328,6 +331,69 @@ export async function POST(request: Request) {
             .where(eq(sponsorAds.id, id));
         }
         break;
+
+      case 'approve_edit':
+      case 'reject_edit': {
+        const [adWithEdit] = await db
+          .select({
+            pendingRevision: sponsorAds.pendingRevision,
+            advertiserEmail: sponsorAds.advertiserEmail,
+            title: sponsorAds.title,
+          })
+          .from(sponsorAds)
+          .where(eq(sponsorAds.id, id))
+          .limit(1);
+        if (!adWithEdit?.pendingRevision) {
+          return NextResponse.json(
+            { error: 'This campaign has no pending edit.' },
+            { status: 400 },
+          );
+        }
+        const revision = parseAdRevision(adWithEdit.pendingRevision);
+        const patch =
+          action === 'approve_edit' && revision
+            ? adRevisionToDbPatch(revision.proposed)
+            : {};
+        if (action === 'approve_edit' && Object.keys(patch).length === 0) {
+          await db
+            .update(sponsorAds)
+            .set({ pendingRevision: null })
+            .where(eq(sponsorAds.id, id));
+          return NextResponse.json(
+            { error: 'The pending edit was unreadable and has been cleared.' },
+            { status: 400 },
+          );
+        }
+
+        // Creative fields only (adRevisionToDbPatch whitelists them): status,
+        // placement, bid and impression counters are untouched, so the
+        // campaign's delivery carries on exactly where it was.
+        await db
+          .update(sponsorAds)
+          .set({ ...patch, pendingRevision: null })
+          .where(eq(sponsorAds.id, id));
+
+        const approved = action === 'approve_edit';
+        try {
+          await sendNotificationEmail({
+            to: adWithEdit.advertiserEmail,
+            heading: approved
+              ? 'Your ad edit is live'
+              : 'Your ad edit needs changes',
+            message: approved
+              ? `Your changes to "${patch.title ?? adWithEdit.title}" were approved and are now showing. Delivery and remaining impressions are unchanged.`
+              : reason ||
+                `Your proposed changes to "${adWithEdit.title}" weren't approved. Your ad keeps running with its current copy, and you can submit a new edit from your dashboard.`,
+            actionText: approved ? 'View campaign dashboard' : 'Open dashboard',
+            actionUrl: approved
+              ? `${getAppUrl()}/advertise/campaign/${id}`
+              : `${getAppUrl()}/dashboard`,
+          });
+        } catch (emailErr) {
+          console.error('[admin/ads/action] edit email failed:', emailErr);
+        }
+        break;
+      }
 
       case 'delete': {
         const [adToDelete] = await db

@@ -274,6 +274,13 @@
       "when": 1791316070388,
       "tag": "0058_logo_checked_at",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
+      "when": 1791830867912,
+      "tag": "0059_ad_pending_revision",
+      "breakpoints": true
     }
   ]
 }

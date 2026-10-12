@@ -1,0 +1,1 @@
+ALTER TABLE `sponsor_ads` ADD `pending_revision` text;

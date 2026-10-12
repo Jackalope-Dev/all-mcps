@@ -15,6 +15,8 @@ export type OwnedAd = {
   id: string;
   title: string;
   description: string;
+  ctaText: string;
+  targetUrl: string;
   placement: string;
   status: string;
   bidCpm: number;
@@ -23,6 +25,7 @@ export type OwnedAd = {
   clicksCount: number;
   stripePaymentIntentId: string | null;
   stripeInvoiceUrl: string | null;
+  pendingRevision: string | null;
   createdAt: Date;
 };
 
@@ -210,6 +213,8 @@ async function getOwnedAds(
         id: sponsorAds.id,
         title: sponsorAds.title,
         description: sponsorAds.description,
+        ctaText: sponsorAds.ctaText,
+        targetUrl: sponsorAds.targetUrl,
         placement: sponsorAds.placement,
         status: sponsorAds.status,
         bidCpm: sponsorAds.bidCpm,
@@ -218,6 +223,7 @@ async function getOwnedAds(
         clicksCount: sponsorAds.clicksCount,
         stripePaymentIntentId: sponsorAds.stripePaymentIntentId,
         stripeInvoiceUrl: sponsorAds.stripeInvoiceUrl,
+        pendingRevision: sponsorAds.pendingRevision,
         createdAt: sponsorAds.createdAt,
       })
       .from(sponsorAds)

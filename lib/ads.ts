@@ -42,6 +42,8 @@ export type SponsorAd = {
   createdAt: Date | string;
   approvedAt?: Date | string | null;
   completedAt?: Date | string | null;
+  /** Advertiser-proposed creative edit awaiting approval (JSON, lib/adRevision.ts). */
+  pendingRevision?: string | null;
 };
 
 export type PlacementMeta = {
