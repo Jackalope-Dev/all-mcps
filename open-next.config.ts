@@ -1,6 +1,6 @@
 import { defineCloudflareConfig } from '@opennextjs/cloudflare';
 import r2IncrementalCache from '@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache';
-import memoryQueue from '@opennextjs/cloudflare/overrides/queue/memory-queue';
+import { MemoryQueue } from '@opennextjs/cloudflare/overrides/queue/memory-queue';
 
 // R2-backed ISR cache (binding: NEXT_INC_CACHE_R2_BUCKET, see wrangler.jsonc) so
 // revalidate-based pages (e.g. app/mcp/[id], app/best/[topic], app/clients/[client],
@@ -16,7 +16,12 @@ import memoryQueue from '@opennextjs/cloudflare/overrides/queue/memory-queue';
 // nofollow on links that had earned dofollow, week-old health checks).
 // memoryQueue sends the revalidation HEAD through the WORKER_SELF_REFERENCE
 // service binding (see wrangler.jsonc), de-duped per isolate.
+//
+// Its default 10s timeout aborted slower background re-renders of `/` (logged
+// as "TimeoutError: The operation was aborted due to timeout" against the
+// visitor request that triggered them), leaving the page stale until the next
+// attempt. 25s stays under the 30s waitUntil budget after the response is sent.
 export default defineCloudflareConfig({
   incrementalCache: r2IncrementalCache,
-  queue: memoryQueue,
+  queue: new MemoryQueue({ revalidationTimeoutMs: 25_000 }),
 });
