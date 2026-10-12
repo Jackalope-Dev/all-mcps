@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { servers } from '@/db/schema';
 import { hasAgentScope, resolveAgentAuth } from '@/lib/agentAuth';
 import { claimWebsiteMatchesListing } from '@/lib/claimDomain';
+import { refreshListingPageInBackground } from '@/lib/listingPageRefresh';
 import { getEmailEnv, sendNotificationEmail } from '@/lib/notify';
 import { isGitHubRepoUrl } from '@/lib/repoUrl';
 import { getAppUrl } from '@/lib/stripe';
@@ -256,6 +257,8 @@ export async function POST(req: Request) {
     }
 
     await db.update(servers).set(claimUpdates).where(eq(servers.id, id));
+    // Official status (repo link rel) and possibly the website backlink changed.
+    refreshListingPageInBackground(id);
 
     const methodLabel =
       method === 'github'

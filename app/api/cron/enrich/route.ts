@@ -26,6 +26,10 @@ import {
   resolveInstallFromSignals,
 } from '../../../../lib/listingEnrich';
 import {
+  listingRenderChanged,
+  refreshListingPages,
+} from '../../../../lib/listingPageRefresh';
+import {
   LogoValidationError,
   processLogoUpload,
 } from '../../../../lib/logoImage';
@@ -205,6 +209,10 @@ export async function POST(req: Request) {
       ...generalBatch.filter((s) => !logoIds.has(s.id)),
     ];
 
+    // Listings that lose an earned dofollow website link (website replaced): the
+    // cached /mcp/[id] page is regenerated after the batch.
+    const pagesToRefresh: string[] = [];
+
     const stats = {
       processed: 0,
       cleanedDesc: 0,
@@ -310,6 +318,8 @@ export async function POST(req: Request) {
         updates.isVerifiedActive = isVerifiedActive;
         updates.healthStatus = healthStatus;
         await db.update(servers).set(updates).where(eq(servers.id, server.id));
+        if (listingRenderChanged(server, updates))
+          pagesToRefresh.push(server.id);
         stats.processed++;
         continue;
       }
@@ -590,14 +600,19 @@ export async function POST(req: Request) {
       }
 
       await db.update(servers).set(updates).where(eq(servers.id, server.id));
+      if (listingRenderChanged(server, updates)) pagesToRefresh.push(server.id);
       stats.processed++;
     }
+
+    const pages = await refreshListingPages(pagesToRefresh, env);
 
     return NextResponse.json({
       success: true,
       ...stats,
       batchSize: batch.length,
       githubAuth: Boolean(githubToken),
+      pagesRefreshed: pages.refreshed.length,
+      pageRefreshFailed: pages.failed,
       message: `Enriched ${stats.processed} listings (websites ${stats.websitesSet}, logos ${stats.logosSet}, install ${stats.installSet}, recategorized ${stats.recategorized}, unpublished ${stats.unpublished}).`,
     });
   } catch (error: any) {

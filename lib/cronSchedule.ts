@@ -132,6 +132,11 @@ export const SLOW_JOBS: CronJob[] = [
     secretVar: 'CRON_SECRET',
     shouldRun: (now) => now.getUTCHours() === 3,
   },
+  // Backstop for lib/listingPageRefresh: fetches the served /mcp/[id] page of
+  // every listing that should have a dofollow website link (~30) and
+  // regenerates any whose cached render still says nofollow. Every tick; a
+  // few dozen page loads.
+  { path: '/api/cron/listing-rel-audit', secretVar: 'CRON_SECRET' },
   // Blog content pipeline: corpus sync, topic dedupe, draft → self-review →
   // revise (lib/blogPipeline). Deliberately LAST — it spends up to ~9 min of
   // its own time budget on LLM calls, so everything above runs first. Stops
@@ -178,6 +183,8 @@ export type RoleEnv = {
   WORKER_ROLE?: string;
   JOBS?: Fetcher;
   SITE_SECRETS?: SecretRelayStub;
+  /** jobs Worker only: plain service binding to the site, for ISR page refreshes. */
+  SITE?: Fetcher;
 };
 
 /** Picks the allowlisted job secrets that are set (non-empty strings) on `env`. */

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { servers } from '../db/schema';
 import { auth } from './auth';
 import { claimWebsiteMatchesListing } from './claimDomain';
+import { refreshListingPageInBackground } from './listingPageRefresh';
 import { getEmailEnv, sendNotificationEmail } from './notify';
 import { isGitHubRepoUrl } from './repoUrl';
 import { getAppUrl } from './stripe';
@@ -158,6 +159,9 @@ export async function claimListing(
             : {}),
         })
         .where(eq(servers.id, id));
+      if (domainChanged && server.websiteBacklinkOk) {
+        refreshListingPageInBackground(id);
+      }
 
       return {
         ok: true,
@@ -295,6 +299,8 @@ export async function claimListing(
     }
 
     await db.update(servers).set(claimUpdates).where(eq(servers.id, id));
+    // Official status (repo link rel) and possibly the website backlink changed.
+    refreshListingPageInBackground(id);
 
     const methodLabel =
       method === 'github'

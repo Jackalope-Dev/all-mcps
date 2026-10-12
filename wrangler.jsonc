@@ -108,6 +108,14 @@
           "binding": "SITE_SECRETS",
           "service": "all-mcps",
           "entrypoint": "SecretRelay"
+        },
+        {
+          // The site Worker's fetch handler, so jobs that change what a listing
+          // page renders can regenerate it in the site's ISR cache (see
+          // lib/listingPageRefresh.ts). WORKER_SELF_REFERENCE above is this
+          // Worker, not the one serving pages.
+          "binding": "SITE",
+          "service": "all-mcps"
         }
       ],
       // No schedules of its own: the site schedules and sends each job here

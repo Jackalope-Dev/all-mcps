@@ -23,6 +23,7 @@ import {
   fetchGithubReadme,
   parseGithubUrl,
 } from '../../../../lib/listingEnrich';
+import { refreshListingPageInBackground } from '../../../../lib/listingPageRefresh';
 import { resolveCanonicalMergeTarget } from '../../../../lib/listingRedirect';
 import {
   sendListingStatusEmail,
@@ -82,6 +83,15 @@ const actionSchema = z.object({
   days: z.number().int().min(1).max(365).optional(),
   reason: z.string().trim().max(2000).optional(),
 });
+
+/** Actions whose `id` is a reviews/reports row, not a listing. */
+const NON_LISTING_ACTIONS = new Set<string>([
+  'approve_review_comment',
+  'reject_review_comment',
+  'delete_review',
+  'mark_report_reviewed',
+  'dismiss_report',
+]);
 
 const MESSAGES: Record<string, string> = {
   approve: 'Listing approved.',
@@ -442,6 +452,7 @@ export async function POST(req: Request) {
         .set({ featuredUntil: newFeaturedUntil })
         .where(eq(servers.id, id));
 
+      refreshListingPageInBackground(id);
       return NextResponse.json({
         success: true,
         message: MESSAGES.feature,
@@ -452,6 +463,7 @@ export async function POST(req: Request) {
         .update(servers)
         .set({ featuredUntil: null })
         .where(eq(servers.id, id));
+      refreshListingPageInBackground(id);
       return NextResponse.json({
         success: true,
         message: MESSAGES.unfeature,
@@ -554,6 +566,7 @@ export async function POST(req: Request) {
 
       await db.update(servers).set(updates).where(eq(servers.id, id));
 
+      refreshListingPageInBackground(id);
       return NextResponse.json({
         success: true,
         message: `AI content enriched: "${content.summary.slice(0, 75)}..."`,
@@ -874,6 +887,7 @@ export async function POST(req: Request) {
           claimedAt: nextOfficial ? new Date() : null,
         })
         .where(eq(servers.id, id));
+      refreshListingPageInBackground(id);
       return NextResponse.json({
         success: true,
         message: `Official badge ${nextOfficial ? 'granted' : 'removed'}.`,
@@ -902,6 +916,7 @@ export async function POST(req: Request) {
         .update(servers)
         .set({ websiteBacklinkOk: nextBadge, reciprocalBadgeOk: nextAggregate })
         .where(eq(servers.id, id));
+      refreshListingPageInBackground(id);
       return NextResponse.json({
         success: true,
         message: `Reciprocal badge ${nextBadge ? 'marked active' : 'marked inactive'}.`,
@@ -954,6 +969,7 @@ export async function POST(req: Request) {
         .set({ healthStatus: nextHealth, lastCheckedAt: new Date() })
         .where(eq(servers.id, id));
 
+      refreshListingPageInBackground(id);
       return NextResponse.json({
         success: true,
         message: `Health check done. Status: ${nextHealth} (Repo HTTP ${repoStatus}${websiteStatus !== null ? `, Site HTTP ${websiteStatus}` : ''})`,
@@ -1059,6 +1075,12 @@ export async function POST(req: Request) {
       }
       // Reports are anonymous — nothing to notify.
     }
+
+    // Nearly every action changes what /mcp/[id] renders (status, premium and
+    // official link rels, content). Regenerate its cached page now instead of
+    // waiting for a visitor to trigger ISR. Review/report actions address other
+    // tables' ids, not a listing.
+    if (!NON_LISTING_ACTIONS.has(action)) refreshListingPageInBackground(id);
 
     return NextResponse.json({ success: true, message: MESSAGES[action] });
   } catch (error: any) {

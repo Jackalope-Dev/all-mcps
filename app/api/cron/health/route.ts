@@ -12,6 +12,10 @@ import {
   toCachedInstallFields,
 } from '../../../../lib/installConfig';
 import { isListingTrulyDead } from '../../../../lib/listingEnrich';
+import {
+  listingRenderChanged,
+  refreshListingPages,
+} from '../../../../lib/listingPageRefresh';
 import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
 import { isGitHubRepoUrl } from '../../../../lib/repoUrl';
 import { parseToolsFromReadme } from '../../../../lib/tools/parseToolsFromReadme';
@@ -183,6 +187,10 @@ export async function POST(req: Request) {
     let processed = 0;
     let installHintsUpdated = 0;
     let unpublished = 0;
+    // Listings whose rendered page changed (dofollow flip, unpublished): their
+    // cached /mcp/[id] page is regenerated after the batch rather than waiting
+    // for a visitor to trigger ISR.
+    const pagesToRefresh: string[] = [];
 
     for (const server of batch) {
       const now = new Date();
@@ -597,15 +605,27 @@ export async function POST(req: Request) {
       }
 
       if (shouldUnpublish) unpublished++;
+      if (
+        listingRenderChanged(server, {
+          websiteBacklinkOk,
+          status: shouldUnpublish ? 'removed' : undefined,
+        })
+      ) {
+        pagesToRefresh.push(server.id);
+      }
       processed++;
     }
+
+    const pages = await refreshListingPages(pagesToRefresh, env);
 
     return NextResponse.json({
       success: true,
       processed,
       installHintsUpdated,
       unpublished,
-      message: `Verified ${processed} servers (${installHintsUpdated} install hints, ${unpublished} unpublished).`,
+      pagesRefreshed: pages.refreshed.length,
+      pageRefreshFailed: pages.failed,
+      message: `Verified ${processed} servers (${installHintsUpdated} install hints, ${unpublished} unpublished, ${pages.refreshed.length}/${pagesToRefresh.length} pages refreshed).`,
     });
   } catch (error) {
     console.error('Cron error:', error);
