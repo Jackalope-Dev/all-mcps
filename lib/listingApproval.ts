@@ -17,7 +17,7 @@ import { getAppUrl } from './stripe';
 type Db = DrizzleD1Database<any>;
 type ServerRow = typeof servers.$inferSelect;
 
-export const DEFAULT_REJECTION_FEEDBACK =
+const DEFAULT_REJECTION_FEEDBACK =
   'Your listing was not approved. Common reasons: incomplete description, unsafe URL, spam, or a duplicate of an existing listing. You can submit again with clearer details.';
 
 /** Pending → active, then notify. Null when the row is gone or no longer pending. */
