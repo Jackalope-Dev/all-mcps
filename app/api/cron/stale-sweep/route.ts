@@ -4,6 +4,7 @@ import {
   asc,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   isNull,
@@ -101,6 +102,8 @@ const REPO_CONCURRENCY = 8;
 const REPO_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
 const PENDING_ACT_BATCH = 200;
 const GATE_BATCH = 100;
+/** Active imports this recent still get a Jev triage pass (see phase 4). */
+const RECENT_IMPORT_MS = 14 * 24 * 60 * 60 * 1000;
 const TRIAGE_BATCH = 48;
 const TRIAGE_CONCURRENCY = 8;
 /** Statements per db.batch — each is a single-row update with a handful of params. */
@@ -450,8 +453,12 @@ export async function POST(req: Request) {
     await runChunked(db, assessStatements);
 
     // ── 4. Triage ──────────────────────────────────────────────────────────
-    // Pending listings and flagged active ones without a current Jev verdict.
-    // Paid review priority first, then oldest.
+    // Without a current Jev verdict: pending listings, flagged active ones,
+    // and active listings imported in the last RECENT_IMPORT_MS — imports that
+    // went live without triage (the 2026-10-13 registry batch published 5,593
+    // before imports moved to pending). A reject on one of those hides it via
+    // the 'jev-reject' stale rule; it never removes it.
+    // Paid priority first, then pending, flagged, recent imports; oldest first.
     const triageRows = await db
       .select({
         id: servers.id,
@@ -489,12 +496,18 @@ export async function POST(req: Request) {
               eq(servers.status, 'active'),
               isNotNull(servers.staleFlaggedAt),
             ),
+            and(
+              eq(servers.status, 'active'),
+              isNull(servers.submitterEmail),
+              gt(servers.createdAt, new Date(now.getTime() - RECENT_IMPORT_MS)),
+            ),
           ),
         ),
       )
       .orderBy(
         desc(servers.reviewPriority),
         sql`CASE WHEN ${servers.submitterEmail} IS NULL THEN 1 ELSE 0 END`,
+        sql`CASE WHEN ${servers.status} = 'pending' THEN 0 WHEN ${servers.staleFlaggedAt} IS NOT NULL THEN 1 ELSE 2 END`,
         asc(servers.createdAt),
       )
       .limit(TRIAGE_BATCH);
