@@ -41,7 +41,7 @@
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
     "@cf-wasm/photon": "^0.4.0",
-    "@lopebase/adapter": "^0.2.0",
+    "@lopebase/adapter": "^0.4.1",
     "@marsidev/react-turnstile": "^1.6.1",
     "@react-email/components": "^1.0.12",
     "drizzle-orm": "^0.45.3",
@@ -91,7 +91,7 @@
     "lightningcss-win32-x64-msvc": "^1.33.0"
   },
   "comments": {
-    "overrides": "Transitive security fixes with no direct dependency to bump. Each is scoped to the major line that is actually vulnerable \u2014 brace-expansion 1.x/2.x are unaffected (the advisory starts at 4.0.0) and forcing them to 5.x would change an API they rely on. Drop an entry once the parent package ships a fix that satisfies it on its own."
+    "overrides": "Transitive security fixes with no direct dependency to bump. Each is scoped to the major line that is actually vulnerable — brace-expansion 1.x/2.x are unaffected (the advisory starts at 4.0.0) and forcing them to 5.x would change an API they rely on. Drop an entry once the parent package ships a fix that satisfies it on its own."
   },
   "overrides": {
     "brace-expansion@>=4.0.0": "^5.0.9",

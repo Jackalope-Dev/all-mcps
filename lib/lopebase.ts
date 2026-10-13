@@ -1,8 +1,10 @@
 import {
   type AdminAdapter,
+  cachedCheck,
   createAdminAdapter,
   memoryAuditStore,
   type Page,
+  type ServiceCheck,
   signedAuth,
 } from '@lopebase/adapter';
 import {
@@ -50,6 +52,7 @@ const PREMIUM_MONTHLY_USD = PAID_PRODUCTS.premium_monthly.unitAmount / 100;
 export function createLopebaseAdapter(opts: {
   secrets: (string | undefined)[];
   store: LopebaseStore;
+  services?: ServiceCheck[];
 }): AdminAdapter {
   const { store } = opts;
   return createAdminAdapter({
@@ -60,6 +63,7 @@ export function createLopebaseAdapter(opts: {
       capabilities: ['users.read', 'system.read'],
     }),
     audit: memoryAuditStore(), // read-only: nothing is written
+    services: opts.services,
     async overview() {
       return { attentionItems: [], stats: await store.stats() };
     },
@@ -116,6 +120,88 @@ export function createLopebaseAdapter(opts: {
       },
     ],
   });
+}
+
+/** Bindings and secrets the service checks read, resolved per health poll. */
+export type ServiceDeps = {
+  db: D1Database;
+  isrCache?: R2Bucket;
+  logos: R2Bucket;
+  vectors: VectorizeIndex;
+  jobs?: Fetcher;
+  resendApiKey?: string;
+};
+
+/**
+ * What the app cannot work without, for GET /api/lopebase/health. Each check
+ * makes the cheapest call with the app's own bindings/credentials. Build this
+ * once at module scope so `cachedCheck` survives across requests.
+ */
+export function lopebaseServices(
+  deps: () => Promise<ServiceDeps>,
+): ServiceCheck[] {
+  return [
+    {
+      id: 'db',
+      label: 'D1 database',
+      check: async () => {
+        await (await deps()).db.prepare('select 1').first();
+      },
+    },
+    {
+      id: 'isr-cache',
+      label: 'ISR cache (R2)',
+      check: async () => {
+        const { isrCache } = await deps();
+        if (!isrCache) return false;
+        await isrCache.head('lopebase-health');
+      },
+    },
+    {
+      id: 'logos',
+      label: 'Logos (R2)',
+      critical: false,
+      check: async () => {
+        await (await deps()).logos.head('lopebase-health');
+      },
+    },
+    {
+      id: 'vectorize',
+      label: 'Search index (Vectorize)',
+      critical: false,
+      check: async () => {
+        await (await deps()).vectors.describe();
+      },
+    },
+    {
+      // The jobs Worker has no public routes; a 404 from it proves the
+      // isolate is up and the binding is wired.
+      id: 'jobs',
+      label: 'Jobs worker',
+      critical: false,
+      check: async () => {
+        const { jobs } = await deps();
+        if (!jobs) return false;
+        const res = await jobs.fetch('https://jobs.internal/lopebase-health');
+        await res.body?.cancel();
+        return res.status < 500;
+      },
+    },
+    cachedCheck({
+      id: 'resend',
+      label: 'Email (Resend)',
+      critical: false,
+      check: async () => {
+        const { resendApiKey } = await deps();
+        if (!resendApiKey) return false;
+        const res = await fetch('https://api.resend.com/domains', {
+          headers: { authorization: `Bearer ${resendApiKey}` },
+        });
+        await res.body?.cancel();
+        return res.ok;
+      },
+    }),
+  ];
 }
 
 function clampLimit(limit: number | undefined): number {

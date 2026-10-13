@@ -8,7 +8,7 @@
         "@auth/core": "^0.41.3",
         "@auth/drizzle-adapter": "^1.11.3",
         "@cf-wasm/photon": "^0.4.0",
-        "@lopebase/adapter": "^0.2.0",
+        "@lopebase/adapter": "^0.4.1",
         "@marsidev/react-turnstile": "^1.6.1",
         "@react-email/components": "^1.0.12",
         "drizzle-orm": "^0.45.3",
@@ -504,7 +504,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@lopebase/adapter": ["@lopebase/adapter@0.2.0", "", {}, "sha512-ibtKamF41PJOnYGSuYr/PrWTF083/2R+j56ssXHlBk4B2zt1Pyhs3IuU4CtrZVmen2GPrs0ZznAXOFNGhpQf6g=="],
+    "@lopebase/adapter": ["@lopebase/adapter@0.4.1", "", {}, "sha512-Hsy64Ou7IRiRazjLR1hCFsCoSwOOmzoIfTS73cSE1Vpk7NxhxSB62YOFgWHcUxZbLtovJeiem7VnBrKgqpIhJw=="],
 
     "@marsidev/react-turnstile": ["@marsidev/react-turnstile@1.6.1", "", { "peerDependencies": { "react": "^17.0.2 || ^18.0.0 || ^19.0", "react-dom": "^17.0.2 || ^18.0.0 || ^19.0" } }, "sha512-ojI9NLYv821IRKi7KraTkxTto6KC/m58hNNyKxvYxm/cQBu5MI5eMkaiJs2JSQBFiXE3LPQI3seJVjv/2lgALA=="],
 
