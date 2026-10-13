@@ -5,6 +5,9 @@
 mcp-server/node_modules
 mcp-server/dist
 
+# local git worktrees made by parallel agent sessions
+/.worktrees/
+
 # testing
 /coverage
 
