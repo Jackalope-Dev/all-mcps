@@ -130,6 +130,9 @@ export function decideIngestPromote(e: GateEvidence): GateResult | null {
 
   const missing: string[] = [];
   if (e.repoGoneConfirmed) missing.push('source repo gone');
+  // Possible duplicate Jev couldn't rule out at import, or a repo unrelated
+  // to the name (scripts/ingest-sources.mjs).
+  if (e.reviewFlagged) missing.push('flagged at import (possible duplicate)');
   if (e.triageVerdict !== 'approve')
     missing.push(`Jev said ${e.triageVerdict}`);
   if ((e.triageConfidence ?? 0) < INGEST_BAR.confidence)

@@ -13,18 +13,6 @@ function stripHtml(input) {
   return s;
 }
 
-function isGithubUrl(u) {
-  if (!u) return false;
-  try {
-    const p = new URL(u.startsWith('//') ? `https:${u}` : u);
-    return p.hostname === 'github.com' || p.hostname.endsWith('.github.com');
-  } catch {
-    return /^https?:\/\/(?:[a-zA-Z0-9-]+\.)*github\.com(?::\d+)?(?:\/|$)/i.test(
-      u,
-    );
-  }
-}
-
 /**
  * Pulls newly-added listings from other public MCP server lists and stages them
  * for review.
@@ -41,9 +29,11 @@ function isGithubUrl(u) {
  * to run that wrangler command automatically right after writing the file —
  * requires CLOUDFLARE_API_TOKEN in the environment for non-interactive auth.
  *
- * Official-registry candidates land with status='active' (no admin review —
- * they're already vetted by the registry's own moderation policy). The two
- * README sources still land 'pending', same as a normal /api/submit.
+ * Every candidate lands 'pending'. A Jev "same project" duplicate is skipped;
+ * an unsure duplicate or a repo unrelated to the name is imported with
+ * review_flagged set. From there the stale sweep checks the source repo, Jev
+ * triages it, and the imported-listing gate (lib/autoDecision.ts) publishes
+ * what clears its bar — flagged rows wait for an admin.
  */
 
 const AUTO_APPLY = process.argv.includes('--apply');
@@ -52,7 +42,7 @@ const AUTO_APPLY = process.argv.includes('--apply');
 // a source can be disabled from CI (the workflow file) without a code change, e.g.
 // while a newly-added source's first few runs are still being reviewed manually.
 // Source names match the `source` tag each fetcher stamps on its entries below
-// ('official-registry', a SOURCES[].name, or 'pulsemcp').
+// ('official-registry' or a SOURCES[].name).
 function argListFlag(name) {
   const prefix = `--${name}=`;
   const arg = process.argv.find((a) => a.startsWith(prefix));
@@ -87,20 +77,6 @@ const OFFICIAL_REGISTRY_BASE = 'https://registry.modelcontextprotocol.io';
 // was hitting this cap when it was still 300 (30,000) — raised with headroom so the
 // weekly cron doesn't silently start missing the tail again as it keeps growing.
 const OFFICIAL_REGISTRY_MAX_PAGES = 2000; // 2000 * 100 = 200,000 servers
-
-// PulseMCP (https://www.pulsemcp.com) — third-party MCP directory with a public,
-// paginated JSON API (confirmed live 2026-08-26: GET .../v0beta/servers returns
-// {servers, total_count, next}; ~22k entries vs. our ~11k rows). Unlike the official
-// registry this has no moderation policy we've vetted, so candidates are NOT
-// auto-approved, and — because the volume dwarfs the two README sources — get their
-// own quality floor and per-run cap so the admin queue stays reviewable instead of
-// getting flooded in one run.
-const PULSEMCP_API_BASE = 'https://api.pulsemcp.com/v0beta/servers';
-const PULSEMCP_PAGE_SIZE = 100;
-const PULSEMCP_MAX_PAGES = 400; // 400 * 100 = 40,000 servers of headroom
-const PULSEMCP_MIN_SIGNAL = { stars: 1, downloads: 50 };
-const PULSEMCP_MAX_NEW_PER_RUN = 150;
-const PULSEMCP_HOST_BLOCKLIST = ['pulsemcp.com', 'www.pulsemcp.com'];
 
 const SOURCES = [
   {
@@ -680,208 +656,13 @@ async function fetchOfficialRegistryEntries() {
   return entries;
 }
 
-// --- PulseMCP (JSON API, not markdown) --------------------------------------
-
-function isPulseMcpOwnUrl(url) {
-  try {
-    return PULSEMCP_HOST_BLOCKLIST.includes(
-      new URL(url).hostname.toLowerCase(),
-    );
-  } catch {
-    return false;
-  }
-}
-
-/**
- * PulseMCP's ~22k entries dwarf our ~11k rows — an unfiltered first run would dump
- * thousands of zero-signal candidates (empty forks, one-off scripts) into the admin
- * queue at once. This is a soft floor, not a strict bar: any one of a handful of
- * "this looks like a real, used project" signals is enough to pass.
- */
-function pulseMcpPassesQualityFloor(entry) {
-  if ((entry.github_stars ?? 0) >= PULSEMCP_MIN_SIGNAL.stars) return true;
-  if ((entry.package_download_count ?? 0) >= PULSEMCP_MIN_SIGNAL.downloads)
-    return true;
-  if (Array.isArray(entry.remotes) && entry.remotes.length > 0) return true;
-  if (entry.external_url && !isPulseMcpOwnUrl(entry.external_url)) return true;
-  return false;
-}
-
-/**
- * PulseMCP gives structured package/remote fields directly — resolve install config
- * from those now instead of waiting on the enrich cron's README-parse heuristic.
- * Unrecognized package_registry values (anything besides npm/PyPI) are left unset;
- * the enrich cron already handles that case for every other source today.
- */
-function pulseMcpInstallFields(entry) {
-  const pkg = (entry.package_name || '').trim();
-  const registry = (entry.package_registry || '').toLowerCase();
-  const remote = Array.isArray(entry.remotes) ? entry.remotes[0] : null;
-  const out = {};
-
-  if (registry === 'npm' && pkg) {
-    out.installKind = 'stdio';
-    out.installCommand = 'npx';
-    out.installArgs = ['-y', pkg];
-    out.installPackage = pkg;
-    out.installConfidence = 'high';
-    if (typeof entry.package_download_count === 'number')
-      out.npmDownloads = entry.package_download_count;
-  } else if (registry === 'pypi' && pkg) {
-    out.installKind = 'stdio';
-    out.installCommand = 'uvx';
-    out.installArgs = [pkg];
-    out.installPackage = pkg;
-    out.installConfidence = 'high';
-  } else if (remote?.url_direct) {
-    out.installKind = 'remote';
-    out.installPackage = remote.url_direct;
-    out.installConfidence = 'high';
-  }
-
-  // Secondary connection method alongside whichever primary install branch fired
-  // above (see db/schema.ts's remoteEndpointUrl comment) — set whenever a remote
-  // exists, independent of package_registry.
-  if (remote?.url_direct) out.remoteEndpointUrl = remote.url_direct;
-
-  return out;
-}
-
-// Confirmed live 2026-08-26: repeated identical requests to this API alternate
-// between 200 and 410 with no discernible pattern (not a page-size or offset
-// limit — verified by re-requesting the exact same URL and getting different
-// results). Treated as a flaky third-party dependency: retry each page a few
-// times before giving up on it.
-const PULSEMCP_FETCH_RETRIES = 3;
-const PULSEMCP_RETRY_DELAY_MS = 1000;
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchPulseMcpPage(url) {
-  let lastErr;
-  for (let attempt = 1; attempt <= PULSEMCP_FETCH_RETRIES; attempt++) {
-    try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'AllMCPs-Ingest' },
-      });
-      if (res.ok) return await res.json();
-      lastErr = new Error(`HTTP ${res.status}`);
-    } catch (err) {
-      lastErr = err;
-    }
-    if (attempt < PULSEMCP_FETCH_RETRIES)
-      await sleep(PULSEMCP_RETRY_DELAY_MS * attempt);
-  }
-  throw lastErr;
-}
-
-async function fetchPulseMcpEntries() {
-  const entries = [];
-  let url = `${PULSEMCP_API_BASE}?count_per_page=${PULSEMCP_PAGE_SIZE}&offset=0`;
-  let page = 0;
-  let skippedNoUrl = 0;
-  let skippedLowSignal = 0;
-
-  while (url && page < PULSEMCP_MAX_PAGES) {
-    let body;
-    try {
-      body = await fetchPulseMcpPage(url);
-    } catch (err) {
-      // A flaky page shouldn't sacrifice everything fetched so far, or (more
-      // importantly) take down the official-registry/README sources — the
-      // caller in main() already isolates this fetch in its own try/catch,
-      // but bail out of pagination gracefully here too so a mid-run failure
-      // still yields whatever was already collected instead of nothing.
-      console.warn(
-        `  pulsemcp: giving up on pagination after a page failed (${err.message}); keeping ${entries.length} entries collected so far.`,
-      );
-      break;
-    }
-
-    for (const entry of body.servers ?? []) {
-      if (!pulseMcpPassesQualityFloor(entry)) {
-        skippedLowSignal++;
-        continue;
-      }
-
-      const remote = Array.isArray(entry.remotes) ? entry.remotes[0] : null;
-      // Never the pulsemcp.com detail-page URL itself — that's their directory
-      // page, not the project's own repo/site.
-      const primaryUrl =
-        entry.source_code_url ||
-        remote?.url_direct ||
-        (entry.external_url && !isPulseMcpOwnUrl(entry.external_url)
-          ? entry.external_url
-          : null);
-      if (!primaryUrl) {
-        skippedNoUrl++;
-        continue;
-      }
-
-      const name = entry.name;
-      const desc =
-        entry.short_description ||
-        entry.EXPERIMENTAL_ai_generated_description ||
-        '';
-      const websiteUrl =
-        entry.external_url &&
-        entry.external_url !== primaryUrl &&
-        !isPulseMcpOwnUrl(entry.external_url) &&
-        !isGithubUrl(entry.external_url)
-          ? entry.external_url
-          : undefined;
-
-      entries.push({
-        name,
-        url: primaryUrl,
-        description: desc,
-        category: inferCategoryFromSignals(name, desc, primaryUrl),
-        websiteUrl,
-        source: 'pulsemcp',
-        githubStars: isGithubUrl(primaryUrl)
-          ? (entry.github_stars ?? undefined)
-          : undefined,
-        // Sort keys for the per-run cap below — kept separate from githubStars
-        // since githubStars is only set for GitHub-primary listings, but the cap
-        // should still rank non-GitHub (remote-only) candidates sensibly.
-        sortStars: entry.github_stars ?? 0,
-        sortDownloads: entry.package_download_count ?? 0,
-        ...pulseMcpInstallFields(entry),
-      });
-    }
-
-    url = body.next || null;
-    page++;
-  }
-
-  if (page >= PULSEMCP_MAX_PAGES && url) {
-    console.warn(
-      `  pulsemcp: hit the ${PULSEMCP_MAX_PAGES}-page safety cap with more pages remaining.`,
-    );
-  }
-  if (skippedNoUrl)
-    console.log(
-      `  pulsemcp: skipped ${skippedNoUrl} entries with no usable URL.`,
-    );
-  if (skippedLowSignal)
-    console.log(
-      `  pulsemcp: skipped ${skippedLowSignal} entries below the quality floor.`,
-    );
-
-  return entries;
-}
-
 // --- liveness pre-check for official-registry candidates -------------------
 // The registry's own moderation doesn't verify submitted repo URLs are still
 // live (confirmed in practice: the first live import included several
 // already-404 entries — see agentbuilders/fulcrum in the 2026-08-10 batch).
-// Since official-registry candidates otherwise skip admin review and publish
-// straight to 'active', give each new one a single lightweight reachability
-// check first — a failure demotes it to 'pending' (the normal review queue)
-// instead of publishing a dead link live. Bounded concurrency so a batch of
-// new candidates doesn't fire hundreds of requests at once.
+// Give each new one a single lightweight reachability check first — a
+// confirmed-dead URL is dropped instead of imported. Bounded concurrency so a
+// batch of new candidates doesn't fire hundreds of requests at once.
 const LIVENESS_TIMEOUT_MS = 8000;
 // Confirmed 2026-09-07: at concurrency 10 with no pacing, blasting ~13.5k HEAD
 // requests at github.com from a single CI runner IP in ~10 minutes trips
@@ -942,11 +723,9 @@ async function checkLive(url) {
   return false;
 }
 
-// official-registry candidates otherwise auto-publish as 'active' (a failed check
-// demotes them to 'pending'); pulsemcp candidates always land 'pending' regardless,
-// but a failed check there means "confirmed dead" — see main()'s use of this flag,
-// which drops those entirely rather than queuing a dead link for admin review.
-const LIVE_CHECK_SOURCES = new Set(['official-registry', 'pulsemcp']);
+// A failed check means "confirmed dead" (404/410/451 — ambiguous answers pass);
+// main() drops those entirely rather than importing a dead link.
+const LIVE_CHECK_SOURCES = new Set(['official-registry']);
 
 /** Same rubric as lib/listingReview.alignListings — null when Jev is unset or errors. */
 async function jevAlignListings(a, b) {
@@ -1002,7 +781,7 @@ async function checkLivenessOfNewCandidates(candidates) {
   const toCheck = candidates.filter((c) => LIVE_CHECK_SOURCES.has(c.source));
   if (toCheck.length === 0) return;
   console.log(
-    `Live-checking ${toCheck.length} new official-registry/pulsemcp candidates...`,
+    `Live-checking ${toCheck.length} new official-registry candidates...`,
   );
 
   let deadCount = 0;
@@ -1020,9 +799,7 @@ async function checkLivenessOfNewCandidates(candidates) {
     }
   }
   if (deadCount > 0) {
-    console.log(
-      `  ${deadCount} of ${toCheck.length} appear dead on arrival — landing as 'pending' for review instead of 'active'.`,
-    );
+    console.log(`  ${deadCount} of ${toCheck.length} appear dead on arrival.`);
   }
 }
 
@@ -1145,24 +922,6 @@ async function main() {
     const entries = parseServerList(md, source);
     console.log(`  ${source.name}: ${entries.length} entries parsed`);
     for (const e of entries) allEntries.push(e);
-  }
-
-  if (sourceEnabled('pulsemcp')) {
-    try {
-      const pulsemcpEntries = await fetchPulseMcpEntries();
-      console.log(
-        `  pulsemcp: ${pulsemcpEntries.length} entries above the quality floor`,
-      );
-      for (const e of pulsemcpEntries) allEntries.push(e);
-    } catch (err) {
-      // Isolated deliberately: pulsemcp's API has observed intermittent failures
-      // (see fetchPulseMcpPage) and is not a source we're vetting the reliability
-      // of the way the official registry has been — a bad run there should never
-      // sacrifice the official-registry/README ingestion that already succeeded.
-      console.warn(
-        `  pulsemcp: skipping this run entirely — fetch failed: ${err.message}`,
-      );
-    }
   }
 
   const byUrlKey = new Map();
@@ -1329,40 +1088,17 @@ async function main() {
 
   await checkLivenessOfNewCandidates(newCandidates);
 
-  const deadPulsemcp = newCandidates.filter(
-    (c) => c.source === 'pulsemcp' && c.liveCheckFailed,
-  ).length;
-  if (deadPulsemcp > 0) {
+  const dead = newCandidates.filter((c) => c.liveCheckFailed).length;
+  if (dead > 0) {
     console.log(
-      `  pulsemcp: dropping ${deadPulsemcp} dead-on-arrival candidates instead of queuing them for review.`,
+      `  dropping ${dead} dead-on-arrival candidate(s) (source URL 404/410) instead of importing them.`,
     );
   }
-  let finalCandidates = newCandidates.filter(
-    (c) => !(c.source === 'pulsemcp' && c.liveCheckFailed),
-  );
-
-  const pulsemcpCandidates = finalCandidates
-    .filter((c) => c.source === 'pulsemcp')
-    .sort(
-      (a, b) => b.sortStars - a.sortStars || b.sortDownloads - a.sortDownloads,
-    );
-  if (pulsemcpCandidates.length > PULSEMCP_MAX_NEW_PER_RUN) {
-    const heldBack = pulsemcpCandidates.length - PULSEMCP_MAX_NEW_PER_RUN;
-    console.log(
-      `  pulsemcp: capping this run to the top ${PULSEMCP_MAX_NEW_PER_RUN} by stars/downloads (${heldBack} held back for a future run).`,
-    );
-    const keepUrlKeys = new Set(
-      pulsemcpCandidates
-        .slice(0, PULSEMCP_MAX_NEW_PER_RUN)
-        .map((c) => c.urlKey),
-    );
-    finalCandidates = finalCandidates.filter(
-      (c) => c.source !== 'pulsemcp' || keepUrlKeys.has(c.urlKey),
-    );
-  }
+  const finalCandidates = newCandidates.filter((c) => !c.liveCheckFailed);
 
   let dupWarningCount = 0;
   let repoWarningCount = 0;
+  let skippedDuplicates = 0;
   const rows = [];
   for (const c of finalCandidates) {
     const base = slugify(c.name);
@@ -1378,6 +1114,7 @@ async function main() {
     // two *new* sources introducing what looks like the same project too.
     const dup = findPossibleDuplicate(c);
     let dupWarning = null;
+    let jevSameProject = false;
     if (dup) {
       const alignment = await jevAlignListings(
         { name: c.name, description: c.description, url: c.url },
@@ -1387,6 +1124,9 @@ async function main() {
           url: dup.url,
         },
       );
+      // Jev confident it's the same project: don't import it at all. A
+      // duplicate listing only splits traffic and reviews between two pages.
+      if (alignment === 'same') jevSameProject = true;
       if (alignment !== 'different') {
         const prefix =
           alignment === 'same'
@@ -1397,6 +1137,12 @@ async function main() {
         dupWarning = `${prefix} '${dup.id}' (${dup.reason}): ${dup.url}`;
         dupWarningCount++;
       }
+    }
+
+    if (jevSameProject) {
+      skippedDuplicates++;
+      usedIds.delete(id);
+      continue;
     }
 
     // Separate from the duplicate check: this catches a candidate pointing at
@@ -1418,17 +1164,18 @@ async function main() {
       isOfficial: c.url
         .toLowerCase()
         .includes('github.com/modelcontextprotocol/servers'),
-      // Official-registry candidates are already vetted by the registry's own
-      // moderation policy — skip our admin queue and publish them directly,
-      // unless the liveness pre-check above found the URL already dead.
-      // Everything else keeps going through review, same as /api/submit.
-      status:
-        c.source === 'official-registry' && !c.liveCheckFailed
-          ? 'active'
-          : 'pending',
-      // Structured signals pulsemcp gives us directly — pre-populated now instead
-      // of waiting on the health/enrich crons' README-parse heuristics. Every
-      // other source simply leaves these undefined, which serializes to NULL below.
+      // Everything lands pending. The stale sweep then checks the source repo,
+      // Jev triages it, and the imported-listing gate (lib/autoDecision.ts)
+      // publishes the ones that clear its bar within the hour — the registry's
+      // own moderation turned out not to mean "has a working source" (most
+      // sampled entries 404'd), so it no longer skips that review.
+      status: 'pending',
+      // Possible duplicate Jev couldn't rule out, or a repo unrelated to the
+      // name: the gate leaves flagged rows for an admin.
+      reviewFlagged: Boolean(dupWarning || repoMismatch),
+      // Structured signals a source can supply directly instead of waiting on
+      // the health/enrich crons. Sources that don't leave these undefined,
+      // which serializes to NULL below.
       githubStars: c.githubStars,
       npmDownloads: c.npmDownloads,
       installKind: c.installKind,
@@ -1471,6 +1218,11 @@ async function main() {
       });
     }
   }
+  if (skippedDuplicates > 0) {
+    console.log(
+      `  ${skippedDuplicates} candidate(s) skipped: Jev judged them the same project as an existing listing.`,
+    );
+  }
   if (dupWarningCount > 0) {
     console.log(
       `  ⚠ ${dupWarningCount} candidate(s) flagged as possible duplicates — review before applying (see comments in the generated SQL).`,
@@ -1498,11 +1250,11 @@ async function main() {
       : null;
     if (r.dupWarning) sql += `-- ⚠ ${r.dupWarning}\n`;
     sql +=
-      `INSERT INTO servers (id, name, url, website_url, description, category, is_official, status, ` +
+      `INSERT INTO servers (id, name, url, website_url, description, category, is_official, status, review_flagged, ` +
       `github_stars, npm_downloads, install_kind, install_command, install_args, install_package, ` +
       `install_confidence, remote_endpoint_url, created_at) ` +
       `VALUES ('${esc(r.id)}', '${esc(r.name)}', '${esc(r.url)}', ${strOrNull(r.websiteUrl)}, '${esc(r.description)}', ` +
-      `'${esc(r.category)}', ${r.isOfficial ? 1 : 0}, '${esc(r.status)}', ` +
+      `'${esc(r.category)}', ${r.isOfficial ? 1 : 0}, '${esc(r.status)}', ${r.reviewFlagged ? 1 : 0}, ` +
       `${numOrNull(r.githubStars)}, ${numOrNull(r.npmDownloads)}, ${strOrNull(r.installKind)}, ` +
       `${strOrNull(r.installCommand)}, ${strOrNull(installArgsJson)}, ${strOrNull(r.installPackage)}, ` +
       `${strOrNull(r.installConfidence)}, ${strOrNull(r.remoteEndpointUrl)}, strftime('%s', 'now')) ` +
@@ -1513,13 +1265,13 @@ async function main() {
   fs.writeFileSync(sqlPath, sql);
 
   const relPath = path.relative(process.cwd(), sqlPath);
-  const activeCount = rows.filter((r) => r.status === 'active').length;
+  const flaggedCount = rows.filter((r) => r.reviewFlagged).length;
   const bySource = finalCandidates.reduce((acc, c) => {
     acc[c.source] = (acc[c.source] || 0) + 1;
     return acc;
   }, {});
   console.log(
-    `\nWrote ${rows.length} new listings to ${relPath} (${activeCount} auto-active from the official registry, ${rows.length - activeCount} pending review).`,
+    `\nWrote ${rows.length} new pending listings to ${relPath} (${flaggedCount} flagged for an admin: possible duplicate or mismatched repo).`,
   );
   console.log(
     `  By source: ${Object.entries(bySource)

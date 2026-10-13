@@ -1,8 +1,8 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, eq, isNull, lt } from 'drizzle-orm';
+import { and, eq, isNull, lt, ne, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
-import { servers } from '../../../../db/schema';
+import { listingSignals, servers } from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { notifyListingIndexed } from '../../../../lib/indexnow';
 import { isPackageInstallable } from '../../../../lib/listingEnrich';
@@ -24,8 +24,8 @@ import { isSafeFetchTarget } from '../../../../lib/urlSafety';
  * other path that creates a `pending` row.
  *
  * Ingested candidates already passed a quality floor + duplicate-flag review
- * at ingest time, but sources we haven't personally vetted (pulsemcp,
- * awesome-lists) get one more independent bar before going public: they have
+ * at ingest time, but sources we haven't personally vetted (official
+ * registry, awesome-lists) get one more independent bar before going public: they have
  * to still be *alive* after sitting untouched for PROMOTION_DWELL_MS, checked
  * fresh here rather than trusting the one-time ingest-time check. A
  * candidate that fails the fresh check isn't retried forever — once it's
@@ -113,17 +113,29 @@ export async function POST(req: Request) {
     const db = drizzle(env?.DB as any);
 
     const dwellCutoff = new Date(Date.now() - PROMOTION_DWELL_MS);
-    const candidates = await db
-      .select()
-      .from(servers)
-      .where(
-        and(
-          eq(servers.status, 'pending'),
-          isNull(servers.submitterEmail),
-          lt(servers.createdAt, dwellCutoff),
-        ),
-      )
-      .limit(BATCH_SIZE);
+    const candidates = (
+      await db
+        .select()
+        .from(servers)
+        .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
+        .where(
+          and(
+            eq(servers.status, 'pending'),
+            isNull(servers.submitterEmail),
+            lt(servers.createdAt, dwellCutoff),
+            // Flagged at ingest (possible duplicate, mismatched repo) or held
+            // by Jev's triage: those wait for an admin. This fallback path
+            // must not publish what the imported-listing gate deliberately
+            // left alone.
+            eq(servers.reviewFlagged, false),
+            or(
+              isNull(listingSignals.triageVerdict),
+              ne(listingSignals.triageVerdict, 'reject'),
+            ),
+          ),
+        )
+        .limit(BATCH_SIZE)
+    ).map((row) => row.servers);
 
     let promoted = 0;
     let removedCount = 0;

@@ -96,13 +96,13 @@ const ASSESS_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
 /** After an unanswered or unusable Jev triage, wait this long before asking again. */
 const TRIAGE_RETRY_MS = 24 * 60 * 60 * 1000;
 const ASSESS_BATCH = 400;
-const REPO_BATCH = 60;
+const REPO_BATCH = 120;
 const REPO_CONCURRENCY = 8;
 const REPO_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
 const PENDING_ACT_BATCH = 200;
-const GATE_BATCH = 50;
-const TRIAGE_BATCH = 24;
-const TRIAGE_CONCURRENCY = 6;
+const GATE_BATCH = 100;
+const TRIAGE_BATCH = 48;
+const TRIAGE_CONCURRENCY = 8;
 /** Statements per db.batch — each is a single-row update with a handful of params. */
 const WRITE_CHUNK = 50;
 

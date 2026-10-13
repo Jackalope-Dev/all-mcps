@@ -1,15 +1,10 @@
 name: 🔄 Registry Sync (weekly)
 
-# Pulls new listings from the official MCP Registry (auto-approved, status='active')
-# and from the community README sources (status='pending', existing admin queue) —
-# see scripts/ingest-sources.mjs.
-#
-# pulsemcp was manually validated
-# across several `--only=pulsemcp` dry runs on 2026-08-26 (quality floor, dedup,
-# duplicate-flag corroboration, and retry/reliability handling against its flaky
-# API all confirmed working) and is now included in the unattended weekly run.
-# It always lands 'pending' regardless — see /api/cron/auto-promote for how
-# pending listings go live without further human involvement.
+# Pulls new listings from the official MCP Registry and the community README
+# sources — see scripts/ingest-sources.mjs. Everything lands 'pending'; the
+# stale sweep, Jev triage and the imported-listing gate (lib/autoDecision.ts)
+# publish what clears the bar. PulseMCP was dropped on 2026-10-13: its free
+# v0beta API was sunset and v0.1 requires a paid key.
 #
 # Requires a CLOUDFLARE_API_TOKEN repo secret scoped to D1 read/write on the
 # all-mcps database (Account Settings > API Tokens > Create Token > "Edit

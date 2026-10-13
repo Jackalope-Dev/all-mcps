@@ -90,6 +90,12 @@ describe('decideIngestPromote', () => {
     ).toBe('hold');
   });
 
+  it('holds anything flagged at import as a possible duplicate', () => {
+    const r = decideIngestPromote({ ...strong, reviewFlagged: true });
+    expect(r?.decision).toBe('hold');
+    expect(r?.reasons.join(' ')).toMatch(/duplicate/);
+  });
+
   it('wants proof beyond stars for a private-repo listing', () => {
     const site = { ...strong, repoStatus: 'site_only' as const, stars: null };
     expect(decideIngestPromote(site)?.decision).toBe('hold');
