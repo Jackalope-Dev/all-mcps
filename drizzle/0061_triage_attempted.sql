@@ -1,0 +1,1 @@
+ALTER TABLE `listing_signals` ADD `triage_attempted_at` integer;

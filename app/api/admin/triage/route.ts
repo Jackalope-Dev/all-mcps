@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { listingSignals, servers, stdioVerifications } from '@/db/schema';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
+import { getGithubToken } from '@/lib/githubAuth';
 import { reviewColumns, triageListing } from '@/lib/listingReview';
+import { checkRepo, type RepoStatus } from '@/lib/repoCheck';
 import { upsertSignals } from '@/lib/signalStore';
 import { parseStaleReasons } from '@/lib/staleness';
 import { computeTrustTier } from '@/lib/trustTier';
@@ -37,7 +39,7 @@ async function getDb() {
   const ctx = await getCloudflareContext();
   const env = ctx.env as any;
   if (!env?.DB) throw new Error('Database binding not found');
-  return drizzle(env.DB as any);
+  return { db: drizzle(env.DB as any), env };
 }
 
 export async function GET(req: Request) {
@@ -56,7 +58,7 @@ export async function GET(req: Request) {
       : 'all';
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
 
-    const db = await getDb();
+    const { db } = await getDb();
     const queueWhere =
       queue === 'pending'
         ? eq(servers.status, 'pending')
@@ -87,6 +89,9 @@ export async function GET(req: Request) {
         npmDownloads: servers.npmDownloads,
         lastCommitAt: servers.lastCommitAt,
         repoForkOf: listingSignals.repoForkOf,
+        repoStatus: listingSignals.repoStatus,
+        repoGoneCount: listingSignals.repoGoneCount,
+        repoCheckedAt: listingSignals.repoCheckedAt,
         healthStatus: servers.healthStatus,
         mcpProbability: listingSignals.mcpProbability,
         listingQuality: listingSignals.listingQuality,
@@ -172,7 +177,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
     }
     const { id, action } = parsed.data;
-    const db = await getDb();
+    const { db, env } = await getDb();
     const now = new Date();
 
     if (action === 'keep') {
@@ -190,12 +195,16 @@ export async function POST(req: Request) {
         name: servers.name,
         description: servers.description,
         url: servers.url,
+        websiteUrl: servers.websiteUrl,
         aiOverview: servers.aiOverview,
         githubStars: servers.githubStars,
         npmDownloads: servers.npmDownloads,
         lastCommitAt: servers.lastCommitAt,
         repoForkOf: listingSignals.repoForkOf,
         staleReasons: listingSignals.staleReasons,
+        repoStatus: listingSignals.repoStatus,
+        repoGoneCount: listingSignals.repoGoneCount,
+        repoFirstGoneAt: listingSignals.repoFirstGoneAt,
         sandboxStatus: stdioVerifications.status,
         toolCount: stdioVerifications.toolCount,
       })
@@ -206,6 +215,22 @@ export async function POST(req: Request) {
       .limit(1);
     if (!r) {
       return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+    }
+    // A fresh repo check first, so the answer reflects the source as it is
+    // now — the same streak bookkeeping as the sweep's repo phase.
+    const repoStatus = await checkRepo(
+      r.url,
+      getGithubToken(env),
+      r.websiteUrl,
+    );
+    if (repoStatus !== 'unknown') {
+      const isGone = repoStatus === 'gone';
+      await upsertSignals(db, id, {
+        repoStatus,
+        repoCheckedAt: now,
+        repoGoneCount: isGone ? (r.repoGoneCount ?? 0) + 1 : 0,
+        repoFirstGoneAt: isGone ? (r.repoFirstGoneAt ?? now) : null,
+      });
     }
     const triage = await triageListing(
       { name: r.name, description: r.description, url: r.url },
@@ -221,6 +246,10 @@ export async function POST(req: Request) {
         repoForkOf: r.repoForkOf,
         staleReasons: parseStaleReasons(r.staleReasons),
         readme: r.aiOverview,
+        repoStatus:
+          repoStatus !== 'unknown'
+            ? repoStatus
+            : (r.repoStatus as RepoStatus | null),
       },
     );
     if (triage.verdict === null) {
@@ -239,6 +268,7 @@ export async function POST(req: Request) {
       verdict: triage.verdict,
       reason: triage.reason,
       mcpProbability: triage.mcpServerProbability,
+      repoStatus,
     });
   } catch (error: any) {
     console.error('admin triage POST error:', error);

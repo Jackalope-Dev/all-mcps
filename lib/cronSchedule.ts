@@ -35,6 +35,12 @@ export const FAST_JOBS: CronJob[] = [
   // Catalog quality: website/homepage, logos, install hints, clean scrape chrome,
   // unpublish archived/404 GitHub repos. Every tick until the catalog is enriched.
   { path: '/api/cron/enrich', secretVar: 'CRON_SECRET' },
+  // Staged dead/stale/fake cleanup: registry deprecation checks, stale-rule
+  // assessment (flag → noindex → remove after a 30-day grace period), and Jev
+  // triage for the admin queue. On the fast schedule because it uses no OpenAI
+  // — only npm/PyPI lookups, local rules and Jev — so it is cheap to run often.
+  // Bounded per tick (see the route): ~27k listings reassessed about every 17h.
+  { path: '/api/cron/stale-sweep', secretVar: 'CRON_SECRET' },
 ];
 
 // Runs every 20 min ("*/20 * * * *") when a single Worker does everything —
@@ -125,11 +131,6 @@ export const SLOW_JOBS: CronJob[] = [
     secretVar: 'CRON_SECRET',
     shouldRun: (now) => now.getUTCHours() === 5,
   },
-  // Staged dead/stale/fake cleanup: registry deprecation checks, stale-rule
-  // assessment (flag → noindex → remove after a 30-day grace period), and Jev
-  // triage recommendations for the admin queue. Bounded per tick — see the
-  // route. Every 4h so the ~27k catalog is reassessed roughly every 11 days.
-  { path: '/api/cron/stale-sweep', secretVar: 'CRON_SECRET' },
   // 45-day retention cleanup for impression_logs and api_access_logs to prevent
   // unbounded table/index growth and D1 Time-Travel WAL storage bloat. Daily at 03:00 UTC.
   {
