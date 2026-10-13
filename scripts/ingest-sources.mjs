@@ -1066,16 +1066,48 @@ function queryExisting() {
   return parsed[0]?.results ?? [];
 }
 
+// Statements per `wrangler d1 execute --file` call. One 5,915-statement file
+// failed on 2026-10-13 with D1's import API reporting "Not currently importing
+// anything"; smaller files apply reliably. Every INSERT is ON CONFLICT DO
+// NOTHING, so re-running after a partial failure is safe.
+const APPLY_CHUNK_STATEMENTS = 400;
+
 function applySql(relPath) {
   const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  // Split on each statement's terminator, not on newlines: a description can
+  // contain a newline, so one INSERT may span several lines. Comment lines
+  // ride along with the INSERT that follows them.
+  const statements = fs
+    .readFileSync(relPath, 'utf8')
+    .split(/(?<=ON CONFLICT\(id\) DO NOTHING;)\n/)
+    .filter((st) => st.trim());
+  const chunks = [];
+  for (let i = 0; i < statements.length; i += APPLY_CHUNK_STATEMENTS) {
+    chunks.push(statements.slice(i, i + APPLY_CHUNK_STATEMENTS));
+  }
+
   console.log(
-    `\nApplying via: npx wrangler d1 execute ${DB_NAME} --remote --file=${relPath}`,
+    `\nApplying ${relPath} in ${chunks.length} chunk(s) of up to ${APPLY_CHUNK_STATEMENTS} statements...`,
   );
-  execFileSync(
-    npxCmd,
-    ['wrangler', 'd1', 'execute', DB_NAME, '--remote', `--file=${relPath}`],
-    { cwd: process.cwd(), env: WRANGLER_ENV, stdio: 'inherit' },
-  );
+  chunks.forEach((chunk, i) => {
+    const chunkPath = relPath.replace(/\.sql$/, `.part${i + 1}.sql`);
+    fs.writeFileSync(chunkPath, `${chunk.join('\n')}\n`);
+    console.log(`  chunk ${i + 1}/${chunks.length}: ${chunkPath}`);
+    execFileSync(
+      npxCmd,
+      [
+        'wrangler',
+        'd1',
+        'execute',
+        DB_NAME,
+        '--remote',
+        '--yes',
+        `--file=${chunkPath}`,
+      ],
+      { cwd: process.cwd(), env: WRANGLER_ENV, stdio: 'inherit' },
+    );
+    fs.unlinkSync(chunkPath);
+  });
 }
 
 // --- main ------------------------------------------------------------------
