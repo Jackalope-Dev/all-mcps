@@ -528,7 +528,9 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
 /**
  * Homepage showcase: the strongest active listings (logo, alive, adopted,
  * well-documented) rather than the newest imports. Pulls a popularity-ordered
- * candidate pool from D1, then re-ranks it with rankShowcaseServers.
+ * candidate pool from D1, then re-ranks it with rankShowcaseServers. The pool
+ * uses the slim scoring columns (no aiDoc/aiFaq, tools trimmed in SQLite):
+ * 300 full rows with tool schemas blew the Worker memory limit on `/`.
  */
 export async function getShowcaseActiveServers(
   limit: number,
@@ -540,7 +542,7 @@ export async function getShowcaseActiveServers(
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
       const rows = await db
-        .select(PUBLIC_SERVER_COLUMNS)
+        .select(SCORING_SERVER_COLUMNS)
         .from(serversTable)
         .where(
           and(

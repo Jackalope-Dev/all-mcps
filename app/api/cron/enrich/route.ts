@@ -97,6 +97,45 @@ async function safeR2Put(
   }
 }
 
+/** processLogoUpload rejects anything bigger, so never buffer more than this. */
+const MAX_LOGO_DOWNLOAD_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Reads a response body, giving up once it passes `maxBytes`. README "logo"
+ * candidates are often multi-MB GIFs or videos; buffering them whole with
+ * arrayBuffer() pushed the jobs Worker over its memory limit.
+ */
+async function readCappedBody(
+  res: Response,
+  maxBytes: number,
+): Promise<ArrayBuffer | null> {
+  const declared = Number(res.headers.get('content-length'));
+  if (declared > maxBytes || !res.body) {
+    await res.body?.cancel();
+    return null;
+  }
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out.buffer;
+}
+
 async function tryUploadLogo(
   url: string,
   serverId: string,
@@ -109,7 +148,8 @@ async function tryUploadLogo(
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
+    const buf = await readCappedBody(res, MAX_LOGO_DOWNLOAD_BYTES);
+    if (!buf) return null;
 
     // Reject generic default Google favicons / ultra-tiny placeholder images (< 1000 bytes)
     if (buf.byteLength < 1000) return null;
