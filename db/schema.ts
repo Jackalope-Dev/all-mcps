@@ -644,6 +644,8 @@ export const listingSignals = sqliteTable(
     /** One-line evidence summary for triageVerdict, shown on the admin card. */
     triageReason: text('triage_reason'),
     reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
+    /** Last time the sweep asked Jev for a triage verdict, answered or not — backs off retries when Jev is down or unsure. */
+    triageAttemptedAt: integer('triage_attempted_at', { mode: 'timestamp' }),
     /** An admin chose to keep this listing in the triage queue. The stale sweep never flags it again. */
     curatorKeptAt: integer('curator_kept_at', { mode: 'timestamp' }),
     /** Comma-separated StaleReason codes from the most recent sweep. */

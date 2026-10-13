@@ -35,17 +35,30 @@ import {
  * never starves the assessment that does the actual work:
  *
  *   1. registry   ask npm/PyPI whether a batch of install packages are
- *                 deprecated or gone (round-robin on registryCheckedAt)
+ *                 deprecated or gone (each package at most every 30 days)
  *   2. assess     re-run the stale rules over a batch of active listings
- *                 (round-robin on staleCheckedAt), flag / unflag, and remove
+ *                 (each at most every 7 days), flag / unflag, and remove
  *                 listings whose auto-removable reasons outlived the grace period
  *   3. triage     ask Jev for a curator recommendation on pending listings and
- *                 freshly flagged ones, for the admin triage queue
+ *                 freshly flagged ones, for the admin triage queue (once per
+ *                 listing; an unanswered attempt is retried after a day)
+ *
+ * Every phase skips work done recently, so once the catalog has been swept a
+ * tick only touches new listings and ones whose window has come round.
  */
 
 const REGISTRY_BATCH = 60;
 const REGISTRY_CONCURRENCY = 8;
-const REGISTRY_RECHECK_MS = 14 * 24 * 60 * 60 * 1000;
+const REGISTRY_RECHECK_MS = 30 * 24 * 60 * 60 * 1000;
+/**
+ * Minimum gap between assessments of one listing. Once the catalog has been
+ * swept, ticks only pick up new listings and ones due again, so a quiet tick
+ * reads a few rows and writes nothing. A flagged listing is still reached well
+ * inside its 30-day grace period.
+ */
+const ASSESS_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
+/** After an unanswered or unusable Jev triage, wait this long before asking again. */
+const TRIAGE_RETRY_MS = 24 * 60 * 60 * 1000;
 const ASSESS_BATCH = 400;
 const TRIAGE_BATCH = 24;
 const TRIAGE_CONCURRENCY = 6;
@@ -189,7 +202,18 @@ export async function POST(req: Request) {
       .from(servers)
       .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
       .leftJoin(stdioVerifications, eq(stdioVerifications.serverId, servers.id))
-      .where(eq(servers.status, 'active'))
+      .where(
+        and(
+          eq(servers.status, 'active'),
+          or(
+            isNull(listingSignals.staleCheckedAt),
+            lt(
+              listingSignals.staleCheckedAt,
+              new Date(now.getTime() - ASSESS_RECHECK_MS),
+            ),
+          ),
+        ),
+      )
       .orderBy(asc(listingSignals.staleCheckedAt))
       .limit(ASSESS_BATCH);
 
@@ -292,6 +316,13 @@ export async function POST(req: Request) {
         and(
           isNull(listingSignals.triageVerdict),
           or(
+            isNull(listingSignals.triageAttemptedAt),
+            lt(
+              listingSignals.triageAttemptedAt,
+              new Date(now.getTime() - TRIAGE_RETRY_MS),
+            ),
+          ),
+          or(
             eq(servers.status, 'pending'),
             and(
               eq(servers.status, 'active'),
@@ -327,13 +358,20 @@ export async function POST(req: Request) {
       }),
     );
     const answered = triaged.filter((t) => t.triage.verdict !== null);
+    // Every attempt is stamped, answered or not, so a listing Jev can't judge
+    // waits TRIAGE_RETRY_MS instead of being re-asked every tick.
     await runChunked(
       db,
-      answered.map(({ id, triage }) =>
+      triaged.map(({ id, triage }) =>
         upsertSignals(db, id, {
-          ...reviewColumns(triage, now),
-          triageVerdict: triage.verdict,
-          triageReason: triage.reason,
+          triageAttemptedAt: now,
+          ...(triage.verdict !== null
+            ? {
+                ...reviewColumns(triage, now),
+                triageVerdict: triage.verdict,
+                triageReason: triage.reason,
+              }
+            : {}),
         }),
       ),
     );
