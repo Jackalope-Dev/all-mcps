@@ -102,6 +102,7 @@ function isFeaturedListing(server: Server): boolean {
 type ViewMode = 'grid' | 'list';
 type SortMode =
   | 'relevance'
+  | 'popular'
   | 'trending'
   | 'most_upvoted'
   | 'most_viewed'
@@ -171,7 +172,7 @@ export default function DirectoryGrid({
   >('all');
   // Default to relevance ordering whenever there's a query (incl. deep links).
   const [sortMode, setSortMode] = useState<SortMode>(
-    initialQuery.trim() ? 'relevance' : 'trending',
+    initialQuery.trim() ? 'relevance' : isBrowse ? 'trending' : 'popular',
   );
   // Landing favors visual discovery (grid); /browse defaults to power-user list.
   // localStorage may override after mount.
@@ -234,10 +235,12 @@ export default function DirectoryGrid({
     if (!empty && prevQueryEmptyRef.current) {
       setSortMode('relevance');
     } else if (empty && !prevQueryEmptyRef.current) {
-      setSortMode((prev) => (prev === 'relevance' ? 'trending' : prev));
+      setSortMode((prev) =>
+        prev === 'relevance' ? (isBrowse ? 'trending' : 'popular') : prev,
+      );
     }
     prevQueryEmptyRef.current = empty;
-  }, [searchQuery]);
+  }, [searchQuery, isBrowse]);
 
   // Track whether the full feed has arrived so a server re-render (e.g. category
   // navigation swapping in a new SSR slice) doesn't shrink the working set back.
@@ -527,7 +530,11 @@ export default function DirectoryGrid({
     // With a query, relevance is meaningful; fall back to trending when the user
     // has cleared the query but the sort state briefly still reads 'relevance'.
     const effectiveSort: SortMode =
-      sortMode === 'relevance' && !hasQuery ? 'trending' : sortMode;
+      sortMode === 'relevance' && !hasQuery
+        ? isBrowse
+          ? 'trending'
+          : 'popular'
+        : sortMode;
 
     scored.sort((x, y) => {
       const a = x.server;
@@ -536,7 +543,11 @@ export default function DirectoryGrid({
       // promises — but only as a tiebreak ahead of the mode's own score, and only on
       // the two discovery-oriented modes. Objective modes (alpha, most viewed/upvoted)
       // stay literal, since buyers of a badge shouldn't distort a metric users trust.
-      if (effectiveSort === 'relevance' || effectiveSort === 'trending') {
+      if (
+        effectiveSort === 'relevance' ||
+        effectiveSort === 'trending' ||
+        effectiveSort === 'popular'
+      ) {
         const featuredBoost =
           (isFeaturedListing(b) ? 1 : 0) - (isFeaturedListing(a) ? 1 : 0);
         if (featuredBoost !== 0) return featuredBoost;
@@ -546,6 +557,12 @@ export default function DirectoryGrid({
         const ea = engagementScore(a);
         const eb = engagementScore(b);
         if (eb !== ea) return eb - ea;
+      } else if (effectiveSort === 'popular') {
+        // All-time adoption (stars, downloads, upvotes, installs, views) with no
+        // recency decay, so proven servers lead instead of fresh imports.
+        const scoreA = engagementScore(a) + (a.logoUrl ? 1 : 0);
+        const scoreB = engagementScore(b) + (b.logoUrl ? 1 : 0);
+        if (scoreB !== scoreA) return scoreB - scoreA;
       } else if (effectiveSort === 'trending') {
         const scoreA = trendingScore(a);
         const scoreB = trendingScore(b);
@@ -582,6 +599,7 @@ export default function DirectoryGrid({
     selectedAuth,
     sortMode,
     verifiedOnly,
+    isBrowse,
   ]);
 
   const filteredCount = filteredServers.length;
@@ -1127,7 +1145,7 @@ export default function DirectoryGrid({
             >
               {isBrowse || selectedCategory || isFiltered
                 ? 'Results'
-                : 'New MCP servers'}{' '}
+                : 'Popular MCP servers'}{' '}
               <span
                 style={{
                   color: 'var(--text-secondary)',
@@ -1140,6 +1158,11 @@ export default function DirectoryGrid({
                 {lazyFeedUrl && feedStatus === 'loading' ? ' · loading…' : ''}
               </span>
             </h2>
+            {sortMode === 'popular' && !searchQuery.trim() && (
+              <p className="directory-sort-hint">
+                Ranked by adoption (GitHub stars, downloads, upvotes, installs).
+              </p>
+            )}
             {sortMode === 'trending' && !searchQuery.trim() && (
               <p className="directory-sort-hint">
                 Sorted by recent engagement (upvotes, installs, views).
@@ -1317,6 +1340,7 @@ export default function DirectoryGrid({
                 [
                   // Relevance only applies while searching; hidden otherwise.
                   ...(searchQuery.trim() ? [['relevance', 'Relevance']] : []),
+                  ['popular', 'Popular'],
                   ['trending', 'Trending'],
                   ['most_upvoted', 'Top Voted'],
                   ['most_viewed', 'Most Viewed'],

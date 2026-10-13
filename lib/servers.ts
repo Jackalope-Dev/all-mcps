@@ -42,6 +42,7 @@ import {
   type Searchable,
   type SearchPrefilter,
 } from './search';
+import { rankShowcaseServers } from './showcase';
 import { computeTrustTier, type TrustTierInput } from './trustTier';
 
 export type ServerTool = {
@@ -522,6 +523,54 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
     .map(normalizeServer)
     .sort((a, b) => toEpoch(b.createdAt) - toEpoch(a.createdAt))
     .slice(0, limit);
+}
+
+/**
+ * Homepage showcase: the strongest active listings (logo, alive, adopted,
+ * well-documented) rather than the newest imports. Pulls a popularity-ordered
+ * candidate pool from D1, then re-ranks it with rankShowcaseServers.
+ */
+export async function getShowcaseActiveServers(
+  limit: number,
+): Promise<Server[]> {
+  const poolSize = Math.max(limit * 6, 300);
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx?.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(PUBLIC_SERVER_COLUMNS)
+        .from(serversTable)
+        .where(
+          and(
+            eq(serversTable.status, 'active'),
+            sql`coalesce(${serversTable.logoUrl}, '') <> ''`,
+            sql`coalesce(${serversTable.healthStatus}, '') not in ('archived', 'offline')`,
+          ),
+        )
+        .orderBy(
+          desc(serversTable.isOfficial),
+          desc(serversTable.githubStars),
+          desc(serversTable.upvotes),
+          desc(serversTable.copies),
+          desc(serversTable.views),
+        )
+        .limit(poolSize);
+      if (rows.length > 0) {
+        return rankShowcaseServers(
+          rows.map((r) => normalizeServer(r as unknown as Server)),
+          limit,
+        );
+      }
+    }
+  } catch (_e) {
+    // Fall back to static JSON
+  }
+  return rankShowcaseServers(
+    snapshotCatalogServers().map(normalizeServer),
+    limit,
+  );
 }
 
 /**

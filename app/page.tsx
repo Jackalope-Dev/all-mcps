@@ -19,7 +19,7 @@ import { pickDiscoveryServers } from '../lib/featured';
 import { buildAiSearchText } from '../lib/search';
 import {
   getActiveServersLight,
-  getNewestActiveServers,
+  getShowcaseActiveServers,
   type Server,
 } from '../lib/servers';
 import { getSiteStats } from '../lib/siteStats';
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
 /**
  * Homepage landing cards only ever render name/description/category/badges/
  * install-snippet/tool-count (see the DirectoryGrid card markup) — never the
- * raw `tools` schema array or the full AI-content fields. `getNewestActiveServers`
+ * raw `tools` schema array or the full AI-content fields. `getShowcaseActiveServers`
  * still selects those heavy columns (other callers need them), so this collapses
  * them into the same compact `toolText`/`toolCount`/`aiText` shape the lazy
  * /browse feed already uses before they ever reach the client, instead of
@@ -113,12 +113,12 @@ export default async function Home() {
   // pool (lightweight columns only — see getActiveServersLight) are independent
   // queries so a homepage hit never has to load every listing's tools/AI-content
   // into memory just to pick ~20 marquee/featured cards out of thousands.
-  const [newestServers, discoveryPool, siteStats] = await Promise.all([
-    getNewestActiveServers(48),
+  const [showcaseServers, discoveryPool, siteStats] = await Promise.all([
+    getShowcaseActiveServers(48),
     getActiveServersLight(200),
     getSiteStats(),
   ]);
-  const landingServers = newestServers.map(toLightCard);
+  const landingServers = showcaseServers.map(toLightCard);
   // discoveryPool is capped at 200 rows for ranking, so its length is not the
   // catalog size — use the real active-listing count that StatsBanner shows.
   const catalogTotal = Math.max(siteStats.totalServers, discoveryPool.length);
