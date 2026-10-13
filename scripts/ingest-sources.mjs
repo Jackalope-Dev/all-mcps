@@ -563,6 +563,33 @@ function deriveOfficialRegistryName(server, primaryUrl) {
   return leaf || server.name;
 }
 
+// The official registry intermittently 500s mid-pagination (a different
+// cursor each time — 4 of the 6 failed weekly syncs between 2026-08-24 and
+// 2026-10-12). Retry a page with backoff before giving up on it.
+const OFFICIAL_REGISTRY_FETCH_RETRIES = 5;
+const OFFICIAL_REGISTRY_RETRY_BASE_MS = 2000;
+
+async function fetchOfficialRegistryPage(url) {
+  let lastErr;
+  for (let attempt = 1; attempt <= OFFICIAL_REGISTRY_FETCH_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'AllMCPs-Ingest' },
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (res.ok) return await res.json();
+      lastErr = new Error(`HTTP ${res.status}`);
+      // A 4xx other than rate limiting won't get better by retrying.
+      if (res.status < 500 && res.status !== 429) break;
+    } catch (err) {
+      lastErr = err;
+    }
+    if (attempt < OFFICIAL_REGISTRY_FETCH_RETRIES)
+      await sleep(OFFICIAL_REGISTRY_RETRY_BASE_MS * 2 ** (attempt - 1));
+  }
+  throw lastErr;
+}
+
 async function fetchOfficialRegistryEntries() {
   const entries = [];
   let cursor;
@@ -575,11 +602,18 @@ async function fetchOfficialRegistryEntries() {
     url.searchParams.set('limit', '100');
     if (cursor) url.searchParams.set('cursor', cursor);
 
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'AllMCPs-Ingest' },
-    });
-    if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-    const body = await res.json();
+    let body;
+    try {
+      body = await fetchOfficialRegistryPage(url);
+    } catch (err) {
+      // Keep everything already collected: dedup against the DB makes the
+      // next weekly run pick up whatever this one missed, whereas throwing
+      // here used to discard ~28 minutes of paging and ingest nothing.
+      console.log(
+        `::warning::official-registry: page ${page + 1} still failing after ${OFFICIAL_REGISTRY_FETCH_RETRIES} attempts (${err.message}); keeping ${entries.length} entries collected so far.`,
+      );
+      break;
+    }
 
     for (const entry of body.servers ?? []) {
       const server = entry.server;
@@ -1058,7 +1092,14 @@ async function main() {
 
   for (const source of SOURCES) {
     if (!sourceEnabled(source.name)) continue;
-    const md = await fetchReadme(source.readmeUrl);
+    let md;
+    try {
+      md = await fetchReadme(source.readmeUrl);
+    } catch (err) {
+      // One unreachable awesome-list shouldn't cost the other sources.
+      console.log(`::warning::${source.name}: skipped — ${err.message}`);
+      continue;
+    }
     const entries = parseServerList(md, source);
     console.log(`  ${source.name}: ${entries.length} entries parsed`);
     allEntries.push(...entries);
