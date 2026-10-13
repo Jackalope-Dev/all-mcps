@@ -41,14 +41,14 @@
     "@auth/core": "^0.41.3",
     "@auth/drizzle-adapter": "^1.11.3",
     "@cf-wasm/photon": "^0.4.0",
-    "@lopebase/adapter": "^0.2.0",
+    "@lopebase/adapter": "^0.4.1",
     "@marsidev/react-turnstile": "^1.6.1",
     "@react-email/components": "^1.0.12",
-    "drizzle-orm": "^0.45.3",
+    "drizzle-orm": "^0.45.4",
     "gpt-tokenizer": "^4.0.0",
     "gray-matter": "^4.0.3",
     "jimp": "^1.6.1",
-    "lucide-react": "^1.50.0",
+    "lucide-react": "^1.55.0",
     "next": "16.3.8",
     "next-auth": "^5.0.0-beta.32",
     "react": "^19.3.0",
@@ -57,7 +57,7 @@
     "rehype-raw": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
-    "resend": "^6.32.0",
+    "resend": "^6.32.1",
     "stripe": "^22.6.2",
     "zod": "^4.6.5"
   },
@@ -85,9 +85,9 @@
   },
   "optionalDependencies": {
     "@biomejs/cli-win32-x64": "^2.5.15",
-    "@rolldown/binding-win32-x64-msvc": "^1.2.12",
+    "@rolldown/binding-win32-x64-msvc": "^1.2.13",
     "@typescript/typescript-win32-x64": "^7.0.2",
-    "lefthook-windows-x64": "^2.1.16",
+    "lefthook-windows-x64": "^2.2.1",
     "lightningcss-win32-x64-msvc": "^1.33.0"
   },
   "comments": {
