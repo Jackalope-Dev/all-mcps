@@ -11,7 +11,7 @@
       "**",
       "!**/.next",
       "!**/.open-next",
-      "!**/.worktrees",
+      "!.worktrees",
       "!**/drizzle",
       "!**/public",
       "!**/content",

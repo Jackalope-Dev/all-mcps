@@ -57,5 +57,3 @@ drizzle/backfill-*.sql
 drizzle/rollback-*.sql
 badge-outreach.csv
 
-# Parallel-session worktrees
-.worktrees/
