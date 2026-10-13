@@ -38,24 +38,35 @@ export function githubRepoPath(url: string): string | null {
   return `${m[1]}/${m[2].replace(/\.git$/i, '')}`;
 }
 
+export type RepoCheck = {
+  status: RepoStatus;
+  /** GitHub stargazers when the source is a live GitHub repo, else null. */
+  stars: number | null;
+};
+
 export async function checkRepo(
   url: string,
   githubToken: string | null,
   websiteUrl?: string | null,
-): Promise<RepoStatus> {
-  const status = await checkUrl(url, githubToken);
-  if (status !== 'gone' || !websiteUrl || websiteUrl === url) return status;
+): Promise<RepoCheck> {
+  const repo = await checkUrl(url, githubToken);
+  if (repo.status !== 'gone' || !websiteUrl || websiteUrl === url) return repo;
   // Only call it gone when the website is gone too; an unreachable site is
   // inconclusive, not a second strike.
   const site = await checkUrl(websiteUrl, githubToken);
-  if (site === 'ok' || site === 'archived') return 'site_only';
-  return site === 'gone' ? 'gone' : 'unknown';
+  const status: RepoStatus =
+    site.status === 'ok' || site.status === 'archived'
+      ? 'site_only'
+      : site.status === 'gone'
+        ? 'gone'
+        : 'unknown';
+  return { status, stars: null };
 }
 
 async function checkUrl(
   url: string,
   githubToken: string | null,
-): Promise<RepoStatus> {
+): Promise<RepoCheck> {
   try {
     const path = githubRepoPath(url);
     if (path) {
@@ -70,9 +81,19 @@ async function checkUrl(
         signal: AbortSignal.timeout(8000),
       });
       const body = res.ok
-        ? ((await res.json()) as { archived?: boolean; disabled?: boolean })
+        ? ((await res.json()) as {
+            archived?: boolean;
+            disabled?: boolean;
+            stargazers_count?: number;
+          })
         : null;
-      return classifyRepoResponse(res.status, body);
+      return {
+        status: classifyRepoResponse(res.status, body),
+        stars:
+          typeof body?.stargazers_count === 'number'
+            ? body.stargazers_count
+            : null,
+      };
     }
     // Any other host: a plain HEAD, falling back to GET for servers that
     // reject HEAD.
@@ -89,9 +110,9 @@ async function checkUrl(
         signal: AbortSignal.timeout(8000),
       });
     }
-    return classifyRepoResponse(res.status);
+    return { status: classifyRepoResponse(res.status), stars: null };
   } catch {
-    return 'unknown';
+    return { status: 'unknown', stars: null };
   }
 }
 

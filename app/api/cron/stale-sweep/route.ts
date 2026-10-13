@@ -14,12 +14,28 @@ import {
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import {
+  autoDecisions,
   listingSignals,
   servers,
   stdioVerifications,
 } from '../../../../db/schema';
+import {
+  decideIngestPromote,
+  decideSubmission,
+  GATE_EVIDENCE_COLUMNS,
+  GATES,
+  gateEvidenceFromRow,
+  getGateModes,
+  markActed,
+  recordDecision,
+} from '../../../../lib/autoDecision';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { getGithubToken } from '../../../../lib/githubAuth';
+import {
+  approvePendingListing,
+  rejectPendingListing,
+} from '../../../../lib/listingApproval';
+import { refreshListingPageInBackground } from '../../../../lib/listingPageRefresh';
 import { reviewColumns, triageListing } from '../../../../lib/listingReview';
 import { checkRegistry } from '../../../../lib/packageRegistry';
 import {
@@ -59,7 +75,9 @@ import {
  *   5. pending    move ingested pending listings to 'removed' when the source
  *                 is confirmed gone or Jev's reject is backed by a low MCP
  *                 probability (lib/staleness.ts pendingAutoRemoveReason).
- *                 Human submissions always wait for an admin.
+ *   6. gates      run the automation gates (lib/autoDecision.ts) over pending
+ *                 listings: record what each would decide and, for gates an
+ *                 admin switched to live, act on it.
  *
  * Every phase skips work done recently, so once the catalog has been swept a
  * tick only touches new listings and ones whose window has come round.
@@ -82,6 +100,7 @@ const REPO_BATCH = 60;
 const REPO_CONCURRENCY = 8;
 const REPO_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
 const PENDING_ACT_BATCH = 200;
+const GATE_BATCH = 50;
 const TRIAGE_BATCH = 24;
 const TRIAGE_CONCURRENCY = 6;
 /** Statements per db.batch — each is a single-row update with a handful of params. */
@@ -243,7 +262,12 @@ export async function POST(req: Request) {
           ),
         ),
       )
-      .orderBy(asc(listingSignals.repoCheckedAt))
+      // Human submissions first: they're what an admin is waiting on, and the
+      // automation gates can't decide them until the repo has been checked.
+      .orderBy(
+        sql`CASE WHEN ${servers.submitterEmail} IS NULL THEN 1 ELSE 0 END`,
+        asc(listingSignals.repoCheckedAt),
+      )
       .limit(REPO_BATCH);
 
     const repoResults = await mapWithConcurrency(
@@ -251,13 +275,14 @@ export async function POST(req: Request) {
       REPO_CONCURRENCY,
       async (row) => ({
         row,
-        status: await checkRepo(row.url, githubToken, row.websiteUrl),
+        check: await checkRepo(row.url, githubToken, row.websiteUrl),
       }),
     );
     const repoCounts = { gone: 0, confirmedGone: 0, archived: 0, unknown: 0 };
     await runChunked(
       db,
-      repoResults.map(({ row, status }) => {
+      repoResults.map(({ row, check }) => {
+        const { status, stars } = check;
         if (status === 'unknown') {
           repoCounts.unknown++;
           return upsertSignals(db, row.id, { repoCheckedAt: now });
@@ -275,6 +300,7 @@ export async function POST(req: Request) {
         return upsertSignals(db, row.id, {
           repoStatus: status,
           repoCheckedAt: now,
+          ...(stars !== null ? { repoStars: stars } : {}),
           repoGoneCount: goneCount,
           repoFirstGoneAt: firstGoneAt,
           // The source appearing or disappearing is new evidence: ask Jev
@@ -439,6 +465,7 @@ export async function POST(req: Request) {
         repoForkOf: listingSignals.repoForkOf,
         staleReasons: listingSignals.staleReasons,
         repoStatus: listingSignals.repoStatus,
+        repoStars: listingSignals.repoStars,
         status: servers.status,
         sandboxStatus: stdioVerifications.status,
         toolCount: stdioVerifications.toolCount,
@@ -465,7 +492,11 @@ export async function POST(req: Request) {
           ),
         ),
       )
-      .orderBy(desc(servers.reviewPriority), asc(servers.createdAt))
+      .orderBy(
+        desc(servers.reviewPriority),
+        sql`CASE WHEN ${servers.submitterEmail} IS NULL THEN 1 ELSE 0 END`,
+        asc(servers.createdAt),
+      )
       .limit(TRIAGE_BATCH);
 
     const triaged = await mapWithConcurrency(
@@ -481,7 +512,9 @@ export async function POST(req: Request) {
                 ? r.sandboxStatus
                 : null,
             toolCount: r.toolCount,
-            githubStars: r.githubStars,
+            // Pending listings get no health-cron stars; the repo check's
+            // count stands in.
+            githubStars: r.githubStars ?? r.repoStars,
             npmDownloads: r.npmDownloads,
             lastCommitAt: r.lastCommitAt,
             repoForkOf: r.repoForkOf,
@@ -506,6 +539,7 @@ export async function POST(req: Request) {
                 ...reviewColumns(triage, now),
                 triageVerdict: triage.verdict,
                 triageReason: triage.reason,
+                triageConfidence: triage.verdictConfidence,
               }
             : {}),
           // A reject on a live listing can hide it (lib/staleness.ts
@@ -579,6 +613,97 @@ export async function POST(req: Request) {
     await runChunked(db, autoRemoveStatements);
     const autoRemoved = autoRemoveStatements.length / 2;
 
+    // ── 6. Automation gates ────────────────────────────────────────────────
+    // See lib/autoDecision.ts. Shadow gates only record; live gates act with
+    // the same side effects as an admin click (lib/listingApproval.ts).
+    const modes = await getGateModes(db);
+    const gateCounts: Record<string, Record<string, number>> = {};
+    for (const gate of GATES) {
+      if (modes[gate] === 'off') continue;
+      const counts = { approve: 0, reject: 0, hold: 0, acted: 0 };
+      gateCounts[gate] = counts;
+      const rows = await db
+        .select({
+          ...GATE_EVIDENCE_COLUMNS,
+          id: servers.id,
+          name: servers.name,
+          triageReason: listingSignals.triageReason,
+        })
+        .from(servers)
+        .innerJoin(listingSignals, eq(listingSignals.serverId, servers.id))
+        .leftJoin(
+          stdioVerifications,
+          eq(stdioVerifications.serverId, servers.id),
+        )
+        .leftJoin(
+          autoDecisions,
+          and(
+            eq(autoDecisions.serverId, servers.id),
+            eq(autoDecisions.gate, gate),
+          ),
+        )
+        .where(
+          and(
+            eq(servers.status, 'pending'),
+            gate === 'submission'
+              ? isNotNull(servers.submitterEmail)
+              : isNull(servers.submitterEmail),
+            or(
+              and(
+                isNotNull(listingSignals.triageVerdict),
+                isNotNull(listingSignals.repoStatus),
+              ),
+              sql`${listingSignals.repoGoneCount} >= 2`,
+            ),
+            or(
+              isNull(autoDecisions.id),
+              // Re-decide a hold only once newer evidence has arrived.
+              and(
+                eq(autoDecisions.decision, 'hold'),
+                sql`${autoDecisions.createdAt} < max(coalesce(${listingSignals.reviewedAt}, 0), coalesce(${listingSignals.repoCheckedAt}, 0))`,
+              ),
+            ),
+          ),
+        )
+        .orderBy(desc(servers.reviewPriority), asc(servers.createdAt))
+        .limit(GATE_BATCH);
+
+      for (const row of rows) {
+        const evidence = gateEvidenceFromRow(row, now);
+        const result =
+          gate === 'submission'
+            ? decideSubmission(evidence)
+            : decideIngestPromote(evidence);
+        if (!result) continue;
+        counts[result.decision]++;
+        const live = modes[gate] === 'live';
+        await recordDecision(db, {
+          gate,
+          serverId: row.id,
+          decision: result.decision,
+          reason: result.reasons.join(' · '),
+          evidence: { ...evidence, triageReason: row.triageReason },
+          mode: live ? 'live' : 'shadow',
+        });
+        if (!live || result.decision === 'hold') continue;
+
+        const done =
+          result.decision === 'approve'
+            ? await approvePendingListing(db, row.id)
+            : await rejectPendingListing(
+                db,
+                row.id,
+                `We couldn't reach the source for ${row.name} — ${result.reasons.join('; ')}. If the repository has moved or was private, you're welcome to submit again with a public link.`,
+              );
+        if (done) {
+          counts.acted++;
+          await markActed(db, gate, row.id);
+          if (result.decision === 'approve')
+            refreshListingPageInBackground(row.id);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       registry: { checked: registryRows.length, ...registryCounts },
@@ -586,6 +711,7 @@ export async function POST(req: Request) {
       assess: { checked: assessRows.length, flagged, unflagged, removed },
       triage: { attempted: triageRows.length, answered: answered.length },
       pending: { autoRemoved },
+      gates: gateCounts,
     });
   } catch (error: any) {
     console.error('stale-sweep error:', error);

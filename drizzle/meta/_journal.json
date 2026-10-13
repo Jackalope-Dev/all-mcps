@@ -302,6 +302,13 @@
       "when": 1791914860344,
       "tag": "0062_repo_check",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1791916366359,
+      "tag": "0063_automation_gates",
+      "breakpoints": true
     }
   ]
 }

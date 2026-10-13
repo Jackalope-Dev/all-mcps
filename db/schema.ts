@@ -643,6 +643,8 @@ export const listingSignals = sqliteTable(
     triageVerdict: text('triage_verdict'),
     /** One-line evidence summary for triageVerdict, shown on the admin card. */
     triageReason: text('triage_reason'),
+    /** Jev's own confidence in triageVerdict, 0..1. The automation gates require a floor on it. */
+    triageConfidence: real('triage_confidence'),
     reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
     /** Last time the sweep asked Jev for a triage verdict, answered or not — backs off retries when Jev is down or unsure. */
     triageAttemptedAt: integer('triage_attempted_at', { mode: 'timestamp' }),
@@ -662,6 +664,8 @@ export const listingSignals = sqliteTable(
     repoCheckedAt: integer('repo_checked_at', { mode: 'timestamp' }),
     /** Consecutive checks that found the source gone (404/410/451). Reset by any other answer except unknown. */
     repoGoneCount: integer('repo_gone_count').notNull().default(0),
+    /** GitHub stargazers from the repo check — pending listings get no health-cron stars, so this is their traction signal. */
+    repoStars: integer('repo_stars'),
     /** First check of the current gone streak — confirmation needs a day between sightings. */
     repoFirstGoneAt: integer('repo_first_gone_at', { mode: 'timestamp' }),
     /** `owner/repo` this GitHub repo was forked from. Null = not a fork or not measured. */
@@ -679,6 +683,61 @@ export const listingSignals = sqliteTable(
       table.registryCheckedAt,
     ),
     triageIdx: index('idx_listing_signals_triage').on(table.triageVerdict),
+  }),
+);
+
+/**
+ * Mode per automation gate (lib/autoDecision.ts): 'off', 'shadow' (record
+ * what it would do, act on nothing) or 'live' (act). A gate with no row is in
+ * shadow — nothing acts until an admin turns it on.
+ */
+export const automationGates = sqliteTable('automation_gates', {
+  gate: text('gate').primaryKey(),
+  mode: text('mode').notNull().default('shadow'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+  updatedBy: text('updated_by'),
+});
+
+/**
+ * One row per (gate, listing): what the gate decided, why, and — once an
+ * admin acts on the same listing — what the human decided. The agreement rate
+ * between the two is how a gate earns 'live'.
+ */
+export const autoDecisions = sqliteTable(
+  'auto_decisions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    gate: text('gate').notNull(),
+    serverId: text('server_id').notNull(),
+    /** approve | reject | hold */
+    decision: text('decision').notNull(),
+    /** One line: the reasons, built from evidence. */
+    reason: text('reason').notNull(),
+    /** JSON snapshot of the evidence the decision used. */
+    evidence: text('evidence'),
+    /** Mode the gate was in when it decided: shadow | live. */
+    mode: text('mode').notNull(),
+    /** Set when a live decision was carried out. */
+    actedAt: integer('acted_at', { mode: 'timestamp' }),
+    /** approve | reject — the admin's own later decision on this listing. */
+    humanDecision: text('human_decision'),
+    humanAt: integer('human_at', { mode: 'timestamp' }),
+    /** A live decision an admin reversed from the automation panel. */
+    undoneAt: integer('undone_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    gateServerIdx: uniqueIndex('idx_auto_decisions_gate_server').on(
+      table.gate,
+      table.serverId,
+    ),
+    gateCreatedIdx: index('idx_auto_decisions_gate_created').on(
+      table.gate,
+      table.createdAt,
+    ),
+    serverIdx: index('idx_auto_decisions_server').on(table.serverId),
   }),
 );
 

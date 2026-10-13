@@ -18,6 +18,7 @@ import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import { parsePendingRevision } from '../../lib/pendingRevision';
 import { AdminAdsControl } from './AdminAdsControl';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
+import { AdminAutomationPanel } from './AdminAutomationPanel';
 import { AdminBlogDrafts } from './AdminBlogDrafts';
 import { AdminToolsControl } from './AdminCronsControl';
 import { AdminTriageQueue } from './AdminTriageQueue';
@@ -787,7 +788,12 @@ export default function AdminClient({
       )}
 
       {/* TAB: JEV TRIAGE QUEUE */}
-      {activeTab === 'triage' && <AdminTriageQueue />}
+      {activeTab === 'triage' && (
+        <>
+          <AdminAutomationPanel />
+          <AdminTriageQueue />
+        </>
+      )}
 
       {/* TAB 3: LISTINGS DIRECTORY */}
       {activeTab === 'listings' && (

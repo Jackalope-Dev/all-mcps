@@ -13,11 +13,19 @@ import {
 } from '../../../../db/schema';
 import { getAuthorizedAdminEmail } from '../../../../lib/adminAuth';
 import { generateListingContent } from '../../../../lib/aiContent';
+import {
+  recordHumanDecision,
+  snapshotGateDecision,
+} from '../../../../lib/autoDecision';
 import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import { cleanListingDescription } from '../../../../lib/description';
 import { computeFeaturedUntil } from '../../../../lib/featuredGrant';
 import { getGithubToken } from '../../../../lib/githubAuth';
 import { notifyListingIndexed } from '../../../../lib/indexnow';
+import {
+  approvePendingListing,
+  rejectPendingListing,
+} from '../../../../lib/listingApproval';
 import { notifyListingApproved } from '../../../../lib/listingApprovalNotify';
 import {
   fetchGithubReadme,
@@ -25,10 +33,7 @@ import {
 } from '../../../../lib/listingEnrich';
 import { refreshListingPageInBackground } from '../../../../lib/listingPageRefresh';
 import { resolveCanonicalMergeTarget } from '../../../../lib/listingRedirect';
-import {
-  sendListingStatusEmail,
-  sendNotificationEmail,
-} from '../../../../lib/notify';
+import { sendNotificationEmail } from '../../../../lib/notify';
 import {
   parsePendingRevision,
   pendingRevisionToDbPatch,
@@ -160,35 +165,15 @@ export async function POST(req: Request) {
     const db = drizzle(env.DB as any);
 
     if (action === 'approve') {
-      const updateResult = await db
-        .update(servers)
-        .set({ status: 'active' })
-        .where(and(eq(servers.id, id), eq(servers.status, 'pending')))
-        .returning();
-
-      if (updateResult.length === 0) {
+      await snapshotGateDecision(db, id);
+      const approved = await approvePendingListing(db, id);
+      if (!approved) {
         return NextResponse.json(
           { error: 'Server not found or not in pending state.' },
           { status: 400 },
         );
       }
-
-      const approvedServer = updateResult[0];
-
-      // Notify submitter: Sequenzy transactional (primary) + Resend fallback.
-      // Copy drives claim + free dofollow badge path — key DR growth lever.
-      await notifyListingApproved({
-        id: approvedServer.id,
-        name: approvedServer.name,
-        submitterEmail: approvedServer.submitterEmail,
-        enrollInSequences: true,
-      });
-
-      // IndexNow — speed up discovery of the new listing page.
-      void notifyListingIndexed(approvedServer.id, [
-        '/browse',
-        '/sitemap.xml',
-      ]).catch(() => {});
+      await recordHumanDecision(db, id, 'approve');
     } else if (action === 'resend_approval') {
       // Re-send the approval email for an already-live listing (missed inbox, etc.).
       const rows = await db
@@ -230,38 +215,15 @@ export async function POST(req: Request) {
         message: `Approval email resent via ${result.channel}.`,
       });
     } else if (action === 'reject') {
-      const deleteResult = await db
-        .delete(servers)
-        .where(and(eq(servers.id, id), eq(servers.status, 'pending')))
-        .returning();
-
-      if (deleteResult.length === 0) {
+      await snapshotGateDecision(db, id);
+      const rejected = await rejectPendingListing(db, id, reason);
+      if (!rejected) {
         return NextResponse.json(
           { error: 'Server not found or not in pending state.' },
           { status: 400 },
         );
       }
-
-      const rejected = deleteResult[0];
-      const submitterEmail =
-        typeof rejected.submitterEmail === 'string'
-          ? rejected.submitterEmail.trim().toLowerCase()
-          : '';
-      if (submitterEmail) {
-        try {
-          await sendListingStatusEmail({
-            to: submitterEmail,
-            mcpName: rejected.name,
-            status: 'rejected',
-            listingUrl: `${getAppUrl()}/submit`,
-            feedback:
-              reason ||
-              'Your listing was not approved. Common reasons: incomplete description, unsafe URL, spam, or a duplicate of an existing listing. You can submit again with clearer details.',
-          });
-        } catch (e) {
-          console.error('Failed to notify submitter on rejection:', e);
-        }
-      }
+      await recordHumanDecision(db, id, 'reject');
     } else if (action === 'set_premium' || action === 'unset_premium') {
       const updateResult = await db
         .update(servers)

@@ -218,7 +218,7 @@ export async function POST(req: Request) {
     }
     // A fresh repo check first, so the answer reflects the source as it is
     // now — the same streak bookkeeping as the sweep's repo phase.
-    const repoStatus = await checkRepo(
+    const { status: repoStatus, stars: repoStars } = await checkRepo(
       r.url,
       getGithubToken(env),
       r.websiteUrl,
@@ -228,6 +228,7 @@ export async function POST(req: Request) {
       await upsertSignals(db, id, {
         repoStatus,
         repoCheckedAt: now,
+        ...(repoStars !== null ? { repoStars } : {}),
         repoGoneCount: isGone ? (r.repoGoneCount ?? 0) + 1 : 0,
         repoFirstGoneAt: isGone ? (r.repoFirstGoneAt ?? now) : null,
       });
@@ -240,7 +241,7 @@ export async function POST(req: Request) {
             ? r.sandboxStatus
             : null,
         toolCount: r.toolCount,
-        githubStars: r.githubStars,
+        githubStars: r.githubStars ?? repoStars,
         npmDownloads: r.npmDownloads,
         lastCommitAt: r.lastCommitAt,
         repoForkOf: r.repoForkOf,
@@ -262,6 +263,7 @@ export async function POST(req: Request) {
       ...reviewColumns(triage, now),
       triageVerdict: triage.verdict,
       triageReason: triage.reason,
+      triageConfidence: triage.verdictConfidence,
     });
     return NextResponse.json({
       success: true,
