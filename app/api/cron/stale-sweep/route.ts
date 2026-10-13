@@ -47,8 +47,8 @@ const REGISTRY_BATCH = 60;
 const REGISTRY_CONCURRENCY = 8;
 const REGISTRY_RECHECK_MS = 14 * 24 * 60 * 60 * 1000;
 const ASSESS_BATCH = 400;
-const TRIAGE_BATCH = 12;
-const TRIAGE_CONCURRENCY = 4;
+const TRIAGE_BATCH = 24;
+const TRIAGE_CONCURRENCY = 6;
 /** Statements per db.batch — each is a single-row update with a handful of params. */
 const WRITE_CHUNK = 50;
 
