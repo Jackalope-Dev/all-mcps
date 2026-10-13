@@ -51,8 +51,8 @@ config for every listing.
 Requires **Node 22** (see `.nvmrc`).
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 Open [localhost:3000](http://localhost:3000). No Cloudflare account, database,
@@ -98,15 +98,15 @@ scripts/       Build, enrichment, ingest, and maintenance scripts
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm run verify` | Typecheck + lint + tests — the gate before any PR |
-| `npm run check` | Biome format and lint, writing fixes |
-| `npm test` | Vitest suite |
-| `npm run preview` | Build with OpenNext and preview the Workers bundle |
-| `npm run deploy` | Build and deploy to Cloudflare Workers |
-| `npm run db:generate` | Generate a Drizzle migration from `db/schema.ts` |
-| `npm run db:migrate:local` | Apply migrations to the local D1 |
+| `bun run dev` | Start the dev server |
+| `bun run build` | Production build |
+| `bun run verify` | Typecheck + lint + tests — the gate before any PR |
+| `bun run check` | Biome format and lint, writing fixes |
+| `bun run test` | Vitest suite |
+| `bun run preview` | Build with OpenNext and preview the Workers bundle |
+| `bun run deploy` | Build and deploy to Cloudflare Workers |
+| `bun run db:generate` | Generate a Drizzle migration from `db/schema.ts` |
+| `bun run db:migrate:local` | Apply migrations to the local D1 |
 
 ## Contributing
 

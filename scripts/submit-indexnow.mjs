@@ -13,7 +13,7 @@
  * come from the real-time approve/republish pings (lib/indexnow.ts) and the
  * change-scoped daily cron (app/api/cron/indexnow/route.ts).
  *
- * Usage: npm run submit-index
+ * Usage: bun run submit-index
  */
 
 import fs from 'node:fs';

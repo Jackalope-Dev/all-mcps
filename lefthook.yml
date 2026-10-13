@@ -1,4 +1,4 @@
-# Lefthook git hooks. Installed by `npm install` (prepare). Docs: https://lefthook.dev
+# Lefthook git hooks. Installed by `bun install` (prepare). Docs: https://lefthook.dev
 # pre-commit touches only staged files; pre-push runs the full `verify` gate.
 
 pre-commit:
@@ -13,7 +13,7 @@ pre-push:
   parallel: true
   commands:
     verify:
-      run: npm run verify
+      run: bun run verify
     secrets:
       run: |
         if ! command -v gitleaks >/dev/null 2>&1; then echo "gitleaks not installed, skipping (brew install gitleaks)"; exit 0; fi

@@ -8,7 +8,7 @@ updates:
   # fast-moving Next release (see AGENTS.md), and partly because those three are
   # version-locked to each other: OpenNext 1.20.3 requires wrangler >=4.125.0,
   # so they have to move together and a grouped bump would hide that.
-  - package-ecosystem: npm
+  - package-ecosystem: bun
     directory: /
     schedule:
       interval: weekly
@@ -41,7 +41,7 @@ updates:
     ignore:
       # Platform-specific binaries live in optionalDependencies on purpose: the
       # dev box forces npm os=linux, and a win32 binary promoted into regular
-      # dependencies breaks the Cloudflare deploy's `npm ci`.
+      # dependencies breaks the Cloudflare deploy's install.
       - dependency-name: '@img/sharp-win32-*'
       - dependency-name: '@rollup/rollup-win32-*'
 

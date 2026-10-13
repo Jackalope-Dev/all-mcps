@@ -2,23 +2,24 @@
   "name": "all-mcps",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.4.2",
   "scripts": {
     "prepare": "lefthook install",
-    "predev": "npm run cf-typegen",
+    "predev": "bun run cf-typegen",
     "prebuild": "node scripts/build-blog-manifest.mjs && node scripts/build-category-manifest.mjs",
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "lint": "biome lint .",
+    "lint": "biome lint . && node scripts/lint-ratchet.mjs",
     "lint:eslint": "eslint",
     "format": "biome format --write .",
     "check": "biome check --write .",
     "test": "vitest run",
     "knip": "knip",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run knip",
+    "verify": "bun run typecheck && bun run lint && bun run test && bun run knip",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && npm run deploy:cf",
+    "deploy": "opennextjs-cloudflare build && bun run deploy:cf",
     "deploy:cf": "node scripts/prune-isr-seed.mjs && node scripts/deploy-jobs-worker.mjs && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "db:generate": "drizzle-kit generate",
@@ -31,7 +32,9 @@
     "capture-screenshots": "node scripts/capture-screenshots.mjs",
     "sync-snapshot": "node scripts/sync-snapshot.mjs",
     "blog:pull": "node scripts/pull-blog-drafts.mjs",
-    "outreach:badges": "node scripts/badge-outreach.mjs"
+    "outreach:badges": "node scripts/badge-outreach.mjs",
+    "lint:ratchet:update": "node scripts/lint-ratchet.mjs --update",
+    "verify:quick": "biome check --changed --since=origin/main --no-errors-on-unmatched && vitest run --changed origin/main"
   },
   "dependencies": {
     "@auth/core": "^0.41.3",
@@ -58,7 +61,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
+    "@biomejs/biome": "2.5.15",
     "@cloudflare/workers-types": "^5.20261002.1",
     "@opennextjs/cloudflare": "1.20.8",
     "@tailwindcss/postcss": "^4",
@@ -87,7 +90,7 @@
     "lightningcss-win32-x64-msvc": "^1.33.0"
   },
   "comments": {
-    "overrides": "Transitive security fixes with no direct dependency to bump. Each is scoped to the major line that is actually vulnerable \u2014 brace-expansion 1.x/2.x are unaffected (the advisory starts at 4.0.0) and forcing them to 5.x would change an API they rely on. Drop an entry once the parent package ships a fix that satisfies it on its own."
+    "overrides": "Transitive security fixes with no direct dependency to bump. Each is scoped to the major line that is actually vulnerable — brace-expansion 1.x/2.x are unaffected (the advisory starts at 4.0.0) and forcing them to 5.x would change an API they rely on. Drop an entry once the parent package ships a fix that satisfies it on its own."
   },
   "overrides": {
     "brace-expansion@>=4.0.0": "^5.0.9",
@@ -100,5 +103,9 @@
     "esbuild": "^0.25.0",
     "undici@^7.0.0": "^7.29.1",
     "engine.io@^6.0.0": "^6.6.10"
+  },
+  "engines": {
+    "node": ">=22",
+    "bun": ">=1.4"
   }
 }
