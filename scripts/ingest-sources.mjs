@@ -600,6 +600,10 @@ async function fetchOfficialRegistryEntries() {
   do {
     const url = new URL(`${OFFICIAL_REGISTRY_BASE}/v0.1/servers`);
     url.searchParams.set('limit', '100');
+    // The registry lists every published version of a server as its own
+    // entry — 138k entries on 2026-10-13, about five per server. Only the
+    // latest version matters here, and asking for it cuts paging ~5x.
+    url.searchParams.set('version', 'latest');
     if (cursor) url.searchParams.set('cursor', cursor);
 
     let body;
@@ -622,8 +626,11 @@ async function fetchOfficialRegistryEntries() {
       // Only ingest servers the registry itself currently considers active —
       // 'deprecated'/'deleted' status typically means spam, malware, or a
       // moderation-policy violation (per the aggregators doc).
-      const registryStatus =
-        entry._meta?.['io.modelcontextprotocol.registry/official']?.status;
+      const official =
+        entry._meta?.['io.modelcontextprotocol.registry/official'];
+      // Belt and braces in case the version filter is ever ignored.
+      if (official?.isLatest === false) continue;
+      const registryStatus = official?.status;
       if (registryStatus && registryStatus !== 'active') {
         skippedInactive++;
         continue;
@@ -1073,6 +1080,9 @@ function applySql(relPath) {
 
 // --- main ------------------------------------------------------------------
 
+// Note: never `allEntries.push(...bigArray)` — spreading 100k+ entries into
+// call arguments overflows the stack (the 2026-10-13 manual run crashed this
+// way after a successful 50-minute fetch).
 async function main() {
   console.log('Fetching source lists...');
 
@@ -1087,7 +1097,7 @@ async function main() {
     console.log(
       `  official-registry: ${registryEntries.length} active entries fetched`,
     );
-    allEntries.push(...registryEntries);
+    for (const e of registryEntries) allEntries.push(e);
   }
 
   for (const source of SOURCES) {
@@ -1102,7 +1112,7 @@ async function main() {
     }
     const entries = parseServerList(md, source);
     console.log(`  ${source.name}: ${entries.length} entries parsed`);
-    allEntries.push(...entries);
+    for (const e of entries) allEntries.push(e);
   }
 
   if (sourceEnabled('pulsemcp')) {
@@ -1111,7 +1121,7 @@ async function main() {
       console.log(
         `  pulsemcp: ${pulsemcpEntries.length} entries above the quality floor`,
       );
-      allEntries.push(...pulsemcpEntries);
+      for (const e of pulsemcpEntries) allEntries.push(e);
     } catch (err) {
       // Isolated deliberately: pulsemcp's API has observed intermittent failures
       // (see fetchPulseMcpPage) and is not a source we're vetting the reliability
