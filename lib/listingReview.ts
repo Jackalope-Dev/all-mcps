@@ -122,6 +122,19 @@ export async function reviewListing(
 }
 
 /**
+ * Columns to persist a review onto `servers`. Empty when Jev did not answer,
+ * so an outage never overwrites an earlier real verdict with nulls.
+ */
+export function reviewColumns(review: ListingReview, now = new Date()) {
+  if (!review.reviewed) return {};
+  return {
+    mcpProbability: review.mcpServerProbability,
+    listingQuality: review.qualityScore,
+    reviewedAt: now,
+  };
+}
+
+/**
  * Whether a pending listing should be held back from automated promotion.
  *
  * Only ever true when Jev actually answered *and* judged the project not to be
@@ -205,4 +218,169 @@ export async function areListingsDuplicates(
   const alignment = await alignListings(a, b);
   if (alignment === null) return null;
   return alignment === 'same';
+}
+
+/**
+ * Admin triage: what should a curator do with this listing? The levels are
+ * the actions, same pattern as DUPLICATE_ALIGNMENT_LEVELS.
+ */
+export const TRIAGE_LEVELS = ['reject', 'needs_review', 'approve'] as const;
+export type TriageVerdict = (typeof TRIAGE_LEVELS)[number];
+
+const triageQuestion: JevScoreQuestion = {
+  type: 'score',
+  instructions:
+    'You are curating a directory of MCP (Model Context Protocol) servers. Given the listing and the evidence we collected, what should the curator do? Approve genuine, usable MCP servers. Reject clients, curated lists, tutorials, empty or placeholder repos, forks with no changes, and spam. Choose needs_review only when the evidence genuinely conflicts.',
+  criteria: [
+    'Reject — not a genuine, usable MCP server for this directory.',
+    'Needs review — the evidence conflicts; a human should look.',
+    'Approve — a genuine MCP server worth listing.',
+  ],
+};
+
+/** Hard evidence handed to Jev alongside the listing text, and echoed back in the reason. */
+export type TriageEvidence = {
+  sandboxStatus?: string | null;
+  toolCount?: number | null;
+  githubStars?: number | null;
+  npmDownloads?: number | null;
+  lastCommitAt?: Date | null;
+  repoForkOf?: string | null;
+  staleReasons?: string[];
+  readme?: string | null;
+};
+
+export type ListingTriage = ListingReview & {
+  verdict: TriageVerdict | null;
+  /** Confidence in `verdict`, 0..1, or null when unknown. */
+  verdictConfidence: number | null;
+  reason: string | null;
+};
+
+/** Below this confidence an approve/reject is downgraded to needs_review. */
+export const TRIAGE_CONFIDENCE_FLOOR = 0.7;
+
+/**
+ * Full review plus a curator recommendation, in one Jev request. Never throws;
+ * all-null when Jev is unavailable.
+ */
+export async function triageListing(
+  listing: ListingForReview,
+  evidence: TriageEvidence,
+): Promise<ListingTriage> {
+  const empty: ListingTriage = {
+    ...UNREVIEWED,
+    verdict: null,
+    verdictConfidence: null,
+    reason: null,
+  };
+  if (!listing.name && !listing.description) return empty;
+
+  const res = await askJev(
+    {
+      name: listing.name ?? '',
+      description: listing.description ?? '',
+      url: listing.url ?? '',
+      readme: (evidence.readme ?? '').slice(0, 3000),
+      evidence: {
+        sandbox_result: evidence.sandboxStatus ?? 'not tested',
+        tools_found: evidence.toolCount ?? 0,
+        github_stars: evidence.githubStars ?? null,
+        npm_monthly_downloads: evidence.npmDownloads ?? null,
+        last_commit: evidence.lastCommitAt?.toISOString().slice(0, 10) ?? null,
+        fork_of: evidence.repoForkOf ?? null,
+        stale_signals: evidence.staleReasons ?? [],
+      },
+    },
+    {
+      is_mcp_server: isMcpServerQuestion,
+      listing_quality: listingQualityQuestion,
+      triage: triageQuestion,
+    },
+  );
+  if (!res) return empty;
+
+  const mcp = res.answers.is_mcp_server;
+  const quality = res.answers.listing_quality;
+  const triage = res.answers.triage;
+  const review: ListingReview = {
+    isMcpServer: noulVerdict(mcp, MCP_SERVER_NOUL_FLOOR),
+    mcpServerProbability: typeof mcp?.noul === 'number' ? mcp.noul : null,
+    qualityScore: typeof quality?.score === 'number' ? quality.score : null,
+    reviewed: true,
+  };
+  const raw = nearestScoreLevel(triage, TRIAGE_LEVELS);
+  const confidence =
+    typeof triage?.confidence === 'number' ? triage.confidence : null;
+  const verdict = settleVerdict(raw, confidence, review, evidence);
+  return {
+    ...review,
+    verdict,
+    verdictConfidence: confidence,
+    reason: verdict ? explainTriage(verdict, review, evidence) : null,
+  };
+}
+
+/**
+ * Apply hard evidence on top of the model's answer. A completed sandbox
+ * handshake is proof, so it can never be auto-rejected; an unsure model never
+ * gets to approve or reject on its own.
+ */
+export function settleVerdict(
+  raw: TriageVerdict | null,
+  confidence: number | null,
+  review: ListingReview,
+  evidence: TriageEvidence,
+): TriageVerdict | null {
+  if (raw === null) return null;
+  const proven =
+    evidence.sandboxStatus === 'ok' ||
+    evidence.sandboxStatus === 'needs_credentials';
+  if (raw === 'reject' && proven) return 'needs_review';
+  if (raw !== 'needs_review' && (confidence ?? 0) < TRIAGE_CONFIDENCE_FLOOR)
+    return 'needs_review';
+  // The model said approve but its own is-MCP answer says no: conflicting.
+  if (raw === 'approve' && review.isMcpServer === false) return 'needs_review';
+  return raw;
+}
+
+/** Human-readable one-liner for the admin card, built from facts, not model prose. */
+export function explainTriage(
+  verdict: TriageVerdict,
+  review: ListingReview,
+  evidence: TriageEvidence,
+): string {
+  const parts: string[] = [];
+  if (review.mcpServerProbability !== null)
+    parts.push(`MCP ${Math.round(review.mcpServerProbability * 100)}%`);
+  if (review.qualityScore !== null) {
+    const level =
+      LISTING_QUALITY_LEVELS[
+        Math.max(
+          0,
+          Math.min(
+            LISTING_QUALITY_LEVELS.length - 1,
+            Math.round(review.qualityScore),
+          ),
+        )
+      ];
+    parts.push(`copy ${level}`);
+  }
+  if (evidence.sandboxStatus) {
+    parts.push(
+      evidence.sandboxStatus === 'ok'
+        ? `handshake ok (${evidence.toolCount ?? 0} tools)`
+        : `sandbox ${evidence.sandboxStatus.replace(/_/g, ' ')}`,
+    );
+  }
+  if (evidence.repoForkOf) parts.push(`fork of ${evidence.repoForkOf}`);
+  if (evidence.staleReasons?.length)
+    parts.push(`stale: ${evidence.staleReasons.join(', ')}`);
+  const lead =
+    verdict === 'approve'
+      ? 'Approve'
+      : verdict === 'reject'
+        ? 'Reject'
+        : 'Look closer';
+  return `${lead} — ${parts.join(' · ') || 'little evidence either way'}`;
 }

@@ -1,8 +1,12 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, asc, desc, eq, notInArray } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, notInArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
-import { serverHealthChecks, servers } from '../../../../db/schema';
+import {
+  listingSignals,
+  serverHealthChecks,
+  servers,
+} from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { cronServerColumns } from '../../../../lib/cronServerColumns';
 import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
@@ -18,6 +22,9 @@ import {
 } from '../../../../lib/listingPageRefresh';
 import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
 import { isGitHubRepoUrl } from '../../../../lib/repoUrl';
+import type { ToolDefinition } from '../../../../lib/securityProfile';
+import { storeSecurityProfile } from '../../../../lib/securityProfileStore';
+import { upsertSignals } from '../../../../lib/signalStore';
 import { parseToolsFromReadme } from '../../../../lib/tools/parseToolsFromReadme';
 import { probeRemoteEndpoint } from '../../../../lib/tools/verifyRemoteEndpoint';
 import { isSafeFetchTarget } from '../../../../lib/urlSafety';
@@ -208,6 +215,11 @@ export async function POST(req: Request) {
       let toolsError: string | null = server.toolsError ?? null;
       let toolsSource: string | null = server.toolsSource ?? null;
       let lastCommitAt: Date | null = server.lastCommitAt ?? null;
+      // undefined = GitHub was not asked this pass; leave the stored value alone.
+      let repoForkOf: string | null | undefined;
+      // Set only when this pass completed a live tools/list, so the security
+      // profile is rebuilt from tools we just saw, never from a README guess.
+      let liveTools: ToolDefinition[] | null = null;
       let remoteEndpointHealthy: boolean | null =
         server.remoteEndpointHealthy ?? null;
       let remoteEndpointCheckedAt: Date | null =
@@ -248,6 +260,11 @@ export async function POST(req: Request) {
                 const pushed = new Date(ghData.pushed_at);
                 if (!Number.isNaN(pushed.getTime())) lastCommitAt = pushed;
               }
+              // Feeds the stale sweep's unmodified-fork rule. The single-repo
+              // endpoint includes `parent`; fall back to a marker when absent.
+              repoForkOf = ghData.fork
+                ? (ghData.parent?.full_name ?? 'unknown')
+                : null;
               if (ghData.archived || ghData.disabled) {
                 healthStatus = 'archived';
               } else {
@@ -319,13 +336,12 @@ export async function POST(req: Request) {
               introspection.tools &&
               introspection.tools.length > 0
             ) {
-              toolsJson = JSON.stringify(
-                introspection.tools.map((t) => ({
-                  name: t.name,
-                  description: t.description,
-                  parameters: t.inputSchema,
-                })),
-              );
+              liveTools = introspection.tools.map((t) => ({
+                name: t.name,
+                description: t.description,
+                parameters: t.inputSchema,
+              }));
+              toolsJson = JSON.stringify(liveTools);
               toolsSource = 'introspected';
               toolsError = null;
             } else if (introspection.authRequired) {
@@ -384,13 +400,12 @@ export async function POST(req: Request) {
             remoteIntrospection.tools &&
             remoteIntrospection.tools.length > 0
           ) {
-            toolsJson = JSON.stringify(
-              remoteIntrospection.tools.map((t) => ({
-                name: t.name,
-                description: t.description,
-                parameters: t.inputSchema,
-              })),
-            );
+            liveTools = remoteIntrospection.tools.map((t) => ({
+              name: t.name,
+              description: t.description,
+              parameters: t.inputSchema,
+            }));
+            toolsJson = JSON.stringify(liveTools);
             toolsSource = 'introspected';
             toolsError = null;
           } else if (remoteIntrospection.authRequired) {
@@ -571,6 +586,26 @@ export async function POST(req: Request) {
               : {}),
         })
         .where(eq(servers.id, server.id));
+
+      if (liveTools && liveTools.length > 0) {
+        await storeSecurityProfile(db, server.id, liveTools, undefined, now);
+      }
+
+      // Forks are rare, so only a fork creates a signals row; a repo that is
+      // not one just clears any stale marker without writing a row per listing.
+      if (repoForkOf) {
+        await upsertSignals(db, server.id, { repoForkOf });
+      } else if (repoForkOf === null) {
+        await db
+          .update(listingSignals)
+          .set({ repoForkOf: null })
+          .where(
+            and(
+              eq(listingSignals.serverId, server.id),
+              isNotNull(listingSignals.repoForkOf),
+            ),
+          );
+      }
 
       // Bounded health-check history for the detail-page trend strip (see
       // db/schema.ts). Insert then trim to the last HEALTH_HISTORY_LIMIT for

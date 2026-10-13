@@ -63,8 +63,10 @@ import { ReviewNudge } from '../../../components/ui/ReviewNudge';
 import { ReviewsSection } from '../../../components/ui/ReviewsSection';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
 import { ScreenshotViewer } from '../../../components/ui/ScreenshotViewer';
+import { SecurityProfileCard } from '../../../components/ui/SecurityProfileCard';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { ToolSchemaInspector } from '../../../components/ui/ToolSchemaInspector';
+import { TrustTierBadge } from '../../../components/ui/TrustTierBadge';
 import { UpvoteButton } from '../../../components/ui/UpvoteButton';
 import { InstallsStat, ViewTracker } from '../../../components/ui/ViewTracker';
 import { VulnSignalCard } from '../../../components/ui/VulnSignalCard';
@@ -100,6 +102,7 @@ import {
   getServerById,
   getServerHealthHistory,
   getServerReviews,
+  getServerSignalsById,
   getStdioVerification,
   type Server,
   truncateReadmeExcerpt,
@@ -165,6 +168,7 @@ export async function generateMetadata({
     hasTools: Array.isArray(server.tools) && server.tools.length > 0,
     githubStars: server.githubStars,
     npmDownloads: server.npmDownloads,
+    staleFlagged: server.staleFlaggedAt != null,
   });
 
   const robotsOverride =
@@ -299,6 +303,7 @@ export default async function MCPDetail({
     featuredPool,
     healthHistory,
     reviewSummary,
+    signals,
   ] = await Promise.all([
     needsReadmeFallback ? fetchReadme(server.url) : Promise.resolve(null),
     getRelatedServers(server as any, 4),
@@ -306,7 +311,11 @@ export default async function MCPDetail({
     getFeaturedServers(server.id, 10),
     getServerHealthHistory(server.id),
     getServerReviews(server.id),
+    getServerSignalsById(server.id),
   ]);
+  // Trust tier and security card read listing_signals fields; merged here
+  // rather than in getServerById so other callers don't pay for the read.
+  const serverWithSignals = { ...server, ...signals };
   // A verification is only meaningful for the install command it actually
   // tested. install_extracted_at (LLM re-validation) can rewrite that
   // command after the verification ran — stale otherwise, showing a mismatched
@@ -823,6 +832,7 @@ export default async function MCPDetail({
                       </h1>
                     </div>
                     <div className="detail-title-badges">
+                      <TrustTierBadge server={serverWithSignals} />
                       <a
                         href="#reviews"
                         className="detail-rating-badge-link"
@@ -1561,6 +1571,8 @@ export default async function MCPDetail({
                         >
                           {
                             {
+                              needs_credentials:
+                                'The install command below installed and started the server, which then stopped for configuration (such as an API key) that our sandbox does not have — expected for servers that connect to your account.',
                               timeout:
                                 "We ran the install command below but it didn't respond within our test window — this can mean a slow first-time install rather than a real problem.",
                               handshake_failed:
@@ -2627,6 +2639,8 @@ export default async function MCPDetail({
               <SponsorAdUnit placement="detail_sidebar" />
 
               <VulnSignalCard server={server} />
+
+              <SecurityProfileCard server={serverWithSignals} />
 
               {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) — rotates between paid
               featured listings and the self-serve upsell */}

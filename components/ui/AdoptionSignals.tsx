@@ -35,6 +35,7 @@ export type AdoptionSignalsProps = {
   /** Result of our automated stdio install check, when it has run. */
   installCheck?:
     | 'ok'
+    | 'needs_credentials'
     | 'timeout'
     | 'handshake_failed'
     | 'install_failed'
@@ -61,6 +62,10 @@ const INSTALL_CHECK_LABEL: Record<
   ok: {
     value: 'Passed',
     caption: 'Our sandbox started it and listed its tools.',
+  },
+  needs_credentials: {
+    value: 'Runs',
+    caption: 'Our sandbox started it; it then asked for an API key or config.',
   },
   timeout: {
     value: 'Inconclusive',

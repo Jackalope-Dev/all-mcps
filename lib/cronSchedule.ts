@@ -125,6 +125,11 @@ export const SLOW_JOBS: CronJob[] = [
     secretVar: 'CRON_SECRET',
     shouldRun: (now) => now.getUTCHours() === 5,
   },
+  // Staged dead/stale/fake cleanup: registry deprecation checks, stale-rule
+  // assessment (flag → noindex → remove after a 30-day grace period), and Jev
+  // triage recommendations for the admin queue. Bounded per tick — see the
+  // route. Every 4h so the ~27k catalog is reassessed roughly every 11 days.
+  { path: '/api/cron/stale-sweep', secretVar: 'CRON_SECRET' },
   // 45-day retention cleanup for impression_logs and api_access_logs to prevent
   // unbounded table/index growth and D1 Time-Travel WAL storage bloat. Daily at 03:00 UTC.
   {

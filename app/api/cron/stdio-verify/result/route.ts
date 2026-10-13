@@ -6,7 +6,11 @@ import { z } from 'zod';
 import { servers, stdioVerifications } from '../../../../../db/schema';
 import { isCronAuthorized } from '../../../../../lib/cronAuth';
 import { isPackageInstallable } from '../../../../../lib/listingEnrich';
-import { decideGuessRetirement } from '../../../../../lib/stdioVerification';
+import { storeSecurityProfile } from '../../../../../lib/securityProfileStore';
+import {
+  decideGuessRetirement,
+  settleVerificationStatus,
+} from '../../../../../lib/stdioVerification';
 import { formatZodError } from '../../../../../lib/zodError';
 
 /**
@@ -28,6 +32,7 @@ import { formatZodError } from '../../../../../lib/zodError';
  */
 const STATUSES = [
   'ok',
+  'needs_credentials',
   'install_failed',
   'handshake_failed',
   'timeout',
@@ -38,7 +43,27 @@ const toolSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   parameters: z.unknown().optional(),
+  annotations: z
+    .object({
+      readOnlyHint: z.boolean().optional(),
+      destructiveHint: z.boolean().optional(),
+      openWorldHint: z.boolean().optional(),
+    })
+    .partial()
+    .optional(),
 });
+
+/** What the sandbox saw while the server installed and started. See lib/securityProfile.ts. */
+const sandboxSchema = z
+  .object({
+    connections: z.array(z.string().max(200)).max(50).optional(),
+    filesWritten: z.array(z.string().max(500)).max(50).optional(),
+    installScripts: z.array(z.string().max(50)).max(10).optional(),
+    hasProvenance: z.boolean().nullable().optional(),
+    packageAgeDays: z.number().int().nullable().optional(),
+    maintainerCount: z.number().int().nullable().optional(),
+  })
+  .optional();
 
 const resultSchema = z.object({
   serverId: z.string().min(1),
@@ -46,6 +71,10 @@ const resultSchema = z.object({
   tools: z.array(toolSchema).optional(),
   error: z.string().optional(),
   durationMs: z.number().int().nonnegative().optional(),
+  stderr: z.string().optional(),
+  installMs: z.number().int().nonnegative().optional(),
+  sandbox: sandboxSchema,
+  retried: z.boolean().optional(),
 });
 
 const bodySchema = z.union([
@@ -67,8 +96,14 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    const results =
-      'results' in parsed.data ? parsed.data.results : [parsed.data];
+    // The script reports raw outcomes; whether a timeout was really a server
+    // asking for an API key is decided here, where the rule is tested.
+    const results = (
+      'results' in parsed.data ? parsed.data.results : [parsed.data]
+    ).map((r) => ({
+      ...r,
+      status: settleVerificationStatus(r.status, r.stderr),
+    }));
 
     let env: any;
     try {
@@ -84,6 +119,7 @@ export async function POST(req: Request) {
     let cleared = 0;
     let needsConfig = 0;
     let discardedStale = 0;
+    let toolsChanged = 0;
 
     for (const r of results) {
       // State as it stands *before* this result lands: the consecutive-failure
@@ -119,6 +155,8 @@ export async function POST(req: Request) {
           tools: r.tools && r.tools.length > 0 ? JSON.stringify(r.tools) : null,
           error: r.error ? r.error.slice(0, 500) : null,
           durationMs: r.durationMs ?? null,
+          stderr: r.stderr ? r.stderr.slice(-2000) : null,
+          installMs: r.installMs ?? null,
           installFailures: nextFailures,
           checkedAt: now,
         })
@@ -142,6 +180,8 @@ export async function POST(req: Request) {
           tools: r.tools && r.tools.length > 0 ? JSON.stringify(r.tools) : null,
           error: r.error ? r.error.slice(0, 500) : null,
           durationMs: r.durationMs ?? null,
+          stderr: r.stderr ? r.stderr.slice(-2000) : null,
+          installMs: r.installMs ?? null,
           checkedAt: now,
         };
         await db.insert(stdioVerifications).values(values).onConflictDoUpdate({
@@ -160,6 +200,14 @@ export async function POST(req: Request) {
             toolsError: null,
           })
           .where(eq(servers.id, r.serverId));
+        const { changed } = await storeSecurityProfile(
+          db,
+          r.serverId,
+          r.tools,
+          r.sandbox,
+          now,
+        );
+        if (changed) toolsChanged++;
       }
 
       // Installed cleanly, never finished the handshake. That is a statement
@@ -167,7 +215,7 @@ export async function POST(req: Request) {
       // about the install command — which just proved itself by installing.
       // Recorded as a positive signal so nothing downstream reads it as a bad
       // install.
-      if (r.status === 'handshake_failed') {
+      if (r.status === 'handshake_failed' || r.status === 'needs_credentials') {
         await db
           .update(servers)
           .set({ installNeedsConfig: now })
@@ -248,6 +296,7 @@ export async function POST(req: Request) {
       clearedGuesses: cleared,
       needsConfig,
       discardedStale,
+      toolsChanged,
     });
   } catch (error: any) {
     console.error('stdio-verify result error:', error);

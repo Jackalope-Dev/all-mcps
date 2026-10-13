@@ -27,4 +27,10 @@ describe('isListingIndexable', () => {
       isListingIndexable({ ...base, hasTools: true, status: 'pending' }),
     ).toBe(false);
   });
+
+  it('noindexes listings the stale sweep has flagged', () => {
+    expect(
+      isListingIndexable({ ...base, githubStars: 5000, staleFlagged: true }),
+    ).toBe(false);
+  });
 });

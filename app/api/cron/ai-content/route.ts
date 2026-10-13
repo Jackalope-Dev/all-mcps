@@ -24,6 +24,7 @@ import {
   parseGithubUrl,
 } from '../../../../lib/listingEnrich';
 import {
+  reviewColumns,
   reviewListing,
   shouldSkipAiWriteup,
 } from '../../../../lib/listingReview';
@@ -33,6 +34,7 @@ import {
   pickInstallCommand,
 } from '../../../../lib/listingSignals';
 import { parseServerTools } from '../../../../lib/servers';
+import { upsertSignals } from '../../../../lib/signalStore';
 
 /**
  * AI content pass — writes the unique per-listing content layer (summary, overview,
@@ -369,6 +371,9 @@ export async function POST(req: Request) {
             description: server.description,
             url: server.url,
           });
+          if (review.reviewed) {
+            await upsertSignals(db, server.id, reviewColumns(review));
+          }
           if (shouldSkipAiWriteup(review)) {
             return { server, skipJev: true as const };
           }

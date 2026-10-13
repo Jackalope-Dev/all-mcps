@@ -2,7 +2,7 @@ import type { drizzle } from 'drizzle-orm/d1';
 import { DEFAULT_SUBMIT_CATEGORY, normalizeCategory } from './categories';
 import { classifyCategory } from './categoryClassifier';
 import { getGithubToken, githubApiHeaders } from './githubAuth';
-import { alignListings, reviewListing } from './listingReview';
+import { alignListings, reviewColumns, reviewListing } from './listingReview';
 import { isRepositoryUrl } from './repoUrl';
 import {
   isAuthType,
@@ -79,6 +79,8 @@ export type ListingIntakeReady = {
   category: string;
   /** Ready to hand straight to `db.insert(servers).values(...)`. */
   values: Record<string, unknown>;
+  /** Jev review for the listing_signals row, written after the insert succeeds. Empty when Jev did not answer. */
+  signals: ReturnType<typeof reviewColumns>;
 };
 
 /**
@@ -306,6 +308,7 @@ export async function prepareListingIntake(
     url,
     websiteUrl,
     category: resolvedCategory,
+    signals: reviewColumns(review),
     values: {
       id,
       name,

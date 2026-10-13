@@ -79,6 +79,8 @@ type Server = {
   toolCount?: number;
   /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null. */
   toolsSource?: string | null;
+  /** Trust tier verified or runs_needs_keys — see lib/trustTier.ts. */
+  testedWorking?: boolean;
   pricingModel?: string | null;
   authType?: string | null;
   tags?: string[] | null;
@@ -457,7 +459,7 @@ export default function DirectoryGrid({
           return false;
         }
       }
-      if (verifiedOnly && !isVerifiedListing(server)) return false;
+      if (verifiedOnly && !server.testedWorking) return false;
       if (!stackMatch(server)) return false;
       if (!transportMatch(server)) return false;
       if (!pricingMatch(server)) return false;
@@ -1017,10 +1019,10 @@ export default function DirectoryGrid({
                     type="button"
                     className="directory-tag directory-tag-active"
                     onClick={() => setVerifiedOnly(false)}
-                    aria-label="Remove verified filter"
+                    aria-label="Remove tested-working filter"
                   >
                     <BadgeCheck size={14} aria-hidden="true" />
-                    Verified
+                    Tested working
                     <X size={12} aria-hidden="true" />
                   </button>
                 )}
@@ -1198,6 +1200,34 @@ export default function DirectoryGrid({
                   onClick={() => setSelectedStack(stack)}
                   className={`directory-segmented-btn ${selectedStack === stack ? 'is-active' : ''}`}
                   aria-pressed={selectedStack === stack}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div
+              className="directory-segmented"
+              role="group"
+              aria-label="Tested filter"
+            >
+              {(
+                [
+                  [false, 'Any status'],
+                  [true, 'Tested working'],
+                ] as const
+              ).map(([on, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setVerifiedOnly(on)}
+                  className={`directory-segmented-btn ${verifiedOnly === on ? 'is-active' : ''}`}
+                  aria-pressed={verifiedOnly === on}
+                  title={
+                    on
+                      ? 'Only servers we ran in a sandbox or reached live — including ones that started and asked for an API key.'
+                      : undefined
+                  }
                 >
                   {label}
                 </button>

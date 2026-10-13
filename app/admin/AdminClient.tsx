@@ -7,6 +7,7 @@ import {
   List,
   Mail,
   Megaphone,
+  Sparkles,
   Wrench,
   X,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ import { AdminAdsControl } from './AdminAdsControl';
 import { AdminAnalyticsView } from './AdminAnalyticsView';
 import { AdminBlogDrafts } from './AdminBlogDrafts';
 import { AdminToolsControl } from './AdminCronsControl';
+import { AdminTriageQueue } from './AdminTriageQueue';
 import ManageListings, { type ListingFilters } from './ManageListings';
 import { type KpiCardSelection, StatsBar } from './StatsBar';
 
@@ -176,6 +178,7 @@ export default function AdminClient({
     | 'overview'
     | 'moderation'
     | 'listings'
+    | 'triage'
     | 'ads'
     | 'blog'
     | 'analytics'
@@ -338,6 +341,7 @@ export default function AdminClient({
       badge: totalPending > 0 ? totalPending : undefined,
       badgeColor: '#d97706',
     },
+    { id: 'triage', label: 'Triage (Jev)', icon: Sparkles },
     { id: 'listings', label: 'Listings Directory', icon: List },
     {
       id: 'ads',
@@ -781,6 +785,9 @@ export default function AdminClient({
           )}
         </div>
       )}
+
+      {/* TAB: JEV TRIAGE QUEUE */}
+      {activeTab === 'triage' && <AdminTriageQueue />}
 
       {/* TAB 3: LISTINGS DIRECTORY */}
       {activeTab === 'listings' && (

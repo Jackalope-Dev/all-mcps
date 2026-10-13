@@ -7,9 +7,11 @@ import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { notifyListingIndexed } from '../../../../lib/indexnow';
 import { isPackageInstallable } from '../../../../lib/listingEnrich';
 import {
+  reviewColumns,
   reviewListing,
   shouldHoldFromAutoPromotion,
 } from '../../../../lib/listingReview';
+import { upsertSignals } from '../../../../lib/signalStore';
 import { isSafeFetchTarget } from '../../../../lib/urlSafety';
 
 /**
@@ -153,6 +155,12 @@ export async function POST(req: Request) {
           url: s.url,
         });
         if (shouldHoldFromAutoPromotion(review)) {
+          // Persisted so the admin triage queue shows why it was held.
+          await db
+            .update(servers)
+            .set({ reviewFlagged: true })
+            .where(eq(servers.id, s.id));
+          await upsertSignals(db, s.id, reviewColumns(review));
           heldForReview++;
           continue;
         }
@@ -164,6 +172,8 @@ export async function POST(req: Request) {
           .returning();
         if (result.length > 0) {
           promoted++;
+          if (review.reviewed)
+            await upsertSignals(db, s.id, reviewColumns(review));
           void notifyListingIndexed(s.id, ['/browse', '/sitemap.xml']).catch(
             () => {},
           );

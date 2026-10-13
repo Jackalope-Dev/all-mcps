@@ -281,6 +281,13 @@
       "when": 1791830867912,
       "tag": "0059_ad_pending_revision",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1791911644666,
+      "tag": "0060_listing_trust",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import {
   desc,
   eq,
   gt,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -54,6 +55,18 @@ import { parseArgsJson } from '../../../../../lib/installConfig';
  * changing. Both are deliberately conservative (retest, not "assume
  * broken") — see RETEST_STALE_MS.
  */
+function parseEnvVarNames(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((v): v is string => typeof v === 'string').slice(0, 20)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 const DEFAULT_BATCH_SIZE = 20;
 const MAX_BATCH_SIZE = 100;
 const PENDING_STALE_MS = 10 * 60 * 1000;
@@ -123,6 +136,7 @@ export async function POST(req: Request) {
         installCommand: servers.installCommand,
         installArgs: servers.installArgs,
         installPackage: servers.installPackage,
+        aiEnvVars: servers.aiEnvVars,
         verifyStatus: stdioVerifications.status,
       })
       .from(servers)
@@ -162,6 +176,14 @@ export async function POST(req: Request) {
                 and(
                   isNull(servers.installExtractedAt),
                   eq(stdioVerifications.status, 'install_failed'),
+                  lt(stdioVerifications.checkedAt, guessRetestCutoff),
+                ),
+                // A timeout or sandbox error says nothing about the listing —
+                // usually a slow install or a server waiting on a key, both of
+                // which the harness now handles (separate install step,
+                // placeholder env vars). Retry those on the short window too.
+                and(
+                  inArray(stdioVerifications.status, ['timeout', 'error']),
                   lt(stdioVerifications.checkedAt, guessRetestCutoff),
                 ),
               ),
@@ -239,6 +261,9 @@ export async function POST(req: Request) {
         installCommand: r.installCommand as string,
         installArgs: parseArgsJson(r.installArgs) ?? [],
         installPackage: r.installPackage as string,
+        // Names only — the sandbox fills them with placeholders so servers
+        // that exit on a missing key get far enough to say so.
+        envVars: parseEnvVarNames(r.aiEnvVars),
       }));
 
     // The overselect above claims up to batchSize*2 candidates for claim-race

@@ -16,6 +16,7 @@ export async function POST(req: Request) {
       'ai-content': '/api/cron/ai-content',
       enrich: '/api/cron/enrich',
       indexnow: '/api/cron/indexnow',
+      'stale-sweep': '/api/cron/stale-sweep',
     };
 
     const cronPath = typeof job === 'string' ? CRON_PATHS[job] : undefined;

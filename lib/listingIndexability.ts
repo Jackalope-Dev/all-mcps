@@ -24,10 +24,13 @@ export type IndexabilityInput = {
   hasTools: boolean;
   githubStars?: number | null;
   npmDownloads?: number | null;
+  /** Flagged by the stale sweep (lib/staleness.ts). Noindexed during the grace period, before any removal. */
+  staleFlagged?: boolean;
 };
 
 export function isListingIndexable(s: IndexabilityInput): boolean {
   if (s.status && s.status !== 'active') return false;
+  if (s.staleFlagged) return false;
   if (!s.hasAiDoc) return false;
   const hasTraction =
     (s.githubStars ?? 0) >= INDEXABLE_MIN_GITHUB_STARS ||

@@ -14,6 +14,7 @@ import {
   PRODUCT_SUBSCRIBERS_LIST_ID,
   syncSequenzySubscriber,
 } from '../../../lib/sequenzy';
+import { upsertSignals } from '../../../lib/signalStore';
 import { getAppUrl } from '../../../lib/stripe';
 import { verifyTurnstileToken } from '../../../lib/turnstile';
 import { formatZodError } from '../../../lib/zodError';
@@ -139,6 +140,14 @@ export async function POST(req: Request) {
             'A listing with a matching name already exists. Please contact us if this is unexpected.',
         },
         { status: 409 },
+      );
+    }
+
+    // Best-effort: the listing is in; a lost review just means the stale sweep
+    // asks Jev again later.
+    if (Object.keys(prepared.signals).length > 0) {
+      await upsertSignals(db, id, prepared.signals).catch((e) =>
+        console.error('Failed to store intake review:', e),
       );
     }
 

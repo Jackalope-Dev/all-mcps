@@ -14,6 +14,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { cache } from 'react';
 import serversData from '../data/mcp-servers.json';
 import {
+  listingSignals,
   reviews,
   serverHealthChecks,
   servers as serversTable,
@@ -42,6 +43,7 @@ import {
   type Searchable,
   type SearchPrefilter,
 } from './search';
+import { computeTrustTier, type TrustTierInput } from './trustTier';
 
 export type ServerTool = {
   name: string;
@@ -169,6 +171,8 @@ export const PUBLIC_SERVER_COLUMNS = {
   vulnMediumCount: serversTable.vulnMediumCount,
   vulnLowCount: serversTable.vulnLowCount,
   vulnScannedAt: serversTable.vulnScannedAt,
+  installNeedsConfig: serversTable.installNeedsConfig,
+  staleFlaggedAt: serversTable.staleFlaggedAt,
   views: serversTable.views,
   copies: serversTable.copies,
   upvotes: serversTable.upvotes,
@@ -289,6 +293,16 @@ export type Server = {
   vulnMediumCount?: number | null;
   vulnLowCount?: number | null;
   vulnScannedAt?: string | Date | null;
+  /** E2B started it, then it stopped for configuration (API key etc.). Feeds the trust tier. */
+  installNeedsConfig?: string | Date | null;
+  /** Jev is-an-MCP-server probability (lib/listingReview.ts). From listing_signals — only the detail page merges it in. */
+  mcpProbability?: number | null;
+  /** Set while the stale sweep has this listing flagged (noindexed). See lib/staleness.ts. */
+  staleFlaggedAt?: string | Date | null;
+  /** Raw SecurityProfile JSON (listing_signals) — parse with parseSecurityProfile. Detail page only. */
+  securityProfile?: string | null;
+  /** Last time the tool definitions changed after a previous profile existed. */
+  toolsChangedAt?: string | Date | null;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -1370,6 +1384,11 @@ export async function getServersForLlmsTxt(): Promise<LlmsTxtServer[]> {
  * directory grid actually reads for search/sort/filter/render — the heavy AI
  * text is pre-collapsed into a single bounded `aiText` blob so pages stay small.
  */
+function isTestedWorking(s: TrustTierInput): boolean {
+  const tier = computeTrustTier(s);
+  return tier === 'verified' || tier === 'runs_needs_keys';
+}
+
 export type DirectoryFeedItem = {
   id: string;
   name: string;
@@ -1390,6 +1409,8 @@ export type DirectoryFeedItem = {
   toolCount: number;
   /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null. */
   toolsSource: string | null;
+  /** Trust tier verified or runs_needs_keys (lib/trustTier.ts) — drives the browse "Tested working" filter. */
+  testedWorking: boolean;
   aiText: string | null;
   views: number;
   copies: number;
@@ -1485,6 +1506,8 @@ export async function getDirectoryFeedPage(
           installConfidence: serversTable.installConfidence,
           tools: serversTable.tools,
           toolsSource: serversTable.toolsSource,
+          installNeedsConfig: serversTable.installNeedsConfig,
+          remoteEndpointHealthy: serversTable.remoteEndpointHealthy,
           views: serversTable.views,
           copies: serversTable.copies,
           upvotes: serversTable.upvotes,
@@ -1554,6 +1577,7 @@ export async function getDirectoryFeedPage(
           toolText: feedToolText(r.tools),
           toolCount: parseServerTools(r.tools).length,
           toolsSource: r.toolsSource ?? null,
+          testedWorking: isTestedWorking(r),
           aiText: feedAiTextFromRaw(
             r.aiSummary,
             r.aiOverview,
@@ -1611,6 +1635,7 @@ export async function getDirectoryFeedPage(
         toolText,
         toolCount: tools.length,
         toolsSource: s.toolsSource ?? null,
+        testedWorking: isTestedWorking(s),
         aiText: buildAiSearchText(s, FEED_AI_TEXT_MAX),
         views: s.views ?? 0,
         copies: s.copies ?? 0,
@@ -1658,6 +1683,39 @@ export async function checkIsOwner(
   return false;
 }
 
+/**
+ * The listing_signals fields the public detail page shows (trust tier,
+ * security card). Separate from getServerById because they live in their own
+ * table (servers is near D1's column cap); one primary-key read. Empty object
+ * when there is no row or D1 is unavailable.
+ */
+export async function getServerSignalsById(
+  id: string,
+): Promise<
+  Pick<Server, 'mcpProbability' | 'securityProfile' | 'toolsChangedAt'>
+> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx?.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const [row] = await db
+        .select({
+          mcpProbability: listingSignals.mcpProbability,
+          securityProfile: listingSignals.securityProfile,
+          toolsChangedAt: listingSignals.toolsChangedAt,
+        })
+        .from(listingSignals)
+        .where(eq(listingSignals.serverId, id))
+        .limit(1);
+      if (row) return row;
+    }
+  } catch {
+    // No signals is a normal state — the page renders without them.
+  }
+  return {};
+}
+
 export async function getServerById(id: string): Promise<Server | undefined> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
@@ -1681,7 +1739,13 @@ export async function getServerById(id: string): Promise<Server | undefined> {
 }
 
 export type StdioVerificationResult = {
-  status: 'ok' | 'install_failed' | 'handshake_failed' | 'timeout' | 'error';
+  status:
+    | 'ok'
+    | 'needs_credentials'
+    | 'install_failed'
+    | 'handshake_failed'
+    | 'timeout'
+    | 'error';
   toolCount: number | null;
   error: string | null;
   durationMs: number | null;

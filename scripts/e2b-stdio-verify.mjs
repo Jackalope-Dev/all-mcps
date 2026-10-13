@@ -41,6 +41,9 @@ const SECRET =
   process.env.ALLMCPS_ADMIN_SECRET ||
   process.env.ADMIN_SECRET;
 const E2B_API_KEY = process.env.E2B_API_KEY;
+// Optional custom template with uv/python/git preinstalled (scripts/e2b-template).
+// Unset = E2B's base image, with uv bootstrapped per run as before.
+const E2B_TEMPLATE = process.env.E2B_TEMPLATE || undefined;
 // Page size per /batch call — kept well above CONCURRENCY so workers rarely
 // wait on a refetch. Capped at 100 by the endpoint itself.
 const BATCH_SIZE = Number.parseInt(process.env.BATCH_SIZE || '100', 10);
@@ -65,6 +68,9 @@ const RUN_BUDGET_MS = process.env.RUN_BUDGET_MS
 // can burn up to ~2x this (initialize wait + tools/list wait) worst case.
 const HANDSHAKE_TIMEOUT_MS = 90_000;
 const SANDBOX_BOOT_TIMEOUT_MS = 90_000;
+// Separate budget for the pre-install step — big dependency trees (playwright,
+// torch) legitimately take minutes and must not eat the handshake's window.
+const INSTALL_TIMEOUT_MS = 240_000;
 
 const INSTALL_FAILURE_MARKERS = [
   'npm ERR!',
@@ -200,25 +206,171 @@ function withRunnerBootstrap(command, cmd) {
   );
 }
 
-async function verifyListing(listing) {
+/** Last N chars of stderr — the end is where the reason a process died usually is. */
+function tail(text, n = 2000) {
+  return text.length > n ? text.slice(-n) : text;
+}
+
+/**
+ * Placeholder values for every env var the README says the server needs.
+ * Many servers exit immediately when a required key is absent; with a
+ * placeholder they get as far as complaining about an *invalid* key — or
+ * finish the handshake outright, since most only use the key on a tool call.
+ * Either way the result says something about the server instead of nothing.
+ */
+function placeholderEnvs(names) {
+  const envs = {};
+  for (const name of names || []) {
+    if (/^[A-Z][A-Z0-9_]{1,63}$/.test(name)) envs[name] = 'allmcps-placeholder';
+  }
+  return envs;
+}
+
+/**
+ * Install before starting, as its own step with its own budget, so a slow
+ * install is never mistaken for a server that hangs on initialize (the bulk
+ * of the old 'timeout' results). npx/bunx/uvx then start from a warm cache.
+ * Returns null when this runner has no separate install step.
+ */
+function preinstallCommand(listing) {
+  const pkg = listing.installPackage;
+  if (!pkg || /\s/.test(pkg)) return null;
+  if (listing.installCommand === 'npx' || listing.installCommand === 'bunx') {
+    return `npm install --no-save --no-audit --no-fund --prefix /tmp/allmcps-pre ${pkg}`;
+  }
+  if (listing.installCommand === 'uvx') {
+    return withRunnerBootstrap('uvx', `uv tool install ${pkg}`);
+  }
+  return null;
+}
+
+/** Facts about the npm package from the public registry — no sandbox needed. */
+async function npmPackageFacts(listing) {
+  if (listing.installCommand !== 'npx' && listing.installCommand !== 'bunx')
+    return {};
+  const name = (listing.installPackage || '').replace(/(?<=.)@[^/]*$/, '');
+  if (!name) return {};
+  try {
+    const res = await fetch(
+      `https://registry.npmjs.org/${name.replace('/', '%2F')}`,
+      { signal: AbortSignal.timeout(10_000) },
+    );
+    if (!res.ok) return {};
+    const doc = await res.json();
+    const latest = doc['dist-tags']?.latest;
+    const version = latest ? doc.versions?.[latest] : null;
+    const created = doc.time?.created ? Date.parse(doc.time.created) : NaN;
+    return {
+      installScripts: Object.keys(version?.scripts || {}).filter((k) =>
+        ['preinstall', 'install', 'postinstall', 'prepare'].includes(k),
+      ),
+      hasProvenance: version ? Boolean(version.dist?.attestations) : null,
+      packageAgeDays: Number.isFinite(created)
+        ? Math.floor((Date.now() - created) / 86_400_000)
+        : null,
+      maintainerCount: Array.isArray(doc.maintainers)
+        ? doc.maintainers.length
+        : null,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/** What the running server touched: open connections and files it wrote. */
+async function observeSandbox(sbx) {
+  const out = {};
+  try {
+    const net = await sbx.commands.run(
+      "ss -tnH state established 2>/dev/null | awk '{print $4}' | sort -u | head -20",
+      { timeoutMs: 10_000 },
+    );
+    out.connections = net.stdout
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l && !/^(127\.|\[::1\]|::1)/.test(l));
+  } catch {
+    /* observation is best-effort */
+  }
+  try {
+    const files = await sbx.commands.run(
+      'find / -xdev -type f -newer /tmp/.allmcps-start ' +
+        "-not -path '/proc/*' -not -path '/sys/*' -not -path '/tmp/*' " +
+        "-not -path '*/node_modules/*' -not -path '*/.npm/*' -not -path '*/.cache/*' " +
+        "-not -path '*/.local/share/uv/*' -not -path '*/.local/bin/*' -not -path '/var/*' " +
+        '2>/dev/null | head -30',
+      { timeoutMs: 15_000 },
+    );
+    out.filesWritten = files.stdout
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+  } catch {
+    /* observation is best-effort */
+  }
+  return out;
+}
+
+async function verifyOnce(listing) {
   const started = Date.now();
   const cmd = withRunnerBootstrap(
     listing.installCommand,
     [listing.installCommand, ...listing.installArgs].join(' '),
   );
+  const envs = placeholderEnvs(listing.envVars);
   let sbx;
   let stderrBuf = '';
+  let installMs;
   const reader = makeJsonRpcReader();
+  const base = () => ({
+    serverId: listing.id,
+    durationMs: Date.now() - started,
+    ...(installMs != null ? { installMs } : {}),
+    ...(stderrBuf ? { stderr: tail(stderrBuf) } : {}),
+  });
 
   try {
-    sbx = await Sandbox.create({
+    const opts = {
       apiKey: E2B_API_KEY,
-      timeoutMs: SANDBOX_BOOT_TIMEOUT_MS,
-    });
+      timeoutMs: SANDBOX_BOOT_TIMEOUT_MS + INSTALL_TIMEOUT_MS,
+    };
+    sbx = E2B_TEMPLATE
+      ? await Sandbox.create(E2B_TEMPLATE, opts)
+      : await Sandbox.create(opts);
 
+    const pre = preinstallCommand(listing);
+    if (pre) {
+      const t0 = Date.now();
+      try {
+        await sbx.commands.run(pre, { timeoutMs: INSTALL_TIMEOUT_MS, envs });
+      } catch (e) {
+        // A non-zero exit throws CommandExitError. For npm that is a real
+        // install failure; uv tool install rejects some packages uvx can still
+        // run (--from forms), so only npm's verdict is trusted here.
+        // A timeout here is not a verdict on the package — fall through and
+        // let the handshake's own budget decide.
+        const stderr = e?.stderr || e?.message || '';
+        if (
+          typeof e?.exitCode === 'number' &&
+          listing.installCommand !== 'uvx'
+        ) {
+          installMs = Date.now() - t0;
+          stderrBuf = stderr;
+          return {
+            ...base(),
+            status: 'install_failed',
+            error: tail(stderr, 500),
+          };
+        }
+      }
+      installMs = Date.now() - t0;
+    }
+
+    await sbx.commands.run('touch /tmp/.allmcps-start', { timeoutMs: 5_000 });
     const proc = await sbx.commands.run(cmd, {
       background: true,
       stdin: true,
+      envs,
       onStdout: (data) => reader.feed(data),
       onStderr: (data) => {
         stderrBuf += data;
@@ -231,11 +383,8 @@ async function verifyListing(listing) {
     let initMsg;
     try {
       // sendStdin itself can throw here — a process that crashed on a bad
-      // install/package before we got to write (confirmed in practice: this
-      // was landing in the outer catch as an opaque "pid not found" error,
-      // discarding the real stderr sitting right there in stderrBuf) needs
-      // the same install-failure classification as a wait-for-initialize
-      // timeout, not a generic 'error'.
+      // install/package before we got to write needs the same classification
+      // as a wait-for-initialize timeout, not a generic 'error'.
       await sbx.commands.sendStdin(
         proc.pid,
         `${JSON.stringify({
@@ -251,25 +400,25 @@ async function verifyListing(listing) {
       );
       initMsg = await reader.waitFor(1, HANDSHAKE_TIMEOUT_MS);
     } catch (e) {
+      const exited = /pid \d+ not found/.test(e?.message || '');
       const looksLikeInstallFailure =
-        INSTALL_FAILURE_MARKERS.some((m) => stderrBuf.includes(m)) ||
-        /pid \d+ not found/.test(e?.message || '');
+        !pre && INSTALL_FAILURE_MARKERS.some((m) => stderrBuf.includes(m));
+      // The result endpoint re-reads stderr and upgrades timeouts/exits that
+      // are really "missing configuration" to needs_credentials.
       return {
-        serverId: listing.id,
+        ...base(),
         status: looksLikeInstallFailure ? 'install_failed' : 'timeout',
-        error: (looksLikeInstallFailure
-          ? stderrBuf || e?.message || 'Install failed.'
+        error: (exited
+          ? 'Process exited before answering initialize.'
           : 'No response to initialize.'
         ).slice(0, 500),
-        durationMs: Date.now() - started,
       };
     }
     if (initMsg.error) {
       return {
-        serverId: listing.id,
+        ...base(),
         status: 'handshake_failed',
         error: (initMsg.error.message || 'initialize failed').slice(0, 500),
-        durationMs: Date.now() - started,
       };
     }
 
@@ -277,40 +426,30 @@ async function verifyListing(listing) {
     try {
       await sbx.commands.sendStdin(
         proc.pid,
-        `${JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'notifications/initialized',
-        })}\n`,
+        `${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`,
       );
       await sbx.commands.sendStdin(
         proc.pid,
-        `${JSON.stringify({
-          jsonrpc: '2.0',
-          id: 2,
-          method: 'tools/list',
-          params: {},
-        })}\n`,
+        `${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })}\n`,
       );
       toolsMsg = await reader.waitFor(2, HANDSHAKE_TIMEOUT_MS);
     } catch (e) {
       return {
-        serverId: listing.id,
+        ...base(),
         status: 'handshake_failed',
         error: (/pid \d+ not found/.test(e?.message || '')
-          ? `Process exited after initialize, before tools/list: ${stderrBuf || e.message}`
+          ? 'Process exited after initialize, before tools/list.'
           : 'initialize succeeded but no response to tools/list.'
         ).slice(0, 500),
-        durationMs: Date.now() - started,
       };
     }
     if (toolsMsg.error || !Array.isArray(toolsMsg.result?.tools)) {
       return {
-        serverId: listing.id,
+        ...base(),
         status: 'handshake_failed',
         error: (
           toolsMsg.error?.message || 'tools/list returned no tools array.'
         ).slice(0, 500),
-        durationMs: Date.now() - started,
       };
     }
 
@@ -318,20 +457,24 @@ async function verifyListing(listing) {
       name: t.name,
       description: t.description,
       parameters: t.inputSchema,
+      ...(t.annotations ? { annotations: t.annotations } : {}),
     }));
 
+    const [observed, facts] = await Promise.all([
+      observeSandbox(sbx),
+      npmPackageFacts(listing),
+    ]);
     return {
-      serverId: listing.id,
+      ...base(),
       status: 'ok',
       tools,
-      durationMs: Date.now() - started,
+      sandbox: { ...observed, ...facts },
     };
   } catch (e) {
     return {
-      serverId: listing.id,
+      ...base(),
       status: 'error',
       error: (e?.message || 'Unknown sandbox error').slice(0, 500),
-      durationMs: Date.now() - started,
     };
   } finally {
     if (sbx) {
@@ -342,6 +485,18 @@ async function verifyListing(listing) {
       }
     }
   }
+}
+
+/**
+ * One retry for a timeout or sandbox error: both are as often our side (a
+ * slow registry, a sandbox that booted late) as the server's. Everything else
+ * is a real answer and is reported as-is.
+ */
+async function verifyListing(listing) {
+  const first = await verifyOnce(listing);
+  if (first.status !== 'timeout' && first.status !== 'error') return first;
+  const second = await verifyOnce(listing);
+  return { ...second, retried: true };
 }
 
 /**

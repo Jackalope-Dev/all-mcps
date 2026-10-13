@@ -9,6 +9,7 @@ import {
   PRODUCT_SUBSCRIBERS_LIST_ID,
   syncSequenzySubscriber,
 } from './sequenzy';
+import { upsertSignals } from './signalStore';
 import { getAppUrl } from './stripe';
 import { formatZodError } from './zodError';
 
@@ -137,6 +138,14 @@ export async function submitListing(
       status: 409,
       body: { error: `Listing for "${name}" already exists on AllMCPs.` },
     };
+  }
+
+  // Best-effort: the listing is in; a lost review just means the stale sweep
+  // asks Jev again later.
+  if (Object.keys(prepared.signals).length > 0) {
+    await upsertSignals(db, id, prepared.signals).catch((e) =>
+      console.error('Failed to store intake review:', e),
+    );
   }
 
   await syncSequenzySubscriber({

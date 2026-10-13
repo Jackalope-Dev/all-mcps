@@ -184,6 +184,7 @@ export type SitemapServer = {
   upvotes?: number | null;
   hasAiDoc?: number | boolean | null;
   hasTools?: number | boolean | null;
+  staleFlagged?: number | boolean | null;
 };
 
 // Only the columns sitemap.ts (SitemapServer) actually reads — the servers table
@@ -210,6 +211,7 @@ const SITEMAP_SERVER_COLUMNS = {
   hasAiDoc: sql<number>`${serversTable.aiDoc} IS NOT NULL AND ${serversTable.aiDoc} != ''`,
   // Feeds isListingIndexable, same as hasAiDoc — the flag, not the JSON.
   hasTools: sql<number>`${serversTable.tools} IS NOT NULL AND ${serversTable.tools} NOT IN ('', '[]')`,
+  staleFlagged: sql<number>`${serversTable.staleFlaggedAt} IS NOT NULL`,
 };
 
 /** How long a sitemap's D1 read is reused before it's queried again. */

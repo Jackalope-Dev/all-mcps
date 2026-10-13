@@ -8,6 +8,7 @@ import {
   Play,
   Search,
   Sparkles,
+  Trash2,
   Wrench,
   Zap,
 } from 'lucide-react';
@@ -60,6 +61,15 @@ const UTILITY_ACTIONS: UtilityAction[] = [
       'Notifies Bing, Yandex, and IndexNow search engines of new and updated listing URLs for rapid indexing.',
     icon: Search,
     color: '#d97706',
+  },
+  {
+    id: 'stale-sweep',
+    name: 'Stale Sweep & Jev Triage',
+    category: 'Catalog Quality',
+    description:
+      'Checks npm/PyPI for deprecated or missing packages, flags stale listings (noindex, removed after 30 days), and asks Jev for triage verdicts.',
+    icon: Trash2,
+    color: '#64748b',
   },
 ];
 

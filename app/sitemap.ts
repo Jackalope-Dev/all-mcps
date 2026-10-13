@@ -208,6 +208,7 @@ function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
         hasTools: Boolean(server.hasTools),
         githubStars: server.githubStars ?? server.stars,
         npmDownloads: server.npmDownloads ?? server.downloads,
+        staleFlagged: Boolean(server.staleFlagged),
       }),
     )
     .map((server) => ({

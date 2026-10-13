@@ -2,6 +2,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -287,6 +288,13 @@ export const servers = sqliteTable(
     suggestedInstallArgs: text('suggested_install_args'),
     /** Canonical server id to 308-redirect to when this listing is retired or merged as a duplicate. */
     redirectTo: text('redirect_to'),
+    /**
+     * Set while the stale sweep has this listing flagged (lib/staleness.ts):
+     * noindexed, and removed after the grace period if every reason is a hard
+     * signal. The one stale field kept on `servers`, because the sitemap and
+     * every /mcp/[id] render read it; the rest live in listing_signals.
+     */
+    staleFlaggedAt: integer('stale_flagged_at', { mode: 'timestamp' }),
   },
   (table) => ({
     // `status = 'active'` is the base filter on nearly every catalog read (browse,
@@ -574,7 +582,7 @@ export const stdioVerifications = sqliteTable(
      * constraint closes that window.
      */
     serverId: text('server_id').notNull().unique(),
-    /** ok | install_failed | handshake_failed | timeout | error */
+    /** ok | needs_credentials | install_failed | handshake_failed | timeout | error */
     status: text('status').notNull(),
     toolCount: integer('tool_count'),
     /** JSON array of {name, description, parameters} on success. */
@@ -600,6 +608,10 @@ export const stdioVerifications = sqliteTable(
      * and discard the now-meaningless verdict instead of acting on it.
      */
     testedPackage: text('tested_package'),
+    /** Tail of the server's stderr from this attempt — kept for every failure so a timeout is diagnosable instead of opaque. */
+    stderr: text('stderr'),
+    /** How long the separate install step took, ms. Null when the runner has no pre-install step. */
+    installMs: integer('install_ms'),
     checkedAt: integer('checked_at', { mode: 'timestamp' })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -607,6 +619,57 @@ export const stdioVerifications = sqliteTable(
   (table) => ({
     serverIdx: index('idx_stdio_verify_server').on(table.serverId),
     checkedIdx: index('idx_stdio_verify_checked').on(table.checkedAt),
+  }),
+);
+
+/**
+ * Per-listing curation and trust signals, one row per server.
+ *
+ * Its own table because `servers` sits near D1's 100-column ceiling (88 when
+ * this was added) — the migration that tried to add these there failed with
+ * "too many columns". Nothing here is read on hot public paths except the
+ * detail page's security card, which fetches its row by primary key.
+ * A missing row means "never reviewed / never swept / never profiled".
+ */
+export const listingSignals = sqliteTable(
+  'listing_signals',
+  {
+    serverId: text('server_id').primaryKey(),
+    /** Jev is-an-MCP-server probability (lib/listingReview.ts). */
+    mcpProbability: real('mcp_probability'),
+    /** Position across LISTING_QUALITY_LEVELS (0 useless … 4 excellent). */
+    listingQuality: real('listing_quality'),
+    /** approve | needs_review | reject — Jev's triage recommendation for an admin. */
+    triageVerdict: text('triage_verdict'),
+    /** One-line evidence summary for triageVerdict, shown on the admin card. */
+    triageReason: text('triage_reason'),
+    reviewedAt: integer('reviewed_at', { mode: 'timestamp' }),
+    /** An admin chose to keep this listing in the triage queue. The stale sweep never flags it again. */
+    curatorKeptAt: integer('curator_kept_at', { mode: 'timestamp' }),
+    /** Comma-separated StaleReason codes from the most recent sweep. */
+    staleReasons: text('stale_reasons'),
+    /** Last time the stale sweep assessed this listing — the sweep's round-robin cursor. */
+    staleCheckedAt: integer('stale_checked_at', { mode: 'timestamp' }),
+    /** npm `deprecated` message / PyPI yanked reason for installPackage. */
+    packageDeprecated: text('package_deprecated'),
+    /** When the registry first answered that installPackage does not exist. Cleared when it reappears. */
+    packageMissingAt: integer('package_missing_at', { mode: 'timestamp' }),
+    registryCheckedAt: integer('registry_checked_at', { mode: 'timestamp' }),
+    /** `owner/repo` this GitHub repo was forked from. Null = not a fork or not measured. */
+    repoForkOf: text('repo_fork_of'),
+    /** JSON SecurityProfile (lib/securityProfile.ts). */
+    securityProfile: text('security_profile'),
+    /** Last time the tool definitions' hash changed after a previous profile existed. */
+    toolsChangedAt: integer('tools_changed_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    staleCheckedIdx: index('idx_listing_signals_stale_checked').on(
+      table.staleCheckedAt,
+    ),
+    registryCheckedIdx: index('idx_listing_signals_registry_checked').on(
+      table.registryCheckedAt,
+    ),
+    triageIdx: index('idx_listing_signals_triage').on(table.triageVerdict),
   }),
 );
 

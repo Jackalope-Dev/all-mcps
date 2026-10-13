@@ -66,6 +66,9 @@ jobs:
         env:
           E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
           ALLMCPS_CRON_SECRET: ${{ secrets.CRON_SECRET || secrets.ADMIN_SECRET }}
+          # Optional custom sandbox with uv/python baked in (scripts/e2b-template).
+          # Unset falls back to E2B's base image with uv bootstrapped per run.
+          E2B_TEMPLATE: ${{ vars.E2B_TEMPLATE }}
           # workflow_dispatch inputs are empty on a schedule trigger, so these
           # fall back to small daily-appropriate defaults rather than the
           # much larger manual-dispatch ones above.

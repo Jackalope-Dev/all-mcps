@@ -25,6 +25,7 @@
 
 export type VerificationStatus =
   | 'ok'
+  | 'needs_credentials'
   | 'install_failed'
   | 'handshake_failed'
   | 'timeout'
@@ -119,4 +120,44 @@ export function nextFailureCount(
   previous: number | null | undefined,
 ): number {
   return status === 'install_failed' ? (previous ?? 0) + 1 : 0;
+}
+
+/**
+ * Phrases a server prints when it stopped for configuration rather than
+ * because it is broken. Matched against stderr only — stdout is the protocol
+ * channel. Deliberately specific: "error" or "failed" alone are not here.
+ */
+const NEEDS_CONFIG_PATTERNS: RegExp[] = [
+  /\b(api[_ -]?key|access[_ -]?token|auth[_ -]?token|secret|credentials?|client[_ -]?id|bearer)\b.{0,60}\b(required|missing|not (set|provided|found|configured)|is (empty|undefined|invalid)|must be (set|provided)|invalid)\b/i,
+  /\b(required|missing|please set|must set|must provide|set the)\b.{0,60}\b(env(ironment)? var(iable)?s?|api[_ -]?key|token|credentials?)\b/i,
+  /\b[A-Z][A-Z0-9]*_(API_KEY|TOKEN|SECRET|KEY|PASSWORD|URL|HOST)\b.{0,40}\b(required|missing|not set|undefined|must)\b/,
+  /\b(401|403)\b.{0,30}\b(unauthori[sz]ed|forbidden)\b/i,
+  /\b(invalid|incorrect|bad)\b.{0,20}\b(api[_ -]?key|token|credentials?)\b/i,
+  /\b(usage|missing (required )?argument|requires? (a |an )?(path|directory|argument))\b/i,
+];
+
+export function looksLikeMissingConfig(
+  stderr: string | null | undefined,
+): boolean {
+  if (!stderr) return false;
+  return NEEDS_CONFIG_PATTERNS.some((re) => re.test(stderr));
+}
+
+/**
+ * The status to record for a sandbox result. A server that timed out or quit
+ * while saying it needs a key is a server that *runs*: upgrade it to
+ * needs_credentials so it is not lumped in with genuinely broken ones.
+ * install_failed is never upgraded — that verdict is about the package.
+ */
+export function settleVerificationStatus(
+  status: VerificationStatus,
+  stderr: string | null | undefined,
+): VerificationStatus {
+  if (
+    (status === 'timeout' || status === 'handshake_failed') &&
+    looksLikeMissingConfig(stderr)
+  ) {
+    return 'needs_credentials';
+  }
+  return status;
 }
