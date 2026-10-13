@@ -122,6 +122,8 @@ export function createLopebaseAdapter(opts: {
   });
 }
 
+const CHECK_CACHE = { ttlMs: 30_000, failureTtlMs: 10_000 };
+
 /** Bindings and secrets the service checks read, resolved per health poll. */
 export type ServiceDeps = {
   db: D1Database;
@@ -140,7 +142,9 @@ export type ServiceDeps = {
 export function lopebaseServices(
   deps: () => Promise<ServiceDeps>,
 ): ServiceCheck[] {
-  return [
+  // The health route is public, so every check is cached: a burst of polls
+  // costs one D1 read / R2 op / jobs invocation / Resend call per window.
+  const checks: ServiceCheck[] = [
     {
       id: 'db',
       label: 'D1 database',
@@ -187,7 +191,7 @@ export function lopebaseServices(
         return res.status < 500;
       },
     },
-    cachedCheck({
+    {
       id: 'resend',
       label: 'Email (Resend)',
       critical: false,
@@ -197,11 +201,20 @@ export function lopebaseServices(
         const res = await fetch('https://api.resend.com/domains', {
           headers: { authorization: `Bearer ${resendApiKey}` },
         });
-        await res.body?.cancel();
-        return res.ok;
+        if (res.ok) {
+          await res.body?.cancel();
+          return true;
+        }
+        // A send-only key can't list domains, but Resend only says
+        // "restricted" to a key it recognised, so the key itself is valid.
+        const body = (await res.json().catch(() => null)) as {
+          name?: string;
+        } | null;
+        return body?.name === 'restricted_api_key';
       },
-    }),
+    },
   ];
+  return checks.map((s) => cachedCheck(s, CHECK_CACHE));
 }
 
 function clampLimit(limit: number | undefined): number {
