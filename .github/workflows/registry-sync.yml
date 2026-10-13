@@ -35,10 +35,14 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22 # wrangler requires >=22
-          cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Ingest and apply new listings
         env:

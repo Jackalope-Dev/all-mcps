@@ -10,7 +10,7 @@ import { accounts, sessions, users, verificationTokens } from '@/db/schema';
 // D1 bindings are only available per-request in the Workers runtime, so the
 // adapter is resolved via NextAuth's function-config form rather than at
 // module scope.
-export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
+export const { handlers, signIn, auth } = NextAuth(async () => {
   const ctx = await getCloudflareContext();
   const db = drizzle((ctx.env as any).DB as any);
 

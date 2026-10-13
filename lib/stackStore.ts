@@ -30,7 +30,7 @@ export function saveStackServerIds(ids: string[]): void {
   }
 }
 
-export function addServerToStack(id: string): string[] {
+function addServerToStack(id: string): string[] {
   const current = getStackServerIds();
   if (!current.includes(id)) {
     const next = [...current, id];

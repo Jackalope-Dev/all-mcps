@@ -22,7 +22,7 @@ import { type RoleEnv, workerRole } from './cronSchedule';
 export const SITE_ORIGIN = 'https://allmcps.com';
 const REFRESH_TIMEOUT_MS = 15_000;
 
-export type PageRefreshEnv = RoleEnv & {
+type PageRefreshEnv = RoleEnv & {
   SITE?: Fetcher;
   WORKER_SELF_REFERENCE?: Fetcher;
 };

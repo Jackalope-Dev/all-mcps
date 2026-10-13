@@ -37,7 +37,7 @@ export type StaleReason =
   | 'jev-reject';
 
 /** Reasons the sweep may act on without a human. 'not-mcp' is a model judgment, so it never is. */
-export const AUTO_REMOVABLE_REASONS: ReadonlySet<StaleReason> = new Set([
+const AUTO_REMOVABLE_REASONS: ReadonlySet<StaleReason> = new Set([
   'package-deprecated',
   'package-missing',
   'install-broken',

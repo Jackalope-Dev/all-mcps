@@ -11,7 +11,6 @@ import {
   sql,
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import { cache } from 'react';
 import serversData from '../data/mcp-servers.json';
 import {
   listingSignals,
@@ -392,7 +391,7 @@ export async function getActiveServersLight(limit?: number): Promise<Server[]> {
         })) as unknown as Server[];
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
   const base = snapshotCatalogServers();
@@ -428,7 +427,7 @@ export async function getActiveServersLight(limit?: number): Promise<Server[]> {
  * people actually search for, not whatever was submitted most recently.
  * Ordered roughly by how often a new MCP setup reaches for it.
  */
-export const CURATED_STARTER_STACK_IDS: string[] = [
+const CURATED_STARTER_STACK_IDS: string[] = [
   'github-github-mcp-server', // GitHub, official
   'filesystem', // Filesystem
   'crystaldba-postgres-mcp', // Postgres
@@ -470,7 +469,7 @@ export async function getCuratedStarterServers(limit = 12): Promise<Server[]> {
  * Any id with no active match is silently dropped, so callers should backfill
  * (e.g. with getNewestActiveServers) if they need an exact count.
  */
-export async function getServersByIds(ids: string[]): Promise<Server[]> {
+async function getServersByIds(ids: string[]): Promise<Server[]> {
   if (ids.length === 0) return [];
   let found: Server[] = [];
   try {
@@ -486,7 +485,7 @@ export async function getServersByIds(ids: string[]): Promise<Server[]> {
         );
       found = rows.map((r) => normalizeServer(r as unknown as Server));
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
   if (found.length === 0) {
@@ -516,7 +515,7 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
         return rows.map((r) => normalizeServer(r as unknown as Server));
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
   return snapshotCatalogServers()
@@ -606,7 +605,7 @@ export async function getRankingCandidates(filter: {
         })) as unknown as Server[];
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
 
@@ -634,7 +633,7 @@ export async function hydrateServersByIds(ids: string[]): Promise<Server[]> {
     try {
       const rows = await hydrateSearchResults(searchDb.db, ids);
       if (rows.length > 0) return rows;
-    } catch (e) {
+    } catch (_e) {
       // Fall back to static JSON
     }
   }
@@ -674,7 +673,7 @@ export async function getRandomActiveServers(
         return rows.map((r) => normalizeServer(r as unknown as Server));
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
   return snapshotCatalogServers()
@@ -768,7 +767,7 @@ export async function getCatalogIndexRows(): Promise<CatalogIndexRow[]> {
         }));
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
   return snapshotCatalogServers().map((s) => ({
@@ -803,7 +802,7 @@ export async function getCategoryCounts(): Promise<Record<string, number>> {
       }
       if (Object.keys(counts).length > 0) return counts;
     }
-  } catch (e) {}
+  } catch (_e) {}
 
   const counts: Record<string, number> = {};
   for (const s of snapshotCatalogServers()) {
@@ -833,7 +832,7 @@ export async function getPopularServers(limit: number): Promise<Server[]> {
         return rows.map((r) => normalizeServer(r as unknown as Server));
       }
     }
-  } catch (e) {}
+  } catch (_e) {}
 
   return snapshotCatalogServers()
     .map(normalizeServer)
@@ -1598,7 +1597,7 @@ export async function getDirectoryFeedPage(
         return { items, total };
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to the static JSON snapshot below.
   }
 
@@ -1679,7 +1678,7 @@ export async function checkIsOwner(
         .limit(1);
       return rows[0]?.ownerUserId === userId;
     }
-  } catch (e) {}
+  } catch (_e) {}
   return false;
 }
 
@@ -1731,7 +1730,7 @@ export async function getServerById(id: string): Promise<Server | undefined> {
         return normalizeServer(dbServers[0] as unknown as Server);
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
   const found = snapshotServers().find((s) => s.id === id);
@@ -1981,7 +1980,7 @@ export async function fetchServerReadme(url: string): Promise<string | null> {
         : text;
     }
     return null;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -2179,7 +2178,7 @@ function extractSemanticTokens(s: Server): Set<string> {
 /**
  * Computes semantic Jaccard similarity index (0.0 to 1.0) based on rich server metadata tokens.
  */
-export function computeServerSemanticSimilarity(a: Server, b: Server): number {
+function computeServerSemanticSimilarity(a: Server, b: Server): number {
   const tokensA = extractSemanticTokens(a);
   const tokensB = extractSemanticTokens(b);
 
@@ -2386,7 +2385,7 @@ export function absolutizeReadmeMarkdown(md: string, repoUrl?: string): string {
  * unique-content ratio. Typical READMEs are well under this, so only the long
  * tail of giant docs is trimmed (with a "read the full README" link to source).
  */
-export const README_EXCERPT_CHARS = 10000;
+const README_EXCERPT_CHARS = 10000;
 
 /**
  * Returns a render-safe excerpt of a README. Cuts at a paragraph (or line)
@@ -2603,7 +2602,7 @@ async function getSameCategoryActiveServers(
         sameCategory = rows.map((r) => normalizeServer(r as unknown as Server));
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
 
@@ -2623,46 +2622,6 @@ async function getSameCategoryActiveServers(
 
   return sameCategory;
 }
-
-/**
- * Same-category peer count only — excludes the cross-category fallback padding
- * getRelatedServers() uses to fill a list up to `limit`. An /alternatives page
- * padded mostly with unrelated-category fallbacks is thin/near-duplicate content,
- * so callers use this count (not getRelatedServers().length, which is nearly always
- * ~`limit`) to decide whether the page is worth indexing.
- */
-export const getSameCategoryAlternativesCount = cache(
-  async (currentServer: Server): Promise<number> => {
-    // COUNT(*) rather than loading the peers and taking .length — the pool that
-    // feeds ranking is capped now (RELATED_CANDIDATE_POOL), so counting its rows
-    // would silently report the cap instead of the real peer count, and this is a
-    // count: it never needed the row bodies in the first place.
-    try {
-      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-      const ctx = await getCloudflareContext();
-      if (ctx?.env && (ctx.env as any).DB) {
-        const db = drizzle((ctx.env as any).DB);
-        const [row] = await db
-          .select({ n: sql<number>`COUNT(*)` })
-          .from(serversTable)
-          .where(
-            and(
-              eq(serversTable.status, 'active'),
-              eq(serversTable.category, currentServer.category),
-              ne(serversTable.id, currentServer.id),
-            ),
-          );
-        if (row) return Number(row.n) || 0;
-      }
-    } catch {
-      // Fall back to static JSON
-    }
-
-    return snapshotCatalogServers().filter(
-      (s) => s.id !== currentServer.id && s.category === currentServer.category,
-    ).length;
-  },
-);
 
 export async function getRelatedServers(
   currentServer: Server,
@@ -2709,7 +2668,7 @@ export async function getRelatedServers(
         );
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
 
@@ -2773,7 +2732,7 @@ export async function getFeaturedServers(
           .map((r) => normalizeServer(r as unknown as Server));
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // Fall back to static JSON
   }
 

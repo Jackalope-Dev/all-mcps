@@ -1,17 +1,21 @@
-# Lefthook git hook configuration
-# https://github.com/evilmartians/lefthook
+# Lefthook git hooks. Installed by `bun install` (prepare). Docs: https://lefthook.dev
+# pre-commit touches only staged files; pre-push runs the full `verify` gate.
 
 pre-commit:
   parallel: true
   commands:
     biome:
-      glob: "*.{js,ts,jsx,tsx,json,css}"
-      run: node node_modules/@biomejs/biome/bin/biome check --no-errors-on-unmatched --staged {staged_files}
-    typecheck:
-      run: node node_modules/typescript/bin/tsc --noEmit
+      glob: "*.{js,mjs,ts,mts,jsx,tsx,json,jsonc,css}"
+      run: node node_modules/@biomejs/biome/bin/biome check --write --diagnostic-level=error --no-errors-on-unmatched --staged {staged_files}
+      stage_fixed: true
 
 pre-push:
   parallel: true
   commands:
-    test:
-      run: node node_modules/vitest/vitest.mjs run
+    verify:
+      run: bun run verify
+    secrets:
+      run: |
+        if ! command -v gitleaks >/dev/null 2>&1; then echo "gitleaks not installed, skipping (brew install gitleaks)"; exit 0; fi
+        base=$(git rev-parse '@{u}' 2>/dev/null || git rev-parse HEAD~1)
+        gitleaks git --redact --no-banner --log-opts="$base..HEAD" .

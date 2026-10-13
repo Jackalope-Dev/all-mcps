@@ -15,7 +15,7 @@ import { useMemo, useState } from 'react';
 import { CollapsibleText } from '../CollapsibleText';
 import { IconTooltip } from './IconTooltip';
 
-export interface ToolItem {
+interface ToolItem {
   name: string;
   description?: string;
   parameters?: Record<string, unknown>;

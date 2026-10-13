@@ -60,7 +60,7 @@ export const AI_CONTENT_JOBS: CronJob[] = [
 // (24 per tick, ~1.7k/day) keeps us near it. Tune the run count, not the
 // cadence: Cloudflare kept firing the old "*/20" for over an hour after the
 // site's schedule was changed to "*/10", and never fired the jobs Worker's own.
-export const AI_CONTENT_DEDICATED_RUNS = 1;
+const AI_CONTENT_DEDICATED_RUNS = 1;
 export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = Array.from(
   { length: AI_CONTENT_DEDICATED_RUNS },
   () => ({
@@ -181,7 +181,7 @@ export const JOB_SECRET_NAMES = [
   'LOPEBASE_SIGNING_SECRET',
 ] as const;
 
-export type SecretRelayStub = {
+type SecretRelayStub = {
   jobSecrets(): Promise<Record<string, string>>;
 };
 

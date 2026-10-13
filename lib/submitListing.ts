@@ -38,7 +38,7 @@ const agentSubmitSchema = z.object({
   suggestedInstallArgs: z.array(z.string()).optional(),
 });
 
-export type SubmitListingSuccess = {
+type SubmitListingSuccess = {
   success: true;
   message: string;
   id: string;

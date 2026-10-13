@@ -4,7 +4,7 @@ import { ChevronDown, HelpCircle } from 'lucide-react';
 import React, { useId, useRef, useState } from 'react';
 import { serializeJsonLd } from '@/lib/jsonLd';
 
-export interface FaqItem {
+interface FaqItem {
   question?: React.ReactNode;
   q?: React.ReactNode;
   answer?: React.ReactNode;

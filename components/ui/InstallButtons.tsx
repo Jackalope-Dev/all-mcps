@@ -29,7 +29,7 @@ function base64EncodeUtf8(value: string): string {
 
 /**
  * One-click "Add to Cursor / VS Code" deep-link install buttons.
- * Uses the same install resolution as <McpConfigGenerator>.
+ * Resolves the install command from the listing's install hints.
  */
 export function InstallButtons({
   serverId,

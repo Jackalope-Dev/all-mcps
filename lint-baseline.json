@@ -1,0 +1,19 @@
+{
+  "lint/a11y/noLabelWithoutControl": 36,
+  "lint/a11y/noStaticElementInteractions": 22,
+  "lint/a11y/noSvgWithoutTitle": 14,
+  "lint/a11y/useButtonType": 85,
+  "lint/a11y/useKeyWithClickEvents": 23,
+  "lint/a11y/useKeyWithMouseEvents": 3,
+  "lint/a11y/useSemanticElements": 22,
+  "lint/complexity/useOptionalChain": 3,
+  "lint/correctness/noUnusedFunctionParameters": 7,
+  "lint/correctness/useExhaustiveDependencies": 14,
+  "lint/performance/noImgElement": 23,
+  "lint/style/noDescendingSpecificity": 39,
+  "lint/style/noNonNullAssertion": 17,
+  "lint/suspicious/noArrayIndexKey": 26,
+  "lint/suspicious/noDocumentCookie": 2,
+  "lint/suspicious/noGlobalIsNan": 5,
+  "lint/suspicious/noTemplateCurlyInString": 1
+}

@@ -9,7 +9,7 @@ import { isSafeFetchTarget, safeFetch } from './urlSafety';
  * body (application/json) or an SSE stream (text/event-stream).
  */
 
-export type McpTool = {
+type McpTool = {
   name: string;
   description?: string;
   inputSchema?: unknown;

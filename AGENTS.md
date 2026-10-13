@@ -66,23 +66,26 @@ Guidelines:
 - 2-5 tags; tags automatically populate the filter chips and search on `/blog`.
 - The `faq` block, if present, renders as a "Frequently asked questions" section on the post and adds `FAQPage` structured data — useful for answer-engine visibility.
 - Everything else (tag filters, search, RSS feed, sitemap entry, JSON-LD) is generated automatically from the file. No other file needs to change to publish a post.
-- Posts are statically generated, so a new file goes live on the next build/deploy, not instantly — run `npm run build` locally to confirm it compiles before pushing.
+- Posts are statically generated, so a new file goes live on the next build/deploy, not instantly — run `bun run build` locally to confirm it compiles before pushing.
 
 # Definition of Done
 
 Run these in order. NEVER report a task complete, hand off, or call a change done
 until every one passes cleanly:
 
-1. `npm run typecheck` — `tsc --noEmit`, 0 errors.
-2. `npm run check` — Biome format + lint (writes fixes). Must end clean with no
+1. `bun run typecheck` — `tsc --noEmit`, 0 errors.
+2. `bun run check` — Biome format + lint (writes fixes). Must end clean with no
    remaining lint errors.
-3. `npm test` — Vitest unit + regression, all green.
-4. `npm run build` — required whenever routes, page copy, blog/content, sitemap
+3. `bun run test` — Vitest unit + regression, all green.
+4. `bun run knip` — no unused files, dependencies, or exports. Delete dead code
+   instead of ignoring it; only add a `knip.jsonc` ignore for something loaded
+   indirectly (runtime virtual modules, vendored contracts), with a comment saying why.
+5. `bun run build` — required whenever routes, page copy, blog/content, sitemap
    entries, `STATIC_PAGE_LASTMOD`, config, or env wiring changed. Posts and static
    pages only go live on build, so this is how you confirm they compile.
 
-`npm run verify` runs typecheck + lint + test in one command (read-only lint); that
-is the minimum gate before finishing. Use `npm run check` to auto-fix formatting/lint.
+`bun run verify` runs typecheck + lint + test + knip in one command (read-only lint);
+that is the minimum gate before finishing. Use `bun run check` to auto-fix formatting/lint.
 
 On failure: fix the cause and re-run the whole chain. Do this autonomously up to
 5 times. Only after 5 failed attempts on the same gate do you stop and ask. Do not
@@ -90,3 +93,60 @@ disable a Biome rule, weaken a type, or skip a test to pass a gate. If a gate fa
 in files you did not touch, a parallel session may be mid-flight — report it, do not
 revert their work.
 
+
+# Dev tooling
+
+- Package manager: **bun** (`bun.lock`); Node (`.nvmrc`) is still the runtime for
+  Next, OpenNext, Wrangler and Vitest. Use `bun run test`, never bare `bun test`
+  (that is Bun's own test runner, not Vitest). `mcp-server/` is a separately
+  published npm package with its own `package-lock.json`; use npm there.
+- `bun run verify:quick` lints and tests only files changed against `origin/main`
+  while iterating; `bun run verify` is still the gate.
+- Lint warnings are ratcheted per rule (`lint-baseline.json`, checked by `bun run lint`).
+  New warnings fail; after fixing some, run `bun run lint:ratchet:update`.
+- Lefthook (installed by `bun install` via `prepare`): pre-commit runs Biome with
+  `--write` on staged files only; pre-push runs `bun run verify` plus a gitleaks scan
+  of the commits being pushed (skipped if gitleaks is not installed).
+- Biome is the formatter and linter. Format only files you touch; no repo-wide
+  reformat commits (they collide with parallel sessions).
+- Knip (`knip.jsonc`) finds dead files, exports, and dependencies. `scripts/` entries
+  are one-off tools run by hand, so they count as entry points.
+- CI (`.github/workflows/ci.yml`) runs the same chain plus an OpenNext build.
+- Concurrent work goes in `.worktrees/<task>` (gitignored), branched from `main`.
+
+# Committing
+
+Agents commit their own work, on a branch, as the repo's configured git user:
+
+- Work in `.worktrees/<task>` on a branch cut from the default branch. Never commit
+  or push to the default branch directly; the user merges.
+- Commit when a coherent piece of work passes the Definition of Done. Conventional
+  messages (`feat:`, `fix:`, `chore:`), body says why.
+- No `Co-Authored-By` or other agent attribution trailers.
+- Do not push unless the user asks. Never force-push, `git reset --hard`, or
+  `git clean` (they are denied in `.claude/settings.json`).
+- Stage only files you changed for this task (`git add <paths>`, not `git add -A`)
+  so parallel sessions' work stays out of your commit.
+
+# Quick facts that trip people up
+
+- `lib/backoffice/kit/` is vendored from jackalope-digital-hub `packages/admin-adapter`.
+  Change it there and re-vendor; knip ignores it because its exports are the contract.
+- `scripts/` are hand-run maintenance tools (`bunx tsx scripts/x.ts`), not app code.
+- `cloudflare-env.d.ts` is generated by `bun run cf-typegen`; never hand-edit or commit churn in it.
+- `custom-worker.ts` is the real Worker entry (wraps OpenNext); cron handlers live there.
+- Knip cannot see `import('./x').Type` type queries; use `import type` instead.
+
+# Workflow: parallel sessions
+
+The user regularly runs multiple agents/sessions in parallel on generally
+non-overlapping parts of this repo, and commits changes manually or via automation
+outside the current session. `git status` / `git diff` at the start of a session may
+show unrelated uncommitted changes you did not make. This is expected. Do not flag it
+or ask about it. Proceed with your task and leave unrelated changes alone unless the
+task requires touching those files.
+
+Never delete or discard another session's uncommitted work (no `git checkout -- <file>`,
+`git reset --hard`, `git clean`, an unpopped `git stash`, or overwriting a file
+someone else is mid-edit on). If unrelated changes conflict with your work, work
+around them: edit only the hunks you need, or ask how to proceed.

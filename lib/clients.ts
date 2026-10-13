@@ -7,8 +7,8 @@
  * Config locations and steps describe the standard stdio setup. Keep them
  * canonical rather than version-specific so they stay accurate as clients evolve.
  */
-export type ClientStep = { title: string; body: string };
-export type ClientConfigLocation = { os: string; path: string };
+type ClientStep = { title: string; body: string };
+type ClientConfigLocation = { os: string; path: string };
 
 export type McpClient = {
   /** URL slug: /clients/<slug> */

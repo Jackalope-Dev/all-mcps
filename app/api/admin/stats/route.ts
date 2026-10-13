@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     try {
       const ctx = await getCloudflareContext();
       env = ctx.env;
-    } catch (e) {
+    } catch (_e) {
       throw new Error('Could not get Cloudflare context.');
     }
 

@@ -91,8 +91,6 @@ export const BaseLayout = ({
   );
 };
 
-export default BaseLayout;
-
 const main = {
   backgroundColor: '#020617', // Slate 950
   fontFamily:

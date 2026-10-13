@@ -1,4 +1,3 @@
-import { eq } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { listingSignals } from '../db/schema';
 
@@ -20,13 +19,4 @@ export function upsertSignals(
     .insert(listingSignals)
     .values({ serverId, ...values })
     .onConflictDoUpdate({ target: listingSignals.serverId, set: values });
-}
-
-export async function getSignals(db: DrizzleD1Database<any>, serverId: string) {
-  const [row] = await db
-    .select()
-    .from(listingSignals)
-    .where(eq(listingSignals.serverId, serverId))
-    .limit(1);
-  return row ?? null;
 }

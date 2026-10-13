@@ -1,7 +1,7 @@
 import { encode } from 'gpt-tokenizer';
 
 /** Approximate token count using a GPT-4-class tokenizer. Callers must present this as an estimate, not an exact count for every model. */
-export function countTokens(text: string): number {
+function countTokens(text: string): number {
   if (!text) return 0;
   return encode(text).length;
 }

@@ -235,7 +235,7 @@ const STOPWORDS = new Set([
 ]);
 
 /** Lowercase alphanumeric terms; separators (-, /, @, ., spaces) split words. Filter common intent stopwords when multiple words exist. */
-export function tokenizeQuery(query: string): string[] {
+function tokenizeQuery(query: string): string[] {
   const tokens = query
     .toLowerCase()
     .split(/[^a-z0-9]+/)
@@ -519,7 +519,7 @@ export function rankServers<T extends Searchable & Engagement>(
 }
 
 /** Compute Levenshtein distance between two strings for fuzzy search fallback. */
-export function levenshteinDistance(a: string, b: string): number {
+function levenshteinDistance(a: string, b: string): number {
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
   const matrix: number[][] = [];
@@ -539,66 +539,6 @@ export function levenshteinDistance(a: string, b: string): number {
     }
   }
   return matrix[b.length][a.length];
-}
-
-export type SearchSuggestion = {
-  type: 'server' | 'category' | 'tag' | 'client';
-  label: string;
-  sublabel?: string;
-  url: string;
-  id?: string;
-};
-
-/**
- * Generate autocomplete suggestions (matching servers, categories, client tools)
- * as the user types in header search or command palette.
- */
-export function getSearchSuggestions<
-  T extends Searchable & Engagement & { id: string; logoUrl?: string | null },
->(query: string, servers: T[], limit = 8): SearchSuggestion[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-
-  const suggestions: SearchSuggestion[] = [];
-  const added = new Set<string>();
-
-  // 1. Client compatibility suggestions
-  const clients = [
-    { name: 'Cursor', slug: 'mcp-for-cursor' },
-    { name: 'Claude Desktop', slug: 'mcp-for-claude-desktop' },
-    { name: 'Windsurf', slug: 'mcp-for-windsurf' },
-    { name: 'Cline', slug: 'mcp-for-cline' },
-  ];
-  for (const c of clients) {
-    if (c.name.toLowerCase().includes(q)) {
-      suggestions.push({
-        type: 'client',
-        label: `${c.name} Setup`,
-        sublabel: `View MCP servers compatible with ${c.name}`,
-        url: `/${c.slug}`,
-      });
-      added.add(`client:${c.name}`);
-    }
-  }
-
-  // 2. Server matches
-  const ranked = rankServers(servers, q, { limit: 5 });
-  for (const s of ranked) {
-    if (suggestions.length >= limit) break;
-    const key = `server:${s.id}`;
-    if (!added.has(key)) {
-      suggestions.push({
-        type: 'server',
-        label: s.name,
-        sublabel: s.category,
-        url: `/mcp/${s.id}`,
-        id: s.id,
-      });
-      added.add(key);
-    }
-  }
-
-  return suggestions.slice(0, limit);
 }
 
 /**

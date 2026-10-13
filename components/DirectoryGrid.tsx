@@ -34,7 +34,6 @@ import {
   formatFullDate,
 } from '../lib/format';
 import { trackSearch } from '../lib/gtag';
-import { isRepositoryUrl } from '../lib/repoUrl';
 import {
   compileQuery,
   engagementScore,

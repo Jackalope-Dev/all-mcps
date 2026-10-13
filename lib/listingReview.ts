@@ -35,10 +35,10 @@ import {
  * monitoring server) to 0.78. A floor anywhere near 0.5 would have held back
  * that real server. This sits in the empty band between the two.
  */
-export const MCP_SERVER_NOUL_FLOOR = 0.15;
+const MCP_SERVER_NOUL_FLOOR = 0.15;
 
 /** Ordered lowest-to-highest; `score` comes back as a position across these. */
-export const LISTING_QUALITY_LEVELS = [
+const LISTING_QUALITY_LEVELS = [
   'useless',
   'thin',
   'adequate',
@@ -161,7 +161,7 @@ export function shouldSkipAiWriteup(review: ListingReview): boolean {
  * Ordered outcomes for a candidate pair. TypeSafe's entity-alignment pattern:
  * the levels *are* the actions, so there is no extra noul threshold to fit.
  */
-export const DUPLICATE_ALIGNMENT_LEVELS = [
+const DUPLICATE_ALIGNMENT_LEVELS = [
   'different',
   'needs_review',
   'same',
@@ -211,21 +211,11 @@ export async function alignListings(
   return level;
 }
 
-/** True only for a confident "same project". Null when Jev had no opinion. */
-export async function areListingsDuplicates(
-  a: ListingForReview,
-  b: ListingForReview,
-): Promise<boolean | null> {
-  const alignment = await alignListings(a, b);
-  if (alignment === null) return null;
-  return alignment === 'same';
-}
-
 /**
  * Admin triage: what should a curator do with this listing? The levels are
  * the actions, same pattern as DUPLICATE_ALIGNMENT_LEVELS.
  */
-export const TRIAGE_LEVELS = ['reject', 'needs_review', 'approve'] as const;
+const TRIAGE_LEVELS = ['reject', 'needs_review', 'approve'] as const;
 export type TriageVerdict = (typeof TRIAGE_LEVELS)[number];
 
 const triageQuestion: JevScoreQuestion = {
@@ -261,7 +251,7 @@ export type ListingTriage = ListingReview & {
 };
 
 /** Below this confidence an approve/reject is downgraded to needs_review. */
-export const TRIAGE_CONFIDENCE_FLOOR = 0.7;
+const TRIAGE_CONFIDENCE_FLOOR = 0.7;
 
 /**
  * Full review plus a curator recommendation, in one Jev request. Never throws;

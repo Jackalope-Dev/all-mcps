@@ -35,7 +35,7 @@ import { PAID_PRODUCTS } from './pricing';
 
 type Row = Record<string, unknown>;
 
-export type ListArgs = { limit: number; cursor?: string; search?: string };
+type ListArgs = { limit: number; cursor?: string; search?: string };
 
 export interface LopebaseStore {
   stats(): Promise<Record<string, number>>;

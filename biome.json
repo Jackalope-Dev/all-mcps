@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -11,7 +11,7 @@
       "**",
       "!**/.next",
       "!**/.open-next",
-      "!**/.worktrees",
+      "!.worktrees",
       "!**/drizzle",
       "!**/public",
       "!**/content",
@@ -43,7 +43,9 @@
         "noDangerouslySetInnerHtml": "off"
       },
       "correctness": {
-        "useExhaustiveDependencies": "warn"
+        "useExhaustiveDependencies": "warn",
+        "noUnusedImports": { "level": "error", "fix": "safe" },
+        "noUnusedVariables": "error"
       },
       "a11y": {
         "noAutofocus": "off",

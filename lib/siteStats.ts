@@ -47,7 +47,7 @@ export type CallerBreakdown = {
 };
 
 /** One day of traffic — total hits vs the subset from named AI systems. Zero-filled for days with no rows. */
-export type DailyTrendPoint = { date: string; total: number; ai: number };
+type DailyTrendPoint = { date: string; total: number; ai: number };
 
 export type EndpointBreakdown = {
   endpoint: Endpoint;

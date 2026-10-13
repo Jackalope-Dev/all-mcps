@@ -4,7 +4,7 @@
  *
  * The pipeline has already deduped the topic, written the post, validated it
  * and passed it through an editorial review loop — this is the human step:
- * read the diff, fix anything off, commit, and deploy (`npm run build` first).
+ * read the diff, fix anything off, commit, and deploy (`bun run build` first).
  *
  * Usage:
  *   ALLMCPS_ADMIN_SECRET=xxx node scripts/pull-blog-drafts.mjs            # export all ready drafts dated today
@@ -177,7 +177,7 @@ async function main() {
 
   if (!flag('--dry-run')) {
     console.log(
-      '\nNext: read the new files, then `npm run build` and commit. The pipeline\n' +
+      '\nNext: read the new files, then `bun run build` and commit. The pipeline\n' +
         'picks up published posts from the manifest automatically after deploy.',
     );
   }

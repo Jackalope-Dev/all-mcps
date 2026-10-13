@@ -2,7 +2,7 @@
  * Syncs the static fallback data snapshot (data/mcp-servers.json) from the live production API.
  * Run this periodically or before major releases to keep the build-time snapshot fresh.
  *
- * Usage: npm run sync-snapshot
+ * Usage: bun run sync-snapshot
  */
 
 import fs from 'node:fs';

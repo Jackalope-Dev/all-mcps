@@ -62,7 +62,7 @@ import {
 
 const MODEL = 'gpt-5.6-luna';
 /** Drafts waiting for a human (ready) or still in the loop — stop writing new ones past this. */
-export const BACKLOG_CAP = 3;
+const BACKLOG_CAP = 3;
 /** New drafts per UTC day. */
 const DAILY_DRAFT_CAP = 2;
 /** Write + revise passes before a draft goes to a human instead. */
@@ -123,7 +123,7 @@ function newId(): string {
 }
 
 /** Insert any new seeds. Existing keywords keep their status. */
-export async function ensureSeeds(db: DrizzleD1Database): Promise<number> {
+async function ensureSeeds(db: DrizzleD1Database): Promise<number> {
   let inserted = 0;
   for (const seed of BLOG_SEEDS) {
     const res = await db

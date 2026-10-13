@@ -25,30 +25,37 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Restore Next.js build cache
         uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/bun.lock') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/bun.lock') }}-
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Generate Cloudflare Types
-        run: npm run cf-typegen
+        run: bun run cf-typegen
 
       - name: Typecheck
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Lint (Biome)
-        run: npm run lint
+        run: bun run lint
 
       - name: Run Unit Tests
-        run: npm test
+        run: bun run test
+
+      - name: Dead code (Knip)
+        run: bun run knip
 
       - name: Dry-run OpenNext Cloudflare Build
         # This used to fail closed here in CI needing a CLOUDFLARE_API_TOKEN
@@ -58,4 +65,4 @@ jobs:
         # wrangler.build.jsonc even though the build never touches it. Fixed
         # there (confirmed 2026-09-07) instead of widening a token's scope —
         # this step needs no Cloudflare credentials at all now.
-        run: npx opennextjs-cloudflare build
+        run: bunx opennextjs-cloudflare build

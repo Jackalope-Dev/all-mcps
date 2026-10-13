@@ -4,7 +4,7 @@
  * defaults a marketing checkbox should reuse this rather than re-deriving it.
  */
 
-export const EU_COUNTRIES = new Set([
+const EU_COUNTRIES = new Set([
   'AT',
   'BE',
   'BG',

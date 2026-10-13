@@ -20,8 +20,8 @@ another one.
 Requires **Node 22** (see `.nvmrc`).
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 The dev server runs at [localhost:3000](http://localhost:3000) with no
@@ -46,13 +46,13 @@ into a local `.dev.vars` file, which is gitignored. `docs/STRIPE_SETUP.md` and
 Every change has to pass these, in order:
 
 ```bash
-npm run typecheck   # tsc --noEmit, zero errors
-npm run check       # Biome format + lint, writes fixes
-npm test            # Vitest unit + regression suite
-npm run build       # required if you touched routes, copy, content, or config
+bun run typecheck   # tsc --noEmit, zero errors
+bun run check       # Biome format + lint, writes fixes
+bun run test            # Vitest unit + regression suite
+bun run build       # required if you touched routes, copy, content, or config
 ```
 
-`npm run verify` runs the first three in one shot and is the minimum gate.
+`bun run verify` runs the first three in one shot and is the minimum gate.
 
 A few rules about how to get them passing:
 
@@ -61,7 +61,7 @@ A few rules about how to get them passing:
   in the PR and we'll change the rule deliberately.
 - Biome reports warnings that don't block; errors do. Both are configured in
   `biome.json` on purpose.
-- `npm run build` is what proves new pages and blog posts actually compile —
+- `bun run build` is what proves new pages and blog posts actually compile —
   they're statically generated, so a broken one won't surface until build time.
 
 ## Conventions worth knowing
@@ -90,8 +90,8 @@ has the full rule.
 **Database changes** go through Drizzle. Edit `db/schema.ts`, then:
 
 ```bash
-npm run db:generate       # writes a numbered migration into drizzle/
-npm run db:migrate:local  # apply it to the local D1
+bun run db:generate       # writes a numbered migration into drizzle/
+bun run db:migrate:local  # apply it to the local D1
 ```
 
 Commit the generated migration, and don't add one-off data-fix SQL to the repo —
@@ -112,7 +112,7 @@ emitting `CREATE TABLE` for tables that had existed for months.
 So: prefer `db:generate` over hand-writing, since that keeps both ledgers
 aligned. If you do need to hand-write one (a rename, a data migration, anything
 drizzle can't express), that's fine — but check afterwards that
-`npm run db:generate` still reports **"No schema changes"**. If it wants to
+`bun run db:generate` still reports **"No schema changes"**. If it wants to
 recreate existing tables, the ledgers have drifted again and need re-baselining
 the same way.
 
@@ -121,7 +121,7 @@ the same way.
 - Branch off `main` and keep the change focused on one thing.
 - Explain what the change does and why in the description; link an issue if one
   exists.
-- Include the gate output, or just confirm `npm run verify` passed.
+- Include the gate output, or just confirm `bun run verify` passed.
 - Screenshots are welcome for anything visual.
 
 ## Reporting bugs and security issues

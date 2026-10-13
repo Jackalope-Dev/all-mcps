@@ -36,11 +36,3 @@ export async function hashVisitorForServer(
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
-
-/** @deprecated Prefer hashVisitorForServer — same implementation. */
-export async function hashUpvoteVoter(
-  ip: string,
-  serverId: string,
-): Promise<string | null> {
-  return hashVisitorForServer(ip, serverId);
-}

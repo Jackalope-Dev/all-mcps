@@ -7,7 +7,7 @@ import { keywordTokens } from './blogPipeline/similarity';
 const BLOG_DIR = path.join(process.cwd(), 'content', 'blog');
 const FILENAME_PATTERN = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/;
 
-export type BlogFaq = {
+type BlogFaq = {
   q: string;
   a: string;
 };

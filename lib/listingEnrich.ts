@@ -12,10 +12,7 @@ import {
 } from './installConfig';
 import { isSafeSubmissionUrl } from './urlSafety';
 
-export {
-  pickBestWebsiteAndLogo,
-  pickBestWebsiteAndLogoWithLlm,
-} from './listingSignals';
+export { pickBestWebsiteAndLogoWithLlm } from './listingSignals';
 
 export type GhRepo = {
   full_name?: string;

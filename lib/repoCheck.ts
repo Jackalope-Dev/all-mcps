@@ -17,7 +17,7 @@ export type RepoStatus = 'ok' | 'archived' | 'gone' | 'site_only' | 'unknown';
  * exists, the repo 404s). Not evidence the listing is dead.
  */
 
-export const GONE_HTTP_STATUSES = new Set([404, 410, 451]);
+const GONE_HTTP_STATUSES = new Set([404, 410, 451]);
 
 export function classifyRepoResponse(
   status: number,
