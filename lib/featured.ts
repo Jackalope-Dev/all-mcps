@@ -28,8 +28,8 @@ function seededRandom(seed: number): () => number {
 }
 
 /**
- * Rank listings for homepage marquee/featured: premium & verified first,
- * then engagement, with light randomness so the shelf isn't frozen forever.
+ * Pick homepage featured cards (paid listings only, when any exist) and the
+ * marquee (engagement-ranked, with light randomness).
  */
 export function pickDiscoveryServers<T extends FeaturedCandidate>(
   servers: T[],
@@ -42,53 +42,47 @@ export function pickDiscoveryServers<T extends FeaturedCandidate>(
   const rand =
     options.seed !== undefined ? seededRandom(options.seed) : Math.random;
 
-  const premiumServers = servers.filter((s) => s.isPremium);
-  const nonPremiumServers = servers.filter((s) => !s.isPremium);
+  const shuffle = <U>(items: U[]): U[] => {
+    const out = [...items];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  };
 
-  const scored = nonPremiumServers.map((s) => {
-    const engagement =
-      (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
-    const boost =
-      (isFeaturedListing(s) ? 2000 : 0) +
-      // A flat 800 previously let the catalog's ~1 non-premium `isOfficial`
-      // listing (a protocol reference/test server, not a typical install
-      // pick) outrank virtually all real engagement and occupy a featured
-      // slot almost every rotation. Keep a modest nudge for official
-      // listings without letting it dominate over genuine upvotes/copies/views.
-      (s.isOfficial ? 150 : 0) +
-      rand() * 120;
-    return { s, score: engagement + boost };
-  });
+  // Paid listings (premium subscription or an active featured boost) own the
+  // featured shelf outright. Shuffled per seed so that when there are more
+  // paid listings than slots, each one gets turns instead of the first rows
+  // in DB order permanently holding the shelf.
+  const paid = shuffle(servers.filter((s) => isFeaturedListing(s)));
 
+  const scored = servers
+    .filter((s) => !isFeaturedListing(s))
+    .map((s) => {
+      const engagement =
+        (s.upvotes || 0) * 5 + (s.copies || 0) + (s.views || 0) * 0.05;
+      // Keep a modest nudge for official listings without letting it
+      // dominate over genuine upvotes/copies/views.
+      const boost = (s.isOfficial ? 150 : 0) + rand() * 120;
+      return { s, score: engagement + boost };
+    });
   scored.sort((a, b) => b.score - a.score);
 
-  const featured = [...premiumServers];
-  const remainingFeaturedCount = Math.max(
-    0,
-    options.featured - featured.length,
-  );
-
-  // Engagement gaps between the top few listings dwarf the 0-120 jitter, so a
-  // straight top-N slice froze the same servers on the shelf every rotation.
-  // Instead, shuffle a wider top pool (paid featured listings still win via
-  // their 2000 boost, since they sort into the pool first and are kept first).
-  const pool = scored.slice(
-    0,
-    Math.max(remainingFeaturedCount * FEATURED_POOL_MULTIPLIER, 0),
-  );
-  const paid = pool.filter((x) => isFeaturedListing(x.s));
-  const organic = pool.filter((x) => !isFeaturedListing(x.s));
-  for (let i = organic.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [organic[i], organic[j]] = [organic[j], organic[i]];
-  }
-  const additionalFeatured = [...paid, ...organic]
-    .slice(0, remainingFeaturedCount)
-    .map((x) => x.s);
-  featured.push(...additionalFeatured);
+  // Organic picks only backfill when nobody has paid; drawn from a wider top
+  // pool so the same high-engagement listings don't freeze the shelf.
+  const featured =
+    paid.length > 0
+      ? paid.slice(0, options.featured)
+      : shuffle(scored.slice(0, options.featured * FEATURED_POOL_MULTIPLIER))
+          .slice(0, options.featured)
+          .map((x) => x.s);
 
   const featuredIds = new Set(featured.map((s) => s.id));
-  const rest = scored.filter((x) => !featuredIds.has(x.s.id)).map((x) => x.s);
+  const rest = [
+    ...paid.filter((s) => !featuredIds.has(s.id)),
+    ...scored.filter((x) => !featuredIds.has(x.s.id)).map((x) => x.s),
+  ];
 
   const marqueeCount = options.marquee;
   const marquee =

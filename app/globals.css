@@ -1486,15 +1486,15 @@ p {
   --jd-accent: #b9a6f2;
   --jd-accent-bright: #cebef8;
   --jd-btn: #7c5cdb;
-  padding: 1.5rem 0 3rem;
+  padding: 1rem 0 2rem;
 }
 
 .jd-callout-card {
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-8);
-  padding: var(--space-8);
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
   border-radius: var(--radius-lg);
   border: 1px solid
     color-mix(in srgb, var(--jd-accent) 42%, var(--border-color));
@@ -1512,8 +1512,8 @@ p {
 .jd-callout-mark {
   position: relative;
   flex-shrink: 0;
-  width: 132px;
-  height: 132px;
+  width: 72px;
+  height: 72px;
   color: var(--jd-accent);
 }
 
@@ -1571,7 +1571,7 @@ p {
 }
 
 .jd-callout-kicker {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.35rem;
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.72rem;
   font-weight: 500;
@@ -1581,8 +1581,8 @@ p {
 }
 
 .jd-callout-title {
-  margin: 0 0 0.6rem;
-  font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -1590,21 +1590,21 @@ p {
 }
 
 .jd-callout-body {
-  margin: 0 0 1.15rem;
+  margin: 0 0 0.75rem;
   max-width: 46rem;
   color: var(--text-secondary);
-  font-size: 0.95rem;
-  line-height: 1.6;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .jd-callout-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.62rem 1.15rem;
+  padding: 0.5rem 1rem;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #fff;
   background: var(--jd-btn);
   border: 1px solid color-mix(in srgb, var(--jd-accent) 70%, #fff);
@@ -1629,13 +1629,13 @@ p {
 @media (max-width: 720px) {
   .jd-callout-card {
     flex-direction: column;
-    gap: var(--space-6);
+    gap: var(--space-4);
     text-align: center;
   }
 
   .jd-callout-mark {
-    width: 108px;
-    height: 108px;
+    width: 64px;
+    height: 64px;
   }
 }
 

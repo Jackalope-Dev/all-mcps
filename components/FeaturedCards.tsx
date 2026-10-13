@@ -3,6 +3,7 @@
 import { ArrowRight, Plus } from 'lucide-react';
 import { getCategoryMeta } from '../lib/categories';
 import { parseServerName } from '../lib/displayName';
+import { isFeaturedListing } from '../lib/featuredStatus';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
@@ -20,8 +21,11 @@ type Server = {
 };
 
 export function FeaturedCards({ servers }: { servers: Server[] }) {
-  const displayServers = (servers || []).slice(0, 2);
-  const showUpsellCard = true; // Always reserve 1 slot for an open featured slot upsell if room permits up to 3 total slots
+  // Paid listings get up to all 3 slots; the upsell card fills any slot they
+  // leave open. Organic fallback (nobody paid) keeps 2 + the upsell.
+  const anyPaid = (servers || []).some((s) => isFeaturedListing(s));
+  const displayServers = (servers || []).slice(0, anyPaid ? 3 : 2);
+  const showUpsellCard = displayServers.length < 3;
 
   return (
     <section

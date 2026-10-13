@@ -358,6 +358,11 @@ export async function getActiveServersLight(limit?: number): Promise<Server[]> {
         ? await query
             .orderBy(
               desc(serversTable.isPremium),
+              // Active featured boosts must make the capped pool regardless of
+              // traffic, or a low-view paid listing never reaches the shelf.
+              desc(
+                sql`coalesce(${serversTable.featuredUntil} > unixepoch(), 0)`,
+              ),
               desc(serversTable.views),
               desc(serversTable.copies),
               desc(serversTable.upvotes),

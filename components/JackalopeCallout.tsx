@@ -24,12 +24,12 @@ const HEAD_OUTLINE = [
 
 const ECHOES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-const WAITLIST_URL =
-  'https://jackalope.dev/?utm_source=allmcps&utm_medium=referral&utm_campaign=waitlist_callout';
+const DOWNLOAD_URL =
+  'https://jackalope.dev/?utm_source=allmcps&utm_medium=referral&utm_campaign=download_callout';
 
 /**
  * Cross-promo card sending AllMCPs visitors to the Jackalope desktop app
- * waitlist. Jackalope Digital builds both.
+ * download. Jackalope Digital builds both.
  */
 export function JackalopeCallout() {
   return (
@@ -82,17 +82,16 @@ export function JackalopeCallout() {
           <p className="jd-callout-body">
             Run Claude Code, Codex, and Grok side by side. Each agent works in
             its own Git worktree, so nothing collides, and you review every
-            change before it lands. Launching for macOS, Windows, and Linux.
-            Early access is going out in waves.
+            change before it lands. Available for macOS, Windows, and Linux.
           </p>
           <OutboundLink
-            href={WAITLIST_URL}
+            href={DOWNLOAD_URL}
             destinationType="other"
             target="_blank"
             rel="noopener noreferrer"
             className="jd-callout-btn"
           >
-            Join the waitlist
+            Download now
             <ArrowUpRight size={16} aria-hidden="true" />
           </OutboundLink>
         </div>
