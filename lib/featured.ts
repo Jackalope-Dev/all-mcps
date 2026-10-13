@@ -13,6 +13,9 @@ export type FeaturedCandidate = {
   upvotes?: number;
 };
 
+/** Organic featured slots are drawn from the top (slots × this) by score. */
+const FEATURED_POOL_MULTIPLIER = 4;
+
 /** Simple seeded PRNG (mulberry32) for deterministic per-user shuffling. */
 function seededRandom(seed: number): () => number {
   return () => {
@@ -65,7 +68,21 @@ export function pickDiscoveryServers<T extends FeaturedCandidate>(
     options.featured - featured.length,
   );
 
-  const additionalFeatured = scored
+  // Engagement gaps between the top few listings dwarf the 0-120 jitter, so a
+  // straight top-N slice froze the same servers on the shelf every rotation.
+  // Instead, shuffle a wider top pool (paid featured listings still win via
+  // their 2000 boost, since they sort into the pool first and are kept first).
+  const pool = scored.slice(
+    0,
+    Math.max(remainingFeaturedCount * FEATURED_POOL_MULTIPLIER, 0),
+  );
+  const paid = pool.filter((x) => isFeaturedListing(x.s));
+  const organic = pool.filter((x) => !isFeaturedListing(x.s));
+  for (let i = organic.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [organic[i], organic[j]] = [organic[j], organic[i]];
+  }
+  const additionalFeatured = [...paid, ...organic]
     .slice(0, remainingFeaturedCount)
     .map((x) => x.s);
   featured.push(...additionalFeatured);
