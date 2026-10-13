@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
+import type { RepoStatus } from '../../lib/repoCheck';
 import { STALE_REASON_LABEL, type StaleReason } from '../../lib/staleness';
 import { TRUST_TIER_COPY, type TrustTier } from '../../lib/trustTier';
 
@@ -34,6 +35,9 @@ type TriageItem = {
   npmDownloads: number | null;
   lastCommitAt: string | null;
   repoForkOf: string | null;
+  repoStatus: RepoStatus | null;
+  repoGoneCount: number | null;
+  repoCheckedAt: string | null;
   healthStatus: string;
   mcpProbability: number | null;
   listingQuality: number | null;
@@ -212,6 +216,7 @@ export function AdminTriageQueue() {
           verdict?: Verdict;
           reason?: string;
           mcpProbability?: number | null;
+          repoStatus?: TriageItem['repoStatus'];
         };
         if (!res.ok) throw new Error(json.error || 'Jev failed');
         setData((d) =>
@@ -225,6 +230,10 @@ export function AdminTriageQueue() {
                         triageVerdict: json.verdict ?? null,
                         triageReason: json.reason ?? null,
                         mcpProbability: json.mcpProbability ?? i.mcpProbability,
+                        repoStatus:
+                          json.repoStatus && json.repoStatus !== 'unknown'
+                            ? json.repoStatus
+                            : i.repoStatus,
                       }
                     : i,
                 ),
@@ -530,6 +539,27 @@ export function AdminTriageQueue() {
                   <Chip color="var(--admin-warn)">
                     fork of {item.repoForkOf}
                   </Chip>
+                )}
+                {item.repoStatus === 'gone' && (
+                  <Chip color="var(--admin-bad)">
+                    source 404
+                    {(item.repoGoneCount ?? 0) >= 2
+                      ? ' · confirmed'
+                      : ' · rechecking'}
+                  </Chip>
+                )}
+                {item.repoStatus === 'ok' && (
+                  <Chip color="var(--admin-ok)">
+                    source live · {fmtDate(item.repoCheckedAt)}
+                  </Chip>
+                )}
+                {item.repoStatus === 'site_only' && (
+                  <Chip color="var(--admin-warn)">
+                    repo 404 · website live (private repo?)
+                  </Chip>
+                )}
+                {item.repoStatus === 'archived' && (
+                  <Chip color="var(--admin-warn)">repo archived</Chip>
                 )}
                 {item.healthStatus === 'archived' && (
                   <Chip color="var(--admin-bad)">archived</Chip>

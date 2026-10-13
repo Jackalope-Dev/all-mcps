@@ -36,6 +36,18 @@ describe('settleVerdict', () => {
     ).toBe('needs_review');
   });
 
+  it('rejects a 404 source regardless of the model, unless it was proven to run', () => {
+    expect(settleVerdict('approve', 0.95, review, { repoStatus: 'gone' })).toBe(
+      'reject',
+    );
+    expect(
+      settleVerdict('approve', 0.95, review, {
+        repoStatus: 'gone',
+        sandboxStatus: 'ok',
+      }),
+    ).toBe('needs_review');
+  });
+
   it('passes through null when Jev had no answer', () => {
     expect(settleVerdict(null, null, review, {})).toBeNull();
   });

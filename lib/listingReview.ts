@@ -16,6 +16,7 @@
  * would let an outage silently stop the promotion pipeline.
  */
 
+import type { RepoStatus } from './repoCheck';
 import {
   askJev,
   type JevNoulQuestion,
@@ -248,6 +249,8 @@ export type TriageEvidence = {
   repoForkOf?: string | null;
   staleReasons?: string[];
   readme?: string | null;
+  /** Our own check of the source URL (lib/repoCheck.ts). */
+  repoStatus?: RepoStatus | null;
 };
 
 export type ListingTriage = ListingReview & {
@@ -290,6 +293,7 @@ export async function triageListing(
         last_commit: evidence.lastCommitAt?.toISOString().slice(0, 10) ?? null,
         fork_of: evidence.repoForkOf ?? null,
         stale_signals: evidence.staleReasons ?? [],
+        source_repo: evidence.repoStatus ?? 'not checked',
       },
     },
     {
@@ -337,6 +341,9 @@ export function settleVerdict(
     evidence.sandboxStatus === 'ok' ||
     evidence.sandboxStatus === 'needs_credentials';
   if (raw === 'reject' && proven) return 'needs_review';
+  // A source URL that returns 404 is a fact, not a judgment: reject unless
+  // the server was proven to run anyway (then a human decides).
+  if (evidence.repoStatus === 'gone') return proven ? 'needs_review' : 'reject';
   if (raw !== 'needs_review' && (confidence ?? 0) < TRIAGE_CONFIDENCE_FLOOR)
     return 'needs_review';
   // The model said approve but its own is-MCP answer says no: conflicting.
@@ -373,6 +380,10 @@ export function explainTriage(
         : `sandbox ${evidence.sandboxStatus.replace(/_/g, ' ')}`,
     );
   }
+  if (evidence.repoStatus === 'gone') parts.push('source 404');
+  if (evidence.repoStatus === 'archived') parts.push('repo archived');
+  if (evidence.repoStatus === 'site_only')
+    parts.push('repo 404 but website live');
   if (evidence.repoForkOf) parts.push(`fork of ${evidence.repoForkOf}`);
   if (evidence.staleReasons?.length)
     parts.push(`stale: ${evidence.staleReasons.join(', ')}`);

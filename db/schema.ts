@@ -657,6 +657,13 @@ export const listingSignals = sqliteTable(
     /** When the registry first answered that installPackage does not exist. Cleared when it reappears. */
     packageMissingAt: integer('package_missing_at', { mode: 'timestamp' }),
     registryCheckedAt: integer('registry_checked_at', { mode: 'timestamp' }),
+    /** ok | archived | gone | unknown — our own check of the listing's source URL (lib/repoCheck.ts). */
+    repoStatus: text('repo_status'),
+    repoCheckedAt: integer('repo_checked_at', { mode: 'timestamp' }),
+    /** Consecutive checks that found the source gone (404/410/451). Reset by any other answer except unknown. */
+    repoGoneCount: integer('repo_gone_count').notNull().default(0),
+    /** First check of the current gone streak — confirmation needs a day between sightings. */
+    repoFirstGoneAt: integer('repo_first_gone_at', { mode: 'timestamp' }),
     /** `owner/repo` this GitHub repo was forked from. Null = not a fork or not measured. */
     repoForkOf: text('repo_fork_of'),
     /** JSON SecurityProfile (lib/securityProfile.ts). */

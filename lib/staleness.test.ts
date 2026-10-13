@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   assessStaleness,
+  evidenceReasons,
+  pendingAutoRemoveReason,
   STALE_GRACE_MS,
   type StalenessInput,
   shouldAutoRemove,
@@ -92,5 +94,97 @@ describe('shouldAutoRemove', () => {
   it('does nothing without reasons or a flag date', () => {
     expect(shouldAutoRemove([], flagged, now)).toBe(false);
     expect(shouldAutoRemove(['abandoned'], null, now)).toBe(false);
+  });
+});
+
+describe('repo and Jev rules', () => {
+  it('flags a confirmed-gone repo only when nothing else runs it', () => {
+    expect(assessStaleness({ ...base, repoGoneConfirmed: true })).toEqual([
+      'repo-gone',
+    ]);
+    expect(
+      assessStaleness({ ...base, repoGoneConfirmed: true, packageAlive: true }),
+    ).toEqual([]);
+    expect(
+      assessStaleness({
+        ...base,
+        repoGoneConfirmed: true,
+        toolsSource: 'introspected',
+      }),
+    ).toEqual([]);
+  });
+
+  it('removes a gone repo after a week, not a month', () => {
+    const eightDays = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+    expect(shouldAutoRemove(['repo-gone'], eightDays, now)).toBe(true);
+    expect(shouldAutoRemove(['abandoned'], eightDays, now)).toBe(false);
+  });
+
+  it('hides on a Jev reject only when the MCP probability agrees, and never removes on it', () => {
+    expect(
+      assessStaleness({
+        ...base,
+        triageVerdict: 'reject',
+        mcpProbability: 0.2,
+      }),
+    ).toEqual(['jev-reject']);
+    expect(
+      assessStaleness({
+        ...base,
+        triageVerdict: 'reject',
+        mcpProbability: 0.6,
+      }),
+    ).toEqual([]);
+    const old = new Date(now.getTime() - STALE_GRACE_MS * 2);
+    expect(shouldAutoRemove(['jev-reject'], old, now)).toBe(false);
+  });
+
+  it('keeps jev-reject out of the reasons that reset a verdict', () => {
+    expect(evidenceReasons(['repo-gone', 'jev-reject'])).toEqual(['repo-gone']);
+  });
+});
+
+describe('pendingAutoRemoveReason', () => {
+  const p = {
+    submitted: false,
+    sandboxProven: false,
+    repoGoneConfirmed: false,
+    triageVerdict: null,
+    mcpProbability: null,
+  };
+  it('removes ingested rows with a gone repo or an agreeing Jev reject', () => {
+    expect(pendingAutoRemoveReason({ ...p, repoGoneConfirmed: true })).toMatch(
+      /repo gone/,
+    );
+    expect(
+      pendingAutoRemoveReason({
+        ...p,
+        triageVerdict: 'reject',
+        mcpProbability: 0.1,
+      }),
+    ).toMatch(/Jev reject/);
+    expect(
+      pendingAutoRemoveReason({
+        ...p,
+        triageVerdict: 'reject',
+        mcpProbability: 0.5,
+      }),
+    ).toBeNull();
+  });
+  it('never auto-removes a human submission or a proven server', () => {
+    expect(
+      pendingAutoRemoveReason({
+        ...p,
+        submitted: true,
+        repoGoneConfirmed: true,
+      }),
+    ).toBeNull();
+    expect(
+      pendingAutoRemoveReason({
+        ...p,
+        sandboxProven: true,
+        repoGoneConfirmed: true,
+      }),
+    ).toBeNull();
   });
 });

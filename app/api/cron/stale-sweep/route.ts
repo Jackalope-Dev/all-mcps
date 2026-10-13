@@ -9,6 +9,7 @@ import {
   isNull,
   lt,
   or,
+  sql,
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
@@ -18,12 +19,22 @@ import {
   stdioVerifications,
 } from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
+import { getGithubToken } from '../../../../lib/githubAuth';
 import { reviewColumns, triageListing } from '../../../../lib/listingReview';
 import { checkRegistry } from '../../../../lib/packageRegistry';
+import {
+  checkRepo,
+  isRepoGoneConfirmed,
+  REPO_GONE_CONFIRM_MS,
+  type RepoStatus,
+} from '../../../../lib/repoCheck';
 import { upsertSignals } from '../../../../lib/signalStore';
 import {
   assessStaleness,
+  evidenceReasons,
+  JEV_REJECT_MCP_CEILING,
   parseStaleReasons,
+  pendingAutoRemoveReason,
   shouldAutoRemove,
 } from '../../../../lib/staleness';
 
@@ -31,17 +42,24 @@ import {
  * Keeps dead, abandoned and fake listings out of the catalog, in stages — see
  * lib/staleness.ts for the rules and why removal is never immediate.
  *
- * Three bounded phases per tick, cheapest first so a slow registry or Jev
- * never starves the assessment that does the actual work:
+ * Bounded phases per tick, cheapest first so a slow registry or Jev never
+ * starves the assessment that does the actual work:
  *
  *   1. registry   ask npm/PyPI whether a batch of install packages are
  *                 deprecated or gone (each package at most every 30 days)
- *   2. assess     re-run the stale rules over a batch of active listings
+ *   2. repo       check the source URL of pending listings and suspect active
+ *                 ones (GitHub API; each at most weekly, and a 404 is
+ *                 re-checked after a day to confirm it)
+ *   3. assess     re-run the stale rules over a batch of active listings
  *                 (each at most every 7 days), flag / unflag, and remove
  *                 listings whose auto-removable reasons outlived the grace period
- *   3. triage     ask Jev for a curator recommendation on pending listings and
+ *   4. triage     ask Jev for a curator recommendation on pending listings and
  *                 freshly flagged ones, for the admin triage queue (once per
  *                 listing; an unanswered attempt is retried after a day)
+ *   5. pending    move ingested pending listings to 'removed' when the source
+ *                 is confirmed gone or Jev's reject is backed by a low MCP
+ *                 probability (lib/staleness.ts pendingAutoRemoveReason).
+ *                 Human submissions always wait for an admin.
  *
  * Every phase skips work done recently, so once the catalog has been swept a
  * tick only touches new listings and ones whose window has come round.
@@ -60,6 +78,10 @@ const ASSESS_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
 /** After an unanswered or unusable Jev triage, wait this long before asking again. */
 const TRIAGE_RETRY_MS = 24 * 60 * 60 * 1000;
 const ASSESS_BATCH = 400;
+const REPO_BATCH = 60;
+const REPO_CONCURRENCY = 8;
+const REPO_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
+const PENDING_ACT_BATCH = 200;
 const TRIAGE_BATCH = 24;
 const TRIAGE_CONCURRENCY = 6;
 /** Statements per db.batch — each is a single-row update with a handful of params. */
@@ -175,7 +197,102 @@ export async function POST(req: Request) {
       }),
     );
 
-    // ── 2. Assess ──────────────────────────────────────────────────────────
+    // ── 2. Repo ────────────────────────────────────────────────────────────
+    // Pending listings were never health-checked, and active ones the health
+    // cron saw offline/archived or the sweep flagged are the likely-dead ones.
+    const githubToken = getGithubToken(env);
+    const repoRows = await db
+      .select({
+        id: servers.id,
+        url: servers.url,
+        websiteUrl: servers.websiteUrl,
+        status: servers.status,
+        repoStatus: listingSignals.repoStatus,
+        repoGoneCount: listingSignals.repoGoneCount,
+        repoFirstGoneAt: listingSignals.repoFirstGoneAt,
+      })
+      .from(servers)
+      .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
+      .where(
+        and(
+          or(
+            eq(servers.status, 'pending'),
+            and(
+              eq(servers.status, 'active'),
+              or(
+                isNotNull(servers.staleFlaggedAt),
+                inArray(servers.healthStatus, ['offline', 'archived']),
+              ),
+            ),
+          ),
+          or(
+            isNull(listingSignals.repoCheckedAt),
+            lt(
+              listingSignals.repoCheckedAt,
+              new Date(now.getTime() - REPO_RECHECK_MS),
+            ),
+            // A first 404 comes back after a day to be confirmed.
+            and(
+              eq(listingSignals.repoStatus, 'gone'),
+              lt(listingSignals.repoGoneCount, 2),
+              lt(
+                listingSignals.repoCheckedAt,
+                new Date(now.getTime() - REPO_GONE_CONFIRM_MS),
+              ),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(listingSignals.repoCheckedAt))
+      .limit(REPO_BATCH);
+
+    const repoResults = await mapWithConcurrency(
+      repoRows,
+      REPO_CONCURRENCY,
+      async (row) => ({
+        row,
+        status: await checkRepo(row.url, githubToken, row.websiteUrl),
+      }),
+    );
+    const repoCounts = { gone: 0, confirmedGone: 0, archived: 0, unknown: 0 };
+    await runChunked(
+      db,
+      repoResults.map(({ row, status }) => {
+        if (status === 'unknown') {
+          repoCounts.unknown++;
+          return upsertSignals(db, row.id, { repoCheckedAt: now });
+        }
+        const wasGone = row.repoStatus === 'gone';
+        const isGone = status === 'gone';
+        if (isGone) repoCounts.gone++;
+        if (status === 'archived') repoCounts.archived++;
+        const goneCount = isGone ? (row.repoGoneCount ?? 0) + 1 : 0;
+        const firstGoneAt = isGone ? (row.repoFirstGoneAt ?? now) : null;
+        const nowConfirmed =
+          isGone && isRepoGoneConfirmed(goneCount, firstGoneAt, now);
+        if (nowConfirmed && (row.repoGoneCount ?? 0) < 2)
+          repoCounts.confirmedGone++;
+        return upsertSignals(db, row.id, {
+          repoStatus: status,
+          repoCheckedAt: now,
+          repoGoneCount: goneCount,
+          repoFirstGoneAt: firstGoneAt,
+          // The source appearing or disappearing is new evidence: ask Jev
+          // again, and have the stale rules look at it on the next pass
+          // instead of waiting out the weekly window.
+          ...(wasGone !== isGone || nowConfirmed
+            ? {
+                triageVerdict: null,
+                triageReason: null,
+                triageAttemptedAt: null,
+                staleCheckedAt: null,
+              }
+            : {}),
+        });
+      }),
+    );
+
+    // ── 3. Assess ──────────────────────────────────────────────────────────
     const assessRows = await db
       .select({
         id: servers.id,
@@ -197,6 +314,10 @@ export async function POST(req: Request) {
         repoForkOf: listingSignals.repoForkOf,
         mcpProbability: listingSignals.mcpProbability,
         staleReasons: listingSignals.staleReasons,
+        registryCheckedAt: listingSignals.registryCheckedAt,
+        repoGoneCount: listingSignals.repoGoneCount,
+        repoFirstGoneAt: listingSignals.repoFirstGoneAt,
+        triageVerdict: listingSignals.triageVerdict,
         installFailures: stdioVerifications.installFailures,
       })
       .from(servers)
@@ -241,6 +362,16 @@ export async function POST(req: Request) {
         installFailures: r.installFailures,
         repoForkOf: r.repoForkOf,
         mcpProbability: r.mcpProbability,
+        repoGoneConfirmed: isRepoGoneConfirmed(
+          r.repoGoneCount,
+          r.repoFirstGoneAt,
+          now,
+        ),
+        packageAlive:
+          r.registryCheckedAt != null &&
+          r.packageMissingAt == null &&
+          !r.packageDeprecated,
+        triageVerdict: r.triageVerdict,
       });
 
       if (reasons.length === 0) {
@@ -264,7 +395,8 @@ export async function POST(req: Request) {
       const flaggedAt = r.staleFlaggedAt ?? now;
       const remove = shouldAutoRemove(reasons, flaggedAt, now);
       const changedReasons =
-        parseStaleReasons(r.staleReasons).join(',') !== reasons.join(',');
+        evidenceReasons(parseStaleReasons(r.staleReasons)).join(',') !==
+        evidenceReasons(reasons).join(',');
       assessStatements.push(
         upsertSignals(db, r.id, {
           staleCheckedAt: now,
@@ -291,7 +423,7 @@ export async function POST(req: Request) {
     }
     await runChunked(db, assessStatements);
 
-    // ── 3. Triage ──────────────────────────────────────────────────────────
+    // ── 4. Triage ──────────────────────────────────────────────────────────
     // Pending listings and flagged active ones without a current Jev verdict.
     // Paid review priority first, then oldest.
     const triageRows = await db
@@ -306,6 +438,8 @@ export async function POST(req: Request) {
         lastCommitAt: servers.lastCommitAt,
         repoForkOf: listingSignals.repoForkOf,
         staleReasons: listingSignals.staleReasons,
+        repoStatus: listingSignals.repoStatus,
+        status: servers.status,
         sandboxStatus: stdioVerifications.status,
         toolCount: stdioVerifications.toolCount,
       })
@@ -353,8 +487,10 @@ export async function POST(req: Request) {
             repoForkOf: r.repoForkOf,
             staleReasons: parseStaleReasons(r.staleReasons),
             readme: r.aiOverview,
+            repoStatus: r.repoStatus as RepoStatus | null,
           },
         ),
+        isActive: r.status === 'active',
       }),
     );
     const answered = triaged.filter((t) => t.triage.verdict !== null);
@@ -362,7 +498,7 @@ export async function POST(req: Request) {
     // waits TRIAGE_RETRY_MS instead of being re-asked every tick.
     await runChunked(
       db,
-      triaged.map(({ id, triage }) =>
+      triaged.map(({ id, triage, isActive }) =>
         upsertSignals(db, id, {
           triageAttemptedAt: now,
           ...(triage.verdict !== null
@@ -372,15 +508,84 @@ export async function POST(req: Request) {
                 triageReason: triage.reason,
               }
             : {}),
+          // A reject on a live listing can hide it (lib/staleness.ts
+          // 'jev-reject'); reassess on the next pass rather than next week.
+          ...(isActive && triage.verdict === 'reject'
+            ? { staleCheckedAt: null }
+            : {}),
         }),
       ),
     );
 
+    // ── 5. Pending auto-remove ─────────────────────────────────────────────
+    // Ingested rows only (no submitter email). 'removed', not deleted, so an
+    // admin can republish anything this got wrong.
+    const pendingRows = await db
+      .select({
+        id: servers.id,
+        submitterEmail: servers.submitterEmail,
+        repoGoneCount: listingSignals.repoGoneCount,
+        repoFirstGoneAt: listingSignals.repoFirstGoneAt,
+        triageVerdict: listingSignals.triageVerdict,
+        triageReason: listingSignals.triageReason,
+        mcpProbability: listingSignals.mcpProbability,
+        sandboxStatus: stdioVerifications.status,
+      })
+      .from(servers)
+      .innerJoin(listingSignals, eq(listingSignals.serverId, servers.id))
+      .leftJoin(stdioVerifications, eq(stdioVerifications.serverId, servers.id))
+      .where(
+        and(
+          eq(servers.status, 'pending'),
+          isNull(servers.submitterEmail),
+          // Pre-filter to rows pendingAutoRemoveReason can act on, so
+          // rows it will always skip don't take up the batch every tick.
+          or(
+            sql`${listingSignals.repoGoneCount} >= 2`,
+            and(
+              eq(listingSignals.triageVerdict, 'reject'),
+              lt(listingSignals.mcpProbability, JEV_REJECT_MCP_CEILING),
+            ),
+          ),
+        ),
+      )
+      .limit(PENDING_ACT_BATCH);
+
+    const autoRemoveStatements: unknown[] = [];
+    for (const r of pendingRows) {
+      const reason = pendingAutoRemoveReason({
+        submitted: Boolean(r.submitterEmail),
+        sandboxProven:
+          r.sandboxStatus === 'ok' || r.sandboxStatus === 'needs_credentials',
+        repoGoneConfirmed: isRepoGoneConfirmed(
+          r.repoGoneCount,
+          r.repoFirstGoneAt,
+          now,
+        ),
+        triageVerdict: r.triageVerdict,
+        mcpProbability: r.mcpProbability,
+      });
+      if (!reason) continue;
+      autoRemoveStatements.push(
+        db
+          .update(servers)
+          .set({ status: 'removed' })
+          .where(and(eq(servers.id, r.id), eq(servers.status, 'pending'))),
+        upsertSignals(db, r.id, {
+          triageReason: `Auto-removed — ${reason}`,
+        }),
+      );
+    }
+    await runChunked(db, autoRemoveStatements);
+    const autoRemoved = autoRemoveStatements.length / 2;
+
     return NextResponse.json({
       success: true,
       registry: { checked: registryRows.length, ...registryCounts },
+      repo: { checked: repoRows.length, ...repoCounts },
       assess: { checked: assessRows.length, flagged, unflagged, removed },
       triage: { attempted: triageRows.length, answered: answered.length },
+      pending: { autoRemoved },
     });
   } catch (error: any) {
     console.error('stale-sweep error:', error);
