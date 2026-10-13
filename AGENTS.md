@@ -106,3 +106,17 @@ revert their work.
   are one-off tools run by hand, so they count as entry points.
 - CI (`.github/workflows/ci.yml`) runs the same chain plus an OpenNext build.
 - Concurrent work goes in `.worktrees/<task>` (gitignored), branched from `main`.
+
+# Workflow: parallel sessions
+
+The user regularly runs multiple agents/sessions in parallel on generally
+non-overlapping parts of this repo, and commits changes manually or via automation
+outside the current session. `git status` / `git diff` at the start of a session may
+show unrelated uncommitted changes you did not make. This is expected. Do not flag it
+or ask about it. Proceed with your task and leave unrelated changes alone unless the
+task requires touching those files.
+
+Never delete or discard another session's uncommitted work (no `git checkout -- <file>`,
+`git reset --hard`, `git clean`, an unpopped `git stash`, or overwriting a file
+someone else is mid-edit on). If unrelated changes conflict with your work, work
+around them: edit only the hunks you need, or ask how to proceed.
