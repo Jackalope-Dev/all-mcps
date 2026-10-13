@@ -63,7 +63,7 @@ export function ContactForm() {
         (window as any).turnstile?.reset();
         setToken('');
       }
-    } catch (err) {
+    } catch (_err) {
       setStatus('error');
       toast.error('Could not send message', {
         description: 'Network error. Check your connection and try again.',

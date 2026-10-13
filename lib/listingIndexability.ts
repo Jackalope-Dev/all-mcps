@@ -15,8 +15,8 @@
  * crosses the traction bar, it becomes indexable and enters the sitemap with
  * no manual step.
  */
-export const INDEXABLE_MIN_GITHUB_STARS = 25;
-export const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
+const INDEXABLE_MIN_GITHUB_STARS = 25;
+const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
 
 export type IndexabilityInput = {
   status?: string | null;

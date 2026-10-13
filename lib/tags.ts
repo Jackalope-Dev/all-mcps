@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { parseCategoryLabel } from './categories';
 import { getActiveServersLight, type Server } from './servers';
 
-export function slugifyTag(str: string): string {
+function slugifyTag(str: string): string {
   return str
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -96,7 +96,7 @@ const TECH_KEYWORDS: { slug: string; label: string; pattern: RegExp }[] = [
 ];
 
 /** Extract all matching tag objects ({ slug, label }) for a server */
-export function extractTagsForServer(
+function extractTagsForServer(
   server: Server,
 ): { slug: string; label: string }[] {
   const map = new Map<string, string>();

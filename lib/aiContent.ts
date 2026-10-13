@@ -26,7 +26,7 @@ import {
 
 export type AiFaqItem = { q: string; a: string };
 
-export type AiListingContent = {
+type AiListingContent = {
   /** One clean sentence, no trailing period stripping — used in cards, meta, digest. */
   summary: string;
   /** 3-5 sentences: what it does and when you'd reach for it. */

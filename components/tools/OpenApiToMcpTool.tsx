@@ -477,7 +477,7 @@ export function OpenApiToMcpTool() {
     const parsedJson = JSON.parse(specInput);
     tools = parseOpenApiToTools(parsedJson);
     if (parseError) setParseError(null);
-  } catch (err: any) {
+  } catch (_err: any) {
     tools = [];
     if (!parseError) {
       setParseError(

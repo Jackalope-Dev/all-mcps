@@ -28,7 +28,7 @@ export interface PresetStack {
   displayTools: Array<{ name: string; tag: string }>;
 }
 
-export const PRESET_STACKS: PresetStack[] = [
+const PRESET_STACKS: PresetStack[] = [
   {
     id: 'fullstack-dev',
     name: 'Fullstack Web Developer Stack',

@@ -308,7 +308,7 @@ export async function getSitemapServers(): Promise<SitemapServer[]> {
  * listing look freshly updated on every crawl, which teaches crawlers to stop
  * trusting the signal (same reasoning as the STATIC_PAGE_LASTMOD rule).
  */
-export function listingContentMs(server: SitemapServer): number {
+function listingContentMs(server: SitemapServer): number {
   let maxMs = 0;
   for (const v of [
     server.aiDocAt,

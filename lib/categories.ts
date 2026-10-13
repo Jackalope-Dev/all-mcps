@@ -249,10 +249,6 @@ export function getCategoryMeta(category: string) {
   };
 }
 
-export function getCategoryColor(category: string): string {
-  return getCategoryMeta(category).color;
-}
-
 export function getCategoryGradient(category: string): string {
   return getCategoryMeta(category).gradient;
 }
@@ -272,12 +268,12 @@ export function categorySlug(category: string): string {
 }
 
 /** slug -> canonical stored category string, built once from the catalog. */
-export const CATEGORY_BY_SLUG: Record<string, string> = Object.fromEntries(
+const CATEGORY_BY_SLUG: Record<string, string> = Object.fromEntries(
   DIRECTORY_CATEGORIES.map((c) => [categorySlug(c), c]),
 );
 
 /** Known legacy slug mappings -> canonical category name */
-export const LEGACY_SLUG_MAP: Record<string, string> = {
+const LEGACY_SLUG_MAP: Record<string, string> = {
   'end-to-end-rag-platforms': '🔎 Search & Data Extraction',
   'rag-platforms': '🔎 Search & Data Extraction',
   development: '💻 Developer Tools',
@@ -299,7 +295,7 @@ export function categoryFromSlug(slug: string): string | undefined {
  * Known alias map for normalizing incoming submission categories, legacy entries,
  * or raw strings from AI agents into the exact canonical stored category.
  */
-export const CATEGORY_ALIASES: Record<string, string> = {
+const CATEGORY_ALIASES: Record<string, string> = {
   // Development variations -> 💻 Developer Tools
   development: '💻 Developer Tools',
   'development & coding': '💻 Developer Tools',

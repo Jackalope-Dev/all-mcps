@@ -49,7 +49,7 @@ type OsvSeverityField =
  * records carry. Missing/unparseable severity defaults to 'low', never to
  * 'high'/'critical' — ambiguous data must never read as alarming.
  */
-export function classifySeverity(vuln: {
+function classifySeverity(vuln: {
   database_specific?: { severity?: OsvSeverityField };
 }): 'critical' | 'high' | 'medium' | 'low' {
   const raw = (vuln.database_specific?.severity || '').toUpperCase();

@@ -10,7 +10,7 @@ export type PaidSku =
   | 'premium_monthly';
 
 /** One volume-pricing tier: weeks <= upToWeeks (or unbounded if null) are billed at unitAmount/week. */
-export type WeeklyTier = { upToWeeks: number | null; unitAmount: number };
+type WeeklyTier = { upToWeeks: number | null; unitAmount: number };
 
 export type PaidProduct = {
   sku: PaidSku;

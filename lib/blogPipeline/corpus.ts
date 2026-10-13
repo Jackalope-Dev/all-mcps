@@ -26,7 +26,7 @@ import {
   textHash,
 } from './similarity';
 
-export type CorpusKind =
+type CorpusKind =
   | 'blog'
   | 'guide'
   | 'best'
@@ -50,7 +50,7 @@ export type CorpusEntry = CorpusDoc & { embedding: number[] | null };
  * head terms each page is built to rank for — keep in sync when a guide is
  * added (AGENTS.md "Also keep in sync when adding a new evergreen guide").
  */
-export const STATIC_CORPUS: CorpusDoc[] = [
+const STATIC_CORPUS: CorpusDoc[] = [
   {
     url: '/what-is-mcp',
     kind: 'guide',
@@ -206,7 +206,7 @@ export function codeCorpus(): CorpusDoc[] {
 }
 
 /** The text embedded for a doc — title, keyword and excerpt carry its query intent. */
-export function embeddingText(doc: CorpusDoc): string {
+function embeddingText(doc: CorpusDoc): string {
   return [doc.title, doc.primaryKeyword, doc.excerpt]
     .filter(Boolean)
     .join('. ')

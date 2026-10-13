@@ -25,8 +25,8 @@ export type ValidationResult = {
   internalLinks: string[];
 };
 
-export const MIN_WORDS = 1100;
-export const MAX_WORDS = 3200;
+const MIN_WORDS = 1100;
+const MAX_WORDS = 3200;
 const MIN_H2 = 4;
 const MIN_INTERNAL_LINKS = 4;
 
@@ -60,7 +60,7 @@ function stripCode(md: string): string {
   return md.replace(/```[\s\S]*?```/g, ' ');
 }
 
-export function countWords(md: string): number {
+function countWords(md: string): number {
   return stripCode(md).split(/\s+/).filter(Boolean).length;
 }
 

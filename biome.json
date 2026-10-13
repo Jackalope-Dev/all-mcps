@@ -42,7 +42,9 @@
         "noDangerouslySetInnerHtml": "off"
       },
       "correctness": {
-        "useExhaustiveDependencies": "warn"
+        "useExhaustiveDependencies": "warn",
+        "noUnusedImports": { "level": "error", "fix": "safe" },
+        "noUnusedVariables": "error"
       },
       "a11y": {
         "noAutofocus": "off",

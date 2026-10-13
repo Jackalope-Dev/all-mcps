@@ -8,7 +8,7 @@ import { getClaimVerificationToken } from './verificationTokens';
  * which account should be credited with ownership. Requiring both means the
  * badge has to be the one this exact signed-in user generated on the claim page.
  */
-export function readmeContainsClaimBadge(
+function readmeContainsClaimBadge(
   readmeText: string,
   serverId: string,
   userId: string,
@@ -29,7 +29,7 @@ const NOFOLLOW_REL_TOKENS = ['nofollow', 'ugc', 'sponsored'];
  * link-equity-killing tokens (nofollow / ugc / sponsored). An empty/absent rel
  * is dofollow by default.
  */
-export function relIsDofollow(relValue: string): boolean {
+function relIsDofollow(relValue: string): boolean {
   const tokens = relValue.toLowerCase().split(/\s+/).filter(Boolean);
   return !tokens.some((t) => NOFOLLOW_REL_TOKENS.includes(t));
 }

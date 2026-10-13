@@ -1,6 +1,6 @@
 import type React from 'react';
 
-export interface DirectoryBadge {
+interface DirectoryBadge {
   id: string;
   name: string;
   href: string;

@@ -12,7 +12,7 @@ export type AdPlacement =
   | 'blog_guide'
   | 'header_banner';
 
-export type AdStatus =
+type AdStatus =
   | 'pending_approval'
   | 'active'
   | 'paused'
@@ -180,7 +180,7 @@ export function formatUsdAmount(cents: number): string {
  * Weighted Random Selection: Picks an active ad based on its bid CPM weight.
  * Higher bid CPM = proportionally higher likelihood of being served.
  */
-export function selectWeightedAd<
+function selectWeightedAd<
   T extends {
     bidCpm: number;
     impressionsServed: number;
@@ -291,7 +291,7 @@ export function validateAdPayload(data: {
   return { valid: true };
 }
 
-export type PlaceholderVariantId =
+type PlaceholderVariantId =
   | 'promote_tool'
   | 'promote_app'
   | 'promote_site'
@@ -306,7 +306,7 @@ export type PlaceholderVariant = {
   badgeText: string;
 };
 
-export const PLACEHOLDER_VARIANTS: PlaceholderVariant[] = [
+const PLACEHOLDER_VARIANTS: PlaceholderVariant[] = [
   {
     id: 'promote_tool',
     headline: 'Promote Your Tool',

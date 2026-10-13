@@ -115,7 +115,7 @@ async function getServer(
         return row;
       }
     }
-  } catch (e) {}
+  } catch (_e) {}
 
   const servers = serversData as OgServer[];
   const found = servers.find((s) => s.id === id || s.id === rawId);

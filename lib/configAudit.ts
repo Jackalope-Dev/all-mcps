@@ -4,7 +4,7 @@
  * VS Code (servers), and Zed (context_servers) formats.
  */
 
-export interface AuditIssue {
+interface AuditIssue {
   type: 'error' | 'warning' | 'info';
   serverKey?: string;
   message: string;

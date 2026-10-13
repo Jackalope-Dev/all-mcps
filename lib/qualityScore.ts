@@ -25,7 +25,7 @@ import type { Server } from './servers';
  *     over the signals we can actually measure.
  */
 
-export type ScoreComponent = {
+type ScoreComponent = {
   key: string;
   label: string;
   earned: number;

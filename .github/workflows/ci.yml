@@ -50,6 +50,9 @@ jobs:
       - name: Run Unit Tests
         run: npm test
 
+      - name: Dead code (Knip)
+        run: npm run knip
+
       - name: Dry-run OpenNext Cloudflare Build
         # This used to fail closed here in CI needing a CLOUDFLARE_API_TOKEN
         # with Workers-edge-preview permission the repo's D1-scoped token

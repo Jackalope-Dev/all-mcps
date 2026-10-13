@@ -1,5 +1,5 @@
 /** UTM values stamped on outbound links rendered from third-party READMEs. */
-export const ALLMCPS_UTM = {
+const ALLMCPS_UTM = {
   source: 'allmcps',
   medium: 'directory',
   campaign: 'listing-readme',

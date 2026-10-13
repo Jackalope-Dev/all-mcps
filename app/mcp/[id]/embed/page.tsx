@@ -35,7 +35,7 @@ async function getServer(id: string): Promise<Server | undefined> {
         .limit(1);
       if (dbServers.length > 0) return dbServers[0] as unknown as Server;
     }
-  } catch (e) {}
+  } catch (_e) {}
 
   const servers = serversData as Server[];
   return servers.find((s) => s.id === id);

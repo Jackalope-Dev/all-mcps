@@ -22,7 +22,7 @@ async function getServer(id: string) {
         .limit(1);
       if (dbServers.length > 0) return dbServers[0];
     }
-  } catch (e) {}
+  } catch (_e) {}
 
   const allServers = serversData as {
     id: string;

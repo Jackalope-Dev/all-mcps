@@ -68,11 +68,3 @@ export const TRUST_TIER_COPY: Record<
     detail: 'We have not yet confirmed this server installs or runs.',
   },
 };
-
-/** Higher = stronger evidence. For sorting. */
-export const TRUST_TIER_RANK: Record<TrustTier, number> = {
-  verified: 3,
-  runs_needs_keys: 2,
-  installable: 1,
-  unverified: 0,
-};

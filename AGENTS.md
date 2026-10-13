@@ -77,12 +77,15 @@ until every one passes cleanly:
 2. `npm run check` — Biome format + lint (writes fixes). Must end clean with no
    remaining lint errors.
 3. `npm test` — Vitest unit + regression, all green.
-4. `npm run build` — required whenever routes, page copy, blog/content, sitemap
+4. `npm run knip` — no unused files, dependencies, or exports. Delete dead code
+   instead of ignoring it; only add a `knip.jsonc` ignore for something loaded
+   indirectly (runtime virtual modules, vendored contracts), with a comment saying why.
+5. `npm run build` — required whenever routes, page copy, blog/content, sitemap
    entries, `STATIC_PAGE_LASTMOD`, config, or env wiring changed. Posts and static
    pages only go live on build, so this is how you confirm they compile.
 
-`npm run verify` runs typecheck + lint + test in one command (read-only lint); that
-is the minimum gate before finishing. Use `npm run check` to auto-fix formatting/lint.
+`npm run verify` runs typecheck + lint + test + knip in one command (read-only lint);
+that is the minimum gate before finishing. Use `npm run check` to auto-fix formatting/lint.
 
 On failure: fix the cause and re-run the whole chain. Do this autonomously up to
 5 times. Only after 5 failed attempts on the same gate do you stop and ask. Do not
@@ -90,3 +93,16 @@ disable a Biome rule, weaken a type, or skip a test to pass a gate. If a gate fa
 in files you did not touch, a parallel session may be mid-flight — report it, do not
 revert their work.
 
+
+# Dev tooling
+
+- Package manager: **npm** (`package-lock.json`). Node version in `.nvmrc`.
+- Lefthook (installed by `npm install` via `prepare`): pre-commit runs Biome with
+  `--write` on staged files only; pre-push runs `npm run verify` plus a gitleaks scan
+  of the commits being pushed (skipped if gitleaks is not installed).
+- Biome is the formatter and linter. Format only files you touch; no repo-wide
+  reformat commits (they collide with parallel sessions).
+- Knip (`knip.jsonc`) finds dead files, exports, and dependencies. `scripts/` entries
+  are one-off tools run by hand, so they count as entry points.
+- CI (`.github/workflows/ci.yml`) runs the same chain plus an OpenNext build.
+- Concurrent work goes in `.worktrees/<task>` (gitignored), branched from `main`.

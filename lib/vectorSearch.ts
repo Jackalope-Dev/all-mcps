@@ -162,7 +162,7 @@ export function resolveServerId(match: {
 /**
  * Generate a 384-dimensional vector embedding for text using Workers AI.
  */
-export async function generateEmbedding(
+async function generateEmbedding(
   text: string,
   env: CloudflareEnv,
 ): Promise<number[] | null> {
@@ -211,41 +211,6 @@ export async function queryVectorIndex(
   } catch (error) {
     console.error('[vectorSearch] Query failed:', error);
     return [];
-  }
-}
-
-/**
- * Upsert a single server's vector embedding into Cloudflare Vectorize.
- */
-export async function upsertServerEmbedding(
-  server: Parameters<typeof buildServerVectorText>[0] & { id: string },
-  env: CloudflareEnv,
-): Promise<boolean> {
-  if (!env?.VECTOR_INDEX || !env?.AI) return false;
-
-  const text = buildServerVectorText(server);
-  const embedding = await generateEmbedding(text, env);
-  if (!embedding) return false;
-
-  try {
-    await env.VECTOR_INDEX.upsert([
-      {
-        id: await toVectorId(String(server.id)),
-        values: embedding,
-        metadata: {
-          serverId: String(server.id),
-          name: String(server.name || '').slice(0, 256),
-          category: String(server.category || '').slice(0, 100),
-        },
-      },
-    ]);
-    return true;
-  } catch (error) {
-    console.error(
-      `[vectorSearch] Failed to upsert vector for server ${server.id}:`,
-      error,
-    );
-    return false;
   }
 }
 

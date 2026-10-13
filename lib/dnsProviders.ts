@@ -74,13 +74,3 @@ export function getDnsProviderLinks(
     },
   ];
 }
-
-export type DnsRecordFields = {
-  type: 'TXT';
-  /** Display name for forms (`@` for apex). */
-  name: string;
-  /** Alternate name some panels want (full apex hostname). */
-  nameAlt: string;
-  content: string;
-  ttl: string;
-};

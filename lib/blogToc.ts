@@ -5,7 +5,6 @@ export type TocEntry = {
 
 const HEADING_LINE = /^##\s+(.+)$/;
 const FENCE_LINE = /^\s*(```|~~~)/;
-const USER_CONTENT_PREFIX = 'user-content-';
 
 function slugify(text: string): string {
   return text
@@ -92,8 +91,4 @@ export function withHeadingAnchors(content: string): string {
   });
 
   return lines.join('\n');
-}
-
-export function tocHref(slug: string): string {
-  return `#${USER_CONTENT_PREFIX}${slug}`;
 }

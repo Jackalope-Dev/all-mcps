@@ -17,7 +17,7 @@ import { bearerAuth, createAdminAdapter } from './kit/adapter';
 import type { Capability } from './kit/contract';
 import type { Repo } from './repo';
 
-export const BACKOFFICE_BASE_PATH = '/api/backoffice';
+const BACKOFFICE_BASE_PATH = '/api/backoffice';
 
 /** Capabilities the back-office service token holds against AllMcps. */
 const TOKEN_CAPABILITIES: Capability[] = [

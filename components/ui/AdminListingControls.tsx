@@ -74,7 +74,7 @@ export function AdminProvider({
   );
 }
 
-export function useAdmin() {
+function useAdmin() {
   return useContext(AdminContext);
 }
 

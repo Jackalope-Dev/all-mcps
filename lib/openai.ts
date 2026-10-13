@@ -9,12 +9,12 @@
 
 import { getEnv } from './env';
 
-export type OpenAIChatMessage = {
+type OpenAIChatMessage = {
   role: 'system' | 'user' | 'assistant';
   content: string;
 };
 
-export type OpenAIChatSuccess = {
+type OpenAIChatSuccess = {
   ok: true;
   content: string;
   model: string;
@@ -42,7 +42,7 @@ export type OpenAIChatFailure = {
   retryable: boolean;
 };
 
-export type OpenAIChatResult = OpenAIChatSuccess | OpenAIChatFailure;
+type OpenAIChatResult = OpenAIChatSuccess | OpenAIChatFailure;
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const DEFAULT_MODEL = 'gpt-5.6-luna';
@@ -91,7 +91,7 @@ function messageLooksLikeQuota(bodyText: string): boolean {
  * Resolve OpenAI API key from Worker secrets or process.env.
  * Accepts OPEN_AI_API_KEY (project convention) or OPENAI_API_KEY.
  */
-export async function getOpenAIApiKey(): Promise<string | undefined> {
+async function getOpenAIApiKey(): Promise<string | undefined> {
   return (
     (await getEnv('OPEN_AI_API_KEY')) ||
     (await getEnv('OPENAI_API_KEY')) ||
@@ -116,7 +116,7 @@ export type ChatCompletionOptions = {
  * programmer mistakes (e.g. empty messages). Safe to call from request handlers
  * and crons without try/catch for spend failures.
  */
-export async function chatCompletion(
+async function chatCompletion(
   options: ChatCompletionOptions,
 ): Promise<OpenAIChatResult> {
   if (!options.messages?.length) {

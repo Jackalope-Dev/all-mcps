@@ -106,8 +106,6 @@ export const ListingStatusEmail = ({
   );
 };
 
-export default ListingStatusEmail;
-
 const feedbackContainer = {
   backgroundColor: 'rgba(255, 0, 0, 0.05)',
   borderLeft: '4px solid #ef4444',

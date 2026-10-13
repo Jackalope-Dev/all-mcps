@@ -27,34 +27,34 @@ export type AnalyticsSummary = {
   ctr: number;
 };
 
-export type CallerBreakdown = {
+type CallerBreakdown = {
   caller: CallerClass;
   hits: number;
   pct: number;
 };
 
-export type DailyHits = {
+type DailyHits = {
   date: string;
   hits: number;
 };
 
-export type EndpointBreakdown = {
+type EndpointBreakdown = {
   endpoint: string;
   hits: number;
 };
 
-export type SurfaceBreakdown = {
+type SurfaceBreakdown = {
   surface: ImpressionSurface;
   impressions: number;
 };
 
-export type CountryBreakdown = {
+type CountryBreakdown = {
   country: string;
   hits: number;
   pct: number;
 };
 
-export type RecentTweet = {
+type RecentTweet = {
   tweetText: string;
   sentAt: string | null;
   status: 'sent' | 'queued';

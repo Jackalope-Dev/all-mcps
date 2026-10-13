@@ -5,7 +5,7 @@
 /**
  * Clean markdown formatting and excess whitespace from strings.
  */
-export function cleanText(input: string | null | undefined): string {
+function cleanText(input: string | null | undefined): string {
   if (!input) return '';
   let str = input;
   let prev = '';

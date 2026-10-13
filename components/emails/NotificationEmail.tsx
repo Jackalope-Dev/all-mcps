@@ -26,5 +26,3 @@ export const NotificationEmail = ({
     </BaseLayout>
   );
 };
-
-export default NotificationEmail;

@@ -106,44 +106,6 @@ export function normalizeNameSiteKey(
   return `${n}|${site}`;
 }
 
-/**
- * Checks whether a listing with the same name AND the same website already
- * exists — catches a re-submission of a project already in the catalog under a
- * different repo URL (so findExistingListingByUrl wouldn't fire). Returns null
- * when no website is supplied. Full-table scan is fine: user-initiated path.
- */
-export async function findExistingListingByNameAndSite(
-  db: ReturnType<typeof drizzle>,
-  name: string,
-  websiteUrl: string | null | undefined,
-): Promise<ExistingListingMatch | null> {
-  const key = normalizeNameSiteKey(name, websiteUrl);
-  if (!key) return null;
-  const rows = await db
-    .select({
-      id: servers.id,
-      name: servers.name,
-      url: servers.url,
-      description: servers.description,
-      websiteUrl: servers.websiteUrl,
-      status: servers.status,
-    })
-    .from(servers);
-  const match = rows.find(
-    (r) => normalizeNameSiteKey(r.name, r.websiteUrl) === key,
-  );
-  return match
-    ? {
-        id: match.id,
-        name: match.name,
-        status: match.status,
-        url: match.url,
-        description: match.description,
-        websiteUrl: match.websiteUrl,
-      }
-    : null;
-}
-
 function listingNameKey(name: string | null | undefined): string {
   return (name || '')
     .toLowerCase()

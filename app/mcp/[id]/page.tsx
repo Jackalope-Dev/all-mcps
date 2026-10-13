@@ -246,7 +246,7 @@ async function fetchReadme(url: string) {
         : text;
     }
     return null;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }

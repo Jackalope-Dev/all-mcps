@@ -229,7 +229,7 @@ async function getAdminData() {
         stats: await getAdminStats(db),
       };
     }
-  } catch (e) {
+  } catch (_e) {
     // Fallback if not in edge context
   }
   return {

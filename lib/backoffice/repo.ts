@@ -10,7 +10,7 @@ import { reports, servers, users } from '@/db/schema';
 
 type DB = ReturnType<typeof drizzle>;
 
-export interface ListArgs {
+interface ListArgs {
   search?: string;
   limit: number;
   filters?: Record<string, unknown>;

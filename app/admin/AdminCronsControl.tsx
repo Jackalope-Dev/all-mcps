@@ -648,6 +648,3 @@ export function AdminToolsControl() {
     </div>
   );
 }
-
-// Backwards compatibility export
-export const AdminCronsControl = AdminToolsControl;

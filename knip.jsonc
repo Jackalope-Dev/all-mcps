@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "workspaces": {
+    ".": {
+      // One-off maintenance scripts are run by hand (`npx tsx scripts/x.ts`), so each is an entry.
+      "entry": ["scripts/**/*.{js,mjs,mts,ts,tsx}", "open-next.config.ts"],
+      "project": ["**/*.{js,mjs,mts,ts,tsx,css}"]
+    },
+    "mcp-server": {
+      "entry": ["scripts/*.mjs"],
+      "project": ["src/**/*.ts", "scripts/**/*.mjs"]
+    }
+  },
+  "ignore": [
+    // Vendored from jackalope-digital-hub/packages/admin-adapter; its exports are the shared contract.
+    "lib/backoffice/kit/**",
+    "public/**"
+  ],
+  "rules": {
+    // A few modules export a second, intent-named alias (isSafeFetchTarget); allowed.
+    "duplicates": "warn"
+  },
+  "ignoreDependencies": [
+    // `cloudflare:workers` virtual module, provided by the Workers runtime.
+    "cloudflare",
+    // Pinned so next-auth and @auth/drizzle-adapter resolve the same copy.
+    "@auth/core",
+    // Native CSS transformer pulled in by Tailwind v4; pinned with platform binaries.
+    "lightningcss"
+  ]
+}

@@ -15,7 +15,7 @@
 import { githubApiHeaders } from '../githubAuth';
 
 export const DEFAULT_BLOG_REPO = 'Jackalope-Dev/all-mcps';
-export const DEFAULT_BLOG_BRANCH = 'main';
+const DEFAULT_BLOG_BRANCH = 'main';
 
 export type PublishableDraft = {
   title: string;

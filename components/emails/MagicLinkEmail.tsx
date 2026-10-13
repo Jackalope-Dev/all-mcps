@@ -32,5 +32,3 @@ export const MagicLinkEmail = ({
     </BaseLayout>
   );
 };
-
-export default MagicLinkEmail;

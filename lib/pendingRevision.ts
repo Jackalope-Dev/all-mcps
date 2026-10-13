@@ -4,7 +4,7 @@
  * compatibleClients, suggestedInstallArgs).
  */
 
-export type EditableFieldValue = string | string[];
+type EditableFieldValue = string | string[];
 
 export type EditableServerFields = {
   name: string;

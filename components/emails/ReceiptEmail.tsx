@@ -69,8 +69,6 @@ export const ReceiptEmail = ({
   );
 };
 
-export default ReceiptEmail;
-
 const receiptSection = {
   backgroundColor: '#020617', // Slate 950
   borderRadius: '8px',
