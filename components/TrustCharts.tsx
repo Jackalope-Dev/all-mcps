@@ -2,6 +2,7 @@
 
 import {
   type PointerEvent as ReactPointerEvent,
+  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -36,8 +37,10 @@ function niceMax(value: number): number {
   return result <= 1 ? 2 : result;
 }
 
-const WIDTH = 720;
-const HEIGHT = 240;
+/** Desktop geometry, and what the server renders before the client measures. */
+const DEFAULT_WIDTH = 720;
+const DEFAULT_HEIGHT = 240;
+const MIN_HEIGHT = 180;
 const PAD_LEFT = 40;
 const PAD_RIGHT = 12;
 const PAD_TOP = 16;
@@ -50,8 +53,27 @@ const PAD_BOTTOM = 28;
 export function TrendChart({ data }: { data: TrendPoint[] }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  // Draw at the real rendered width, so text stays its intended pixel size.
+  // A fixed 720-unit viewBox squeezed onto a phone shrank the 10px axis
+  // labels to about 4px and the whole chart to ~100px tall.
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  useEffect(() => {
+    const el = svgRef.current?.parentElement;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      if (w > 0) setWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   if (data.length === 0) return null;
+
+  const WIDTH = width;
+  const HEIGHT = Math.round(
+    Math.min(DEFAULT_HEIGHT, Math.max(MIN_HEIGHT, width / 3)),
+  );
 
   const plotW = WIDTH - PAD_LEFT - PAD_RIGHT;
   const plotH = HEIGHT - PAD_TOP - PAD_BOTTOM;

@@ -196,7 +196,7 @@ function StatGrid({ children }: { children: ReactNode }) {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))',
         gap: '0.75rem',
         marginBottom: '1.5rem',
       }}
@@ -253,12 +253,13 @@ function SectionLabel({
 function Panel({ children }: { children: ReactNode }) {
   return (
     <div
+      className="trust-panel"
       style={{
         border: '1px solid var(--border-color)',
         borderRadius: 16,
         background: 'var(--card-bg)',
-        padding: '1.5rem',
         marginBottom: '1.5rem',
+        minWidth: 0,
       }}
     >
       {children}
@@ -383,17 +384,22 @@ function Group({
       <div
         style={{
           display: 'flex',
+          flexWrap: 'wrap',
           alignItems: 'baseline',
           justifyContent: 'space-between',
-          gap: '1rem',
+          gap: '0.25rem 1rem',
           marginBottom: '0.25rem',
         }}
       >
+        {/* Title takes the line first; the count drops below it on narrow
+            screens instead of squeezing the title into a broken column. */}
         <span
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',
+            flex: '1 1 14rem',
+            minWidth: 0,
           }}
         >
           <Icon size={15} style={{ color: iconColor, flexShrink: 0 }} />
@@ -442,7 +448,11 @@ function Group({
               }}
             >
               <span
-                style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}
+                style={{
+                  fontSize: '0.875rem',
+                  color: 'var(--text-primary)',
+                  minWidth: 0,
+                }}
               >
                 {callerLabel(row.class, row.label)}
               </span>
@@ -524,8 +534,10 @@ function BarList({ items, colorVar }: { items: BarItem[]; colorVar?: string }) {
                 fontSize: '0.875rem',
                 color: 'var(--text-primary)',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
+                flexWrap: 'wrap',
+                alignItems: 'baseline',
+                gap: '0 0.4rem',
+                minWidth: 0,
               }}
             >
               {item.label}
@@ -832,7 +844,8 @@ export default async function TrustPage() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gridTemplateColumns:
+                    'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
                   gap: '1rem',
                   marginTop: '1rem',
                 }}
@@ -1058,8 +1071,10 @@ export default async function TrustPage() {
                             background: TIER_COLORS[tier] || '#64748b',
                           }}
                         />
-                        <strong>{tier}</strong>: {formatNumber(count)} (
-                        {pct(count, totalQualityServers)})
+                        <span>
+                          <strong>{tier}</strong>: {formatNumber(count)} (
+                          {pct(count, totalQualityServers)})
+                        </span>
                       </div>
                     ),
                   )}
@@ -1209,7 +1224,8 @@ export default async function TrustPage() {
                 className="trust-viz"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gridTemplateColumns:
+                    'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
                   gap: '1.5rem',
                   marginBottom: '1.5rem',
                 }}
@@ -1249,7 +1265,8 @@ export default async function TrustPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gridTemplateColumns:
+                  'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
                 gap: '0.75rem',
                 marginBottom: '1rem',
               }}
@@ -1295,6 +1312,16 @@ export default async function TrustPage() {
         </div>
       </main>
       <style>{`
+        .trust-panel {
+          padding: 1.5rem;
+        }
+        @media (max-width: 640px) {
+          /* The page panel is already padded; a second 1.5rem left the inner
+             cards about 60% of the screen wide. */
+          .trust-panel {
+            padding: 1rem;
+          }
+        }
         .trust-viz {
           --tv-ai: #3987e5;
           --tv-crawler: #d95926;
