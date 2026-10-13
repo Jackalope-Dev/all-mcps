@@ -32,7 +32,14 @@ function isPngOrJpeg(bytes: Uint8Array): boolean {
  * width/height straight from the file header (a few bytes, no allocation)
  * lets us reject oversized images before Photon ever touches them.
  */
-const MAX_DECODE_PIXELS = 20_000_000; // ~20MP, e.g. 5000x4000 — well beyond any real favicon/logo/screenshot
+const MAX_SCREENSHOT_DECODE_PIXELS = 20_000_000; // ~20MP, e.g. 5000x4000
+/**
+ * Logos end up 256x256, so anything past ~4MP (16MB RGBA) is wasted decode.
+ * The near-square path also crops a second full-size copy before resizing,
+ * and Photon's WASM memory never shrinks once grown: a 20MP README logo
+ * (~80MB decoded, ~160MB with the crop) OOMed the jobs Worker.
+ */
+const MAX_LOGO_DECODE_PIXELS = 4_000_000;
 
 /** Reads width/height from a PNG's IHDR chunk (always the first chunk, right after the signature). */
 function readPngDimensions(
@@ -84,11 +91,11 @@ function readJpegDimensions(
 }
 
 /** Rejects images whose declared pixel dimensions would blow the Worker's memory budget on decode, without decoding them. Unreadable headers pass through — Photon's own decode error handling covers those. */
-function assertDecodeSizeSafe(bytes: Uint8Array): void {
+function assertDecodeSizeSafe(bytes: Uint8Array, maxPixels: number): void {
   const dims = matchesSignature(bytes, PNG_SIGNATURE)
     ? readPngDimensions(bytes)
     : readJpegDimensions(bytes);
-  if (dims && dims.width * dims.height > MAX_DECODE_PIXELS) {
+  if (dims && dims.width * dims.height > maxPixels) {
     throw new LogoValidationError(
       `Image is too large (${dims.width}x${dims.height}px). Please use a smaller image.`,
     );
@@ -130,7 +137,7 @@ export async function processLogoUpload(
   if (!isPngOrJpeg(view)) {
     throw new LogoValidationError('Logo must be a PNG or JPEG image.');
   }
-  assertDecodeSizeSafe(view);
+  assertDecodeSizeSafe(view, MAX_LOGO_DECODE_PIXELS);
 
   const { PhotonImage, SamplingFilter, Rgba, crop, padding_uniform, resize } =
     await import('@cf-wasm/photon/workerd');
@@ -178,7 +185,7 @@ export async function processScreenshotUpload(
   if (!isPngOrJpeg(view)) {
     throw new LogoValidationError('Screenshot must be a PNG or JPEG image.');
   }
-  assertDecodeSizeSafe(view);
+  assertDecodeSizeSafe(view, MAX_SCREENSHOT_DECODE_PIXELS);
 
   const { PhotonImage, SamplingFilter, resize } = await import(
     '@cf-wasm/photon/workerd'
