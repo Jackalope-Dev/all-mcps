@@ -539,6 +539,10 @@ function deriveOfficialRegistryName(server, primaryUrl) {
   return leaf || server.name;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // The official registry intermittently 500s mid-pagination (a different
 // cursor each time — 4 of the 6 failed weekly syncs between 2026-08-24 and
 // 2026-10-12). Retry a page with backoff before giving up on it.
