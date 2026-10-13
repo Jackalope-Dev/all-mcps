@@ -6,7 +6,7 @@ pre-commit:
   commands:
     biome:
       glob: "*.{js,mjs,ts,mts,jsx,tsx,json,jsonc,css}"
-      run: node node_modules/@biomejs/biome/bin/biome check --write --no-errors-on-unmatched --staged {staged_files}
+      run: node node_modules/@biomejs/biome/bin/biome check --write --diagnostic-level=error --no-errors-on-unmatched --staged {staged_files}
       stage_fixed: true
 
 pre-push:
