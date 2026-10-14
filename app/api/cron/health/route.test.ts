@@ -302,11 +302,29 @@ describe('health cron tiers', () => {
 });
 
 describe('health cron cached remote endpoints', () => {
-  it('clears a cached remote install that turned out not to be MCP', async () => {
+  it('keeps a cached remote install after a single failed check', async () => {
+    insertServer('remote-once', {
+      install_kind: 'remote',
+      install_package: 'https://docs.example.com/mcp',
+      install_confidence: 'high',
+    });
+    await run();
+    expect(
+      sqlite
+        .prepare(
+          "SELECT install_kind, remote_endpoint_healthy FROM servers WHERE id = 'remote-once'",
+        )
+        .get(),
+    ).toEqual({ install_kind: 'remote', remote_endpoint_healthy: 0 });
+  });
+
+  it('clears a cached remote install that failed twice a day apart', async () => {
     insertServer('remote-docs', {
       install_kind: 'remote',
       install_package: 'https://docs.example.com/mcp',
       install_confidence: 'high',
+      remote_endpoint_healthy: 0,
+      remote_endpoint_checked_at: nowSec - 2 * DAY,
     });
     await run();
     expect(
@@ -316,5 +334,30 @@ describe('health cron cached remote endpoints', () => {
         )
         .get(),
     ).toEqual({ install_kind: null, install_package: null });
+  });
+});
+
+describe('health cron installs', () => {
+  it('keeps a README-derived install when the README is unchanged', async () => {
+    insertServer('readme-install', {
+      install_extracted_at: null,
+      install_kind: 'stdio',
+      install_command: 'npx',
+      install_package: '@acme/real-server',
+      install_confidence: 'high',
+    });
+    sqlite
+      .prepare(
+        "INSERT INTO listing_signals (server_id, readme_hash, repo_gone_count) VALUES ('readme-install', 'oid-readme-install-new', 0)",
+      )
+      .run();
+    await run();
+    expect(
+      sqlite
+        .prepare(
+          "SELECT install_package FROM servers WHERE id = 'readme-install'",
+        )
+        .get(),
+    ).toEqual({ install_package: '@acme/real-server' });
   });
 });

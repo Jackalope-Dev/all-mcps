@@ -144,8 +144,6 @@ export async function POST(req: Request) {
       .where(
         and(
           eq(servers.status, 'active'),
-          // Flagged listings are hidden; sandbox minutes go to ones users see.
-          isNull(servers.staleFlaggedAt),
           eq(servers.installKind, 'stdio'),
           isNotNull(servers.installCommand),
           isNotNull(servers.installPackage),
@@ -198,6 +196,10 @@ export async function POST(req: Request) {
       // Within each tier, never-tested first (nothing beats first-time
       // coverage), then by popularity.
       .orderBy(
+        // Flagged listings are hidden, so sandbox minutes go to visible ones
+        // first; flagged ones still get a run, since a successful one is how
+        // an 'install-broken' or 'abandoned' flag clears before removal.
+        sql`CASE WHEN ${servers.staleFlaggedAt} IS NULL THEN 0 ELSE 1 END`,
         sql`CASE WHEN ${servers.installExtractedAt} IS NULL THEN 1 ELSE 0 END`,
         sql`CASE WHEN ${stdioVerifications.id} IS NULL THEN 0 ELSE 1 END`,
         desc(servers.views),

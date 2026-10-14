@@ -139,7 +139,13 @@ function securityReasons(s: StalenessInput): StaleReason[] {
   if (s.installRisk) out.push('risky-install');
   if (s.typosquatOf) out.push('typosquat');
   if (s.packageRepoMismatch) out.push('package-repo-mismatch');
-  if ((s.maliciousReporters ?? 0) >= MALICIOUS_REPORT_THRESHOLD)
+  // Anonymous reports alone never hide a paid or claimed listing (a cheap
+  // way to knock out a competitor); an admin is emailed on every report.
+  const hasOwner =
+    s.isPremium ||
+    s.ownerUserId ||
+    (s.featuredUntil && s.featuredUntil > s.now);
+  if (!hasOwner && (s.maliciousReporters ?? 0) >= MALICIOUS_REPORT_THRESHOLD)
     out.push('reported-malicious');
   return out;
 }

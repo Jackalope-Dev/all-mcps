@@ -89,16 +89,22 @@ export function pypiStatusFromDoc(doc: unknown): RegistryStatus {
   };
   // PyPI has no single repository field; the first GitHub link wins, with
   // the conventional source keys checked before Homepage.
-  const urls = d?.info?.project_urls ?? {};
+  // Keys are free-form, so match them case-insensitively, and only the ones
+  // that conventionally mean "source": a Funding or Docs link is not it.
+  const urls = new Map(
+    Object.entries(d?.info?.project_urls ?? {}).map(([k, v]) => [
+      k.toLowerCase(),
+      v,
+    ]),
+  );
   const ordered = [
-    urls.Source,
-    urls.Repository,
-    urls['Source Code'],
-    urls.Code,
-    urls.GitHub,
-    urls.Homepage,
+    urls.get('source'),
+    urls.get('repository'),
+    urls.get('source code'),
+    urls.get('code'),
+    urls.get('github'),
+    urls.get('homepage'),
     d?.info?.home_page,
-    ...Object.values(urls),
   ];
   let repo: string | null = null;
   for (const u of ordered) {

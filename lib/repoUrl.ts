@@ -60,6 +60,18 @@ export function isGitHubRepoUrl(url: string | null | undefined): boolean {
   }
 }
 
+/** GitHub paths that look like owner/repo but are site pages, not repositories. */
+const NOT_A_REPO_OWNER = new Set([
+  'sponsors',
+  'orgs',
+  'topics',
+  'marketplace',
+  'apps',
+  'settings',
+  'features',
+  'about',
+]);
+
 /**
  * Lowercased `owner/repo` for any GitHub reference a registry might hold —
  * https and git+https URLs, git@github.com:owner/repo, the `github:owner/repo`
@@ -73,5 +85,25 @@ export function githubRepoSlug(ref: string | null | undefined): string | null {
     /github\.com[/:]([\w.-]+)\/([\w.-]+)/i.exec(ref);
   if (!m) return null;
   const repo = m[2].replace(/\.git$/i, '');
-  return repo ? `${m[1]}/${repo}`.toLowerCase() : null;
+  if (!repo || NOT_A_REPO_OWNER.has(m[1].toLowerCase())) return null;
+  return `${m[1]}/${repo}`.toLowerCase();
+}
+
+/**
+ * Whether an install package's registry repo and the listing's repo point at
+ * different projects. Renames inside one owner, transfers that keep the repo
+ * name, and a listing that is a fork of the package's repo all happen to
+ * honest packages, so only a different owner *and* a different repo name
+ * counts.
+ */
+export function isPackageRepoMismatch(
+  packageRepo: string | null | undefined,
+  listingRepo: string | null | undefined,
+  listingForkOf?: string | null,
+): boolean {
+  if (!packageRepo || !listingRepo || packageRepo === listingRepo) return false;
+  if (packageRepo === listingForkOf?.toLowerCase()) return false;
+  const [pkgOwner, pkgName] = packageRepo.split('/');
+  const [listOwner, listName] = listingRepo.split('/');
+  return pkgOwner !== listOwner && pkgName !== listName;
 }

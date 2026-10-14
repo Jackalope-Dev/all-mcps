@@ -51,7 +51,7 @@ import {
   REPO_GONE_CONFIRM_MS,
   type RepoStatus,
 } from '../../../../lib/repoCheck';
-import { githubRepoSlug } from '../../../../lib/repoUrl';
+import { githubRepoSlug, isPackageRepoMismatch } from '../../../../lib/repoUrl';
 import {
   hasStrongPoisoning,
   type PoisoningFinding,
@@ -509,11 +509,11 @@ export async function POST(req: Request) {
         typosquatOf: npmName
           ? findTyposquatTarget(npmName, r.npmDownloads, popularPackages)
           : null,
-        packageRepoMismatch:
-          r.packageRepo != null &&
-          listingRepo != null &&
-          r.packageRepo !== listingRepo &&
-          r.packageRepo !== r.repoForkOf?.toLowerCase(),
+        packageRepoMismatch: isPackageRepoMismatch(
+          r.packageRepo,
+          listingRepo,
+          r.repoForkOf,
+        ),
         maliciousReporters: maliciousReporters.get(r.id) ?? 0,
       });
 

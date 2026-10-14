@@ -121,6 +121,8 @@ const CONCURRENCY = 6;
 const HEALTH_HISTORY_LIMIT = 96;
 /** Statements per db.batch. */
 const WRITE_CHUNK = 40;
+/** A cached endpoint must fail twice this far apart before its install is cleared. */
+const ENDPOINT_CONFIRM_MS = 24 * 60 * 60 * 1000;
 
 type Db = ReturnType<typeof drizzle>;
 type HealthRow = Awaited<ReturnType<typeof selectDueListings>>[number];
@@ -432,7 +434,10 @@ async function checkListing(
   // without this guard it reinstated exactly the guesses the LLM had rejected.
   let installFields: ReturnType<typeof toCachedInstallFields> | null = null;
   let installHintUpdated = false;
-  if (!server.installExtractedAt) {
+  // An unchanged README is not read this pass, so there is nothing new to
+  // resolve from: keep the install we already have rather than recompute it
+  // from the name and description alone.
+  if (!server.installExtractedAt && (readmeText || !server.installKind)) {
     const fromReadme = readmeText
       ? resolveInstallFromText(readmeText, {
           id: server.id,
@@ -452,8 +457,10 @@ async function checkListing(
         url: server.url,
         description: server.description,
       });
-      // Only persist non-low confidence so we don't lock in bad guesses forever
-      if (resolved.confidence !== 'low' || resolved.source !== 'heuristic') {
+      // Never persist a heuristic: a package name guessed from the listing
+      // name can be a stranger's package, and caching it borrows that
+      // package's downloads and registry status.
+      if (resolved.source !== 'heuristic') {
         installFields = toCachedInstallFields(resolved);
         if (installFields) installHintUpdated = true;
       }
@@ -511,12 +518,26 @@ async function checkListing(
         toolsCheckedAt = now;
       }
     } else {
+      // One bad answer (a deploy's 404, a CDN error page) is not proof. The
+      // install is cleared only when the previous check, at least a day
+      // earlier, also failed, and never for an owner-managed listing.
+      const failedBefore =
+        server.remoteEndpointHealthy === false &&
+        server.remoteEndpointCheckedAt != null &&
+        now.getTime() - new Date(server.remoteEndpointCheckedAt).getTime() >=
+          ENDPOINT_CONFIRM_MS;
       remoteEndpointHealthy = false;
-      const probe = await probeRemoteEndpoint(cachedEndpoint);
-      if (probe.verdict === 'not-mcp') {
-        installFields = null;
-        clearInstallFields = true;
-        remoteEndpointHealthy = null;
+      if (failedBefore && !server.ownerUserId) {
+        const probe = await probeRemoteEndpoint(cachedEndpoint);
+        if (probe.verdict === 'not-mcp') {
+          installFields = null;
+          clearInstallFields = true;
+          remoteEndpointHealthy = null;
+        }
+      } else if (server.remoteEndpointHealthy === false) {
+        // Keep the first failure's timestamp so the day-apart rule measures
+        // from the first sighting.
+        remoteEndpointCheckedAt = server.remoteEndpointCheckedAt ?? now;
       }
     }
   }

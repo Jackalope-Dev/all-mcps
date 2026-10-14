@@ -1,7 +1,6 @@
 /**
  * Package names that imitate a popular package — `@modeicontextprotocol/…`,
- * `server-githbu`, a well-known bare name republished under a stranger's
- * scope. Typosquats are the cheapest supply-chain attack on a catalog like
+ * `server-githbu`, `rncp-server` for `mcp-server`. Typosquats are the cheapest supply-chain attack on a catalog like
  * ours: the listing looks like the real server and the install runs someone
  * else's code.
  *
@@ -73,30 +72,23 @@ export function findTyposquatTarget(
   downloads: number | null | undefined,
   popular: PopularPackage[],
 ): string | null {
+  // Unknown downloads (never measured, or not an npm package) can't be
+  // compared against the popular one, so no verdict.
+  if (downloads == null) return null;
   const suspect = split(name);
   if (!suspect.bare) return null;
-  const own = downloads ?? 0;
   const lowered = name.trim().toLowerCase();
 
   for (const p of popular) {
     const target = p.name.trim().toLowerCase();
     if (target === lowered) continue;
     if (p.downloads < MIN_POPULAR_DOWNLOADS) continue;
-    if (p.downloads < Math.max(1, own) * POPULARITY_RATIO) continue;
+    if (p.downloads < Math.max(1, downloads) * POPULARITY_RATIO) continue;
     const t = split(target);
 
-    // Same bare name under a different scope (or unscoped copy of a scoped one).
-    // Generic bare names ("server", "mcp") are not distinctive enough.
-    if (
-      t.scope &&
-      suspect.scope !== t.scope &&
-      suspect.bare === t.bare &&
-      t.bare.length >= MIN_FUZZY_LENGTH
-    ) {
-      return p.name;
-    }
-
     // Look-alike scope with the same bare name: @modeicontextprotocol/x.
+    // A different, ordinary scope (@acme/notion-mcp-server) is just another
+    // author using a descriptive name, which is common and fine.
     if (
       t.scope &&
       suspect.scope &&
@@ -109,16 +101,30 @@ export function findTyposquatTarget(
       return p.name;
     }
 
-    // Look-alike full name, same scope. Short names and numbered siblings
-    // (server-fetch vs server-fetch2) are ordinary, not imitations.
+    // Same scope (or both unscoped), look-alike name. Only character swaps
+    // that imitate: homoglyphs (rn/m, 1/l, 0/o) and two adjacent letters
+    // transposed. Plain one-letter differences are usually different real
+    // products (mysql/mssql, redis/reddit, jira/jina), so they don't count.
     if (suspect.scope !== t.scope || suspect.bare.length < MIN_FUZZY_LENGTH)
       continue;
     if (stripVersionSuffix(suspect.bare) === stripVersionSuffix(t.bare))
       continue;
     if (fold(suspect.bare) === fold(t.bare)) return p.name;
-    if (editDistance(suspect.bare, t.bare) <= (t.bare.length >= 14 ? 2 : 1)) {
-      return p.name;
-    }
+    if (isAdjacentTransposition(suspect.bare, t.bare)) return p.name;
   }
   return null;
+}
+
+/** True when `a` is `b` with exactly two neighbouring characters swapped. */
+function isAdjacentTransposition(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  return (
+    i < a.length - 1 &&
+    a[i] === b[i + 1] &&
+    a[i + 1] === b[i] &&
+    a[i] !== a[i + 1] &&
+    a.slice(i + 2) === b.slice(i + 2)
+  );
 }

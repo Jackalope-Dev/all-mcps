@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { githubRepoSlug, isGitHubRepoUrl, isRepositoryUrl } from './repoUrl';
+import {
+  githubRepoSlug,
+  isGitHubRepoUrl,
+  isPackageRepoMismatch,
+  isRepositoryUrl,
+} from './repoUrl';
 
 describe('isRepositoryUrl', () => {
   it('accepts real repository URLs across the common hosts', () => {
@@ -85,5 +90,24 @@ describe('githubRepoSlug', () => {
   it('returns null for anything else', () => {
     expect(githubRepoSlug('https://gitlab.com/acme/repo')).toBeNull();
     expect(githubRepoSlug(null)).toBeNull();
+  });
+});
+
+describe('isPackageRepoMismatch', () => {
+  it('flags a package from an unrelated repo', () => {
+    expect(isPackageRepoMismatch('stranger/other-tool', 'acme/mcp')).toBe(true);
+  });
+
+  it('allows renames, transfers and forks', () => {
+    expect(isPackageRepoMismatch('acme/new-name', 'acme/old-name')).toBe(false);
+    expect(isPackageRepoMismatch('neworg/mcp', 'oldorg/mcp')).toBe(false);
+    expect(
+      isPackageRepoMismatch('upstream/tool', 'me/tool-fork', 'Upstream/Tool'),
+    ).toBe(false);
+    expect(isPackageRepoMismatch(null, 'acme/mcp')).toBe(false);
+  });
+
+  it('ignores GitHub site pages that look like repos', () => {
+    expect(githubRepoSlug('https://github.com/sponsors/acme')).toBeNull();
   });
 });

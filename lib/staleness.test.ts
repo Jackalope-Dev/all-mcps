@@ -243,3 +243,14 @@ describe('security reasons', () => {
     ).toBe(false);
   });
 });
+
+describe('malicious reports', () => {
+  it('never hide a paid or claimed listing on their own', () => {
+    expect(
+      assessStaleness({ ...base, isPremium: true, maliciousReporters: 9 }),
+    ).toEqual([]);
+    expect(
+      assessStaleness({ ...base, ownerUserId: 'u1', maliciousReporters: 9 }),
+    ).toEqual([]);
+  });
+});

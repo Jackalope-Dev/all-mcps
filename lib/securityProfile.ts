@@ -116,20 +116,31 @@ const POISONING_PATTERNS: { label: string; re: RegExp }[] = [
 ];
 
 /**
- * Findings strong enough to hide a listing for review. 'reaches for local
- * secrets' is left out: plenty of honest tools say they read a `.env` file.
+ * Findings strong enough to hide a listing for review. Left out: 'reaches
+ * for local secrets' (honest tools read `.env` files) and 'tries to chain
+ * into other tools' (honest tools say "call list_tables first"). Hiding
+ * something from the user counts unless it is about not revealing a secret.
  */
 const STRONG_POISONING = new Set([
   'overrides prior instructions',
-  'asks the assistant to hide something from the user',
   'hidden instruction block',
-  'tries to chain into other tools',
 ]);
+
+/** Honest tools tell the model not to reveal secrets to the user; that is not concealment. */
+const SECRET_WORDS =
+  /\b(key|token|secret|password|credential|api[_ ]?key)s?\b/i;
 
 export function hasStrongPoisoning(
   findings: PoisoningFinding[] | null | undefined,
 ): boolean {
-  return Boolean(findings?.some((f) => STRONG_POISONING.has(f.pattern)));
+  return Boolean(
+    findings?.some(
+      (f) =>
+        STRONG_POISONING.has(f.pattern) ||
+        (f.pattern === 'asks the assistant to hide something from the user' &&
+          !SECRET_WORDS.test(f.excerpt)),
+    ),
+  );
 }
 
 function toolText(t: ToolDefinition): string {

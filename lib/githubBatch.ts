@@ -32,7 +32,15 @@ export type RepoSnapshot =
 /** Repos per GraphQL request — keeps responses small and well under node limits. */
 const GITHUB_BATCH_SIZE = 50;
 
-const README_PATHS = ['README.md', 'readme.md', 'Readme.md', 'README'];
+const README_PATHS = [
+  'README.md',
+  'readme.md',
+  'Readme.md',
+  'README.MD',
+  'README.markdown',
+  'README.rst',
+  'README',
+];
 const SAFE_SEGMENT = /^[A-Za-z0-9_.-]+$/;
 
 const REPO_FIELDS = `stargazerCount pushedAt isArchived isDisabled isFork
