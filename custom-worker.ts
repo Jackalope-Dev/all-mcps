@@ -83,7 +83,7 @@ async function runCronJob(
   job: CronJob,
   env: CloudflareEnv,
   ctx: ExecutionContext,
-): Promise<void> {
+): Promise<{ drained: boolean }> {
   // Secrets live on the runtime env even though they aren't in the generated
   // `CloudflareEnv` type (same values the routes read via `process.env`).
   // Falls back to ADMIN_SECRET so a Worker that hasn't had CRON_SECRET set yet
@@ -94,7 +94,7 @@ async function runCronJob(
     console.error(
       `[cron] Skipping ${job.path}: neither ${job.secretVar} nor ADMIN_SECRET is configured`,
     );
-    return;
+    return { drained: false };
   }
 
   const request = new Request(`https://allmcps.com${job.path}`, {
@@ -123,19 +123,26 @@ async function runCronJob(
       );
     } else {
       let summary = '';
+      let drained = false;
       try {
-        const parsed = JSON.parse(body) as { message?: unknown };
+        const parsed = JSON.parse(body) as {
+          message?: unknown;
+          drained?: unknown;
+        };
         if (typeof parsed.message === 'string') summary = `: ${parsed.message}`;
+        drained = parsed.drained === true;
       } catch {
         // Not JSON; the status alone is enough.
       }
       console.log(
         `[cron] ${job.path} ok (${response.status})${summary.slice(0, 400)}`,
       );
+      return { drained };
     }
   } catch (error) {
     console.error(`[cron] ${job.path} threw`, error);
   }
+  return { drained: false };
 }
 
 export default {
@@ -176,9 +183,12 @@ export default {
 
     // Run sequentially so overlapping D1 writes / third-party rate limits stay
     // predictable, and so one failing job never blocks the others.
+    const drained = new Set<string>();
     for (const job of jobs) {
       if (job.shouldRun && !job.shouldRun(now)) continue;
-      await runCronJob(job, jobEnv, ctx);
+      if (job.drainable && drained.has(job.path)) continue;
+      const result = await runCronJob(job, jobEnv, ctx);
+      if (job.drainable && result.drained) drained.add(job.path);
     }
   },
 } satisfies ExportedHandler<CloudflareEnv>;

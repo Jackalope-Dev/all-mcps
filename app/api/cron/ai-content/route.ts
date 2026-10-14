@@ -602,6 +602,9 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: true,
         ...stats,
+        // A short batch means the backlog is empty; the scheduler skips the
+        // tick's remaining install-only runs (CronJob.drainable).
+        drained: stats.claimedInstall < batchSize,
         message: `AI content (install-only): picked ${stats.installPicked} of ${stats.claimedInstall} claimed, failed ${stats.failed}.`,
       });
     }

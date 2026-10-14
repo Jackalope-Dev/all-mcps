@@ -23,6 +23,12 @@ export type CronJob = {
    * only run on ticks where it also returns true.
    */
   shouldRun?: (now: Date) => boolean;
+  /**
+   * One of several identical backlog runs in a tick. When a run's response
+   * says `drained: true`, the tick skips its remaining runs of the same path
+   * instead of re-scanning for work that isn't there.
+   */
+  drainable?: boolean;
 };
 
 // Runs every 15 min (wrangler.jsonc "*/15 * * * *") — these two used to be
@@ -74,6 +80,7 @@ export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
   ...Array.from({ length: AI_CONTENT_INSTALL_RUNS }, () => ({
     path: '/api/cron/ai-content?pass=install&batchSize=24',
     secretVar: 'CRON_SECRET' as const,
+    drainable: true,
   })),
 ];
 

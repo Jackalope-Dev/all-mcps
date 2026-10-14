@@ -49,6 +49,11 @@ describe('jobsForTick', () => {
     for (const job of AI_CONTENT_JOBS_DEDICATED) {
       expect(isOffloadedCronPath(job.path)).toBe(true);
     }
+    // Only the install-only runs stop early once one reports the backlog empty.
+    expect(AI_CONTENT_JOBS_DEDICATED.map((j) => Boolean(j.drainable))).toEqual([
+      false,
+      ...Array(16).fill(true),
+    ]);
     expect(jobsForTick('*/20 * * * *', 'all')).toBe(AI_CONTENT_JOBS);
   });
 
