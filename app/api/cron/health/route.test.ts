@@ -152,6 +152,12 @@ beforeEach(() => {
         }
         return Response.json({ data, errors });
       }
+      if (url.startsWith('https://docs.example.com/')) {
+        // A docs page where an MCP endpoint was cached: HTML to every request.
+        return new Response('<!doctype html><html><body>Docs</body></html>', {
+          headers: { 'content-type': 'text/html' },
+        });
+      }
       if (url.startsWith('https://raw.githubusercontent.com/')) {
         readmeFetches++;
         return new Response('# Server\n\nDoes things.');
@@ -292,5 +298,23 @@ describe('health cron tiers', () => {
       .prepare('SELECT server_id FROM server_health_checks ORDER BY server_id')
       .all();
     expect(checked).toEqual([{ server_id: 'paid' }, { server_id: 'popular' }]);
+  });
+});
+
+describe('health cron cached remote endpoints', () => {
+  it('clears a cached remote install that turned out not to be MCP', async () => {
+    insertServer('remote-docs', {
+      install_kind: 'remote',
+      install_package: 'https://docs.example.com/mcp',
+      install_confidence: 'high',
+    });
+    await run();
+    expect(
+      sqlite
+        .prepare(
+          "SELECT install_kind, install_package FROM servers WHERE id = 'remote-docs'",
+        )
+        .get(),
+    ).toEqual({ install_kind: null, install_package: null });
   });
 });

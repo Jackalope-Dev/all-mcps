@@ -8,8 +8,14 @@
  * Sept 2026 spam update). A listing without our own writeup only shows a README
  * excerpt — duplicate content Google already has from GitHub — so it's never
  * indexable. A writeup alone is templated-catalog shaped; requiring a second,
- * independent signal (real-world traction or a parsed/introspected tool list)
- * keeps the indexed set to listings people actually look for.
+ * independent signal (real-world traction, or proof the server runs) keeps the
+ * indexed set to listings people actually look for.
+ *
+ * "Proof it runs" means we saw it work: a live tools/list (toolsSource
+ * 'introspected'), a sandbox run that started and asked for keys
+ * (installNeedsConfig), or a healthy remote endpoint. A tool list parsed from
+ * the README used to count, but that is the README's claim, not evidence —
+ * and it let thin listings in on documentation alone.
  *
  * Fully self-healing: once the enrich cron writes a writeup, or a listing
  * crosses the traction bar, it becomes indexable and enters the sitemap with
@@ -21,7 +27,9 @@ const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
 export type IndexabilityInput = {
   status?: string | null;
   hasAiDoc: boolean;
-  hasTools: boolean;
+  toolsSource?: string | null;
+  installNeedsConfig?: Date | string | number | null;
+  remoteEndpointHealthy?: boolean | number | null;
   githubStars?: number | null;
   npmDownloads?: number | null;
   /** Flagged by the stale sweep (lib/staleness.ts). Noindexed during the grace period, before any removal. */
@@ -35,5 +43,18 @@ export function isListingIndexable(s: IndexabilityInput): boolean {
   const hasTraction =
     (s.githubStars ?? 0) >= INDEXABLE_MIN_GITHUB_STARS ||
     (s.npmDownloads ?? 0) >= INDEXABLE_MIN_NPM_DOWNLOADS;
-  return hasTraction || s.hasTools;
+  return hasTraction || hasVerifiedRun(s);
+}
+
+/** We saw the server work: live tools, a sandbox start that asked for keys, or a healthy remote endpoint. */
+function hasVerifiedRun(s: {
+  toolsSource?: string | null;
+  installNeedsConfig?: Date | string | number | null;
+  remoteEndpointHealthy?: boolean | number | null;
+}): boolean {
+  return (
+    s.toolsSource === 'introspected' ||
+    s.installNeedsConfig != null ||
+    Boolean(s.remoteEndpointHealthy)
+  );
 }

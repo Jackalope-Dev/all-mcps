@@ -183,7 +183,9 @@ export type SitemapServer = {
   copies?: number | null;
   upvotes?: number | null;
   hasAiDoc?: number | boolean | null;
-  hasTools?: number | boolean | null;
+  toolsSource?: string | null;
+  installNeedsConfig?: Date | string | number | null;
+  remoteEndpointHealthy?: boolean | number | null;
   staleFlagged?: number | boolean | null;
 };
 
@@ -209,8 +211,10 @@ const SITEMAP_SERVER_COLUMNS = {
   // Boolean, not the doc itself — curated compare pairs are only submitted
   // when both sides have a writeup (lib/comparePairs.ts).
   hasAiDoc: sql<number>`${serversTable.aiDoc} IS NOT NULL AND ${serversTable.aiDoc} != ''`,
-  // Feeds isListingIndexable, same as hasAiDoc — the flag, not the JSON.
-  hasTools: sql<number>`${serversTable.tools} IS NOT NULL AND ${serversTable.tools} NOT IN ('', '[]')`,
+  // Feed isListingIndexable's proof-it-runs check (hasVerifiedRun).
+  toolsSource: serversTable.toolsSource,
+  installNeedsConfig: serversTable.installNeedsConfig,
+  remoteEndpointHealthy: serversTable.remoteEndpointHealthy,
   staleFlagged: sql<number>`${serversTable.staleFlaggedAt} IS NOT NULL`,
 };
 

@@ -205,7 +205,9 @@ function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
     .filter((server) =>
       isListingIndexable({
         hasAiDoc: Boolean(server.hasAiDoc),
-        hasTools: Boolean(server.hasTools),
+        toolsSource: server.toolsSource,
+        installNeedsConfig: server.installNeedsConfig,
+        remoteEndpointHealthy: server.remoteEndpointHealthy,
         githubStars: server.githubStars ?? server.stars,
         npmDownloads: server.npmDownloads ?? server.downloads,
         staleFlagged: Boolean(server.staleFlagged),

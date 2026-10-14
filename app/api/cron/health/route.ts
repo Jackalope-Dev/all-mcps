@@ -477,6 +477,50 @@ async function checkListing(
     }
   }
 
+  // A cached remote install (installKind 'remote') is the URL we hand clients
+  // as "connect here", and used to be checked only once, when first cached.
+  // Handshake it every pass like a declared remoteEndpointUrl: live tools
+  // when it answers, and if a probe proves it no longer speaks MCP (an HTML
+  // page, a 404) the install is cleared rather than left on the page.
+  const cachedEndpoint =
+    !server.remoteEndpointUrl &&
+    !clearInstallFields &&
+    (installFields?.installKind ?? server.installKind) === 'remote'
+      ? (installFields?.installPackage ?? server.installPackage)
+      : null;
+  if (
+    cachedEndpoint &&
+    cachedEndpoint !== server.url &&
+    isSafeSubmissionUrl(cachedEndpoint)
+  ) {
+    const handshake = await callMcpEndpoint(cachedEndpoint, {
+      method: 'tools/list',
+    }).catch(() => null);
+    remoteEndpointCheckedAt = now;
+    if (handshake?.ok || handshake?.authRequired) {
+      remoteEndpointHealthy = true;
+      if (handshake.ok && handshake.tools && handshake.tools.length > 0) {
+        liveTools = handshake.tools.map((t) => ({
+          name: t.name,
+          description: t.description,
+          parameters: t.inputSchema,
+        }));
+        toolsJson = JSON.stringify(liveTools);
+        toolsSource = 'introspected';
+        toolsError = null;
+        toolsCheckedAt = now;
+      }
+    } else {
+      remoteEndpointHealthy = false;
+      const probe = await probeRemoteEndpoint(cachedEndpoint);
+      if (probe.verdict === 'not-mcp') {
+        installFields = null;
+        clearInstallFields = true;
+        remoteEndpointHealthy = null;
+      }
+    }
+  }
+
   // Dead/archived GitHub projects: unpublish so the public catalog stays fresh —
   // but only once the npm/pypi package and remote endpoint are also confirmed
   // dead (see isListingTrulyDead). Soft-remove only (status = removed).

@@ -5,11 +5,10 @@ name: 🧪 E2B Stdio Verification Verification
 # installing and running them in an E2B sandbox (initialize -> tools/list over
 # stdio), instead of trusting README-parsed tool guesses.
 #
-# Runs on a small daily schedule sized just for new listings trickling in from
-# the LLM install validator (/batch only selects installExtractedAt-confirmed,
-# not-yet-tested listings, so this never re-drains the whole catalog) — daily
-# defaults are deliberately modest (concurrency 5, 15min budget, batch 20) to
-# keep steady-state E2B cost low and predictable. A manual dispatch with
+# Runs daily over the most-used unverified stdio listings first (/batch orders
+# LLM-confirmed installs, then never-tested, then by demand) — daily defaults
+# are concurrency 10, 45min budget, batch 50, overridable with the
+# E2B_DAILY_* repo variables to keep E2B cost predictable. A manual dispatch with
 # larger inputs is still how to drain a big backlog fast (e.g. right after a
 # schema change makes a lot of the catalog newly re-claimable).
 #
@@ -74,9 +73,12 @@ jobs:
           # Unset falls back to E2B's base image with uv bootstrapped per run.
           E2B_TEMPLATE: ${{ vars.E2B_TEMPLATE }}
           # workflow_dispatch inputs are empty on a schedule trigger, so these
-          # fall back to small daily-appropriate defaults rather than the
-          # much larger manual-dispatch ones above.
-          CONCURRENCY: ${{ github.event.inputs.concurrency || '5' }}
-          RUN_BUDGET_MINUTES: ${{ github.event.inputs.run_budget_minutes || '15' }}
-          BATCH_SIZE: ${{ github.event.inputs.batch_size || '20' }}
+          # fall back to the daily defaults: repo variables when set (Settings →
+          # Variables), else concurrency 10 for 45 minutes. Verified tools are
+          # now what makes a thin listing indexable (lib/listingIndexability.ts),
+          # so the daily run was raised from 5 sandboxes for 15 minutes; lower
+          # the variables if E2B cost matters more than coverage.
+          CONCURRENCY: ${{ github.event.inputs.concurrency || vars.E2B_DAILY_CONCURRENCY || '10' }}
+          RUN_BUDGET_MINUTES: ${{ github.event.inputs.run_budget_minutes || vars.E2B_DAILY_BUDGET_MINUTES || '45' }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || vars.E2B_DAILY_BATCH_SIZE || '50' }}
         run: node scripts/e2b-stdio-verify.mjs

@@ -166,7 +166,9 @@ export async function generateMetadata({
   const isThinListing = !isListingIndexable({
     status: server.status,
     hasAiDoc: Boolean(server.aiDoc?.trim()),
-    hasTools: Array.isArray(server.tools) && server.tools.length > 0,
+    toolsSource: server.toolsSource,
+    installNeedsConfig: server.installNeedsConfig,
+    remoteEndpointHealthy: server.remoteEndpointHealthy,
     githubStars: server.githubStars,
     npmDownloads: server.npmDownloads,
     staleFlagged: server.staleFlaggedAt != null,

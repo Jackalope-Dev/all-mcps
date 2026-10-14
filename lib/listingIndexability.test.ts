@@ -3,7 +3,6 @@ import { isListingIndexable } from './listingIndexability';
 
 const base = {
   hasAiDoc: true,
-  hasTools: false,
   githubStars: 0,
   npmDownloads: 0,
 };
@@ -17,14 +16,30 @@ describe('isListingIndexable', () => {
 
   it('requires a second signal beyond the writeup', () => {
     expect(isListingIndexable(base)).toBe(false);
-    expect(isListingIndexable({ ...base, hasTools: true })).toBe(true);
     expect(isListingIndexable({ ...base, githubStars: 25 })).toBe(true);
     expect(isListingIndexable({ ...base, npmDownloads: 100 })).toBe(true);
   });
 
+  it('counts proof the server runs, not a README tool list', () => {
+    expect(isListingIndexable({ ...base, toolsSource: 'readme' })).toBe(false);
+    expect(isListingIndexable({ ...base, toolsSource: 'introspected' })).toBe(
+      true,
+    );
+    expect(
+      isListingIndexable({ ...base, installNeedsConfig: new Date() }),
+    ).toBe(true);
+    expect(isListingIndexable({ ...base, remoteEndpointHealthy: 1 })).toBe(
+      true,
+    );
+  });
+
   it('never indexes non-active listings', () => {
     expect(
-      isListingIndexable({ ...base, hasTools: true, status: 'pending' }),
+      isListingIndexable({
+        ...base,
+        toolsSource: 'introspected',
+        status: 'pending',
+      }),
     ).toBe(false);
   });
 

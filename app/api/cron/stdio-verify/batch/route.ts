@@ -144,6 +144,8 @@ export async function POST(req: Request) {
       .where(
         and(
           eq(servers.status, 'active'),
+          // Flagged listings are hidden; sandbox minutes go to ones users see.
+          isNull(servers.staleFlaggedAt),
           eq(servers.installKind, 'stdio'),
           isNotNull(servers.installCommand),
           isNotNull(servers.installPackage),
@@ -199,7 +201,10 @@ export async function POST(req: Request) {
         sql`CASE WHEN ${servers.installExtractedAt} IS NULL THEN 1 ELSE 0 END`,
         sql`CASE WHEN ${stdioVerifications.id} IS NULL THEN 0 ELSE 1 END`,
         desc(servers.views),
+        desc(servers.copies),
         desc(servers.upvotes),
+        sql`coalesce(${servers.githubStars}, 0) DESC`,
+        sql`coalesce(${servers.npmDownloads}, 0) DESC`,
       )
       .limit(Math.min(batchSize * 2, MAX_BATCH_SIZE * 2));
 
