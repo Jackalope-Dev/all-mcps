@@ -1258,7 +1258,15 @@ export default async function MCPDetail({
                 initialDescription={
                   server.aiSummary?.trim() || server.description || ''
                 }
-                repoUrl={server.url}
+                rendered={
+                  <SafeMarkdown
+                    content={
+                      server.aiSummary?.trim() || server.description || ''
+                    }
+                    utmContent={server.id}
+                    repoUrl={server.url}
+                  />
+                }
               />
 
               {/* Install-first: primary conversion path sits above long AI copy / README. */}

@@ -47,7 +47,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { IconTooltip } from './ui/IconTooltip';
-import { SafeMarkdown } from './ui/SafeMarkdown';
+import { InlineMarkdown } from './ui/InlineMarkdown';
 import { ServerAvatar } from './ui/ServerAvatar';
 
 type Server = {
@@ -1554,11 +1554,10 @@ export default function DirectoryGrid({
                         );
                       })()}
                       <div className="directory-card-desc-block">
-                        <SafeMarkdown
+                        <InlineMarkdown
                           content={
                             server.description || 'No description provided.'
                           }
-                          isInline
                         />
                       </div>
                       <div className="directory-card-footer">
@@ -1669,11 +1668,10 @@ export default function DirectoryGrid({
                             })()}
                         </div>
                         <div className="directory-list-desc">
-                          <SafeMarkdown
+                          <InlineMarkdown
                             content={
                               server.description || 'No description provided.'
                             }
-                            isInline
                           />
                         </div>
                       </div>

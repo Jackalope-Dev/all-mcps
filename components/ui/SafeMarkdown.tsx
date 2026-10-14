@@ -1,13 +1,6 @@
-import dynamic from 'next/dynamic';
-
-// react-markdown requires client hooks internally (useState/useEffect in its
-// own implementation), so this — and the remark-gfm/rehype-raw/rehype-sanitize
-// pipeline it pulls in — can never run as a pure Server Component. Loading it
-// via next/dynamic instead of a plain import splits that ~30-40KB out of every
-// page's main JS bundle into its own chunk. `ssr: true` (the default) means
-// the server still renders the real markdown HTML synchronously — this only
-// changes which chunk the *hydration* JS loads from, not what's painted or
-// when, so there's no visible/behavioral change from SafeMarkdownImpl.
-export const SafeMarkdown = dynamic(() =>
-  import('./SafeMarkdownImpl').then((m) => m.SafeMarkdown),
-);
+// Re-exported directly (no next/dynamic): SafeMarkdownImpl has no 'use client'
+// boundary, so a Server Component renders markdown entirely on the server and
+// ships none of react-markdown/remark/rehype (~320 KB raw) to the browser. Only
+// the image and copy-button leaves hydrate. A Client Component that imports it
+// still bundles the pipeline, so cards and lists use InlineMarkdown instead.
+export { SafeMarkdown } from './SafeMarkdownImpl';

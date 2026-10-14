@@ -18,7 +18,6 @@ import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { DIRECTORY_CATEGORIES } from '../../lib/categories';
-import { SafeMarkdown } from './SafeMarkdown';
 import { toast } from './Toast';
 
 /* -------------------------------------------------------------------------- */
@@ -736,11 +735,17 @@ export function AdminInlineCategory({
 export function AdminInlineDescription({
   serverId,
   initialDescription,
-  repoUrl,
+  rendered,
 }: {
   serverId: string;
   initialDescription: string;
-  repoUrl: string;
+  /**
+   * The description already rendered as markdown by the Server Component.
+   * Passed in rather than rendered here so this client module doesn't pull
+   * the markdown pipeline into every listing page's JS; router.refresh()
+   * after a save re-renders it with the new text.
+   */
+  rendered: React.ReactNode;
 }) {
   const router = useRouter();
   const { isAdmin } = useAdmin();
@@ -759,11 +764,7 @@ export function AdminInlineDescription({
           lineHeight: '1.6',
         }}
       >
-        <SafeMarkdown
-          content={initialDescription}
-          utmContent={serverId}
-          repoUrl={repoUrl}
-        />
+        {rendered}
       </div>
     );
   }
@@ -926,13 +927,7 @@ export function AdminInlineDescription({
           gap: '1rem',
         }}
       >
-        <div style={{ flex: 1 }}>
-          <SafeMarkdown
-            content={initialDescription}
-            utmContent={serverId}
-            repoUrl={repoUrl}
-          />
-        </div>
+        <div style={{ flex: 1 }}>{rendered}</div>
         <button
           type="button"
           onClick={() => setIsEditing(true)}

@@ -7,7 +7,7 @@ import { isFeaturedListing } from '../lib/featuredStatus';
 import { ImpressionBeacon } from './ImpressionTracker';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
-import { SafeMarkdown } from './ui/SafeMarkdown';
+import { InlineMarkdown } from './ui/InlineMarkdown';
 import { ServerAvatar } from './ui/ServerAvatar';
 
 type Server = {
@@ -143,9 +143,8 @@ export function FeaturedCards({ servers }: { servers: Server[] }) {
                   lineHeight: 1.5,
                 }}
               >
-                <SafeMarkdown
+                <InlineMarkdown
                   content={server.description || 'No description provided.'}
-                  isInline
                 />
               </div>
               <div

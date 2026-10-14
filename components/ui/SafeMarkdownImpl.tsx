@@ -1,12 +1,12 @@
-'use client';
-
-import React, { useState } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import { isOutboundHttpUrl, withAllMcpsUtm } from '../../lib/outboundLinks';
 import { CopyBlock } from './CopyBlock';
+import { MarkdownImage } from './MarkdownImage';
+import { resolveUrl } from './resolveMarkdownUrl';
 
 const customSanitizeSchema = {
   ...defaultSchema,
@@ -37,92 +37,6 @@ interface SafeMarkdownProps {
   utmContent?: string;
   /** Repository URL to resolve relative images and links against. */
   repoUrl?: string;
-}
-
-/**
- * Resolves relative URLs (e.g. `assets/logo.png`, `./LICENSE`) against a repository URL.
- */
-function resolveUrl(
-  url: string | Blob | undefined,
-  repoUrl?: string,
-  isImage?: boolean,
-): string {
-  if (!url || typeof url !== 'string') return '';
-  if (
-    url.startsWith('http://') ||
-    url.startsWith('https://') ||
-    url.startsWith('//') ||
-    url.startsWith('data:') ||
-    url.startsWith('#') ||
-    url.startsWith('mailto:') ||
-    url.startsWith('tel:')
-  ) {
-    if (isImage) {
-      try {
-        const parsed = new URL(url.startsWith('//') ? `https:${url}` : url);
-        if (
-          (parsed.hostname === 'github.com' ||
-            parsed.hostname === 'www.github.com') &&
-          parsed.pathname.includes('/blob/')
-        ) {
-          parsed.hostname = 'raw.githubusercontent.com';
-          parsed.pathname = parsed.pathname.replace('/blob/', '/');
-          return parsed.toString();
-        }
-      } catch {
-        // fallback
-      }
-    }
-    return url;
-  }
-
-  if (!repoUrl) return url;
-
-  const match = repoUrl.match(/github\.com\/([^/]+)\/([^/#?]+)/);
-  if (!match) return url;
-
-  const owner = match[1];
-  let repo = match[2];
-  if (repo.endsWith('.git')) repo = repo.slice(0, -4);
-
-  const cleanPath = url.replace(/^\.\//, '').replace(/^\//, '');
-
-  if (isImage) {
-    return `https://raw.githubusercontent.com/${owner}/${repo}/main/${cleanPath}`;
-  }
-  return `https://github.com/${owner}/${repo}/blob/main/${cleanPath}`;
-}
-
-function MarkdownImage({
-  src,
-  alt,
-  repoUrl,
-  style,
-  ...rest
-}: React.ImgHTMLAttributes<HTMLImageElement> & { repoUrl?: string }) {
-  const [hasError, setHasError] = useState(false);
-
-  if (hasError) return null;
-
-  const resolvedSrc = resolveUrl(src, repoUrl, true);
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={resolvedSrc}
-      alt={alt || ''}
-      onError={() => setHasError(true)}
-      style={{
-        maxWidth: '100%',
-        height: 'auto',
-        borderRadius: '8px',
-        display: 'inline-block',
-        verticalAlign: 'middle',
-        ...style,
-      }}
-      {...rest}
-    />
-  );
 }
 
 function MarkdownLink({
