@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isSafeFetchTarget, safeFetch } from './urlSafety';
+import { isSafeSubmissionUrl, safeFetch } from './urlSafety';
 
-describe('isSafeFetchTarget', () => {
+describe('isSafeSubmissionUrl', () => {
   it.each([
     'http://localhost/',
     'http://localhost./',
@@ -17,7 +17,7 @@ describe('isSafeFetchTarget', () => {
     'http://[fd00::1]/',
     'file:///etc/passwd',
   ])('blocks %s', (url) => {
-    expect(isSafeFetchTarget(url)).toBe(false);
+    expect(isSafeSubmissionUrl(url)).toBe(false);
   });
 
   it.each([
@@ -25,7 +25,7 @@ describe('isSafeFetchTarget', () => {
     'http://8.8.8.8/',
     'http://[::ffff:808:808]/',
   ])('allows %s', (url) => {
-    expect(isSafeFetchTarget(url)).toBe(true);
+    expect(isSafeSubmissionUrl(url)).toBe(true);
   });
 });
 

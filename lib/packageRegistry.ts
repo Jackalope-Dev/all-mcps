@@ -21,6 +21,21 @@ export function registryFor(
   return null;
 }
 
+/**
+ * The npm package a listing actually installs, or null when it isn't an npm
+ * install. Never falls back to the listing name: a PyPI server or a generic
+ * name ("github", "memory") would pick up an unrelated npm package's download
+ * count, which then feeds indexability and the stale sweep's traction check.
+ */
+export function npmPackageFor(listing: {
+  installCommand?: string | null;
+  installPackage?: string | null;
+}): string | null {
+  if (registryFor(listing.installCommand) !== 'npm') return null;
+  const pkg = listing.installPackage?.trim();
+  return pkg ? bareName(pkg) : null;
+}
+
 /** Strip a trailing @version / ==version, keeping a leading @scope. */
 export function bareName(pkg: string): string {
   return pkg

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   bareName,
+  npmPackageFor,
   npmStatusFromDoc,
   packageBelongsElsewhere,
   pypiStatusFromDoc,
@@ -142,5 +143,29 @@ describe('packageBelongsElsewhere', () => {
       await packageBelongsElsewhere('npx', 'x', 'https://example.com'),
     ).toBe(false);
     expect(await packageBelongsElsewhere('docker', 'x', LISTING)).toBe(false);
+  });
+});
+
+describe('npmPackageFor', () => {
+  it('returns the bare npm package for npm runners only', () => {
+    expect(
+      npmPackageFor({
+        installCommand: 'npx',
+        installPackage: '@modelcontextprotocol/server-github@1.2.0',
+      }),
+    ).toBe('@modelcontextprotocol/server-github');
+    expect(
+      npmPackageFor({
+        installCommand: 'uvx',
+        installPackage: 'mcp-server-git',
+      }),
+    ).toBeNull();
+  });
+
+  it('never falls back to the listing name', () => {
+    expect(
+      npmPackageFor({ installCommand: 'npx', installPackage: '' }),
+    ).toBeNull();
+    expect(npmPackageFor({})).toBeNull();
   });
 });

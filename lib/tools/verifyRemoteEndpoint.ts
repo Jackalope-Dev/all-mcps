@@ -1,4 +1,4 @@
-import { isSafeFetchTarget } from '../urlSafety';
+import { isSafeSubmissionUrl } from '../urlSafety';
 
 /**
  * Does a cached remote endpoint actually speak MCP?
@@ -192,7 +192,7 @@ export async function probeRemoteEndpoint(url: string): Promise<ProbeResult> {
   if (!target || !/^https?:\/\//i.test(target)) {
     return { verdict: 'not-mcp', detail: 'Not an http(s) URL' };
   }
-  if (!isSafeFetchTarget(target)) {
+  if (!isSafeSubmissionUrl(target)) {
     // Private/loopback/metadata addresses: never probe them, and never advertise them
     // either — no client on the open internet could use one.
     return { verdict: 'not-mcp', detail: 'Not a permitted public endpoint' };

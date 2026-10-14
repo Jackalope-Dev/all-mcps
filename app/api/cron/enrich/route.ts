@@ -20,7 +20,7 @@ import {
   type LogoSource,
   logoSourcePriority,
   parseGithubUrl,
-  pickBestWebsiteAndLogoWithLlm,
+  pickBestWebsiteAndLogo,
   pickDescription,
   pickWebsiteUrl,
   resolveInstallFromSignals,
@@ -442,7 +442,7 @@ export async function POST(req: Request) {
             let llmChoice: { websiteUrl?: string; logoUrl?: string } | null =
               null;
             if (candidateWebsites.length > 0 || candidateImages.length > 0) {
-              llmChoice = await pickBestWebsiteAndLogoWithLlm({
+              llmChoice = await pickBestWebsiteAndLogo({
                 readmeSnippet: readme,
                 ghOwner: gh.owner,
                 ghRepo: gh.repo,

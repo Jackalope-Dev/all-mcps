@@ -239,7 +239,8 @@ export async function verifyGithubReadme(
   let repo = githubMatch[2];
   if (repo.endsWith('.git')) repo = repo.slice(0, -4);
 
-  const branches = ['main', 'master'];
+  // HEAD resolves to the repo's default branch, whatever it is named.
+  const branches = ['HEAD'];
   for (const branch of branches) {
     try {
       const res = await fetch(

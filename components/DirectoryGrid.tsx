@@ -593,6 +593,7 @@ export default function DirectoryGrid({
     queryTerms,
     fullQuery,
     selectedCategory,
+    selectedClient,
     selectedStack,
     selectedTransport,
     selectedPricing,

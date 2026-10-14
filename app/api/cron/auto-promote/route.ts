@@ -12,7 +12,7 @@ import {
   shouldHoldFromAutoPromotion,
 } from '../../../../lib/listingReview';
 import { upsertSignals } from '../../../../lib/signalStore';
-import { isSafeFetchTarget } from '../../../../lib/urlSafety';
+import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 
 /**
  * Fully-unattended promotion for pending listings that came from our own
@@ -83,7 +83,7 @@ async function checkUrlAliveOnce(
 }
 
 async function checkUrlAlive(url: string | null | undefined): Promise<boolean> {
-  if (!url || !isSafeFetchTarget(url)) return false;
+  if (!url || !isSafeSubmissionUrl(url)) return false;
   for (let attempt = 0; attempt <= LIVENESS_RETRIES; attempt++) {
     const result = await checkUrlAliveOnce(url);
     if (result.alive) return true;

@@ -12,7 +12,7 @@ import {
 } from './installConfig';
 import { isSafeSubmissionUrl } from './urlSafety';
 
-export { pickBestWebsiteAndLogoWithLlm } from './listingSignals';
+export { pickBestWebsiteAndLogo } from './listingSignals';
 
 export type GhRepo = {
   full_name?: string;
@@ -222,7 +222,8 @@ async function fetchRawGithubReadme(
   const encOwner = encodeURIComponent(safeOwner);
   const encRepo = encodeURIComponent(safeRepo);
 
-  for (const branch of ['main', 'master']) {
+  // HEAD resolves to the repo's default branch, whatever it is named.
+  for (const branch of ['HEAD']) {
     try {
       const res = await fetch(
         `https://raw.githubusercontent.com/${encOwner}/${encRepo}/${branch}/README.md`,

@@ -1,9 +1,9 @@
-import { isSafeFetchTarget, safeFetch } from './urlSafety';
+import { isSafeSubmissionUrl, safeFetch } from './urlSafety';
 
 /**
  * Minimal server-side MCP (Streamable HTTP) client used by the live Protocol
  * Inspector and the health cron. Running the handshake server-side sidesteps
- * browser CORS and keeps SSRF checks (isSafeFetchTarget) in one place.
+ * browser CORS and keeps SSRF checks (isSafeSubmissionUrl) in one place.
  *
  * Supports both response shapes a compliant server may return: a single JSON
  * body (application/json) or an SSE stream (text/event-stream).
@@ -136,7 +136,7 @@ export async function callMcpEndpoint(
   if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
     return { ok: false, error: 'Enter a valid http(s) MCP endpoint URL.' };
   }
-  if (!isSafeFetchTarget(targetUrl)) {
+  if (!isSafeSubmissionUrl(targetUrl)) {
     return { ok: false, error: 'That URL is not a permitted public endpoint.' };
   }
 

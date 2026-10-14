@@ -4,7 +4,20 @@ import { getAllPosts } from '@/lib/blog';
 import { categorySlug } from '@/lib/categories';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { WORKFLOW_PROMPTS } from '@/lib/prompts';
-import { getServersForLlmsTxt } from '@/lib/servers';
+import { getServersForLlmsTxt, type LlmsTxtServer } from '@/lib/servers';
+
+/**
+ * The real install for a listing, or nothing. Never a name-derived guess: an
+ * agent that runs a made-up package name can install a stranger's code.
+ */
+function llmsInstallNote(server: LlmsTxtServer): string {
+  if (!server.installPackage) return '';
+  if (server.installKind === 'remote')
+    return ` (Remote endpoint: \`${server.installPackage}\`)`;
+  if (server.installKind === 'stdio')
+    return ` (Package: \`${server.installPackage}\`)`;
+  return '';
+}
 
 export async function GET(request: Request) {
   const servers = await getServersForLlmsTxt();
@@ -75,8 +88,7 @@ export async function GET(request: Request) {
     content += `### ${category}\n`;
     content += `Category page: https://allmcps.com/categories/${categorySlug(category)}\n`;
     for (const server of catServers.slice(0, 10)) {
-      const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      content += `- [${server.name}](https://allmcps.com/mcp/${server.id}): ${server.description} (Package: \`${installName}\`)\n`;
+      content += `- [${server.name}](https://allmcps.com/mcp/${server.id}): ${server.description}${llmsInstallNote(server)}\n`;
     }
     content += `\n`;
   }

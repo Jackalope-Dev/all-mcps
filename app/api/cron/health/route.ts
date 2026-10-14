@@ -24,13 +24,14 @@ import {
   refreshListingPages,
 } from '../../../../lib/listingPageRefresh';
 import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
+import { npmPackageFor } from '../../../../lib/packageRegistry';
 import { isGitHubRepoUrl } from '../../../../lib/repoUrl';
 import type { ToolDefinition } from '../../../../lib/securityProfile';
 import { storeSecurityProfile } from '../../../../lib/securityProfileStore';
 import { upsertSignals } from '../../../../lib/signalStore';
 import { parseToolsFromReadme } from '../../../../lib/tools/parseToolsFromReadme';
 import { probeRemoteEndpoint } from '../../../../lib/tools/verifyRemoteEndpoint';
-import { isSafeFetchTarget } from '../../../../lib/urlSafety';
+import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 import { websiteHasReciprocalBadge } from '../../../../lib/verification';
 
 /**
@@ -77,7 +78,8 @@ async function fetchGithubReadme(
   owner: string,
   repo: string,
 ): Promise<string | null> {
-  for (const branch of ['main', 'master']) {
+  // HEAD resolves to the repo's default branch, whatever it is named.
+  for (const branch of ['HEAD']) {
     try {
       const res = await fetch(
         `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`,
@@ -110,6 +112,36 @@ const POPULAR_STALE_MS = 3 * 24 * 60 * 60 * 1000;
  * hours.
  */
 const HEALTH_HISTORY_LIMIT = 96;
+
+/**
+ * Insert one history row, then trim this listing to the last
+ * HEALTH_HISTORY_LIMIT so the table stays flat-sized rather than growing with
+ * total checks ever performed — two small single-server queries, well under
+ * D1's 100-bound-param cap regardless of catalog size.
+ */
+async function recordHealthCheck(
+  db: ReturnType<typeof drizzle>,
+  row: typeof serverHealthChecks.$inferInsert,
+): Promise<void> {
+  await db.insert(serverHealthChecks).values(row);
+  const keepIds = await db
+    .select({ id: serverHealthChecks.id })
+    .from(serverHealthChecks)
+    .where(eq(serverHealthChecks.serverId, row.serverId))
+    .orderBy(desc(serverHealthChecks.checkedAt))
+    .limit(HEALTH_HISTORY_LIMIT);
+  if (keepIds.length === HEALTH_HISTORY_LIMIT) {
+    await db.delete(serverHealthChecks).where(
+      and(
+        eq(serverHealthChecks.serverId, row.serverId),
+        notInArray(
+          serverHealthChecks.id,
+          keepIds.map((r) => r.id),
+        ),
+      ),
+    );
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -233,11 +265,16 @@ export async function POST(req: Request) {
       let remoteEndpointCheckedAt: Date | null =
         server.remoteEndpointCheckedAt ?? null;
 
-      // Prefer package name from cached install, else listing name
-      const npmName = server.installPackage || server.name;
-      const npmDownloads = await fetchNpmDownloads(npmName);
+      // Only a real npm install has npm downloads. A non-npm listing keeps
+      // null rather than borrowing a same-named package's count.
+      const npmName = npmPackageFor(server);
+      const npmDownloads = npmName
+        ? ((await fetchNpmDownloads(npmName)) ?? server.npmDownloads ?? null)
+        : null;
 
       let readmeText: string | null = null;
+      // True when the check could not reach a verdict this pass.
+      let inconclusive = false;
 
       try {
         if (isGitHubRepoUrl(server.url)) {
@@ -309,9 +346,13 @@ export async function POST(req: Request) {
               }
             } else if (ghRes.status === 404) {
               healthStatus = 'offline';
+            } else {
+              // Rate limit (403/429) or a GitHub outage says nothing about
+              // the repo. Keep the last verdict and skip the history row.
+              inconclusive = true;
             }
           }
-        } else if (!isSafeFetchTarget(server.url)) {
+        } else if (!isSafeSubmissionUrl(server.url)) {
           healthStatus = 'offline';
         } else {
           const pingRes = await fetch(server.url, {
@@ -447,7 +488,7 @@ export async function POST(req: Request) {
       if (
         !server.isPremium &&
         server.websiteUrl &&
-        isSafeFetchTarget(server.websiteUrl)
+        isSafeSubmissionUrl(server.websiteUrl)
       ) {
         try {
           const siteRes = await fetch(server.websiteUrl, {
@@ -555,6 +596,11 @@ export async function POST(req: Request) {
             })
           : false;
 
+      if (inconclusive) {
+        isVerifiedActive = Boolean(server.isVerifiedActive);
+        healthStatus = server.healthStatus || 'unknown';
+      }
+
       await db
         .update(servers)
         .set({
@@ -616,35 +662,20 @@ export async function POST(req: Request) {
       }
 
       // Bounded health-check history for the detail-page trend strip (see
-      // db/schema.ts). Insert then trim to the last HEALTH_HISTORY_LIMIT for
-      // this listing so the table stays flat-sized rather than growing with
-      // total checks ever performed — two small single-server queries, well
-      // under D1's 100-bound-param cap regardless of catalog size.
-      await db.insert(serverHealthChecks).values({
-        serverId: server.id,
-        checkedAt: now,
-        healthy: isVerifiedActive,
-        detail: isVerifiedActive ? null : healthStatus,
-        // Only meaningfully set (non-carried-forward) when this listing has a
-        // remoteEndpointUrl — see remoteEndpointHealthy's declaration above.
-        remoteHealthy: server.remoteEndpointUrl ? remoteEndpointHealthy : null,
-      });
-      const keepIds = await db
-        .select({ id: serverHealthChecks.id })
-        .from(serverHealthChecks)
-        .where(eq(serverHealthChecks.serverId, server.id))
-        .orderBy(desc(serverHealthChecks.checkedAt))
-        .limit(HEALTH_HISTORY_LIMIT);
-      if (keepIds.length === HEALTH_HISTORY_LIMIT) {
-        await db.delete(serverHealthChecks).where(
-          and(
-            eq(serverHealthChecks.serverId, server.id),
-            notInArray(
-              serverHealthChecks.id,
-              keepIds.map((r) => r.id),
-            ),
-          ),
-        );
+      // db/schema.ts). An inconclusive pass records nothing, so a GitHub rate
+      // limit never shows up as downtime.
+      if (!inconclusive) {
+        await recordHealthCheck(db, {
+          serverId: server.id,
+          checkedAt: now,
+          healthy: isVerifiedActive,
+          detail: isVerifiedActive ? null : healthStatus,
+          // Only meaningfully set (non-carried-forward) when this listing has a
+          // remoteEndpointUrl — see remoteEndpointHealthy's declaration above.
+          remoteHealthy: server.remoteEndpointUrl
+            ? remoteEndpointHealthy
+            : null,
+        });
       }
 
       if (shouldUnpublish) unpublished++;

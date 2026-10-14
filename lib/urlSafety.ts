@@ -71,13 +71,10 @@ export function normalizeUrl(urlString: string): string {
   }
 }
 
-/** Defense-in-depth check before the health-check cron fetches a stored URL. */
-export const isSafeFetchTarget = isSafeSubmissionUrl;
-
 const MAX_REDIRECTS = 5;
 
 /**
- * fetch() that re-checks every redirect hop with isSafeFetchTarget. A default
+ * fetch() that re-checks every redirect hop with isSafeSubmissionUrl. A default
  * fetch follows redirects on its own, so a public URL that passed the check
  * could still 302 to a blocked host. Mirrors fetch's own method rules: 303,
  * and 301/302 on a POST, continue as a bodiless GET; 307/308 replay as-is.

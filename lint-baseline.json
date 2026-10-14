@@ -8,7 +8,7 @@
   "lint/a11y/useSemanticElements": 22,
   "lint/complexity/useOptionalChain": 3,
   "lint/correctness/noUnusedFunctionParameters": 7,
-  "lint/correctness/useExhaustiveDependencies": 14,
+  "lint/correctness/useExhaustiveDependencies": 13,
   "lint/performance/noImgElement": 23,
   "lint/style/noDescendingSpecificity": 39,
   "lint/style/noNonNullAssertion": 17,

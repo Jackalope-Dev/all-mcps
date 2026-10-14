@@ -1391,6 +1391,9 @@ export type LlmsTxtServer = {
   name: string;
   description: string | null;
   category: string | null;
+  installKind: string | null;
+  installCommand: string | null;
+  installPackage: string | null;
 };
 
 /**
@@ -1413,9 +1416,19 @@ export async function getServersForLlmsTxt(): Promise<LlmsTxtServer[]> {
           name: serversTable.name,
           description: serversTable.description,
           category: serversTable.category,
+          installKind: serversTable.installKind,
+          installCommand: serversTable.installCommand,
+          installPackage: serversTable.installPackage,
         })
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'));
+        .where(eq(serversTable.status, 'active'))
+        // Same order as idx_servers_status_popularity, so "top 10 per
+        // category" really is the most-used ten, not insertion order.
+        .orderBy(
+          desc(serversTable.views),
+          desc(serversTable.copies),
+          desc(serversTable.upvotes),
+        );
       if (rows.length > 0) return rows;
     }
   } catch {
@@ -1426,6 +1439,9 @@ export async function getServersForLlmsTxt(): Promise<LlmsTxtServer[]> {
     name: s.name,
     description: s.description ?? null,
     category: s.category ?? null,
+    installKind: s.installKind ?? null,
+    installCommand: s.installCommand ?? null,
+    installPackage: s.installPackage ?? null,
   }));
 }
 
@@ -2009,20 +2025,13 @@ export async function fetchServerReadme(url: string): Promise<string | null> {
       repo = repo.slice(0, -4);
     }
 
-    let res = await fetch(
-      `https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`,
+    // HEAD resolves to the repo's default branch (main, master, trunk, dev…).
+    const res = await fetch(
+      `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/README.md`,
       {
         next: { revalidate: 3600 },
       },
     );
-    if (!res.ok) {
-      res = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`,
-        {
-          next: { revalidate: 3600 },
-        },
-      );
-    }
 
     if (res.ok) {
       const text = await res.text();

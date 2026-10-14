@@ -310,9 +310,6 @@ export async function pickBestWebsiteAndLogo(input: {
   return Object.keys(out).length ? out : null;
 }
 
-/** @deprecated Name kept for enrich-cron call sites; implementation is Jev. */
-export const pickBestWebsiteAndLogoWithLlm = pickBestWebsiteAndLogo;
-
 export function installHintToCache(hint: NonNullable<ParsedInstallHint>): {
   installKind: 'stdio' | 'remote';
   installCommand: string | null;
