@@ -1,3 +1,4 @@
+import { type AnyColumn, and, or, type SQL, sql } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/d1';
 import { servers } from '../db/schema';
 
@@ -48,20 +49,53 @@ export type ExistingListingMatch = {
   websiteUrl?: string | null;
 };
 
+/** Case-insensitive "contains" on a column, without LIKE's wildcard escaping. */
+function containsLower(column: AnyColumn, needle: string): SQL {
+  return sql`instr(lower(coalesce(${column}, '')), ${needle}) > 0`;
+}
+
+/**
+ * Rows that could share `key` (normalizeUrlKey) with `url`: their lowercased
+ * URL must contain the key's host and path. Null when the URL has non-ASCII
+ * or percent-encoded parts, where SQLite's ASCII-only lower() and the URL
+ * parser's encoding could disagree — the caller then scans everything.
+ */
+function urlKeyPrefilter(url: string): SQL | null {
+  let host: string;
+  let path: string;
+  try {
+    const u = new URL(url);
+    host = u.hostname.toLowerCase().replace(/^www\./, '');
+    path = u.pathname
+      .replace(/\.git$/i, '')
+      .replace(/\/+$/, '')
+      .toLowerCase();
+  } catch {
+    return null;
+  }
+  if (!/^[!-~]*$/.test(host + path) || (host + path).includes('%')) return null;
+  return path
+    ? (and(
+        containsLower(servers.url, host),
+        containsLower(servers.url, path),
+      ) as SQL)
+    : containsLower(servers.url, host);
+}
+
 /**
  * Checks whether `url` already matches an existing listing's primary URL —
  * regardless of that listing's status, so a 'removed' (dead-link) or
  * 'pending' row still counts as "already here" and blocks a duplicate
  * submission instead of silently creating a second row for the same server.
- * Full-table scan of (id, name, url) is fine here: called from a low-frequency,
- * user-initiated path, not a hot loop.
+ * D1 narrows the rows by host and path first; the exact key is compared here.
  */
 export async function findExistingListingByUrl(
   db: ReturnType<typeof drizzle>,
   url: string,
 ): Promise<ExistingListingMatch | null> {
   const key = normalizeUrlKey(url);
-  const rows = await db
+  const prefilter = urlKeyPrefilter(url);
+  const query = db
     .select({
       id: servers.id,
       name: servers.name,
@@ -71,6 +105,7 @@ export async function findExistingListingByUrl(
       status: servers.status,
     })
     .from(servers);
+  const rows = await (prefilter ? query.where(prefilter) : query);
   const match = rows.find((r) => normalizeUrlKey(r.url) === key);
   return match
     ? {
@@ -164,6 +199,30 @@ export async function findNearDuplicateCandidates(
   const nameKey = listingNameKey(input.name);
   const host = websiteHost(input.websiteUrl) || websiteHost(input.url);
 
+  // D1 narrows to rows that could match one of the three keys below; the
+  // exact comparisons still run here. A same-nameKey row contains every
+  // token of nameKey in its lowercased name; a same-site row contains the
+  // site (or host) in its website or URL.
+  const site = nameSite ? nameSite.slice(nameSite.indexOf('|') + 1) : '';
+  const clauses: SQL[] = [];
+  if (nameKey) {
+    clauses.push(
+      and(
+        ...nameKey.split(' ').map((t) => containsLower(servers.name, t)),
+      ) as SQL,
+    );
+  }
+  for (const needle of [site, host]) {
+    if (!needle) continue;
+    clauses.push(
+      or(
+        containsLower(servers.websiteUrl, needle),
+        containsLower(servers.url, needle),
+      ) as SQL,
+    );
+  }
+  if (clauses.length === 0) return [];
+
   const rows = await db
     .select({
       id: servers.id,
@@ -173,7 +232,8 @@ export async function findNearDuplicateCandidates(
       websiteUrl: servers.websiteUrl,
       status: servers.status,
     })
-    .from(servers);
+    .from(servers)
+    .where(or(...clauses));
 
   const out: ExistingListingMatch[] = [];
   const seen = new Set<string>();
