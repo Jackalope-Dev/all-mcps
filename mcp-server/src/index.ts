@@ -10,7 +10,8 @@ import {
 const server = new Server(
   {
     name: 'allmcps-server',
-    version: '2.0.0',
+    // Keep in step with package.json (bumped by `npm version`).
+    version: '2.2.0',
   },
   {
     capabilities: {
@@ -29,14 +30,30 @@ const MCP_ENDPOINT =
   process.env.ALLMCPS_MCP_URL || 'https://allmcps.com/api/mcp';
 const API_BASE = process.env.ALLMCPS_API_URL || 'https://allmcps.com';
 
-async function callRemote(method: string, params?: unknown) {
+async function callRemote(
+  method: string,
+  params?: { name?: string; arguments?: unknown },
+) {
+  // The stdio side negotiates the protocol with the local client (via the
+  // SDK); this leg is a stateless JSON-RPC call the remote serves for any
+  // revision. Mcp-Method / Mcp-Name mirror the body, as Streamable HTTP asks.
   const response = await fetch(MCP_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+      'Mcp-Method': method,
+      ...(params?.name ? { 'Mcp-Name': params.name } : {}),
+    },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
   });
 
-  const data = (await response.json()) as any;
+  const data = (await response.json().catch(() => null)) as any;
+  if (!data) {
+    throw new Error(
+      `AllMCPs returned HTTP ${response.status} with no JSON-RPC body.`,
+    );
+  }
 
   if (data.error) {
     throw new Error(data.error.message || 'Remote MCP request failed.');

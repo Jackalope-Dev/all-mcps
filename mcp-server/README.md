@@ -56,8 +56,11 @@ runs as the MCP stdio server described below (the default `npx allmcps-server` b
 
 | Tool                    | Required arguments   | Description                                                              |
 | ----------------------- | --------------------- | ------------------------------------------------------------------------- |
-| `search_mcp_servers`    | —                     | Search the directory by keyword and/or category.                         |
-| `get_mcp_install_config`| `id`                  | Get the install config snippet and docs for a server by ID.              |
+| `search_mcp_servers`    | —                     | Search by keyword and/or category; optional `transport` (remote/stdio) and `verified_only` filters. |
+| `get_mcp_install_config`| `id`                  | Setup for a server in 13 clients (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Cline, Zed, Codex, Gemini CLI, JetBrains, Roo Code, Continue, LM Studio); optional `client` for one. |
+| `get_mcp_alternatives`  | `id`                  | Alternatives to a server in the same category.                           |
+| `compare_mcp_servers`   | `ids` (2 to 4)        | Side by side: install, evidence it works, tools, health, stars, last commit, quality score. |
+| `recommend_mcp_stack`   | `role`                | A small stack of complementary servers for a role or workflow.           |
 | `list_mcp_categories`   | —                     | List all categories with server counts.                                  |
 | `get_boost_pricing`     | —                     | Get pricing and features for boosting/featuring a listing.               |
 | `boost_mcp_server`      | `id`                  | Start a sponsorship/boost order — returns a Stripe checkout URL and x402 invoice. |
