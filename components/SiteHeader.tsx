@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchBrowserSession } from '../lib/clientSession';
+import { openSearch } from '../lib/openSearch';
 import { BrandLogo } from './BrandLogo';
 import { Button } from './ui/Button';
 
@@ -190,16 +191,7 @@ export function SiteHeader() {
             ))}
             <button
               type="button"
-              onClick={() =>
-                window.dispatchEvent(
-                  new KeyboardEvent('keydown', {
-                    key: 'k',
-                    metaKey: true,
-                    ctrlKey: true,
-                    bubbles: true,
-                  }),
-                )
-              }
+              onClick={openSearch}
               className="header-search-btn"
               title={`Search directory (${searchModKey}+K)`}
               aria-label={`Search directory (${searchModKey}+K)`}
@@ -250,6 +242,18 @@ export function SiteHeader() {
               </div>
             )}
           </nav>
+
+          {/* Mobile search: the desktop search chip is hidden below 768px, so
+              without this the only way to search on a phone was two taps deep
+              inside the menu drawer. */}
+          <button
+            type="button"
+            className="mobile-search-btn"
+            onClick={openSearch}
+            aria-label="Search directory"
+          >
+            <Search size={20} aria-hidden="true" />
+          </button>
 
           {/* Mobile Menu Toggle Button */}
           <button
@@ -312,9 +316,7 @@ export function SiteHeader() {
                   type="button"
                   onClick={() => {
                     closeMobileMenu();
-                    window.dispatchEvent(
-                      new KeyboardEvent('keydown', { key: 'k', metaKey: true }),
-                    );
+                    openSearch();
                   }}
                   className="mobile-nav-link"
                   style={{

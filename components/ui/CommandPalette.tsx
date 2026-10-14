@@ -6,9 +6,10 @@ import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseServerName } from '../../lib/displayName';
 import { trackFeatureUse } from '../../lib/gtag';
+import { OPEN_SEARCH_EVENT } from '../../lib/openSearch';
 import { compileQuery, scoreServerMatch } from '../../lib/search';
 import { Badge } from './Badge';
-import { SafeMarkdown } from './SafeMarkdown';
+import { InlineMarkdown } from './InlineMarkdown';
 import { ServerAvatar } from './ServerAvatar';
 
 interface CommandItem {
@@ -41,8 +42,16 @@ type IndexedCategory = {
   count: number;
 };
 
-export function CommandPalette() {
-  const [isOpen, setIsOpen] = useState(false);
+export function CommandPalette({
+  initialOpen = false,
+  onReady,
+}: {
+  /** Open immediately on mount — a search request arrived while this chunk was loading. */
+  initialOpen?: boolean;
+  /** Called once this component's own hotkey/open listeners are attached. */
+  onReady?: () => void;
+}) {
+  const [isOpen, setIsOpen] = useState(initialOpen);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [liveServers, setLiveServers] = useState<IndexedServer[] | null>(null);
@@ -84,9 +93,16 @@ export function CommandPalette() {
       }
     };
 
+    const handleOpenRequest = () => setIsOpen(true);
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+    window.addEventListener(OPEN_SEARCH_EVENT, handleOpenRequest);
+    onReady?.();
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener(OPEN_SEARCH_EVENT, handleOpenRequest);
+    };
+  }, [isOpen, onReady]);
 
   // Lock scroll and focus input when open
   useEffect(() => {
@@ -579,7 +595,7 @@ export function CommandPalette() {
                         marginTop: '0.2rem',
                       }}
                     >
-                      <SafeMarkdown content={item.subtitle} isInline />
+                      <InlineMarkdown content={item.subtitle} />
                     </div>
                   </div>
                 </div>

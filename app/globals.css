@@ -14211,3 +14211,43 @@ code.inline-path {
   align-items: center;
   gap: 0.35rem;
 }
+
+/* ── UX pass (2026-10): mobile header search button ───────────────────────
+   components/SiteHeader.tsx. Same 44px target and chrome as .mobile-menu-btn;
+   margin-left:auto keeps it beside the menu button instead of centred by the
+   header's space-between. */
+.mobile-search-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin-left: auto;
+  transition: background 0.2s ease;
+}
+
+.mobile-search-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mobile-search-btn:focus-visible,
+.mobile-menu-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+[data-theme="light"] .mobile-search-btn {
+  border-color: rgba(15, 23, 42, 0.15);
+}
+
+@media (max-width: 768px) {
+  .mobile-search-btn {
+    display: flex;
+  }
+}
