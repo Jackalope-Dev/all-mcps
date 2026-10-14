@@ -58,6 +58,88 @@ export function pypiStatusFromDoc(doc: unknown): RegistryStatus {
   return { kind: 'ok' };
 }
 
+type GithubRepoRef = { owner: string; repo: string };
+
+function githubRepoRef(raw: unknown): GithubRepoRef | null {
+  if (typeof raw !== 'string') return null;
+  const m = raw.match(/github\.com[/:]([^/\s#?]+)\/([^/\s#?]+)/i);
+  if (!m) return null;
+  return {
+    owner: m[1].toLowerCase(),
+    repo: m[2].toLowerCase().replace(/\.git$/, ''),
+  };
+}
+
+/** GitHub repos a registry document names as the package's source (npm `/latest` doc or PyPI JSON). */
+export function sourceReposFromDoc(
+  registry: 'npm' | 'pypi',
+  doc: unknown,
+): GithubRepoRef[] {
+  const d = doc as {
+    repository?: string | { url?: string };
+    homepage?: string;
+    bugs?: { url?: string };
+    info?: { home_page?: string; project_urls?: Record<string, string> };
+  };
+  const links =
+    registry === 'npm'
+      ? [
+          typeof d?.repository === 'string' ? d.repository : d?.repository?.url,
+          d?.homepage,
+          d?.bugs?.url,
+        ]
+      : [d?.info?.home_page, ...Object.values(d?.info?.project_urls ?? {})];
+  return links.map(githubRepoRef).filter((r): r is GithubRepoRef => !!r);
+}
+
+/**
+ * True only when the registry proves a stdio package is not this listing's:
+ * it doesn't exist, or every source repo it names differs from the listing's
+ * repo in both owner and name (one of the two matching covers renamed orgs
+ * and moved repos). No source metadata, a non-GitHub listing, or a registry
+ * hiccup all return false — absence of evidence keeps the candidate.
+ *
+ * READMEs routinely show other servers' install commands (an example config,
+ * a dependency, a catalog entry), and a sole candidate is taken without the
+ * LLM ever seeing it — this is what kept @modelcontextprotocol/server-filesystem
+ * on audit tools and BotHire's package on the AON listing.
+ */
+export async function packageBelongsElsewhere(
+  installCommand: string | null | undefined,
+  installPackage: string | null | undefined,
+  listingUrl: string | null | undefined,
+): Promise<boolean> {
+  const registry = registryFor(installCommand);
+  const listing = githubRepoRef(listingUrl);
+  const raw = (installPackage || '').trim();
+  if (!registry || !listing || !raw || raw.includes('://') || /\s/.test(raw))
+    return false;
+  const name = bareName(raw).replace(/\[.*\]$/, '');
+  const url =
+    registry === 'npm'
+      ? `https://registry.npmjs.org/${name.replace('/', '%2F')}/latest`
+      : `https://pypi.org/pypi/${encodeURIComponent(name)}/json`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'AllMCPs-Install-Check' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.status === 404 || res.status === 410) return true;
+    if (!res.ok) return false;
+    // A package named exactly like the listing's repo is its own, whatever
+    // account published it (geolabel/geolabel-mcp ships `geolabel-mcp`).
+    if (name.replace(/^@[^/]+\//, '').toLowerCase() === listing.repo)
+      return false;
+    const repos = sourceReposFromDoc(registry, await res.json());
+    return (
+      repos.length > 0 &&
+      !repos.some((r) => r.owner === listing.owner || r.repo === listing.repo)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function checkRegistry(
   installCommand: string | null | undefined,
   installPackage: string | null | undefined,

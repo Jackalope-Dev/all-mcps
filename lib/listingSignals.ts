@@ -5,6 +5,7 @@
  */
 
 import { DIRECTORY_CATEGORIES } from './categories';
+import { packageBelongsElsewhere } from './packageRegistry';
 import {
   type AuthType,
   isAuthType,
@@ -116,7 +117,21 @@ export async function pickInstallCommand(
   listing: ListingSignalInput,
 ): Promise<NonNullable<ParsedInstallHint> | null> {
   const text = `${listing.description || ''}\n${listing.readme || ''}`;
-  const candidates = collectInstallCandidates(text);
+  const all = collectInstallCandidates(text);
+  // Drop what the registry proves is some other project's package before the
+  // sole-candidate shortcut or the LLM can pick it (see packageBelongsElsewhere).
+  const foreign = await Promise.all(
+    all.map(
+      (hint) =>
+        !isRemoteHint(hint) &&
+        packageBelongsElsewhere(
+          hint.command,
+          hint.package || hint.args[hint.args.length - 1],
+          listing.url,
+        ),
+    ),
+  );
+  const candidates = all.filter((_, i) => !foreign[i]);
   if (candidates.length === 0) return null;
   if (candidates.length === 1) return candidates[0];
 
