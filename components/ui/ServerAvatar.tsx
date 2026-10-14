@@ -52,11 +52,14 @@ export function ServerAvatar({
   logoUrl,
   category,
   size = 48,
+  priority = false,
 }: {
   name: string;
   logoUrl?: string | null;
   category?: string;
   size?: number;
+  /** Above-the-fold hero logo: load eagerly at high priority instead of lazily. */
+  priority?: boolean;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const radius = size > 40 ? 12 : 10;
@@ -82,7 +85,8 @@ export function ServerAvatar({
         alt={`${displayName} logo`}
         width={size}
         height={size}
-        loading="lazy"
+        loading={priority ? 'eager' : 'lazy'}
+        fetchPriority={priority ? 'high' : undefined}
         decoding="async"
         style={{
           borderRadius: radius,

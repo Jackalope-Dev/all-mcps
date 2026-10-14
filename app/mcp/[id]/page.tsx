@@ -797,6 +797,7 @@ export default async function MCPDetail({
                     logoUrl={server.logoUrl}
                     category={server.category}
                     size={72}
+                    priority
                   />
                   <div className="detail-title-text">
                     <div className="detail-title-heading">
