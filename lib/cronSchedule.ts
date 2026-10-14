@@ -61,13 +61,20 @@ export const AI_CONTENT_JOBS: CronJob[] = [
 // cadence: Cloudflare kept firing the old "*/20" for over an hour after the
 // site's schedule was changed to "*/10", and never fired the jobs Worker's own.
 const AI_CONTENT_DEDICATED_RUNS = 1;
-export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = Array.from(
-  { length: AI_CONTENT_DEDICATED_RUNS },
-  () => ({
+// Install-only runs (?pass=install) make no OpenAI calls, so they don't count
+// against that allowance. Without them installs only got the slots left after
+// write-ups: ~36/h against a backlog of ~11.7k.
+const AI_CONTENT_INSTALL_RUNS = 4;
+export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
+  ...Array.from({ length: AI_CONTENT_DEDICATED_RUNS }, () => ({
     path: '/api/cron/ai-content?batchSize=24',
-    secretVar: 'CRON_SECRET',
-  }),
-);
+    secretVar: 'CRON_SECRET' as const,
+  })),
+  ...Array.from({ length: AI_CONTENT_INSTALL_RUNS }, () => ({
+    path: '/api/cron/ai-content?pass=install&batchSize=24',
+    secretVar: 'CRON_SECRET' as const,
+  })),
+];
 
 // Must run on the Worker that serves pages. It deletes every ISR-cache prefix
 // except the *running* build's (process.env.OPEN_NEXT_BUILD_ID), so on any

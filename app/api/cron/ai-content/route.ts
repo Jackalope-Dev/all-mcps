@@ -139,53 +139,60 @@ export async function POST(req: Request) {
       Number.isFinite(queryBatch) && queryBatch > 0
         ? Math.min(Math.floor(queryBatch), 24)
         : DEFAULT_BATCH_SIZE;
+    // ?pass=install claims only install picks: README + registry checks and at
+    // most one Jev call each, no OpenAI. Run as extra jobs per tick so the
+    // install backlog isn't limited to the slots left over after write-ups,
+    // which are capped for OpenAI spend (see AI_CONTENT_DEDICATED_RUNS).
+    const installOnly = url.searchParams.get('pass') === 'install';
 
     // Phase 1: atomically claim highest-value never-enriched or missing-writeup listings
-    const claimedNew = (await db
-      .update(servers)
-      .set({ aiEnrichedAt: claimTime })
-      .where(
-        inArray(
-          servers.id,
-          db
-            .select({ id: servers.id })
-            .from(servers)
-            .where(
-              and(
-                eq(servers.status, 'active'),
-                // Rows skipped as thin/JEV keep aiEnrichedAt with no aiDoc or
-                // summary; re-claiming them here pinned the same top-view rows
-                // every tick. Only backfill docs for rows that got a summary.
-                // A summarized row whose doc backfill is skipped gets aiDoc = ''
-                // (markWriteupSkipped), so it drops out of this clause too.
-                or(
-                  isNull(servers.aiEnrichedAt),
-                  and(isNull(servers.aiDoc), isNotNull(servers.aiSummary)),
-                ),
-              ),
-            )
-            // Leads with idx_servers_status_popularity's columns so D1 walks
-            // the index and stops after the batch (~4k rows read) instead of
-            // sorting every active listing (~51k) on each claim.
-            .orderBy(
-              desc(servers.views),
-              desc(servers.copies),
-              desc(servers.upvotes),
-              sql`${servers.githubStars} IS NULL`,
-              desc(servers.githubStars),
-              asc(servers.createdAt),
-            )
-            .limit(batchSize),
-        ),
-      )
-      .returning({
-        id: servers.id,
-        name: servers.name,
-        url: servers.url,
-        description: servers.description,
-        category: servers.category,
-        tools: servers.tools,
-      })) as Omit<ClaimedRow, 'pass'>[];
+    const claimedNew = installOnly
+      ? []
+      : ((await db
+          .update(servers)
+          .set({ aiEnrichedAt: claimTime })
+          .where(
+            inArray(
+              servers.id,
+              db
+                .select({ id: servers.id })
+                .from(servers)
+                .where(
+                  and(
+                    eq(servers.status, 'active'),
+                    // Rows skipped as thin/JEV keep aiEnrichedAt with no aiDoc or
+                    // summary; re-claiming them here pinned the same top-view rows
+                    // every tick. Only backfill docs for rows that got a summary.
+                    // A summarized row whose doc backfill is skipped gets aiDoc = ''
+                    // (markWriteupSkipped), so it drops out of this clause too.
+                    or(
+                      isNull(servers.aiEnrichedAt),
+                      and(isNull(servers.aiDoc), isNotNull(servers.aiSummary)),
+                    ),
+                  ),
+                )
+                // Leads with idx_servers_status_popularity's columns so D1 walks
+                // the index and stops after the batch (~4k rows read) instead of
+                // sorting every active listing (~51k) on each claim.
+                .orderBy(
+                  desc(servers.views),
+                  desc(servers.copies),
+                  desc(servers.upvotes),
+                  sql`${servers.githubStars} IS NULL`,
+                  desc(servers.githubStars),
+                  asc(servers.createdAt),
+                )
+                .limit(batchSize),
+            ),
+          )
+          .returning({
+            id: servers.id,
+            name: servers.name,
+            url: servers.url,
+            description: servers.description,
+            category: servers.category,
+            tools: servers.tools,
+          })) as Omit<ClaimedRow, 'pass'>[]);
 
     const claimedWriteup: ClaimedRow[] = claimedNew.map((c) => ({
       ...c,
@@ -194,7 +201,7 @@ export async function POST(req: Request) {
 
     let claimedStale: ClaimedRow[] = [];
     const staleSlots = batchSize - claimedNew.length;
-    if (staleSlots > 0) {
+    if (!installOnly && staleSlots > 0) {
       const staleCutoff = new Date(claimTime.getTime() - STALE_RECHECK_MS);
       const candidates = await db
         .select({
@@ -257,8 +264,12 @@ export async function POST(req: Request) {
               .where(
                 and(
                   eq(servers.status, 'active'),
-                  isNotNull(servers.aiEnrichedAt),
-                  hasWriteup,
+                  // The regular pass waits for a write-up, which picks an
+                  // install itself; install-only runs also take listings still
+                  // queued for one, skipping only those marked thin (aiDoc '').
+                  installOnly
+                    ? or(isNull(servers.aiDoc), hasWriteup)
+                    : and(isNotNull(servers.aiEnrichedAt), hasWriteup),
                   isNull(servers.installExtractedAt),
                 ),
               )
@@ -285,7 +296,7 @@ export async function POST(req: Request) {
     }
 
     const leftoverAfterInstall = leftover - claimedInstall.length;
-    if (leftoverAfterInstall > 0) {
+    if (!installOnly && leftoverAfterInstall > 0) {
       const metaRows = await db
         .select({
           id: servers.id,
