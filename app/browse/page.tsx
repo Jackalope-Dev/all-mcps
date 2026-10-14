@@ -1,18 +1,14 @@
 import type { Metadata } from 'next';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import DirectoryGrid from '../../components/DirectoryGrid';
+import { browseCatalog } from '../../lib/browse';
+import { parseBrowseParams } from '../../lib/browseParams';
 import {
   categoryFromSlug,
   categorySlug,
   normalizeCategory,
   parseCategoryLabel,
 } from '../../lib/categories';
-import {
-  getNewestActiveServers,
-  getRankingCandidates,
-  hydrateServersByIds,
-  relatedRankingScore,
-} from '../../lib/servers';
 
 // 5-minute ISR caches default /browse views at the Edge CDN for instant page loads.
 export const revalidate = 300;
@@ -92,7 +88,7 @@ export async function generateMetadata({
 export default async function BrowsePage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; q?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
   const categoryRaw =
@@ -102,28 +98,22 @@ export default async function BrowsePage({
     ? resolveCategory(categoryRaw) || categoryRaw
     : null;
 
-  // A category can hold >13k listings: rank slim rows, then load full rows
-  // only for the 60 the grid server-renders (see getRankingCandidates).
-  const candidates = category ? await getRankingCandidates({ category }) : null;
-  const servers = candidates
-    ? await hydrateServersByIds(
-        [...candidates]
-          .sort((a, b) => relatedRankingScore(b) - relatedRankingScore(a))
-          .slice(0, 60)
-          .map((s) => s.id),
-      )
-    : await getNewestActiveServers(60);
+  // Page one comes from the same server-side search/filter/sort the grid
+  // calls for every later change (lib/browse.ts), so the HTML matches what
+  // the client would fetch and nothing else needs loading on mount.
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (typeof v === 'string') query.set(k, v);
+  }
+  if (category) query.set('category', category);
+  const browseParams = parseBrowseParams(query);
+  const result = await browseCatalog(browseParams);
 
   const label = category ? parseCategoryLabel(category).label : null;
   const canonical = category
     ? `https://allmcps.com/categories/${categorySlug(category)}`
     : 'https://allmcps.com/browse';
-  const relevant = servers;
-
-  // Server-render only a small slice for fast HTML + SEO; DirectoryGrid fetches the
-  // full catalog from /api/directory-feed on mount so search/sort/filter cover
-  // everything. Previously the entire catalog was inlined into the browse HTML.
-  const initialForGrid = relevant.slice(0, 60);
+  const relevant = result.items;
 
   const itemList = q
     ? []
@@ -175,7 +165,7 @@ export default async function BrowsePage({
           ? {
               mainEntity: {
                 '@type': 'ItemList',
-                numberOfItems: candidates?.length ?? relevant.length,
+                numberOfItems: result.total,
                 itemListElement: itemList,
               },
             }
@@ -195,11 +185,15 @@ export default async function BrowsePage({
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <DirectoryGrid
-        initialServers={initialForGrid}
-        initialCategory={category}
-        initialQuery={q}
+        initialServers={result.items}
+        initialCategory={browseParams.category}
+        initialQuery={browseParams.q}
         variant="browse"
-        lazyFeedUrl="/api/directory-feed"
+        serverResults={{
+          params: browseParams,
+          total: result.total,
+          capped: result.capped,
+        }}
       />
     </main>
   );

@@ -84,7 +84,36 @@ export type Engagement = {
   views?: number | null;
   githubStars?: number | null;
   npmDownloads?: number | null;
+} & QualitySignals;
+
+/** Optional evidence about whether a listing works, used to weight relevance. */
+type QualitySignals = {
+  healthStatus?: string | null;
+  toolsSource?: string | null;
+  installNeedsConfig?: unknown;
+  remoteEndpointHealthy?: boolean | number | null;
 };
+
+/**
+ * Relevance multiplier from what we know about a listing: one we saw run
+ * (live tools, a sandbox start that asked for keys, a healthy endpoint) ranks
+ * a little higher; an archived or unreachable one ranks lower. Applied to the
+ * match score, so a strong match on a dead listing still beats a weak match
+ * on a working one, but two similar matches resolve toward the one that works.
+ */
+export function qualityMultiplier(s: QualitySignals): number {
+  let m = 1;
+  if (s.healthStatus === 'archived') m *= 0.6;
+  else if (s.healthStatus === 'offline') m *= 0.5;
+  if (
+    s.toolsSource === 'introspected' ||
+    s.installNeedsConfig != null ||
+    s.remoteEndpointHealthy
+  ) {
+    m *= 1.15;
+  }
+  return m;
+}
 
 export type QueryTerm = { term: string; boundary: RegExp };
 
@@ -466,7 +495,8 @@ export function rankServers<T extends Searchable & Engagement>(
     const out: Array<{ server: T; score: number }> = [];
     for (const server of servers) {
       const score = scoreServerMatch(server, terms, fullQuery, requireAll);
-      if (score > 0) out.push({ server, score });
+      if (score > 0)
+        out.push({ server, score: score * qualityMultiplier(server) });
     }
     return out;
   };
@@ -503,7 +533,10 @@ export function rankServers<T extends Searchable & Engagement>(
       }
 
       if (totalFuzzy > 0) {
-        fuzzyOut.push({ server, score: totalFuzzy });
+        fuzzyOut.push({
+          server,
+          score: totalFuzzy * qualityMultiplier(server),
+        });
       }
     }
     scored = fuzzyOut;
@@ -581,7 +614,10 @@ export function hybridRankServers<
     }
 
     if (totalScore > 0) {
-      scoredMap.set(server.id, { server, score: totalScore });
+      scoredMap.set(server.id, {
+        server,
+        score: totalScore * qualityMultiplier(server),
+      });
     }
   }
 
@@ -590,7 +626,10 @@ export function hybridRankServers<
     if (vm.score >= 0.5 && !scoredMap.has(vm.id)) {
       const server = servers.find((s) => s.id === vm.id);
       if (server) {
-        scoredMap.set(server.id, { server, score: vm.score * 100 });
+        scoredMap.set(server.id, {
+          server,
+          score: vm.score * 100 * qualityMultiplier(server),
+        });
       }
     }
   }

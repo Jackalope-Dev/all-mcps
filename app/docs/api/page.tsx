@@ -30,7 +30,7 @@ const ENDPOINTS = [
     method: 'GET',
     path: '/api/v1/search',
     title: 'Search servers',
-    desc: 'Keyword and category search over active listings. Returns install hints with confidence scores.',
+    desc: 'Keyword, semantic and category search over listed servers, ranked toward ones we have seen run. Optional transport=stdio|remote and verified=1 filters. Returns install hints with confidence scores.',
     example: 'https://allmcps.com/api/v1/search?q=github&limit=5',
   },
   {

@@ -47,7 +47,7 @@ import {
   type Searchable,
   type SearchPrefilter,
 } from './search';
-import { SERVABLE_SQL } from './servability';
+import { servableSql } from './servability';
 import { rankShowcaseServers } from './showcase';
 import { computeTrustTier, type TrustTierInput } from './trustTier';
 
@@ -992,6 +992,8 @@ const SEARCH_CANDIDATE_SELECT_SQL = `s.id AS id, s.name AS name, s.description A
   s.pricing_model AS pricingModel, s.auth_type AS authType, s.compatible_clients AS compatibleClients,
   s.upvotes AS upvotes, s.copies AS copies, s.views AS views,
   s.github_stars AS githubStars, s.npm_downloads AS npmDownloads,
+  s.health_status AS healthStatus, s.tools_source AS toolsSource,
+  s.install_needs_config AS installNeedsConfig, s.remote_endpoint_healthy AS remoteEndpointHealthy,
   CASE WHEN json_valid(s.tools) THEN (
     SELECT group_concat(json_extract(je.value, '$.name'), ' ') FROM json_each(s.tools) AS je
   ) END AS toolText`;
@@ -1015,6 +1017,10 @@ type SearchCandidateRow = {
   views: number | null;
   githubStars: number | null;
   npmDownloads: number | null;
+  healthStatus: string | null;
+  toolsSource: string | null;
+  installNeedsConfig: number | null;
+  remoteEndpointHealthy: number | null;
   toolText: string | null;
 };
 
@@ -1046,6 +1052,10 @@ function toSearchCandidate(row: SearchCandidateRow): SearchCandidate {
     views: row.views,
     githubStars: row.githubStars,
     npmDownloads: row.npmDownloads,
+    healthStatus: row.healthStatus,
+    toolsSource: row.toolsSource,
+    installNeedsConfig: row.installNeedsConfig,
+    remoteEndpointHealthy: row.remoteEndpointHealthy,
   };
 }
 
@@ -1116,7 +1126,7 @@ async function prefilterSearchCandidates(
     WITH c AS MATERIALIZED (
       SELECT id, name, (upvotes * 5 + copies + views * 0.05) AS eng, ${haystack} AS h
       FROM servers
-      WHERE ${sql.raw(SERVABLE_SQL)}${categoryFilter}
+      WHERE ${sql.raw(servableSql())}${categoryFilter}
     ),
     m AS (${sql.join(wheres.map(topMatches), sql` UNION `)})
     SELECT ${sql.raw(SEARCH_CANDIDATE_SELECT_SQL)}
@@ -1138,7 +1148,7 @@ async function searchCandidatesByIds(
     const rows = await db.all<SearchCandidateRow>(sql`
       SELECT ${sql.raw(SEARCH_CANDIDATE_SELECT_SQL)}
       FROM servers s
-      WHERE s.status = 'active' AND s.stale_flagged_at IS NULL${categoryFilter}
+      WHERE ${sql.raw(servableSql('s'))}${categoryFilter}
         AND s.id IN (${sql.join(
           chunk.map((id) => sql`${id}`),
           sql`, `,
@@ -1547,139 +1557,145 @@ function feedAiTextFromRaw(
 }
 
 /**
- * One page of the public directory feed for the /browse client grid.
- *
- * The full catalog is thousands of listings; pulling every row's full AI-content
- * columns in a single query loads several MB into the Worker/D1 isolate at once,
- * which can trip D1's per-query memory/CPU limits and leave the browse grid stuck
- * on its initial slice. So we *shard*: select only the columns the grid reads,
- * cap the AI text at the SQL level, and page with LIMIT/OFFSET. The client walks
- * the pages until `nextOffset` is null, assembling the whole catalog reliably.
+ * The browse grid's row shape: only what it renders, with the heavy
+ * AI-content columns capped in SQL so a page stays small even when individual
+ * overviews or use-case lists are long.
  */
-export async function getDirectoryFeedPage(
-  offset: number,
-  limit: number,
-): Promise<{ items: DirectoryFeedItem[]; total: number }> {
+function selectFeedRows(db: D1Drizzle, where: SQL) {
+  return db
+    .select({
+      id: serversTable.id,
+      name: serversTable.name,
+      url: serversTable.url,
+      description: serversTable.description,
+      category: serversTable.category,
+      logoUrl: serversTable.logoUrl,
+      isOfficial: serversTable.isOfficial,
+      isPremium: serversTable.isPremium,
+      featuredUntil: serversTable.featuredUntil,
+      githubStars: serversTable.githubStars,
+      npmDownloads: serversTable.npmDownloads,
+      lastCommitAt: serversTable.lastCommitAt,
+      installConfidence: serversTable.installConfidence,
+      tools: serversTable.tools,
+      toolsSource: serversTable.toolsSource,
+      installNeedsConfig: serversTable.installNeedsConfig,
+      remoteEndpointHealthy: serversTable.remoteEndpointHealthy,
+      views: serversTable.views,
+      copies: serversTable.copies,
+      upvotes: serversTable.upvotes,
+      createdAt: serversTable.createdAt,
+      tags: serversTable.tags,
+      pricingModel: serversTable.pricingModel,
+      authType: serversTable.authType,
+      compatibleClients: serversTable.compatibleClients,
+      // Cap the heavy AI-content columns in SQL so a page stays small even
+      // when individual overviews/use-case lists are long.
+      aiSummary: sql<
+        string | null
+      >`substr(${serversTable.aiSummary}, 1, ${FEED_AI_TEXT_MAX})`,
+      aiOverview: sql<
+        string | null
+      >`substr(${serversTable.aiOverview}, 1, ${FEED_AI_TEXT_MAX})`,
+      aiUseCases: sql<
+        string | null
+      >`substr(${serversTable.aiUseCases}, 1, ${FEED_AI_TEXT_MAX})`,
+      aiFeatures: sql<
+        string | null
+      >`substr(${serversTable.aiFeatures}, 1, ${FEED_AI_TEXT_MAX})`,
+      aiFaq: sql<
+        string | null
+      >`substr(${serversTable.aiFaq}, 1, ${FEED_AI_TEXT_MAX})`,
+    })
+    .from(serversTable)
+    .where(where);
+}
+
+type FeedRow = Awaited<ReturnType<typeof selectFeedRows>>[number];
+
+function toFeedItem(r: FeedRow): DirectoryFeedItem {
+  return {
+    id: r.id,
+    name: r.name,
+    url: r.url,
+    description: cleanListingDescription(r.description),
+    category: r.category,
+    logoUrl: r.logoUrl ?? null,
+    isOfficial: !!r.isOfficial,
+    isPremium: !!r.isPremium,
+    featuredUntil: r.featuredUntil ?? null,
+    githubStars: r.githubStars ?? null,
+    npmDownloads: r.npmDownloads ?? null,
+    lastCommitAt: r.lastCommitAt ?? null,
+    installConfidence: r.installConfidence ?? null,
+    toolText: feedToolText(r.tools),
+    toolCount: parseServerTools(r.tools).length,
+    toolsSource: r.toolsSource ?? null,
+    testedWorking: isTestedWorking(r),
+    aiText: feedAiTextFromRaw(
+      r.aiSummary,
+      r.aiOverview,
+      r.aiUseCases,
+      r.aiFeatures,
+      r.aiFaq,
+    ),
+    views: r.views ?? 0,
+    copies: r.copies ?? 0,
+    upvotes: r.upvotes ?? 0,
+    createdAt: r.createdAt ?? null,
+    tags: parseStringArray(r.tags),
+    pricingModel: r.pricingModel ?? null,
+    authType: r.authType ?? null,
+    compatibleClients: parseStringArray(r.compatibleClients),
+  };
+}
+
+/**
+ * Feed items for `ids`, in the order given, servable listings only. The browse
+ * API picks and orders ids in SQL (lib/browse.ts) and hydrates just the page
+ * it returns through here.
+ */
+export async function getFeedItemsByIds(
+  ids: string[],
+): Promise<DirectoryFeedItem[]> {
+  if (ids.length === 0) return [];
   try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          id: serversTable.id,
-          name: serversTable.name,
-          url: serversTable.url,
-          description: serversTable.description,
-          category: serversTable.category,
-          logoUrl: serversTable.logoUrl,
-          isOfficial: serversTable.isOfficial,
-          isPremium: serversTable.isPremium,
-          featuredUntil: serversTable.featuredUntil,
-          githubStars: serversTable.githubStars,
-          npmDownloads: serversTable.npmDownloads,
-          lastCommitAt: serversTable.lastCommitAt,
-          installConfidence: serversTable.installConfidence,
-          tools: serversTable.tools,
-          toolsSource: serversTable.toolsSource,
-          installNeedsConfig: serversTable.installNeedsConfig,
-          remoteEndpointHealthy: serversTable.remoteEndpointHealthy,
-          views: serversTable.views,
-          copies: serversTable.copies,
-          upvotes: serversTable.upvotes,
-          createdAt: serversTable.createdAt,
-          tags: serversTable.tags,
-          pricingModel: serversTable.pricingModel,
-          authType: serversTable.authType,
-          compatibleClients: serversTable.compatibleClients,
-          // Cap the heavy AI-content columns in SQL so a page stays small even
-          // when individual overviews/use-case lists are long.
-          aiSummary: sql<
-            string | null
-          >`substr(${serversTable.aiSummary}, 1, ${FEED_AI_TEXT_MAX})`,
-          aiOverview: sql<
-            string | null
-          >`substr(${serversTable.aiOverview}, 1, ${FEED_AI_TEXT_MAX})`,
-          aiUseCases: sql<
-            string | null
-          >`substr(${serversTable.aiUseCases}, 1, ${FEED_AI_TEXT_MAX})`,
-          aiFeatures: sql<
-            string | null
-          >`substr(${serversTable.aiFeatures}, 1, ${FEED_AI_TEXT_MAX})`,
-          aiFaq: sql<
-            string | null
-          >`substr(${serversTable.aiFaq}, 1, ${FEED_AI_TEXT_MAX})`,
-        })
-        .from(serversTable)
-        // Pick the page's ids on idx_servers_status_created_id first, then read
-        // only those rows. A plain OFFSET walked (and sorted) every earlier row,
-        // so the deep pages the grid fetches in parallel read ~46k rows each.
-        .where(
-          inArray(
-            serversTable.id,
-            db
-              .select({ id: serversTable.id })
-              .from(serversTable)
-              .where(servableFilter())
-              .orderBy(desc(serversTable.createdAt), desc(serversTable.id))
-              .limit(limit)
-              .offset(offset),
-          ),
-        )
-        // Deterministic order (newest first, id tiebreaker) keeps paging stable.
-        .orderBy(desc(serversTable.createdAt), desc(serversTable.id));
-
-      const totalRow = await db
-        .select({ c: sql<number>`count(*)` })
-        .from(serversTable)
-        .where(servableFilter());
-      const total = Number(totalRow[0]?.c ?? rows.length);
-
-      if (total > 0) {
-        const items: DirectoryFeedItem[] = rows.map((r) => ({
-          id: r.id,
-          name: r.name,
-          url: r.url,
-          description: cleanListingDescription(r.description),
-          category: r.category,
-          logoUrl: r.logoUrl ?? null,
-          isOfficial: !!r.isOfficial,
-          isPremium: !!r.isPremium,
-          featuredUntil: r.featuredUntil ?? null,
-          githubStars: r.githubStars ?? null,
-          npmDownloads: r.npmDownloads ?? null,
-          lastCommitAt: r.lastCommitAt ?? null,
-          installConfidence: r.installConfidence ?? null,
-          toolText: feedToolText(r.tools),
-          toolCount: parseServerTools(r.tools).length,
-          toolsSource: r.toolsSource ?? null,
-          testedWorking: isTestedWorking(r),
-          aiText: feedAiTextFromRaw(
-            r.aiSummary,
-            r.aiOverview,
-            r.aiUseCases,
-            r.aiFeatures,
-            r.aiFaq,
-          ),
-          views: r.views ?? 0,
-          copies: r.copies ?? 0,
-          upvotes: r.upvotes ?? 0,
-          createdAt: r.createdAt ?? null,
-          tags: parseStringArray(r.tags),
-          pricingModel: r.pricingModel ?? null,
-          authType: r.authType ?? null,
-          compatibleClients: parseStringArray(r.compatibleClients),
-        }));
-
-        return { items, total };
+    const conn = await getSearchDb();
+    if (conn) {
+      const found = new Map<string, DirectoryFeedItem>();
+      for (let i = 0; i < ids.length; i += D1_ID_CHUNK) {
+        const rows = await selectFeedRows(
+          conn.db,
+          and(
+            inArray(serversTable.id, ids.slice(i, i + D1_ID_CHUNK)),
+            servableFilter(),
+          ) as SQL,
+        );
+        for (const r of rows) found.set(r.id, toFeedItem(r));
       }
+      return ids
+        .map((id) => found.get(id))
+        .filter((s): s is DirectoryFeedItem => Boolean(s));
     }
   } catch (_e) {
-    // Fall back to the static JSON snapshot below.
+    // Fall back to the static snapshot below.
   }
+  const byId = new Map(
+    snapshotFeedPage(0, Number.MAX_SAFE_INTEGER).items.map((s) => [s.id, s]),
+  );
+  return ids
+    .map((id) => byId.get(id))
+    .filter((s): s is DirectoryFeedItem => Boolean(s));
+}
 
-  // Static fallback (local dev / DB unavailable): page the bundled snapshot with
-  // the same newest-first ordering so behavior matches production.
+/**
+ * A newest-first page of the bundled snapshot, for local dev and tests where
+ * D1 isn't reachable, so browse still renders something real.
+ */
+export function snapshotFeedPage(
+  offset: number,
+  limit: number,
+): { items: DirectoryFeedItem[]; total: number } {
   const all = snapshotCatalogServers()
     .map(normalizeServer)
     .sort((a, b) => toEpoch(b.createdAt) - toEpoch(a.createdAt));

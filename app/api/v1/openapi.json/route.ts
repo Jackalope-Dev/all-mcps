@@ -175,6 +175,22 @@ export async function GET() {
                 maximum: 100,
               },
             },
+            {
+              name: 'transport',
+              in: 'query',
+              description:
+                'Only servers installed over this transport: `stdio` (local process) or `remote` (hosted HTTP endpoint)',
+              required: false,
+              schema: { type: 'string', enum: ['stdio', 'remote'] },
+            },
+            {
+              name: 'verified',
+              in: 'query',
+              description:
+                '`1` = only servers AllMCPs has seen run: a live tools/list, a sandbox start that asked for keys, or a healthy remote endpoint',
+              required: false,
+              schema: { type: 'string', enum: ['1'] },
+            },
           ],
           responses: {
             '200': {

@@ -67,35 +67,31 @@ export function BadgeEmbedBuilder({
     }
   }, []);
 
-  // Fetch search index on focus/search
-  const fetchIndex = async () => {
-    if (allServers.length > 0) return;
+  // Suggestions come from the server as you type (popular listings before
+  // the first keystroke). It used to download the whole catalog on focus.
+  const fetchIndex = async (q = '') => {
     try {
-      const res = await fetch('/api/search-index');
+      const res = await fetch(
+        `/api/search-index?limit=8${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+      );
       if (res.ok) {
         const data = (await res.json()) as { servers?: IndexedServer[] } | null;
-        if (data?.servers) {
-          setAllServers(data.servers);
-        }
+        setAllServers(data?.servers ?? []);
       }
     } catch {
       // degrade silently
     }
   };
 
-  // Filter server suggestions
-  const suggestions = searchQuery.trim()
-    ? allServers
-        .filter((s) => {
-          const q = searchQuery.toLowerCase();
-          return (
-            s.id.toLowerCase().includes(q) ||
-            s.name.toLowerCase().includes(q) ||
-            s.category.toLowerCase().includes(q)
-          );
-        })
-        .slice(0, 8)
-    : allServers.slice(0, 8);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchIndex only reads its argument.
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    const timer = setTimeout(() => void fetchIndex(q), 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const suggestions = allServers.slice(0, 8);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -321,7 +317,7 @@ export function BadgeEmbedBuilder({
                 type="text"
                 value={searchQuery}
                 onFocus={() => {
-                  fetchIndex();
+                  if (allServers.length === 0) void fetchIndex();
                   setDropdownOpen(true);
                 }}
                 onChange={(e) => {

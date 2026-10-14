@@ -17,6 +17,11 @@ import {
 import Link from 'next/link';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BROWSE_PAGE_SIZE,
+  type BrowseParams,
+  browseQueryString,
+} from '../lib/browseParams';
+import {
   categorySlug,
   DIRECTORY_CATEGORIES,
   getCategoryMeta,
@@ -86,7 +91,7 @@ type Server = {
   compatibleClients?: string[] | null;
   /** Bounded AI search text (summary + use cases + features) for intent-query recall. */
   aiText?: string | null;
-  createdAt?: string | Date;
+  createdAt?: string | Date | null;
 };
 
 /** Claimed (badge/DNS) or premium/paid — shown as "Verified" in the directory. */
@@ -121,8 +126,8 @@ function stableAdSlot(seed: string): number {
   return 3 + (Math.abs(h) % 8);
 }
 
-// Max parallel /api/directory-feed page requests (see the lazy-feed effect).
-const FEED_CONCURRENCY = 4;
+/** Typing pause before a browse search hits the server. */
+const SEARCH_DEBOUNCE_MS = 250;
 
 export default function DirectoryGrid({
   initialServers,
@@ -130,7 +135,7 @@ export default function DirectoryGrid({
   initialQuery = '',
   variant = 'landing',
   totalCount,
-  lazyFeedUrl,
+  serverResults,
 }: {
   initialServers: Server[];
   initialCategory?: string | null;
@@ -140,46 +145,59 @@ export default function DirectoryGrid({
   /** Full catalog size, when `initialServers` is a truncated subset (landing page only). Drives the "browse all" callout. */
   totalCount?: number;
   /**
-   * When set, the grid renders `initialServers` for the first paint (kept small
-   * for SEO + fast HTML) and fetches the full catalog from this URL on mount so
-   * search/sort/filter cover everything without shipping the whole catalog in HTML.
+   * Browse only: `initialServers` is page one of a server-side result
+   * (lib/browse.ts) for `params`, and every search, filter, sort and "Load
+   * more" asks /api/browse for the next page instead of filtering in the
+   * browser. Without it the grid filters its own `initialServers` (homepage).
    */
-  lazyFeedUrl?: string;
+  serverResults?: { params: BrowseParams; total: number; capped: boolean };
 }) {
   const isBrowse = variant === 'browse';
   const browseBase = '/browse';
-  // Working dataset: seeded from the server-rendered slice, then replaced by the
-  // full feed once `lazyFeedUrl` resolves (browse only).
+  const serverMode = Boolean(serverResults);
+  const initialParams = serverResults?.params;
+  // Working dataset: the server-rendered page. In server mode it is replaced
+  // by each /api/browse response; otherwise it is filtered in place.
   const [servers, setServers] = useState<Server[]>(initialServers);
-  const [feedStatus, setFeedStatus] = useState<
-    'idle' | 'loading' | 'ready' | 'error'
-  >(lazyFeedUrl ? 'loading' : 'idle');
+  const [browseTotal, setBrowseTotal] = useState(serverResults?.total ?? 0);
+  const [browseCapped, setBrowseCapped] = useState(
+    serverResults?.capped ?? false,
+  );
+  const [browseStatus, setBrowseStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('idle');
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     initialCategory,
   );
   const [selectedClient, setSelectedClient] = useState<
     'all' | 'cursor' | 'claude' | 'windsurf' | 'cline'
-  >('all');
-  const [selectedStack, setSelectedStack] = useState<TechStack>('all');
-  const [selectedTransport, setSelectedTransport] =
-    useState<TransportKind>('all');
+  >(initialParams?.client ?? 'all');
+  const [selectedStack, setSelectedStack] = useState<TechStack>(
+    initialParams?.stack ?? 'all',
+  );
+  const [selectedTransport, setSelectedTransport] = useState<TransportKind>(
+    initialParams?.transport ?? 'all',
+  );
   const [selectedPricing, setSelectedPricing] = useState<
     'all' | 'free' | 'freemium' | 'paid' | 'byok'
-  >('all');
+  >(initialParams?.pricing ?? 'all');
   const [selectedAuth, setSelectedAuth] = useState<
     'all' | 'none' | 'api_key' | 'oauth' | 'other'
-  >('all');
+  >(initialParams?.auth ?? 'all');
   // Default to relevance ordering whenever there's a query (incl. deep links).
   const [sortMode, setSortMode] = useState<SortMode>(
-    initialQuery.trim() ? 'relevance' : isBrowse ? 'trending' : 'popular',
+    initialParams?.sort ??
+      (initialQuery.trim() ? 'relevance' : isBrowse ? 'trending' : 'popular'),
   );
   // Landing favors visual discovery (grid); /browse defaults to power-user list.
   // localStorage may override after mount.
   const [viewMode, setViewMode] = useState<ViewMode>(
     isBrowse ? 'list' : 'grid',
   );
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [verifiedOnly, setVerifiedOnly] = useState(
+    initialParams?.verified ?? false,
+  );
   const [visibleCount, setVisibleCount] = useState(isBrowse ? 30 : 12);
 
   const SEARCH_PLACEHOLDERS = useMemo(
@@ -242,113 +260,108 @@ export default function DirectoryGrid({
     prevQueryEmptyRef.current = empty;
   }, [searchQuery, isBrowse]);
 
-  // Track whether the full feed has arrived so a server re-render (e.g. category
-  // navigation swapping in a new SSR slice) doesn't shrink the working set back.
-  const loadedFullRef = useRef(false);
+  // A server re-render (category link, back/forward) brings a new SSR page.
   useEffect(() => {
-    if (!loadedFullRef.current) setServers(initialServers);
-  }, [initialServers]);
+    setServers(initialServers);
+    if (serverResults) {
+      setBrowseTotal(serverResults.total);
+      setBrowseCapped(serverResults.capped);
+    }
+  }, [initialServers, serverResults]);
 
-  // Lazy-load the full catalog on mount, replacing the SSR slice, so client-side
-  // search/sort/filter cover everything (browse only). The feed is paged so no
-  // single request has to carry the whole catalog (which could hang/time out).
-  // The first page tells us `total`/`limit`, so the remaining pages are known
-  // upfront and fetched concurrently (Promise.all) rather than one-by-one —
-  // at ~10k+ servers / 1000 per page that's the difference between ~1 round
-  // trip and ~11 serialized ones before search/filter/sort cover everything.
-  // Partial results are kept — only a completely empty load surfaces the error state.
+  // Server mode: the current filters as /api/browse params (page one).
+  const browseParams: BrowseParams = {
+    q: searchQuery.trim(),
+    category: selectedCategory,
+    client: selectedClient === 'all' ? null : selectedClient,
+    stack: selectedStack === 'all' ? null : selectedStack,
+    transport: selectedTransport === 'all' ? null : selectedTransport,
+    pricing: selectedPricing === 'all' ? null : selectedPricing,
+    auth:
+      selectedAuth === 'all' || selectedAuth === 'other' ? null : selectedAuth,
+    verified: verifiedOnly,
+    sort:
+      sortMode === 'relevance' && !searchQuery.trim() ? 'trending' : sortMode,
+    offset: 0,
+    limit: BROWSE_PAGE_SIZE,
+  };
+  const browseKey = browseQueryString(browseParams);
+  const initialBrowseKey = useRef(
+    initialParams ? browseQueryString(initialParams) : null,
+  );
+  const browseAbort = useRef<AbortController | null>(null);
+
+  const fetchBrowsePage = async (
+    query: string,
+    append: boolean,
+  ): Promise<void> => {
+    browseAbort.current?.abort();
+    const controller = new AbortController();
+    browseAbort.current = controller;
+    setBrowseStatus('loading');
+    try {
+      const res = await fetch(`/api/browse?${query}`, {
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`browse ${res.status}`);
+      const data = (await res.json()) as {
+        items: Server[];
+        total: number;
+        capped: boolean;
+      };
+      setServers((prev) => (append ? [...prev, ...data.items] : data.items));
+      setBrowseTotal(data.total);
+      setBrowseCapped(data.capped);
+      setBrowseStatus('idle');
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setBrowseStatus('error');
+    }
+  };
+
+  // Server mode: refetch page one whenever the filters change. Typing waits
+  // for a short pause; clicks go out at once. The SSR page already matches
+  // the initial filters, so the first render doesn't refetch.
+  const lastQueryRef = useRef(searchQuery);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: browseKey encodes every filter, and fetchBrowsePage is recreated each render.
   useEffect(() => {
-    if (!lazyFeedUrl) return;
-    let cancelled = false;
-    setFeedStatus('loading');
+    if (!serverMode) return;
+    if (browseKey === initialBrowseKey.current) {
+      initialBrowseKey.current = null;
+      return;
+    }
+    initialBrowseKey.current = null;
+    const typing = lastQueryRef.current !== searchQuery;
+    lastQueryRef.current = searchQuery;
+    const timer = setTimeout(
+      () => void fetchBrowsePage(browseKey, false),
+      typing ? SEARCH_DEBOUNCE_MS : 0,
+    );
+    return () => clearTimeout(timer);
+  }, [browseKey, serverMode]);
 
-    (async () => {
-      const sep = lazyFeedUrl.includes('?') ? '&' : '?';
-      type FeedPage = {
-        servers?: Server[];
-        total?: number;
-        limit?: number;
-        nextOffset?: number | null;
-      };
-      const fetchPage = async (offset: number): Promise<FeedPage | null> => {
-        try {
-          const res = await fetch(`${lazyFeedUrl}${sep}offset=${offset}`);
-          if (!res.ok) throw new Error(`directory feed ${res.status}`);
-          return (await res.json()) as FeedPage;
-        } catch {
-          return null; // Network/HTTP error — caller keeps whatever it already has.
-        }
-      };
+  // Server mode: keep every filter in the URL, so a filtered view can be
+  // shared or reloaded. Defaults (page one, the default sort) are left out.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: browseKey encodes every filter.
+  useEffect(() => {
+    if (!serverMode || typeof window === 'undefined') return;
+    const defaultSort = browseParams.q ? 'relevance' : 'trending';
+    const qs = browseQueryString({
+      ...browseParams,
+      category: browseParams.category
+        ? categorySlug(browseParams.category)
+        : null,
+      sort: browseParams.sort === defaultSort ? undefined : browseParams.sort,
+      limit: 0,
+    });
+    window.history.replaceState({}, '', qs ? `/browse?${qs}` : '/browse');
+  }, [browseKey, serverMode]);
 
-      const accumulated: Server[] = [];
-      const first = await fetchPage(0);
-      if (cancelled) return;
-
-      if (first?.servers?.length) {
-        accumulated.push(...first.servers);
-
-        if (first.total && first.limit && first.servers.length < first.total) {
-          const offsets: number[] = [];
-          for (
-            let offset = first.servers.length;
-            offset < first.total;
-            offset += first.limit
-          ) {
-            offsets.push(offset);
-          }
-          // Bounded concurrency + one retry: firing every page at once piled
-          // ~10 concurrent requests onto one Worker isolate, which occasionally
-          // got canceled as "hung" and silently dropped ~1k listings.
-          const rest: (FeedPage | null)[] = new Array(offsets.length);
-          let cursor = 0;
-          const worker = async () => {
-            while (!cancelled && cursor < offsets.length) {
-              const i = cursor++;
-              rest[i] =
-                (await fetchPage(offsets[i])) ?? (await fetchPage(offsets[i]));
-            }
-          };
-          await Promise.all(
-            Array.from(
-              { length: Math.min(FEED_CONCURRENCY, offsets.length) },
-              worker,
-            ),
-          );
-          if (cancelled) return;
-          for (const page of rest) {
-            if (page?.servers?.length) accumulated.push(...page.servers);
-          }
-        } else {
-          // Server didn't report total/limit — fall back to walking nextOffset.
-          let next = first.nextOffset;
-          while (next != null) {
-            const page = await fetchPage(next);
-            if (cancelled) return;
-            if (!page?.servers?.length) break;
-            accumulated.push(...page.servers);
-            next = page.nextOffset ?? null;
-          }
-        }
-      }
-
-      if (cancelled) return;
-      if (accumulated.length) {
-        loadedFullRef.current = true;
-        // Merge with initialServers/prev once after full feed arrives to prevent stuttering/re-sorting on every chunk
-        setServers((prev) => {
-          const map = new Map<string, Server>();
-          for (const s of prev) map.set(s.id, s);
-          for (const s of accumulated) map.set(s.id, s);
-          return Array.from(map.values());
-        });
-      }
-      setFeedStatus(accumulated.length ? 'ready' : 'error');
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [lazyFeedUrl]);
+  const loadMoreFromServer = () => {
+    void fetchBrowsePage(
+      browseQueryString({ ...browseParams, offset: servers.length }),
+      true,
+    );
+  };
 
   // Extract unique categories for the filter pill list
   const categories = useMemo(() => {
@@ -364,6 +377,8 @@ export default function DirectoryGrid({
   );
 
   const filteredServers = useMemo(() => {
+    // Server mode: the page is already searched, filtered and sorted.
+    if (serverMode) return servers;
     const hasQuery = queryTerms.length > 0;
 
     const stackMatch = (server: Server): boolean => {
@@ -601,9 +616,10 @@ export default function DirectoryGrid({
     sortMode,
     verifiedOnly,
     isBrowse,
+    serverMode,
   ]);
 
-  const filteredCount = filteredServers.length;
+  const filteredCount = serverMode ? browseTotal : filteredServers.length;
 
   useEffect(() => {
     if (!searchQuery && !selectedCategory) return;
@@ -672,6 +688,7 @@ export default function DirectoryGrid({
     setSelectedCategory(null);
     setSearchQuery('');
     setVerifiedOnly(false);
+    setSelectedClient('all');
     setSelectedStack('all');
     setSelectedTransport('all');
     setSelectedPricing('all');
@@ -700,8 +717,12 @@ export default function DirectoryGrid({
     verifiedOnly,
   ]);
 
-  const visibleServers = filteredServers.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredServers.length;
+  const visibleServers = serverMode
+    ? filteredServers
+    : filteredServers.slice(0, visibleCount);
+  const hasMore = serverMode
+    ? servers.length < browseTotal
+    : visibleCount < filteredServers.length;
 
   const isFiltered =
     searchQuery.length > 0 ||
@@ -710,7 +731,8 @@ export default function DirectoryGrid({
     selectedStack !== 'all' ||
     selectedTransport !== 'all' ||
     selectedPricing !== 'all' ||
-    selectedAuth !== 'all';
+    selectedAuth !== 'all' ||
+    selectedClient !== 'all';
   const categoryMeta = selectedCategory
     ? parseCategoryLabel(selectedCategory)
     : null;
@@ -1101,35 +1123,12 @@ export default function DirectoryGrid({
         className="container animate-fade-in delay-3"
         style={{ marginBottom: '6rem' }}
       >
-        {lazyFeedUrl && feedStatus === 'loading' && (
-          <div
-            className="directory-feed-status"
-            role="status"
-            aria-live="polite"
-          >
-            <Loader2
-              size={16}
-              aria-hidden="true"
-              className="directory-feed-spinner"
-            />
-            Loading full directory so search and filters cover every listing…
-          </div>
-        )}
-        {lazyFeedUrl && feedStatus === 'error' && (
+        {serverMode && browseStatus === 'error' && (
           <div
             className="directory-feed-status directory-feed-status--warn"
             role="status"
           >
-            Showing the initial page of results. Full-catalog search is
-            temporarily unavailable — try refreshing.
-          </div>
-        )}
-
-        {lazyFeedUrl && feedStatus === 'loading' && (
-          <div className="directory-skeleton-grid" aria-hidden="true">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="directory-skeleton-card surface" />
-            ))}
+            Couldn&rsquo;t load results. Check your connection and try again.
           </div>
         )}
 
@@ -1154,9 +1153,17 @@ export default function DirectoryGrid({
                   fontWeight: 500,
                 }}
               >
-                ({filteredServers.length.toLocaleString('en-US')}{' '}
-                {filteredServers.length === 1 ? 'tool' : 'tools'})
-                {lazyFeedUrl && feedStatus === 'loading' ? ' · loading…' : ''}
+                ({filteredCount.toLocaleString('en-US')}
+                {serverMode && browseCapped ? '+' : ''}{' '}
+                {filteredCount === 1 ? 'tool' : 'tools'})
+                {serverMode && browseStatus === 'loading' && (
+                  <Loader2
+                    size={14}
+                    aria-label="Loading"
+                    className="directory-feed-spinner"
+                    style={{ marginLeft: '0.4rem', verticalAlign: 'middle' }}
+                  />
+                )}
               </span>
             </h2>
             {sortMode === 'popular' && !searchQuery.trim() && (
@@ -1688,7 +1695,12 @@ export default function DirectoryGrid({
           <div style={{ textAlign: 'center', marginTop: '3rem' }}>
             <Button
               variant="secondary"
-              onClick={() => setVisibleCount((v) => v + 30)}
+              disabled={serverMode && browseStatus === 'loading'}
+              onClick={() =>
+                serverMode
+                  ? loadMoreFromServer()
+                  : setVisibleCount((v) => v + 30)
+              }
             >
               Load More
             </Button>

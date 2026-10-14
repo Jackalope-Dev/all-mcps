@@ -24,5 +24,8 @@ export function isServable(s: ServabilityInput): boolean {
   return s.status === 'active' && s.staleFlaggedAt == null;
 }
 
-/** The same rule as raw SQL, for hand-written queries over `servers`. */
-export const SERVABLE_SQL = "status = 'active' AND stale_flagged_at IS NULL";
+/** The same rule as raw SQL, for hand-written queries over `servers` (optionally aliased). */
+export function servableSql(alias?: string): string {
+  const c = alias ? `${alias}.` : '';
+  return `${c}status = 'active' AND ${c}stale_flagged_at IS NULL`;
+}

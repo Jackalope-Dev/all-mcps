@@ -104,20 +104,49 @@ export function StackBuilderModal({
     };
   }, [refreshStack]);
 
-  // Fetch full directory catalog if any stack item is missing from `allServers`
+  // Look up only what the modal shows: stack entries missing from
+  // `allServers` by id, and (once) the most-used listings for recommendations.
+  // It used to download the whole catalog to find a handful of rows.
+  const stackKey = serverIds.join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stackKey stands in for serverIds; fetchedCatalog is read for the known set only.
   useEffect(() => {
-    if (!isOpen || fetchedRef.current) return;
-    fetchedRef.current = true;
-
-    fetch('/api/search-index')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: any) => {
-        if (data?.servers && Array.isArray(data.servers)) {
-          setFetchedCatalog(data.servers);
-        }
-      })
-      .catch(() => {});
-  }, [isOpen]);
+    if (!isOpen) return;
+    const known = new Set([
+      ...allServers.map((s) => s.id),
+      ...fetchedCatalog.map((s) => s.id),
+    ]);
+    const missing = serverIds.filter((id) => !known.has(id));
+    const urls: string[] = [];
+    if (missing.length > 0) {
+      urls.push(
+        `/api/search-index?ids=${encodeURIComponent(missing.join(','))}`,
+      );
+    }
+    if (!fetchedRef.current) {
+      fetchedRef.current = true;
+      urls.push('/api/search-index?limit=20');
+    }
+    if (urls.length === 0) return;
+    Promise.all(
+      urls.map((u) =>
+        fetch(u)
+          .then((res) =>
+            res.ok ? (res.json() as Promise<{ servers?: unknown }>) : null,
+          )
+          .catch(() => null),
+      ),
+    ).then((pages) => {
+      const rows = pages.flatMap((d) =>
+        Array.isArray(d?.servers) ? (d.servers as CatalogServerItem[]) : [],
+      );
+      if (rows.length === 0) return;
+      setFetchedCatalog((prev) => {
+        const map = new Map(prev.map((s) => [s.id, s]));
+        for (const r of rows) map.set(r.id, r);
+        return Array.from(map.values());
+      });
+    });
+  }, [isOpen, stackKey, allServers]);
 
   // Handle Escape key to close modal
   useEffect(() => {

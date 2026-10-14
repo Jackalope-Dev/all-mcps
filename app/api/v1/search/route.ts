@@ -17,6 +17,7 @@ import {
   rateLimitedResponse,
   rateLimitHeaders,
 } from '@/lib/rateLimit';
+import { recordSearchMiss } from '@/lib/searchMisses';
 import { searchActiveServers } from '@/lib/servers';
 
 export async function GET(request: Request) {
@@ -28,6 +29,13 @@ export async function GET(request: Request) {
   const rawCategory = searchParams.get('category')?.trim() || '';
   const limitParam = parseInt(searchParams.get('limit') || '20', 10);
   const limit = Math.min(Math.max(1, limitParam), 100);
+  // Optional filters, applied to the ranked results: `transport=stdio|remote`
+  // and `verified=1` (we saw it run: live tools, a sandbox start that asked
+  // for keys, or a healthy remote endpoint).
+  const transport = searchParams.get('transport');
+  const verifiedOnly = searchParams.get('verified') === '1';
+  const filtering =
+    transport === 'stdio' || transport === 'remote' || verifiedOnly;
 
   // Listings store the full emoji-prefixed category and the catalog query matches
   // that string exactly, so resolve whatever the caller sent (slug, plain label,
@@ -56,12 +64,28 @@ export async function GET(request: Request) {
 
   // Candidate filtering happens in D1. The full catalog no longer fits in a
   // Worker's memory, so it can't be loaded and ranked here (see searchActiveServers).
-  const servers = await searchActiveServers({
+  const ranked = await searchActiveServers({
     query,
     category,
-    limit,
+    // Over-fetch when filtering so a filter doesn't empty a short page.
+    limit: filtering ? Math.min(limit * 4, 200) : limit,
     vectorTopK: 40,
   });
+  const servers = ranked
+    .filter((s) => {
+      if (transport === 'remote')
+        return s.installKind === 'remote' || Boolean(s.remoteEndpointUrl);
+      if (transport === 'stdio') return s.installKind === 'stdio';
+      return true;
+    })
+    .filter(
+      (s) =>
+        !verifiedOnly ||
+        s.toolsSource === 'introspected' ||
+        s.installNeedsConfig != null ||
+        s.remoteEndpointHealthy === true,
+    )
+    .slice(0, limit);
 
   const results = servers.map((server) => {
     const install = resolveInstallConfig({
@@ -119,6 +143,9 @@ export async function GET(request: Request) {
       const meta = extractRequestMeta(request);
       // Attribute the search to every server it actually surfaced so each
       // owner's "search queries that find you" panel has data to show.
+      if (query && ranked.length === 0) {
+        cfCtx.ctx.waitUntil(recordSearchMiss(logDb, query, 'api'));
+      }
       cfCtx.ctx.waitUntil(
         query && results.length > 0
           ? logApiAccessBatch(logDb, {

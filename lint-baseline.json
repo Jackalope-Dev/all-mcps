@@ -12,7 +12,7 @@
   "lint/performance/noImgElement": 23,
   "lint/style/noDescendingSpecificity": 39,
   "lint/style/noNonNullAssertion": 17,
-  "lint/suspicious/noArrayIndexKey": 26,
+  "lint/suspicious/noArrayIndexKey": 25,
   "lint/suspicious/noDocumentCookie": 2,
   "lint/suspicious/noGlobalIsNan": 5,
   "lint/suspicious/noTemplateCurlyInString": 1

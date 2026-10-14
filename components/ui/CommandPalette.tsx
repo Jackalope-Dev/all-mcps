@@ -27,6 +27,9 @@ interface CommandItem {
   searchText?: string;
 }
 
+/** Typing pause before the palette asks the server for matches. */
+const SEARCH_DEBOUNCE_MS = 150;
+
 type IndexedServer = {
   id: string;
   name: string;
@@ -60,28 +63,49 @@ export function CommandPalette({
   const fetchedRef = useRef(false);
   const router = useRouter();
 
-  // Fetch the full live directory (DB-backed) the first time the palette is
-  // opened, rather than on every page load. The catalog JSON is deliberately NOT
-  // imported into this client component — it would ship ~1.5 MB into the bundle;
-  // the palette shows page/category shortcuts instantly and fills in server
-  // results the moment this fetch resolves.
+  // Category shortcuts load once, the first time the palette opens.
   useEffect(() => {
     if (!isOpen || fetchedRef.current) return;
     fetchedRef.current = true;
-    fetch('/api/search-index')
+    fetch('/api/search-index?categories=1')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const payload = data as {
-          servers?: IndexedServer[];
-          categories?: IndexedCategory[];
-        } | null;
-        if (payload?.servers) setLiveServers(payload.servers);
+        const payload = data as { categories?: IndexedCategory[] } | null;
         if (payload?.categories) setLiveCategories(payload.categories);
       })
       .catch(() => {
-        // Silently degrade to page/category shortcuts if the index can't load.
+        // Silently degrade to page shortcuts if categories can't load.
       });
   }, [isOpen]);
+
+  // Server matches are fetched as you type (after a short pause), ranked by the
+  // same search the API uses. The palette used to download the entire catalog
+  // on first open and filter it here.
+  useEffect(() => {
+    const q = query.trim();
+    if (!isOpen || !q) {
+      setLiveServers(null);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/search-index?q=${encodeURIComponent(q)}&limit=8`, {
+        signal: controller.signal,
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const payload = data as { servers?: IndexedServer[] } | null;
+          setLiveServers(payload?.servers ?? []);
+        })
+        .catch(() => {
+          // Aborted by the next keystroke, or offline: keep page matches only.
+        });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isOpen, query]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -356,8 +380,12 @@ export function CommandPalette({
     if (terms.length === 0) return items.slice(0, 10);
     const fullQuery = terms.map((t) => t.term).join(' ');
 
+    // Pages and categories are scored here; servers arrive already ranked by
+    // the server, so they keep that order after the best few shortcuts.
+    const servers = items.filter((i) => i.categoryType === 'server');
     const scored: Array<{ item: CommandItem; score: number }> = [];
     for (const item of items) {
+      if (item.categoryType === 'server') continue;
       const score = scoreServerMatch(
         {
           name: item.title,
@@ -375,7 +403,7 @@ export function CommandPalette({
     }
 
     scored.sort((a, b) => b.score - a.score);
-    return scored.map((s) => s.item).slice(0, 12);
+    return [...scored.map((s) => s.item).slice(0, 4), ...servers].slice(0, 12);
   }, [items, query]);
 
   useEffect(() => {
