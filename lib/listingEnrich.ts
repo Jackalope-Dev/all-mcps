@@ -162,7 +162,51 @@ export async function fetchGithubRepo(
   return { ok: true, data };
 }
 
+/**
+ * Distinct other repos a README must link before it counts as a catalog.
+ * Measured: curated lists (awesome-mcp-servers and its forks) link 4,000+,
+ * while real servers link at most a handful (modelcontextprotocol/servers,
+ * the busiest, links 14).
+ */
+const CATALOG_README_MIN_REPOS = 100;
+
+/**
+ * A README that is a curated list of other projects rather than this listing's
+ * own docs — typically a fork of awesome-mcp-servers that a submitter gave as
+ * their repo URL while their PR to the list was open. Everything we extract
+ * from such a README (install command, tools, logo, AI writeup) belongs to
+ * some other server: aon-agent-offer-network was given BotHire's
+ * `npx -y bothire-mcp`, which the stdio verifier then ran and stored
+ * BotHire's tools as "introspected".
+ */
+export function isCatalogReadme(
+  readme: string,
+  owner: string,
+  repo: string,
+): boolean {
+  const self = `${owner}/${repo}`.toLowerCase();
+  const repos = new Set<string>();
+  for (const m of readme.matchAll(
+    /github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/gi,
+  )) {
+    const linked = m[1].toLowerCase().replace(/\.git$/, '');
+    if (linked !== self) repos.add(linked);
+    if (repos.size >= CATALOG_README_MIN_REPOS) return true;
+  }
+  return false;
+}
+
+/** Fetch a repo's README, or null when it has none or it is a catalog of other projects (see isCatalogReadme). */
 export async function fetchGithubReadme(
+  owner: string,
+  repo: string,
+  token?: string | null,
+): Promise<string | null> {
+  const readme = await fetchRawGithubReadme(owner, repo, token);
+  return readme && !isCatalogReadme(readme, owner, repo) ? readme : null;
+}
+
+async function fetchRawGithubReadme(
   owner: string,
   repo: string,
   token?: string | null,

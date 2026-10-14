@@ -15,7 +15,10 @@ import {
   resolveInstallFromText,
   toCachedInstallFields,
 } from '../../../../lib/installConfig';
-import { isListingTrulyDead } from '../../../../lib/listingEnrich';
+import {
+  isCatalogReadme,
+  isListingTrulyDead,
+} from '../../../../lib/listingEnrich';
 import {
   listingRenderChanged,
   refreshListingPages,
@@ -83,7 +86,12 @@ async function fetchGithubReadme(
           signal: AbortSignal.timeout(10000),
         },
       );
-      if (res.ok) return await res.text();
+      if (res.ok) {
+        // A catalog README describes other servers; nothing here may read it
+        // as this listing's (see isCatalogReadme).
+        const text = await res.text();
+        return isCatalogReadme(text, owner, repo) ? null : text;
+      }
     } catch {
       /* try next branch */
     }
