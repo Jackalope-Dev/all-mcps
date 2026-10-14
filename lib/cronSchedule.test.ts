@@ -101,6 +101,10 @@ describe('secret relay', () => {
     expect(JOB_SECRET_NAMES).not.toContain('STRIPE_SECRET_KEY');
   });
 
+  it('relays the Jev key, which stale-sweep triage needs on the jobs Worker', () => {
+    expect(JOB_SECRET_NAMES).toContain('TYPESAFE_API_KEY');
+  });
+
   it('fills only what the jobs Worker lacks and never drops its own bindings', () => {
     const db = { prepare() {} };
     const merged = mergeRelayedSecrets(

@@ -42,6 +42,8 @@ jobs:
       - name: Ingest and apply new listings
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Jev duplicate/relevance checks at import; without it they're skipped.
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: node scripts/ingest-sources.mjs --apply
 
       - name: Upload generated SQL as a run artifact

@@ -179,6 +179,10 @@ export const JOB_SECRET_NAMES = [
   'SEQUENZY_CAMPAIGNS_API_KEY',
   'BLOG_PUBLISH_TOKEN',
   'LOPEBASE_SIGNING_SECRET',
+  // Jev (lib/typesafe.ts): stale-sweep triage, auto-promote, ai-content. A
+  // missing key makes every Jev call a silent no-op, so the automation gates
+  // never get the evidence they need to act.
+  'TYPESAFE_API_KEY',
 ] as const;
 
 type SecretRelayStub = {
