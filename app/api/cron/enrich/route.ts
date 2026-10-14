@@ -2,7 +2,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { and, asc, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
-import { servers } from '../../../../db/schema';
+import { listingSignals, servers } from '../../../../db/schema';
 import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import { classifyCategory } from '../../../../lib/categoryClassifier';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
@@ -34,6 +34,7 @@ import {
   LogoValidationError,
   processLogoUpload,
 } from '../../../../lib/logoImage';
+import { upsertSignals } from '../../../../lib/signalStore';
 
 function isGithubUrl(urlString: string): boolean {
   if (!urlString) return false;
@@ -92,6 +93,10 @@ const GITHUB_USER_LOGO_RETRY_MS = 30 * 24 * 60 * 60 * 1000;
  * Category check only (one Jev call, no fetches), so it stays cheap.
  */
 const RECAT_BATCH_SIZE = 10;
+/** A default-category listing Jev answered for is not asked again for this long. */
+const RECAT_RECHECK_MS = 60 * 24 * 60 * 60 * 1000;
+/** No answer (Jev down or unsure): ask again after this long. */
+const RECAT_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Safely writes an asset to R2 without throwing when concurrent jobs write to the same key. */
 async function safeR2Put(
@@ -657,11 +662,12 @@ export async function POST(req: Request) {
       stats.processed++;
     }
 
-    // Default-category slot. logoCheckedAt is the round-robin cursor: the
-    // enrich cron is its only writer besides the logo queue, and each listing
-    // checked here moves to the back. That also moves a logo-less listing to
-    // the back of the logo queue once, which only delays its next logo try.
+    // Default-category slot, with its own cursor (listing_signals.
+    // category_checked_at): a listing is re-asked only when never checked or
+    // checked more than RECAT_RECHECK_MS ago, so one Jev confirms really is
+    // Developer Tools is not asked again every few days.
     const batchIds = new Set(batch.map((s) => s.id));
+    const recatCutoff = new Date(Date.now() - RECAT_RECHECK_MS);
     const recatRows = await db
       .select({
         id: servers.id,
@@ -671,26 +677,39 @@ export async function POST(req: Request) {
         category: servers.category,
       })
       .from(servers)
+      .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
       .where(
         and(
           eq(servers.status, 'active'),
           isNull(servers.staleFlaggedAt),
           eq(servers.category, DEFAULT_SUBMIT_CATEGORY),
+          or(
+            isNull(listingSignals.categoryCheckedAt),
+            lt(listingSignals.categoryCheckedAt, recatCutoff),
+          ),
         ),
       )
-      .orderBy(asc(servers.logoCheckedAt))
+      .orderBy(asc(listingSignals.categoryCheckedAt))
       .limit(RECAT_BATCH_SIZE + batch.length);
     for (const row of recatRows
       .filter((r) => !batchIds.has(r.id))
       .slice(0, RECAT_BATCH_SIZE)) {
       const classified = await classifyCategory(row, row.category);
-      const updates: Record<string, unknown> = { logoCheckedAt: new Date() };
+      const now = Date.now();
+      // An answer (move or "it really is the default") holds for the full
+      // window; no answer (Jev down or unsure) comes back in a week.
+      const checkedAt = new Date(
+        classified.fromJev ? now : now - RECAT_RECHECK_MS + RECAT_RETRY_MS,
+      );
+      await upsertSignals(db, row.id, { categoryCheckedAt: checkedAt });
       if (classified.fromJev && classified.category !== row.category) {
-        updates.category = classified.category;
+        await db
+          .update(servers)
+          .set({ category: classified.category })
+          .where(eq(servers.id, row.id));
         stats.recategorized++;
         pagesToRefresh.push(row.id);
       }
-      await db.update(servers).set(updates).where(eq(servers.id, row.id));
       stats.recatChecked++;
     }
 

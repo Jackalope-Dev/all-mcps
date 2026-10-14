@@ -194,9 +194,28 @@ beforeAll(() => {
 
 describe('claim queries', () => {
   it('claims changed writeups first', async () => {
-    const rows = await changedCandidates(db, 10);
+    const rows = await changedCandidates(db, new Date(), 10);
     expect(rows.map((r) => r.id)).toEqual(['changed']);
     expect(await countChanged(db)).toBe(1);
+  });
+
+  it('backs off a changed row whose refresh just failed', async () => {
+    const now = new Date();
+    sqlite
+      .prepare(
+        "UPDATE listing_signals SET content_refresh_failed_at = ? WHERE server_id = 'changed'",
+      )
+      .run(Math.floor(now.getTime() / 1000) - 3600);
+    expect(await changedCandidates(db, now, 10)).toEqual([]);
+    const dayLater = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+    expect(
+      (await changedCandidates(db, dayLater, 10)).map((r) => r.id),
+    ).toEqual(['changed']);
+    sqlite
+      .prepare(
+        "UPDATE listing_signals SET content_refresh_failed_at = NULL WHERE server_id = 'changed'",
+      )
+      .run();
   });
 
   it('claims never-enriched servable rows by demand, holding quiet forks', async () => {

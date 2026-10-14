@@ -686,6 +686,16 @@ export const listingSignals = sqliteTable(
     contentChangedAt: integer('content_changed_at', { mode: 'timestamp' }),
     /** GitHub `owner/repo` the install package's registry metadata points at (lib/packageRegistry.ts). Null = none named or not checked. */
     packageRepo: text('package_repo'),
+    /** Last time the enrich cron asked Jev about a listing stuck in the default category. Its own cursor, so the logo queue's logoCheckedAt is left alone. */
+    categoryCheckedAt: integer('category_checked_at', { mode: 'timestamp' }),
+    /** Last failed ai-content refresh of a changed listing (content_changed_at). Backs the retry off. */
+    contentRefreshFailedAt: integer('content_refresh_failed_at', {
+      mode: 'timestamp',
+    }),
+    /** Consecutive failed refreshes of the current change. At 3 the change is dropped and the row waits for the normal cycle. */
+    contentRefreshFailures: integer('content_refresh_failures')
+      .notNull()
+      .default(0),
     /** Where ingest first found this listing: official-registry | awesome-list | npm | pypi | github-topic | submission. */
     discoveredVia: text('discovered_via'),
   },
@@ -720,6 +730,17 @@ export const searchMisses = sqliteTable(
     lastSeenIdx: index('idx_search_misses_last_seen').on(table.lastSeenAt),
   }),
 );
+
+/**
+ * Resume points for incremental cron jobs, one row per job (e.g. the registry
+ * ingest's updated_since). A job advances its cursor only past work it
+ * finished, so a run cut short never skips anything.
+ */
+export const jobCursors = sqliteTable('job_cursors', {
+  name: text('name').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
 
 /**
  * Mode per automation gate (lib/autoDecision.ts): 'off', 'shadow' (record

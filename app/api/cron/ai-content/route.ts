@@ -14,9 +14,10 @@ import {
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
-import { servers } from '../../../../db/schema';
+import { listingSignals, servers } from '../../../../db/schema';
 import { generateListingContent } from '../../../../lib/aiContent';
 import {
+  CHANGED_MAX_FAILURES,
   changedCandidates,
   countChanged,
   countNewBacklog,
@@ -120,8 +121,39 @@ type ClaimedRow = {
   category: string;
   tools: string | null;
   previousEnrichedAt?: Date | null;
+  /** Claimed because its source changed (pass 1): failures back off. */
+  changed?: boolean;
   pass: 'writeup' | 'install' | 'metadata';
 };
+
+/**
+ * Claim re-check rows only if no overlapping run got there first: each row's
+ * UPDATE also requires ai_enriched_at to still hold the value we read, and
+ * RETURNING says which claims won. One statement per row, in one batch.
+ */
+async function claimReclaimable<
+  T extends { id: string; aiEnrichedAt: Date | null },
+>(db: ReturnType<typeof drizzle>, rows: T[], claimTime: Date): Promise<T[]> {
+  if (rows.length === 0) return [];
+  const results = (await db.batch(
+    rows.map((r) =>
+      db
+        .update(servers)
+        .set({ aiEnrichedAt: claimTime })
+        .where(
+          and(
+            eq(servers.id, r.id),
+            r.aiEnrichedAt
+              ? eq(servers.aiEnrichedAt, r.aiEnrichedAt)
+              : isNull(servers.aiEnrichedAt),
+          ),
+        )
+        .returning({ id: servers.id }),
+    ) as any,
+  )) as { id: string }[][];
+  const won = new Set(results.flat().map((r) => r.id));
+  return rows.filter((r) => won.has(r.id));
+}
 
 /** A re-claimed writeup row: releases back to its previous ai_enriched_at on failure. */
 function toReclaimed(c: {
@@ -184,22 +216,15 @@ export async function POST(req: Request) {
     // Pass 1: writeups older than their listing's latest source change.
     // Claimed like stale re-checks: a failure releases back to the previous
     // ai_enriched_at, so the row stays ahead of the queue.
-    let claimedChanged: ClaimedRow[] = [];
-    const changedRows = installOnly
+    const claimedChanged: ClaimedRow[] = installOnly
       ? []
-      : await changedCandidates(db, batchSize);
-    if (changedRows.length > 0) {
-      await db
-        .update(servers)
-        .set({ aiEnrichedAt: claimTime })
-        .where(
-          inArray(
-            servers.id,
-            changedRows.map((c) => c.id),
-          ),
-        );
-      claimedChanged = changedRows.map((c) => toReclaimed(c));
-    }
+      : (
+          await claimReclaimable(
+            db,
+            await changedCandidates(db, claimTime, batchSize),
+            claimTime,
+          )
+        ).map((c) => ({ ...toReclaimed(c), changed: true }));
 
     // Pass 2: atomically claim the highest-demand never-enriched or
     // missing-writeup listings.
@@ -229,17 +254,12 @@ export async function POST(req: Request) {
     let claimedStale: ClaimedRow[] = [];
     const staleSlots = newSlots - claimedNew.length;
     if (staleSlots > 0) {
-      const candidates = await staleCandidates(db, claimTime, staleSlots);
+      const candidates = await claimReclaimable(
+        db,
+        await staleCandidates(db, claimTime, staleSlots),
+        claimTime,
+      );
       if (candidates.length > 0) {
-        await db
-          .update(servers)
-          .set({ aiEnrichedAt: claimTime })
-          .where(
-            inArray(
-              servers.id,
-              candidates.map((c) => c.id),
-            ),
-          );
         claimedStale = candidates.map((c) => toReclaimed(c));
       }
     }
@@ -600,6 +620,41 @@ export async function POST(req: Request) {
         .update(servers)
         .set({ aiEnrichedAt: row.previousEnrichedAt })
         .where(eq(servers.id, row.id));
+    }
+    // A failed refresh of a changed row backs off (see changedCandidates);
+    // after CHANGED_MAX_FAILURES the change is dropped and the row waits for
+    // the normal demand-based cycle.
+    const failedChanged = releaseStale.filter((c) => c.changed);
+    if (failedChanged.length > 0) {
+      await db.batch(
+        failedChanged.map((c) =>
+          db
+            .insert(listingSignals)
+            .values({
+              serverId: c.id,
+              contentRefreshFailedAt: claimTime,
+              contentRefreshFailures: 1,
+            })
+            .onConflictDoUpdate({
+              target: listingSignals.serverId,
+              set: {
+                contentRefreshFailedAt: claimTime,
+                contentRefreshFailures: sql`CASE WHEN ${listingSignals.contentRefreshFailures} + 1 >= ${CHANGED_MAX_FAILURES} THEN 0 ELSE ${listingSignals.contentRefreshFailures} + 1 END`,
+                contentChangedAt: sql`CASE WHEN ${listingSignals.contentRefreshFailures} + 1 >= ${CHANGED_MAX_FAILURES} THEN NULL ELSE ${listingSignals.contentChangedAt} END`,
+              },
+            }),
+        ) as any,
+      );
+    }
+    // A refreshed changed row starts the next change with a clean count.
+    const refreshedChanged = claimed
+      .filter((c) => c.changed && keep.has(c.id))
+      .map((c) => c.id);
+    if (refreshedChanged.length > 0) {
+      await db
+        .update(listingSignals)
+        .set({ contentRefreshFailedAt: null, contentRefreshFailures: 0 })
+        .where(inArray(listingSignals.serverId, refreshedChanged));
     }
     if (releaseInstall.length > 0) {
       await db

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "7270e896-4a45-462c-917e-227c746de6e7",
+  "id": "b63f56f3-729f-4318-be6f-f253ac1c2125",
   "prevId": "f41c33c9-2aa6-4843-80fa-57b82d2ed16b",
   "tables": {
     "accounts": {
@@ -1047,6 +1047,37 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "job_cursors": {
+      "name": "job_cursors",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "listing_signals": {
       "name": "listing_signals",
       "columns": {
@@ -1232,6 +1263,28 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "category_checked_at": {
+          "name": "category_checked_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "content_refresh_failed_at": {
+          "name": "content_refresh_failed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "content_refresh_failures": {
+          "name": "content_refresh_failures",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         },
         "discovered_via": {
           "name": "discovered_via",

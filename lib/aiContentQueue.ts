@@ -138,8 +138,17 @@ const claimColumns = {
   aiEnrichedAt: servers.aiEnrichedAt,
 };
 
-/** Pass 1: writeups older than their listing's latest source change. */
-export function changedCandidates(db: Db, limit: number) {
+/** A changed row whose refresh failed waits this long before it is tried again. */
+const CHANGED_RETRY_MS = 24 * 60 * 60 * 1000;
+/** Failed refreshes of one change before it is dropped back to the normal cycle. */
+export const CHANGED_MAX_FAILURES = 3;
+
+/**
+ * Pass 1: writeups older than their listing's latest source change. A row
+ * whose refresh just failed backs off for CHANGED_RETRY_MS, so one listing
+ * with a persistent LLM error can't take a slot every tick.
+ */
+export function changedCandidates(db: Db, now: Date, limit: number) {
   return db
     .select(claimColumns)
     .from(servers)
@@ -150,6 +159,13 @@ export function changedCandidates(db: Db, limit: number) {
         notHeldWhere,
         isNotNull(servers.aiEnrichedAt),
         gt(listingSignals.contentChangedAt, servers.aiEnrichedAt),
+        or(
+          isNull(listingSignals.contentRefreshFailedAt),
+          lt(
+            listingSignals.contentRefreshFailedAt,
+            new Date(now.getTime() - CHANGED_RETRY_MS),
+          ),
+        ),
       ),
     )
     .orderBy(...demandOrder)

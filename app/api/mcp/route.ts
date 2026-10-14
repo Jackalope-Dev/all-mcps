@@ -759,7 +759,8 @@ export async function POST(request: Request) {
       const serverId = String(args.id || '');
       const limit = Math.min(Math.max(1, Number(args.limit) || 5), 10);
       const server = await getServerById(serverId);
-      if (!server) {
+      // Pending, removed and flagged listings are not in the directory.
+      if (!server || !isServable(server)) {
         return text(
           `Server with ID "${serverId}" not found in AllMCPs directory.`,
           true,
@@ -785,7 +786,10 @@ export async function POST(request: Request) {
         return text('Pass 2 to 4 distinct server IDs in `ids`.', true);
       }
       const found = await Promise.all(ids.map((sid) => getServerById(sid)));
-      const missing = ids.filter((_, i) => !found[i]);
+      const missing = ids.filter((_, i) => {
+        const s = found[i];
+        return !s || !isServable(s);
+      });
       if (missing.length > 0) {
         return text(`Not found in AllMCPs: ${missing.join(', ')}.`, true);
       }

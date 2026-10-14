@@ -1,3 +1,9 @@
+CREATE TABLE `job_cursors` (
+	`name` text PRIMARY KEY NOT NULL,
+	`value` text NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `search_misses` (
 	`query` text PRIMARY KEY NOT NULL,
 	`surface` text NOT NULL,
@@ -12,4 +18,7 @@ ALTER TABLE `listing_signals` ADD `readme_hash` text;--> statement-breakpoint
 ALTER TABLE `listing_signals` ADD `latest_release_tag` text;--> statement-breakpoint
 ALTER TABLE `listing_signals` ADD `content_changed_at` integer;--> statement-breakpoint
 ALTER TABLE `listing_signals` ADD `package_repo` text;--> statement-breakpoint
+ALTER TABLE `listing_signals` ADD `category_checked_at` integer;--> statement-breakpoint
+ALTER TABLE `listing_signals` ADD `content_refresh_failed_at` integer;--> statement-breakpoint
+ALTER TABLE `listing_signals` ADD `content_refresh_failures` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `listing_signals` ADD `discovered_via` text;
