@@ -314,6 +314,23 @@ const GENERIC_PACKAGE_NAMES = new Set([
   'can',
   'use',
   'using',
+  'without',
+  'needed',
+  'required',
+  'recommended',
+  'directly',
+  'invocation',
+  'fetches',
+  'auto-installs',
+  // Error codes quoted in troubleshooting sections ("npx … fails with ENOENT").
+  // npm has legacy packages by these names with no repo metadata, so the
+  // registry ownership check can't reject them.
+  'enoent',
+  'eacces',
+  'eperm',
+  'enotfound',
+  'econnrefused',
+  'etimedout',
 ]);
 
 /**

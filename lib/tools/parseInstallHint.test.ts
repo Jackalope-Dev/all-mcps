@@ -148,6 +148,12 @@ describe('prose and placeholders are not package names', () => {
     expect(isPlausibleInstallPackage('/')).toBe(false);
   });
 
+  it('rejects error codes and prose caught from troubleshooting text', () => {
+    for (const pkg of ['ENOENT', 'EACCES', 'without', 'needed', 'directly']) {
+      expect(isPlausibleInstallPackage(pkg), pkg).toBe(false);
+    }
+  });
+
   it('still accepts ordinary and scoped package specs', () => {
     for (const pkg of [
       'weather-mcp',
