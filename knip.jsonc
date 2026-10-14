@@ -20,6 +20,8 @@
     // A few modules export a second, intent-named alias (isSafeFetchTarget); allowed.
     "duplicates": "warn"
   },
+  // System tool, installed per machine (brew/scoop), not an npm dependency; see scripts/check-secrets.mjs.
+  "ignoreBinaries": ["gitleaks"],
   "ignoreDependencies": [
     // `cloudflare:workers` virtual module, provided by the Workers runtime.
     "cloudflare",
