@@ -8,7 +8,7 @@ type Mode = 'off' | 'shadow' | 'live';
 type Decision = 'approve' | 'reject' | 'hold';
 
 type GateView = {
-  gate: 'submission' | 'ingest_promote';
+  gate: 'submission' | 'ingest_promote' | 'dedupe_retire';
   label: string;
   detail: string;
   mode: Mode;
@@ -107,7 +107,9 @@ export function AdminAutomationPanel() {
           : 'It has no track record yet.';
       if (
         !window.confirm(
-          `Turn "${g.label}" live? It will approve${g.gate === 'submission' ? ' and reject' : ''} listings on its own, with the same emails as your clicks. ${record}`,
+          g.gate === 'dedupe_retire'
+            ? `Turn "${g.label}" live? It will retire same-repo duplicates on its own (status removed, redirect to the keeper). ${record}`
+            : `Turn "${g.label}" live? It will approve${g.gate === 'submission' ? ' and reject' : ''} listings on its own, with the same emails as your clicks. ${record}`,
         )
       )
         return;

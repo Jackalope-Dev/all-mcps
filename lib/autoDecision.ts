@@ -26,8 +26,10 @@ import { isRepoGoneConfirmed, type RepoStatus } from './repoCheck';
 
 type Db = DrizzleD1Database<any>;
 
-export const GATES = ['submission', 'ingest_promote'] as const;
+export const GATES = ['submission', 'ingest_promote', 'dedupe_retire'] as const;
 export type Gate = (typeof GATES)[number];
+/** Gates that decide pending listings (the stale sweep's phase 6). */
+export const PENDING_GATES = ['submission', 'ingest_promote'] as const;
 export type GateMode = 'off' | 'shadow' | 'live';
 export type AutoDecision = 'approve' | 'reject' | 'hold';
 
@@ -41,6 +43,11 @@ export const GATE_COPY: Record<Gate, { label: string; detail: string }> = {
     label: 'Imported listings fast-track',
     detail:
       'Publishes imported listings with a confident Jev approve and a live source without the 7-day wait. Never rejects — the stale sweep handles dead ones.',
+  },
+  dedupe_retire: {
+    label: 'Duplicate retirement',
+    detail:
+      'Retires a listing the weekly sweep finds pointing at exactly the same repo directory as a stronger listing (status removed, 308 to the keeper). In shadow it files a duplicate report instead. Undo restores the listing and stops it being retired again.',
   },
 };
 

@@ -29,29 +29,38 @@ function row(over: Partial<DedupeRow> & { id: string }): DedupeRow {
 }
 
 describe('sameRepo', () => {
-  it('matches identical repos, monorepo subpaths and org moves', () => {
+  it('matches the same repo directory, ignoring case, .git and the ref', () => {
     expect(
       sameRepo('https://github.com/a/b', 'https://github.com/A/b.git'),
     ).toBe(true);
     expect(
       sameRepo(
-        'https://github.com/a/b',
-        'https://github.com/a/b/tree/main/packages/mcp',
-      ),
-    ).toBe(true);
-    expect(
-      sameRepo(
-        'https://github.com/me/widgets',
-        'https://github.com/org/widgets',
+        'https://github.com/a/b/tree/main/src/x',
+        'https://github.com/a/b/tree/master/src/x/',
       ),
     ).toBe(true);
   });
 
-  it('does not match generic repo names across owners, or different hosts', () => {
+  it('keeps different servers in one monorepo apart', () => {
     expect(
       sameRepo(
-        'https://github.com/a/mcp-server',
-        'https://github.com/b/mcp-server',
+        'https://github.com/awslabs/mcp/tree/main/src/aws-docs',
+        'https://github.com/awslabs/mcp/tree/main/src/cdk',
+      ),
+    ).toBe(false);
+    expect(
+      sameRepo(
+        'https://github.com/a/b',
+        'https://github.com/a/b/tree/main/packages/mcp',
+      ),
+    ).toBe(false);
+  });
+
+  it('never treats a same-named repo under another owner as the same', () => {
+    expect(
+      sameRepo(
+        'https://github.com/someone/notion-mcp-server',
+        'https://github.com/makenotion/notion-mcp-server',
       ),
     ).toBe(false);
     expect(sameRepo('https://github.com/a/b', 'https://gitlab.com/a/b')).toBe(
@@ -102,6 +111,47 @@ describe('findDuplicateClusters', () => {
       NOW,
     );
     expect(clusters.map((c) => c.tier)).toEqual(['review']);
+  });
+
+  it('sends monorepo siblings and cross-owner namesakes to review', () => {
+    const monorepo = findDuplicateClusters(
+      [
+        row({
+          id: 'aws-docs',
+          name: 'mcp',
+          url: 'https://github.com/awslabs/mcp/tree/main/src/aws-docs',
+          websiteUrl: 'https://awslabs.github.io/mcp',
+          views: 100,
+        }),
+        row({
+          id: 'aws-cdk',
+          name: 'mcp',
+          url: 'https://github.com/awslabs/mcp/tree/main/src/cdk',
+          websiteUrl: 'https://awslabs.github.io/mcp',
+        }),
+      ],
+      NOW,
+    );
+    expect(monorepo.map((c) => c.tier)).toEqual(['review']);
+    const namesake = findDuplicateClusters(
+      [
+        row({
+          id: 'notion',
+          name: 'Notion MCP Server',
+          url: 'https://github.com/makenotion/notion-mcp-server',
+          websiteUrl: 'https://notion.so',
+        }),
+        row({
+          id: 'notion-2',
+          name: 'Notion MCP Server',
+          url: 'https://github.com/someone/notion-mcp-server',
+          websiteUrl: 'https://notion.so',
+          views: 900,
+        }),
+      ],
+      NOW,
+    );
+    expect(namesake.map((c) => c.tier)).toEqual(['review']);
   });
 
   it('never auto-retires a claimed, premium or featured loser', () => {

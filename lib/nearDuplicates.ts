@@ -9,13 +9,15 @@ import { normalizeNameSiteKey, normalizeUrlKey } from './urlDedup';
  *     together (union-find);
  *   - the keeper is the strongest row (active > official > premium >
  *     enriched > traction > oldest);
- *   - AUTO when every other member points at the same repo as the keeper
- *     (identical owner/repo, a monorepo subpath, or the same non-generic
- *     repo name under another owner); otherwise REVIEW.
+ *   - AUTO only when every other member points at exactly the same repo
+ *     directory as the keeper (same owner/repo and the same subpath);
+ *     otherwise REVIEW.
  *
- * One deliberate addition on top of the script: a cluster whose losers
- * include a claimed, premium or featured listing is never AUTO. A person
- * answers for that row, so a human decides.
+ * Stricter than the script on purpose, because this runs unattended: the
+ * script also auto-merged monorepo subpaths and same-named repos under other
+ * owners, which retired distinct servers. A cluster whose losers include a
+ * claimed, premium or featured listing is never AUTO either. And AUTO only
+ * acts when the 'dedupe_retire' automation gate is live (see the cron).
  */
 
 export type DedupeRow = {
@@ -42,27 +44,6 @@ const NOT_DUPLICATES = new Set([
   'agent-memory,mcp-57', // agishub: memory server vs x402 payments server
 ]);
 
-/** Repo basenames too generic to treat a cross-owner match as "same repo". */
-const GENERIC_REPO_NAMES = new Set([
-  'mcp',
-  'server',
-  'servers',
-  'mcp-server',
-  'mcp-servers',
-  'skills',
-  'agent-skills',
-  'agent',
-  'agents',
-  'tools',
-  'sdk',
-  'api',
-  'app',
-  'core',
-  'main',
-  'python-sdk',
-  'typescript',
-]);
-
 function parseRepo(rawUrl: string) {
   try {
     const u = new URL(rawUrl);
@@ -74,37 +55,50 @@ function parseRepo(rawUrl: string) {
       .filter(Boolean)
       .map((s) => s.toLowerCase());
     if (segs.length < 2)
-      return { host, owner: '', repo: '', path: segs, ok: false };
+      return { host, owner: '', repo: '', sub: '', ok: false };
     const cut = segs.findIndex(
       (s) => s === 'tree' || s === 'blob' || s === '-',
     );
-    const trimmed = cut > 1 ? segs.slice(0, cut) : segs;
+    // Path inside the repo below tree/<ref>/ (or GitLab's -/tree/<ref>/). The
+    // ref itself is ignored: main and master point at the same directory.
+    let sub = '';
+    if (cut > 1) {
+      const afterCut = segs.slice(cut + 1);
+      const rest = segs[cut] === '-' ? afterCut.slice(1) : afterCut;
+      sub = rest.slice(1).join('/');
+    } else if (segs.length > 2) {
+      sub = segs.slice(2).join('/');
+    }
     return {
       host,
-      owner: trimmed[0] ?? '',
-      repo: trimmed[1] ?? '',
-      path: segs,
+      owner: segs[0] ?? '',
+      repo: segs[1] ?? '',
+      sub,
       ok: true,
     };
   } catch {
-    return { host: '', owner: '', repo: '', path: [] as string[], ok: false };
+    return { host: '', owner: '', repo: '', sub: '', ok: false };
   }
 }
 
-/** Do two listing URLs point at the same underlying repo? */
+/**
+ * Do two listing URLs point at the same server? Same host, owner and repo, and
+ * the same directory inside it: two subpaths of one monorepo (awslabs/mcp's
+ * src/aws-docs and src/cdk) are different servers, and so is a monorepo root
+ * against one of its subpaths. The same repo name under a different owner is
+ * not "the same" either — that is often a community fork or a namesake, so it
+ * goes to a human (REVIEW), never AUTO.
+ */
 export function sameRepo(a: string, b: string): boolean {
   const ra = parseRepo(a);
   const rb = parseRepo(b);
   if (!ra.ok || !rb.ok) return false;
-  if (ra.host !== rb.host) return false;
-  if (ra.owner === rb.owner && ra.repo === rb.repo) return true;
-  const [short, long] =
-    ra.path.length <= rb.path.length ? [ra.path, rb.path] : [rb.path, ra.path];
-  if (short.length >= 2 && short.every((s, i) => s === long[i])) return true;
-  if (ra.repo && ra.repo === rb.repo && !GENERIC_REPO_NAMES.has(ra.repo)) {
-    return true;
-  }
-  return false;
+  return (
+    ra.host === rb.host &&
+    ra.owner === rb.owner &&
+    ra.repo === rb.repo &&
+    ra.sub === rb.sub
+  );
 }
 
 function ms(value: Date | number | null): number {

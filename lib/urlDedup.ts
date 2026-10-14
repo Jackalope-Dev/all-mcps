@@ -55,29 +55,45 @@ function containsLower(column: AnyColumn, needle: string): SQL {
 }
 
 /**
+ * Narrowing needles are only safe when the raw stored text must contain them.
+ * An internationalized host can be stored as Unicode (müller.de) while the URL
+ * parser hands back punycode (xn--mller-kva.de), and SQLite's lower() is
+ * ASCII-only, so either form makes the caller scan everything instead.
+ */
+function isSafeNeedle(needle: string): boolean {
+  return /^[!-~]*$/.test(needle) && !needle.includes('xn--');
+}
+
+/**
  * Rows that could share `key` (normalizeUrlKey) with `url`: their lowercased
- * URL must contain the key's host and path. Null when the URL has non-ASCII
- * or percent-encoded parts, where SQLite's ASCII-only lower() and the URL
- * parser's encoding could disagree — the caller then scans everything.
+ * URL must contain the key's host and its last path segment. Only the last
+ * segment, because the parser rewrites stored paths (dot segments, backslashes)
+ * in ways a raw substring test can't follow, while the final segment survives
+ * all of them. Null when no needle is safe — the caller then scans everything.
  */
 function urlKeyPrefilter(url: string): SQL | null {
   let host: string;
-  let path: string;
+  let lastSegment: string;
   try {
     const u = new URL(url);
     host = u.hostname.toLowerCase().replace(/^www\./, '');
-    path = u.pathname
-      .replace(/\.git$/i, '')
-      .replace(/\/+$/, '')
-      .toLowerCase();
+    lastSegment =
+      u.pathname
+        .replace(/\.git$/i, '')
+        .replace(/\/+$/, '')
+        .toLowerCase()
+        .split('/')
+        .pop() ?? '';
   } catch {
     return null;
   }
-  if (!/^[!-~]*$/.test(host + path) || (host + path).includes('%')) return null;
-  return path
+  if (!isSafeNeedle(host)) return null;
+  const safeSegment =
+    lastSegment && isSafeNeedle(lastSegment) && !lastSegment.includes('%');
+  return safeSegment
     ? (and(
         containsLower(servers.url, host),
-        containsLower(servers.url, path),
+        containsLower(servers.url, lastSegment),
       ) as SQL)
     : containsLower(servers.url, host);
 }
@@ -212,6 +228,9 @@ export async function findNearDuplicateCandidates(
       ) as SQL,
     );
   }
+  // An unsafe site/host needle (IDN, non-ASCII) can't narrow without missing
+  // stored rows, so that case falls back to reading every row.
+  const unsafeNeedle = [site, host].some((n) => n && !isSafeNeedle(n));
   for (const needle of [site, host]) {
     if (!needle) continue;
     clauses.push(
@@ -233,7 +252,7 @@ export async function findNearDuplicateCandidates(
       status: servers.status,
     })
     .from(servers)
-    .where(or(...clauses));
+    .where(unsafeNeedle ? undefined : or(...clauses));
 
   const out: ExistingListingMatch[] = [];
   const seen = new Set<string>();

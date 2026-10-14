@@ -25,10 +25,10 @@ import {
   decideIngestPromote,
   decideSubmission,
   GATE_EVIDENCE_COLUMNS,
-  GATES,
   gateEvidenceFromRow,
   getGateModes,
   markActed,
+  PENDING_GATES,
   recordDecision,
 } from '../../../../lib/autoDecision';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
@@ -745,7 +745,7 @@ export async function POST(req: Request) {
     // the same side effects as an admin click (lib/listingApproval.ts).
     const modes = await getGateModes(db);
     const gateCounts: Record<string, Record<string, number>> = {};
-    for (const gate of GATES) {
+    for (const gate of PENDING_GATES) {
       if (modes[gate] === 'off') continue;
       const counts = { approve: 0, reject: 0, hold: 0, acted: 0 };
       gateCounts[gate] = counts;

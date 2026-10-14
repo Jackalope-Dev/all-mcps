@@ -151,11 +151,24 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    const reverted = await db
-      .update(servers)
-      .set({ status: 'pending' })
-      .where(and(eq(servers.id, body.serverId), eq(servers.status, 'active')))
-      .returning({ id: servers.id });
+    // A retired duplicate comes back as active with its redirect cleared; the
+    // undone decision keeps the weekly sweep from retiring it again.
+    const reverted =
+      body.gate === 'dedupe_retire'
+        ? await db
+            .update(servers)
+            .set({ status: 'active', redirectTo: null })
+            .where(
+              and(eq(servers.id, body.serverId), eq(servers.status, 'removed')),
+            )
+            .returning({ id: servers.id })
+        : await db
+            .update(servers)
+            .set({ status: 'pending' })
+            .where(
+              and(eq(servers.id, body.serverId), eq(servers.status, 'active')),
+            )
+            .returning({ id: servers.id });
     await db
       .update(autoDecisions)
       .set({
@@ -169,7 +182,9 @@ export async function POST(req: Request) {
       success: true,
       message:
         reverted.length > 0
-          ? 'Moved back to pending.'
+          ? body.gate === 'dedupe_retire'
+            ? 'Restored as active.'
+            : 'Moved back to pending.'
           : 'Marked undone; the listing was no longer active.',
     });
   } catch (error: any) {
