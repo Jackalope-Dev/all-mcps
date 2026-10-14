@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { AdminStats } from '@/lib/adminStats';
+import { CatalogCoverageCard } from './CatalogCoverageCard';
 
 export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
   const callerEntries = Object.entries(stats.callerCounts || {}).sort(
@@ -25,6 +26,8 @@ export function AdminAnalyticsView({ stats }: { stats: AdminStats }) {
       className="admin-analytics-shell"
       style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
     >
+      <CatalogCoverageCard />
+
       <div
         className="admin-grid-2"
         style={{
