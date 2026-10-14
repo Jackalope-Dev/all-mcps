@@ -25,9 +25,14 @@ function stripHtml(input) {
  *
  *   npx wrangler d1 execute all-mcps --remote --file=drizzle/ingest-<date>.sql
  *
- * Pass --apply (used by the weekly `.github/workflows/registry-sync.yml` cron)
+ * Pass --apply (used by the manual `.github/workflows/registry-sync.yml` run)
  * to run that wrangler command automatically right after writing the file —
  * requires CLOUDFLARE_API_TOKEN in the environment for non-interactive auth.
+ *
+ * Scheduled ingest now lives in /api/cron/ingest (lib/ingest/), which reads
+ * the registry incrementally and adds npm and GitHub topic sources. This
+ * script is the full-rescan backup; keep its parsing in step with
+ * lib/ingest/sources.ts.
  *
  * Every candidate lands 'pending'. A Jev "same project" duplicate is skipped;
  * an unsure duplicate or a repo unrelated to the name is imported with
