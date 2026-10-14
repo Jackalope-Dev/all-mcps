@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
+import { SUPPORTED_PROTOCOL_VERSIONS } from '@/lib/mcpProtocol';
 
 export async function GET() {
   const mcpManifest = {
     name: 'AllMCPs Directory Server',
     description:
       'The definitive open directory of Model Context Protocol (MCP) servers, tools, and client configurations.',
-    version: '1.3.0',
+    version: '1.5.0',
     websiteUrl: 'https://allmcps.com',
     mcpEndpoint: 'https://allmcps.com/api/mcp',
-    // "Streamable HTTP" is the official MCP transport name (spec revision
-    // 2024-11-05+) for a single HTTP endpoint that accepts POSTed JSON-RPC
-    // and returns either a plain JSON response or an SSE stream. This server
-    // returns plain JSON today (no streaming responses yet) — a valid,
-    // spec-compliant degenerate case of Streamable HTTP, not a separate
-    // "http-jsonrpc" transport.
+    // Streamable HTTP: one endpoint taking POSTed JSON-RPC. Responses are
+    // plain JSON (a valid case of the transport). Dual-era: modern clients
+    // send the version per request; legacy clients use initialize.
     transport: 'streamable-http',
-    protocolVersion: '2024-11-05',
+    protocolVersion: SUPPORTED_PROTOCOL_VERSIONS[0],
+    protocolVersions: SUPPORTED_PROTOCOL_VERSIONS,
     wellKnownHandshake: 'https://allmcps.com/.well-known/mcp',
     capabilities: {
       tools: {
@@ -25,7 +24,20 @@ export async function GET() {
         },
         get_mcp_install_config: {
           description:
-            'Get client JSON configurations for specific MCP servers',
+            'Setup configs for one server in 13 MCP clients (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Cline, Zed, Codex, Gemini CLI, JetBrains, Roo Code, Continue, LM Studio)',
+        },
+        get_mcp_alternatives: {
+          description: 'Alternative servers to a given server, same category',
+        },
+        compare_mcp_servers: {
+          description:
+            'Side-by-side comparison of 2 to 4 servers: install, evidence, tools, health, stars',
+        },
+        recommend_mcp_stack: {
+          description: 'A small stack of complementary servers for a role',
+        },
+        get_boost_status: {
+          description: 'Boost and verified-badge status for a listing',
         },
         list_mcp_categories: {
           description: 'List directory categories with server counts',

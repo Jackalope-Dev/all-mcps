@@ -37,7 +37,7 @@ const ENDPOINTS = [
     method: 'GET',
     path: '/api/v1/servers/{id}',
     title: 'Get server by ID',
-    desc: 'Single listing with quality score, popularity signals, and public metadata.',
+    desc: 'Single listing with quality score, popularity signals, public metadata, and a configs array with ready-to-paste setup for each MCP client (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Cline, Zed, Codex, Gemini CLI, JetBrains, Roo Code, Continue, LM Studio). configs is null when the install is not confirmed. Pending, rejected and flagged listings return 404.',
     example: 'https://allmcps.com/api/v1/servers/github-github-mcp-server',
   },
   {
@@ -115,7 +115,7 @@ const ENDPOINTS = [
     method: 'GET',
     path: '/api/mcp',
     title: 'Remote MCP server',
-    desc: "AllMCPs itself as a remote MCP server: search, install configs, categories, boosting, and a fully schema'd submit_mcp_server tool (call tools/list for the exact category/pricing/auth/maintenance enum values). Also available as the allmcps-server npm package (stdio bridge to this same endpoint).",
+    desc: "AllMCPs itself as a remote MCP server (protocol 2026-07-28, plus initialize-based 2025-11-25 and earlier): search with transport and verified-only filters, per-client install configs, alternatives, side-by-side comparison, stack recommendations, categories, boosting, and a fully schema'd submit_mcp_server tool (call tools/list for the exact enum values). Also available as the allmcps-server npm package (stdio bridge to this same endpoint).",
     example: 'https://allmcps.com/api/mcp',
   },
 ] as const;
