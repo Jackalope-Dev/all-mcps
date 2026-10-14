@@ -16,6 +16,15 @@ import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
 import { generateListingContent } from '../../../../lib/aiContent';
+import {
+  changedCandidates,
+  countChanged,
+  countNewBacklog,
+  countStaleDue,
+  newCandidateIds,
+  servableWhere,
+  staleCandidates,
+} from '../../../../lib/aiContentQueue';
 import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { cleanListingDescription } from '../../../../lib/description';
@@ -71,7 +80,6 @@ const DEFAULT_BATCH_SIZE = 6;
 // not this per-wave width, which still bounds one isolate's peak memory.
 const CONCURRENCY = 6;
 const MIN_MATERIAL_CHARS = 30;
-const STALE_RECHECK_MS = 90 * 24 * 60 * 60 * 1000;
 /** Minimum gap before an install-only run re-checks a listing it found no install for. */
 const INSTALL_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -115,6 +123,28 @@ type ClaimedRow = {
   pass: 'writeup' | 'install' | 'metadata';
 };
 
+/** A re-claimed writeup row: releases back to its previous ai_enriched_at on failure. */
+function toReclaimed(c: {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+  category: string;
+  tools: string | null;
+  aiEnrichedAt: Date | null;
+}): ClaimedRow {
+  return {
+    id: c.id,
+    name: c.name,
+    url: c.url,
+    description: c.description,
+    category: c.category,
+    tools: c.tools,
+    previousEnrichedAt: c.aiEnrichedAt,
+    pass: 'writeup',
+  };
+}
+
 export async function POST(req: Request) {
   try {
     if (!(await isCronAuthorized(req))) {
@@ -149,85 +179,57 @@ export async function POST(req: Request) {
     const installOnly = url.searchParams.get('pass') === 'install';
     const recheckBefore = new Date(claimTime.getTime() - INSTALL_RECHECK_MS);
 
-    // Phase 1: atomically claim highest-value never-enriched or missing-writeup listings
-    const claimedNew = installOnly
+    // Order and eligibility live in lib/aiContentQueue.ts. Install-only runs
+    // (?pass=install) skip the write-up passes entirely.
+    // Pass 1: writeups older than their listing's latest source change.
+    // Claimed like stale re-checks: a failure releases back to the previous
+    // ai_enriched_at, so the row stays ahead of the queue.
+    let claimedChanged: ClaimedRow[] = [];
+    const changedRows = installOnly
       ? []
-      : ((await db
-          .update(servers)
-          .set({ aiEnrichedAt: claimTime })
-          .where(
-            inArray(
-              servers.id,
-              db
-                .select({ id: servers.id })
-                .from(servers)
-                .where(
-                  and(
-                    eq(servers.status, 'active'),
-                    // Rows skipped as thin/JEV keep aiEnrichedAt with no aiDoc or
-                    // summary; re-claiming them here pinned the same top-view rows
-                    // every tick. Only backfill docs for rows that got a summary.
-                    // A summarized row whose doc backfill is skipped gets aiDoc = ''
-                    // (markWriteupSkipped), so it drops out of this clause too.
-                    or(
-                      isNull(servers.aiEnrichedAt),
-                      and(isNull(servers.aiDoc), isNotNull(servers.aiSummary)),
-                    ),
-                  ),
-                )
-                // Leads with idx_servers_status_popularity's columns so D1 walks
-                // the index and stops after the batch (~4k rows read) instead of
-                // sorting every active listing (~51k) on each claim.
-                .orderBy(
-                  desc(servers.views),
-                  desc(servers.copies),
-                  desc(servers.upvotes),
-                  sql`${servers.githubStars} IS NULL`,
-                  desc(servers.githubStars),
-                  asc(servers.createdAt),
-                )
-                .limit(batchSize),
-            ),
-          )
-          .returning({
-            id: servers.id,
-            name: servers.name,
-            url: servers.url,
-            description: servers.description,
-            category: servers.category,
-            tools: servers.tools,
-          })) as Omit<ClaimedRow, 'pass'>[]);
+      : await changedCandidates(db, batchSize);
+    if (changedRows.length > 0) {
+      await db
+        .update(servers)
+        .set({ aiEnrichedAt: claimTime })
+        .where(
+          inArray(
+            servers.id,
+            changedRows.map((c) => c.id),
+          ),
+        );
+      claimedChanged = changedRows.map((c) => toReclaimed(c));
+    }
+
+    // Pass 2: atomically claim the highest-demand never-enriched or
+    // missing-writeup listings.
+    const newSlots = installOnly ? 0 : batchSize - claimedChanged.length;
+    const claimedNew =
+      newSlots > 0
+        ? ((await db
+            .update(servers)
+            .set({ aiEnrichedAt: claimTime })
+            .where(inArray(servers.id, newCandidateIds(db, newSlots)))
+            .returning({
+              id: servers.id,
+              name: servers.name,
+              url: servers.url,
+              description: servers.description,
+              category: servers.category,
+              tools: servers.tools,
+            })) as Omit<ClaimedRow, 'pass'>[])
+        : [];
 
     const claimedWriteup: ClaimedRow[] = claimedNew.map((c) => ({
       ...c,
       pass: 'writeup' as const,
     }));
 
+    // Pass 3: writeups past their demand-based age (90 or 180 days).
     let claimedStale: ClaimedRow[] = [];
-    const staleSlots = batchSize - claimedNew.length;
-    if (!installOnly && staleSlots > 0) {
-      const staleCutoff = new Date(claimTime.getTime() - STALE_RECHECK_MS);
-      const candidates = await db
-        .select({
-          id: servers.id,
-          name: servers.name,
-          url: servers.url,
-          description: servers.description,
-          category: servers.category,
-          tools: servers.tools,
-          aiEnrichedAt: servers.aiEnrichedAt,
-        })
-        .from(servers)
-        .where(
-          and(
-            eq(servers.status, 'active'),
-            isNotNull(servers.aiEnrichedAt),
-            lt(servers.aiEnrichedAt, staleCutoff),
-          ),
-        )
-        .orderBy(asc(servers.aiEnrichedAt))
-        .limit(staleSlots);
-
+    const staleSlots = newSlots - claimedNew.length;
+    if (staleSlots > 0) {
+      const candidates = await staleCandidates(db, claimTime, staleSlots);
       if (candidates.length > 0) {
         await db
           .update(servers)
@@ -238,22 +240,14 @@ export async function POST(req: Request) {
               candidates.map((c) => c.id),
             ),
           );
-        claimedStale = candidates.map((c) => ({
-          id: c.id,
-          name: c.name,
-          url: c.url,
-          description: c.description,
-          category: c.category,
-          tools: c.tools,
-          previousEnrichedAt: c.aiEnrichedAt as Date | null,
-          pass: 'writeup' as const,
-        }));
+        claimedStale = candidates.map((c) => toReclaimed(c));
       }
     }
 
     let claimedInstall: ClaimedRow[] = [];
     let claimedMetadata: ClaimedRow[] = [];
-    const writeupCount = claimedWriteup.length + claimedStale.length;
+    const writeupCount =
+      claimedChanged.length + claimedWriteup.length + claimedStale.length;
     const leftover = batchSize - writeupCount;
     if (leftover > 0) {
       const installClaim = (await db
@@ -267,7 +261,7 @@ export async function POST(req: Request) {
               .from(servers)
               .where(
                 and(
-                  eq(servers.status, 'active'),
+                  servableWhere,
                   // The regular pass waits for a write-up, which picks an
                   // install itself; install-only runs also take listings still
                   // queued for one, skipping only those marked thin (aiDoc '').
@@ -326,7 +320,7 @@ export async function POST(req: Request) {
         .from(servers)
         .where(
           and(
-            eq(servers.status, 'active'),
+            servableWhere,
             hasWriteup,
             or(isNull(servers.authType), isNull(servers.pricingModel)),
           ),
@@ -340,6 +334,7 @@ export async function POST(req: Request) {
     }
 
     const claimed = [
+      ...claimedChanged,
       ...claimedWriteup,
       ...claimedStale,
       ...claimedInstall,
@@ -347,6 +342,7 @@ export async function POST(req: Request) {
     ];
     const stats = {
       claimed: claimed.length,
+      claimedChanged: claimedChanged.length,
       claimedNew: claimedWriteup.length,
       claimedStale: claimedStale.length,
       claimedInstall: claimedInstall.length,
@@ -626,49 +622,37 @@ export async function POST(req: Request) {
       });
     }
 
-    const [{ remaining }] = await db
-      .select({ remaining: sql<number>`count(*)` })
-      .from(servers)
-      .where(and(eq(servers.status, 'active'), isNull(servers.aiEnrichedAt)));
+    const [remaining, dueForRecheck, changedWaiting] = await Promise.all([
+      countNewBacklog(db),
+      countStaleDue(db, new Date()),
+      countChanged(db),
+    ]);
 
     const [{ installRemaining }] = await db
       .select({ installRemaining: sql<number>`count(*)` })
       .from(servers)
-      .where(
-        and(eq(servers.status, 'active'), isNull(servers.installExtractedAt)),
-      );
+      .where(and(servableWhere, isNull(servers.installExtractedAt)));
 
     const [{ docRemaining }] = await db
       .select({ docRemaining: sql<number>`count(*)` })
       .from(servers)
-      .where(and(eq(servers.status, 'active'), isNull(servers.aiDoc)));
-
-    const staleCutoffNow = new Date(Date.now() - STALE_RECHECK_MS);
-    const [{ dueForRecheck }] = await db
-      .select({ dueForRecheck: sql<number>`count(*)` })
-      .from(servers)
-      .where(
-        and(
-          eq(servers.status, 'active'),
-          isNotNull(servers.aiEnrichedAt),
-          lt(servers.aiEnrichedAt, staleCutoffNow),
-        ),
-      );
+      .where(and(servableWhere, isNull(servers.aiDoc)));
 
     return NextResponse.json({
       success: true,
       ...stats,
       remaining,
       dueForRecheck,
+      changedWaiting,
       installRemaining,
       docRemaining,
       githubAuth: Boolean(githubToken),
       message:
-        `AI content: enriched ${stats.enriched} (${stats.claimedNew} new, ${stats.claimedStale} re-checked), ` +
+        `AI content: enriched ${stats.enriched} (${stats.claimedChanged} changed, ${stats.claimedNew} new, ${stats.claimedStale} re-checked), ` +
         `install ${stats.installPicked}, metadata ${stats.metadataFilled}, ` +
         `skipped-thin ${stats.skippedThin}, skipped-jev ${stats.skippedJev}, skipped-empty ${stats.skippedEmpty}, failed ${stats.failed}${
           stats.budgetStopped ? ' (stopped — LLM spend cap/outage)' : ''
-        }. ~${remaining} never-enriched, ~${dueForRecheck} due for re-check, ~${installRemaining} install-unchecked, ~${docRemaining} without a writeup.`,
+        }. ~${changedWaiting} changed since writeup, ~${remaining} never-enriched, ~${dueForRecheck} due for re-check, ~${installRemaining} install-unchecked, ~${docRemaining} without a writeup.`,
     });
   } catch (error: any) {
     console.error('AI content cron error:', error);
