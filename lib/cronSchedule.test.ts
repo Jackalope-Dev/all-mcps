@@ -44,7 +44,7 @@ describe('jobsForTick', () => {
   it('sends one batch-24 AI run plus install-only runs from the site, but keeps the default batch on a single Worker', () => {
     expect(paths(AI_CONTENT_JOBS_DEDICATED)).toEqual([
       '/api/cron/ai-content?batchSize=24',
-      ...Array(4).fill('/api/cron/ai-content?pass=install&batchSize=24'),
+      ...Array(16).fill('/api/cron/ai-content?pass=install&batchSize=24'),
     ]);
     for (const job of AI_CONTENT_JOBS_DEDICATED) {
       expect(isOffloadedCronPath(job.path)).toBe(true);

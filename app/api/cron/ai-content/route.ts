@@ -596,6 +596,16 @@ export async function POST(req: Request) {
     }
     stats.budgetStopped = budgetHit;
 
+    // Install-only runs go many per tick; the backlog counts below each scan
+    // every active listing, so they're left to the regular run's summary.
+    if (installOnly) {
+      return NextResponse.json({
+        success: true,
+        ...stats,
+        message: `AI content (install-only): picked ${stats.installPicked} of ${stats.claimedInstall} claimed, failed ${stats.failed}.`,
+      });
+    }
+
     const [{ remaining }] = await db
       .select({ remaining: sql<number>`count(*)` })
       .from(servers)

@@ -63,8 +63,9 @@ export const AI_CONTENT_JOBS: CronJob[] = [
 const AI_CONTENT_DEDICATED_RUNS = 1;
 // Install-only runs (?pass=install) make no OpenAI calls, so they don't count
 // against that allowance. Without them installs only got the slots left after
-// write-ups: ~36/h against a backlog of ~11.7k.
-const AI_CONTENT_INSTALL_RUNS = 4;
+// write-ups: ~36/h against a backlog of ~11.7k. Measured 7-16s per run vs ~90s
+// for the write-up run, so 16 fit well inside the tick (~6 min of 15).
+const AI_CONTENT_INSTALL_RUNS = 16;
 export const AI_CONTENT_JOBS_DEDICATED: CronJob[] = [
   ...Array.from({ length: AI_CONTENT_DEDICATED_RUNS }, () => ({
     path: '/api/cron/ai-content?batchSize=24',
