@@ -15,7 +15,4 @@ pre-push:
     verify:
       run: bun run verify
     secrets:
-      run: |
-        if ! command -v gitleaks >/dev/null 2>&1; then echo "gitleaks not installed, skipping (brew install gitleaks)"; exit 0; fi
-        base=$(git rev-parse '@{u}' 2>/dev/null || git rev-parse HEAD~1)
-        gitleaks git --redact --no-banner --log-opts="$base..HEAD" .
+      run: node scripts/check-secrets.mjs
