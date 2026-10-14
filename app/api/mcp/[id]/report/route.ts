@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { reports, servers } from '../../../../../db/schema';
 import { getEmailEnv, sendNotificationEmail } from '../../../../../lib/notify';
+import { upsertSignals } from '../../../../../lib/signalStore';
 import { getAppUrl } from '../../../../../lib/stripe';
 import { verifyTurnstileToken } from '../../../../../lib/turnstile';
 import {
@@ -150,6 +151,15 @@ export async function POST(
       details,
       reporterIpHash: ipHash,
     });
+
+    // A malicious report is new evidence: have the stale sweep re-assess the
+    // listing on its next tick instead of waiting out its weekly window, so a
+    // listing several people report is hidden within the hour (see
+    // MALICIOUS_REPORT_THRESHOLD in lib/staleness.ts). Reports still never
+    // touch the public score.
+    if (reason === 'malicious') {
+      await upsertSignals(db, id, { staleCheckedAt: null });
+    }
 
     // Without this, reports sat unseen until someone happened to open /admin — a
     // maintainer's correction went nowhere and they fell back to emailing us.

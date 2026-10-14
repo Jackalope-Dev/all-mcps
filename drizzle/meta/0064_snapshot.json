@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "90da4f43-53a4-44b7-a01c-bcc88478a72a",
+  "id": "7270e896-4a45-462c-917e-227c746de6e7",
   "prevId": "f41c33c9-2aa6-4843-80fa-57b82d2ed16b",
   "tables": {
     "accounts": {
@@ -1222,6 +1222,13 @@
         "content_changed_at": {
           "name": "content_changed_at",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "package_repo": {
+          "name": "package_repo",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

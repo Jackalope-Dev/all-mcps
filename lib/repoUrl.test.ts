@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isGitHubRepoUrl, isRepositoryUrl } from './repoUrl';
+import { githubRepoSlug, isGitHubRepoUrl, isRepositoryUrl } from './repoUrl';
 
 describe('isRepositoryUrl', () => {
   it('accepts real repository URLs across the common hosts', () => {
@@ -64,5 +64,26 @@ describe('isGitHubRepoUrl', () => {
 
   it('rejects a bare github.com with no repo path', () => {
     expect(isGitHubRepoUrl('https://github.com')).toBe(false);
+  });
+});
+
+describe('githubRepoSlug', () => {
+  it('reduces every GitHub reference shape to owner/repo', () => {
+    expect(githubRepoSlug('https://github.com/Acme/Repo')).toBe('acme/repo');
+    expect(githubRepoSlug('git+https://github.com/acme/repo.git')).toBe(
+      'acme/repo',
+    );
+    expect(githubRepoSlug('git@github.com:acme/repo.git')).toBe('acme/repo');
+    expect(githubRepoSlug('github:acme/repo')).toBe('acme/repo');
+    expect(
+      githubRepoSlug(
+        'https://github.com/modelcontextprotocol/servers/tree/main/src/git',
+      ),
+    ).toBe('modelcontextprotocol/servers');
+  });
+
+  it('returns null for anything else', () => {
+    expect(githubRepoSlug('https://gitlab.com/acme/repo')).toBeNull();
+    expect(githubRepoSlug(null)).toBeNull();
   });
 });

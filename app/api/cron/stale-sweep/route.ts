@@ -17,6 +17,7 @@ import { NextResponse } from 'next/server';
 import {
   autoDecisions,
   listingSignals,
+  reports,
   servers,
   stdioVerifications,
 } from '../../../../db/schema';
@@ -32,19 +33,29 @@ import {
 } from '../../../../lib/autoDecision';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { getGithubToken } from '../../../../lib/githubAuth';
+import { assessInstallRisk } from '../../../../lib/installRisk';
 import {
   approvePendingListing,
   rejectPendingListing,
 } from '../../../../lib/listingApproval';
 import { refreshListingPageInBackground } from '../../../../lib/listingPageRefresh';
 import { reviewColumns, triageListing } from '../../../../lib/listingReview';
-import { checkRegistry } from '../../../../lib/packageRegistry';
+import {
+  bareName,
+  checkRegistry,
+  npmPackageFor,
+} from '../../../../lib/packageRegistry';
 import {
   checkRepo,
   isRepoGoneConfirmed,
   REPO_GONE_CONFIRM_MS,
   type RepoStatus,
 } from '../../../../lib/repoCheck';
+import { githubRepoSlug } from '../../../../lib/repoUrl';
+import {
+  hasStrongPoisoning,
+  type PoisoningFinding,
+} from '../../../../lib/securityProfile';
 import { upsertSignals } from '../../../../lib/signalStore';
 import {
   assessStaleness,
@@ -54,6 +65,10 @@ import {
   pendingAutoRemoveReason,
   shouldAutoRemove,
 } from '../../../../lib/staleness';
+import {
+  findTyposquatTarget,
+  type PopularPackage,
+} from '../../../../lib/typosquat';
 
 /**
  * Keeps dead, abandoned and fake listings out of the catalog, in stages — see
@@ -106,6 +121,11 @@ const GATE_BATCH = 100;
 const RECENT_IMPORT_MS = 14 * 24 * 60 * 60 * 1000;
 const TRIAGE_BATCH = 48;
 const TRIAGE_CONCURRENCY = 8;
+/** How many top npm packages the typosquat check compares against. */
+const POPULAR_PACKAGE_POOL = 400;
+const MALICIOUS_REPORT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+/** Ids per reports query, under D1's 100-bound-parameter cap with room for the filters. */
+const REPORT_ID_CHUNK = 90;
 /** Statements per db.batch — each is a single-row update with a handful of params. */
 const WRITE_CHUNK = 50;
 
@@ -133,6 +153,66 @@ async function runChunked(db: any, statements: unknown[]): Promise<void> {
     const chunk = statements.slice(i, i + WRITE_CHUNK);
     if (chunk.length > 0) await db.batch(chunk as any);
   }
+}
+
+function safeParseArray(raw: string): PoisoningFinding[] {
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Most-downloaded npm installs in the catalog: what a typosquat would imitate. */
+async function loadPopularNpmPackages(db: any): Promise<PopularPackage[]> {
+  const rows: { pkg: string | null; downloads: number | null }[] = await db
+    .select({ pkg: servers.installPackage, downloads: servers.npmDownloads })
+    .from(servers)
+    .where(
+      and(
+        eq(servers.status, 'active'),
+        inArray(servers.installCommand, ['npx', 'bunx', 'npm']),
+        gt(servers.npmDownloads, 999),
+      ),
+    )
+    .orderBy(desc(servers.npmDownloads))
+    .limit(POPULAR_PACKAGE_POOL);
+  const out: PopularPackage[] = [];
+  for (const r of rows) {
+    if (r.pkg) out.push({ name: bareName(r.pkg), downloads: r.downloads ?? 0 });
+  }
+  return out;
+}
+
+/** Distinct reporters with an open 'malicious' report per listing, last 30 days. */
+async function countMaliciousReporters(
+  db: any,
+  ids: string[],
+  now: Date,
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const since = new Date(now.getTime() - MALICIOUS_REPORT_WINDOW_MS);
+  for (let i = 0; i < ids.length; i += REPORT_ID_CHUNK) {
+    const rows: { serverId: string; n: number }[] = await db
+      .select({
+        serverId: reports.serverId,
+        n: sql<number>`count(distinct ${reports.reporterIpHash})`,
+      })
+      .from(reports)
+      .where(
+        and(
+          inArray(reports.serverId, ids.slice(i, i + REPORT_ID_CHUNK)),
+          eq(reports.reason, 'malicious'),
+          eq(reports.status, 'open'),
+          isNotNull(reports.reporterIpHash),
+          gt(reports.createdAt, since),
+        ),
+      )
+      .groupBy(reports.serverId);
+    for (const r of rows) counts.set(r.serverId, Number(r.n));
+  }
+  return counts;
 }
 
 export async function POST(req: Request) {
@@ -210,6 +290,7 @@ export async function POST(req: Request) {
         if (status.kind === 'missing') registryCounts.missing++;
         return upsertSignals(db, row.id, {
           registryCheckedAt: now,
+          packageRepo: status.kind === 'missing' ? null : (status.repo ?? null),
           packageDeprecated:
             status.kind === 'deprecated' ? status.message : null,
           // Keep the first-seen date while it stays missing.
@@ -348,6 +429,15 @@ export async function POST(req: Request) {
         repoFirstGoneAt: listingSignals.repoFirstGoneAt,
         triageVerdict: listingSignals.triageVerdict,
         installFailures: stdioVerifications.installFailures,
+        url: servers.url,
+        installCommand: servers.installCommand,
+        installArgs: servers.installArgs,
+        installPackage: servers.installPackage,
+        packageRepo: listingSignals.packageRepo,
+        // Only the findings, not the whole profile JSON, for 400 rows.
+        poisoning: sql<
+          string | null
+        >`json_extract(${listingSignals.securityProfile}, '$.poisoning')`,
       })
       .from(servers)
       .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
@@ -367,11 +457,22 @@ export async function POST(req: Request) {
       .orderBy(asc(listingSignals.staleCheckedAt))
       .limit(ASSESS_BATCH);
 
+    const [popularPackages, maliciousReporters] = await Promise.all([
+      loadPopularNpmPackages(db),
+      countMaliciousReporters(
+        db,
+        assessRows.map((r) => r.id),
+        now,
+      ),
+    ]);
+
     let flagged = 0;
     let unflagged = 0;
     let removed = 0;
     const assessStatements: unknown[] = [];
     for (const r of assessRows) {
+      const npmName = npmPackageFor(r);
+      const listingRepo = githubRepoSlug(r.url);
       const reasons = assessStaleness({
         now,
         isPremium: r.isPremium,
@@ -401,6 +502,19 @@ export async function POST(req: Request) {
           r.packageMissingAt == null &&
           !r.packageDeprecated,
         triageVerdict: r.triageVerdict,
+        toolPoisoning: hasStrongPoisoning(
+          r.poisoning ? safeParseArray(r.poisoning) : null,
+        ),
+        installRisk: assessInstallRisk(r).length > 0,
+        typosquatOf: npmName
+          ? findTyposquatTarget(npmName, r.npmDownloads, popularPackages)
+          : null,
+        packageRepoMismatch:
+          r.packageRepo != null &&
+          listingRepo != null &&
+          r.packageRepo !== listingRepo &&
+          r.packageRepo !== r.repoForkOf?.toLowerCase(),
+        maliciousReporters: maliciousReporters.get(r.id) ?? 0,
       });
 
       if (reasons.length === 0) {

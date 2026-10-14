@@ -684,6 +684,8 @@ export const listingSignals = sqliteTable(
      * servers.ai_enriched_at, ahead of the fixed 90-day refresh.
      */
     contentChangedAt: integer('content_changed_at', { mode: 'timestamp' }),
+    /** GitHub `owner/repo` the install package's registry metadata points at (lib/packageRegistry.ts). Null = none named or not checked. */
+    packageRepo: text('package_repo'),
     /** Where ingest first found this listing: official-registry | awesome-list | npm | pypi | github-topic | submission. */
     discoveredVia: text('discovered_via'),
   },

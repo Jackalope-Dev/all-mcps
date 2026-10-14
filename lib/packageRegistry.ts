@@ -1,3 +1,5 @@
+import { githubRepoSlug } from './repoUrl';
+
 /**
  * Registry status of a listing's install package — the stale sweep's two hard
  * signals: deprecated, or gone. Only a definite answer counts: a timeout, rate
@@ -5,9 +7,14 @@
  * auto-promote liveness check, where only 404/410 mean gone).
  */
 
+/**
+ * `repo` is the GitHub `owner/repo` the package's own metadata points at, or
+ * null when it names none — compared against the listing's repo to catch a
+ * listing that installs someone else's package.
+ */
 export type RegistryStatus =
-  | { kind: 'ok' }
-  | { kind: 'deprecated'; message: string }
+  | { kind: 'ok'; repo?: string | null }
+  | { kind: 'deprecated'; message: string; repo?: string | null }
   | { kind: 'missing' }
   | { kind: 'unknown' };
 
@@ -46,31 +53,66 @@ export function bareName(pkg: string): string {
 
 /** npm packument → status. Deprecation is per version; the dist-tag `latest` is what users get. */
 export function npmStatusFromDoc(doc: unknown): RegistryStatus {
+  type Repo = string | { url?: unknown } | undefined;
   const d = doc as {
     'dist-tags'?: { latest?: string };
-    versions?: Record<string, { deprecated?: unknown }>;
+    versions?: Record<string, { deprecated?: unknown; repository?: Repo }>;
+    repository?: Repo;
     time?: { unpublished?: unknown };
   };
   if (d?.time?.unpublished) return { kind: 'missing' };
   const latest = d?.['dist-tags']?.latest;
-  const dep = latest ? d.versions?.[latest]?.deprecated : undefined;
+  const version = latest ? d.versions?.[latest] : undefined;
+  const repoField = version?.repository ?? d?.repository;
+  const repo = githubRepoSlug(
+    typeof repoField === 'string'
+      ? repoField
+      : typeof repoField?.url === 'string'
+        ? repoField.url
+        : null,
+  );
+  const dep = version?.deprecated;
   if (typeof dep === 'string' && dep.trim())
-    return { kind: 'deprecated', message: dep.trim().slice(0, 300) };
-  return { kind: 'ok' };
+    return { kind: 'deprecated', message: dep.trim().slice(0, 300), repo };
+  return { kind: 'ok', repo };
 }
 
 /** PyPI JSON → status. A yanked latest release is PyPI's deprecation. */
 export function pypiStatusFromDoc(doc: unknown): RegistryStatus {
   const d = doc as {
-    info?: { yanked?: boolean; yanked_reason?: string | null };
+    info?: {
+      yanked?: boolean;
+      yanked_reason?: string | null;
+      home_page?: string | null;
+      project_urls?: Record<string, string> | null;
+    };
   };
+  // PyPI has no single repository field; the first GitHub link wins, with
+  // the conventional source keys checked before Homepage.
+  const urls = d?.info?.project_urls ?? {};
+  const ordered = [
+    urls.Source,
+    urls.Repository,
+    urls['Source Code'],
+    urls.Code,
+    urls.GitHub,
+    urls.Homepage,
+    d?.info?.home_page,
+    ...Object.values(urls),
+  ];
+  let repo: string | null = null;
+  for (const u of ordered) {
+    repo = githubRepoSlug(u);
+    if (repo) break;
+  }
   if (d?.info?.yanked) {
     return {
       kind: 'deprecated',
       message: (d.info.yanked_reason || 'Latest release yanked').slice(0, 300),
+      repo,
     };
   }
-  return { kind: 'ok' };
+  return { kind: 'ok', repo };
 }
 
 type GithubRepoRef = { owner: string; repo: string };

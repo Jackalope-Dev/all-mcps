@@ -1,4 +1,5 @@
 import { ScanSearch } from 'lucide-react';
+import { assessInstallRisk } from '../../lib/installRisk';
 import {
   CAPABILITY_LABEL,
   type Capability,
@@ -16,9 +17,12 @@ import type { Server } from '../../lib/servers';
  */
 export function SecurityProfileCard({ server }: { server: Server }) {
   const profile = parseSecurityProfile(server.securityProfile);
-  if (!profile) return null;
+  // The install command is checked even for servers we have never run: it is
+  // what the user is about to paste into their client.
+  const installRisk = assessInstallRisk(server);
+  if (!profile && installRisk.length === 0) return null;
 
-  const sb = profile.sandbox;
+  const sb = profile?.sandbox;
   const changedAt = server.toolsChangedAt
     ? new Date(server.toolsChangedAt as string | Date)
     : null;
@@ -105,47 +109,9 @@ export function SecurityProfileCard({ server }: { server: Server }) {
         </h3>
       </div>
 
-      <p
-        style={{
-          margin: 0,
-          fontSize: '0.82rem',
-          color: 'var(--text-secondary)',
-          lineHeight: 1.6,
-        }}
-      >
-        From the {profile.toolCount} tool{profile.toolCount === 1 ? '' : 's'}{' '}
-        this server returned when we ran it
-        {profile.annotatedTools > 0
-          ? `; ${profile.annotatedTools} declare their own safety hints`
-          : ''}
-        .
-      </p>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-        {profile.capabilities.map((cap: Capability) => {
-          const tools = profile.toolsByCapability[cap] ?? [];
-          return (
-            <span
-              key={cap}
-              title={tools.slice(0, 12).join(', ')}
-              style={{
-                padding: '0.2rem 0.55rem',
-                borderRadius: '999px',
-                fontSize: '0.74rem',
-                fontWeight: 600,
-                background: 'var(--bg-muted)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              {CAPABILITY_LABEL[cap]} · {tools.length}
-            </span>
-          );
-        })}
-      </div>
-
-      {profile.poisoning.length > 0 && (
+      {installRisk.length > 0 && (
         <div
+          role="alert"
           style={{
             padding: '0.7rem',
             borderRadius: '10px',
@@ -155,46 +121,107 @@ export function SecurityProfileCard({ server }: { server: Server }) {
             lineHeight: 1.5,
           }}
         >
-          <strong>Unusual tool instructions.</strong> {profile.poisoning.length}{' '}
-          tool description
-          {profile.poisoning.length === 1 ? '' : 's'} contain text aimed at the
-          AI model rather than at you (
-          {[...new Set(profile.poisoning.map((p) => p.pattern))].join('; ')}).
-          Read the tool descriptions before connecting.
+          <strong>Check the install command first.</strong>{' '}
+          {installRisk.map((f) => f.label).join('; ')}. Registries like npm and
+          PyPI can take down malicious packages; a command like this skips them.
         </div>
       )}
 
-      {recentChange && changedAt && (
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
-          Tool definitions changed on {changedAt.toISOString().slice(0, 10)}.
-          Review them if you approved this server earlier.
-        </div>
-      )}
+      {profile && (
+        <>
+          <p
+            style={{
+              margin: 0,
+              fontSize: '0.82rem',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.6,
+            }}
+          >
+            From the {profile.toolCount} tool
+            {profile.toolCount === 1 ? '' : 's'} this server returned when we
+            ran it
+            {profile.annotatedTools > 0
+              ? `; ${profile.annotatedTools} declare their own safety hints`
+              : ''}
+            .
+          </p>
 
-      {sandboxRows.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.35rem',
-            borderTop: '1px solid var(--border-color)',
-            paddingTop: '0.7rem',
-          }}
-        >
-          {sandboxRows.map(([l, v]) => row(l, v))}
-        </div>
-      )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+            {profile.capabilities.map((cap: Capability) => {
+              const tools = profile.toolsByCapability[cap] ?? [];
+              return (
+                <span
+                  key={cap}
+                  title={tools.slice(0, 12).join(', ')}
+                  style={{
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '999px',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    background: 'var(--bg-muted)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {CAPABILITY_LABEL[cap]} · {tools.length}
+                </span>
+              );
+            })}
+          </div>
 
-      <p
-        style={{
-          margin: 0,
-          fontSize: '0.72rem',
-          color: 'var(--text-secondary)',
-        }}
-      >
-        Observed {profile.profiledAt.slice(0, 10)} in an isolated sandbox. A
-        description of reach, not a security audit.
-      </p>
+          {profile.poisoning.length > 0 && (
+            <div
+              style={{
+                padding: '0.7rem',
+                borderRadius: '10px',
+                border: '1px solid var(--admin-warn)',
+                fontSize: '0.8rem',
+                color: 'var(--text-primary)',
+                lineHeight: 1.5,
+              }}
+            >
+              <strong>Unusual tool instructions.</strong>{' '}
+              {profile.poisoning.length} tool description
+              {profile.poisoning.length === 1 ? '' : 's'} contain text aimed at
+              the AI model rather than at you (
+              {[...new Set(profile.poisoning.map((p) => p.pattern))].join('; ')}
+              ). Read the tool descriptions before connecting.
+            </div>
+          )}
+
+          {recentChange && changedAt && (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+              Tool definitions changed on {changedAt.toISOString().slice(0, 10)}
+              . Review them if you approved this server earlier.
+            </div>
+          )}
+
+          {sandboxRows.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem',
+                borderTop: '1px solid var(--border-color)',
+                paddingTop: '0.7rem',
+              }}
+            >
+              {sandboxRows.map(([l, v]) => row(l, v))}
+            </div>
+          )}
+
+          <p
+            style={{
+              margin: 0,
+              fontSize: '0.72rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            Observed {profile.profiledAt.slice(0, 10)} in an isolated sandbox. A
+            description of reach, not a security audit.
+          </p>
+        </>
+      )}
     </div>
   );
 }

@@ -115,6 +115,23 @@ const POISONING_PATTERNS: { label: string; re: RegExp }[] = [
   },
 ];
 
+/**
+ * Findings strong enough to hide a listing for review. 'reaches for local
+ * secrets' is left out: plenty of honest tools say they read a `.env` file.
+ */
+const STRONG_POISONING = new Set([
+  'overrides prior instructions',
+  'asks the assistant to hide something from the user',
+  'hidden instruction block',
+  'tries to chain into other tools',
+]);
+
+export function hasStrongPoisoning(
+  findings: PoisoningFinding[] | null | undefined,
+): boolean {
+  return Boolean(findings?.some((f) => STRONG_POISONING.has(f.pattern)));
+}
+
 function toolText(t: ToolDefinition): string {
   // Tool names are snake/camel case; split so `delete_file` matches \bdelete\b.
   // Parameter names are left out on purpose: a "url" argument would otherwise

@@ -39,6 +39,7 @@ import {
   pendingRevisionToDbPatch,
 } from '../../../../lib/pendingRevision';
 import { parseServerTools } from '../../../../lib/servers';
+import { upsertSignals } from '../../../../lib/signalStore';
 import { getAppUrl } from '../../../../lib/stripe';
 import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 
@@ -1035,6 +1036,11 @@ export async function POST(req: Request) {
           { status: 404 },
         );
       }
+      // A resolved report may lift a 'reported-malicious' flag; re-assess on
+      // the next sweep tick rather than in up to a week.
+      await upsertSignals(db, updateResult[0].serverId, {
+        staleCheckedAt: null,
+      });
       // Reports are anonymous — nothing to notify.
     }
 

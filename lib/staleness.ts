@@ -12,6 +12,10 @@
  * Every rule needs at least two independent signals or one that is definitive
  * on its own (a registry deprecation notice). Being old is never enough:
  * plenty of finished, working servers have not needed a commit in a year.
+ *
+ * Security reasons (tool poisoning, risky install, typosquat, package/repo
+ * mismatch, repeated malicious reports) hide a listing the same way but are
+ * never auto-removed: a human confirms every one from the triage queue.
  */
 
 export type StaleReason =
@@ -34,7 +38,22 @@ export type StaleReason =
    * answers agreeing is enough to hide the listing (noindex), never to remove
    * it — flag-only, like not-mcp.
    */
-  | 'jev-reject';
+  | 'jev-reject'
+  /**
+   * A live tool description tries to steer the assistant (override
+   * instructions, hide things from the user, hidden instruction blocks).
+   * Security reasons are flag-only and, unlike the rest, apply to paid and
+   * claimed listings too: paying for a listing does not make its tools safe.
+   */
+  | 'tool-poisoning'
+  /** The install command pipes a download into a shell, decodes a payload, or fetches code from an arbitrary host (lib/installRisk.ts). */
+  | 'risky-install'
+  /** The install package's name imitates a far more used package (lib/typosquat.ts). */
+  | 'typosquat'
+  /** The install package's registry metadata names a different GitHub repo than the listing. */
+  | 'package-repo-mismatch'
+  /** Several different visitors reported it as malicious and nobody has reviewed the reports yet. */
+  | 'reported-malicious';
 
 /** Reasons the sweep may act on without a human. 'not-mcp' is a model judgment, so it never is. */
 const AUTO_REMOVABLE_REASONS: ReadonlySet<StaleReason> = new Set([
@@ -51,6 +70,9 @@ const AUTO_REMOVABLE_REASONS: ReadonlySet<StaleReason> = new Set([
  * Only these reset Jev's triage verdict when they change: 'jev-reject' is
  * derived *from* the verdict, so letting it reset the verdict would loop.
  */
+/** Open 'malicious' reports from this many distinct reporters hide a listing until an admin reviews them. */
+const MALICIOUS_REPORT_THRESHOLD = 3;
+
 export function evidenceReasons(reasons: StaleReason[]): StaleReason[] {
   return reasons.filter((r) => r !== 'jev-reject');
 }
@@ -97,11 +119,35 @@ export type StalenessInput = {
   packageAlive?: boolean | null;
   /** Jev's settled triage verdict (lib/listingReview.ts). */
   triageVerdict?: string | null;
+  /** The security profile holds a strong tool-poisoning finding (lib/securityProfile.ts hasStrongPoisoning). */
+  toolPoisoning?: boolean | null;
+  /** lib/installRisk.ts found something in the cached install. */
+  installRisk?: boolean | null;
+  /** The popular package this one's name imitates (lib/typosquat.ts). */
+  typosquatOf?: string | null;
+  /** Package registry repo and listing repo are both known and differ. */
+  packageRepoMismatch?: boolean | null;
+  /** Distinct reporters with an open 'malicious' report in the last 30 days. */
+  maliciousReporters?: number | null;
 };
 
+/** Security findings, assessed for every listing except official and curator-kept ones. */
+function securityReasons(s: StalenessInput): StaleReason[] {
+  if (s.curatorKeptAt || s.isOfficial) return [];
+  const out: StaleReason[] = [];
+  if (s.toolPoisoning) out.push('tool-poisoning');
+  if (s.installRisk) out.push('risky-install');
+  if (s.typosquatOf) out.push('typosquat');
+  if (s.packageRepoMismatch) out.push('package-repo-mismatch');
+  if ((s.maliciousReporters ?? 0) >= MALICIOUS_REPORT_THRESHOLD)
+    out.push('reported-malicious');
+  return out;
+}
+
 export function assessStaleness(s: StalenessInput): StaleReason[] {
+  const security = securityReasons(s);
   // Paid, claimed, official and curator-kept listings have a human who
-  // answers for them.
+  // answers for them — for staleness. Security findings still apply.
   if (
     s.curatorKeptAt ||
     s.isPremium ||
@@ -109,7 +155,7 @@ export function assessStaleness(s: StalenessInput): StaleReason[] {
     s.ownerUserId ||
     (s.featuredUntil && s.featuredUntil > s.now)
   ) {
-    return [];
+    return security;
   }
 
   const verified =
@@ -151,7 +197,7 @@ export function assessStaleness(s: StalenessInput): StaleReason[] {
     reasons.push('jev-reject');
   }
 
-  return reasons;
+  return [...reasons, ...security];
 }
 
 /** Whether a flagged listing has served its grace period and may be removed without a human. */
@@ -185,6 +231,12 @@ export const STALE_REASON_LABEL: Record<StaleReason, string> = {
   'repo-gone': 'Source repo gone (404), nothing else runs it',
   'not-mcp': 'Jev: probably not an MCP server',
   'jev-reject': 'Jev: reject, and probably not an MCP server',
+  'tool-poisoning': 'A tool description tries to instruct the AI assistant',
+  'risky-install': 'Install command downloads and runs code outside a registry',
+  typosquat: 'Package name imitates a much more popular package',
+  'package-repo-mismatch':
+    "The install package comes from a different repo than this listing's",
+  'reported-malicious': 'Reported as malicious by several visitors',
 };
 
 export type PendingAutoInput = {

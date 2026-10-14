@@ -34,13 +34,35 @@ describe('npmStatusFromDoc', () => {
         'dist-tags': { latest: '2.0.0' },
         versions: { '1.0.0': { deprecated: 'old' }, '2.0.0': {} },
       }),
-    ).toEqual({ kind: 'ok' });
+    ).toEqual({ kind: 'ok', repo: null });
     expect(
       npmStatusFromDoc({
         'dist-tags': { latest: '2.0.0' },
         versions: { '2.0.0': { deprecated: 'Moved to @x/y' } },
       }),
-    ).toEqual({ kind: 'deprecated', message: 'Moved to @x/y' });
+    ).toEqual({ kind: 'deprecated', message: 'Moved to @x/y', repo: null });
+  });
+
+  it("reads the package's GitHub repository, latest version first", () => {
+    expect(
+      npmStatusFromDoc({
+        'dist-tags': { latest: '1.0.0' },
+        repository: { url: 'git+https://github.com/old/place.git' },
+        versions: {
+          '1.0.0': {
+            repository: {
+              url: 'git+https://github.com/Acme/MCP-Server.git',
+            },
+          },
+        },
+      }),
+    ).toEqual({ kind: 'ok', repo: 'acme/mcp-server' });
+    expect(
+      npmStatusFromDoc({
+        'dist-tags': { latest: '1.0.0' },
+        versions: { '1.0.0': { repository: 'github:acme/tool' } },
+      }),
+    ).toEqual({ kind: 'ok', repo: 'acme/tool' });
   });
 
   it('treats an unpublished package as missing', () => {
@@ -57,8 +79,22 @@ describe('pypiStatusFromDoc', () => {
     ).toEqual({
       kind: 'deprecated',
       message: 'broken',
+      repo: null,
     });
-    expect(pypiStatusFromDoc({ info: {} })).toEqual({ kind: 'ok' });
+    expect(pypiStatusFromDoc({ info: {} })).toEqual({ kind: 'ok', repo: null });
+  });
+
+  it('prefers a Source link over Homepage for the repository', () => {
+    expect(
+      pypiStatusFromDoc({
+        info: {
+          project_urls: {
+            Homepage: 'https://acme.dev',
+            Source: 'https://github.com/acme/mcp-tool/tree/main',
+          },
+        },
+      }),
+    ).toEqual({ kind: 'ok', repo: 'acme/mcp-tool' });
   });
 });
 

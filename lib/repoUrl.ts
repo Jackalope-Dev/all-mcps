@@ -59,3 +59,19 @@ export function isGitHubRepoUrl(url: string | null | undefined): boolean {
     return false;
   }
 }
+
+/**
+ * Lowercased `owner/repo` for any GitHub reference a registry might hold —
+ * https and git+https URLs, git@github.com:owner/repo, the `github:owner/repo`
+ * shorthand — or null for anything else. Deep links (/tree/main/src/x) reduce
+ * to the repo, so a monorepo package and its listing compare equal.
+ */
+export function githubRepoSlug(ref: string | null | undefined): string | null {
+  if (!ref) return null;
+  const m =
+    /^github:([\w.-]+)\/([\w.-]+)/i.exec(ref.trim()) ||
+    /github\.com[/:]([\w.-]+)\/([\w.-]+)/i.exec(ref);
+  if (!m) return null;
+  const repo = m[2].replace(/\.git$/i, '');
+  return repo ? `${m[1]}/${repo}`.toLowerCase() : null;
+}

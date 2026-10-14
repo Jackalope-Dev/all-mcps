@@ -7,6 +7,7 @@
 import { and, count, desc, eq, like, or } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/d1';
 import { reports, servers, users } from '@/db/schema';
+import { upsertSignals } from '@/lib/signalStore';
 
 type DB = ReturnType<typeof drizzle>;
 
@@ -176,6 +177,10 @@ export function drizzleRepo(db: DB): Repo {
           .where(eq(reports.id, Number(id)));
         const row = await this.get(id);
         if (!row) throw new Error(`report ${id} not found`);
+        // May lift a 'reported-malicious' flag — see app/api/admin/action.
+        await upsertSignals(db, String(row.serverId), {
+          staleCheckedAt: null,
+        });
         return row;
       },
     },
