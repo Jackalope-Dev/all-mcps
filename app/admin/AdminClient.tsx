@@ -87,6 +87,7 @@ const REPORT_REASON_LABELS: Record<string, string> = {
   misleading: 'Misleading or inaccurate info',
   malicious: 'Malicious or unsafe behavior',
   dead_link: 'Dead link / repo gone',
+  duplicate: 'Possible duplicate (weekly sweep)',
   other: 'Something else',
 };
 
@@ -158,8 +159,8 @@ export default function AdminClient({
   } | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // Rows with no submitterEmail came from scripts/ingest-sources.mjs, never a
-  // human /api/submit — those self-resolve via the daily /api/cron/auto-promote
+  // Rows with no submitterEmail came from ingest (/api/cron/ingest), never a
+  // human /api/submit — those self-resolve via the 4-hourly /api/cron/auto-promote
   // job (7-day dwell + fresh liveness check, then active or removed) without
   // any admin action. Keeping them out of the "needs you" badge/count is what
   // makes that badge mean what an admin expects it to mean; they're still

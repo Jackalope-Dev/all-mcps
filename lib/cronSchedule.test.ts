@@ -132,3 +132,59 @@ describe('secret relay', () => {
     expect(mergeRelayedSecrets(env, { CRON_SECRET: 'site' })).toBe(env);
   });
 });
+
+describe('catalog sourcing jobs', () => {
+  const due = (iso: string) =>
+    FAST_JOBS.filter((j) => !j.shouldRun || j.shouldRun(new Date(iso))).map(
+      (j) => j.path,
+    );
+  const ingest = (iso: string) =>
+    due(iso).filter((p) => p.startsWith('/api/cron/ingest'));
+
+  it('ingests the registry every 4h at :30 and catches up once a day', () => {
+    expect(ingest('2026-10-14T01:30:00Z')).toEqual([
+      '/api/cron/ingest?source=registry&hours=6',
+    ]);
+    expect(ingest('2026-10-14T07:30:00Z')).toEqual([
+      '/api/cron/ingest?source=registry&hours=30',
+    ]);
+  });
+
+  it('runs each other source once a day, never on the :00 tick', () => {
+    expect(ingest('2026-10-14T02:30:00Z')).toEqual([
+      '/api/cron/ingest?source=awesome',
+    ]);
+    expect(ingest('2026-10-14T03:30:00Z')).toEqual([
+      '/api/cron/ingest?source=npm',
+    ]);
+    expect(ingest('2026-10-14T04:30:00Z')).toEqual([
+      '/api/cron/ingest?source=github',
+    ]);
+    expect(ingest('2026-10-14T02:00:00Z')).toEqual([]);
+    expect(ingest('2026-10-14T02:45:00Z')).toEqual([]);
+  });
+
+  it('sweeps near-duplicates on Sundays only', () => {
+    expect(due('2026-10-18T06:30:00Z')).toContain('/api/cron/dedupe');
+    expect(due('2026-10-14T06:30:00Z')).not.toContain('/api/cron/dedupe');
+  });
+
+  it('keeps health, enrich and stale-sweep on every fast tick', () => {
+    expect(due('2026-10-14T05:15:00Z')).toEqual([
+      '/api/cron/health',
+      '/api/cron/enrich',
+      '/api/cron/stale-sweep',
+    ]);
+  });
+
+  it('auto-promotes on every slow tick', () => {
+    const job = SLOW_JOBS.find((j) => j.path === '/api/cron/auto-promote');
+    expect(job).toBeDefined();
+    expect(job?.shouldRun).toBeUndefined();
+  });
+
+  it('offloads the new routes to the jobs Worker', () => {
+    expect(isOffloadedCronPath('/api/cron/ingest?source=npm')).toBe(true);
+    expect(isOffloadedCronPath('/api/cron/dedupe')).toBe(true);
+  });
+});

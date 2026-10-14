@@ -1,5 +1,11 @@
-name: 🔄 Registry Sync (weekly)
+name: 🔄 Registry Sync (manual backup)
 
+# Manual backup only. Ingest now runs on the site's own cron
+# (/api/cron/ingest, scheduled in lib/cronSchedule.ts): the registry every 4h,
+# awesome-lists, npm and GitHub topics daily. Run this by hand for a full
+# re-scan of the registry, e.g. after an outage longer than the cron's 30h
+# catch-up window.
+#
 # Pulls new listings from the official MCP Registry and the community README
 # sources — see scripts/ingest-sources.mjs. Everything lands 'pending'; the
 # stale sweep, Jev triage and the imported-listing gate (lib/autoDecision.ts)
@@ -12,9 +18,7 @@ name: 🔄 Registry Sync (weekly)
 # "D1 Edit" permission). Without it this job fails at the wrangler auth step.
 
 on:
-  schedule:
-    - cron: '0 6 * * 1' # Mondays 06:00 UTC
-  workflow_dispatch: # Allows manual triggering for testing
+  workflow_dispatch:
 
 permissions:
   contents: read

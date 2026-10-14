@@ -1,11 +1,16 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, eq, isNull, lt, ne, or } from 'drizzle-orm';
+import { and, asc, eq, isNull, lt, ne, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { listingSignals, servers } from '../../../../db/schema';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
+import { getGithubToken } from '../../../../lib/githubAuth';
 import { notifyListingIndexed } from '../../../../lib/indexnow';
-import { isPackageInstallable } from '../../../../lib/listingEnrich';
+import {
+  fetchGithubRepo,
+  isPackageInstallable,
+  parseGithubUrl,
+} from '../../../../lib/listingEnrich';
 import {
   reviewColumns,
   reviewListing,
@@ -16,12 +21,13 @@ import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
 
 /**
  * Fully-unattended promotion for pending listings that came from our own
- * automated ingestion (scripts/ingest-sources.mjs), never from a human
+ * automated ingestion (/api/cron/ingest, or scripts/ingest-sources.mjs run by
+ * hand), never from a human
  * /api/submit submission — those always set submitterEmail and keep
  * requiring real admin review via /admin (see app/api/admin/action/route.ts).
  * submitterEmail is a required field on that form, so `IS NULL` reliably
- * means "landed via direct SQL from the ingest script," which is the only
- * other path that creates a `pending` row.
+ * means "created by ingest," which is the only other path that creates a
+ * `pending` row.
  *
  * Ingested candidates already passed a quality floor + duplicate-flag review
  * at ingest time, but sources we haven't personally vetted (official
@@ -40,6 +46,8 @@ import { isSafeSubmissionUrl } from '../../../../lib/urlSafety';
  */
 
 const BATCH_SIZE = 100;
+/** Runs every 4h alongside the other slow jobs; stop starting new checks after this. */
+const BUDGET_MS = 4 * 60 * 1000;
 const PROMOTION_DWELL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const STALE_REMOVAL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const LIVENESS_TIMEOUT_MS = 8000;
@@ -82,6 +90,62 @@ async function checkUrlAliveOnce(
   }
 }
 
+type SourceAnswer = {
+  alive: boolean;
+  /** The repo is archived or disabled: alive, but not something to publish unseen. */
+  archived: boolean;
+  stars: number | null;
+  pushedAt: Date | null;
+};
+
+/**
+ * GitHub repos go through the authenticated API rather than a HEAD on
+ * github.com: it follows renames, reports archived, returns stars and the last
+ * push for the new listing's first ranking signals, and is not the
+ * unauthenticated surface that throttled the 2026-09-07 ingest. Anything else
+ * gets the plain liveness check.
+ */
+async function checkSource(
+  url: string,
+  githubToken: string | null,
+): Promise<SourceAnswer> {
+  const gh = parseGithubUrl(url);
+  if (gh) {
+    try {
+      const res = await fetchGithubRepo(gh.owner, gh.repo, githubToken);
+      if (res.ok) {
+        const data = res.data as typeof res.data & { pushed_at?: string };
+        const pushed = data.pushed_at ? new Date(data.pushed_at) : null;
+        return {
+          alive: true,
+          archived: Boolean(data.archived || data.disabled),
+          stars: data.stargazers_count ?? null,
+          pushedAt: pushed && !Number.isNaN(pushed.getTime()) ? pushed : null,
+        };
+      }
+      if (!LIVENESS_DEAD_STATUSES.has(res.status)) {
+        // Rate limited or GitHub trouble: fall back to the plain check
+        // rather than treating an unknown as dead.
+        return {
+          alive: await checkUrlAlive(url),
+          archived: false,
+          stars: null,
+          pushedAt: null,
+        };
+      }
+      return { alive: false, archived: false, stars: null, pushedAt: null };
+    } catch {
+      /* fall through to the plain check */
+    }
+  }
+  return {
+    alive: await checkUrlAlive(url),
+    archived: false,
+    stars: null,
+    pushedAt: null,
+  };
+}
+
 async function checkUrlAlive(url: string | null | undefined): Promise<boolean> {
   if (!url || !isSafeSubmissionUrl(url)) return false;
   for (let attempt = 0; attempt <= LIVENESS_RETRIES; attempt++) {
@@ -111,6 +175,8 @@ export async function POST(req: Request) {
       throw new Error('Could not get Cloudflare context.');
     }
     const db = drizzle(env?.DB as any);
+    const githubToken = getGithubToken(env);
+    const deadline = Date.now() + BUDGET_MS;
 
     const dwellCutoff = new Date(Date.now() - PROMOTION_DWELL_MS);
     const candidates = (
@@ -134,6 +200,11 @@ export async function POST(req: Request) {
             ),
           ),
         )
+        // Pending rows get no health checks, so lastCheckedAt here is this
+        // route's own cursor: never-checked first, then the longest-waiting.
+        // Without an order the same unreachable rows came back every run and
+        // starved everything behind them.
+        .orderBy(asc(servers.lastCheckedAt), asc(servers.createdAt))
         .limit(BATCH_SIZE)
     ).map((row) => row.servers);
 
@@ -143,9 +214,22 @@ export async function POST(req: Request) {
     let heldForReview = 0;
 
     for (const s of candidates) {
+      if (Date.now() > deadline) break;
       // Multi-interface alive check (mirrors isListingTrulyDead's philosophy in
       // reverse): any one working interface is enough to promote.
-      const urlAlive = await checkUrlAlive(s.url);
+      const source = s.url
+        ? await checkSource(s.url, githubToken)
+        : { alive: false, archived: false, stars: null, pushedAt: null };
+      if (source.archived) {
+        // Archived upstream: leave it for an admin instead of publishing it.
+        await db
+          .update(servers)
+          .set({ reviewFlagged: true, lastCheckedAt: new Date() })
+          .where(eq(servers.id, s.id));
+        heldForReview++;
+        continue;
+      }
+      const urlAlive = source.alive;
       const packageAlive =
         !urlAlive && s.installPackage
           ? await isPackageInstallable(s.installCommand, s.installPackage)
@@ -179,7 +263,13 @@ export async function POST(req: Request) {
 
         const result = await db
           .update(servers)
-          .set({ status: 'active' })
+          .set({
+            status: 'active',
+            // First ranking signals now rather than after the health cron's
+            // first pass. lastCheckedAt stays as-is so that pass comes soon.
+            ...(source.stars !== null ? { githubStars: source.stars } : {}),
+            ...(source.pushedAt ? { lastCommitAt: source.pushedAt } : {}),
+          })
           .where(and(eq(servers.id, s.id), eq(servers.status, 'pending')))
           .returning();
         if (result.length > 0) {
@@ -203,6 +293,10 @@ export async function POST(req: Request) {
           .where(eq(servers.id, s.id));
         removedCount++;
       } else {
+        await db
+          .update(servers)
+          .set({ lastCheckedAt: new Date() })
+          .where(eq(servers.id, s.id));
         stillPending++;
       }
     }

@@ -31,6 +31,47 @@ export type CronJob = {
   drainable?: boolean;
 };
 
+/** True on the fast tick at hh:30 for any of `hours` (UTC). */
+function atHalfPast(hours: number[]) {
+  return (now: Date) =>
+    now.getUTCMinutes() === 30 && hours.includes(now.getUTCHours());
+}
+
+const CATALOG_SOURCING_JOBS: CronJob[] = [
+  {
+    path: '/api/cron/ingest?source=registry&hours=6',
+    secretVar: 'CRON_SECRET',
+    shouldRun: atHalfPast([1, 5, 9, 13, 17, 21]),
+  },
+  {
+    path: '/api/cron/ingest?source=registry&hours=30',
+    secretVar: 'CRON_SECRET',
+    shouldRun: atHalfPast([7]),
+  },
+  {
+    path: '/api/cron/ingest?source=awesome',
+    secretVar: 'CRON_SECRET',
+    shouldRun: atHalfPast([2]),
+  },
+  {
+    path: '/api/cron/ingest?source=npm',
+    secretVar: 'CRON_SECRET',
+    shouldRun: atHalfPast([3]),
+  },
+  {
+    path: '/api/cron/ingest?source=github',
+    secretVar: 'CRON_SECRET',
+    shouldRun: atHalfPast([4]),
+  },
+  // Weekly near-duplicate sweep (app/api/cron/dedupe): retires same-repo
+  // duplicates, files a report for the rest. Sundays 06:30 UTC.
+  {
+    path: '/api/cron/dedupe',
+    secretVar: 'CRON_SECRET',
+    shouldRun: (now) => now.getUTCDay() === 0 && atHalfPast([6])(now),
+  },
+];
+
 // Runs every 15 min (wrangler.jsonc "*/15 * * * *") — these two used to be
 // driven by a GitHub Actions workflow on the same cadence (health-check.yml,
 // removed) until GH Actions usage limits forced everything cron-shaped onto
@@ -47,6 +88,12 @@ export const FAST_JOBS: CronJob[] = [
   // — only npm/PyPI lookups, local rules and Jev — so it is cheap to run often.
   // Bounded per tick (see the route): ~27k listings reassessed about every 17h.
   { path: '/api/cron/stale-sweep', secretVar: 'CRON_SECRET' },
+  // Catalog ingest (app/api/cron/ingest): new servers from public sources,
+  // staged as pending. On the :30 fast ticks rather than the 4h list so its
+  // bounded few minutes never sit in front of blog-pipeline's long budget.
+  // Registry every 4h with a 6h window (overlap absorbs a slow tick), plus a
+  // 30h catch-up once a day; the other sources daily, an hour apart.
+  ...CATALOG_SOURCING_JOBS,
 ];
 
 // Runs every 20 min ("*/20 * * * *") when a single Worker does everything —
@@ -139,13 +186,10 @@ export const SLOW_JOBS: CronJob[] = [
   },
   // Promotes ingested (never human-submitted) pending listings to active once
   // they've sat untouched for a week and a fresh liveness check still finds
-  // them alive — see the route for the full policy. Daily is plenty; the
-  // dwell window is measured in days, not hours.
-  {
-    path: '/api/cron/auto-promote',
-    secretVar: 'CRON_SECRET',
-    shouldRun: (now) => now.getUTCHours() === 5,
-  },
+  // them alive — see the route for the full policy. Every tick now that
+  // ingest runs several times a day: a bounded batch per run (with its own
+  // time budget), rotating through the queue oldest-checked first.
+  { path: '/api/cron/auto-promote', secretVar: 'CRON_SECRET' },
   // 45-day retention cleanup for impression_logs and api_access_logs to prevent
   // unbounded table/index growth and D1 Time-Travel WAL storage bloat. Daily at 03:00 UTC.
   {
