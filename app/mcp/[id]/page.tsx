@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ListingVisibilityNotice } from '@/components/listing/ListingVisibilityNotice';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { isListingIndexable } from '@/lib/listingIndexability';
@@ -774,6 +775,14 @@ export default async function MCPDetail({
               </div>
             </div>
           )}
+
+          <ListingVisibilityNotice
+            serverId={server.id}
+            status={server.status}
+            staleFlaggedAt={server.staleFlaggedAt}
+            staleReasons={signals.staleReasons}
+            isOfficial={server.isOfficial}
+          />
 
           <div className="detail-grid">
             {/* Main Content (Left Column) */}

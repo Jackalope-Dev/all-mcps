@@ -1,14 +1,11 @@
-import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/d1';
 import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { CategoryGrid } from '../../components/CategoryGrid';
 import { PageHeader, PageShell } from '../../components/PageShell';
-import serversData from '../../data/mcp-servers.json';
-import { servers as serversTable } from '../../db/schema';
 import { categorySlug } from '../../lib/categories';
+import { getCategoryCounts } from '../../lib/servers';
 
 // Hourly ISR keeps category counts current from D1 without querying on every request.
 export const revalidate = 3600;
@@ -42,42 +39,6 @@ export const metadata: Metadata = {
   },
 };
 
-type ServerSlim = {
-  id: string;
-  name: string;
-  category: string;
-};
-
-async function getServers(): Promise<ServerSlim[]> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext({ async: true });
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select({
-          id: serversTable.id,
-          name: serversTable.name,
-          category: serversTable.category,
-        })
-        .from(serversTable)
-        .where(eq(serversTable.status, 'active'));
-      if (rows.length > 0) {
-        return rows;
-      }
-    }
-  } catch {
-    // Fallback to local JSON if not running in wrangler / opennext
-  }
-  return (serversData as Array<ServerSlim & { status?: string }>)
-    .filter((s) => s.status !== 'removed')
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      category: s.category,
-    }));
-}
-
 /**
  * Extract a leading emoji from a category string, if present.
  * Handles multi-codepoint emoji (e.g. 👨‍💻, 🏠) via segmenter where available,
@@ -109,26 +70,19 @@ function parseEmoji(category: string): { emoji: string; label: string } {
 }
 
 export default async function CategoriesPage() {
-  const servers = await getServers();
-
-  // Group by category and count
-  const categoryMap = new Map<string, number>();
-  for (const server of servers) {
-    categoryMap.set(
-      server.category,
-      (categoryMap.get(server.category) || 0) + 1,
-    );
-  }
+  // One grouped COUNT in D1 (servable listings only) instead of loading every
+  // row to count it in the Worker.
+  const counts = await getCategoryCounts();
 
   // Sort by count descending (most popular first)
-  const categories = Array.from(categoryMap.entries())
+  const categories = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => {
       const { emoji, label } = parseEmoji(name);
       return { name, emoji, label, count, slug: categorySlug(name) };
     });
 
-  const totalServers = servers.length;
+  const totalServers = Object.values(counts).reduce((a, b) => a + b, 0);
 
   // JSON-LD structured data
   const jsonLd = {

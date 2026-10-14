@@ -20,6 +20,7 @@ import {
   clientKey,
   rateLimitedResponse,
 } from '@/lib/rateLimit';
+import { isServable } from '@/lib/servability';
 import {
   AUTH_TYPES,
   COMPATIBLE_CLIENT_SLUGS,
@@ -555,7 +556,7 @@ export async function POST(request: Request) {
         const serverId = args.id;
         const server = await getServerById(serverId);
 
-        if (!server) {
+        if (!server || !isServable(server)) {
           return Response.json(
             {
               jsonrpc: '2.0',
@@ -564,7 +565,9 @@ export async function POST(request: Request) {
                 content: [
                   {
                     type: 'text',
-                    text: `Server with ID "${serverId}" not found in AllMCPs directory.`,
+                    text: server
+                      ? `"${server.name}" is not currently listed in the AllMCPs directory (${server.staleFlaggedAt ? 'flagged for review' : server.status}), so no install config is offered. Use search_mcp_servers to find an alternative.`
+                      : `Server with ID "${serverId}" not found in AllMCPs directory.`,
                   },
                 ],
                 isError: true,

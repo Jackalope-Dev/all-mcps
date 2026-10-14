@@ -4,6 +4,7 @@ import {
   eq,
   gt,
   inArray,
+  isNull,
   like,
   ne,
   or,
@@ -42,8 +43,20 @@ import {
   type Searchable,
   type SearchPrefilter,
 } from './search';
+import { SERVABLE_SQL } from './servability';
 import { rankShowcaseServers } from './showcase';
 import { computeTrustTier, type TrustTierInput } from './trustTier';
+
+/**
+ * Active and not flagged by the stale sweep — the filter on every catalog
+ * read that recommends listings. See lib/servability.ts for why.
+ */
+function servableFilter(): SQL {
+  return and(
+    eq(serversTable.status, 'active'),
+    isNull(serversTable.staleFlaggedAt),
+  ) as SQL;
+}
 
 export type ServerTool = {
   name: string;
@@ -303,6 +316,8 @@ export type Server = {
   securityProfile?: string | null;
   /** Last time the tool definitions changed after a previous profile existed. */
   toolsChangedAt?: string | Date | null;
+  /** Comma-separated StaleReason list while the stale sweep has this listing flagged (listing_signals). */
+  staleReasons?: string | null;
   views?: number;
   copies?: number;
   upvotes?: number;
@@ -367,7 +382,7 @@ export async function getActiveServersLight(limit?: number): Promise<Server[]> {
       const query = db
         .select(DISCOVERY_COLUMNS)
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'));
+        .where(servableFilter());
       const rows = limit
         ? await query
             .orderBy(
@@ -481,9 +496,7 @@ async function getServersByIds(ids: string[]): Promise<Server[]> {
       const rows = await db
         .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
-        .where(
-          and(inArray(serversTable.id, ids), eq(serversTable.status, 'active')),
-        );
+        .where(and(inArray(serversTable.id, ids), servableFilter()));
       found = rows.map((r) => normalizeServer(r as unknown as Server));
     }
   } catch (_e) {
@@ -509,7 +522,7 @@ export async function getNewestActiveServers(limit: number): Promise<Server[]> {
       const rows = await db
         .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'))
+        .where(servableFilter())
         .orderBy(desc(serversTable.createdAt))
         .limit(limit);
       if (rows.length > 0) {
@@ -546,7 +559,7 @@ export async function getShowcaseActiveServers(
         .from(serversTable)
         .where(
           and(
-            eq(serversTable.status, 'active'),
+            servableFilter(),
             sql`coalesce(${serversTable.logoUrl}, '') <> ''`,
             sql`coalesce(${serversTable.healthStatus}, '') not in ('archived', 'offline')`,
           ),
@@ -629,9 +642,7 @@ export async function getRankingCandidates(filter: {
     const ctx = await getCloudflareContext();
     if (ctx?.env && (ctx.env as any).DB) {
       const db = drizzle((ctx.env as any).DB);
-      const conditions: (SQL | undefined)[] = [
-        eq(serversTable.status, 'active'),
-      ];
+      const conditions: (SQL | undefined)[] = [servableFilter()];
       if (filter.category) {
         conditions.push(eq(serversTable.category, filter.category));
       }
@@ -714,7 +725,7 @@ export async function getRandomActiveServers(
         .from(serversTable)
         .where(
           and(
-            eq(serversTable.status, 'active'),
+            servableFilter(),
             category ? eq(serversTable.category, category) : undefined,
           ),
         )
@@ -752,9 +763,7 @@ export async function* iterateActiveServers(
         const rows = await searchDb.db
           .select(SCORING_SERVER_COLUMNS)
           .from(serversTable)
-          .where(
-            and(eq(serversTable.status, 'active'), gt(serversTable.id, after)),
-          )
+          .where(and(servableFilter(), gt(serversTable.id, after)))
           .orderBy(serversTable.id)
           .limit(pageSize);
         if (rows.length === 0) break;
@@ -810,7 +819,7 @@ export async function getCatalogIndexRows(): Promise<CatalogIndexRow[]> {
           aiSummary: serversTable.aiSummary,
         })
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'));
+        .where(servableFilter());
       if (rows.length > 0) {
         return rows.map((r) => ({
           ...r,
@@ -845,7 +854,7 @@ export async function getCategoryCounts(): Promise<Record<string, number>> {
           count: sql<number>`count(*)`,
         })
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'))
+        .where(servableFilter())
         .groupBy(serversTable.category);
       const counts: Record<string, number> = {};
       for (const r of rows) {
@@ -872,7 +881,7 @@ export async function getPopularServers(limit: number): Promise<Server[]> {
       const rows = await db
         .select(PUBLIC_SERVER_COLUMNS)
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'))
+        .where(servableFilter())
         .orderBy(
           desc(serversTable.views),
           desc(serversTable.copies),
@@ -1103,7 +1112,7 @@ async function prefilterSearchCandidates(
     WITH c AS MATERIALIZED (
       SELECT id, name, (upvotes * 5 + copies + views * 0.05) AS eng, ${haystack} AS h
       FROM servers
-      WHERE status = 'active'${categoryFilter}
+      WHERE ${sql.raw(SERVABLE_SQL)}${categoryFilter}
     ),
     m AS (${sql.join(wheres.map(topMatches), sql` UNION `)})
     SELECT ${sql.raw(SEARCH_CANDIDATE_SELECT_SQL)}
@@ -1125,7 +1134,7 @@ async function searchCandidatesByIds(
     const rows = await db.all<SearchCandidateRow>(sql`
       SELECT ${sql.raw(SEARCH_CANDIDATE_SELECT_SQL)}
       FROM servers s
-      WHERE s.status = 'active'${categoryFilter}
+      WHERE s.status = 'active' AND s.stale_flagged_at IS NULL${categoryFilter}
         AND s.id IN (${sql.join(
           chunk.map((id) => sql`${id}`),
           sql`, `,
@@ -1149,7 +1158,7 @@ async function hydrateSearchResults(
       .where(
         and(
           inArray(serversTable.id, ids.slice(i, i + D1_ID_CHUNK)),
-          eq(serversTable.status, 'active'),
+          servableFilter(),
         ),
       );
     for (const r of rows) {
@@ -1194,11 +1203,8 @@ async function getTopActiveServers(
         .from(serversTable)
         .where(
           category
-            ? and(
-                eq(serversTable.status, 'active'),
-                eq(serversTable.category, category),
-              )
-            : eq(serversTable.status, 'active'),
+            ? and(servableFilter(), eq(serversTable.category, category))
+            : servableFilter(),
         )
         .orderBy(
           desc(serversTable.views),
@@ -1421,7 +1427,7 @@ export async function getServersForLlmsTxt(): Promise<LlmsTxtServer[]> {
           installPackage: serversTable.installPackage,
         })
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'))
+        .where(servableFilter())
         // Same order as idx_servers_status_popularity, so "top 10 per
         // category" really is the most-used ten, not insertion order.
         .orderBy(
@@ -1610,7 +1616,7 @@ export async function getDirectoryFeedPage(
             db
               .select({ id: serversTable.id })
               .from(serversTable)
-              .where(eq(serversTable.status, 'active'))
+              .where(servableFilter())
               .orderBy(desc(serversTable.createdAt), desc(serversTable.id))
               .limit(limit)
               .offset(offset),
@@ -1622,7 +1628,7 @@ export async function getDirectoryFeedPage(
       const totalRow = await db
         .select({ c: sql<number>`count(*)` })
         .from(serversTable)
-        .where(eq(serversTable.status, 'active'));
+        .where(servableFilter());
       const total = Number(totalRow[0]?.c ?? rows.length);
 
       if (total > 0) {
@@ -1758,7 +1764,10 @@ export async function checkIsOwner(
 export async function getServerSignalsById(
   id: string,
 ): Promise<
-  Pick<Server, 'mcpProbability' | 'securityProfile' | 'toolsChangedAt'>
+  Pick<
+    Server,
+    'mcpProbability' | 'securityProfile' | 'toolsChangedAt' | 'staleReasons'
+  >
 > {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
@@ -1770,6 +1779,7 @@ export async function getServerSignalsById(
           mcpProbability: listingSignals.mcpProbability,
           securityProfile: listingSignals.securityProfile,
           toolsChangedAt: listingSignals.toolsChangedAt,
+          staleReasons: listingSignals.staleReasons,
         })
         .from(listingSignals)
         .where(eq(listingSignals.serverId, id))
@@ -2647,7 +2657,7 @@ async function getSameCategoryActiveServers(
         .from(serversTable)
         .where(
           and(
-            eq(serversTable.status, 'active'),
+            servableFilter(),
             eq(serversTable.category, currentServer.category),
             ne(serversTable.id, currentServer.id),
           ),
@@ -2711,7 +2721,7 @@ export async function getRelatedServers(
         .from(serversTable)
         .where(
           and(
-            eq(serversTable.status, 'active'),
+            servableFilter(),
             ne(serversTable.category, currentServer.category),
             ne(serversTable.id, currentServer.id),
           ),
@@ -2771,7 +2781,7 @@ export async function getFeaturedServers(
           .from(serversTable)
           .where(
             and(
-              eq(serversTable.status, 'active'),
+              servableFilter(),
               match,
               excludeId ? ne(serversTable.id, excludeId) : undefined,
             ),

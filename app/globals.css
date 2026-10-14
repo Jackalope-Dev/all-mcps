@@ -14169,3 +14169,45 @@ code.inline-path {
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
+
+/* Listing visibility notice (flagged / pending / rejected) — components/listing/ListingVisibilityNotice.tsx */
+.listing-visibility-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+}
+.listing-visibility-notice-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.listing-visibility-notice-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.listing-visibility-notice-body {
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.listing-visibility-notice-reasons {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.listing-visibility-notice-cta {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}

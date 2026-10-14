@@ -13,6 +13,7 @@ import {
   rateLimitedResponse,
   rateLimitHeaders,
 } from '@/lib/rateLimit';
+import { isServable } from '@/lib/servability';
 import { fetchServerReadme, getServerById } from '@/lib/servers';
 
 export async function GET(
@@ -51,8 +52,25 @@ export async function GET(
     );
   }
 
+  // Pending, rejected and flagged listings exist, but the API does not hand
+  // out their install config as though they were recommended.
+  if (!isServable(server)) {
+    return Response.json(
+      {
+        error: 'not_available',
+        message: `Listing "${id}" is not currently listed in the directory (${server.staleFlaggedAt ? 'flagged for review' : server.status}).`,
+      },
+      {
+        status: 404,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          ...rateLimitHeaders(rateLimit),
+        },
+      },
+    );
+  }
+
   const readme = await fetchServerReadme(server.url);
-  const installName = server.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
   // Same resolver the search endpoint and /mcp/[id] use, so a remote server gets its
   // endpoint URL and a stdio server its real package — never a guessed `npx -y <name>`.
   const install = resolveInstallConfig({
@@ -66,6 +84,9 @@ export async function GET(
     installPackage: server.installPackage,
     installConfidence: server.installConfidence,
   });
+  // Same key rule as /api/v1/search: the real package for stdio, else the id.
+  const installName =
+    install.kind === 'stdio' ? install.packageName : server.id;
   const quality = computeQualityScore(server);
 
   // Log access (best-effort) so premium owners can see agent/LLM traffic per listing.
