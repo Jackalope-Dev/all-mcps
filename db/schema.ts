@@ -674,6 +674,18 @@ export const listingSignals = sqliteTable(
     securityProfile: text('security_profile'),
     /** Last time the tool definitions' hash changed after a previous profile existed. */
     toolsChangedAt: integer('tools_changed_at', { mode: 'timestamp' }),
+    /** SHA-256 of the README the health cron last read. A change sets contentChangedAt. */
+    readmeHash: text('readme_hash'),
+    /** Newest GitHub release tag seen by the health cron. A new tag sets contentChangedAt. */
+    latestReleaseTag: text('latest_release_tag'),
+    /**
+     * When the listing's source material (README, release, tools) last changed.
+     * The ai-content cron re-enriches rows where this is newer than
+     * servers.ai_enriched_at, ahead of the fixed 90-day refresh.
+     */
+    contentChangedAt: integer('content_changed_at', { mode: 'timestamp' }),
+    /** Where ingest first found this listing: official-registry | awesome-list | npm | pypi | github-topic | submission. */
+    discoveredVia: text('discovered_via'),
   },
   (table) => ({
     staleCheckedIdx: index('idx_listing_signals_stale_checked').on(
@@ -683,6 +695,27 @@ export const listingSignals = sqliteTable(
       table.registryCheckedAt,
     ),
     triageIdx: index('idx_listing_signals_triage').on(table.triageVerdict),
+  }),
+);
+
+/**
+ * Searches that found nothing, aggregated per normalized query. Feeds the admin
+ * "demand gaps" list (what to source next) and nothing public. Queries are
+ * stored lowercased and trimmed, capped in length, with no visitor identifiers.
+ */
+export const searchMisses = sqliteTable(
+  'search_misses',
+  {
+    query: text('query').primaryKey(),
+    /** Where the last miss came from: browse | api | mcp | palette. */
+    surface: text('surface').notNull(),
+    count: integer('count').notNull().default(1),
+    firstSeenAt: integer('first_seen_at', { mode: 'timestamp' }).notNull(),
+    lastSeenAt: integer('last_seen_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => ({
+    countIdx: index('idx_search_misses_count').on(table.count),
+    lastSeenIdx: index('idx_search_misses_last_seen').on(table.lastSeenAt),
   }),
 );
 
