@@ -106,7 +106,8 @@ export default async function BrowsePage({
     if (typeof v === 'string') query.set(k, v);
   }
   if (category) query.set('category', category);
-  const browseParams = parseBrowseParams(query);
+  // The server always renders page one; deeper pages load in the grid.
+  const browseParams = { ...parseBrowseParams(query), offset: 0 };
   const result = await browseCatalog(browseParams);
 
   const label = category ? parseCategoryLabel(category).label : null;
@@ -165,7 +166,7 @@ export default async function BrowsePage({
           ? {
               mainEntity: {
                 '@type': 'ItemList',
-                numberOfItems: result.total,
+                numberOfItems: result.total ?? 0,
                 itemListElement: itemList,
               },
             }
@@ -191,7 +192,7 @@ export default async function BrowsePage({
         variant="browse"
         serverResults={{
           params: browseParams,
-          total: result.total,
+          total: result.total ?? 0,
           capped: result.capped,
         }}
       />

@@ -15,7 +15,13 @@ describe('parseBrowseParams', () => {
     expect(p.stack).toBeNull();
     expect(p.transport).toBeNull();
     expect(p.sort).toBe('trending');
-    expect(p.limit).toBe(60);
+    expect(p.limit).toBe(30);
+  });
+
+  it('snaps offsets to pages and caps how deep they go', () => {
+    expect(parse('offset=45').offset).toBe(30);
+    expect(parse('offset=999999').offset).toBe(2010);
+    expect(parse('offset=-5').offset).toBe(0);
   });
 
   it('round-trips through the query string', () => {

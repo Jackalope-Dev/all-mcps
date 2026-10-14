@@ -24,7 +24,8 @@ import {
 
 export type BrowseResult = {
   items: DirectoryFeedItem[];
-  total: number;
+  /** Matching listings; null on pages after the first, which skip the count. */
+  total: number | null;
   /** True when `total` hit the search pool cap, so "500+" is the honest count. */
   capped: boolean;
 };
@@ -136,7 +137,7 @@ async function selectPage(
   p: BrowseParams,
   rankedIds: string[] | null,
   now: Date,
-): Promise<{ ids: string[]; total: number }> {
+): Promise<{ ids: string[]; total: number | null }> {
   const nowSec = Math.floor(now.getTime() / 1000);
   // One bound parameter however many ids: json_each unpacks the array in
   // SQLite, which also gives each id its rank (j.key) for relevance order.
@@ -148,13 +149,16 @@ async function selectPage(
     db.all<{ id: string }>(
       sql`SELECT s.id AS id FROM ${from} WHERE ${where} ORDER BY ${orderBy(p, nowSec, rankedIds != null)} LIMIT ${p.limit} OFFSET ${p.offset}`,
     ),
-    db.all<{ n: number }>(
-      sql`SELECT count(*) AS n FROM ${from} WHERE ${where}`,
-    ),
+    // The grid keeps page one's total, so later pages skip the count scan.
+    p.offset === 0
+      ? db.all<{ n: number }>(
+          sql`SELECT count(*) AS n FROM ${from} WHERE ${where}`,
+        )
+      : Promise.resolve(null),
   ]);
   return {
     ids: rows.map((r) => r.id),
-    total: Number(countRows[0]?.n ?? 0),
+    total: countRows ? Number(countRows[0]?.n ?? 0) : null,
   };
 }
 
@@ -187,7 +191,7 @@ export async function browseCatalog(
   const key = cacheKey(p);
   const cached = await readEdgeCache<{
     ids: string[];
-    total: number;
+    total: number | null;
     capped: boolean;
   }>(key);
   if (cached) {

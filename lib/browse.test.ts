@@ -172,10 +172,11 @@ describe('browseCatalog against real SQLite', () => {
     ]);
   });
 
-  it('pages with offset and limit', async () => {
-    const page = await browse('sort=alpha&limit=2&offset=2');
-    expect(ids(page)).toEqual(['pg-remote', 'py-files']);
-    expect(page.total).toBe(4);
+  it('counts on page one only', async () => {
+    expect((await browse('sort=alpha')).total).toBe(4);
+    const next = await browse('sort=alpha&offset=30');
+    expect(ids(next)).toEqual([]);
+    expect(next.total).toBeNull();
   });
 
   it('searches through the shared ranker and applies facets to the hits', async () => {

@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BROWSE_MAX_OFFSET,
   BROWSE_PAGE_SIZE,
   type BrowseParams,
   browseQueryString,
@@ -166,6 +167,9 @@ export default function DirectoryGrid({
   const [browseStatus, setBrowseStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
+  // Next page's offset, tracked apart from servers.length: a page can come
+  // back short when a listing was hidden after its ids were cached.
+  const [browseNextOffset, setBrowseNextOffset] = useState(BROWSE_PAGE_SIZE);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     initialCategory,
@@ -263,6 +267,7 @@ export default function DirectoryGrid({
   // A server re-render (category link, back/forward) brings a new SSR page.
   useEffect(() => {
     setServers(initialServers);
+    setBrowseNextOffset(BROWSE_PAGE_SIZE);
     if (serverResults) {
       setBrowseTotal(serverResults.total);
       setBrowseCapped(serverResults.capped);
@@ -277,8 +282,7 @@ export default function DirectoryGrid({
     stack: selectedStack === 'all' ? null : selectedStack,
     transport: selectedTransport === 'all' ? null : selectedTransport,
     pricing: selectedPricing === 'all' ? null : selectedPricing,
-    auth:
-      selectedAuth === 'all' || selectedAuth === 'other' ? null : selectedAuth,
+    auth: selectedAuth === 'all' ? null : selectedAuth,
     verified: verifiedOnly,
     sort:
       sortMode === 'relevance' && !searchQuery.trim() ? 'trending' : sortMode,
@@ -294,6 +298,7 @@ export default function DirectoryGrid({
   const fetchBrowsePage = async (
     query: string,
     append: boolean,
+    offset = 0,
   ): Promise<void> => {
     browseAbort.current?.abort();
     const controller = new AbortController();
@@ -306,11 +311,17 @@ export default function DirectoryGrid({
       if (!res.ok) throw new Error(`browse ${res.status}`);
       const data = (await res.json()) as {
         items: Server[];
-        total: number;
+        total: number | null;
         capped: boolean;
       };
-      setServers((prev) => (append ? [...prev, ...data.items] : data.items));
-      setBrowseTotal(data.total);
+      setServers((prev) => {
+        if (!append) return data.items;
+        const seen = new Set(prev.map((s) => s.id));
+        return [...prev, ...data.items.filter((s) => !seen.has(s.id))];
+      });
+      setBrowseNextOffset(offset + BROWSE_PAGE_SIZE);
+      // Later pages skip the count; keep page one's total.
+      if (data.total != null) setBrowseTotal(data.total);
       setBrowseCapped(data.capped);
       setBrowseStatus('idle');
     } catch (e) {
@@ -358,8 +369,9 @@ export default function DirectoryGrid({
 
   const loadMoreFromServer = () => {
     void fetchBrowsePage(
-      browseQueryString({ ...browseParams, offset: servers.length }),
+      browseQueryString({ ...browseParams, offset: browseNextOffset }),
       true,
+      browseNextOffset,
     );
   };
 
@@ -721,7 +733,7 @@ export default function DirectoryGrid({
     ? filteredServers
     : filteredServers.slice(0, visibleCount);
   const hasMore = serverMode
-    ? servers.length < browseTotal
+    ? browseNextOffset < browseTotal && browseNextOffset <= BROWSE_MAX_OFFSET
     : visibleCount < filteredServers.length;
 
   const isFiltered =

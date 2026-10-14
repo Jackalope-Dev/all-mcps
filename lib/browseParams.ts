@@ -37,8 +37,13 @@ export type BrowseParams = {
   limit: number;
 };
 
-const BROWSE_MAX_LIMIT = 60;
+/** Fixed page size: one size keeps the result cache small and hit often. */
 export const BROWSE_PAGE_SIZE = 30;
+/**
+ * Deepest page served. Nobody reads 70 pages of a directory; capping keeps
+ * crawler-driven deep offsets from turning into full-table sorts.
+ */
+export const BROWSE_MAX_OFFSET = 2010;
 function pick<T extends string>(
   value: string | null,
   allowed: readonly T[],
@@ -59,11 +64,13 @@ export function parseBrowseParams(sp: URLSearchParams): BrowseParams {
   const q = (sp.get('q') ?? '').trim().slice(0, 200);
   const sort =
     pick(sp.get('sort'), BROWSE_SORTS) ?? (q ? 'relevance' : 'trending');
-  const offset = Math.max(0, Number.parseInt(sp.get('offset') ?? '0', 10) || 0);
-  const limit = Math.min(
-    BROWSE_MAX_LIMIT,
-    Math.max(1, Number.parseInt(sp.get('limit') ?? '', 10) || BROWSE_PAGE_SIZE),
+  // Offsets snap to page boundaries so every request maps to a cacheable page.
+  const rawOffset = Number.parseInt(sp.get('offset') ?? '0', 10) || 0;
+  const offset = Math.min(
+    BROWSE_MAX_OFFSET,
+    Math.max(0, Math.floor(rawOffset / BROWSE_PAGE_SIZE) * BROWSE_PAGE_SIZE),
   );
+  const limit = BROWSE_PAGE_SIZE;
   return {
     q,
     category: resolveCategoryParam(sp.get('category')),
@@ -93,6 +100,5 @@ export function browseQueryString(p: Partial<BrowseParams>): string {
   if (p.verified) sp.set('verified', '1');
   if (p.sort) sp.set('sort', p.sort);
   if (p.offset) sp.set('offset', String(p.offset));
-  if (p.limit) sp.set('limit', String(p.limit));
   return sp.toString();
 }
