@@ -1,5 +1,5 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { and, asc, desc, eq, isNotNull, notInArray } from 'drizzle-orm';
+import { and, asc, desc, eq, notInArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import {
@@ -10,6 +10,13 @@ import {
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { cronServerColumns } from '../../../../lib/cronServerColumns';
 import { getGithubToken, githubApiHeaders } from '../../../../lib/githubAuth';
+import {
+  batchableRepoSlug,
+  fetchRepoSnapshotRest,
+  fetchRepoSnapshots,
+  type RepoSnapshot,
+} from '../../../../lib/githubBatch';
+import { healthDueSql } from '../../../../lib/healthTier';
 import {
   resolveInstallConfig,
   resolveInstallFromText,
@@ -25,7 +32,6 @@ import {
 } from '../../../../lib/listingPageRefresh';
 import { callMcpEndpoint } from '../../../../lib/mcpIntrospect';
 import { npmPackageFor } from '../../../../lib/packageRegistry';
-import { isGitHubRepoUrl } from '../../../../lib/repoUrl';
 import type { ToolDefinition } from '../../../../lib/securityProfile';
 import { storeSecurityProfile } from '../../../../lib/securityProfileStore';
 import { upsertSignals } from '../../../../lib/signalStore';
@@ -74,73 +80,538 @@ async function fetchNpmDownloads(pkg: string): Promise<number | null> {
   }
 }
 
-async function fetchGithubReadme(
-  owner: string,
-  repo: string,
+/** README text at `path` on the default branch, or null (missing, or a catalog README). */
+async function fetchReadmeText(
+  slug: string,
+  path: string,
 ): Promise<string | null> {
-  // HEAD resolves to the repo's default branch, whatever it is named.
-  for (const branch of ['HEAD']) {
-    try {
-      const res = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`,
-        {
-          headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
-          signal: AbortSignal.timeout(10000),
-        },
-      );
-      if (res.ok) {
-        // A catalog README describes other servers; nothing here may read it
-        // as this listing's (see isCatalogReadme).
-        const text = await res.text();
-        return isCatalogReadme(text, owner, repo) ? null : text;
-      }
-    } catch {
-      /* try next branch */
-    }
+  try {
+    const res = await fetch(
+      `https://raw.githubusercontent.com/${slug}/HEAD/${path}`,
+      {
+        headers: { 'User-Agent': 'AllMCPs-Health-Checker' },
+        signal: AbortSignal.timeout(10000),
+      },
+    );
+    if (!res.ok) return null;
+    // A catalog README describes other servers; nothing here may read it
+    // as this listing's (see isCatalogReadme).
+    const text = await res.text();
+    const [owner, repo] = slug.split('/');
+    return isCatalogReadme(text, owner, repo) ? null : text;
+  } catch {
+    return null;
   }
-  return null;
 }
 
-// Maximum servers to check per cron run (keeps us under rate limits)
-const BATCH_SIZE = 50;
-/** Prefer rechecking popular listings at least this often. */
-const POPULAR_STALE_MS = 3 * 24 * 60 * 60 * 1000;
 /**
- * Bounds server_health_checks per listing — see db/schema.ts for why. The
- * cron runs every 15min (custom-worker.ts FAST_JOBS), so 96 covers a full
- * day of history — enough to actually show a trend, not just the last few
- * hours.
+ * Listings per run. Due listings come first (lib/healthTier.ts: popular ones
+ * daily, the long tail weekly); GitHub repos are read 50 to a GraphQL query
+ * and READMEs are downloaded only when their blob id changed, so most
+ * listings cost one npm call at most.
+ */
+const BATCH_SIZE = 150;
+/** Listings checked at once. Each makes a few sequential fetches. */
+const CONCURRENCY = 6;
+/**
+ * Bounds server_health_checks per listing — see db/schema.ts for why. At the
+ * daily cadence of the busiest listings, 96 rows is about three months of
+ * history; enough for the detail page's trend strip.
  */
 const HEALTH_HISTORY_LIMIT = 96;
+/** Statements per db.batch. */
+const WRITE_CHUNK = 40;
 
-/**
- * Insert one history row, then trim this listing to the last
- * HEALTH_HISTORY_LIMIT so the table stays flat-sized rather than growing with
- * total checks ever performed — two small single-server queries, well under
- * D1's 100-bound-param cap regardless of catalog size.
- */
-async function recordHealthCheck(
-  db: ReturnType<typeof drizzle>,
-  row: typeof serverHealthChecks.$inferInsert,
-): Promise<void> {
-  await db.insert(serverHealthChecks).values(row);
-  const keepIds = await db
-    .select({ id: serverHealthChecks.id })
-    .from(serverHealthChecks)
-    .where(eq(serverHealthChecks.serverId, row.serverId))
-    .orderBy(desc(serverHealthChecks.checkedAt))
-    .limit(HEALTH_HISTORY_LIMIT);
-  if (keepIds.length === HEALTH_HISTORY_LIMIT) {
-    await db.delete(serverHealthChecks).where(
-      and(
-        eq(serverHealthChecks.serverId, row.serverId),
-        notInArray(
-          serverHealthChecks.id,
-          keepIds.map((r) => r.id),
-        ),
-      ),
+type Db = ReturnType<typeof drizzle>;
+type HealthRow = Awaited<ReturnType<typeof selectDueListings>>[number];
+
+async function selectDueListings(db: Db, now: Date) {
+  return db
+    .select({
+      ...cronServerColumns,
+      readmeHash: listingSignals.readmeHash,
+      latestReleaseTag: listingSignals.latestReleaseTag,
+    })
+    .from(servers)
+    .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
+    .where(and(eq(servers.status, 'active'), healthDueSql(now)))
+    .orderBy(asc(servers.lastCheckedAt))
+    .limit(BATCH_SIZE);
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, worker),
+  );
+  return results;
+}
+
+type CheckResult = {
+  statements: unknown[];
+  installHintUpdated: boolean;
+  unpublished: boolean;
+  contentChanged: boolean;
+  pageChanged: boolean;
+};
+
+async function checkListing(
+  db: Db,
+  server: HealthRow,
+  snapshot: RepoSnapshot | undefined,
+  repoSlug: string | null,
+  now: Date,
+): Promise<CheckResult> {
+  let isVerifiedActive = false;
+  let healthStatus = 'unknown';
+  // True when the check could not reach a verdict this pass (GitHub rate
+  // limit or outage): keep the last verdict and record no history row.
+  let inconclusive = false;
+  // Two independent reciprocal-backlink signals, tracked separately so the
+  // repo README badge and the custom-website backlink never overwrite each
+  // other on listings that have both. `reciprocalBadgeOk` below is the
+  // derived aggregate persisted for the rest of the app.
+  let readmeBadgeOk = server.readmeBadgeOk;
+  let websiteBacklinkOk = server.websiteBacklinkOk;
+  let githubStars: number | null = server.githubStars ?? null;
+  let toolsJson: string | null = server.tools ?? null;
+  let toolsCheckedAt: Date | null = server.toolsCheckedAt ?? null;
+  let toolsError: string | null = server.toolsError ?? null;
+  let toolsSource: string | null = server.toolsSource ?? null;
+  let lastCommitAt: Date | null = server.lastCommitAt ?? null;
+  // undefined = GitHub was not asked this pass; leave the stored value alone.
+  let repoForkOf: string | null | undefined;
+  let readmeHash = server.readmeHash ?? null;
+  let latestReleaseTag = server.latestReleaseTag ?? null;
+  let contentChanged = false;
+  // Set only when this pass completed a live tools/list, so the security
+  // profile is rebuilt from tools we just saw, never from a README guess.
+  let liveTools: ToolDefinition[] | null = null;
+  let remoteEndpointHealthy: boolean | null =
+    server.remoteEndpointHealthy ?? null;
+  let remoteEndpointCheckedAt: Date | null =
+    server.remoteEndpointCheckedAt ?? null;
+
+  // Only a real npm install has npm downloads. A non-npm listing keeps null
+  // rather than borrowing a same-named package's count.
+  const npmName = npmPackageFor(server);
+  const npmDownloads = npmName
+    ? ((await fetchNpmDownloads(npmName)) ?? server.npmDownloads ?? null)
+    : null;
+
+  let readmeText: string | null = null;
+
+  try {
+    if (repoSlug) {
+      if (!snapshot || snapshot.kind === 'error') {
+        inconclusive = true;
+      } else if (snapshot.kind === 'missing') {
+        healthStatus = 'offline';
+      } else {
+        githubStars = snapshot.stars;
+        if (snapshot.pushedAt) lastCommitAt = snapshot.pushedAt;
+        // Feeds the stale sweep's unmodified-fork rule.
+        repoForkOf = snapshot.forkOf;
+        if (snapshot.archived) {
+          healthStatus = 'archived';
+        } else {
+          isVerifiedActive = true;
+          healthStatus = 'healthy';
+        }
+
+        // A changed README or a new release is new source material for the
+        // writeup; the ai-content cron refreshes rows whose
+        // content_changed_at is newer than their enrichment. A first
+        // sighting only records the hash: it is not a change.
+        if (
+          (server.readmeHash &&
+            snapshot.readmeOid &&
+            snapshot.readmeOid !== server.readmeHash) ||
+          (server.latestReleaseTag &&
+            snapshot.latestReleaseTag &&
+            snapshot.latestReleaseTag !== server.latestReleaseTag)
+        ) {
+          contentChanged = true;
+        }
+        const readmeChanged =
+          snapshot.readmeOid != null && snapshot.readmeOid !== readmeHash;
+        readmeHash = snapshot.readmeOid ?? readmeHash;
+        latestReleaseTag = snapshot.latestReleaseTag ?? latestReleaseTag;
+
+        // Everything below reads the README, so it only runs when the README
+        // changed (or was never read for tools/install). An unchanged blob id
+        // means the badge, tool list and install hint we stored still hold.
+        const needsReadme =
+          readmeChanged ||
+          toolsCheckedAt == null ||
+          (!server.installExtractedAt && !server.installKind);
+        if (needsReadme && snapshot.readmePath) {
+          readmeText = await fetchReadmeText(repoSlug, snapshot.readmePath);
+        }
+        if (readmeText) {
+          readmeBadgeOk = websiteHasReciprocalBadge(readmeText, server.id);
+        }
+
+        // GitHub-linked listings are almost always stdio packages (npx/uvx/pip), not a
+        // live HTTP endpoint, so the tools/list handshake below never applies to them —
+        // this is the only source of tool data they'll ever get. Never overwrite a real
+        // live-introspected result with a weaker guess.
+        if (readmeText && toolsSource !== 'introspected') {
+          toolsCheckedAt = now;
+          const parsedTools = parseToolsFromReadme(readmeText);
+          if (parsedTools.length > 0) {
+            toolsJson = JSON.stringify(parsedTools);
+            toolsSource = 'readme';
+            toolsError = null;
+          } else {
+            // Leave any previously-found tools/source alone — this only means
+            // *this run's* README didn't parse, not that earlier good data is stale.
+            toolsError = 'No tools section found in README.';
+          }
+        }
+      }
+    } else if (!isSafeSubmissionUrl(server.url)) {
+      healthStatus = 'offline';
+    } else {
+      const pingRes = await fetch(server.url, {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(8000),
+      }).catch(() => null);
+      if (pingRes && pingRes.status < 500) {
+        isVerifiedActive = true;
+        healthStatus = 'healthy';
+      } else {
+        const getRes = await fetch(server.url, {
+          method: 'GET',
+          signal: AbortSignal.timeout(8000),
+        }).catch(() => null);
+        if (getRes && getRes.status < 500) {
+          isVerifiedActive = true;
+          healthStatus = 'healthy';
+        } else {
+          healthStatus = 'offline';
+        }
+      }
+
+      if (isVerifiedActive) {
+        const introspection = await callMcpEndpoint(server.url, {
+          method: 'tools/list',
+        });
+        toolsCheckedAt = now;
+        if (
+          introspection.ok &&
+          introspection.tools &&
+          introspection.tools.length > 0
+        ) {
+          liveTools = introspection.tools.map((t) => ({
+            name: t.name,
+            description: t.description,
+            parameters: t.inputSchema,
+          }));
+          toolsJson = JSON.stringify(liveTools);
+          toolsSource = 'introspected';
+          toolsError = null;
+        } else if (introspection.authRequired) {
+          // Spec-compliant 401 + WWW-Authenticate (RFC 9728) — a real,
+          // correctly-configured OAuth-protected MCP server, not a broken
+          // one. isVerifiedActive/healthStatus above already reflect this
+          // as healthy; this message just needs to not read as a failure.
+          toolsError =
+            'Requires authentication (OAuth) — tools not introspected by the automated check.';
+        } else {
+          toolsError = (
+            introspection.ok
+              ? 'Endpoint responded but returned no tools.'
+              : introspection.error || 'Unknown error'
+          ).slice(0, 500);
+          // Expected, per-listing condition — already recorded on the row as
+          // toolsError. console.warn keeps it out of error-level alerting.
+          console.warn(
+            `[health-cron] tools/list failed for ${server.id} (${server.url}): ${toolsError}`,
+          );
+        }
+      }
+    }
+  } catch {
+    healthStatus = 'offline';
+  }
+
+  // Secondary connection method: a listing can declare a hosted endpoint
+  // alongside its primary install (e.g. a stdio bridge package that proxies
+  // to a real remote server). When present, always prefer a live tools/list
+  // handshake against it over whatever the primary path above found — it's
+  // the authoritative source the owner pointed us at, not a README guess.
+  // Independent try/catch so a flaky remote endpoint can't blow away the
+  // primary path's result for this run.
+  if (server.remoteEndpointUrl) {
+    try {
+      const remoteIntrospection = await callMcpEndpoint(
+        server.remoteEndpointUrl,
+        { method: 'tools/list' },
+      );
+      toolsCheckedAt = now;
+      // A successful initialize means the endpoint is up and speaking MCP,
+      // tracked separately from healthStatus/isVerifiedActive (which read the
+      // *primary* url) so a transient endpoint blip can't trip repo-archival
+      // unpublish logic. See lib/qualityScore.ts for where this feeds scoring.
+      remoteEndpointHealthy = remoteIntrospection.ok;
+      remoteEndpointCheckedAt = now;
+      if (
+        remoteIntrospection.ok &&
+        remoteIntrospection.tools &&
+        remoteIntrospection.tools.length > 0
+      ) {
+        liveTools = remoteIntrospection.tools.map((t) => ({
+          name: t.name,
+          description: t.description,
+          parameters: t.inputSchema,
+        }));
+        toolsJson = JSON.stringify(liveTools);
+        toolsSource = 'introspected';
+        toolsError = null;
+      } else if (remoteIntrospection.authRequired) {
+        toolsError =
+          'Requires authentication (OAuth) — tools not introspected by the automated check.';
+      } else {
+        toolsError = (
+          remoteIntrospection.ok
+            ? 'Remote endpoint responded but returned no tools.'
+            : remoteIntrospection.error || 'Unknown error'
+        ).slice(0, 500);
+      }
+    } catch {
+      // A thrown error (network failure, timeout) means the endpoint didn't
+      // respond — tools data is left as-is so a blip doesn't erase a good
+      // tool list, but health explicitly reflects this as down.
+      remoteEndpointHealthy = false;
+      remoteEndpointCheckedAt = now;
+    }
+  }
+
+  // The website backlink is a separate public-content check from the repo
+  // README badge above, so it writes its own signal and never overwrites the
+  // README result. Premium is skipped since it's already dofollow.
+  if (
+    !server.isPremium &&
+    server.websiteUrl &&
+    isSafeSubmissionUrl(server.websiteUrl)
+  ) {
+    try {
+      const siteRes = await fetch(server.websiteUrl, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000),
+      });
+      websiteBacklinkOk =
+        siteRes.ok &&
+        websiteHasReciprocalBadge(await siteRes.text(), server.id);
+    } catch {
+      websiteBacklinkOk = false;
+    }
+  }
+
+  const reciprocalBadgeOk = readmeBadgeOk || websiteBacklinkOk;
+
+  // Install hint: README first, then description, then deterministic resolve.
+  //
+  // Skipped entirely once the AI pipeline has validated this listing's install
+  // (installExtractedAt set, see db/schema.ts): that pass reads the whole README with
+  // context and is the documented source of truth — including when its verdict is
+  // "no confident install" and it deliberately voids the fields to null. A regex
+  // cannot tell a debugging CLI or an installer CLI from the server itself, so
+  // without this guard it reinstated exactly the guesses the LLM had rejected.
+  let installFields: ReturnType<typeof toCachedInstallFields> | null = null;
+  let installHintUpdated = false;
+  if (!server.installExtractedAt) {
+    const fromReadme = readmeText
+      ? resolveInstallFromText(readmeText, {
+          id: server.id,
+          name: server.name,
+          url: server.url,
+        })
+      : null;
+    // toCachedInstallFields returns null when a resolved install must not be cached,
+    // so a README hint that fails that bar falls through to the deterministic resolve.
+    installFields = fromReadme ? toCachedInstallFields(fromReadme) : null;
+    if (installFields) {
+      installHintUpdated = true;
+    } else {
+      const resolved = resolveInstallConfig({
+        id: server.id,
+        name: server.name,
+        url: server.url,
+        description: server.description,
+      });
+      // Only persist non-low confidence so we don't lock in bad guesses forever
+      if (resolved.confidence !== 'low' || resolved.source !== 'heuristic') {
+        installFields = toCachedInstallFields(resolved);
+        if (installFields) installHintUpdated = true;
+      }
+    }
+  }
+
+  // A cached remote endpoint is a URL we hand to clients as "connect here". Before
+  // caching a *new or changed* endpoint, ask it directly, and refuse to store one the
+  // probe proves is not MCP. Inconclusive results change nothing; see
+  // lib/tools/verifyRemoteEndpoint.ts. Re-verifying endpoints that rot after being
+  // cached is scripts/verify-cached-remote-endpoints.ts.
+  let clearInstallFields = false;
+  if (
+    installFields?.installKind === 'remote' &&
+    installFields.installPackage !== server.installPackage
+  ) {
+    const probe = await probeRemoteEndpoint(installFields.installPackage);
+    if (probe.verdict === 'not-mcp') {
+      installFields = null;
+      clearInstallFields = server.installKind === 'remote';
+    }
+  }
+
+  // Dead/archived GitHub projects: unpublish so the public catalog stays fresh —
+  // but only once the npm/pypi package and remote endpoint are also confirmed
+  // dead (see isListingTrulyDead). Soft-remove only (status = removed).
+  const shouldUnpublish =
+    healthStatus === 'archived'
+      ? await isListingTrulyDead({
+          githubDead: true,
+          remoteEndpointHealthy,
+          // A just-cleared install is not evidence the listing is reachable.
+          installCommand: clearInstallFields
+            ? null
+            : (installFields?.installCommand ?? server.installCommand),
+          installPackage: clearInstallFields
+            ? null
+            : (installFields?.installPackage ?? server.installPackage),
+        })
+      : false;
+
+  if (inconclusive) {
+    isVerifiedActive = Boolean(server.isVerifiedActive);
+    healthStatus = server.healthStatus || 'unknown';
+  }
+
+  if (liveTools && liveTools.length > 0) {
+    const { changed } = await storeSecurityProfile(
+      db,
+      server.id,
+      liveTools,
+      undefined,
+      now,
+    );
+    if (changed) contentChanged = true;
+  }
+
+  const statements: unknown[] = [
+    db
+      .update(servers)
+      .set({
+        lastCheckedAt: now,
+        isVerifiedActive,
+        healthStatus,
+        reciprocalBadgeOk,
+        readmeBadgeOk,
+        websiteBacklinkOk,
+        badgeLastCheckedAt: now,
+        githubStars,
+        lastCommitAt,
+        npmDownloads,
+        tools: toolsJson,
+        toolsCheckedAt,
+        toolsError,
+        toolsSource,
+        remoteEndpointHealthy,
+        remoteEndpointCheckedAt,
+        ...(shouldUnpublish ? { status: 'removed' } : {}),
+        ...(installFields
+          ? {
+              installKind: installFields.installKind,
+              installCommand: installFields.installCommand,
+              installArgs: installFields.installArgs,
+              installPackage: installFields.installPackage,
+              installConfidence: installFields.installConfidence,
+            }
+          : clearInstallFields
+            ? {
+                installKind: null,
+                installCommand: null,
+                installArgs: null,
+                installPackage: null,
+                installConfidence: null,
+              }
+            : {}),
+      })
+      .where(eq(servers.id, server.id)),
+  ];
+
+  if (
+    repoForkOf !== undefined ||
+    readmeHash !== (server.readmeHash ?? null) ||
+    latestReleaseTag !== (server.latestReleaseTag ?? null) ||
+    contentChanged
+  ) {
+    statements.push(
+      upsertSignals(db, server.id, {
+        ...(repoForkOf !== undefined ? { repoForkOf } : {}),
+        readmeHash,
+        latestReleaseTag,
+        ...(contentChanged ? { contentChangedAt: now } : {}),
+      }),
     );
   }
+
+  // Bounded health-check history for the detail-page trend strip. An
+  // inconclusive pass records nothing, so a GitHub rate limit never shows up
+  // as downtime. Insert, then trim this listing to the newest
+  // HEALTH_HISTORY_LIMIT in one statement.
+  if (!inconclusive) {
+    statements.push(
+      db.insert(serverHealthChecks).values({
+        serverId: server.id,
+        checkedAt: now,
+        healthy: isVerifiedActive,
+        detail: isVerifiedActive ? null : healthStatus,
+        // Only meaningfully set when this listing has a remoteEndpointUrl.
+        remoteHealthy: server.remoteEndpointUrl ? remoteEndpointHealthy : null,
+      }),
+      db
+        .delete(serverHealthChecks)
+        .where(
+          and(
+            eq(serverHealthChecks.serverId, server.id),
+            notInArray(
+              serverHealthChecks.id,
+              db
+                .select({ id: serverHealthChecks.id })
+                .from(serverHealthChecks)
+                .where(eq(serverHealthChecks.serverId, server.id))
+                .orderBy(desc(serverHealthChecks.checkedAt))
+                .limit(HEALTH_HISTORY_LIMIT),
+            ),
+          ),
+        ),
+    );
+  }
+
+  return {
+    statements,
+    installHintUpdated,
+    unpublished: shouldUnpublish,
+    contentChanged,
+    pageChanged: listingRenderChanged(server, {
+      websiteBacklinkOk,
+      status: shouldUnpublish ? 'removed' : undefined,
+    }),
+  };
 }
 
 export async function POST(req: Request) {
@@ -163,543 +634,74 @@ export async function POST(req: Request) {
 
     const db = drizzle(env.DB as any);
     const githubToken = getGithubToken(env);
+    const now = new Date();
 
-    // Mix oldest-checked (coverage) with popular-stale (user-facing quality).
-    const half = Math.floor(BATCH_SIZE / 2);
-    const [oldest, popular] = await Promise.all([
-      db
-        .select(cronServerColumns)
-        .from(servers)
-        .where(eq(servers.status, 'active'))
-        .orderBy(asc(servers.lastCheckedAt))
-        .limit(half),
-      db
-        .select(cronServerColumns)
-        .from(servers)
-        .where(eq(servers.status, 'active'))
-        // Same column order as idx_servers_status_popularity, so D1 walks the
-        // index for 50 rows instead of reading and sorting the whole catalog.
-        .orderBy(
-          desc(servers.views),
-          desc(servers.copies),
-          desc(servers.upvotes),
-        )
-        .limit(half * 2),
-    ]);
-
-    const staleCutoff = Date.now() - POPULAR_STALE_MS;
-    const seen = new Set<string>();
-    const batch: typeof oldest = [];
-
-    // First: popular listings that are stale or never checked / missing stars
-    for (const s of popular) {
-      if (batch.length >= half) break;
-      const checked = s.lastCheckedAt
-        ? new Date(s.lastCheckedAt as any).getTime()
-        : 0;
-      const needs =
-        !checked ||
-        checked < staleCutoff ||
-        s.githubStars == null ||
-        !s.installKind;
-      if (!needs) continue;
-      if (seen.has(s.id)) continue;
-      seen.add(s.id);
-      batch.push(s);
-    }
-
-    // Fill remainder with oldest-checked for full-catalog coverage
-    for (const s of oldest) {
-      if (batch.length >= BATCH_SIZE) break;
-      if (seen.has(s.id)) continue;
-      seen.add(s.id);
-      batch.push(s);
-    }
-
-    // If still short, take more popular regardless of staleness
-    for (const s of popular) {
-      if (batch.length >= BATCH_SIZE) break;
-      if (seen.has(s.id)) continue;
-      seen.add(s.id);
-      batch.push(s);
-    }
-
+    const batch = await selectDueListings(db, now);
     if (batch.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No active servers to check.',
+        message: 'No listings due for a health check.',
       });
     }
 
-    let processed = 0;
-    let installHintsUpdated = 0;
-    let unpublished = 0;
-    // Listings whose rendered page changed (dofollow flip, unpublished): their
-    // cached /mcp/[id] page is regenerated after the batch rather than waiting
-    // for a visitor to trigger ISR.
-    const pagesToRefresh: string[] = [];
+    // One GraphQL round trip per 50 GitHub repos; REST per repo without a token.
+    const slugs = new Map<string, string>();
+    for (const s of batch) {
+      const slug = batchableRepoSlug(s.url);
+      if (slug) slugs.set(s.id, slug);
+    }
+    const uniqueSlugs = [...new Set(slugs.values())];
+    const restHeaders = githubApiHeaders(
+      null,
+      'application/vnd.github+json',
+      'AllMCPs-Health-Checker',
+    );
+    const snapshots: Map<string, RepoSnapshot> = githubToken
+      ? await fetchRepoSnapshots(uniqueSlugs, githubToken)
+      : new Map(
+          await mapWithConcurrency(
+            uniqueSlugs,
+            CONCURRENCY,
+            async (slug) =>
+              [slug, await fetchRepoSnapshotRest(slug, restHeaders)] as const,
+          ),
+        );
 
-    for (const server of batch) {
-      const now = new Date();
-      let isVerifiedActive = false;
-      let healthStatus = 'unknown';
-      // Two independent reciprocal-backlink signals, tracked separately so the
-      // repo README badge and the custom-website backlink never overwrite each
-      // other on listings that have both. `reciprocalBadgeOk` below is the
-      // derived aggregate persisted for the rest of the app.
-      let readmeBadgeOk = server.readmeBadgeOk;
-      let websiteBacklinkOk = server.websiteBacklinkOk;
-      let githubStars: number | null = server.githubStars ?? null;
-      let toolsJson: string | null = server.tools ?? null;
-      let toolsCheckedAt: Date | null = server.toolsCheckedAt ?? null;
-      let toolsError: string | null = server.toolsError ?? null;
-      let toolsSource: string | null = server.toolsSource ?? null;
-      let lastCommitAt: Date | null = server.lastCommitAt ?? null;
-      // undefined = GitHub was not asked this pass; leave the stored value alone.
-      let repoForkOf: string | null | undefined;
-      // Set only when this pass completed a live tools/list, so the security
-      // profile is rebuilt from tools we just saw, never from a README guess.
-      let liveTools: ToolDefinition[] | null = null;
-      let remoteEndpointHealthy: boolean | null =
-        server.remoteEndpointHealthy ?? null;
-      let remoteEndpointCheckedAt: Date | null =
-        server.remoteEndpointCheckedAt ?? null;
+    const results = await mapWithConcurrency(batch, CONCURRENCY, (server) => {
+      const slug = slugs.get(server.id) ?? null;
+      return checkListing(
+        db,
+        server,
+        slug ? snapshots.get(slug) : undefined,
+        slug,
+        now,
+      );
+    });
 
-      // Only a real npm install has npm downloads. A non-npm listing keeps
-      // null rather than borrowing a same-named package's count.
-      const npmName = npmPackageFor(server);
-      const npmDownloads = npmName
-        ? ((await fetchNpmDownloads(npmName)) ?? server.npmDownloads ?? null)
-        : null;
-
-      let readmeText: string | null = null;
-      // True when the check could not reach a verdict this pass.
-      let inconclusive = false;
-
-      try {
-        if (isGitHubRepoUrl(server.url)) {
-          const githubMatch = server.url.match(/github\.com\/([^/]+)\/([^/]+)/);
-          if (githubMatch) {
-            const owner = githubMatch[1];
-            let repo = githubMatch[2];
-            if (repo.endsWith('.git')) repo = repo.slice(0, -4);
-
-            const ghRes = await fetch(
-              `https://api.github.com/repos/${owner}/${repo}`,
-              {
-                headers: githubApiHeaders(
-                  githubToken,
-                  'application/vnd.github+json',
-                  'AllMCPs-Health-Checker',
-                ),
-                signal: AbortSignal.timeout(10000),
-              },
-            );
-
-            if (ghRes.ok) {
-              const ghData = (await ghRes.json()) as any;
-              if (typeof ghData.stargazers_count === 'number') {
-                githubStars = ghData.stargazers_count;
-              }
-              if (typeof ghData.pushed_at === 'string') {
-                const pushed = new Date(ghData.pushed_at);
-                if (!Number.isNaN(pushed.getTime())) lastCommitAt = pushed;
-              }
-              // Feeds the stale sweep's unmodified-fork rule. The single-repo
-              // endpoint includes `parent`; fall back to a marker when absent.
-              repoForkOf = ghData.fork
-                ? (ghData.parent?.full_name ?? 'unknown')
-                : null;
-              if (ghData.archived || ghData.disabled) {
-                healthStatus = 'archived';
-              } else {
-                isVerifiedActive = true;
-                healthStatus = 'healthy';
-              }
-
-              readmeText = await fetchGithubReadme(owner, repo);
-              if (readmeText) {
-                readmeBadgeOk = websiteHasReciprocalBadge(
-                  readmeText,
-                  server.id,
-                );
-              }
-
-              // GitHub-linked listings are almost always stdio packages (npx/uvx/pip), not a
-              // live HTTP endpoint, so the tools/list handshake below never applies to them —
-              // this is the only source of tool data they'll ever get. Never overwrite a real
-              // live-introspected result with a weaker guess (moot in practice: a listing's
-              // URL shape doesn't change between runs, so the branches never collide on one
-              // listing, but this keeps the intent explicit).
-              if (readmeText && toolsSource !== 'introspected') {
-                toolsCheckedAt = now;
-                const parsedTools = parseToolsFromReadme(readmeText);
-                if (parsedTools.length > 0) {
-                  toolsJson = JSON.stringify(parsedTools);
-                  toolsSource = 'readme';
-                  toolsError = null;
-                } else {
-                  // Leave any previously-found tools/source alone — this only means
-                  // *this run's* README didn't parse, not that earlier good data is stale.
-                  toolsError = 'No tools section found in README.';
-                }
-              }
-            } else if (ghRes.status === 404) {
-              healthStatus = 'offline';
-            } else {
-              // Rate limit (403/429) or a GitHub outage says nothing about
-              // the repo. Keep the last verdict and skip the history row.
-              inconclusive = true;
-            }
-          }
-        } else if (!isSafeSubmissionUrl(server.url)) {
-          healthStatus = 'offline';
-        } else {
-          const pingRes = await fetch(server.url, {
-            method: 'HEAD',
-            signal: AbortSignal.timeout(8000),
-          }).catch(() => null);
-          if (pingRes && pingRes.status < 500) {
-            isVerifiedActive = true;
-            healthStatus = 'healthy';
-          } else {
-            const getRes = await fetch(server.url, {
-              method: 'GET',
-              signal: AbortSignal.timeout(8000),
-            }).catch(() => null);
-            if (getRes && getRes.status < 500) {
-              isVerifiedActive = true;
-              healthStatus = 'healthy';
-            } else {
-              healthStatus = 'offline';
-            }
-          }
-
-          if (isVerifiedActive) {
-            const introspection = await callMcpEndpoint(server.url, {
-              method: 'tools/list',
-            });
-            toolsCheckedAt = now;
-            if (
-              introspection.ok &&
-              introspection.tools &&
-              introspection.tools.length > 0
-            ) {
-              liveTools = introspection.tools.map((t) => ({
-                name: t.name,
-                description: t.description,
-                parameters: t.inputSchema,
-              }));
-              toolsJson = JSON.stringify(liveTools);
-              toolsSource = 'introspected';
-              toolsError = null;
-            } else if (introspection.authRequired) {
-              // Spec-compliant 401 + WWW-Authenticate (RFC 9728) — a real,
-              // correctly-configured OAuth-protected MCP server, not a broken
-              // one. isVerifiedActive/healthStatus above already reflect this
-              // as healthy; this message just needs to not read as a failure.
-              // Reported independently as a common false-negative in other MCP
-              // directories' health probes — worth getting right.
-              toolsError =
-                'Requires authentication (OAuth) — tools not introspected by the automated check.';
-            } else {
-              toolsError = (
-                introspection.ok
-                  ? 'Endpoint responded but returned no tools.'
-                  : introspection.error || 'Unknown error'
-              ).slice(0, 500);
-              // Expected, per-listing condition (endpoint doesn't support tools/list, requires
-              // auth, etc.) — already recorded on the row as toolsError. console.warn keeps it
-              // out of error-level alerting while still showing up in logs for debugging.
-              console.warn(
-                `[health-cron] tools/list failed for ${server.id} (${server.url}): ${toolsError}`,
-              );
-            }
-          }
-        }
-      } catch {
-        healthStatus = 'offline';
-      }
-
-      // Secondary connection method: a listing can declare a hosted endpoint
-      // alongside its primary install (e.g. a stdio bridge package that proxies
-      // to a real remote server). When present, always prefer a live tools/list
-      // handshake against it over whatever the primary path above found — it's
-      // the authoritative source the owner pointed us at, not a README guess.
-      // Independent try/catch so a flaky remote endpoint can't blow away the
-      // primary path's result for this run.
-      if (server.remoteEndpointUrl) {
-        try {
-          const remoteIntrospection = await callMcpEndpoint(
-            server.remoteEndpointUrl,
-            { method: 'tools/list' },
-          );
-          toolsCheckedAt = now;
-          // A successful initialize (part of callMcpEndpoint's handshake) means
-          // the endpoint is up and speaking MCP correctly, regardless of whether
-          // this particular listing has tools to report — genuine uptime signal,
-          // tracked separately from healthStatus/isVerifiedActive (which read the
-          // *primary* url, e.g. the GitHub repo for a stdio+remote listing like
-          // our own — a transient endpoint blip shouldn't trip repo-archival
-          // unpublish logic). See lib/qualityScore.ts for where this feeds scoring.
-          remoteEndpointHealthy = remoteIntrospection.ok;
-          remoteEndpointCheckedAt = now;
-          if (
-            remoteIntrospection.ok &&
-            remoteIntrospection.tools &&
-            remoteIntrospection.tools.length > 0
-          ) {
-            liveTools = remoteIntrospection.tools.map((t) => ({
-              name: t.name,
-              description: t.description,
-              parameters: t.inputSchema,
-            }));
-            toolsJson = JSON.stringify(liveTools);
-            toolsSource = 'introspected';
-            toolsError = null;
-          } else if (remoteIntrospection.authRequired) {
-            // See the primary-url branch above — same RFC 9728 case, healthy
-            // endpoint, just OAuth-protected.
-            toolsError =
-              'Requires authentication (OAuth) — tools not introspected by the automated check.';
-          } else {
-            toolsError = (
-              remoteIntrospection.ok
-                ? 'Remote endpoint responded but returned no tools.'
-                : remoteIntrospection.error || 'Unknown error'
-            ).slice(0, 500);
-          }
-        } catch {
-          // A thrown error (network failure, timeout) means the endpoint didn't
-          // respond — unlike the tools data (left as-is so a transient blip
-          // doesn't erase a previously-good tool list), health explicitly
-          // reflects this as down; that's the whole point of tracking it.
-          remoteEndpointHealthy = false;
-          remoteEndpointCheckedAt = now;
-        }
-      }
-
-      // The website backlink is a separate public-content check from the repo
-      // README badge above — does the *custom site* currently show our
-      // badge/link — so it writes its own signal and never overwrites the
-      // README result. Applies to any listing with a website, independent of
-      // Official/claim status (premium is skipped since it's already dofollow
-      // regardless, see websiteLinkRel).
-      if (
-        !server.isPremium &&
-        server.websiteUrl &&
-        isSafeSubmissionUrl(server.websiteUrl)
-      ) {
-        try {
-          const siteRes = await fetch(server.websiteUrl, {
-            method: 'GET',
-            signal: AbortSignal.timeout(10000),
-          });
-          websiteBacklinkOk =
-            siteRes.ok &&
-            websiteHasReciprocalBadge(await siteRes.text(), server.id);
-        } catch {
-          websiteBacklinkOk = false;
-        }
-      }
-
-      // Aggregate the two independent signals for the rest of the app.
-      const reciprocalBadgeOk = readmeBadgeOk || websiteBacklinkOk;
-
-      // Install hint: README first, then description, then deterministic resolve.
-      //
-      // Skipped entirely once the AI pipeline has validated this listing's install
-      // (installExtractedAt set, see db/schema.ts): that pass reads the whole README with
-      // context and is the documented source of truth — including when its verdict is
-      // "no confident install" and it deliberately voids the fields to null. This sweep
-      // runs every 15 minutes with a regex that cannot tell a debugging CLI or an installer
-      // CLI from the server itself, so without this guard it kept reinstating exactly the
-      // guesses the LLM had just rejected, on every already-validated row.
-      let installFields: ReturnType<typeof toCachedInstallFields> | null = null;
-      if (!server.installExtractedAt) {
-        const fromReadme = readmeText
-          ? resolveInstallFromText(readmeText, {
-              id: server.id,
-              name: server.name,
-              url: server.url,
-            })
-          : null;
-        // toCachedInstallFields returns null when a resolved install must not be cached
-        // (a "remote" URL that isn't endpoint-shaped, or a stdio package that is a dev
-        // tool/flag/placeholder), so a README hint that fails that bar falls through to the
-        // deterministic resolve instead of ending the search — and the counter only moves
-        // when something is actually written.
-        installFields = fromReadme ? toCachedInstallFields(fromReadme) : null;
-        if (installFields) {
-          installHintsUpdated++;
-        } else {
-          const resolved = resolveInstallConfig({
-            id: server.id,
-            name: server.name,
-            url: server.url,
-            description: server.description,
-            // Do not re-use old cache here — recompute so we can refresh
-          });
-          // Only persist non-low confidence so we don't lock in bad guesses forever
-          if (
-            resolved.confidence !== 'low' ||
-            resolved.source !== 'heuristic'
-          ) {
-            installFields = toCachedInstallFields(resolved);
-            if (installFields) installHintsUpdated++;
-          }
-        }
-      }
-
-      // A cached remote endpoint is a URL we hand to clients as "connect here", and
-      // nothing used to connect to it before writing it down: looksLikeMcpEndpointUrl
-      // only checks the URL's shape, which a docs page under an /mcp path passes
-      // happily. So before caching a *new or changed* endpoint, ask it directly, and
-      // refuse to store one the probe proves is not MCP — HTML served to a JSON-RPC
-      // POST, 404/410, or a private address no reader could reach. Inconclusive results
-      // (timeouts, bot walls, 5xx) change nothing; see lib/tools/verifyRemoteEndpoint.ts.
-      //
-      // Scoped to changed values on purpose. This sweep already makes several
-      // sequential fetches per listing, and probing every remote row every 15 minutes
-      // would add one more to each with nothing new to learn. Re-verifying endpoints
-      // that rot after being cached is the job of
-      // scripts/verify-cached-remote-endpoints.ts, which can be re-run over the catalog.
-      let clearInstallFields = false;
-      if (
-        installFields?.installKind === 'remote' &&
-        installFields.installPackage !== server.installPackage
-      ) {
-        const probe = await probeRemoteEndpoint(installFields.installPackage);
-        if (probe.verdict === 'not-mcp') {
-          installFields = null;
-          clearInstallFields = server.installKind === 'remote';
-        }
-      }
-
-      // Dead/archived GitHub projects: unpublish so the public catalog stays fresh —
-      // but only once the npm/pypi package and remote endpoint are also confirmed
-      // dead (see isListingTrulyDead), so a broken source link alone doesn't take
-      // down a listing that's still installable/reachable another way.
-      // Soft-remove only — rows stay for admin recovery (status = removed).
-      const shouldUnpublish =
-        healthStatus === 'archived'
-          ? await isListingTrulyDead({
-              githubDead: true,
-              remoteEndpointHealthy,
-              // A just-cleared install is not evidence the listing is reachable.
-              installCommand: clearInstallFields
-                ? null
-                : (installFields?.installCommand ?? server.installCommand),
-              installPackage: clearInstallFields
-                ? null
-                : (installFields?.installPackage ?? server.installPackage),
-            })
-          : false;
-
-      if (inconclusive) {
-        isVerifiedActive = Boolean(server.isVerifiedActive);
-        healthStatus = server.healthStatus || 'unknown';
-      }
-
-      await db
-        .update(servers)
-        .set({
-          lastCheckedAt: now,
-          isVerifiedActive,
-          healthStatus,
-          reciprocalBadgeOk,
-          readmeBadgeOk,
-          websiteBacklinkOk,
-          badgeLastCheckedAt: now,
-          githubStars,
-          lastCommitAt,
-          npmDownloads,
-          tools: toolsJson,
-          toolsCheckedAt,
-          toolsError,
-          toolsSource,
-          remoteEndpointHealthy,
-          remoteEndpointCheckedAt,
-          ...(shouldUnpublish ? { status: 'removed' } : {}),
-          ...(installFields
-            ? {
-                installKind: installFields.installKind,
-                installCommand: installFields.installCommand,
-                installArgs: installFields.installArgs,
-                installPackage: installFields.installPackage,
-                installConfidence: installFields.installConfidence,
-              }
-            : clearInstallFields
-              ? {
-                  installKind: null,
-                  installCommand: null,
-                  installArgs: null,
-                  installPackage: null,
-                  installConfidence: null,
-                }
-              : {}),
-        })
-        .where(eq(servers.id, server.id));
-
-      if (liveTools && liveTools.length > 0) {
-        await storeSecurityProfile(db, server.id, liveTools, undefined, now);
-      }
-
-      // Forks are rare, so only a fork creates a signals row; a repo that is
-      // not one just clears any stale marker without writing a row per listing.
-      if (repoForkOf) {
-        await upsertSignals(db, server.id, { repoForkOf });
-      } else if (repoForkOf === null) {
-        await db
-          .update(listingSignals)
-          .set({ repoForkOf: null })
-          .where(
-            and(
-              eq(listingSignals.serverId, server.id),
-              isNotNull(listingSignals.repoForkOf),
-            ),
-          );
-      }
-
-      // Bounded health-check history for the detail-page trend strip (see
-      // db/schema.ts). An inconclusive pass records nothing, so a GitHub rate
-      // limit never shows up as downtime.
-      if (!inconclusive) {
-        await recordHealthCheck(db, {
-          serverId: server.id,
-          checkedAt: now,
-          healthy: isVerifiedActive,
-          detail: isVerifiedActive ? null : healthStatus,
-          // Only meaningfully set (non-carried-forward) when this listing has a
-          // remoteEndpointUrl — see remoteEndpointHealthy's declaration above.
-          remoteHealthy: server.remoteEndpointUrl
-            ? remoteEndpointHealthy
-            : null,
-        });
-      }
-
-      if (shouldUnpublish) unpublished++;
-      if (
-        listingRenderChanged(server, {
-          websiteBacklinkOk,
-          status: shouldUnpublish ? 'removed' : undefined,
-        })
-      ) {
-        pagesToRefresh.push(server.id);
-      }
-      processed++;
+    const statements = results.flatMap((r) => r.statements);
+    for (let i = 0; i < statements.length; i += WRITE_CHUNK) {
+      await db.batch(statements.slice(i, i + WRITE_CHUNK) as any);
     }
 
+    const pagesToRefresh = batch
+      .filter((_, i) => results[i].pageChanged)
+      .map((s) => s.id);
     const pages = await refreshListingPages(pagesToRefresh, env);
 
+    const installHintsUpdated = results.filter(
+      (r) => r.installHintUpdated,
+    ).length;
+    const unpublished = results.filter((r) => r.unpublished).length;
+    const contentChanged = results.filter((r) => r.contentChanged).length;
     return NextResponse.json({
       success: true,
-      processed,
+      processed: batch.length,
       installHintsUpdated,
       unpublished,
+      contentChanged,
       pagesRefreshed: pages.refreshed.length,
       pageRefreshFailed: pages.failed,
-      message: `Verified ${processed} servers (${installHintsUpdated} install hints, ${unpublished} unpublished, ${pages.refreshed.length}/${pagesToRefresh.length} pages refreshed).`,
+      message: `Verified ${batch.length} servers (${installHintsUpdated} install hints, ${unpublished} unpublished, ${contentChanged} content changes, ${pages.refreshed.length}/${pagesToRefresh.length} pages refreshed).`,
     });
   } catch (error) {
     console.error('Cron error:', error);
