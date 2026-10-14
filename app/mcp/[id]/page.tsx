@@ -1706,9 +1706,19 @@ export default async function MCPDetail({
                     {server.tools.length})
                   </a>
                 )}
-                <a href="#directory-badge" className="detail-next-step">
-                  <BadgeCheck size={14} aria-hidden="true" /> Directory Badge
+                <a href="#overview-doc" className="detail-next-step">
+                  <Info size={14} aria-hidden="true" /> How it works
                 </a>
+                {relatedServers && relatedServers.length > 0 && (
+                  <a href="#related" className="detail-next-step">
+                    <Sparkles size={14} aria-hidden="true" /> Related
+                  </a>
+                )}
+                {faqItems.length > 0 && (
+                  <a href="#faq" className="detail-next-step">
+                    <LifeBuoy size={14} aria-hidden="true" /> FAQ
+                  </a>
+                )}
                 {reviewSummary.count > 0 && (
                   <a href="#reviews" className="detail-next-step">
                     <Star size={14} aria-hidden="true" /> Reviews (
@@ -1737,6 +1747,9 @@ export default async function MCPDetail({
                   <span aria-hidden="true">{catMeta.emoji}</span> More in{' '}
                   {catMeta.label}
                 </Link>
+                <a href="#directory-badge" className="detail-next-step">
+                  <BadgeCheck size={14} aria-hidden="true" /> Directory Badge
+                </a>
               </nav>
 
               {/* AI-authored content — overview soft-collapsed so install stays primary. */}
@@ -2007,7 +2020,9 @@ export default async function MCPDetail({
               {/* Related MCP Servers */}
               {relatedServers && relatedServers.length > 0 && (
                 <section
+                  id="related"
                   style={{
+                    scrollMarginTop: '5rem',
                     marginTop: '3rem',
                     paddingTop: '2rem',
                     borderTop: '1px solid var(--border-color)',
@@ -2242,7 +2257,10 @@ export default async function MCPDetail({
               <ReviewsSection serverId={server.id} summary={reviewSummary} />
 
               {/* Query-Forward AEO / FAQ Block */}
-              <section style={{ marginTop: '2.5rem' }}>
+              <section
+                id="faq"
+                style={{ marginTop: '2.5rem', scrollMarginTop: '5rem' }}
+              >
                 <FaqSection
                   renderJsonLd={false}
                   title={`Frequently Asked Questions about ${displayName}`}
