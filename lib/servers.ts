@@ -32,7 +32,11 @@ import { categoryFromSlug } from './categories';
 import { cleanListingDescription } from './description';
 import { readEdgeCache, writeEdgeCache } from './edgeCache';
 import { isFeaturedListing } from './featuredStatus';
-import { installConfidenceNote, resolveInstallConfig } from './installConfig';
+import {
+  installConfidenceNote,
+  isUnverifiedInstall,
+  resolveInstallConfig,
+} from './installConfig';
 import {
   buildAiSearchText,
   buildSearchPrefilter,
@@ -2538,7 +2542,11 @@ export function formatServerAsMarkdown(
   const confNote = installConfidenceNote(install);
 
   md += `## Claude Desktop Quick Installation\n`;
-  if (install.kind === 'remote') {
+  if (isUnverifiedInstall(install)) {
+    // Same rule as the listing page's config tabs: a package guessed from the
+    // listing name may not exist or may be someone else's, so print no config.
+    md += `No confirmed install details yet, so no config is published. Follow the setup steps in the repository above.\n\n`;
+  } else if (install.kind === 'remote') {
     md += `Remote MCP endpoint (confidence: ${install.confidence}). ${confNote} Add as a URL/SSE server in your client:\n\n`;
     md += `\`\`\`json\n`;
     md += `"mcpServers": {\n`;

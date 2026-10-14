@@ -244,7 +244,7 @@ export async function GET() {
         get: {
           summary: 'Get a single MCP server by ID',
           description:
-            'Full public listing detail: quality score, popularity signals, install config. Public, unauthenticated.',
+            'Full public listing detail: quality score, popularity signals, install config, and configs (one ready-to-paste setup per MCP client; null when the install is not confirmed). Pending, rejected and flagged listings return 404. Public, unauthenticated.',
           operationId: 'getServerById',
           parameters: [
             {
@@ -265,9 +265,63 @@ export async function GET() {
                 'RateLimit-Remaining': { schema: { type: 'integer' } },
                 'RateLimit-Reset': { schema: { type: 'integer' } },
               },
-              content: { 'application/json': { schema: { type: 'object' } } },
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      server: {
+                        type: 'object',
+                        properties: {
+                          configs: {
+                            type: 'array',
+                            nullable: true,
+                            description:
+                              'Setup per MCP client, in display order. Null when the install was only guessed.',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                client: {
+                                  type: 'string',
+                                  description:
+                                    'Client slug, e.g. claude-desktop, cursor, vs-code, codex, or cli.',
+                                },
+                                label: { type: 'string' },
+                                format: {
+                                  type: 'string',
+                                  enum: [
+                                    'json',
+                                    'toml',
+                                    'yaml',
+                                    'shell',
+                                    'text',
+                                  ],
+                                },
+                                locations: {
+                                  type: 'array',
+                                  items: {
+                                    type: 'object',
+                                    properties: {
+                                      os: { type: 'string' },
+                                      path: { type: 'string' },
+                                    },
+                                  },
+                                },
+                                snippet: { type: 'string' },
+                                note: { type: 'string' },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
-            '404': errorResponse('No listing exists with this ID.'),
+            '404': errorResponse(
+              'No listing exists with this ID, or it is pending, rejected or flagged.',
+            ),
           },
         },
       },

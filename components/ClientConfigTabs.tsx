@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { buildClientConfigs, serverConfigKey } from '../lib/clientConfigs';
 import { trackFeatureUse } from '../lib/gtag';
 import {
   isUnverifiedInstall,
@@ -38,15 +39,6 @@ interface ServerConfigProps {
   };
 }
 
-type ClientTab =
-  | 'claude'
-  | 'cursor'
-  | 'claude-code'
-  | 'windsurf'
-  | 'cline'
-  | 'zed'
-  | 'cli';
-
 const PRESET_ENV_KEYS = [
   'API_KEY',
   'GITHUB_TOKEN',
@@ -54,18 +46,18 @@ const PRESET_ENV_KEYS = [
   'OPENAI_API_KEY',
 ];
 
-const TABS: { id: ClientTab; label: string; file: string }[] = [
-  { id: 'claude', label: 'Claude Desktop', file: 'claude_desktop_config.json' },
-  { id: 'cursor', label: 'Cursor IDE', file: '.cursor/mcp.json' },
-  { id: 'claude-code', label: 'Claude Code', file: 'Terminal CLI' },
-  { id: 'windsurf', label: 'Windsurf', file: 'mcp_config.json' },
-  { id: 'cline', label: 'Cline / VS Code', file: 'cline_mcp_settings.json' },
-  { id: 'zed', label: 'Zed', file: 'settings.json' },
-  { id: 'cli', label: 'Terminal / Run', file: 'Terminal Command' },
+/** Shown as tabs; every other client sits in the "More clients" picker. */
+const PRIMARY_CLIENTS = [
+  'claude-desktop',
+  'claude-code',
+  'cursor',
+  'vs-code',
+  'windsurf',
+  'cli',
 ];
 
 export function ClientConfigTabs({ server }: ServerConfigProps) {
-  const [activeTab, setActiveTab] = useState<ClientTab>('claude');
+  const [activeTab, setActiveTab] = useState<string>('claude-desktop');
   const initialEnvVars = useMemo(() => {
     if (server.aiEnvVars && server.aiEnvVars.length > 0) {
       return server.aiEnvVars.map((key) => ({ key, value: '' }));
@@ -77,7 +69,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
     Boolean(server.aiEnvVars && server.aiEnvVars.length > 0),
   );
   const [copiedPath, setCopiedPath] = useState(false);
-  const [osMode, setOsMode] = useState<'mac' | 'windows'>('mac');
+  const [locationIndex, setLocationIndex] = useState(0);
   const [envVars, setEnvVars] =
     useState<Array<{ key: string; value: string }>>(initialEnvVars);
 
@@ -100,243 +92,39 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
     [server],
   );
 
-  const serverKey =
-    (server.id || server.name)
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]/g, '-')
-      .replace(/^-+|-+$/g, '') || 'mcp-server';
+  const serverKey = serverConfigKey(server.id || server.name);
 
-  // Active env vars map (only non-empty keys)
-  const envObj = useMemo(() => {
-    return envVars.reduce<Record<string, string>>((acc, item) => {
-      const k = item.key.trim();
-      if (k) {
-        acc[k] = item.value || 'YOUR_VALUE_HERE';
-      }
-      return acc;
-    }, {});
-  }, [envVars]);
+  const configs = useMemo(
+    () =>
+      buildClientConfigs({
+        install,
+        serverKey,
+        serverName: server.name,
+        env: showEnvVars
+          ? envVars.map((e) => ({
+              key: e.key,
+              value: e.value || 'YOUR_VALUE_HERE',
+            }))
+          : [],
+      }),
+    [install, serverKey, server.name, showEnvVars, envVars],
+  );
 
-  const hasEnv = Object.keys(envObj).length > 0 && showEnvVars;
+  const active = configs.find((c) => c.client === activeTab) ?? configs[0];
+  const primary = configs.filter((c) => PRIMARY_CLIENTS.includes(c.client));
+  const more = configs.filter((c) => !PRIMARY_CLIENTS.includes(c.client));
+  const location =
+    active.locations[Math.min(locationIndex, active.locations.length - 1)];
+  const activePathString = location?.path ?? '';
 
-  // Build snippet per client
-  const { snippet, pathInfo } = useMemo(() => {
-    if (install.kind === 'remote') {
-      const remoteBlock = {
-        mcpServers: {
-          [serverKey]: {
-            url: install.url,
-            ...(hasEnv ? { env: envObj } : {}),
-          },
-        },
-      };
-
-      const pathMap: Record<
-        ClientTab,
-        { mac: string; win: string; note?: string }
-      > = {
-        claude: {
-          mac: '~/Library/Application Support/Claude/claude_desktop_config.json',
-          win: '%APPDATA%\\Claude\\claude_desktop_config.json',
-        },
-        cursor: {
-          mac: '.cursor/mcp.json',
-          win: '.cursor/mcp.json',
-          note: 'Workspace root or Cursor Settings > MCP',
-        },
-        'claude-code': {
-          mac: `claude mcp add --transport http ${serverKey} ${install.url}`,
-          win: `claude mcp add --transport http ${serverKey} ${install.url}`,
-          note: 'Run in terminal to register with Claude Code CLI',
-        },
-        windsurf: {
-          mac: '~/.codeium/windsurf/mcp_config.json',
-          win: '%USERPROFILE%\\.codeium\\windsurf\\mcp_config.json',
-        },
-        cline: {
-          mac: 'cline_mcp_settings.json',
-          win: 'cline_mcp_settings.json',
-          note: 'VS Code Cline extension settings',
-        },
-        zed: {
-          mac: '~/.config/zed/settings.json',
-          win: '%APPDATA%\\Zed\\settings.json',
-        },
-        cli: {
-          mac: `curl -s -i "${install.url}"`,
-          win: `curl -s -i "${install.url}"`,
-          note: 'Test HTTP connection directly',
-        },
-      };
-
-      let code = '';
-      switch (activeTab) {
-        case 'claude':
-        case 'cursor':
-        case 'windsurf':
-          code = JSON.stringify(remoteBlock, null, 2);
-          break;
-        case 'claude-code':
-          code = `claude mcp add --transport http ${serverKey} ${install.url}`;
-          break;
-        case 'cline':
-          code = JSON.stringify(
-            {
-              mcpServers: {
-                [serverKey]: {
-                  url: install.url,
-                  disabled: false,
-                  autoApprove: [],
-                },
-              },
-            },
-            null,
-            2,
-          );
-          break;
-        case 'zed':
-          code = JSON.stringify(
-            {
-              experimental: {
-                context_servers: [
-                  {
-                    id: serverKey,
-                    url: install.url,
-                  },
-                ],
-              },
-            },
-            null,
-            2,
-          );
-          break;
-        case 'cli':
-          code = `curl -s -i "${install.url}"`;
-          break;
-      }
-
-      return { snippet: code, pathInfo: pathMap[activeTab] };
-    }
-
-    // stdio transport
-    const { command, args } = install;
-    const stdioBlock = {
-      mcpServers: {
-        [serverKey]: {
-          command,
-          args,
-          ...(hasEnv ? { env: envObj } : {}),
-        },
-      },
-    };
-
-    const envCliStr = hasEnv
-      ? `${Object.entries(envObj)
-          .map(([k, v]) => `${k}="${v}"`)
-          .join(' ')} `
-      : '';
-
-    const envClaudeCodeFlags = hasEnv
-      ? `${Object.entries(envObj)
-          .map(([k, v]) => `-e ${k}="${v}"`)
-          .join(' ')} `
-      : '';
-
-    const pathMap: Record<
-      ClientTab,
-      { mac: string; win: string; note?: string }
-    > = {
-      claude: {
-        mac: '~/Library/Application Support/Claude/claude_desktop_config.json',
-        win: '%APPDATA%\\Claude\\claude_desktop_config.json',
-      },
-      cursor: {
-        mac: '.cursor/mcp.json',
-        win: '.cursor/mcp.json',
-        note: 'Workspace root or Cursor Settings > MCP',
-      },
-      'claude-code': {
-        mac: `claude mcp add ${serverKey} ${envClaudeCodeFlags}-- ${command} ${args.join(' ')}`.trim(),
-        win: `claude mcp add ${serverKey} ${envClaudeCodeFlags}-- ${command} ${args.join(' ')}`.trim(),
-        note: 'Run in terminal to register with Claude Code CLI',
-      },
-      windsurf: {
-        mac: '~/.codeium/windsurf/mcp_config.json',
-        win: '%USERPROFILE%\\.codeium\\windsurf\\mcp_config.json',
-      },
-      cline: {
-        mac: 'cline_mcp_settings.json',
-        win: 'cline_mcp_settings.json',
-        note: 'VS Code Cline extension settings',
-      },
-      zed: {
-        mac: '~/.config/zed/settings.json',
-        win: '%APPDATA%\\Zed\\settings.json',
-      },
-      cli: {
-        mac: `${envCliStr}${command} ${args.join(' ')}`.trim(),
-        win: `${envCliStr}${command} ${args.join(' ')}`.trim(),
-        note: 'Execute in terminal to run the MCP server directly',
-      },
-    };
-
-    let code = '';
-    switch (activeTab) {
-      case 'claude':
-      case 'cursor':
-      case 'windsurf':
-        code = JSON.stringify(stdioBlock, null, 2);
-        break;
-      case 'claude-code':
-        code =
-          `claude mcp add ${serverKey} ${envClaudeCodeFlags}-- ${command} ${args.join(' ')}`.trim();
-        break;
-      case 'cline':
-        code = JSON.stringify(
-          {
-            mcpServers: {
-              [serverKey]: {
-                command,
-                args,
-                ...(hasEnv ? { env: envObj } : {}),
-                disabled: false,
-                autoApprove: [],
-              },
-            },
-          },
-          null,
-          2,
-        );
-        break;
-      case 'zed':
-        code = JSON.stringify(
-          {
-            experimental: {
-              context_servers: [
-                {
-                  id: serverKey,
-                  command,
-                  args,
-                  ...(hasEnv ? { env: envObj } : {}),
-                },
-              ],
-            },
-          },
-          null,
-          2,
-        );
-        break;
-      case 'cli':
-        code = `${envCliStr}${command} ${args.join(' ')}`.trim();
-        break;
-    }
-
-    return { snippet: code, pathInfo: pathMap[activeTab] };
-  }, [install, serverKey, activeTab, hasEnv, envObj]);
-
-  const activeTabMeta = TABS.find((t) => t.id === activeTab) || TABS[0];
-  const activePathString = osMode === 'mac' ? pathInfo.mac : pathInfo.win;
-  const isCliOrCommand = activeTab === 'claude-code' || activeTab === 'cli';
+  const selectClient = (client: string) => {
+    trackFeatureUse('client_config_tabs', {
+      client,
+      server_id: server.id,
+    });
+    setActiveTab(client);
+    setLocationIndex(0);
+  };
 
   const handleCopyPath = async () => {
     if (!activePathString) return;
@@ -768,23 +556,17 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
           padding: '0.35rem',
         }}
       >
-        {TABS.map((t) => {
-          const isSelected = activeTab === t.id;
+        {primary.map((t) => {
+          const isSelected = active.client === t.client;
           return (
             <button
-              key={t.id}
-              id={`tab-${t.id}`}
+              key={t.client}
+              id={`tab-${t.client}`}
               type="button"
               role="tab"
               aria-selected={isSelected}
-              aria-controls={`panel-${t.id}`}
-              onClick={() => {
-                trackFeatureUse('client_config_tabs', {
-                  client: t.id,
-                  server_id: server.id,
-                });
-                setActiveTab(t.id);
-              }}
+              aria-controls={`panel-${t.client}`}
+              onClick={() => selectClient(t.client)}
               className="client-config-tab"
               style={{
                 padding: '0.42rem 0.85rem',
@@ -811,129 +593,75 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
             </button>
           );
         })}
+        {more.length > 0 && (
+          <select
+            aria-label="More MCP clients"
+            className={`client-config-more${more.some((m) => m.client === active.client) ? ' is-active' : ''}`}
+            value={
+              more.some((m) => m.client === active.client) ? active.client : ''
+            }
+            onChange={(e) => {
+              if (e.target.value) selectClient(e.target.value);
+            }}
+          >
+            <option value="">More clients…</option>
+            {more.map((m) => (
+              <option key={m.client} value={m.client}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Active Tab Panel */}
       <div
-        id={`panel-${activeTab}`}
+        id={`panel-${active.client}`}
         role="tabpanel"
-        aria-labelledby={`tab-${activeTab}`}
+        aria-labelledby={
+          PRIMARY_CLIENTS.includes(active.client)
+            ? `tab-${active.client}`
+            : undefined
+        }
+        aria-label={
+          PRIMARY_CLIENTS.includes(active.client) ? undefined : active.label
+        }
         style={{ minWidth: 0 }}
       >
         {/* Config Destination Path Box */}
-        {!isCliOrCommand && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              flexWrap: 'wrap',
-              padding: '0.65rem 0.85rem',
-              background: 'var(--bg-muted)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              marginBottom: '0.85rem',
-              fontSize: '0.8rem',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                minWidth: 0,
-                flex: 1,
-              }}
-            >
+        {location && (
+          <div className="client-config-location">
+            <div className="client-config-location-main">
               <Folder
                 size={15}
                 style={{ color: 'var(--accent-color)', flexShrink: 0 }}
                 aria-hidden="true"
               />
               <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>
-                Target File:
+                Where:
               </span>
               <code
-                style={{
-                  color: 'var(--text-primary)',
-                  fontFamily: 'monospace',
-                  fontSize: '0.78rem',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  maxWidth: '100%',
-                }}
+                className="client-config-location-path"
                 title={activePathString}
               >
                 {activePathString}
               </code>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                flexShrink: 0,
-              }}
-            >
-              {/* OS Toggle if windows/mac paths differ */}
-              {pathInfo.mac !== pathInfo.win && (
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    background: 'var(--bg-elevated)',
-                    borderRadius: '6px',
-                    padding: '2px',
-                    border: '1px solid var(--border-color)',
-                  }}
+            <div className="client-config-location-actions">
+              {active.locations.length > 1 && (
+                <select
+                  aria-label="Config location"
+                  className="client-config-location-select"
+                  value={Math.min(locationIndex, active.locations.length - 1)}
+                  onChange={(e) => setLocationIndex(Number(e.target.value))}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setOsMode('mac')}
-                    style={{
-                      border: 'none',
-                      background:
-                        osMode === 'mac'
-                          ? 'var(--accent-color)'
-                          : 'transparent',
-                      color:
-                        osMode === 'mac'
-                          ? 'var(--bg-color)'
-                          : 'var(--text-secondary)',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      padding: '0.15rem 0.4rem',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    macOS
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOsMode('windows')}
-                    style={{
-                      border: 'none',
-                      background:
-                        osMode === 'windows'
-                          ? 'var(--accent-color)'
-                          : 'transparent',
-                      color:
-                        osMode === 'windows'
-                          ? 'var(--bg-color)'
-                          : 'var(--text-secondary)',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      padding: '0.15rem 0.4rem',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Windows
-                  </button>
-                </div>
+                  {active.locations.map((l, i) => (
+                    <option key={l.os} value={i}>
+                      {l.os}
+                    </option>
+                  ))}
+                </select>
               )}
 
               <button
@@ -947,14 +675,14 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
                   alignItems: 'center',
                   gap: '0.3rem',
                 }}
-                title="Copy configuration file path"
+                title="Copy configuration location"
               >
                 {copiedPath ? (
                   <Check size={12} color="#10b981" aria-hidden="true" />
                 ) : (
                   <Copy size={12} aria-hidden="true" />
                 )}
-                <span>{copiedPath ? 'Copied' : 'Copy path'}</span>
+                <span>{copiedPath ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
           </div>
@@ -962,14 +690,20 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
 
         {/* Code Snippet Box */}
         <CopyBlock
-          code={snippet}
-          title={activeTabMeta.file}
+          code={active.snippet}
+          title={
+            active.format === 'shell'
+              ? 'Terminal'
+              : active.format === 'text'
+                ? 'Server URL'
+                : (location?.path.split(/[/]/).pop() ?? active.label)
+          }
           serverId={server.id}
-          snippetType={`config_${activeTab}`}
-          toastMessage={`Copied ${activeTabMeta.label} config`}
+          snippetType={`config_${active.client}`}
+          toastMessage={`Copied ${active.label} config`}
         />
 
-        {/* Informative footer tip */}
+        {/* How to apply it */}
         <p
           style={{
             fontSize: '0.78rem',
@@ -979,21 +713,7 @@ export function ClientConfigTabs({ server }: ServerConfigProps) {
             lineHeight: 1.45,
           }}
         >
-          {pathInfo.note ? (
-            <>💡 {pathInfo.note}</>
-          ) : isCliOrCommand ? (
-            <>
-              💡 Run the command directly in your shell to register or test this
-              MCP server.
-            </>
-          ) : (
-            <>
-              💡 Paste the JSON block into your client&apos;s configuration file
-              under{' '}
-              <code style={{ color: 'var(--text-primary)' }}>mcpServers</code>,
-              then restart the application.
-            </>
-          )}
+          💡 {active.note}
         </p>
       </div>
     </div>

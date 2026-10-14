@@ -5,6 +5,7 @@ import {
   resolveInstallConfig,
   toClaudeConfigSnippet,
 } from '@/lib/installConfig';
+import { listingClientConfigs } from '@/lib/listingClientConfigs';
 import { listingRedirectTarget } from '@/lib/listingRedirect';
 import { computeQualityScore } from '@/lib/qualityScore';
 import {
@@ -124,6 +125,9 @@ export async function GET(
           installName,
           server.aiEnvVars || [],
         ),
+        // Per-client configs (Claude Desktop, Claude Code, Cursor, VS Code, …),
+        // or null when the install was only guessed — see listingClientConfigs.
+        configs: listingClientConfigs(server),
         detailUrl: `https://allmcps.com/mcp/${server.id}`,
         markdownUrl: `https://allmcps.com/mcp/${server.id}.md`,
         readme,
