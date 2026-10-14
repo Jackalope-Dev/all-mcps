@@ -35,6 +35,7 @@ import {
   clientKey,
   rateLimitedResponse,
 } from '@/lib/rateLimit';
+import { recordSearchMiss } from '@/lib/searchMisses';
 import { isServable } from '@/lib/servability';
 import {
   AUTH_TYPES,
@@ -512,7 +513,12 @@ export async function POST(request: Request) {
   // each owner's "search queries that find you" panel has data — a single
   // serverId:null row (like other tool calls use) is invisible to every
   // server's per-id analytics query.
-  async function logMcpSearch(serverIds: string[], tool: string) {
+  async function logMcpSearch(
+    serverIds: string[],
+    tool: string,
+    /** A text query that found nothing, recorded as catalog demand. */
+    missedQuery?: string,
+  ) {
     try {
       const { getCloudflareContext } = await import('@opennextjs/cloudflare');
       const cfCtx = await getCloudflareContext();
@@ -520,6 +526,9 @@ export async function POST(request: Request) {
         const logDb = (await import('drizzle-orm/d1')).drizzle(
           (cfCtx.env as any).DB,
         );
+        if (missedQuery) {
+          cfCtx.ctx.waitUntil(recordSearchMiss(logDb, missedQuery, 'mcp'));
+        }
         const meta = extractRequestMeta(request);
         cfCtx.ctx.waitUntil(
           serverIds.length > 0
@@ -712,6 +721,13 @@ export async function POST(request: Request) {
       await logMcpSearch(
         query ? results.map((s) => s.id) : [],
         `search_mcp_servers${query ? ` query: ${query}` : ''}`,
+        // Filter misses are the agent narrowing too far, not a catalog gap.
+        query &&
+          results.length === 0 &&
+          !transport &&
+          args.verified_only !== true
+          ? query
+          : undefined,
       );
       return toolResult(content, {
         structuredContent: { results: results.map(listingFacts) },
