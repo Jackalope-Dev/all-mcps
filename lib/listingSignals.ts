@@ -132,8 +132,10 @@ export async function pickInstallCommand(
     ),
   );
   const candidates = all.filter((_, i) => !foreign[i]);
+  // A sole candidate still goes to Jev, which can answer "none": READMEs
+  // often hold exactly one command and it's another project's (an example
+  // config, a catalog entry) with no registry metadata to disprove it.
   if (candidates.length === 0) return null;
-  if (candidates.length === 1) return candidates[0];
 
   const criteria: Record<string, string | null> = {
     none: 'None of these run THIS server',

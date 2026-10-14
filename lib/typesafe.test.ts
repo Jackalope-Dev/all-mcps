@@ -294,6 +294,42 @@ assert(
   'nearestScoreLevel must reject a noul answer',
 );
 
+// A sole install candidate still goes to Jev, which can reject it.
+process.env.TYPESAFE_API_KEY = KEY;
+const jevPicksInstall = (choice: string) => {
+  globalThis.fetch = (async (input: RequestInfo | URL) =>
+    String(input).includes('registry.npmjs.org')
+      ? new Response('{}', { status: 200 })
+      : new Response(
+          JSON.stringify({
+            model: 'jev-latest',
+            answers: {
+              install: {
+                type: 'choice',
+                choice,
+                confidence: 0.95,
+                probabilities: { [choice]: 0.95 },
+              },
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )) as typeof fetch;
+};
+const SOLE = {
+  ...LISTING,
+  readme: 'Example config: npx -y @modelcontextprotocol/server-filesystem',
+};
+jevPicksInstall('none');
+assert(
+  (await pickInstallCommand(SOLE)) === null,
+  "pickInstallCommand must drop a sole candidate Jev says isn't this server",
+);
+jevPicksInstall('c0');
+assert(
+  (await pickInstallCommand(SOLE)) !== null,
+  'pickInstallCommand must keep a sole candidate Jev confirms',
+);
+
 process.env.TYPESAFE_API_KEY = '';
 assert(
   (await classifyListingFields(LISTING)).authType === null,
