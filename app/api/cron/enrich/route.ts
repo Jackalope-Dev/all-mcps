@@ -3,6 +3,7 @@ import { and, asc, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { NextResponse } from 'next/server';
 import { servers } from '../../../../db/schema';
+import { DEFAULT_SUBMIT_CATEGORY } from '../../../../lib/categories';
 import { classifyCategory } from '../../../../lib/categoryClassifier';
 import { isCronAuthorized } from '../../../../lib/cronAuth';
 import { cronServerColumns } from '../../../../lib/cronServerColumns';
@@ -54,14 +55,17 @@ function isGithubUrl(urlString: string): boolean {
 /**
  * Catalog quality pass for scrape/import listings.
  *
- * Per batch (default 40):
+ * Per tick: up to LOGO_BATCH_SIZE logo-less listings plus BATCH_SIZE that still
+ * look unenriched, each getting the full pass below, then RECAT_BATCH_SIZE
+ * listings still in the default category getting a category check only.
  *  - Clean Glama/README chrome in descriptions
  *  - Pull GitHub homepage & README → website_url (derived or official), stars, archived/disabled
  *  - Install hints from README
  *  - High-quality Logo extraction (README image > Website Favicon > Org Avatar > User Avatar)
  *  - Unpublish offline (404) and archived GitHub repos
+ *  - Re-classify the category (Jev, confidence >= 0.75)
  *
- * Auth: ADMIN_SECRET. Optional GITHUB_TOKEN greatly raises rate limits.
+ * Auth: CRON_SECRET (see lib/cronAuth.ts). Optional GITHUB_TOKEN greatly raises rate limits.
  * Runs every Worker cron tick (see custom-worker.ts).
  */
 
@@ -80,6 +84,14 @@ const LOGO_BATCH_SIZE = 8;
 // Listings stuck on a github_user avatar are re-tried for a better logo at most
 // this often, instead of re-entering the queue every tick.
 const GITHUB_USER_LOGO_RETRY_MS = 30 * 24 * 60 * 60 * 1000;
+/**
+ * Listings still in DEFAULT_SUBMIT_CATEGORY get a category check every tick,
+ * whether or not they look unenriched. That bucket means both "a developer
+ * tool" and "we could not tell", and listings with complete metadata never
+ * enter the main batch, so without this slot they would never be re-asked.
+ * Category check only (one Jev call, no fetches), so it stays cheap.
+ */
+const RECAT_BATCH_SIZE = 10;
 
 /** Safely writes an asset to R2 without throwing when concurrent jobs write to the same key. */
 async function safeR2Put(
@@ -264,6 +276,7 @@ export async function POST(req: Request) {
       skipped: 0,
       ghErrors: 0,
       recategorized: 0,
+      recatChecked: 0,
     };
 
     for (const server of batch) {
@@ -644,6 +657,43 @@ export async function POST(req: Request) {
       stats.processed++;
     }
 
+    // Default-category slot. logoCheckedAt is the round-robin cursor: the
+    // enrich cron is its only writer besides the logo queue, and each listing
+    // checked here moves to the back. That also moves a logo-less listing to
+    // the back of the logo queue once, which only delays its next logo try.
+    const batchIds = new Set(batch.map((s) => s.id));
+    const recatRows = await db
+      .select({
+        id: servers.id,
+        name: servers.name,
+        description: servers.description,
+        url: servers.url,
+        category: servers.category,
+      })
+      .from(servers)
+      .where(
+        and(
+          eq(servers.status, 'active'),
+          isNull(servers.staleFlaggedAt),
+          eq(servers.category, DEFAULT_SUBMIT_CATEGORY),
+        ),
+      )
+      .orderBy(asc(servers.logoCheckedAt))
+      .limit(RECAT_BATCH_SIZE + batch.length);
+    for (const row of recatRows
+      .filter((r) => !batchIds.has(r.id))
+      .slice(0, RECAT_BATCH_SIZE)) {
+      const classified = await classifyCategory(row, row.category);
+      const updates: Record<string, unknown> = { logoCheckedAt: new Date() };
+      if (classified.fromJev && classified.category !== row.category) {
+        updates.category = classified.category;
+        stats.recategorized++;
+        pagesToRefresh.push(row.id);
+      }
+      await db.update(servers).set(updates).where(eq(servers.id, row.id));
+      stats.recatChecked++;
+    }
+
     const pages = await refreshListingPages(pagesToRefresh, env);
 
     return NextResponse.json({
@@ -653,7 +703,7 @@ export async function POST(req: Request) {
       githubAuth: Boolean(githubToken),
       pagesRefreshed: pages.refreshed.length,
       pageRefreshFailed: pages.failed,
-      message: `Enriched ${stats.processed} listings (websites ${stats.websitesSet}, logos ${stats.logosSet}, install ${stats.installSet}, recategorized ${stats.recategorized}, unpublished ${stats.unpublished}).`,
+      message: `Enriched ${stats.processed} listings (websites ${stats.websitesSet}, logos ${stats.logosSet}, install ${stats.installSet}, recategorized ${stats.recategorized} (${stats.recatChecked} default-category checks), unpublished ${stats.unpublished}).`,
     });
   } catch (error: any) {
     // Drizzle's message is "Failed query: <sql>"; the D1 reason is on `cause`.
