@@ -231,37 +231,86 @@ let inflightSiteStats: Promise<SiteStats> | null = null;
 // isolate in a colo, so one computation serves them all until it expires.
 const SHARED_CACHE_KEY = 'site-stats/v1';
 
+/**
+ * How long the edge copy is kept past freshness. A stale copy is served while
+ * a background refresh recomputes it, so renders only wait on the full
+ * computation when a colo has no copy at all.
+ */
+const SHARED_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+/** A background refresh that has not finished by then may be retried (a canceled one never settles). */
+const REFRESH_RETRY_MS = 60 * 1000;
+
 type CachedSiteStats = { data: SiteStats; timestamp: number };
 
-async function readSharedSiteStats(): Promise<CachedSiteStats | null> {
-  const entry = await readEdgeCache<CachedSiteStats>(SHARED_CACHE_KEY);
-  return entry && Date.now() - entry.timestamp < CACHE_TTL_MS ? entry : null;
+function isFresh(entry: CachedSiteStats): boolean {
+  return Date.now() - entry.timestamp < CACHE_TTL_MS;
 }
 
+/**
+ * Stale-while-revalidate. Computing the stats takes eight D1 aggregates (six
+ * over the 30-day api_access_logs window) plus a paged scan of every active
+ * listing, and `/` awaited that inside its ISR re-render whenever the 10-min
+ * cache had expired. On a busy D1 the re-render outlived the 25s memory-queue
+ * timeout (open-next.config.ts), which logged "TimeoutError: The operation was
+ * aborted due to timeout" against the visitor request and left `/` stale.
+ * Now an expired copy is returned at once and recomputed in waitUntil.
+ */
 export async function getSiteStats(): Promise<SiteStats> {
-  if (
-    cachedSiteStats &&
-    Date.now() - cachedSiteStats.timestamp < CACHE_TTL_MS
-  ) {
+  if (cachedSiteStats && isFresh(cachedSiteStats)) {
     return cachedSiteStats.data;
   }
-  // Concurrent renders on a cold isolate share one computation.
+  if (!cachedSiteStats) {
+    const shared = await readEdgeCache<CachedSiteStats>(SHARED_CACHE_KEY);
+    if (shared && Date.now() - shared.timestamp < SHARED_CACHE_MAX_AGE_MS) {
+      cachedSiteStats = shared;
+    }
+  }
+  if (cachedSiteStats) {
+    if (!isFresh(cachedSiteStats)) await refreshSiteStatsInBackground();
+    return cachedSiteStats.data;
+  }
+  // Nothing cached in this colo yet: compute inline. Concurrent renders on a
+  // cold isolate share one computation.
   inflightSiteStats ??= loadSiteStats().finally(() => {
     inflightSiteStats = null;
   });
   return inflightSiteStats;
 }
 
+let refreshStartedAt = 0;
+
+async function refreshSiteStatsInBackground(): Promise<void> {
+  if (Date.now() - refreshStartedAt < REFRESH_RETRY_MS) return;
+  refreshStartedAt = Date.now();
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const { ctx } = getCloudflareContext();
+    ctx.waitUntil(
+      loadSiteStats().catch((err) => {
+        console.error('[getSiteStats] background refresh failed:', err);
+      }),
+    );
+  } catch {
+    // No request context (build, tests): the stale copy stands until the next render.
+  }
+}
+
 async function loadSiteStats(): Promise<SiteStats> {
-  const shared = await readSharedSiteStats();
-  if (shared) {
+  // Another isolate in this colo may have refreshed the shared copy already.
+  const shared = await readEdgeCache<CachedSiteStats>(SHARED_CACHE_KEY);
+  if (shared && isFresh(shared)) {
     cachedSiteStats = shared;
     return shared.data;
   }
   const data = await querySiteStats();
-  if (!data) return getSnapshotFallback();
+  if (!data) return cachedSiteStats?.data ?? getSnapshotFallback();
   cachedSiteStats = { data, timestamp: Date.now() };
-  await writeEdgeCache(SHARED_CACHE_KEY, cachedSiteStats, CACHE_TTL_MS / 1000);
+  await writeEdgeCache(
+    SHARED_CACHE_KEY,
+    cachedSiteStats,
+    SHARED_CACHE_MAX_AGE_MS / 1000,
+  );
   return data;
 }
 

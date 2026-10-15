@@ -238,6 +238,8 @@ export async function generateMetadata({
   };
 }
 
+const README_FETCH_TIMEOUT_MS = 5000;
+
 async function fetchReadme(url: string) {
   try {
     const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
@@ -250,16 +252,24 @@ async function fetchReadme(url: string) {
       repo = repo.slice(0, -4);
     }
 
-    // Attempt to fetch from 'main' branch first
+    // Attempt to fetch from 'main' branch first. Bounded: this runs inside the
+    // page's ISR re-render, and a slow GitHub response could hold that render
+    // past the memory queue's revalidation timeout (open-next.config.ts).
     let res = await fetch(
       `https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`,
-      { next: { revalidate: 3600 } },
+      {
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(README_FETCH_TIMEOUT_MS),
+      },
     );
     if (!res.ok) {
       // Fallback to 'master' branch
       res = await fetch(
         `https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`,
-        { next: { revalidate: 3600 } },
+        {
+          next: { revalidate: 3600 },
+          signal: AbortSignal.timeout(README_FETCH_TIMEOUT_MS),
+        },
       );
     }
 
