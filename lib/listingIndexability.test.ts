@@ -14,30 +14,53 @@ describe('isListingIndexable', () => {
     ).toBe(false);
   });
 
-  it('requires a second signal beyond the writeup', () => {
+  it('needs traction AND proof it runs, not either alone', () => {
     expect(isListingIndexable(base)).toBe(false);
-    expect(isListingIndexable({ ...base, githubStars: 25 })).toBe(true);
-    expect(isListingIndexable({ ...base, npmDownloads: 100 })).toBe(true);
+    expect(isListingIndexable({ ...base, githubStars: 25 })).toBe(false);
+    expect(isListingIndexable({ ...base, npmDownloads: 100 })).toBe(false);
+    expect(isListingIndexable({ ...base, toolsSource: 'introspected' })).toBe(
+      false,
+    );
+    expect(
+      isListingIndexable({
+        ...base,
+        githubStars: 25,
+        toolsSource: 'introspected',
+      }),
+    ).toBe(true);
+    expect(
+      isListingIndexable({
+        ...base,
+        npmDownloads: 100,
+        installNeedsConfig: new Date(),
+      }),
+    ).toBe(true);
+    expect(
+      isListingIndexable({
+        ...base,
+        githubStars: 25,
+        remoteEndpointHealthy: 1,
+      }),
+    ).toBe(true);
+  });
+
+  it('indexes clearly popular servers without a verified run', () => {
+    expect(isListingIndexable({ ...base, githubStars: 249 })).toBe(false);
+    expect(isListingIndexable({ ...base, githubStars: 250 })).toBe(true);
+    expect(isListingIndexable({ ...base, npmDownloads: 5000 })).toBe(true);
   });
 
   it('counts proof the server runs, not a README tool list', () => {
-    expect(isListingIndexable({ ...base, toolsSource: 'readme' })).toBe(false);
-    expect(isListingIndexable({ ...base, toolsSource: 'introspected' })).toBe(
-      true,
-    );
     expect(
-      isListingIndexable({ ...base, installNeedsConfig: new Date() }),
-    ).toBe(true);
-    expect(isListingIndexable({ ...base, remoteEndpointHealthy: 1 })).toBe(
-      true,
-    );
+      isListingIndexable({ ...base, githubStars: 25, toolsSource: 'readme' }),
+    ).toBe(false);
   });
 
   it('never indexes non-active listings', () => {
     expect(
       isListingIndexable({
         ...base,
-        toolsSource: 'introspected',
+        githubStars: 5000,
         status: 'pending',
       }),
     ).toBe(false);

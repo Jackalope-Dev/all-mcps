@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
 
 /** Named sitemap shards so GSC/Bing can prioritize core + listings first. */
 export async function generateSitemaps() {
-  return [{ id: 'core' }, { id: 'listings' }];
+  return [{ id: 'core' }, { id: 'listings' }, { id: 'secondary' }];
 }
 
 function staticEntry(

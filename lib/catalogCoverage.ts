@@ -2,6 +2,12 @@ import { desc, gt, sql } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/d1';
 import { searchMisses, servers } from '../db/schema';
 import { DEFAULT_SUBMIT_CATEGORY } from './categories';
+import {
+  INDEXABLE_MIN_GITHUB_STARS,
+  INDEXABLE_MIN_NPM_DOWNLOADS,
+  INDEXABLE_STRONG_GITHUB_STARS,
+  INDEXABLE_STRONG_NPM_DOWNLOADS,
+} from './listingIndexability';
 
 /**
  * How complete the public catalog is, field by field, for servable listings
@@ -10,8 +16,6 @@ import { DEFAULT_SUBMIT_CATEGORY } from './categories';
  * bar, which re-polls on every admin action.
  */
 
-const INDEXABLE_MIN_GITHUB_STARS = 25;
-const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
 const FRESH_CHECK_MS = 7 * 24 * 60 * 60 * 1000;
 const DEMAND_GAP_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const DEMAND_GAP_LIMIT = 50;
@@ -50,7 +54,12 @@ export async function getCatalogCoverage(
   const freshCutoff = Math.floor((now.getTime() - FRESH_CHECK_MS) / 1000);
   const hasTools = hasJsonList(servers.tools);
   // Mirrors lib/listingIndexability.ts (status and flag are already filtered).
-  const indexable = sql`${hasText(servers.aiDoc)} AND (coalesce(${servers.githubStars}, 0) >= ${INDEXABLE_MIN_GITHUB_STARS} OR coalesce(${servers.npmDownloads}, 0) >= ${INDEXABLE_MIN_NPM_DOWNLOADS} OR ${hasTools})`;
+  const stars = sql`coalesce(${servers.githubStars}, 0)`;
+  const downloads = sql`coalesce(${servers.npmDownloads}, 0)`;
+  const traction = sql`(${stars} >= ${INDEXABLE_MIN_GITHUB_STARS} OR ${downloads} >= ${INDEXABLE_MIN_NPM_DOWNLOADS})`;
+  const strongTraction = sql`(${stars} >= ${INDEXABLE_STRONG_GITHUB_STARS} OR ${downloads} >= ${INDEXABLE_STRONG_NPM_DOWNLOADS})`;
+  const verifiedRun = sql`(${servers.toolsSource} = 'introspected' OR ${servers.installNeedsConfig} IS NOT NULL OR coalesce(${servers.remoteEndpointHealthy}, 0) = 1)`;
+  const indexable = sql`${hasText(servers.aiDoc)} AND (${strongTraction} OR (${traction} AND ${verifiedRun}))`;
 
   const [row] = await db
     .select({
@@ -88,7 +97,7 @@ export async function getCatalogCoverage(
         key: 'indexable',
         label: 'Indexable',
         count: n(row?.indexable),
-        hint: 'Writeup plus traction or tools (lib/listingIndexability.ts). Only these enter the sitemap.',
+        hint: 'Writeup plus traction and a verified run, or strong traction alone (lib/listingIndexability.ts). Only these enter the sitemap.',
       },
       {
         key: 'aiDoc',
