@@ -110,8 +110,6 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@AllMCPs',
-    creator: '@AllMCPs',
     title: 'AllMCPs | Directory for Model Context Protocol Servers',
     description:
       'Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers.',
@@ -274,10 +272,7 @@ export default function RootLayout({
                   name: 'AllMCPs',
                   url: 'https://allmcps.com',
                   logo: 'https://allmcps.com/logo-icon.svg',
-                  sameAs: [
-                    'https://x.com/AllMCPs',
-                    'https://github.com/Jackalope-Dev',
-                  ],
+                  sameAs: ['https://github.com/Jackalope-Dev'],
                   description:
                     'The definitive directory for discovering and installing Model Context Protocol servers.',
                   contactPoint: {
