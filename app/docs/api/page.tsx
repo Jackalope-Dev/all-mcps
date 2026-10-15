@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ArticleLayout } from '@/components/content/ArticleLayout';
+import { CopyCommand } from '@/components/content/CopyCommand';
+import { CopyBlock } from '@/components/ui/CopyBlock';
+import type { TocItem } from '@/components/ui/TableOfContents';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { CopyBlock } from '../../../components/ui/CopyBlock';
 
 export const metadata: Metadata = {
   title: 'AllMCPs API Documentation',
   description:
-    'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations. Includes the AllMCPs OpenAPI spec, CLI, and MCP server.',
+    'Public AllMCPs REST API for searching MCP servers, fetching listing markdown, health checks, and badges. Built for AI agents and developer integrations.',
   alternates: { canonical: 'https://allmcps.com/docs/api' },
   openGraph: {
     images: [
@@ -120,6 +123,35 @@ const ENDPOINTS = [
   },
 ] as const;
 
+const endpointId = (path: string) =>
+  `ep-${path
+    .replace(/^\/api\//, '')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/-+$/, '')}`;
+
+/** Copyable curl for an endpoint example (GET URL or "POST <url>"). */
+function curlFor(method: string, example: string): string {
+  const url = example.replace(/^POST\s+/, '');
+  if (method === 'POST') {
+    return `curl -X POST "${url}" -H "Content-Type: application/json" -d '{}'`;
+  }
+  return `curl "${url}"`;
+}
+
+const TOC: TocItem[] = [
+  { id: 'quick-start', text: 'Quick start' },
+  { id: 'endpoints', text: 'Endpoints' },
+  ...ENDPOINTS.map((ep) => ({
+    id: endpointId(ep.path),
+    text: ep.title,
+    level: 3,
+  })),
+  { id: 'category-filtering', text: 'Category filtering' },
+  { id: 'auth', text: 'Scoped agent auth' },
+  { id: 'versioning', text: 'Versioning & deprecation' },
+  { id: 'discovery', text: 'Agent discovery' },
+];
+
 export default function ApiDocsPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -167,385 +199,218 @@ export default function ApiDocsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <main className="page-shell page-shell--tool">
-        <div className="page-shell-inner" style={{ maxWidth: 880 }}>
-          <div className="surface page-panel">
-            <p
-              className="directory-category-kicker"
-              style={{ marginBottom: '0.5rem' }}
-            >
-              Developers &amp; agents
-            </p>
-            <h1 className="text-page-title" style={{ marginBottom: '0.75rem' }}>
-              AllMCPs API Documentation
-            </h1>
-            <p className="text-lead" style={{ marginBottom: '1.5rem' }}>
-              Public, CORS-friendly endpoints for searching MCP servers,
-              embedding badges, and plugging the AllMCPs directory into AI
-              agents. No API key required for read endpoints. Also available as
-              the official <code>allmcps-server</code> CLI / MCP server on npm,
-              and as a full{' '}
-              <Link href="/api/v1/openapi.json">AllMCPs OpenAPI spec</Link>.
-            </p>
+      <ArticleLayout
+        path="/docs/api"
+        crumbs={[{ label: 'Home', href: '/' }, { label: 'API reference' }]}
+        title="AllMCPs API Documentation"
+        lede={
+          <p>
+            Public, CORS-friendly endpoints for searching MCP servers, embedding
+            badges, and plugging the AllMCPs directory into AI agents. No API
+            key required for read endpoints. Also available as the official{' '}
+            <code>allmcps-server</code> CLI / MCP server on npm, and as a full{' '}
+            <Link href="/api/v1/openapi.json">AllMCPs OpenAPI spec</Link>.
+          </p>
+        }
+        meta={<span>REST · JSON · v1</span>}
+        toc={TOC}
+        progress={false}
+      >
+        <div className="api-resources">
+          <Link
+            href="/api/v1/openapi.json"
+            className="btn btn-primary btn-sm"
+            target="_blank"
+          >
+            OpenAPI JSON ↗
+          </Link>
+          <Link
+            href="/llms.txt"
+            className="btn btn-ghost btn-sm"
+            target="_blank"
+          >
+            llms.txt ↗
+          </Link>
+          <Link
+            href="/.well-known/api-catalog"
+            className="btn btn-ghost btn-sm"
+            target="_blank"
+          >
+            API catalog ↗
+          </Link>
+          <Link
+            href="/.well-known/oauth-protected-resource"
+            className="btn btn-ghost btn-sm"
+            target="_blank"
+          >
+            OAuth scopes ↗
+          </Link>
+          <a
+            href="https://www.npmjs.com/package/allmcps-server"
+            className="btn btn-ghost btn-sm"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            allmcps-server CLI on npm ↗
+          </a>
+        </div>
 
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-                marginBottom: '2rem',
-              }}
-            >
-              <Link
-                href="/api/v1/openapi.json"
-                className="btn btn-primary"
-                target="_blank"
-              >
-                OpenAPI JSON ↗
-              </Link>
-              <Link
-                href="/llms.txt"
-                className="btn btn-secondary"
-                target="_blank"
-              >
-                llms.txt ↗
-              </Link>
-              <Link
-                href="/.well-known/api-catalog"
-                className="btn btn-secondary"
-                target="_blank"
-              >
-                API catalog ↗
-              </Link>
-              <Link
-                href="/.well-known/oauth-protected-resource"
-                className="btn btn-secondary"
-                target="_blank"
-              >
-                OAuth scopes ↗
-              </Link>
-              <a
-                href="https://www.npmjs.com/package/allmcps-server"
-                className="btn btn-secondary"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                allmcps-server CLI on npm ↗
-              </a>
-            </div>
+        <h2 id="quick-start">Quick start</h2>
+        <p>Search the directory from any HTTP client or agent:</p>
+        <CopyCommand command='curl "https://allmcps.com/api/v1/search?q=postgres&limit=5"' />
 
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>
-              Quick start
-            </h2>
-            <p
-              style={{
-                color: 'var(--text-secondary)',
-                marginBottom: '0.75rem',
-                lineHeight: 1.6,
-              }}
-            >
-              Search the directory from any HTTP client or agent:
-            </p>
-            <CopyBlock
-              code={`curl "https://allmcps.com/api/v1/search?q=postgres&limit=5"`}
-            />
-
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 1rem' }}>
-              Endpoints
-            </h2>
-            <ul
-              style={{
-                listStyle: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem',
-                margin: 0,
-                padding: 0,
-              }}
-            >
-              {ENDPOINTS.map((ep) => (
-                <li key={ep.path + ep.method}>
-                  <article
-                    style={{
-                      padding: '1.1rem 1.25rem',
-                      borderRadius: 12,
-                      border: '1px solid var(--border-color)',
-                      background: 'var(--bg-muted)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        gap: '0.6rem',
-                        marginBottom: '0.45rem',
-                      }}
+        <h2 id="endpoints">Endpoints</h2>
+        <ul className="api-endpoints">
+          {ENDPOINTS.map((ep) => {
+            const isUrl = ep.example.startsWith('http');
+            return (
+              <li key={ep.path + ep.method} id={endpointId(ep.path)}>
+                <article className="api-endpoint">
+                  <div className="api-endpoint-head">
+                    <span
+                      className={`api-method api-method--${ep.method.toLowerCase()}`}
                     >
-                      <span
-                        className={
-                          ep.method === 'GET'
-                            ? 'api-method-badge api-method-badge--get'
-                            : 'api-method-badge api-method-badge--post'
-                        }
-                        style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 800,
-                          letterSpacing: '0.04em',
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: 6,
-                        }}
-                      >
-                        {ep.method}
-                      </span>
-                      <code
-                        style={{
-                          fontSize: '0.9rem',
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        {ep.path}
-                      </code>
-                    </div>
-                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.35rem' }}>
-                      {ep.title}
-                    </h3>
-                    <p
-                      style={{
-                        fontSize: '0.875rem',
-                        color: 'var(--text-secondary)',
-                        margin: '0 0 0.65rem',
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      {ep.desc}
-                    </p>
+                      {ep.method}
+                    </span>
+                    <code className="api-path">{ep.path}</code>
+                  </div>
+                  <h3 className="api-endpoint-title">{ep.title}</h3>
+                  <p className="api-endpoint-desc">{ep.desc}</p>
+                  <CopyCommand command={curlFor(ep.method, ep.example)} />
+                  {isUrl ? (
                     <a
-                      href={
-                        ep.example.startsWith('http') ? ep.example : undefined
-                      }
-                      style={{
-                        fontSize: '0.8rem',
-                        color: 'var(--accent-color)',
-                        wordBreak: 'break-all',
-                      }}
-                      target={
-                        ep.example.startsWith('http') ? '_blank' : undefined
-                      }
+                      href={ep.example}
+                      className="api-try"
+                      target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {ep.example}
+                      Open example ↗
                     </a>
-                  </article>
-                </li>
-              ))}
-            </ul>
+                  ) : null}
+                </article>
+              </li>
+            );
+          })}
+        </ul>
 
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>
-              Category filtering
-            </h2>
-            <p
-              style={{
-                color: 'var(--text-secondary)',
-                marginBottom: '0.75rem',
-                lineHeight: 1.6,
-              }}
-            >
-              <code>/api/v1/search?category=</code> accepts any of the three
-              forms returned by{' '}
-              <Link href="/api/v1/categories">/api/v1/categories</Link> — the
-              full stored <code>name</code> (emoji included), the plain{' '}
-              <code>label</code>, or the <code>slug</code>. Matching is
-              case-insensitive and ignores surrounding whitespace, so all three
-              requests below return the same listings, and the response echoes
-              back the canonical category it resolved to. Combine it with{' '}
-              <code>q=</code> to apply both filters at once.
-            </p>
-            <CopyBlock
-              code={`curl "https://allmcps.com/api/v1/search?category=databases&limit=5"
+        <h2 id="category-filtering">Category filtering</h2>
+        <p>
+          <code>/api/v1/search?category=</code> accepts any of the three forms
+          returned by <Link href="/api/v1/categories">/api/v1/categories</Link>{' '}
+          — the full stored <code>name</code> (emoji included), the plain{' '}
+          <code>label</code>, or the <code>slug</code>. Matching is
+          case-insensitive and ignores surrounding whitespace, so all three
+          requests below return the same listings, and the response echoes back
+          the canonical category it resolved to. Combine it with <code>q=</code>{' '}
+          to apply both filters at once.
+        </p>
+        <CopyBlock
+          code={`curl "https://allmcps.com/api/v1/search?category=databases&limit=5"
 curl "https://allmcps.com/api/v1/search?category=Databases&limit=5"
 curl --get --data-urlencode "category=🗄️ Databases" "https://allmcps.com/api/v1/search?limit=5"
 
 # Both filters: Postgres servers within Databases only
 curl "https://allmcps.com/api/v1/search?q=postgres&category=databases"`}
-            />
-            <p
-              style={{
-                color: 'var(--text-secondary)',
-                marginBottom: '1.5rem',
-                lineHeight: 1.6,
-              }}
-            >
-              A category the directory doesn&apos;t have returns{' '}
-              <code>400</code> with{' '}
-              <code>{'{ "error": "unknown_category" }'}</code> — an empty{' '}
-              <code>servers</code> array always means &quot;this category has no
-              matching listings&quot;, never &quot;that category name was
-              wrong&quot;.
-            </p>
+        />
+        <p>
+          A category the directory doesn&apos;t have returns <code>400</code>{' '}
+          with <code>{'{ "error": "unknown_category" }'}</code> — an empty{' '}
+          <code>servers</code> array always means &quot;this category has no
+          matching listings&quot;, never &quot;that category name was
+          wrong&quot;.
+        </p>
 
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>
-              Scoped agent auth
-            </h2>
-            <p
-              style={{
-                color: 'var(--text-secondary)',
-                marginBottom: '0.75rem',
-                lineHeight: 1.6,
-              }}
-            >
-              Read endpoints (search, servers, categories, markdown, health)
-              need no auth at all. Endpoints that mutate a listing require a
-              scoped Bearer token — register via{' '}
-              <code>POST /api/v1/agent/register</code>, requesting only the
-              scopes you need in an optional <code>scopes</code> array (omit it
-              to receive the full set below). A token used against an endpoint
-              it wasn&apos;t granted a scope for gets back{' '}
-              <code>
-                403 {'{'}
-                "error":"insufficient_scope","requiredScope":"...","grantedScopes":[...]
-                {'}'}{' '}
-              </code>{' '}
-              — never a silent failure or a downgraded response.
-            </p>
-            <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
-              <table
-                style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  fontSize: '0.85rem',
-                }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border-color)',
-                    }}
-                  >
-                    <th style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>
-                      Scope
-                    </th>
-                    <th style={{ padding: '0.5rem 0.75rem' }}>Grants</th>
-                    <th style={{ padding: '0.5rem 0' }}>Required by</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '0.5rem 0.75rem 0.5rem 0' }}>
-                      <code>listings:claim</code>
-                    </td>
-                    <td
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      Claim ownership of an existing listing via DNS TXT, site
-                      badge, or GitHub README proof. No other write access.
-                    </td>
-                    <td style={{ padding: '0.5rem 0' }}>
-                      <code>POST /api/v1/agent/claim</code>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td
-                      style={{
-                        padding: '0.5rem 0.75rem 0.5rem 0',
-                        color: 'var(--text-secondary)',
-                      }}
-                      colSpan={3}
-                    >
-                      <code>POST /api/v1/agent/revoke</code> needs a valid
-                      (unrevoked) Bearer token but no specific scope — any token
-                      can always revoke itself.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p
-              style={{
-                color: 'var(--text-secondary)',
-                marginBottom: '1.5rem',
-                lineHeight: 1.6,
-                fontSize: '0.9rem',
-              }}
-            >
-              Machine-readable copies of this table:{' '}
-              <Link href="/.well-known/oauth-protected-resource">
-                /.well-known/oauth-protected-resource
-              </Link>{' '}
-              (<code>scopes_supported</code>), the{' '}
-              <code>
-                components.securitySchemes.agentBearerAuth.flows.clientCredentials.scopes
-              </code>{' '}
-              map in the <Link href="/api/v1/openapi.json">OpenAPI spec</Link>,
-              and <a href="/auth.md">/auth.md</a>&apos;s frontmatter, for the
-              full registration → claim flow with example requests.
-            </p>
+        <h2 id="auth">Scoped agent auth</h2>
+        <p>
+          Read endpoints (search, servers, categories, markdown, health) need no
+          auth at all. Endpoints that mutate a listing require a scoped Bearer
+          token — register via <code>POST /api/v1/agent/register</code>,
+          requesting only the scopes you need in an optional <code>scopes</code>{' '}
+          array (omit it to receive the full set below). A token used against an
+          endpoint it wasn&apos;t granted a scope for gets back{' '}
+          <code>
+            403 {'{'}
+            "error":"insufficient_scope","requiredScope":"...","grantedScopes":[...]
+            {'}'}
+          </code>{' '}
+          — never a silent failure or a downgraded response.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Scope</th>
+              <th>Grants</th>
+              <th>Required by</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <code>listings:claim</code>
+              </td>
+              <td>
+                Claim ownership of an existing listing via DNS TXT, site badge,
+                or GitHub README proof. No other write access.
+              </td>
+              <td>
+                <code>POST /api/v1/agent/claim</code>
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={3}>
+                <code>POST /api/v1/agent/revoke</code> needs a valid (unrevoked)
+                Bearer token but no specific scope — any token can always revoke
+                itself.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Machine-readable copies of this table:{' '}
+          <Link href="/.well-known/oauth-protected-resource">
+            /.well-known/oauth-protected-resource
+          </Link>{' '}
+          (<code>scopes_supported</code>), the{' '}
+          <code>
+            components.securitySchemes.agentBearerAuth.flows.clientCredentials.scopes
+          </code>{' '}
+          map in the <Link href="/api/v1/openapi.json">OpenAPI spec</Link>, and{' '}
+          <a href="/auth.md">/auth.md</a>&apos;s frontmatter, for the full
+          registration → claim flow with example requests.
+        </p>
 
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>
-              Versioning &amp; deprecation policy
-            </h2>
-            <p
-              style={{
-                color: 'var(--text-secondary)',
-                marginBottom: '1.5rem',
-                lineHeight: 1.6,
-              }}
-            >
-              The API is URL-versioned (<code>/api/v1/...</code>); fields are
-              added, not removed or repurposed, within a version. If an endpoint
-              is ever deprecated it will carry a <code>Deprecation: true</code>{' '}
-              response header and, once a removal date is set, a{' '}
-              <code>Sunset</code> header, for at least 90 days before removal —
-              announced on the <Link href="/blog">blog</Link>. Nothing in v1 is
-              currently deprecated.
-            </p>
+        <h2 id="versioning">Versioning &amp; deprecation policy</h2>
+        <p>
+          The API is URL-versioned (<code>/api/v1/...</code>); fields are added,
+          not removed or repurposed, within a version. If an endpoint is ever
+          deprecated it will carry a <code>Deprecation: true</code> response
+          header and, once a removal date is set, a <code>Sunset</code> header,
+          for at least 90 days before removal — announced on the{' '}
+          <Link href="/blog">blog</Link>. Nothing in v1 is currently deprecated.
+        </p>
 
-            <h2 style={{ fontSize: '1.25rem', margin: '2rem 0 0.75rem' }}>
-              Agent discovery
-            </h2>
-            <ul
-              style={{
-                color: 'var(--text-secondary)',
-                lineHeight: 1.7,
-                paddingLeft: '1.2rem',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <li>
-                <code>Link</code> response headers on every page point at this
-                docs URL, the API catalog, and OAuth metadata.
-              </li>
-              <li>
-                Markdown negotiation: send <code>Accept: text/markdown</code> or
-                append <code>?format=md</code> / <code>.md</code> to listing,
-                blog, or category URLs.
-              </li>
-              <li>
-                Machine catalog: <Link href="/data.json">/data.json</Link> and{' '}
-                <Link href="/llms-full.txt">/llms-full.txt</Link>.
-              </li>
-            </ul>
+        <h2 id="discovery">Agent discovery</h2>
+        <ul>
+          <li>
+            <code>Link</code> response headers on every page point at this docs
+            URL, the API catalog, and OAuth metadata.
+          </li>
+          <li>
+            Markdown negotiation: send <code>Accept: text/markdown</code> or
+            append <code>?format=md</code> / <code>.md</code> to listing, blog,
+            or category URLs.
+          </li>
+          <li>
+            Machine catalog: <Link href="/data.json">/data.json</Link> and{' '}
+            <Link href="/llms-full.txt">/llms-full.txt</Link>.
+          </li>
+        </ul>
 
-            <p
-              style={{
-                color: 'var(--text-secondary)',
-                fontSize: '0.9rem',
-                lineHeight: 1.6,
-              }}
-            >
-              Questions or partnership ideas?{' '}
-              <Link href="/contact" style={{ color: 'var(--accent-color)' }}>
-                Contact us
-              </Link>
-              .
-            </p>
-          </div>
-        </div>
-      </main>
+        <p className="prose-callout">
+          Questions or partnership ideas?{' '}
+          <Link href="/contact">Contact us</Link>.
+        </p>
+      </ArticleLayout>
     </>
   );
 }

@@ -12,11 +12,9 @@ import { toast } from './ui/Toast';
 export default function ShareModal({
   serverId,
   serverName,
-  variant = 'full',
 }: {
   serverId: string;
   serverName: string;
-  variant?: 'full' | 'mini' | 'action';
 }) {
   const { displayName } = parseServerName(serverName);
   const [isOpen, setIsOpen] = useState(false);
@@ -33,13 +31,15 @@ export default function ShareModal({
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKey);
     };
   }, [isOpen]);
 
@@ -111,6 +111,7 @@ export default function ShareModal({
     snippetKey: keyof typeof snippets;
   }) => (
     <button
+      type="button"
       onClick={() => handleCopy(snippetKey)}
       style={{
         position: 'absolute',
@@ -129,6 +130,10 @@ export default function ShareModal({
         (e.currentTarget.style.background = 'var(--border-strong)')
       }
       onMouseOut={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
+      onFocus={(e) =>
+        (e.currentTarget.style.background = 'var(--border-strong)')
+      }
+      onBlur={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
     >
       {copiedStates[snippetKey] ? (
         <Check size={14} color="#10b981" />
@@ -179,9 +184,27 @@ export default function ShareModal({
     typeof navigator.share === 'function';
 
   const modalContent = (
-    <div className="share-modal-overlay" onClick={() => setIsOpen(false)}>
-      <div className="share-modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="share-modal-overlay">
+      {/* Backdrop: a click outside the dialog content closes it. The content
+          (position: relative) paints above this full-bleed button. */}
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Close share dialog"
+        onClick={() => setIsOpen(false)}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          margin: 0,
+          padding: 0,
+          border: 0,
+          background: 'transparent',
+          cursor: 'default',
+        }}
+      />
+      <div className="share-modal-content">
         <button
+          type="button"
           onClick={() => setIsOpen(false)}
           style={{
             position: 'absolute',
@@ -202,6 +225,12 @@ export default function ShareModal({
             (e.currentTarget.style.backgroundColor = 'var(--bg-muted)')
           }
           onMouseOut={(e) =>
+            (e.currentTarget.style.backgroundColor = 'transparent')
+          }
+          onFocus={(e) =>
+            (e.currentTarget.style.backgroundColor = 'var(--bg-muted)')
+          }
+          onBlur={(e) =>
             (e.currentTarget.style.backgroundColor = 'transparent')
           }
         >
@@ -391,52 +420,16 @@ export default function ShareModal({
 
   return (
     <>
-      {variant === 'mini' ? (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="listing-metric-pill listing-metric-pill--button listing-metric-pill--share"
-          title="Share & Embed Badge or Widget"
-          aria-label="Share & Embed Badge or Widget"
-        >
-          <Share2 size={16} />
-          <span>Share &amp; Embed</span>
-        </button>
-      ) : variant === 'action' ? (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="mcp-action-btn"
-          title="Share & Embed Badge or Widget"
-          aria-label="Share & Embed Badge or Widget"
-        >
-          <Share2 size={18} style={{ color: 'var(--accent-color)' }} />
-          <span>Share &amp; Embed</span>
-        </button>
-      ) : (
-        <button
-          onClick={() => setIsOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1rem',
-            backgroundColor: 'var(--accent-color)',
-            color: 'var(--bg-color)',
-            borderRadius: '8px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            border: 'none',
-            width: '100%',
-            transition: 'opacity 0.2s',
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
-          onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
-        >
-          <Share2 size={18} /> Share / Embed
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="btn btn-secondary btn-sm"
+        title="Share this listing or embed a badge"
+        aria-label="Share"
+      >
+        <Share2 size={15} aria-hidden="true" />
+        <span className="lst-btn-label">Share</span>
+      </button>
 
       {isOpen && mounted && createPortal(modalContent, document.body)}
     </>

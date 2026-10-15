@@ -1,11 +1,13 @@
-import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { CategoryGrid } from '../../components/CategoryGrid';
-import { PageHeader, PageShell } from '../../components/PageShell';
+import { PageShell } from '../../components/PageShell';
 import { categorySlug } from '../../lib/categories';
-import { getCategoryCounts } from '../../lib/servers';
+import { getActiveServersLight, getCategoryCounts } from '../../lib/servers';
+
+/** Servers per category shown as the card's "top servers" preview. */
+const PREVIEW_PER_CATEGORY = 3;
 
 // Hourly ISR keeps category counts current from D1 without querying on every request.
 export const revalidate = 3600;
@@ -72,14 +74,37 @@ function parseEmoji(category: string): { emoji: string; label: string } {
 export default async function CategoriesPage() {
   // One grouped COUNT in D1 (servable listings only) instead of loading every
   // row to count it in the Worker.
-  const counts = await getCategoryCounts();
+  // The preview pool is the light discovery scan (no tools / AI columns),
+  // capped and ordered by views, so each card can show its best-known servers.
+  const [counts, pool] = await Promise.all([
+    getCategoryCounts(),
+    getActiveServersLight(1500),
+  ]);
+  const previews = new Map<
+    string,
+    { id: string; name: string; logoUrl: string | null }[]
+  >();
+  for (const s of pool) {
+    const list = previews.get(s.category) ?? [];
+    if (list.length < PREVIEW_PER_CATEGORY) {
+      list.push({ id: s.id, name: s.name, logoUrl: s.logoUrl ?? null });
+      previews.set(s.category, list);
+    }
+  }
 
   // Sort by count descending (most popular first)
   const categories = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => {
       const { emoji, label } = parseEmoji(name);
-      return { name, emoji, label, count, slug: categorySlug(name) };
+      return {
+        name,
+        emoji,
+        label,
+        count,
+        slug: categorySlug(name),
+        top: previews.get(name) ?? [],
+      };
     });
 
   const totalServers = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -137,39 +162,24 @@ export default async function CategoriesPage() {
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <PageShell variant="default">
-        {/* Breadcrumb */}
         <nav aria-label="Breadcrumb">
-          <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
+          <ol className="crumbs">
             <li>
               <Link href="/">Home</Link>
             </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">Categories</li>
+            <li aria-current="page">Categories</li>
           </ol>
         </nav>
 
-        <PageHeader
-          centered
-          className="animate-fade-in delay-1"
-          title="Browse by Category"
-          description={
-            <>
-              Explore{' '}
-              <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
-                {totalServers.toLocaleString()}
-              </span>{' '}
-              MCP servers across{' '}
-              <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
-                {categories.length}
-              </span>{' '}
-              categories.
-            </>
-          }
-        />
+        <header className="dir-page-head animate-in">
+          <h1 className="text-page-title">Browse by category</h1>
+          <p className="text-lead">
+            <span className="tabular">{totalServers.toLocaleString()}</span> MCP
+            servers across {categories.length} categories. Pick a domain to see
+            its top picks, or filter the list below.
+          </p>
+        </header>
 
-        {/* Client-side search + grid */}
         <CategoryGrid categories={categories} />
       </PageShell>
     </>

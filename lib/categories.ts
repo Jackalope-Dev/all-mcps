@@ -1,4 +1,5 @@
 import categoryManifest from './category-manifest.json';
+import { type Hue, hueFor } from './palette';
 
 /**
  * Full directory category list (emoji labels as stored on listings).
@@ -23,6 +24,8 @@ export type CategoryGroup = {
   id: string;
   label: string;
   emoji: string;
+  /** Identity hue (app/styles/foundation.css) for pills, tiles and dots. */
+  hue: Hue;
   color: string;
   lightColor: string;
   bgTint: string;
@@ -36,6 +39,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     id: 'dev',
     label: 'Dev & Coding',
+    hue: 'blue',
     emoji: '💻',
     color: '#00E5FF',
     lightColor: '#0284c7',
@@ -58,6 +62,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     id: 'data',
     label: 'Databases & Data',
+    hue: 'violet',
     emoji: '🗄️',
     color: '#A855F7',
     lightColor: '#7e22ce',
@@ -71,6 +76,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     id: 'ai',
     label: 'AI & Knowledge',
+    hue: 'amber',
     emoji: '🧠',
     color: '#F59E0B',
     lightColor: '#b45309',
@@ -92,6 +98,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     id: 'cloud',
     label: 'Cloud & Systems',
+    hue: 'indigo',
     emoji: '☁️',
     color: '#0EA5E9',
     lightColor: '#0369a1',
@@ -112,6 +119,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     id: 'productivity',
     label: 'Productivity & Work',
+    hue: 'green',
     emoji: '🏢',
     color: '#10B981',
     lightColor: '#047857',
@@ -132,6 +140,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     id: 'security',
     label: 'Security & Auth',
+    hue: 'red',
     emoji: '🔒',
     color: '#F43F5E',
     lightColor: '#be123c',
@@ -145,6 +154,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     id: 'finance',
     label: 'Finance & Commerce',
+    hue: 'teal',
     emoji: '💰',
     color: '#22C55E',
     lightColor: '#15803d',
@@ -165,6 +175,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     id: 'media',
     label: 'Media, Web & Bio',
+    hue: 'pink',
     emoji: '🌐',
     color: '#EC4899',
     lightColor: '#be185d',
@@ -246,7 +257,26 @@ export function getCategoryMeta(category: string) {
     gradient: matchedGroup.gradient,
     lightGradient: matchedGroup.lightGradient,
     group: matchedGroup,
+    hue: categoryHue(category),
   };
+}
+
+/**
+ * The one colour a category carries everywhere it appears (row pills, category
+ * cards, listing header, command palette). Categories in a known group share the
+ * group's hue; anything unmatched gets a stable hash hue of its label.
+ */
+export function categoryHue(category: string): Hue {
+  const lower = (category || '').toLowerCase();
+  const group = CATEGORY_GROUPS.find((g) =>
+    g.keywords.some((kw) => lower.includes(kw)),
+  );
+  return group ? group.hue : hueFor(parseCategoryLabel(category).label);
+}
+
+/** `hue-*` class for a category (sets --tint for the tint-* utilities). */
+export function categoryHueClass(category: string): string {
+  return `hue-${categoryHue(category)}`;
 }
 
 export function getCategoryGradient(category: string): string {

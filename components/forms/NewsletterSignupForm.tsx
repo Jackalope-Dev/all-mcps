@@ -1,5 +1,6 @@
 'use client';
 
+import { CheckCircle2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { trackNewsletterSignup } from '../../lib/gtag';
@@ -51,9 +52,8 @@ export function NewsletterSignupForm({
         setStatus('success');
         trackNewsletterSignup({ source });
         toast.success('Subscribed', { description: "You're on the list." });
-        // Persist a cookie so the newsletter modal won't reappear
-        document.cookie =
-          'allmcps_subscribed=1; path=/; max-age=31536000; SameSite=Lax';
+        // The response sets the allmcps_subscribed cookie, so the newsletter
+        // modal won't reappear.
         onSuccess?.();
       } else {
         const data = (await res.json().catch(() => null)) as {
@@ -78,13 +78,8 @@ export function NewsletterSignupForm({
 
   if (status === 'success') {
     return (
-      <p
-        style={{
-          color: 'var(--text-secondary)',
-          fontSize: '0.9rem',
-          margin: 0,
-        }}
-      >
+      <p className="acct-newsletter-done" role="status">
+        <CheckCircle2 size={16} aria-hidden="true" />
         You&apos;re subscribed — thanks for joining!
       </p>
     );

@@ -1,93 +1,149 @@
+import type { CSSProperties } from 'react';
+
+const sk = (width: CSSProperties['width'], height: number, r?: number) => ({
+  width,
+  height,
+  ...(r != null ? { borderRadius: r } : {}),
+});
+
 /**
- * Shown immediately on navigation to /mcp/[id] while the real page streams in —
- * this is what was missing before (no loading.tsx anywhere in the app meant
- * clicking a listing link gave zero feedback for however long the page took).
- * Loosely mirrors the real detail-grid layout so the swap-in doesn't jump around.
+ * Shown immediately on navigation to /mcp/[id] while the page streams in.
+ * Built from the same lst-* layout classes as the real page (header, sticky
+ * section nav, install panel, sidebar) so the swap-in doesn't shift anything.
  */
 export default function Loading() {
   return (
-    <main
-      className="container page-shell"
-      style={{ paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-16)' }}
-    >
-      <div className="detail-grid">
-        <div className="detail-main">
-          <div className="detail-title-row">
-            <div
-              className="skeleton-block"
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: '50%',
-                flexShrink: 0,
-              }}
-            />
-            <div style={{ flex: 1 }}>
-              <div
-                className="skeleton-block"
-                style={{ width: '55%', height: 28, marginBottom: '0.6rem' }}
-              />
-              <div
-                className="skeleton-block"
-                style={{ width: '30%', height: 18 }}
-              />
+    <main className="container lst-page" aria-busy="true">
+      <span className="sr-only">Loading listing…</span>
+      <ol className="crumbs" aria-hidden="true">
+        <li className="skeleton" style={sk(40, 14)} />
+        <li className="skeleton" style={sk(90, 14)} />
+        <li className="skeleton" style={sk(70, 14)} />
+      </ol>
+
+      <div className="lst-hero" aria-hidden="true">
+        <div className="lst-hero-id">
+          <div className="skeleton" style={sk(64, 64, 16)} />
+          <div className="skeleton" style={sk('min(16rem, 50vw)', 34)} />
+        </div>
+        <div className="lst-hero-summary">
+          <div className="skeleton" style={sk('100%', 16)} />
+          <div
+            className="skeleton"
+            style={{ ...sk('62%', 16), marginTop: '0.6rem' }}
+          />
+        </div>
+        <div className="lst-meta">
+          {[96, 72, 104, 64, 88, 120].map((w) => (
+            <div key={w} className="skeleton" style={sk(w, 22, 999)} />
+          ))}
+        </div>
+        <div className="lst-actions">
+          <div className="skeleton" style={sk(104, 40, 10)} />
+          <div className="skeleton" style={sk(96, 36)} />
+          <div className="skeleton" style={sk(112, 36)} />
+          <div className="skeleton" style={sk(84, 36)} />
+          <div className="skeleton" style={sk(36, 36)} />
+        </div>
+      </div>
+
+      <div className="lst-grid" aria-hidden="true">
+        <div className="lst-main">
+          <div className="lst-secnav">
+            <div className="lst-secnav-inner">
+              {[56, 72, 52, 66, 62, 40, 92].map((w) => (
+                <div
+                  key={w}
+                  className="skeleton"
+                  style={{ ...sk(w, 18), margin: '0.55rem 0.75rem' }}
+                />
+              ))}
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.6rem', margin: '1.25rem 0' }}>
-            <div
-              className="skeleton-block"
-              style={{ width: 150, height: 38, borderRadius: 8 }}
-            />
-            <div
-              className="skeleton-block"
-              style={{ width: 130, height: 38, borderRadius: 8 }}
-            />
-            <div
-              className="skeleton-block"
-              style={{ width: 100, height: 38, borderRadius: 8 }}
-            />
+          <div className="lst-section lst-install">
+            <div className="lst-install-head">
+              <div>
+                <div className="skeleton" style={sk(200, 24)} />
+                <div
+                  className="skeleton"
+                  style={{ ...sk(300, 14), marginTop: '0.55rem' }}
+                />
+              </div>
+            </div>
+            <div className="lst-install-body">
+              <div
+                className="skeleton"
+                style={sk('min(100%, 34rem)', 42, 12)}
+              />
+              <div className="skeleton" style={sk('100%', 38)} />
+              <div className="skeleton" style={sk('100%', 220, 12)} />
+              <div className="lst-install-footer">
+                <div className="skeleton" style={sk(200, 34)} />
+                <div className="skeleton" style={sk(120, 34)} />
+              </div>
+            </div>
           </div>
 
-          <div
-            className="skeleton-block"
-            style={{ width: '90%', height: 16, marginBottom: '0.5rem' }}
-          />
-          <div
-            className="skeleton-block"
-            style={{ width: '70%', height: 16, marginBottom: '1.5rem' }}
-          />
-
-          <div
-            className="skeleton-block"
-            style={{ height: 220, borderRadius: 16, marginBottom: '1.75rem' }}
-          />
-          <div
-            className="skeleton-block"
-            style={{ height: 140, borderRadius: 12, marginBottom: '1.5rem' }}
-          />
-          <div
-            className="skeleton-block"
-            style={{ height: 280, borderRadius: 12 }}
-          />
+          <div className="lst-section">
+            <div className="skeleton" style={sk(140, 26)} />
+            {['100%', '96%', '88%', '70%'].map((w, i) => (
+              <div
+                key={w}
+                className="skeleton"
+                style={{
+                  ...sk(w, 15),
+                  marginTop: i === 0 ? '1.15rem' : '0.7rem',
+                }}
+              />
+            ))}
+          </div>
         </div>
 
-        <div
-          className="detail-sidebar"
-          style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-        >
-          <div
-            className="skeleton-block"
-            style={{ height: 220, borderRadius: 14 }}
-          />
-          <div
-            className="skeleton-block"
-            style={{ height: 160, borderRadius: 14 }}
-          />
-          <div
-            className="skeleton-block"
-            style={{ height: 160, borderRadius: 14 }}
-          />
+        <div className="lst-side">
+          <div className="lst-card">
+            <div className="skeleton" style={sk(96, 16)} />
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '1rem',
+                }}
+              >
+                <div className="skeleton" style={sk(70, 13)} />
+                <div className="skeleton" style={sk(90, 13)} />
+              </div>
+            ))}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.5rem',
+                marginTop: '1.25rem',
+              }}
+            >
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="skeleton" style={sk('100%', 58)} />
+              ))}
+            </div>
+          </div>
+          <div className="lst-card">
+            <div className="skeleton" style={sk(130, 16)} />
+            <div
+              className="skeleton"
+              style={{ ...sk('100%', 13), marginTop: '0.9rem' }}
+            />
+            <div
+              className="skeleton"
+              style={{ ...sk('80%', 13), marginTop: '0.55rem' }}
+            />
+            <div
+              className="skeleton"
+              style={{ ...sk('100%', 34), marginTop: '1rem' }}
+            />
+          </div>
         </div>
       </div>
     </main>

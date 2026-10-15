@@ -9,21 +9,19 @@ import {
   Code2,
   Database,
   Globe,
-  Sparkles,
 } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import { Card } from '@/components/ui/Card';
 import { toast } from '@/components/ui/Toast';
+import { trackFeatureUse } from '@/lib/gtag';
 import { saveStackServerIds } from '@/lib/stackStore';
 
-export interface PresetStack {
+interface PresetStack {
   id: string;
   name: string;
   badge: string;
   description: string;
   icon: React.ReactNode;
-  accentColor: string; // Brand accent hex (e.g. #00e5ff) — drives Card's accent border/icon/badge color
   servers: string[];
   displayTools: Array<{ name: string; tag: string }>;
 }
@@ -32,15 +30,10 @@ const PRESET_STACKS: PresetStack[] = [
   {
     id: 'fullstack-dev',
     name: 'Fullstack Web Developer Stack',
-    badge: 'Most Popular',
+    badge: 'Web Dev',
     description:
       'Git repository management, SQL database introspection, headless browser testing, and persistent agent memory.',
-    icon: <Code2 size={22} />,
-    // Uses the theme accent token (not a fixed hex like the other presets)
-    // because raw #00e5ff cyan text/border reads fine on dark but fails
-    // contrast on a white light-theme surface — var(--accent-color) already
-    // resolves to a darker, readable blue in light theme everywhere else.
-    accentColor: 'var(--accent-color)',
+    icon: <Code2 size={18} />,
     servers: [
       'github-github-mcp-server',
       'crystaldba-postgres-mcp',
@@ -60,8 +53,7 @@ const PRESET_STACKS: PresetStack[] = [
     badge: 'Data & AI',
     description:
       'Query SQLite & BigQuery databases, execute Python data analysis scripts, and parse spreadsheet workbooks.',
-    icon: <Database size={22} />,
-    accentColor: '#a855f7',
+    icon: <Database size={18} />,
     servers: [
       'jparkerweb-mcp-sqlite',
       'ergut-mcp-bigquery-server',
@@ -81,8 +73,7 @@ const PRESET_STACKS: PresetStack[] = [
     badge: 'Infrastructure',
     description:
       'Control Kubernetes clusters, manage AWS S3 storage buckets, orchestrate Docker containers, and Cloudflare workers.',
-    icon: <Cloud size={22} />,
-    accentColor: '#34d399',
+    icon: <Cloud size={18} />,
     servers: [
       'flux159-mcp-server-kubernetes',
       'alexei-led-aws-mcp-server',
@@ -102,8 +93,7 @@ const PRESET_STACKS: PresetStack[] = [
     badge: 'Superpower',
     description:
       'Equip your AI agent with long-term graph memory, real-time Brave web search, file system tools, and deep context.',
-    icon: <Bot size={22} />,
-    accentColor: '#f59e0b',
+    icon: <Bot size={18} />,
     servers: [
       'basicmachines-co-basic-memory',
       'brave-brave-search-mcp-server',
@@ -123,8 +113,7 @@ const PRESET_STACKS: PresetStack[] = [
     badge: 'Collaboration',
     description:
       'Streamline team messaging via Slack, search Notion workspaces, monitor Sentry error tracking, and fetch Figma designs.',
-    icon: <Briefcase size={22} />,
-    accentColor: '#f43f5e',
+    icon: <Briefcase size={18} />,
     servers: [
       'jtalk22-slack-mcp-server',
       'badhansen-notion-mcp',
@@ -144,8 +133,7 @@ const PRESET_STACKS: PresetStack[] = [
     badge: 'Web & Search',
     description:
       'Automate browser navigation, query live web indexes, fetch structured page content, and summarize articles automatically.',
-    icon: <Globe size={22} />,
-    accentColor: '#0ea5e9',
+    icon: <Globe size={18} />,
     servers: [
       'automatalabs-mcp-server-playwright',
       'brave-brave-search-mcp-server',
@@ -162,10 +150,14 @@ const PRESET_STACKS: PresetStack[] = [
 ];
 
 export function PresetStackGrid() {
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
 
   const handleLoadStack = (preset: PresetStack) => {
-    setLoadingId(preset.id);
+    setLoadedId(preset.id);
+    trackFeatureUse('stack_builder', {
+      action: 'load_preset',
+      preset: preset.id,
+    });
 
     // Save stack IDs to store & update state
     saveStackServerIds(preset.servers);
@@ -180,102 +172,84 @@ export function PresetStackGrid() {
       description: `${preset.servers.length} MCP server tools ready to configure and export.`,
     });
 
-    // Smooth scroll up to stack builder section
+    // Scroll back up to the builder so the change is visible.
     const builderEl = document.getElementById('stack-builder');
     if (builderEl) {
-      builderEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const reduce = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+      ).matches;
+      builderEl.scrollIntoView({
+        behavior: reduce ? 'auto' : 'smooth',
+        block: 'start',
+      });
     }
 
     setTimeout(() => {
-      setLoadingId(null);
-    }, 600);
+      setLoadedId(null);
+    }, 1600);
   };
 
   return (
-    <div className="preset-stacks-wrapper">
-      <div className="preset-stacks-header">
-        <div className="preset-stacks-pill">
-          <Sparkles size={14} /> Curated Configurations
-        </div>
-        <h2 className="preset-stacks-title">Featured Preset Stacks</h2>
-        <p className="preset-stacks-subtitle">
-          Click &ldquo;Load Stack&rdquo; to instantly load pre-configured
-          multi-tool suites into your builder.
+    <section
+      id="stack-presets"
+      className="stk-presets"
+      aria-labelledby="stk-presets-title"
+    >
+      <div className="stk-presets-head">
+        <h2 id="stk-presets-title" className="stk-presets-title">
+          Start from a preset
+        </h2>
+        <p className="stk-presets-sub">
+          Curated four-server stacks for common jobs. Loading one replaces your
+          current stack.
         </p>
       </div>
 
-      <div className="preset-stacks-grid">
+      <ul className="stk-presets-grid">
         {PRESET_STACKS.map((preset) => {
-          const isLoading = loadingId === preset.id;
-
+          const isLoaded = loadedId === preset.id;
           return (
-            <Card
+            <li
               key={preset.id}
-              accent={preset.accentColor}
-              padding="md"
-              className="preset-card"
+              className="stk-preset spotlight"
               data-preset-id={preset.id}
             >
-              {/* Header Badge & Icon */}
-              <div className="preset-card-top">
-                <div
-                  className="preset-card-icon-wrap"
-                  style={{ color: 'var(--card-accent)' }}
-                >
+              <div className="stk-preset-top">
+                <span className="stk-preset-icon" aria-hidden="true">
                   {preset.icon}
-                </div>
-                <span
-                  className="preset-card-badge"
-                  style={{
-                    borderColor: 'var(--card-accent)',
-                    color: 'var(--card-accent)',
-                  }}
-                >
-                  {preset.badge}
                 </span>
+                <span className="stk-preset-badge">{preset.badge}</span>
               </div>
-
-              {/* Title & Description */}
-              <h3 className="preset-card-title">{preset.name}</h3>
-              <p className="preset-card-desc">{preset.description}</p>
-
-              {/* Tool Chips */}
-              <div className="preset-card-chips">
-                {preset.displayTools.map((tool, idx) => (
-                  <span key={idx} className="preset-tool-pill">
-                    <span className="preset-tool-name">{tool.name}</span>
-                    <span className="preset-tool-tag">{tool.tag}</span>
-                  </span>
+              <h3 className="stk-preset-title">{preset.name}</h3>
+              <p className="stk-preset-desc">{preset.description}</p>
+              <ul className="stk-preset-tools" aria-label="Included servers">
+                {preset.displayTools.map((tool) => (
+                  <li key={tool.name}>
+                    {tool.name}
+                    <span>{tool.tag}</span>
+                  </li>
                 ))}
-              </div>
-
-              {/* Card Footer Actions */}
-              <div className="preset-card-footer">
-                <button
-                  type="button"
-                  onClick={() => handleLoadStack(preset)}
-                  disabled={isLoading}
-                  className="preset-card-load-btn"
-                >
-                  {isLoading ? (
-                    <>
-                      <CheckCircle2 size={15} className="spin-icon" /> Loaded!
-                    </>
-                  ) : (
-                    <>
-                      Load Stack <ArrowRight size={15} />
-                    </>
-                  )}
-                </button>
-
-                <span className="preset-card-count">
-                  {preset.servers.length} Tools
-                </span>
-              </div>
-            </Card>
+              </ul>
+              <button
+                type="button"
+                onClick={() => handleLoadStack(preset)}
+                className={`btn btn-secondary btn-sm stk-preset-load tl-copy ${isLoaded ? 'is-copied' : ''}`}
+              >
+                {isLoaded ? (
+                  <>
+                    <CheckCircle2 size={15} aria-hidden="true" /> Loaded
+                  </>
+                ) : (
+                  <>
+                    Load {preset.servers.length} servers{' '}
+                    <ArrowRight size={15} aria-hidden="true" />
+                  </>
+                )}
+              </button>
+            </li>
           );
         })}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }

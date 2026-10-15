@@ -8,8 +8,10 @@
 
 import {
   categoryFromSlug,
+  categoryHue,
   categorySlug as slugFromCategory,
 } from './categories';
+import { type Hue, hueFor } from './palette';
 
 export type BestTopic = {
   /** URL slug: /best/<slug> */
@@ -1379,6 +1381,15 @@ export function bestTopicBySlug(slug: string): BestTopic | undefined {
   return BEST_TOPICS.find((t) => t.slug === slug);
 }
 
+/**
+ * Identity hue for a /best topic: a category hub shares its category's hue, an
+ * integration hub gets a stable hash hue of its slug.
+ */
+export function bestTopicHue(topic: BestTopic): Hue {
+  const category = topic.categorySlug && categoryFromSlug(topic.categorySlug);
+  return category ? categoryHue(category) : hueFor(topic.slug);
+}
+
 /** Match a listing's stored category label to a /best/{slug} topic, if any. */
 export function bestTopicForCategory(category: string): BestTopic | undefined {
   const slug = slugFromCategory(category);
@@ -1403,9 +1414,10 @@ function mentionsAny(text: string, terms: string[]): boolean {
 export function selectServersForTopic<
   T extends { name: string; description?: string | null; category: string },
 >(topic: BestTopic, servers: T[]): T[] {
-  if (topic.match && topic.match.length > 0) {
+  const match = topic.match;
+  if (match && match.length > 0) {
     return servers.filter((s) =>
-      mentionsAny(`${s.name} ${s.description || ''}`, topic.match!),
+      mentionsAny(`${s.name} ${s.description || ''}`, match),
     );
   }
   const category = topic.categorySlug

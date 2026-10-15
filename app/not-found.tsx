@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import { EmptyState } from '../components/EmptyState';
-import { PageShell } from '../components/PageShell';
-import { Button } from '../components/ui/Button';
+import { StatusScreen } from '../components/StatusScreen';
 
 export const metadata: Metadata = {
   title: '404 - Page Not Found',
@@ -13,34 +11,13 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <PageShell variant="status" panel className="animate-fade-in">
-      {/* h2, not h1: Next serializes this tree into every page's RSC payload, and
-          audit tools that scan it report a second h1 on otherwise-clean pages. */}
-      <EmptyState
-        titleAs="h2"
-        code="404"
-        title="Page Not Found"
-        description="We couldn't find the page or MCP server tool you were looking for. It may have been moved or removed."
-        actions={
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button href="/browse" variant="primary">
-              Browse Directory
-            </Button>
-            <Button href="/categories" variant="secondary">
-              Categories
-            </Button>
-            <Button href="/tools" variant="secondary">
-              Free Tools
-            </Button>
-            <Button href="/guides" variant="secondary">
-              Guides
-            </Button>
-            <Button href="/blog" variant="secondary">
-              Blog
-            </Button>
-          </div>
-        }
-      />
-    </PageShell>
+    // h2, not h1: Next serializes this tree into every page's RSC payload, and
+    // audit tools that scan it report a second h1 on otherwise-clean pages.
+    <StatusScreen
+      code="404"
+      titleAs="h2"
+      title="We couldn’t find that page"
+      description="The page or MCP server you were looking for may have been renamed or removed. Try a search, or jump back in below."
+    />
   );
 }

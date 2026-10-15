@@ -1,5 +1,6 @@
 'use client';
 
+import { Cookie } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { isUserInEU } from '../lib/consentRegion';
@@ -98,36 +99,31 @@ export function CookieBanner({ country }: { country?: string }) {
   if (!showBanner) return null;
 
   return (
-    <div
-      role="region"
-      aria-label="Cookie consent banner"
-      className="cookie-banner"
-    >
-      <div className="cookie-banner-title">Cookie preferences</div>
-      <p className="cookie-banner-body">
-        We use analytics cookies to measure site traffic and improve AllMCPs.
-        Learn more in our{' '}
-        <Link href="/privacy" className="cookie-banner-privacy-link">
-          Privacy Policy
+    <section aria-label="Cookie consent banner" className="acct-cookie">
+      <Cookie size={18} className="acct-cookie-icon" aria-hidden="true" />
+      <p className="acct-cookie-body">
+        <strong>Analytics cookies?</strong> They help us see what&rsquo;s
+        useful.{' '}
+        <Link href="/privacy" className="acct-cookie-link">
+          Privacy
         </Link>
-        .
       </p>
-      <div className="cookie-banner-actions">
+      <div className="acct-cookie-actions">
         <button
           type="button"
-          className="btn btn-secondary btn-sm"
+          className="btn btn-ghost btn-sm"
           onClick={handleDecline}
         >
           Decline
         </button>
         <button
           type="button"
-          className="btn btn-primary btn-sm"
+          className="btn btn-secondary btn-sm"
           onClick={handleAccept}
         >
           Accept
         </button>
       </div>
-    </div>
+    </section>
   );
 }

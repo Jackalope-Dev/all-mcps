@@ -112,64 +112,54 @@ export function ThemeSwitcher() {
 
   if (!mounted) return null;
 
-  // Determine current active display icon
-  const getDisplayIcon = () => {
-    if (themeMode === 'light') return <Sun size={18} />;
-    if (themeMode === 'dark') return <Moon size={18} />;
-    return <Monitor size={18} />;
-  };
+  const options: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
+    { mode: 'light', label: 'Light', Icon: Sun },
+    { mode: 'dark', label: 'Dark', Icon: Moon },
+    { mode: 'system', label: 'System', Icon: Monitor },
+  ];
+  const Current = options.find((o) => o.mode === themeMode)?.Icon ?? Monitor;
 
   return (
-    <div className="theme-switcher-container" ref={containerRef}>
+    <div className="acct-theme" ref={containerRef}>
       {isOpen && (
         <div
-          className="theme-switcher-popover"
+          className="acct-theme-menu"
           role="menu"
           aria-label="Select theme mode"
         >
-          <button
-            type="button"
-            className={`theme-switcher-option ${themeMode === 'light' ? 'is-active' : ''}`}
-            onClick={() => handleSelectMode('light')}
-            role="menuitem"
-          >
-            <Sun size={15} />
-            <span style={{ flex: 1 }}>Light</span>
-            {themeMode === 'light' && <Check size={14} />}
-          </button>
-          <button
-            type="button"
-            className={`theme-switcher-option ${themeMode === 'dark' ? 'is-active' : ''}`}
-            onClick={() => handleSelectMode('dark')}
-            role="menuitem"
-          >
-            <Moon size={15} />
-            <span style={{ flex: 1 }}>Dark</span>
-            {themeMode === 'dark' && <Check size={14} />}
-          </button>
-          <button
-            type="button"
-            className={`theme-switcher-option ${themeMode === 'system' ? 'is-active' : ''}`}
-            onClick={() => handleSelectMode('system')}
-            role="menuitem"
-          >
-            <Monitor size={15} />
-            <span style={{ flex: 1 }}>System</span>
-            {themeMode === 'system' && <Check size={14} />}
-          </button>
+          {options.map(({ mode, label, Icon }) => (
+            <button
+              key={mode}
+              type="button"
+              className={`acct-theme-option ${themeMode === mode ? 'is-active' : ''}`}
+              onClick={() => handleSelectMode(mode)}
+              role="menuitemradio"
+              aria-checked={themeMode === mode}
+            >
+              <Icon size={15} aria-hidden="true" />
+              <span>{label}</span>
+              {themeMode === mode && (
+                <Check
+                  size={14}
+                  className="acct-theme-check"
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          ))}
         </div>
       )}
 
       <button
         type="button"
-        className="theme-switcher-btn"
+        className="acct-theme-btn"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label={`Theme: ${themeMode}. Open theme menu`}
         aria-expanded={isOpen}
         aria-haspopup="menu"
         title={`Theme: ${themeMode.charAt(0).toUpperCase() + themeMode.slice(1)}`}
       >
-        {getDisplayIcon()}
+        <Current size={16} aria-hidden="true" />
       </button>
     </div>
   );

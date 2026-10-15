@@ -109,27 +109,14 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
   const displayRating = hoverRating || rating;
 
   return (
-    <div
-      style={{
-        padding: '1.25rem',
-        borderRadius: 12,
-        border: '1px solid var(--border-color)',
-        background: 'var(--bg-muted)',
-      }}
-    >
-      <h3
-        style={{
-          fontSize: '0.95rem',
-          margin: '0 0 0.75rem',
-          color: 'var(--text-primary)',
-        }}
-      >
+    <div className="lst-card lst-composer">
+      <h3 className="lst-composer-title">
         {existingCommentStatus !== null || rating > 0
           ? 'Update your review'
           : 'Write a review'}
       </h3>
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: '0.9rem' }}>
+      <div className="lst-composer-stars">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -138,18 +125,10 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
             onMouseEnter={() => setHoverRating(n)}
             onMouseLeave={() => setHoverRating(0)}
             aria-label={`${n} star${n > 1 ? 's' : ''}`}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 2,
-            }}
+            aria-pressed={n <= rating}
+            className={n <= displayRating ? 'is-on' : undefined}
           >
-            <Star
-              size={26}
-              fill={n <= displayRating ? '#fbbf24' : 'none'}
-              color={n <= displayRating ? '#fbbf24' : 'var(--border-strong)'}
-            />
+            <Star size={24} aria-hidden="true" />
           </button>
         ))}
       </div>
@@ -174,31 +153,13 @@ export function ReviewComposer({ serverId }: { serverId: string }) {
         type="button"
         onClick={handleSubmit}
         disabled={submitting || !token || rating < 1}
-        style={{
-          marginTop: '0.75rem',
-          padding: '0.65rem 1.25rem',
-          borderRadius: 8,
-          border: 'none',
-          background: 'var(--accent-color)',
-          color: 'var(--bg-color)',
-          fontWeight: 600,
-          cursor:
-            submitting || !token || rating < 1 ? 'not-allowed' : 'pointer',
-          opacity: submitting || !token || rating < 1 ? 0.6 : 1,
-        }}
+        className="btn btn-secondary btn-md lst-composer-submit"
       >
         {submitting ? 'Submitting…' : 'Submit review'}
       </button>
 
       {justSubmitted && (
-        <p
-          style={{
-            marginTop: '0.75rem',
-            fontSize: '0.8rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.5,
-          }}
-        >
+        <p className="lst-muted-sm lst-composer-done">
           Your rating is live now.
           {justSubmitted.commentStatus === 'pending' &&
             ' Your comment is awaiting a quick review before it shows up publicly.'}

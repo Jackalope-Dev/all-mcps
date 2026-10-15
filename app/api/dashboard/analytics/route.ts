@@ -93,22 +93,22 @@ export async function GET(request: Request) {
   }
 
   // Batch view for all owned servers — detailed summaries for premium/boosted listings.
-  const serverIds = Array.from(ownedById.keys());
-  if (serverIds.length === 0) {
+  const ownedList = Array.from(ownedById.values());
+  if (ownedList.length === 0) {
     return NextResponse.json({ servers: [] });
   }
 
-  const allowedIds = serverIds.filter((id) =>
-    isFeaturedListing(ownedById.get(id)!),
-  );
+  const allowedIds = ownedList
+    .filter((row) => isFeaturedListing(row))
+    .map((row) => row.id);
   const summaries =
     allowedIds.length > 0
       ? await getServerAnalyticsBatch(db, allowedIds, days)
       : {};
 
   return NextResponse.json({
-    servers: serverIds.map((id) => {
-      const row = ownedById.get(id)!;
+    servers: ownedList.map((row) => {
+      const id = row.id;
       const access = isFeaturedListing(row);
       return {
         id,

@@ -1,12 +1,9 @@
 'use client';
 
-import { AlertCircle, Code2, Download, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle, Code2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
-import { CopyBlock } from '../ui/CopyBlock';
-import { Input } from '../ui/Input';
+import { CodePanel, CopyButton, EditorPane } from './CodePanel';
 
 type TargetLanguage = 'typescript' | 'python';
 type AuthType = 'none' | 'bearer' | 'apiKey';
@@ -469,27 +466,33 @@ export function OpenApiToMcpTool() {
   const [targetLang, setTargetLang] = useState<TargetLanguage>('typescript');
   const [authType, setAuthType] = useState<AuthType>('none');
   const [apiKeyHeader, setApiKeyHeader] = useState<string>('X-API-Key');
-  const [parseError, setParseError] = useState<string | null>(null);
 
-  // Parse OpenAPI JSON
-  let tools: ExtractedTool[] = [];
-  try {
-    const parsedJson = JSON.parse(specInput);
-    tools = parseOpenApiToTools(parsedJson);
-    if (parseError) setParseError(null);
-  } catch (_err: any) {
-    tools = [];
-    if (!parseError) {
-      setParseError(
-        'Invalid JSON format. Please ensure your spec is valid OpenAPI JSON.',
-      );
+  // Derived, not stored: parse errors used to be set during render.
+  const { tools, parseError } = useMemo(() => {
+    if (!specInput.trim()) {
+      return { tools: [] as ExtractedTool[], parseError: null };
     }
-  }
+    try {
+      return {
+        tools: parseOpenApiToTools(JSON.parse(specInput)),
+        parseError: null as string | null,
+      };
+    } catch {
+      return {
+        tools: [] as ExtractedTool[],
+        parseError:
+          'Invalid JSON. Paste an OpenAPI 3.0/3.1 or Swagger spec in JSON form.',
+      };
+    }
+  }, [specInput]);
 
-  const generatedCode =
-    targetLang === 'typescript'
-      ? generateTypeScriptCode(tools, baseUrl, authType, apiKeyHeader)
-      : generatePythonCode(tools, baseUrl, authType, apiKeyHeader);
+  const generatedCode = useMemo(
+    () =>
+      targetLang === 'typescript'
+        ? generateTypeScriptCode(tools, baseUrl, authType, apiKeyHeader)
+        : generatePythonCode(tools, baseUrl, authType, apiKeyHeader),
+    [tools, baseUrl, authType, apiKeyHeader, targetLang],
+  );
 
   function loadPreset(preset: SamplePreset) {
     trackFeatureUse('openapi_converter', {
@@ -498,420 +501,216 @@ export function OpenApiToMcpTool() {
     });
     setSpecInput(preset.spec);
     setBaseUrl(preset.baseUrl);
-    setParseError(null);
   }
 
-  function handleDownload() {
-    trackFeatureUse('openapi_converter', {
-      action: 'download_code',
-      language: targetLang,
-    });
-    const ext = targetLang === 'typescript' ? 'ts' : 'py';
-    const filename = `mcp-server.${ext}`;
-    const blob = new Blob([generatedCode], {
-      type: 'text/plain;charset=utf-8',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const ext = targetLang === 'typescript' ? 'ts' : 'py';
+  const installCmd =
+    targetLang === 'typescript'
+      ? 'npm install @modelcontextprotocol/sdk zod'
+      : 'pip install "mcp[cli]" httpx';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* Quick Presets Banner */}
-      <Card
-        style={{
-          padding: '1.25rem',
-          background: 'var(--bg-muted)',
-          borderColor: 'var(--border-color)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '0.75rem',
-          }}
-        >
-          <Sparkles size={18} style={{ color: 'var(--brand-cyan)' }} />
-          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
-            Load Sample OpenAPI Specifications
-          </span>
+    <div className="tl-workspace">
+      <section className="tl-pane" aria-labelledby="oa-in">
+        <div className="tl-pane-head">
+          <h2 id="oa-in" className="tl-pane-title">
+            <span className="tl-step">1</span> Your API spec
+          </h2>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <fieldset className="tl-toolbar" aria-label="Sample specs">
+          <span className="tl-hint">Samples:</span>
           {SAMPLE_PRESETS.map((preset) => (
-            <Button
+            <button
               key={preset.name}
-              variant="secondary"
-              size="sm"
+              type="button"
+              className="chip"
+              title={preset.desc}
+              aria-pressed={specInput === preset.spec}
               onClick={() => loadPreset(preset)}
-              style={{ fontSize: '0.85rem' }}
             >
-              {preset.name}
-            </Button>
+              {preset.name.replace(/\s*\(.*\)\s*$/, '')}
+            </button>
           ))}
-        </div>
-      </Card>
-
-      {/* Inputs Section */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {/* Left Column: Spec & Configuration */}
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
-        >
-          <div>
-            <label
-              htmlFor="openapi-spec-input"
-              style={{
-                display: 'block',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                marginBottom: '0.5rem',
-              }}
+        </fieldset>
+        <EditorPane
+          title="openapi.json"
+          value={specInput}
+          onChange={setSpecInput}
+          ariaLabel="OpenAPI 3.0 / 3.1 JSON specification"
+          placeholder="Paste your OpenAPI JSON spec here…"
+          rows={14}
+          invalid={!!parseError}
+          status={
+            parseError ? (
+              <span className="tl-status tl-status--err">Invalid JSON</span>
+            ) : specInput.trim() ? (
+              <span className="tl-status tl-status--ok">
+                {tools.length} operation{tools.length === 1 ? '' : 's'}
+              </span>
+            ) : null
+          }
+          actions={
+            <button
+              type="button"
+              className="tl-code-btn"
+              onClick={() => setSpecInput('')}
+              disabled={!specInput}
             >
-              OpenAPI 3.0 / 3.1 JSON Specification
-            </label>
-            <textarea
-              id="openapi-spec-input"
-              value={specInput}
-              onChange={(e) => {
-                setSpecInput(e.target.value);
-                setParseError(null);
-              }}
-              placeholder="Paste your OpenAPI JSON spec here..."
-              rows={12}
-              style={{
-                width: '100%',
-                padding: '0.875rem',
-                borderRadius: '8px',
-                background: 'var(--bg-muted)',
-                border: parseError
-                  ? '1px solid #ef4444'
-                  : '1px solid var(--border-color)',
-                color: 'var(--text-primary)',
-                fontFamily: 'monospace',
-                fontSize: '0.85rem',
-                outline: 'none',
-                resize: 'vertical',
-                boxSizing: 'border-box',
-              }}
-            />
-            {parseError && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  color: '#ef4444',
-                  fontSize: '0.8rem',
-                  marginTop: '0.35rem',
-                }}
-              >
-                <AlertCircle size={14} />
-                <span>{parseError}</span>
-              </div>
-            )}
+              Clear
+            </button>
+          }
+        />
+        {parseError ? (
+          <div className="tl-alert tl-alert--err" role="alert">
+            <AlertCircle size={18} aria-hidden="true" />
+            <p>{parseError}</p>
           </div>
+        ) : null}
 
-          <Input
-            label="API Base URL (Endpoint Prefix)"
+        <label className="tl-field">
+          <span className="tl-label">API base URL</span>
+          <input
+            type="url"
+            className="tl-input"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder="https://api.example.com/v1"
+            spellCheck={false}
           />
+        </label>
 
-          <div>
-            <label
-              style={{
-                display: 'block',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                marginBottom: '0.5rem',
-              }}
-            >
-              Authentication Header Strategy
-            </label>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="tl-field">
+          <span className="tl-label" id="oa-auth">
+            Authentication
+          </span>
+          <div className="tl-toolbar">
+            <fieldset className="segmented" aria-labelledby="oa-auth">
               <button
                 type="button"
-                className={`btn btn-sm ${authType === 'none' ? 'btn-primary' : 'btn-secondary'}`}
+                aria-pressed={authType === 'none'}
                 onClick={() => setAuthType('none')}
               >
-                No Auth
+                None
               </button>
               <button
                 type="button"
-                className={`btn btn-sm ${authType === 'bearer' ? 'btn-primary' : 'btn-secondary'}`}
+                aria-pressed={authType === 'bearer'}
                 onClick={() => setAuthType('bearer')}
               >
-                Bearer Token
+                Bearer token
               </button>
               <button
                 type="button"
-                className={`btn btn-sm ${authType === 'apiKey' ? 'btn-primary' : 'btn-secondary'}`}
+                aria-pressed={authType === 'apiKey'}
                 onClick={() => setAuthType('apiKey')}
               >
-                Custom API Key Header
+                API key header
               </button>
-            </div>
+            </fieldset>
           </div>
+        </div>
 
-          {authType === 'apiKey' && (
-            <Input
-              label="Header Name"
+        {authType === 'apiKey' ? (
+          <label className="tl-field">
+            <span className="tl-label">Header name</span>
+            <input
+              className="tl-input is-mono"
               value={apiKeyHeader}
               onChange={(e) => setApiKeyHeader(e.target.value)}
               placeholder="X-API-Key"
             />
+          </label>
+        ) : null}
+
+        <div className="tl-field">
+          <span className="tl-label">
+            Parsed tools <span className="tl-label-opt">({tools.length})</span>
+          </span>
+          {tools.length === 0 ? (
+            <div className="tl-empty">
+              <Code2 size={22} aria-hidden="true" />
+              <p style={{ margin: 0 }}>
+                {parseError
+                  ? 'Fix the JSON above to extract tools.'
+                  : 'No operations found. Make sure the spec has a "paths" object.'}
+              </p>
+            </div>
+          ) : (
+            <ul className="oa-tools">
+              {tools.map((t) => (
+                <li key={`${t.method}-${t.path}-${t.name}`} className="oa-tool">
+                  <div className="oa-tool-head">
+                    <code className="oa-tool-name">{t.name}</code>
+                    <span
+                      className={`oa-method oa-method--${t.method.toLowerCase()}`}
+                    >
+                      {t.method}
+                    </span>
+                    <code className="oa-tool-path">{t.path}</code>
+                  </div>
+                  {t.description ? (
+                    <p className="oa-tool-desc">{t.description}</p>
+                  ) : null}
+                  {t.parameters.length > 0 ? (
+                    <p className="oa-tool-params">
+                      {t.parameters.map((p) => (
+                        <code key={p.name}>
+                          {p.name}
+                          {p.required ? '*' : ''}: {p.type}
+                        </code>
+                      ))}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
+      </section>
 
-        {/* Right Column: Parsed Tool Preview */}
-        <div>
-          <Card
-            style={{
-              padding: '1.25rem',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
+      <section className="tl-pane tl-sticky" aria-labelledby="oa-out">
+        <div className="tl-pane-head">
+          <h2 id="oa-out" className="tl-pane-title">
+            <span className="tl-step">2</span> Generated server
+          </h2>
+        </div>
+        <fieldset className="segmented" aria-label="Language">
+          <button
+            type="button"
+            aria-pressed={targetLang === 'typescript'}
+            onClick={() => setTargetLang('typescript')}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  margin: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <Code2 size={18} style={{ color: 'var(--accent-color)' }} />
-                Parsed MCP Tools ({tools.length})
-              </h2>
-              {tools.length > 0 && (
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    color: '#10b981',
-                    fontWeight: 600,
-                  }}
-                >
-                  Ready to compile
-                </span>
-              )}
-            </div>
-
-            {tools.length === 0 ? (
-              <div
-                style={{
-                  color: 'var(--text-secondary)',
-                  fontSize: '0.85rem',
-                  textAlign: 'center',
-                  padding: '2rem 1rem',
-                  margin: 'auto',
-                }}
-              >
-                Paste a valid OpenAPI spec on the left to extract tool schemas
-                automatically.
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.75rem',
-                  overflowY: 'auto',
-                  maxHeight: '420px',
-                  paddingRight: '0.25rem',
-                }}
-              >
-                {tools.map((t, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: '0.875rem',
-                      borderRadius: '6px',
-                      background: 'var(--bg-muted)',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '0.35rem',
-                        marginBottom: '0.35rem',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: 'monospace',
-                          fontWeight: 700,
-                          color: 'var(--accent-color)',
-                          wordBreak: 'break-all',
-                        }}
-                      >
-                        {t.name}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: '3px',
-                          background: 'var(--bg-muted)',
-                          fontFamily: 'monospace',
-                          wordBreak: 'break-all',
-                        }}
-                      >
-                        {t.method} {t.path}
-                      </span>
-                    </div>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '0.8rem',
-                        color: 'var(--text-secondary)',
-                        marginBottom: '0.5rem',
-                      }}
-                    >
-                      {t.description}
-                    </p>
-                    {t.parameters.length > 0 && (
-                      <div
-                        style={{
-                          fontSize: '0.75rem',
-                          color: 'var(--text-secondary)',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        <strong>Params:</strong>{' '}
-                        {t.parameters
-                          .map(
-                            (p) =>
-                              `${p.name} (${p.type}${p.required ? '*' : ''})`,
-                          )
-                          .join(', ')}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
-
-      {/* Generated Code Section */}
-      <section>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            marginBottom: '1rem',
-          }}
-        >
-          <div>
-            <h2 className="text-section" style={{ margin: 0 }}>
-              Generated MCP Server Code
-            </h2>
-            <p
-              style={{
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                margin: '0.25rem 0 0 0',
-              }}
-            >
-              Copy or download your complete, runnable MCP server file.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.5rem',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-            }}
+            TypeScript SDK
+          </button>
+          <button
+            type="button"
+            aria-pressed={targetLang === 'python'}
+            onClick={() => setTargetLang('python')}
           >
-            <button
-              type="button"
-              className={`btn btn-sm ${targetLang === 'typescript' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setTargetLang('typescript')}
-            >
-              TypeScript SDK
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm ${targetLang === 'python' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setTargetLang('python')}
-            >
-              Python FastMCP
-            </button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleDownload}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            >
-              <Download size={15} />
-              Download .{targetLang === 'typescript' ? 'ts' : 'py'}
-            </Button>
-          </div>
+            Python FastMCP
+          </button>
+        </fieldset>
+        <div className="oa-install">
+          <span className="tl-label">Install</span>
+          <code>{installCmd}</code>
+          <CopyButton text={installCmd} variant="secondary" />
         </div>
-
-        {/* Required dependencies notice */}
-        <div
-          style={{
-            marginBottom: '0.75rem',
-            padding: '0.75rem 1rem',
-            background: 'var(--bg-muted)',
-            borderRadius: '6px',
-            fontSize: '0.85rem',
-            border: '1px solid var(--border-color)',
-            wordBreak: 'break-word',
-            overflowX: 'auto',
-          }}
-        >
-          <strong>Install dependencies:</strong>{' '}
-          <code style={{ color: 'var(--accent-color)' }}>
-            {targetLang === 'typescript'
-              ? 'npm install @modelcontextprotocol/sdk zod'
-              : 'pip install "mcp[cli]" httpx'}
-          </code>
-        </div>
-
-        <CopyBlock code={generatedCode} />
+        <CodePanel
+          title={`mcp-server.${ext}`}
+          code={generatedCode}
+          language={targetLang}
+          downloadName={`mcp-server.${ext}`}
+          downloadMime="text/plain;charset=utf-8"
+          maxHeight="34rem"
+          wrap={false}
+          snippetType="install_command"
+          onDownloaded={() =>
+            trackFeatureUse('openapi_converter', {
+              action: 'download_code',
+              language: targetLang,
+            })
+          }
+        />
       </section>
     </div>
   );

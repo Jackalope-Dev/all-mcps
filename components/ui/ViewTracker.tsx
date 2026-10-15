@@ -20,9 +20,16 @@ export function ViewTracker({
   const tracked = useRef(false);
   const [views, setViews] = useState(initialCount || 0);
 
-  useEffect(() => {
+  // Re-sync the displayed count when the listing or its server-rendered count
+  // changes (adjusted during render, React's "reset state on prop change" pattern).
+  const [syncedFor, setSyncedFor] = useState({ initialCount, serverId });
+  if (
+    syncedFor.initialCount !== initialCount ||
+    syncedFor.serverId !== serverId
+  ) {
+    setSyncedFor({ initialCount, serverId });
     setViews(initialCount || 0);
-  }, [initialCount, serverId]);
+  }
 
   useEffect(() => {
     if (tracked.current) return;
@@ -87,10 +94,9 @@ export function ViewTracker({
       label={`${views.toLocaleString()} unique views`}
       asSpan
       trigger={
-        <div
-          className="detail-stat-item"
+        <fieldset
+          className="detail-stat-item fieldset-plain"
           style={{ cursor: 'pointer' }}
-          role="group"
           aria-label={`${views.toLocaleString()} unique ${views === 1 ? 'view' : 'views'}`}
         >
           <span className="detail-stat-item-label">
@@ -99,7 +105,7 @@ export function ViewTracker({
           <span className="detail-stat-item-value">
             {views.toLocaleString()}
           </span>
-        </div>
+        </fieldset>
       }
     >
       <span className="mcp-icon-tooltip-title">
@@ -112,7 +118,7 @@ export function ViewTracker({
   );
 }
 
-/** Compact installs tile for the sidebar stats grid (count is incremented by CopyBlock / AgentPromptButton). */
+/** Compact installs tile for the sidebar stats grid (count is incremented by CopyBlock / the listing InstallPanel). */
 export function InstallsStat({ count = 0 }: { count?: number }) {
   const n = count || 0;
   return (
@@ -120,17 +126,16 @@ export function InstallsStat({ count = 0 }: { count?: number }) {
       label={`${n.toLocaleString()} total installs`}
       asSpan
       trigger={
-        <div
-          className="detail-stat-item"
+        <fieldset
+          className="detail-stat-item fieldset-plain"
           style={{ cursor: 'pointer' }}
-          role="group"
           aria-label={`${n.toLocaleString()} ${n === 1 ? 'install' : 'installs'}`}
         >
           <span className="detail-stat-item-label">
             <Download size={12} aria-hidden="true" /> Installs
           </span>
           <span className="detail-stat-item-value">{n.toLocaleString()}</span>
-        </div>
+        </fieldset>
       }
     >
       <span className="mcp-icon-tooltip-title">

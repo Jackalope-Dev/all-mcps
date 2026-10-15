@@ -1,4 +1,3 @@
-import { ChevronRight, Flame, Hash, Layers, Sparkles, Tag } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageShell } from '@/components/PageShell';
@@ -40,10 +39,6 @@ export default async function TagsIndexPage() {
 
   // Compute metrics
   const totalTagsCount = sortedTags.length;
-  const totalTaggedRefs = sortedTags.reduce((sum, t) => sum + t.count, 0);
-  const topTag = sortedTags[0]
-    ? sortedTags[0]
-    : { label: 'Developer', count: 0 };
   const featuredTags = sortedTags.slice(0, 10);
 
   // Structured JSON-LD Data
@@ -98,124 +93,40 @@ export default async function TagsIndexPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <div className="tags-container">
-        {/* Breadcrumbs */}
-        <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
-          <ol className="breadcrumb">
-            <li>
-              <Link href="/">Home</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">Tags</li>
-          </ol>
-        </nav>
+      <nav aria-label="Breadcrumb">
+        <ol className="crumbs">
+          <li>
+            <Link href="/">Home</Link>
+          </li>
+          <li aria-current="page">Tags</li>
+        </ol>
+      </nav>
 
-        {/* Hero Section */}
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: '2.5rem',
-            maxWidth: '750px',
-            margin: '0 auto 2.5rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.4rem 0.85rem',
-              borderRadius: '20px',
-              backgroundColor:
-                'color-mix(in srgb, var(--accent-color) 12%, transparent)',
-              border:
-                '1px solid color-mix(in srgb, var(--accent-color) 30%, transparent)',
-              color: 'var(--accent-color)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              marginBottom: '1rem',
-            }}
-          >
-            <Tag size={14} /> Taxonomy Index
+      <header className="dir-page-head animate-in">
+        <h1 className="text-page-title">MCP server tags</h1>
+        <p className="text-lead">
+          {totalTagsCount} topics and integrations. Tags cut across categories —
+          use them to find every server that touches a technology.
+        </p>
+      </header>
+
+      {featuredTags.length > 0 && (
+        <section className="dir-trending" aria-labelledby="trending-tags">
+          <h2 id="trending-tags" className="dir-trending-title">
+            Most used
+          </h2>
+          <div className="scroll-x fade-x dir-trending-row">
+            {featuredTags.map(({ slug, label, count }) => (
+              <Link key={slug} href={`/tags/${slug}`} className="chip">
+                {label}
+                <span className="chip-count">{count}</span>
+              </Link>
+            ))}
           </div>
-          <h1 className="text-display" style={{ marginBottom: '0.85rem' }}>
-            MCP Directory Tags
-          </h1>
-          <p
-            className="text-lead"
-            style={{ margin: '0 auto', textAlign: 'center' }}
-          >
-            Browse{' '}
-            <span style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
-              {totalTagsCount}
-            </span>{' '}
-            topics and integrations across the Model Context Protocol ecosystem.
-          </p>
-        </div>
+        </section>
+      )}
 
-        {/* Summary Metric Cards */}
-        <div className="tags-stats-grid">
-          <div className="tags-stat-card">
-            <div className="tags-stat-icon">
-              <Hash size={22} />
-            </div>
-            <div>
-              <div className="tags-stat-val">{totalTagsCount}</div>
-              <div className="tags-stat-lbl">Total Topics & Tags</div>
-            </div>
-          </div>
-
-          <div className="tags-stat-card">
-            <div className="tags-stat-icon">
-              <Layers size={22} />
-            </div>
-            <div>
-              <div className="tags-stat-val">
-                {totalTaggedRefs.toLocaleString()}
-              </div>
-              <div className="tags-stat-lbl">Tagged Server References</div>
-            </div>
-          </div>
-
-          <div className="tags-stat-card">
-            <div className="tags-stat-icon">
-              <Sparkles size={22} />
-            </div>
-            <div>
-              <div className="tags-stat-val">{topTag.label}</div>
-              <div className="tags-stat-lbl">
-                Most Popular ({topTag.count} servers)
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Featured Tags Section */}
-        {featuredTags.length > 0 && (
-          <div className="featured-tags-section">
-            <div className="featured-tags-header">
-              <Flame size={16} /> Featured & Trending Topics
-            </div>
-            <div className="featured-tags-pills">
-              {featuredTags.map(({ slug, label, count }) => (
-                <Link
-                  key={slug}
-                  href={`/tags/${slug}`}
-                  className="featured-tag-pill"
-                >
-                  <span>{label}</span>
-                  <span className="featured-tag-count">{count}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Client-side Search, Filter & Tag Grid */}
-        <TagGridClient tags={sortedTags} />
-      </div>
+      <TagGridClient tags={sortedTags} />
     </PageShell>
   );
 }

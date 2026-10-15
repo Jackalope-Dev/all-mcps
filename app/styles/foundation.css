@@ -1,0 +1,1154 @@
+/* ==========================================================================
+   Foundation — design tokens, primitives, and motion for the 2026 refresh.
+
+   Loaded from app/layout.tsx AFTER globals.css, so anything here wins the
+   cascade over the legacy rules at equal specificity. New UI should be built
+   from these primitives; area stylesheets in app/styles/ build on them.
+
+   Direction: "calm precision". One accent (brand cyan), quiet neutral
+   surfaces, crisp hairlines, generous spacing, and short purposeful motion.
+   Glow is reserved for the one primary action per view.
+
+   NOTE: write only `backdrop-filter`, never a hand-written
+   `-webkit-backdrop-filter` alongside it. lightningcss (the CSS minifier)
+   adds the Safari prefix itself, and when both are present it keeps ONLY the
+   prefixed one — which Chrome/Edge ignore, so glass surfaces lose their blur.
+   ========================================================================== */
+
+:root {
+  /* Neutral surfaces — slightly less blue than the old slate so cyan reads
+     as the single accent instead of competing with a blue page. */
+  --bg-color: #05070c;
+  --bg-elevated: #0b0f17;
+  --bg-muted: rgba(255, 255, 255, 0.025);
+  --bg-accent: #121826;
+  --card-bg: #0b0f17;
+  --surface-1: #0b0f17;
+  --surface-2: #10151f;
+  --surface-3: #161c28;
+  --surface-hover: rgba(255, 255, 255, 0.035);
+
+  --text-primary: #f5f7fa;
+  --text-secondary: #9ba5b7;
+  /* Lowest-emphasis text — still ≥4.5:1 on every surface (WCAG AA). */
+  --text-tertiary: #808a9d;
+
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+  --border-accent: rgba(var(--accent-rgb), 0.38);
+  --ring: 0 0 0 3px rgba(var(--accent-rgb), 0.22);
+
+  --radius-btn: 10px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px -4px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 12px 32px -8px rgba(0, 0, 0, 0.55);
+  --shadow-elevated:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 12px 32px -16px rgba(0, 0, 0, 0.6);
+  --shadow-elevated-hover:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 2px 4px rgba(0, 0, 0, 0.35),
+    0 24px 48px -20px rgba(0, 0, 0, 0.7);
+  --shadow-popover:
+    0 0 0 1px var(--border-strong), 0 16px 48px -12px rgba(0, 0, 0, 0.7);
+
+  /* Motion. --ease-spring is a light overshoot for things that "land"
+     (popovers, toasts, chips); everything else uses --ease-out. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: linear(
+    0,
+    0.009,
+    0.035 2.1%,
+    0.141,
+    0.281 6.7%,
+    0.723 12.9%,
+    0.938 16.7%,
+    1.017,
+    1.077,
+    1.121,
+    1.149 24.3%,
+    1.159,
+    1.163,
+    1.161,
+    1.154 29.9%,
+    1.129 32.8%,
+    1.051 39.6%,
+    1.017 43.1%,
+    0.991,
+    0.977 51%,
+    0.974 53.8%,
+    0.975 57.1%,
+    0.997 69.8%,
+    1.003 76.9%,
+    1
+  );
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 420ms;
+
+  --header-height: 4rem;
+  --container-max: 1240px;
+}
+
+[data-theme="light"] {
+  --bg-color: #fafbfc;
+  --bg-elevated: #ffffff;
+  --bg-muted: rgba(15, 23, 42, 0.025);
+  --bg-accent: #eef1f5;
+  --card-bg: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f5f7fa;
+  --surface-3: #eef1f5;
+  --surface-hover: rgba(15, 23, 42, 0.035);
+
+  --text-primary: #0b1220;
+  --text-secondary: #4a5568;
+  --text-tertiary: #5a6577;
+  /* Accent as text (links, labels) needs a deeper blue than the brand cyan
+     to reach 4.5:1 on light surfaces; tints still use --accent-rgb. */
+  --accent-color: #0272ad;
+
+  --border-color: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.15);
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm:
+    0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px -4px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 12px 32px -8px rgba(15, 23, 42, 0.14);
+  --shadow-elevated:
+    0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -14px rgba(15, 23, 42, 0.12);
+  --shadow-elevated-hover:
+    0 2px 4px rgba(15, 23, 42, 0.05), 0 20px 40px -18px rgba(15, 23, 42, 0.2);
+  --shadow-popover:
+    0 0 0 1px var(--border-strong), 0 16px 40px -12px rgba(15, 23, 42, 0.22);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+
+body {
+  /* One quiet top-center wash instead of three competing radial blobs. */
+  background-image: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(var(--accent-rgb), 0.07),
+    transparent 70%
+  );
+  background-attachment: scroll;
+  background-repeat: no-repeat;
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+}
+
+[data-theme="light"] body {
+  background-image: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(var(--accent-rgb), 0.05),
+    transparent 70%
+  );
+}
+
+::selection {
+  background: rgba(var(--accent-rgb), 0.28);
+  color: var(--text-primary);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+}
+
+h2 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+h3 {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.text-display {
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+  background: linear-gradient(180deg, #ffffff 30%, #b6c0d0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+[data-theme="light"] .text-display {
+  background: linear-gradient(180deg, #0b1220 40%, #3b4657 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.text-page-title {
+  font-size: clamp(1.75rem, 4.2vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.text-lead {
+  font-size: clamp(1rem, 1.6vw, 1.125rem);
+  line-height: 1.65;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Thin, theme-matched scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* ── Surfaces & cards ─────────────────────────────────────────────────── */
+
+.surface {
+  background: var(--surface-1);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-elevated);
+}
+
+.surface-interactive,
+.card-hoverable {
+  background: var(--surface-1);
+  box-shadow: var(--shadow-elevated);
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    background-color var(--duration-base) var(--ease-out);
+}
+
+.surface-interactive:hover,
+.card-hoverable:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated-hover);
+}
+
+.surface-interactive:active,
+.card-hoverable:active {
+  transform: translateY(0) scale(0.995);
+  transition-duration: 80ms;
+}
+
+.card-glow:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-elevated-hover);
+}
+
+/* Pointer spotlight — any element with .spotlight gets a soft accent wash
+   that follows the cursor. Coordinates come from one delegated listener in
+   components/ui/MotionRuntime.tsx (no per-card JS). */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(var(--accent-rgb), 0.08),
+    transparent 45%
+  );
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+.spotlight:hover::before {
+  opacity: 1;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+
+.btn {
+  gap: 0.5rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    filter var(--duration-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+  transition-duration: 60ms;
+}
+
+.btn-sm {
+  padding: 0.42rem 0.8rem;
+  font-size: 0.8125rem;
+  border-radius: 8px;
+}
+
+.btn-md {
+  padding: 0.65rem 1.15rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-btn);
+}
+
+.btn-lg {
+  padding: 0.85rem 1.5rem;
+  font-size: 0.95rem;
+  border-radius: 12px;
+}
+
+.btn-primary {
+  background: var(--brand-gradient);
+  color: #ffffff;
+  font-weight: 650;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 6px 20px -8px rgba(var(--accent-rgb), 0.55);
+}
+
+.btn-primary:hover {
+  background: var(--brand-gradient);
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 10px 28px -8px rgba(var(--accent-rgb), 0.65);
+}
+
+.btn-primary:active {
+  filter: brightness(0.96);
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  backdrop-filter: none;
+  box-shadow: var(--shadow-xs);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-3);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+[data-theme="light"] .btn-secondary {
+  background: #ffffff;
+  border-color: var(--border-strong);
+}
+
+[data-theme="light"] .btn-secondary:hover {
+  background: var(--surface-2);
+  border-color: rgba(15, 23, 42, 0.24);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.btn-glass {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+}
+
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--border-strong);
+}
+
+.btn-icon {
+  padding: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn[disabled],
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Form controls ────────────────────────────────────────────────────── */
+
+.form-input {
+  background-color: var(--surface-1);
+  border-color: var(--border-strong);
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.form-input:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="light"] .form-input:hover {
+  border-color: rgba(15, 23, 42, 0.25);
+}
+
+.form-input:focus {
+  border-color: var(--accent-color);
+  box-shadow: var(--ring);
+}
+
+select,
+select.form-input {
+  background-color: var(--surface-1);
+}
+
+select option,
+select optgroup {
+  background-color: var(--surface-2);
+  color: var(--text-primary);
+}
+
+/* Button/link groups rendered as <fieldset> for native group semantics: drop
+   the UA fieldset chrome so they lay out exactly like the <div>s they replaced.
+   (0,0,1) specificity, so each component's own margin/padding/border wins. */
+fieldset:where(.fieldset-plain) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: auto;
+}
+
+/* ── Badges, chips, kbd ───────────────────────────────────────────────── */
+
+.badge {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+.badge-default,
+.badge-category {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+.badge-cyan {
+  box-shadow: none;
+}
+
+/* Filter/toggle chip — the one pill style for facets, quick queries,
+   and segmented choices across the site. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+
+.chip:active {
+  transform: scale(0.96);
+}
+
+.chip.is-active,
+.chip[aria-pressed="true"],
+.chip[aria-selected="true"] {
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: rgba(var(--accent-rgb), 0.45);
+  color: var(--accent-color);
+}
+
+.chip-count {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chip.is-active .chip-count {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+/* Segmented control — mutually exclusive options (sort, view mode). */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+}
+
+.segmented > button,
+.segmented > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.segmented > button:hover,
+.segmented > a:hover {
+  color: var(--text-primary);
+}
+
+.segmented > .is-active,
+.segmented > [aria-pressed="true"],
+.segmented > [aria-selected="true"] {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── Section rhythm ───────────────────────────────────────────────────── */
+
+.section {
+  padding-block: clamp(3.5rem, 8vw, 6.5rem);
+}
+
+.section-tight {
+  padding-block: clamp(2.25rem, 5vw, 3.5rem);
+}
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+  max-width: 46rem;
+}
+
+.section-head--center {
+  align-items: center;
+  text-align: center;
+  margin-inline: auto;
+}
+
+.section-head--split {
+  max-width: none;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.section-title {
+  font-size: clamp(1.6rem, 3.6vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.section-sub {
+  font-size: clamp(0.95rem, 1.4vw, 1.0625rem);
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 40rem;
+}
+
+.link-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--accent-color);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.link-arrow svg {
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.link-arrow:hover svg {
+  transform: translateX(3px);
+}
+
+.divider {
+  height: 1px;
+  border: 0;
+  background: var(--border-color);
+  margin: 0;
+}
+
+/* Fades the edges of horizontally scrolling rows (chips, marquees). Only on
+   narrow screens, where those rows actually scroll — on desktop the row fits
+   and a mask would just wash out the first and last items. */
+@media (max-width: 767px) {
+  .fade-x {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 2.5rem,
+      #000 calc(100% - 2.5rem),
+      transparent
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 2.5rem,
+      #000 calc(100% - 2.5rem),
+      transparent
+    );
+  }
+}
+
+.scroll-x {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-x > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* ── Skeletons ────────────────────────────────────────────────────────── */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.045),
+    transparent
+  );
+  animation: skeleton-sweep 1.4s var(--ease-in-out) infinite;
+}
+
+[data-theme="light"] .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.7),
+    transparent
+  );
+}
+
+@keyframes skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Motion primitives ────────────────────────────────────────────────── */
+
+/* One-shot entrance for above-the-fold content. Stagger with style="--i: n". */
+.animate-in {
+  animation: enter-rise 620ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.animate-fade {
+  animation: enter-fade 500ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+/* Scroll reveal (components/ui/Reveal.tsx) — pure CSS scroll-driven
+   animation, so content never waits on hydration and is fully visible in
+   browsers without animation-timeline support. */
+.reveal,
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 55%;
+  }
+
+  .reveal-stagger > * {
+    animation: reveal-rise linear both;
+    animation-timeline: view();
+    animation-range: entry calc(var(--i, 0) * 4%) entry
+      calc(45% + var(--i, 0) * 4%);
+  }
+}
+
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Route transitions (components/RouteTransition.tsx). Exit is quick; the
+   new page rises in slightly slower so navigation reads as forward motion. */
+::view-transition-group(root) {
+  animation-duration: 0s;
+}
+
+::view-transition-old(.page-out) {
+  animation: vt-page-out 140ms var(--ease-in-out) both;
+}
+
+::view-transition-new(.page-in) {
+  animation: vt-page-in 340ms var(--ease-out) 60ms both;
+}
+
+@keyframes vt-page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes vt-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* Top-of-page navigation progress (components/RouteTransition.tsx). */
+.nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 10001;
+  pointer-events: none;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--brand-cyan), var(--brand-blue));
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.6);
+  transform: scaleX(0);
+  opacity: 0;
+}
+
+.nav-progress[data-state="loading"] {
+  opacity: 1;
+  animation: nav-progress-grow 8s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+.nav-progress[data-state="done"] {
+  opacity: 0;
+  transform: scaleX(1);
+  transition:
+    transform 160ms var(--ease-out),
+    opacity 260ms ease 140ms;
+}
+
+@keyframes nav-progress-grow {
+  from {
+    transform: scaleX(0.04);
+  }
+  to {
+    transform: scaleX(0.92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal,
+  .reveal-stagger > * {
+    animation: none !important;
+  }
+
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation: none !important;
+  }
+}
+
+/* ── Page shell & header (components/PageShell.tsx) ───────────────────── */
+
+.page-shell {
+  padding: clamp(2.25rem, 6vw, 4rem) 0 clamp(3rem, 8vw, 5rem);
+}
+
+.page-header {
+  margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+  animation: enter-rise 560ms var(--ease-out) both;
+}
+
+.page-header .text-page-title {
+  margin-bottom: 0.75rem;
+}
+
+.page-header .text-lead {
+  color: var(--text-secondary);
+  max-width: 42rem;
+}
+
+.page-panel {
+  border-radius: var(--radius-xl);
+}
+
+/* Breadcrumb trail — shared by detail pages. */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.crumbs a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.crumbs a:hover {
+  color: var(--text-primary);
+}
+
+.crumbs li + li::before {
+  content: "/";
+  margin-right: 0.35rem;
+  color: var(--border-strong);
+}
+
+/* Scroll-driven reveals rewind above the fold's end state when a page is
+   captured from the top (print, full-page capture) — show everything. */
+@media print {
+  .reveal,
+  .reveal-stagger > *,
+  .animate-in,
+  .animate-fade {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+[data-theme="light"] .chip.is-active,
+[data-theme="light"] .chip[aria-pressed="true"],
+[data-theme="light"] .chip[aria-selected="true"] {
+  background: #e0f2fe;
+  border-color: rgba(3, 105, 161, 0.45);
+  color: #075985;
+}
+
+/* Code blocks wrap instead of scrolling sideways. A horizontally scrollable
+   <pre> is unreachable for keyboard users unless it takes focus (axe
+   scrollable-region-focusable / WCAG 2.1.1), and wrapped code reads better
+   on phones. `:root` lifts these above the area stylesheets loaded later. */
+:root :is(.copyblock-pre, .content-prose pre, .markdown-body pre, .cl-code pre),
+:root
+  :is(.copyblock-pre, .content-prose pre, .markdown-body pre, .cl-code pre)
+  code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+:root
+  :is(.copyblock-pre, .content-prose pre, .markdown-body pre, .cl-code pre) {
+  overflow-x: visible;
+}
+
+/* Links inside running text must be distinguishable without color
+   (WCAG 1.4.1): underline unclassed links in paragraphs and list items.
+   Navigation lists (breadcrumbs, footer, menus) aren't running text. */
+:where(p, li) > a:not([class]):not(nav a, .crumbs a) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+/* Client brand mark tile (components/ClientLogo.tsx) — white mark on the
+   brand colour, with a soft inner highlight so dark tiles still read on the
+   dark page. */
+.client-logo {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 22%;
+  color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.client-logo-mono {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+/* ── Accent palette ───────────────────────────────────────────────────────
+   Secondary hues for identity (categories, jobs, tool groups, topics), so
+   the site has colour without diluting the action colour: brand cyan stays
+   reserved for buttons, links and focus. Each hue clears 3:1 as an icon on
+   its surface and 4.5:1 as text in both themes. Set `--tint` on an element
+   (or use a .hue-* class) and the tint utilities pick it up. */
+:root {
+  --hue-blue: #60a5fa;
+  --hue-indigo: #818cf8;
+  --hue-violet: #a78bfa;
+  --hue-pink: #f472b6;
+  --hue-red: #f87171;
+  --hue-orange: #fb923c;
+  --hue-amber: #fbbf24;
+  --hue-green: #34d399;
+  --hue-teal: #2dd4bf;
+  --hue-cyan: #22d3ee;
+}
+
+[data-theme="light"] {
+  --hue-blue: #1d4ed8;
+  --hue-indigo: #4338ca;
+  --hue-violet: #6d28d9;
+  --hue-pink: #be185d;
+  --hue-red: #b91c1c;
+  --hue-orange: #c2410c;
+  --hue-amber: #92400e;
+  --hue-green: #047857;
+  --hue-teal: #0f766e;
+  --hue-cyan: #0e7490;
+}
+
+.hue-blue {
+  --tint: var(--hue-blue);
+}
+.hue-indigo {
+  --tint: var(--hue-indigo);
+}
+.hue-violet {
+  --tint: var(--hue-violet);
+}
+.hue-pink {
+  --tint: var(--hue-pink);
+}
+.hue-red {
+  --tint: var(--hue-red);
+}
+.hue-orange {
+  --tint: var(--hue-orange);
+}
+.hue-amber {
+  --tint: var(--hue-amber);
+}
+.hue-green {
+  --tint: var(--hue-green);
+}
+.hue-teal {
+  --tint: var(--hue-teal);
+}
+.hue-cyan {
+  --tint: var(--hue-cyan);
+}
+
+/* Icon tile tinted with --tint (falls back to the accent). */
+.tint-tile {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--tint, var(--accent-color));
+  background: color-mix(
+    in srgb,
+    var(--tint, var(--accent-color)) 14%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--tint, var(--accent-color)) 28%, transparent);
+}
+
+.tint-text {
+  color: var(--tint, var(--accent-color));
+}
+
+/* Small coloured pill/label (category names, topic tags). */
+.tint-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--tint, var(--accent-color));
+  background: color-mix(
+    in srgb,
+    var(--tint, var(--accent-color)) 12%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--tint, var(--accent-color)) 24%, transparent);
+}
+
+/* Cards that carry a hue: border and the cursor spotlight pick it up. */
+.tint-card:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--tint, var(--accent-color)) 45%,
+    transparent
+  );
+}
+
+.spotlight::before {
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--tint, var(--accent-color)) 10%, transparent),
+    transparent 45%
+  );
+}

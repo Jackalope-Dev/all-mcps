@@ -332,7 +332,7 @@ const EXCLUDED_DOMAINS_FOR_WEBSITE = [
 /** Extract candidate website URLs from a README. */
 export function extractCandidateWebsitesFromReadme(
   readme: string,
-  ghOwner: string,
+  _ghOwner: string,
   ghRepo: string,
 ): string[] {
   if (!readme) return [];

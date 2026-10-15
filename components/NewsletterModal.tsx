@@ -1,13 +1,14 @@
 'use client';
 
+import { Mail, X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
 
 const DISMISS_KEY = 'allmcps_newsletter_dismissed';
 const SUPPRESSED_PREFIXES = ['/login', '/dashboard', '/admin'];
 /** Delay after the visitor's first interaction before the modal appears. */
-const REVEAL_DELAY_MS = 4000;
+const REVEAL_DELAY_MS = 12000;
 
 function getDismissed(): boolean {
   try {
@@ -49,9 +50,18 @@ export function NewsletterModal() {
       }
     };
 
+    // Never stack on top of the cookie banner (same corner) — wait it out.
+    const reveal = () => {
+      if (document.querySelector('.acct-cookie')) {
+        revealTimer = setTimeout(reveal, REVEAL_DELAY_MS);
+        return;
+      }
+      setVisible(true);
+    };
+
     const onFirstInteraction = () => {
       removeInteractionListeners();
-      revealTimer = setTimeout(() => setVisible(true), REVEAL_DELAY_MS);
+      revealTimer = setTimeout(reveal, REVEAL_DELAY_MS);
     };
 
     for (const evt of interactionEvents) {
@@ -64,10 +74,19 @@ export function NewsletterModal() {
     };
   }, [pathname]);
 
-  const dismiss = () => {
+  const dismiss = useCallback(() => {
     setDismissed();
     setVisible(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [visible, dismiss]);
 
   const handleSuccess = () => {
     setDismissed();
@@ -76,34 +95,34 @@ export function NewsletterModal() {
 
   if (!visible) return null;
 
+  // A non-blocking card in the corner rather than a page-covering modal:
+  // visitors can keep reading, and Esc or ✕ dismisses it for good.
   return (
-    <div
-      className="newsletter-modal-overlay"
+    <aside
+      className="acct-newsletter"
       role="dialog"
-      aria-modal="true"
-      aria-label="Newsletter signup"
-      onClick={dismiss}
+      aria-modal="false"
+      aria-labelledby="acct-newsletter-title"
     >
-      <div
-        className="newsletter-modal-card"
-        onClick={(e) => e.stopPropagation()}
+      <button
+        type="button"
+        className="acct-newsletter-close"
+        onClick={dismiss}
+        aria-label="Close newsletter signup"
       >
-        <button
-          type="button"
-          className="newsletter-modal-close"
-          onClick={dismiss}
-          aria-label="Close"
-        >
-          ✕
-        </button>
-        <h3 style={{ margin: '0 0 0.5rem' }}>
-          Get new MCP servers in your inbox
-        </h3>
-        <p style={{ margin: '0 0 1rem', color: 'var(--text-secondary)' }}>
-          A roundup of new and top submissions — no spam, unsubscribe anytime.
-        </p>
-        <NewsletterSignupForm source="modal" onSuccess={handleSuccess} />
+        <X size={16} aria-hidden="true" />
+      </button>
+      <div className="acct-newsletter-icon" aria-hidden="true">
+        <Mail size={18} />
       </div>
-    </div>
+      <h2 id="acct-newsletter-title" className="acct-newsletter-title">
+        New MCP servers, weekly
+      </h2>
+      <p className="acct-newsletter-sub">
+        The best new listings and install tips. One email a week, unsubscribe
+        anytime.
+      </p>
+      <NewsletterSignupForm source="modal" compact onSuccess={handleSuccess} />
+    </aside>
   );
 }

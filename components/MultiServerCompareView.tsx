@@ -3,1752 +3,564 @@
 import {
   ArrowRight,
   BadgeCheck,
-  ChevronRight,
-  Code2,
-  DollarSign,
-  FileText,
-  HelpCircle,
-  Layers,
-  LayoutGrid,
-  Lock,
-  Sparkles,
-  Star,
-  Table,
-  Terminal,
-  Wrench,
+  ExternalLink,
+  SlidersHorizontal,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/Badge';
+import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
+import { CompareSelector } from '@/components/CompareSelector';
 import { CopyBlock } from '@/components/ui/CopyBlock';
-import { QualityBadge } from '@/components/ui/QualityBadge';
-import { SafeMarkdown } from '@/components/ui/SafeMarkdown';
 import { ServerAvatar } from '@/components/ui/ServerAvatar';
-import { categorySlug, parseCategoryLabel } from '@/lib/categories';
-import { parseServerName } from '@/lib/displayName';
-import { isFeaturedListing, isVerifiedListing } from '@/lib/featuredStatus';
 import {
-  type ResolvedInstall,
+  categoryHueClass,
+  categorySlug,
+  getCategoryMeta,
+} from '@/lib/categories';
+import type { ComparePickServer } from '@/lib/comparePick';
+import { parseServerName } from '@/lib/displayName';
+import { isVerifiedListing } from '@/lib/featuredStatus';
+import { formatCommitAge, formatCompactNumber } from '@/lib/format';
+import {
+  isUnverifiedInstall,
   resolveInstallConfig,
+  runtimeLabel,
+  transportLabel,
 } from '@/lib/installConfig';
+import { statusHueClass } from '@/lib/palette';
 import { computeQualityScore, tierColor } from '@/lib/qualityScore';
+import {
+  AUTH_TYPE_LABELS,
+  type AuthType,
+  MAINTENANCE_STATUS_LABELS,
+  type MaintenanceStatus,
+  PRICING_MODEL_LABELS,
+  type PricingModel,
+} from '@/lib/serverEnums';
 import type { Server } from '@/lib/servers';
 
 interface MultiServerCompareViewProps {
   servers: Server[];
+  /** Pool for the inline "change servers" picker. */
+  pickerServers?: ComparePickServer[];
 }
 
-function formatAuthLabel(auth?: string | null): string {
-  if (!auth || auth === 'none') return 'No Auth Required';
-  if (auth === 'api_key') return 'API Key Required';
-  if (auth === 'oauth') return 'OAuth 2.0';
-  if (auth === 'byok') return 'Bring Your Own Key';
-  return auth;
+type Cell = { node: ReactNode; key: string; num?: number | null };
+type Row = { label: string; cells: Cell[]; best?: 'max' };
+type Group = { title: string; rows: Row[] };
+
+const DASH = '—';
+
+function text(value: string | null | undefined): Cell {
+  const v = value?.trim() || '';
+  return {
+    node: v || <span className="cmp-na">{DASH}</span>,
+    key: v.toLowerCase(),
+  };
 }
 
-function formatPricingLabel(pricing?: string | null): string {
-  if (!pricing || pricing === 'free') return 'Free / Open Source';
-  if (pricing === 'freemium') return 'Freemium';
-  if (pricing === 'paid') return 'Paid Service';
-  if (pricing === 'byok') return 'BYOK (Pay Provider)';
-  return pricing;
+function num(value: number | null | undefined, suffix = ''): Cell {
+  if (typeof value !== 'number') return { ...text(null), num: null };
+  return {
+    node: (
+      <span className="tabular">
+        {formatCompactNumber(value)}
+        {suffix}
+      </span>
+    ),
+    key: String(value),
+    num: value,
+  };
 }
 
-function getToolsList(s: Server): string[] {
-  if (s.tools && Array.isArray(s.tools) && s.tools.length > 0) {
-    return s.tools.map((t) => t.name).filter(Boolean);
+function comparePathFor(ids: string[]): string {
+  if (ids.length === 2) {
+    const [a, b] = ids;
+    const [c0, c1] = a < b ? [a, b] : [b, a];
+    return `/mcp/${c0}/vs/${c1}`;
   }
-  if (s.aiFeatures && Array.isArray(s.aiFeatures) && s.aiFeatures.length > 0) {
-    return s.aiFeatures;
-  }
-  return [];
+  return `/compare/${ids.join('-vs-')}`;
 }
 
-/** Determines a "Best For" summary statement based on metadata */
-function deriveBestFor(
-  s: Server,
-  install: ResolvedInstall,
-  toolsCount: number,
-): string {
-  const cat = parseCategoryLabel(s.category).label;
-  if (install.kind === 'remote') {
-    return `Hosted ${cat} integration with zero local process management`;
-  }
-  if (toolsCount > 10) {
-    return `Comprehensive ${cat} automation with ${toolsCount}+ specialized tools`;
-  }
-  if (s.authType === 'api_key' || s.authType === 'oauth') {
-    return `Secure enterprise ${cat} connectivity requiring authentication`;
-  }
-  return `Lightweight, open-source local ${cat} stdio workflow`;
-}
-
+/**
+ * /compare/[slugs]: one side-by-side table (sticky server header row, grouped
+ * spec rows, differing rows marked and filterable), then a combined config
+ * that only includes servers with a confirmed install command.
+ */
 export function MultiServerCompareView({
   servers,
+  pickerServers,
 }: MultiServerCompareViewProps) {
-  const [viewMode, setViewMode] = useState<'narrative' | 'grid' | 'matrix'>(
-    'narrative',
-  );
-  const [selectedClient, setSelectedClient] = useState<
-    'claude' | 'cursor' | 'windsurf' | 'vscode'
-  >('claude');
+  const [onlyDiff, setOnlyDiff] = useState(false);
+  const ids = servers.map((s) => s.id);
 
-  // Process server details
-  const enriched = useMemo(() => {
-    return servers.map((s) => {
-      const { displayName, org } = parseServerName(s.name);
-      const quality = computeQualityScore(s);
-      const install = resolveInstallConfig({
-        id: s.id,
-        name: s.name,
-        url: s.url,
-        description: s.description,
-        installKind: s.installKind,
-        installCommand: s.installCommand,
-        installArgs: s.installArgs,
-        installPackage: s.installPackage,
-        installConfidence: s.installConfidence,
-        suggestedInstallCommand: s.suggestedInstallCommand,
-        suggestedInstallArgs: s.suggestedInstallArgs,
-      });
-      const tools = getToolsList(s);
-      const key = s.id.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-      const categoryLabel = parseCategoryLabel(s.category).label;
-      const bestFor = deriveBestFor(s, install, tools.length);
-
-      // Construct individual JSON config
-      const envObj: Record<string, string> = {};
-      if (s.aiEnvVars && s.aiEnvVars.length > 0) {
-        s.aiEnvVars.forEach((v) => {
-          envObj[v] = `YOUR_${v}_HERE`;
+  const enriched = useMemo(
+    () =>
+      servers.map((s) => {
+        const install = resolveInstallConfig({
+          id: s.id,
+          name: s.name,
+          url: s.url,
+          description: s.description,
+          remoteEndpointUrl: s.remoteEndpointUrl,
+          installKind: s.installKind,
+          installCommand: s.installCommand,
+          installArgs: s.installArgs,
+          installPackage: s.installPackage,
+          installConfidence: s.installConfidence,
+          suggestedInstallCommand: s.suggestedInstallCommand,
+          suggestedInstallArgs: s.suggestedInstallArgs,
         });
-      }
-
-      const singleConfigObj =
-        install.kind === 'remote'
-          ? { mcpServers: { [key]: { url: install.url } } }
-          : {
-              mcpServers: {
-                [key]: {
-                  command: install.command,
-                  args: install.args,
-                  ...(Object.keys(envObj).length > 0 ? { env: envObj } : {}),
-                },
-              },
-            };
-
-      return {
-        server: s,
-        displayName,
-        org,
-        quality,
-        install,
-        tools,
-        key,
-        categoryLabel,
-        bestFor,
-        envObj,
-        singleConfigJson: JSON.stringify(singleConfigObj, null, 2),
-      };
-    });
-  }, [servers]);
-
-  // Combined mcpServers JSON snippet for all servers in comparison
-  const combinedConfigJson = useMemo(() => {
-    const mcpServers: Record<string, unknown> = {};
-
-    enriched.forEach(({ key, install, envObj }) => {
-      if (install.kind === 'remote') {
-        mcpServers[key] = { url: install.url };
-      } else {
-        mcpServers[key] = {
-          command: install.command,
-          args: install.args,
-          ...(Object.keys(envObj).length > 0 ? { env: envObj } : {}),
+        return {
+          server: s,
+          displayName: parseServerName(s.name, s.url).displayName,
+          quality: computeQualityScore(s),
+          install,
+          confirmed: !isUnverifiedInstall(install),
+          tools: (s.tools ?? []).map((t) => t.name).filter(Boolean),
+          key: s.id.toLowerCase().replace(/[^a-z0-9_-]/g, '-'),
         };
-      }
-    });
+      }),
+    [servers],
+  );
 
-    return JSON.stringify({ mcpServers }, null, 2);
+  const sharedTools = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of enriched)
+      for (const t of new Set(e.tools)) counts.set(t, (counts.get(t) ?? 0) + 1);
+    return new Set([...counts].filter(([, c]) => c > 1).map(([name]) => name));
   }, [enriched]);
 
-  // Comparative metrics
-  const distinctCategories = useMemo(
-    () => new Set(enriched.map((e) => e.categoryLabel)).size,
-    [enriched],
-  );
+  const groups = useMemo<Group[]>(() => {
+    const health = (s: Server) =>
+      s.isVerifiedActive
+        ? { label: 'Healthy', tone: statusHueClass('ok') }
+        : s.healthStatus === 'down' || s.healthStatus === 'unhealthy'
+          ? { label: 'Issues detected', tone: statusHueClass('bad') }
+          : { label: 'Not checked yet', tone: '' };
+    return [
+      {
+        title: 'Trust',
+        rows: [
+          {
+            label: 'Quality signal',
+            best: 'max',
+            cells: enriched.map((e) => ({
+              node: (
+                <span className="cmp-quality">
+                  <span
+                    className="cmp-quality-score tabular"
+                    style={{ color: tierColor(e.quality.tier) }}
+                  >
+                    {e.quality.score}
+                  </span>
+                  <span className="cmp-muted">{e.quality.tier}</span>
+                </span>
+              ),
+              key: String(e.quality.score),
+              num: e.quality.score,
+            })),
+          },
+          {
+            label: 'Verified owner',
+            cells: enriched.map((e) => {
+              const v = isVerifiedListing(e.server) && !!e.server.isOfficial;
+              return {
+                node: v ? (
+                  <span className="cmp-yes">
+                    <BadgeCheck size={14} aria-hidden="true" /> Verified
+                  </span>
+                ) : (
+                  <span className="cmp-muted">Not claimed</span>
+                ),
+                key: String(v),
+              };
+            }),
+          },
+          {
+            label: 'Health',
+            cells: enriched.map((e) => {
+              const h = health(e.server);
+              return {
+                node: (
+                  <span className={`cmp-status ${h.tone}`}>
+                    <span className="lst-cat-dot" aria-hidden="true" />
+                    {h.label}
+                  </span>
+                ),
+                key: h.label.toLowerCase(),
+              };
+            }),
+          },
+        ],
+      },
+      {
+        title: 'Install',
+        rows: [
+          {
+            label: 'Install command',
+            cells: enriched.map((e) => ({
+              node: e.confirmed ? (
+                <span className="cmp-yes">Confirmed</span>
+              ) : (
+                <span className="cmp-muted">Not confirmed yet</span>
+              ),
+              key: String(e.confirmed),
+            })),
+          },
+          {
+            label: 'Transport',
+            cells: enriched.map((e) => text(transportLabel(e.install))),
+          },
+          {
+            label: 'Runtime',
+            cells: enriched.map((e) => text(runtimeLabel(e.install))),
+          },
+          {
+            label: 'Auth',
+            cells: enriched.map((e) =>
+              text(
+                e.server.authType
+                  ? AUTH_TYPE_LABELS[e.server.authType as AuthType] ||
+                      e.server.authType
+                  : null,
+              ),
+            ),
+          },
+          {
+            label: 'Pricing',
+            cells: enriched.map((e) =>
+              text(
+                e.server.pricingModel
+                  ? PRICING_MODEL_LABELS[
+                      e.server.pricingModel as PricingModel
+                    ] || e.server.pricingModel
+                  : null,
+              ),
+            ),
+          },
+          {
+            label: 'License',
+            cells: enriched.map((e) => text(e.server.license)),
+          },
+        ],
+      },
+      {
+        title: 'Adoption',
+        rows: [
+          {
+            label: 'GitHub stars',
+            best: 'max',
+            cells: enriched.map((e) => num(e.server.githubStars)),
+          },
+          {
+            label: 'npm downloads',
+            best: 'max',
+            cells: enriched.map((e) => num(e.server.npmDownloads, '/mo')),
+          },
+          {
+            label: 'Last commit',
+            cells: enriched.map((e) =>
+              text(formatCommitAge(e.server.lastCommitAt)),
+            ),
+          },
+          {
+            label: 'Maintenance',
+            cells: enriched.map((e) =>
+              text(
+                e.server.maintenanceStatus
+                  ? MAINTENANCE_STATUS_LABELS[
+                      e.server.maintenanceStatus as MaintenanceStatus
+                    ] || e.server.maintenanceStatus
+                  : null,
+              ),
+            ),
+          },
+          {
+            label: 'Upvotes',
+            best: 'max',
+            cells: enriched.map((e) => num(e.server.upvotes ?? 0)),
+          },
+          {
+            label: 'Views',
+            best: 'max',
+            cells: enriched.map((e) => num(e.server.views ?? 0)),
+          },
+        ],
+      },
+      {
+        title: 'Capabilities',
+        rows: [
+          {
+            label: 'Category',
+            cells: enriched.map((e) => {
+              const meta = getCategoryMeta(e.server.category);
+              return {
+                node: (
+                  <Link
+                    href={`/categories/${categorySlug(e.server.category)}`}
+                    className={`tint-pill cmp-cat ${categoryHueClass(e.server.category)}`}
+                  >
+                    <span aria-hidden="true">{meta.emoji}</span> {meta.label}
+                  </Link>
+                ),
+                key: meta.label,
+              };
+            }),
+          },
+          {
+            label: 'Tools',
+            best: 'max',
+            cells: enriched.map((e) =>
+              e.tools.length > 0
+                ? { ...num(e.tools.length), key: String(e.tools.length) }
+                : { ...text(null), num: null },
+            ),
+          },
+          {
+            label: 'Tool names',
+            cells: enriched.map((e) => ({
+              node:
+                e.tools.length > 0 ? (
+                  <span className="cmp-tools">
+                    {e.tools.slice(0, 12).map((t) => (
+                      <code
+                        key={t}
+                        className={sharedTools.has(t) ? 'is-shared' : undefined}
+                        title={
+                          sharedTools.has(t)
+                            ? 'Also offered by another server here'
+                            : undefined
+                        }
+                      >
+                        {t}
+                      </code>
+                    ))}
+                    {e.tools.length > 12 && (
+                      <span className="cmp-muted">
+                        +{e.tools.length - 12} more
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="cmp-muted">Not introspected yet</span>
+                ),
+              key: e.tools.slice().sort().join(','),
+            })),
+          },
+        ],
+      },
+    ];
+  }, [enriched, sharedTools]);
 
-  const remoteCount = useMemo(
-    () => enriched.filter((e) => e.install.kind === 'remote').length,
-    [enriched],
-  );
+  const confirmed = enriched.filter((e) => e.confirmed);
+  const combinedConfig = useMemo(() => {
+    const mcpServers: Record<string, unknown> = {};
+    for (const { key, install, server } of confirmed) {
+      const env =
+        server.aiEnvVars && server.aiEnvVars.length > 0
+          ? Object.fromEntries(
+              server.aiEnvVars.map((v) => [v, `YOUR_${v}_HERE`]),
+            )
+          : null;
+      mcpServers[key] =
+        install.kind === 'remote'
+          ? { url: install.url }
+          : {
+              command: install.command,
+              args: install.args,
+              ...(env ? { env } : {}),
+            };
+    }
+    return JSON.stringify({ mcpServers }, null, 2);
+  }, [confirmed]);
 
-  const stdioCount = enriched.length - remoteCount;
-
-  const clientPaths = {
-    claude: {
-      title: 'Claude Desktop',
-      file: 'claude_desktop_config.json',
-      hint: 'Add to root mcpServers',
-    },
-    cursor: {
-      title: 'Cursor AI',
-      file: '~/.cursor/mcp.json',
-      hint: 'Global MCP configuration',
-    },
-    windsurf: {
-      title: 'Windsurf Codeium',
-      file: '~/.codeium/windsurf/mcp_config.json',
-      hint: 'Cascade MCP config',
-    },
-    vscode: {
-      title: 'VS Code MCP',
-      file: '.vscode/mcp.json',
-      hint: 'Workspace or Global settings',
-    },
-  };
+  const cols = { '--cmp-cols': enriched.length } as CSSProperties;
 
   return (
-    <div
-      style={{
-        width: '100%',
-        maxWidth: '1440px',
-        margin: '0 auto',
-        padding: '1.5rem 1rem 4rem 1rem',
-      }}
-    >
-      {/* Top Header & Breadcrumbs */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '1rem',
-          }}
-        >
-          <Link
-            href="/compare"
-            style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-          >
-            Compare
-          </Link>
-          <ChevronRight size={14} style={{ flexShrink: 0 }} />
-          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-            {enriched.map((e) => e.displayName).join(' vs ')}
-          </span>
-        </div>
+    <div className="cmp-view">
+      <nav aria-label="Breadcrumb">
+        <ol className="crumbs">
+          <li>
+            <Link href="/">Home</Link>
+          </li>
+          <li>
+            <Link href="/compare">Compare</Link>
+          </li>
+          <li aria-current="page">{enriched.length} servers</li>
+        </ol>
+      </nav>
 
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-          }}
+      <header className="cmp-head">
+        <h1 className="text-page-title">
+          {enriched.map((e) => e.displayName).join(' vs ')}
+        </h1>
+        <p className="text-lead">
+          {enriched.length} MCP servers side by side — trust, install, adoption
+          and tools. Rows that differ are marked.
+        </p>
+      </header>
+
+      <div className="cmp-controls">
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={onlyDiff}
+          onClick={() => setOnlyDiff((v) => !v)}
         >
-          <div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                color: 'var(--brand-cyan)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                marginBottom: '0.35rem',
-              }}
-            >
-              <Sparkles size={16} /> Multi-Server Evaluation & Breakdown
+          <SlidersHorizontal size={13} aria-hidden="true" />
+          Only show differences
+        </button>
+        {pickerServers && (
+          <details className="cmp-change">
+            <summary className="btn btn-secondary btn-sm">
+              Change servers
+            </summary>
+            <div className="cmp-change-body">
+              <CompareSelector servers={pickerServers} initialIds={ids} />
             </div>
-            <h1
-              style={{
-                fontSize: '2.25rem',
-                fontWeight: 800,
-                color: 'var(--text-primary)',
-                margin: '0 0 0.5rem 0',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {enriched.map((e) => e.displayName).join(' vs ')}
-            </h1>
-            <p
-              style={{
-                fontSize: '1rem',
-                color: 'var(--text-secondary)',
-                margin: 0,
-                maxWidth: '800px',
-              }}
-            >
-              Evaluating <strong>{enriched.length} MCP servers</strong>{' '}
-              side-by-side: breakdown of distinctions, capability matrices,
-              security profiles, and combined installation configs.
-            </p>
-          </div>
-
-          {/* View Switcher Controls */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '12px',
-              padding: '4px',
-              gap: '4px',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setViewMode('narrative')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.5rem 0.85rem',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor:
-                  viewMode === 'narrative'
-                    ? 'var(--brand-cyan)'
-                    : 'transparent',
-                color:
-                  viewMode === 'narrative'
-                    ? 'var(--accent-text)'
-                    : 'var(--text-secondary)',
-                fontWeight: viewMode === 'narrative' ? 700 : 500,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <FileText size={15} /> Distinctions
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.5rem 0.85rem',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor:
-                  viewMode === 'grid' ? 'var(--brand-cyan)' : 'transparent',
-                color:
-                  viewMode === 'grid'
-                    ? 'var(--accent-text)'
-                    : 'var(--text-secondary)',
-                fontWeight: viewMode === 'grid' ? 700 : 500,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <LayoutGrid size={15} /> Grid Cards
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('matrix')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.5rem 0.85rem',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor:
-                  viewMode === 'matrix' ? 'var(--brand-cyan)' : 'transparent',
-                color:
-                  viewMode === 'matrix'
-                    ? 'var(--accent-text)'
-                    : 'var(--text-secondary)',
-                fontWeight: viewMode === 'matrix' ? 700 : 500,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Table size={15} /> Spec Matrix
-            </button>
-          </div>
-        </div>
+          </details>
+        )}
       </div>
 
-      {/* Overview Stat Chips Bar */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '0.85rem',
-          marginBottom: '2.5rem',
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '1rem 1.25rem',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              fontWeight: 600,
-            }}
-          >
-            Compared Servers
-          </div>
-          <div
-            style={{
-              fontSize: '1.4rem',
-              fontWeight: 800,
-              color: 'var(--text-primary)',
-              marginTop: '0.2rem',
-            }}
-          >
-            {enriched.length} Options
-          </div>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '1rem 1.25rem',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              fontWeight: 600,
-            }}
-          >
-            Category Coverage
-          </div>
-          <div
-            style={{
-              fontSize: '1.4rem',
-              fontWeight: 800,
-              color: 'var(--brand-cyan)',
-              marginTop: '0.2rem',
-            }}
-          >
-            {distinctCategories}{' '}
-            {distinctCategories === 1 ? 'Category' : 'Distinct Domains'}
-          </div>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '1rem 1.25rem',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              fontWeight: 600,
-            }}
-          >
-            Execution Transports
-          </div>
-          <div
-            style={{
-              fontSize: '1.4rem',
-              fontWeight: 800,
-              color: 'var(--text-primary)',
-              marginTop: '0.2rem',
-            }}
-          >
-            {stdioCount > 0 && `${stdioCount} Stdio`}
-            {stdioCount > 0 && remoteCount > 0 && ' · '}
-            {remoteCount > 0 && `${remoteCount} Cloud SSE`}
-          </div>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: 'var(--bg-elevated)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '1rem 1.25rem',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              fontWeight: 600,
-            }}
-          >
-            Total Tools Exposed
-          </div>
-          <div
-            style={{
-              fontSize: '1.4rem',
-              fontWeight: 800,
-              color: '#34d399',
-              marginTop: '0.2rem',
-            }}
-          >
-            {enriched.reduce((acc, curr) => acc + curr.tools.length, 0)} Total
-            Tools
-          </div>
-        </div>
-      </div>
-
-      {/* ---------------------------------------------------- */}
-      {/* MODE 1: NARRATIVE & DISTINCTIONS VIEW                */}
-      {/* ---------------------------------------------------- */}
-      {viewMode === 'narrative' && (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}
-        >
-          {/* Executive Distinctions Cards */}
-          <section>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '1.25rem',
-              }}
-            >
-              <HelpCircle size={20} style={{ color: 'var(--brand-cyan)' }} />
-              <h2
-                style={{
-                  fontSize: '1.35rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  margin: 0,
-                }}
-              >
-                Which Server Should You Choose?
-              </h2>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-                gap: '1.25rem',
-              }}
-            >
-              {enriched.map(
-                ({
-                  server: s,
-                  displayName,
-                  org,
-                  install,
-                  tools,
-                  categoryLabel,
-                  bestFor,
-                  singleConfigJson,
-                }) => (
-                  <div
-                    key={s.id}
-                    style={{
-                      backgroundColor: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '14px',
-                      padding: '1.5rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <div>
-                      {/* Header */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          justifyContent: 'space-between',
-                          gap: '0.75rem',
-                          marginBottom: '1rem',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            minWidth: 0,
-                          }}
-                        >
-                          <ServerAvatar
-                            name={s.name}
-                            logoUrl={s.logoUrl}
-                            size={40}
-                          />
-                          <div style={{ minWidth: 0 }}>
-                            <Link
-                              href={`/mcp/${s.id}`}
-                              style={{
-                                fontWeight: 800,
-                                fontSize: '1.15rem',
-                                color: 'var(--text-primary)',
-                                textDecoration: 'none',
-                                display: 'block',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {displayName}
-                            </Link>
-                            <div
-                              style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--text-secondary)',
-                              }}
-                            >
-                              {categoryLabel} {org ? `· ${org}` : ''}
-                            </div>
-                          </div>
-                        </div>
-
-                        <QualityBadge server={s} compact />
-                      </div>
-
-                      {/* Best For Highlight */}
-                      <div
-                        style={{
-                          padding: '0.75rem 0.9rem',
-                          backgroundColor: 'rgba(0, 229, 255, 0.06)',
-                          border: '1px solid rgba(0, 229, 255, 0.2)',
-                          borderRadius: '10px',
-                          marginBottom: '1rem',
-                          fontSize: '0.85rem',
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        <strong style={{ color: 'var(--brand-cyan)' }}>
-                          Best For:
-                        </strong>{' '}
-                        {bestFor}
-                      </div>
-
-                      {/* Key Specs & Distinctions List */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.5rem',
-                          fontSize: '0.85rem',
-                          color: 'var(--text-secondary)',
-                          marginBottom: '1.25rem',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                          }}
-                        >
-                          <Terminal
-                            size={14}
-                            style={{
-                              color: 'var(--brand-cyan)',
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span>
-                            Transport:{' '}
-                            <strong style={{ color: 'var(--text-primary)' }}>
-                              {install.kind === 'remote'
-                                ? 'Remote HTTP/SSE'
-                                : 'Local Subprocess (stdio)'}
-                            </strong>
-                          </span>
-                        </div>
-
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                          }}
-                        >
-                          <Lock
-                            size={14}
-                            style={{
-                              color: 'var(--text-secondary)',
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span>
-                            Auth:{' '}
-                            <strong style={{ color: 'var(--text-primary)' }}>
-                              {formatAuthLabel(s.authType)}
-                            </strong>
-                          </span>
-                        </div>
-
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                          }}
-                        >
-                          <DollarSign
-                            size={14}
-                            style={{ color: '#34d399', flexShrink: 0 }}
-                          />
-                          <span>
-                            Pricing:{' '}
-                            <strong style={{ color: 'var(--text-primary)' }}>
-                              {formatPricingLabel(s.pricingModel)}
-                            </strong>
-                          </span>
-                        </div>
-
-                        {s.aiEnvVars && s.aiEnvVars.length > 0 && (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '0.5rem',
-                              marginTop: '0.2rem',
-                            }}
-                          >
-                            <Code2
-                              size={14}
-                              style={{
-                                color: 'var(--text-secondary)',
-                                flexShrink: 0,
-                                marginTop: '2px',
-                              }}
-                            />
-                            <div
-                              style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '0.25rem',
-                              }}
-                            >
-                              <span>Keys:</span>
-                              {s.aiEnvVars.map((v) => (
-                                <code
-                                  key={v}
-                                  style={{
-                                    fontSize: '0.725rem',
-                                    padding: '0.1rem 0.35rem',
-                                    borderRadius: '4px',
-                                    backgroundColor: 'var(--bg-color)',
-                                  }}
-                                >
-                                  {v}
-                                </code>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Tools Spotlight */}
-                      {tools.length > 0 && (
-                        <div style={{ marginBottom: '1.25rem' }}>
-                          <div
-                            style={{
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              color: 'var(--text-secondary)',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.04em',
-                              marginBottom: '0.4rem',
-                            }}
-                          >
-                            Key Tools ({tools.length})
-                          </div>
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              gap: '0.35rem',
-                            }}
-                          >
-                            {tools.slice(0, 6).map((t) => (
-                              <Badge
-                                key={t}
-                                variant="default"
-                                style={{
-                                  fontSize: '0.7rem',
-                                  backgroundColor: 'var(--bg-color)',
-                                }}
-                              >
-                                {t}
-                              </Badge>
-                            ))}
-                            {tools.length > 6 && (
-                              <Badge
-                                variant="category"
-                                style={{ fontSize: '0.7rem' }}
-                              >
-                                +{tools.length - 6} more
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Individual Config Snippet */}
-                    <div>
-                      <div
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          color: 'var(--text-secondary)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
-                          marginBottom: '0.25rem',
-                        }}
-                      >
-                        Server Config
-                      </div>
-                      <CopyBlock
-                        code={singleConfigJson}
-                        language="json"
-                        serverId={s.id}
-                      />
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <Link
-                          href={`/mcp/${s.id}`}
-                          style={{
-                            fontSize: '0.8rem',
-                            color: 'var(--brand-cyan)',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          View full details page <ArrowRight size={12} />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>
-          </section>
-
-          {/* Tools & Capability Overview Section */}
-          <section
-            style={{
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '14px',
-              padding: '1.5rem',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <Wrench size={18} style={{ color: 'var(--brand-cyan)' }} />
-              <h3
-                style={{
-                  fontSize: '1.15rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  margin: 0,
-                }}
-              >
-                Tool Capability Comparison
-              </h3>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: '1.25rem',
-              }}
-            >
-              {enriched.map(({ server: s, displayName, tools }) => (
-                <div
-                  key={s.id}
-                  style={{
-                    backgroundColor: 'var(--bg-color)',
-                    padding: '1rem',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-color)',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: '0.95rem',
-                      color: 'var(--text-primary)',
-                      marginBottom: '0.5rem',
-                    }}
-                  >
-                    {displayName}{' '}
-                    <span
-                      style={{
-                        color: 'var(--brand-cyan)',
-                        fontWeight: 600,
-                        fontSize: '0.8rem',
-                      }}
-                    >
-                      ({tools.length} tools)
-                    </span>
-                  </div>
-                  {tools.length > 0 ? (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '0.35rem',
-                      }}
-                    >
-                      {tools.map((t) => (
-                        <span
-                          key={t}
-                          style={{
-                            fontSize: '0.75rem',
-                            padding: '0.2rem 0.45rem',
-                            borderRadius: '6px',
-                            backgroundColor: 'var(--bg-elevated)',
-                            border: '1px solid var(--border-color)',
-                            color: 'var(--text-primary)',
-                          }}
-                        >
-                          <code>{t}</code>
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p
-                      style={{
-                        fontSize: '0.8rem',
-                        color: 'var(--text-secondary)',
-                        margin: 0,
-                      }}
-                    >
-                      No explicitly listed tools. Capabilities defined via
-                      prompt templates or general API adapters.
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      )}
-
-      {/* ---------------------------------------------------- */}
-      {/* MODE 2: GRID CARDS VIEW                              */}
-      {/* ---------------------------------------------------- */}
-      {viewMode === 'grid' && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '1.25rem',
-            marginBottom: '2.5rem',
-          }}
-        >
-          {enriched.map(
-            ({
-              server: s,
-              displayName,
-              org,
-              install,
-              tools,
-              categoryLabel,
-              singleConfigJson,
-            }) => (
-              <div
-                key={s.id}
-                style={{
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '14px',
-                  padding: '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div>
-                  {/* Header */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: '0.75rem',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        minWidth: 0,
-                      }}
-                    >
-                      <ServerAvatar
-                        name={s.name}
-                        logoUrl={s.logoUrl}
-                        size={42}
-                      />
-                      <div style={{ minWidth: 0 }}>
-                        <Link
-                          href={`/mcp/${s.id}`}
-                          style={{
-                            fontWeight: 800,
-                            fontSize: '1.15rem',
-                            color: 'var(--text-primary)',
-                            textDecoration: 'none',
-                            display: 'block',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {displayName}
-                        </Link>
-                        <div
-                          style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {categoryLabel} {org ? `· ${org}` : ''}
-                        </div>
-                      </div>
-                    </div>
-
-                    <QualityBadge server={s} compact />
-                  </div>
-
-                  {/* Badges row */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '0.35rem',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    {isVerifiedListing(s) && (
-                      <Badge variant="official" style={{ fontSize: '0.7rem' }}>
-                        <BadgeCheck size={12} style={{ marginRight: '3px' }} />{' '}
-                        Verified
-                      </Badge>
-                    )}
-                    {isFeaturedListing(s) && (
-                      <Badge variant="success" style={{ fontSize: '0.7rem' }}>
-                        Featured
-                      </Badge>
-                    )}
-                    <Badge variant="category" style={{ fontSize: '0.7rem' }}>
-                      {categoryLabel}
-                    </Badge>
-                  </div>
-
-                  {/* Description */}
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                      lineHeight: 1.5,
-                      marginBottom: '1rem',
-                      minHeight: '2.8rem',
-                    }}
-                  >
-                    <SafeMarkdown
-                      content={s.description || 'No description provided.'}
-                      isInline
+      <div className="cmp-table-wrap">
+        <table className="cmp-table" style={cols}>
+          <thead>
+            <tr className="cmp-row cmp-row--head">
+              <th className="cmp-label" scope="col">
+                <span className="sr-only">Spec</span>
+              </th>
+              {enriched.map((e) => (
+                <th key={e.server.id} className="cmp-col-head" scope="col">
+                  <Link href={`/mcp/${e.server.id}`} className="cmp-col-id">
+                    <ServerAvatar
+                      name={e.server.name}
+                      logoUrl={e.server.logoUrl}
+                      category={e.server.category}
+                      size={32}
                     />
-                  </div>
-
-                  {/* Specs List */}
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-color)',
-                      padding: '0.85rem',
-                      borderRadius: '10px',
-                      border: '1px solid var(--border-color)',
-                      marginBottom: '1rem',
-                      fontSize: '0.8rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.4rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        Transport
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        {install.kind === 'remote'
-                          ? 'Remote HTTP/SSE'
-                          : 'Local stdio'}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        Auth
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        {formatAuthLabel(s.authType)}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        Pricing
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        {formatPricingLabel(s.pricingModel)}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        GitHub Stars
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        <Star
-                          size={12}
-                          style={{ color: '#f5c518', marginRight: '3px' }}
-                        />
-                        {(s.githubStars || 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Install Config */}
-                <div>
-                  <CopyBlock
-                    code={singleConfigJson}
-                    language="json"
-                    serverId={s.id}
-                  />
-                  <Link
-                    href={`/mcp/${s.id}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      padding: '0.5rem',
-                      borderRadius: '8px',
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      marginTop: '0.5rem',
-                    }}
-                  >
-                    Explore Server <ChevronRight size={14} />
+                    <span className="cmp-col-name">{e.displayName}</span>
                   </Link>
-                </div>
-              </div>
-            ),
-          )}
-        </div>
-      )}
+                  {enriched.length > 2 && (
+                    <Link
+                      href={comparePathFor(
+                        ids.filter((i) => i !== e.server.id),
+                      )}
+                      className="lst-icon-btn cmp-col-x"
+                      aria-label={`Remove ${e.displayName} from comparison`}
+                      title="Remove from comparison"
+                    >
+                      <X size={14} aria-hidden="true" />
+                    </Link>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
 
-      {/* ---------------------------------------------------- */}
-      {/* MODE 3: COMPACT SPEC MATRIX VIEW                     */}
-      {/* ---------------------------------------------------- */}
-      {viewMode === 'matrix' && (
-        <div style={{ marginBottom: '2.5rem' }}>
-          <div
-            style={{
-              overflowX: 'auto',
-              borderRadius: '14px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-elevated)',
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                textAlign: 'left',
-                minWidth: `${200 + enriched.length * 240}px`,
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    borderBottom: '1px solid var(--border-color)',
-                    backgroundColor: 'rgba(255,255,255,0.02)',
-                  }}
-                >
-                  <th
-                    style={{
-                      padding: '1.25rem',
-                      width: '200px',
-                      minWidth: '180px',
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    Specification
+          {groups.map((g) => {
+            const rows = g.rows.map((r) => {
+              const keys = r.cells.map((c) => c.key);
+              const differs = new Set(keys).size > 1;
+              let bestIdx = -1;
+              if (r.best === 'max' && differs) {
+                const nums = r.cells.map((c) => c.num ?? -1);
+                const max = Math.max(...nums);
+                if (max > 0 && nums.filter((n) => n === max).length === 1)
+                  bestIdx = nums.indexOf(max);
+              }
+              return { ...r, differs, bestIdx };
+            });
+            const visible = onlyDiff ? rows.filter((r) => r.differs) : rows;
+            if (visible.length === 0) return null;
+            return (
+              <tbody key={g.title} className="cmp-group">
+                <tr className="cmp-group-title">
+                  <th scope="colgroup" colSpan={enriched.length + 1}>
+                    {g.title}
                   </th>
-                  {enriched.map(({ server: s, displayName, categoryLabel }) => (
-                    <th
-                      key={s.id}
-                      style={{
-                        padding: '1.25rem',
-                        minWidth: '220px',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.65rem',
-                        }}
-                      >
-                        <ServerAvatar
-                          name={s.name}
-                          logoUrl={s.logoUrl}
-                          size={32}
-                        />
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <Link
-                            href={`/mcp/${s.id}`}
-                            style={{
-                              color: 'var(--text-primary)',
-                              textDecoration: 'none',
-                              fontWeight: 700,
-                              fontSize: '1rem',
-                              display: 'block',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {displayName}
-                          </Link>
-                          <div
-                            style={{
-                              fontSize: '0.75rem',
-                              color: 'var(--text-secondary)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {categoryLabel}
-                          </div>
-                        </div>
-                      </div>
+                </tr>
+                {visible.map((r) => (
+                  <tr
+                    key={r.label}
+                    className={`cmp-row${r.differs ? ' is-diff' : ''}`}
+                  >
+                    <th className="cmp-label" scope="row">
+                      {r.label}
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {/* Summary */}
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td
-                    style={{
-                      padding: '1rem 1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    Summary
-                  </td>
-                  {enriched.map(({ server: s }) => (
-                    <td
-                      key={s.id}
-                      style={{
-                        padding: '1rem 1.25rem',
-                        color: 'var(--text-secondary)',
-                        fontSize: '0.85rem',
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      <SafeMarkdown content={s.description || '—'} isInline />
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Category */}
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td
-                    style={{
-                      padding: '1rem 1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    Category
-                  </td>
-                  {enriched.map(({ server: s, categoryLabel }) => (
-                    <td
-                      key={s.id}
-                      style={{
-                        padding: '1rem 1.25rem',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.9rem',
-                      }}
-                    >
-                      <Link
-                        href={`/categories/${categorySlug(s.category)}`}
-                        style={{
-                          color: 'var(--brand-cyan)',
-                          textDecoration: 'none',
-                          fontWeight: 600,
-                        }}
+                    {r.cells.map((c, i) => (
+                      <td
+                        key={enriched[i].server.id}
+                        className={`cmp-cell${i === r.bestIdx ? ' is-best' : ''}`}
                       >
-                        {categoryLabel}
-                      </Link>
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Quality Score */}
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td
-                    style={{
-                      padding: '1rem 1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    Quality Signal
-                  </td>
-                  {enriched.map(({ server: s, quality }) => (
-                    <td key={s.id} style={{ padding: '1rem 1.25rem' }}>
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          color: tierColor(quality.tier),
-                        }}
-                      >
-                        {quality.score}/100{' '}
-                        <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
-                          ({quality.tier})
-                        </span>
-                      </span>
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Transport Protocol */}
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td
-                    style={{
-                      padding: '1rem 1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    Transport Protocol
-                  </td>
-                  {enriched.map(({ server: s, install }) => (
-                    <td
-                      key={s.id}
-                      style={{
-                        padding: '1rem 1.25rem',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Terminal
-                          size={14}
-                          style={{ color: 'var(--brand-cyan)' }}
-                        />
-                        {install.kind === 'remote'
-                          ? 'Remote HTTP/SSE'
-                          : 'Local Subprocess (stdio)'}
-                      </span>
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Auth Requirement */}
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td
-                    style={{
-                      padding: '1rem 1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    Auth Requirement
-                  </td>
-                  {enriched.map(({ server: s }) => (
-                    <td
-                      key={s.id}
-                      style={{
-                        padding: '1rem 1.25rem',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      {formatAuthLabel(s.authType)}
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Pricing */}
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td
-                    style={{
-                      padding: '1rem 1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    Pricing Model
-                  </td>
-                  {enriched.map(({ server: s }) => (
-                    <td
-                      key={s.id}
-                      style={{
-                        padding: '1rem 1.25rem',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      {formatPricingLabel(s.pricingModel)}
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Tools Count & Highlights */}
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td
-                    style={{
-                      padding: '1rem 1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    Tools Exposed
-                  </td>
-                  {enriched.map(({ server: s, tools }) => (
-                    <td
-                      key={s.id}
-                      style={{ padding: '1rem 1.25rem', fontSize: '0.85rem' }}
-                    >
-                      <div
-                        style={{
-                          fontWeight: 700,
-                          color: 'var(--brand-cyan)',
-                          marginBottom: '0.35rem',
-                        }}
-                      >
-                        {tools.length} Tools
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: '0.25rem',
-                        }}
-                      >
-                        {tools.slice(0, 4).map((t) => (
-                          <Badge
-                            key={t}
-                            variant="default"
-                            style={{ fontSize: '0.65rem' }}
-                          >
-                            {t}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Stats / Stars */}
-                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td
-                    style={{
-                      padding: '1rem 1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    GitHub Stars
-                  </td>
-                  {enriched.map(({ server: s }) => (
-                    <td
-                      key={s.id}
-                      style={{
-                        padding: '1rem 1.25rem',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                        }}
-                      >
-                        <Star size={14} style={{ color: '#f5c518' }} />{' '}
-                        {(s.githubStars || 0).toLocaleString()}
-                      </span>
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Config Snippet */}
-                <tr>
-                  <td
-                    style={{
-                      padding: '1.25rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem',
-                      verticalAlign: 'top',
-                    }}
-                  >
-                    Install Config
-                  </td>
-                  {enriched.map(({ server: s, singleConfigJson }) => (
-                    <td
-                      key={s.id}
-                      style={{ padding: '1.25rem', verticalAlign: 'top' }}
-                    >
-                      <CopyBlock
-                        code={singleConfigJson}
-                        language="json"
-                        serverId={s.id}
-                      />
-                    </td>
-                  ))}
-                </tr>
+                        {c.node}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
               </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+            );
+          })}
 
-      {/* ---------------------------------------------------- */}
-      {/* COMBINED CONFIGURATION GENERATOR                     */}
-      {/* ---------------------------------------------------- */}
-      <section
-        style={{
-          backgroundColor: 'var(--bg-elevated)',
-          border: '1px solid rgba(0, 229, 255, 0.3)',
-          borderRadius: '16px',
-          padding: '1.75rem',
-          marginTop: '2rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            marginBottom: '1.25rem',
-          }}
-        >
-          <div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                color: 'var(--brand-cyan)',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                marginBottom: '0.25rem',
-              }}
-            >
-              <Layers size={15} /> All-in-One Integration
-            </div>
-            <h3
-              style={{
-                fontSize: '1.35rem',
-                fontWeight: 800,
-                color: 'var(--text-primary)',
-                margin: 0,
-              }}
-            >
-              Combined Client Configuration (`mcpServers`)
-            </h3>
-            <p
-              style={{
-                fontSize: '0.875rem',
-                color: 'var(--text-secondary)',
-                margin: '0.25rem 0 0 0',
-              }}
-            >
-              Use all {enriched.length} servers together in a single
-              configuration file. Copy and paste into your AI client setup.
-            </p>
-          </div>
+          <tbody>
+            <tr className="cmp-row cmp-row--links">
+              <th className="cmp-label" scope="row">
+                Links
+              </th>
+              {enriched.map((e) => (
+                <td key={e.server.id} className="cmp-cell">
+                  <Link href={`/mcp/${e.server.id}`} className="link-arrow">
+                    Listing <ArrowRight size={13} />
+                  </Link>
+                  {e.server.url && (
+                    <a
+                      href={e.server.url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="link-arrow cmp-ext"
+                    >
+                      Source <ExternalLink size={12} />
+                    </a>
+                  )}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-          {/* Client Tab Selector */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-            {(Object.keys(clientPaths) as Array<keyof typeof clientPaths>).map(
-              (key) => {
-                const info = clientPaths[key];
-                const isSelected = selectedClient === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setSelectedClient(key)}
-                    style={{
-                      padding: '0.4rem 0.75rem',
-                      borderRadius: '8px',
-                      border: isSelected
-                        ? '1px solid var(--brand-cyan)'
-                        : '1px solid var(--border-color)',
-                      backgroundColor: isSelected
-                        ? 'rgba(0, 229, 255, 0.12)'
-                        : 'var(--bg-color)',
-                      color: isSelected
-                        ? 'var(--brand-cyan)'
-                        : 'var(--text-secondary)',
-                      fontWeight: 600,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {info.title}
-                  </button>
-                );
-              },
-            )}
-          </div>
-        </div>
-
-        {/* Client File Location Hint */}
-        <div
-          style={{
-            padding: '0.65rem 0.85rem',
-            borderRadius: '8px',
-            backgroundColor: 'var(--bg-color)',
-            border: '1px solid var(--border-color)',
-            fontSize: '0.8rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-        >
-          <Code2
-            size={15}
-            style={{ color: 'var(--brand-cyan)', flexShrink: 0 }}
+      <section className="cmp-config" aria-labelledby="cmp-config-h">
+        <h2 id="cmp-config-h" className="lst-subhead">
+          Install them together
+        </h2>
+        <p className="lst-muted-sm">
+          One <code>mcpServers</code> block for Claude Desktop, Cursor, Windsurf
+          or Cline. Only servers with a confirmed install command are included.
+        </p>
+        {confirmed.length > 0 ? (
+          <CopyBlock
+            code={combinedConfig}
+            title="mcpServers"
+            language="json"
+            snippetType="compare_combined"
           />
-          <span>
-            Target file:{' '}
-            <code style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-              {clientPaths[selectedClient].file}
-            </code>{' '}
-            ({clientPaths[selectedClient].hint})
-          </span>
-        </div>
-
-        {/* Combined JSON Block */}
-        <CopyBlock
-          code={combinedConfigJson}
-          language="json"
-          snippetType="combined_mcp_config"
-          toastMessage={`Copied combined config for ${enriched.length} servers`}
-        />
+        ) : (
+          <p className="cmp-config-empty">
+            None of these servers has a confirmed install command yet, so
+            there&rsquo;s nothing we can safely combine. Each listing links to
+            the project&rsquo;s own setup steps.
+          </p>
+        )}
+        {confirmed.length > 0 && confirmed.length < enriched.length && (
+          <p className="lst-muted-sm">
+            Left out (no confirmed command):{' '}
+            {enriched
+              .filter((e) => !e.confirmed)
+              .map((e) => e.displayName)
+              .join(', ')}
+            .
+          </p>
+        )}
       </section>
     </div>
   );

@@ -24,9 +24,9 @@ Used in the logo mark, primary buttons, nav hairline, hero “superpowers”, an
 ```
 
 ### Backgrounds (Dark Mode First)
-- **Base Background:** `#020617` (Slate 950)
-- **Surface / Card Background:** `#0f172a` (Slate 900)
-- **Borders:** `rgba(255, 255, 255, 0.1)`
+- **Base Background:** `#05070c` (`--bg-color`)
+- **Surfaces:** `#0b0f17` / `#10151f` / `#161c28` (`--surface-1/2/3`)
+- **Borders:** `rgba(255, 255, 255, 0.07)` default, `0.13` strong (`--border-color`, `--border-strong`)
 
 ### Typography Colors
 - **Primary Text:** `#ffffff` (White, for headings)
@@ -40,45 +40,47 @@ Used in the logo mark, primary buttons, nav hairline, hero “superpowers”, an
 - Use `400` or `500` font weights for body text to ensure readability.
 - Wordmark markup: split as `All` (gradient) + `MCPs` (solid), via the `.wordmark-all` / `.wordmark-mcps` classes.
 
-## 4. Design System & UI Patterns (Firecrawl-Inspired)
+## 4. Design System & UI Patterns ("calm precision")
 
-Our UI language takes direct inspiration from modern high-performance dev tools (e.g. Firecrawl), featuring generous whitespace, crisp hairline borders, elevated dark surfaces, subtle electric blue/cyan glow, structural crosshair grids, and animated ASCII code canvas backgrounds.
+Neutral surfaces, crisp hairlines, generous whitespace, and short purposeful motion. Brand cyan
+is the single accent; glow is reserved for the one primary action in a view. Inspiration: Linear,
+Vercel, Raycast, Stripe docs. Tokens and primitives live in `app/styles/foundation.css` (loaded after
+`app/globals.css`); each area of the site has its own stylesheet in `app/styles/` (`chrome`, `home`,
+`directory`, `listing`, `tools`, `content`, `account`). Build new UI from the primitives below rather
+than hand-rolling one-off styles or large inline `style={{}}` objects.
 
-### Elevated Surfaces & Glass
-- **Base Background:** `#030712` (`--bg-color`)
-- **Elevated Surface:** `#0b1324` (`--bg-elevated`)
-- **Glass Chrome:** `rgba(11, 19, 36, 0.75)` with `backdrop-filter: blur(16px)`
-- **Hairline Borders:** `rgba(255, 255, 255, 0.08)` default, `rgba(0, 229, 255, 0.3)` on hover/active
-- **Glow Accents:** `radial-gradient(circle, rgba(0, 229, 255, 0.25), transparent)`
+### Tokens
+- **Surfaces:** `--bg-color`, `--surface-1/2/3`, `--surface-hover`
+- **Text:** `--text-primary`, `--text-secondary`, `--text-tertiary`
+- **Lines & focus:** `--border-color`, `--border-strong`, `--border-accent`, `--ring`
+- **Shape & depth:** `--radius-sm/md/lg/xl` (8/12/16/22), `--shadow-xs/sm/md/elevated/elevated-hover/popover`
+- **Motion:** `--ease-out` (default), `--ease-in-out`, `--ease-spring` (things that land: popovers, toasts, chips), `--duration-fast/base/slow`
 
-### Structural Grid & Crosshairs
-- **Crosshair Corners:** Use `.grid-crosshair` (`.grid-crosshair-tl`, `.grid-crosshair-tr`, `.grid-crosshair-bl`, `.grid-crosshair-br`) to place subtle monospace `+` intersection marks on container borders.
-- **Full-Bleed Dividers:** `.border-grid-x` generates edge-to-edge hairline dividers framing sections.
+### Primitives (`app/styles/foundation.css`)
+- **Buttons:** `.btn` + `.btn-primary | .btn-secondary | .btn-ghost | .btn-glass`, sizes `.btn-sm|md|lg`, `.btn-icon`. One primary per view.
+- **`.chip`** (`.is-active` / `aria-pressed="true"`, `.chip-count`): the single pill style for filters and quick queries.
+- **`.segmented`**: mutually exclusive toggles (sort, view mode).
+- **Sections:** `.section`, `.section-tight`, `.section-head` (`--center`, `--split`), `.section-title`, `.section-sub`.
+- **Surfaces:** `.surface`, `.surface-interactive` (hover lift), `.spotlight` (cursor-following accent wash; coordinates come from `components/MotionRuntime.tsx`).
+- **Misc:** `.kbd`, `.divider`, `.link-arrow`, `.tabular`, `.crumbs` (breadcrumbs), `.fade-x` + `.scroll-x` (mobile chip rows), `.skeleton` (loading shimmer).
 
-### ASCII Code Canvas & Atmosphere
-- **Component:** `components/ui/AsciiCodeCanvas.tsx`
-- Classic ASCII fire, remapped onto brand cyan: heat seeds at the floor, averages upward, and maps onto a density ramp plus slate → blue → cyan → white.
-- Frame rate is ~85ms (Firecrawl's flame cadence), not 60fps. Pointer proximity adds a local heat bloom. Pauses off-screen. `prefers-reduced-motion` gets a single static frame.
-- Paired with `components/ui/AmbientCodeBackground.tsx` (graph-paper grid + `[ TAG ]` labels) for hero/marketing section backdrops.
-- Section kickers use the Firecrawl index form: `[ 01 / 06 ] · Discovery //`.
+### Motion
+- Route changes cross-fade via React `<ViewTransition>` in `app/template.tsx`; a 2px progress bar runs on every internal navigation (`MotionRuntime`).
+- Above the fold: `.animate-in` / `.animate-fade` with a `--i` stagger. Scroll reveals: `.reveal` / `.reveal-stagger` (children set `--i`), which are pure CSS scroll-driven animations (no JS, never hidden waiting on hydration).
+- Animate transform and opacity only, 120–450ms. Everything is disabled under `prefers-reduced-motion`.
+- Every dynamic route gets a page-shaped `loading.tsx` skeleton so navigation feels instant.
+
+### Brand atmosphere (use sparingly)
+- `components/ui/AsciiCodeCanvas.tsx` (cyan ASCII fire, ~85ms cadence, pauses off-screen, static under reduced motion) and `components/ui/AmbientCodeBackground.tsx` back the homepage hero only.
+- Avoid decorative noise and generated-looking tropes: no eyebrow/kicker labels above headings, no crosshair `+` marks, no `[ 01 / 06 ]` index tags. A heading and a one-line lead are enough.
 
 ### Shared UI Components
-Always use canonical shared components instead of hand-rolling one-off styles:
-- **`Button` (`components/ui/Button.tsx`)**:
-  - `variant="primary"`: Electric cyan/blue gradient with specular top highlight and glow flare.
-  - `variant="secondary"`: Dark glass surface with hairline border and hover lift.
-  - `variant="terminal"`: Monospace dev-tool button for command/code actions.
-  - `variant="glass"`: Semi-transparent frosted glass button.
-- **`Badge` (`components/ui/Badge.tsx`)**:
-  - `variant="cyan" | "official" | "verified" | "premium" | "category" | "default"`
-  - `pulse={true}`: Displays an animated live status indicator dot.
-  - `mono={true}`: Displays crisp monospace tracking for dev-tool tags.
-- **`Card` (`components/ui/Card.tsx`)**:
-  - `hoverable={true}`: Hover lift with shadow elevation.
-  - `glow={true}`: Subtle cyan glow aura.
-  - `crosshair={true}`: Adds corner intersection crosshairs.
-- **`CopyBlock` (`components/ui/CopyBlock.tsx`)**:
-  - Terminal window with traffic light controls (`red`, `yellow`, `green`) and one-click copy with toast feedback.
+- **`Button`** (`components/ui/Button.tsx`): `variant="primary" | "secondary" | "glass" | "terminal"`, `size="sm" | "md" | "lg"`, `href` renders a Link.
+- **`Badge`** (`components/ui/Badge.tsx`): `variant="cyan" | "official" | "verified" | "premium" | "category" | "default"`, `pulse`, `mono`.
+- **`Card`** (`components/ui/Card.tsx`): `hoverable`, `surface`, `padding`, `glow`.
+- **`PageShell` / `PageHeader`** (`components/PageShell.tsx`): page width variants and the standard title block.
+- **`CopyBlock`** (`components/ui/CopyBlock.tsx`): code panel with one-click copy and success state.
+- Area building blocks: `components/content/ArticleLayout.tsx` (guides/blog/docs), `components/tools/ToolPage.tsx` + `CodePanel.tsx` (developer tools), `components/directory/ServerRow.tsx` (listing rows/cards), `components/listing/InstallPanel.tsx` (install flow).
 
 ## 5. Logo & Assets
 All official brand assets are located in the `/brand-assets/` directory.

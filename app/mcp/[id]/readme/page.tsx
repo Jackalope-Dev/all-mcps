@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, FolderGit2 } from 'lucide-react';
+import { ArrowLeft, FolderGit2 } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -72,69 +72,31 @@ export default async function ListingReadmePage({
   const readme = await fetchServerReadme(server.url);
 
   return (
-    <main
-      className="container page-shell"
-      style={{ paddingTop: 'var(--space-8)', paddingBottom: '4rem' }}
-    >
-      <nav aria-label="Breadcrumb" style={{ marginBottom: '1.5rem' }}>
-        <ol className="breadcrumb">
+    <main className="container lst-page rd-page">
+      <nav aria-label="Breadcrumb">
+        <ol className="crumbs">
           <li>
             <Link href="/">Home</Link>
-          </li>
-          <li className="breadcrumb-separator" aria-hidden="true">
-            <ChevronRight size={12} />
           </li>
           <li>
             <Link href={`/categories/${catSlug}`}>{catMeta.label}</Link>
           </li>
-          <li className="breadcrumb-separator" aria-hidden="true">
-            <ChevronRight size={12} />
-          </li>
           <li>
             <Link href={listingUrl}>{displayName}</Link>
           </li>
-          <li className="breadcrumb-separator" aria-hidden="true">
-            <ChevronRight size={12} />
-          </li>
-          <li className="breadcrumb-current" aria-current="page">
-            README
-          </li>
+          <li aria-current="page">README</li>
         </ol>
       </nav>
 
-      <header style={{ marginBottom: '1.75rem', maxWidth: '820px' }}>
-        <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
-          {displayName} README
-        </h1>
-        <p
-          style={{
-            color: 'var(--text-secondary)',
-            fontSize: '0.95rem',
-            lineHeight: 1.6,
-            margin: '0 0 1rem',
-          }}
-        >
-          The full upstream README, mirrored here for reference. Install config,
-          tool schemas, adoption signals, and an original overview live on the{' '}
+      <header className="rd-head">
+        <h1 className="text-page-title">{displayName} README</h1>
+        <p className="text-lead">
+          The full upstream README, mirrored for reference. Install config, tool
+          schemas, adoption signals and our own overview live on the{' '}
           <Link href={listingUrl}>{displayName} listing page</Link>.
         </p>
-        <div
-          style={{
-            display: 'flex',
-            gap: '1.25rem',
-            flexWrap: 'wrap',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-          }}
-        >
-          <Link
-            href={listingUrl}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-            }}
-          >
+        <div className="rd-actions">
+          <Link href={listingUrl} className="btn btn-secondary btn-sm">
             <ArrowLeft size={15} aria-hidden="true" /> Back to {displayName}
           </Link>
           <OutboundLink
@@ -143,18 +105,14 @@ export default async function ListingReadmePage({
             serverId={server.id}
             target="_blank"
             rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-            }}
+            className="btn btn-ghost btn-sm"
           >
             <FolderGit2 size={15} aria-hidden="true" /> View source on {host}
           </OutboundLink>
         </div>
       </header>
 
-      <div className="detail-readme-scroll">
+      <article className="lst-card rd-body">
         <div className="markdown-body">
           {readme ? (
             <SafeMarkdown
@@ -163,7 +121,7 @@ export default async function ListingReadmePage({
               repoUrl={server.url}
             />
           ) : (
-            <p style={{ color: 'var(--text-secondary)' }}>
+            <p>
               We couldn&rsquo;t automatically pull a README for this listing
               from {host}. Open the{' '}
               <OutboundLink
@@ -179,7 +137,7 @@ export default async function ListingReadmePage({
             </p>
           )}
         </div>
-      </div>
+      </article>
     </main>
   );
 }

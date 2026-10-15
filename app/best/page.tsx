@@ -7,7 +7,6 @@ import {
   Brain,
   Briefcase,
   CheckSquare,
-  ChevronRight,
   Cloud,
   Code2,
   CreditCard,
@@ -46,13 +45,14 @@ import {
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { PageHeader, PageShell } from '../../components/PageShell';
-import { Card } from '../../components/ui/Card';
+import { PageShell } from '../../components/PageShell';
 import {
   BEST_TOPICS,
+  bestTopicHue,
   CATEGORY_TOPICS,
   KEYWORD_TOPICS,
 } from '../../lib/bestTopics';
+import type { Hue } from '../../lib/palette';
 
 const SITE = 'https://allmcps.com';
 
@@ -140,31 +140,37 @@ const KEYWORD_ICONS: Record<string, LucideIcon> = {
 function TopicTile({
   href,
   Icon,
+  hue,
   title,
   lead,
   level = 2,
+  compact = false,
 }: {
   href: string;
   Icon: LucideIcon;
+  hue: Hue;
   title: string;
   lead: string;
   /** Heading level — the category grid is under the page h1, the keyword grid is under its own h2. */
   level?: 2 | 3;
+  /** Integration tiles: title only, no lead paragraph. */
+  compact?: boolean;
 }) {
   const Heading = level === 3 ? 'h3' : 'h2';
   return (
-    <Card href={href} hoverable padding="md" className="topic-tile">
-      <div className="topic-tile-header">
-        <div className="topic-tile-icon">
-          <Icon size={20} />
-        </div>
-        <Heading className="topic-tile-title">{title}</Heading>
-      </div>
-      <p className="topic-tile-lead">{lead}</p>
-      <span className="topic-tile-link">
-        View ranking <ArrowRight size={15} />
+    <Link
+      href={href}
+      className={`dir-topic spotlight tint-card hue-${hue}${compact ? ' dir-topic--compact' : ''}`}
+    >
+      <span className="dir-topic-icon" aria-hidden="true">
+        <Icon size={18} />
       </span>
-    </Card>
+      <span className="dir-topic-body">
+        <Heading className="dir-topic-title">{title}</Heading>
+        {!compact && <span className="dir-topic-lead">{lead}</span>}
+      </span>
+      <ArrowRight size={15} className="dir-topic-arrow" aria-hidden="true" />
+    </Link>
   );
 }
 
@@ -213,33 +219,30 @@ export default function BestIndexPage() {
       />
       <PageShell variant="default">
         <nav aria-label="Breadcrumb">
-          <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
+          <ol className="crumbs">
             <li>
               <Link href="/">Home</Link>
             </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">Best MCP Servers</li>
+            <li aria-current="page">Best MCP servers</li>
           </ol>
         </nav>
 
-        <PageHeader
-          centered
-          title="Best MCP Servers by Use Case"
-          description="Hand-picked, usage-ranked guides to the best Model Context Protocol servers for the jobs people reach for most — each list is drawn live from the AllMCPs directory."
-        />
+        <header className="dir-page-head animate-in">
+          <h1 className="text-page-title">Best MCP servers by use case</h1>
+          <p className="text-lead">
+            Hand-picked, usage-ranked guides to the Model Context Protocol
+            servers people reach for most. Every list is drawn live from the
+            AllMCPs directory and refreshed hourly.
+          </p>
+        </header>
 
-        {/* Category Topics Grid */}
-        <ul
-          className="directory-grid"
-          style={{ listStyle: 'none', margin: 0, padding: 0 }}
-        >
+        <ul className="dir-topics">
           {CATEGORY_TOPICS.map((t) => (
             <li key={t.slug}>
               <TopicTile
                 href={`/best/${t.slug}`}
                 Icon={CATEGORY_ICONS[t.slug] || Sparkles}
+                hue={bestTopicHue(t)}
                 title={`Best for ${t.title}`}
                 lead={t.lead}
               />
@@ -247,49 +250,27 @@ export default function BestIndexPage() {
           ))}
         </ul>
 
-        {/* Integration Topics Section */}
-        <section style={{ marginTop: '4.5rem' }}>
-          <div
-            style={{
-              textAlign: 'center',
-              maxWidth: '780px',
-              margin: '0 auto 2.5rem',
-              padding: '0 1rem',
-            }}
-          >
-            <h2
-              className="text-display"
-              style={{
-                fontSize: 'clamp(1.75rem, 3vw, 2.25rem)',
-                marginBottom: '0.75rem',
-              }}
-            >
-              By Integration &amp; Tool
+        <section className="dir-section" aria-labelledby="by-integration">
+          <div className="dir-section-head">
+            <h2 id="by-integration" className="dir-section-title">
+              By integration &amp; tool
             </h2>
-            <p
-              className="text-lead"
-              style={{
-                margin: '0 auto',
-                maxWidth: '640px',
-                fontSize: '1.05rem',
-              }}
-            >
-              Looking for a specific tool? Jump straight to the best MCP servers
-              for the platforms and databases people connect most.
+            <p className="dir-section-sub">
+              Looking for a specific platform? Jump straight to the best servers
+              for the tools and databases people connect most.
             </p>
           </div>
-          <ul
-            className="directory-grid"
-            style={{ listStyle: 'none', margin: 0, padding: 0 }}
-          >
+          <ul className="dir-topics dir-topics--compact">
             {KEYWORD_TOPICS.map((t) => (
               <li key={t.slug}>
                 <TopicTile
                   href={`/best/${t.slug}`}
                   Icon={KEYWORD_ICONS[t.slug] || Sparkles}
+                  hue={bestTopicHue(t)}
                   title={`Best ${t.title} MCP servers`}
                   lead={t.lead}
                   level={3}
+                  compact
                 />
               </li>
             ))}

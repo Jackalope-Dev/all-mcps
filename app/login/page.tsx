@@ -1,8 +1,11 @@
+import { BadgeCheck, BarChart3, Link2, Mail, Sparkles } from 'lucide-react';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import type React from 'react';
 import { BrandLogo } from '@/components/BrandLogo';
-import { PageShell } from '@/components/PageShell';
+import { AuthSubmitButton } from '@/components/forms/AuthSubmitButton';
 import { auth, signIn } from '@/lib/auth';
 import { isUserInEU } from '@/lib/consentRegion';
 import {
@@ -61,149 +64,128 @@ export default async function LoginPage({
   const inEU = isUserInEU(reqHeaders.get('cf-ipcountry') || undefined);
 
   return (
-    <PageShell variant="auth" panel>
-      <div style={{ marginBottom: '2rem' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            marginBottom: '1.25rem',
-          }}
-        >
+    <main className="acct-auth">
+      <div className="acct-auth-card animate-in">
+        <div className="acct-auth-mark">
           <BrandLogo size="lg" href={null} showWordmark={false} />
         </div>
-        <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
-          Sign in to <span className="text-brand-gradient">AllMCPs</span>
-        </h1>
-        <p className="text-meta" style={{ lineHeight: 1.5 }}>
-          Enter your email to receive a secure login link. No password required.
+        <h1 className="acct-auth-title">Sign in to AllMCPs</h1>
+        <p className="acct-auth-sub">
+          We&rsquo;ll email you a secure one-time link. No password needed.
+        </p>
+
+        <form
+          action={async (formData) => {
+            'use server';
+            const email = String(formData.get('email') || '');
+            const rawRedirect = formData.get('redirectTo');
+            const isValidRedirect =
+              typeof rawRedirect === 'string' &&
+              rawRedirect.startsWith('/') &&
+              !rawRedirect.startsWith('//') &&
+              !rawRedirect.startsWith('/login') &&
+              !rawRedirect.startsWith('/verify-request');
+            const redirectTo = isValidRedirect ? rawRedirect : '/dashboard';
+            const newsletterOptIn = formData.get('newsletterOptIn') === 'on';
+            // Call with redirect: false and redirect to our own /verify-request
+            // page ourselves, rather than letting next-auth issue its internal
+            // redirect — that one always points at the raw `/api/auth/verify-request`
+            // route (basePath + action name) instead of the custom page set in
+            // pages.verifyRequest, and a POST reaching that route 500s with
+            // "UnknownAction: Cannot handle action: verify-request" since it's
+            // GET-only.
+            await signIn('resend', {
+              email,
+              redirect: false,
+              redirectTo,
+            });
+            if (newsletterOptIn && email) {
+              await syncSequenzySubscriber({
+                email,
+                tags: ['newsletter-signup'],
+                lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
+                customAttributes: { source: 'login' },
+                enrollInSequences: true,
+              });
+            }
+            redirect('/verify-request');
+          }}
+          className="acct-auth-form"
+        >
+          <div className="form-field">
+            <label htmlFor="email" className="form-label">
+              Work or personal email
+            </label>
+            <div className="acct-input-icon">
+              <Mail size={16} aria-hidden="true" />
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                inputMode="email"
+                placeholder="you@example.com"
+                className="form-input"
+              />
+            </div>
+          </div>
+
+          <input type="hidden" name="redirectTo" value={targetRedirect} />
+
+          <label className="form-checkbox-row">
+            <input
+              type="checkbox"
+              name="newsletterOptIn"
+              defaultChecked={!inEU}
+            />
+            <span>
+              Send me the weekly AllMCPs newsletter — new servers and guides.
+            </span>
+          </label>
+
+          <AuthSubmitButton />
+        </form>
+
+        <p className="acct-auth-fine">
+          By continuing you agree to the <Link href="/terms">Terms</Link> and{' '}
+          <Link href="/privacy">Privacy Policy</Link>.
         </p>
       </div>
 
-      <form
-        action={async (formData) => {
-          'use server';
-          const email = String(formData.get('email') || '');
-          const rawRedirect = formData.get('redirectTo');
-          const isValidRedirect =
-            typeof rawRedirect === 'string' &&
-            rawRedirect.startsWith('/') &&
-            !rawRedirect.startsWith('//') &&
-            !rawRedirect.startsWith('/login') &&
-            !rawRedirect.startsWith('/verify-request');
-          const redirectTo = isValidRedirect ? rawRedirect : '/dashboard';
-          const newsletterOptIn = formData.get('newsletterOptIn') === 'on';
-          // Call with redirect: false and redirect to our own /verify-request
-          // page ourselves, rather than letting next-auth issue its internal
-          // redirect — that one always points at the raw `/api/auth/verify-request`
-          // route (basePath + action name) instead of the custom page set in
-          // pages.verifyRequest, and a POST reaching that route 500s with
-          // "UnknownAction: Cannot handle action: verify-request" since it's
-          // GET-only.
-          await signIn('resend', {
-            email,
-            redirect: false,
-            redirectTo,
-          });
-          if (newsletterOptIn && email) {
-            await syncSequenzySubscriber({
-              email,
-              tags: ['newsletter-signup'],
-              lists: [NEWSLETTER_SUBSCRIBERS_LIST_ID],
-              customAttributes: { source: 'login' },
-              enrollInSequences: true,
-            });
-          }
-          redirect('/verify-request');
-        }}
-        className="form-stack"
-        style={{ textAlign: 'left' }}
+      <section
+        className="acct-auth-perks animate-in"
+        style={{ '--i': 2 } as React.CSSProperties}
       >
-        <div className="form-field">
-          <label htmlFor="email" className="form-label">
-            Email address
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            placeholder="you@example.com"
-            className="form-input"
-          />
-        </div>
-
-        <input type="hidden" name="redirectTo" value={targetRedirect} />
-
-        <label className="form-checkbox-row">
-          <input
-            type="checkbox"
-            name="newsletterOptIn"
-            defaultChecked={!inEU}
-          />
-          <span>
-            Keep me posted with the AllMCPs newsletter (new servers, guides,
-            product updates).
-          </span>
-        </label>
-
-        <button
-          type="submit"
-          className="btn btn-primary btn-full"
-          style={{ padding: '0.65rem 1rem', fontSize: '0.95rem' }}
-        >
-          Send Magic Link →
-        </button>
-      </form>
-
-      <div
-        style={{
-          marginTop: '2rem',
-          paddingTop: '1.5rem',
-          borderTop: '1px solid var(--border-color)',
-          textAlign: 'left',
-        }}
-      >
-        <h2
-          style={{
-            fontSize: '0.85rem',
-            fontWeight: 700,
-            color: 'var(--text-primary)',
-            marginBottom: '0.6rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-          }}
-        >
-          Developer Dashboard Features
-        </h2>
-        <ul
-          style={{
-            listStyle: 'none',
-            padding: 0,
-            margin: 0,
-            fontSize: '0.825rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.75,
-          }}
-        >
+        <h2 className="acct-auth-perks-title">With an account you can</h2>
+        <ul>
           <li>
-            ✓ <strong>Claim &amp; Edit Listings</strong> — Update metadata and
-            verify ownership.
+            <BadgeCheck size={16} aria-hidden="true" />
+            <span>
+              <strong>Claim &amp; edit listings</strong> and verify ownership
+            </span>
           </li>
           <li>
-            ✓ <strong>LLM Usage Analytics</strong> — Monitor API hits,
-            impressions, and caller breakdown.
+            <BarChart3 size={16} aria-hidden="true" />
+            <span>
+              <strong>See usage analytics</strong> — views and installs, plus AI
+              callers on Premium or boosted listings
+            </span>
           </li>
           <li>
-            ✓ <strong>Reciprocal Dofollow Backlinks</strong> — Pass ranking
-            signals to your product site.
+            <Link2 size={16} aria-hidden="true" />
+            <span>
+              <strong>Earn a dofollow backlink</strong> to your product site
+            </span>
           </li>
           <li>
-            ✓ <strong>Spotlight Boosts</strong> — Feature your MCP at the top of
-            search and category discovery.
+            <Sparkles size={16} aria-hidden="true" />
+            <span>
+              <strong>Boost visibility</strong> in search and categories
+            </span>
           </li>
         </ul>
-      </div>
-    </PageShell>
+      </section>
+    </main>
   );
 }

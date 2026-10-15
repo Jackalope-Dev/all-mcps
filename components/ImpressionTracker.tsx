@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ImpressionSurface } from '@/lib/impressionLog';
 
 type PendingImpression = { serverId: string; surface: ImpressionSurface };
@@ -79,19 +79,6 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Hook that returns a function to manually track impressions.
- */
-export function useImpressionTracker() {
-  const trackImpression = useCallback(
-    (serverId: string, surface: ImpressionSurface) => {
-      enqueue(serverId, surface);
-    },
-    [],
-  );
-  return { trackImpression };
-}
-
-/**
  * Component that auto-tracks an impression when it becomes visible.
  * Wrap it around a listing card and it fires once per page view.
  */
@@ -99,10 +86,13 @@ export function ImpressionBeacon({
   serverId,
   surface,
   children,
+  className,
 }: {
   serverId: string;
   surface: ImpressionSurface;
   children: React.ReactNode;
+  /** Lets grids stretch the wrapper (e.g. equal-height cards). */
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -124,5 +114,9 @@ export function ImpressionBeacon({
     return () => observer.disconnect();
   }, [serverId, surface]);
 
-  return <div ref={ref}>{children}</div>;
+  return (
+    <div ref={ref} className={className}>
+      {children}
+    </div>
+  );
 }

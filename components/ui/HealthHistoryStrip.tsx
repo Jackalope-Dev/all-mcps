@@ -1,3 +1,4 @@
+import { statusHueClass } from '../../lib/palette';
 import type { ServerHealthCheck } from '../../lib/servers';
 
 function spanLabel(oldest: string | Date): string {
@@ -47,7 +48,7 @@ export function HealthHistoryStrip({
         role="img"
         aria-label={`${healthyCount} of ${history.length} recent health checks succeeded, over ${spanLabel(oldest)}.`}
       >
-        {history.map((h, i) => {
+        {history.map((h) => {
           const isPrimaryPass = h.healthy || isOfficial;
           const isRemotePass =
             h.remoteHealthy === true || (isOfficial && hasRemoteEndpoint);
@@ -92,8 +93,9 @@ export function HealthHistoryStrip({
 
           return (
             <span
-              key={i}
-              className="health-dot"
+              key={String(h.checkedAt)}
+              className={`health-dot lst-health-bar ${statusHueClass(isOverallHealthy ? 'ok' : 'bad')}`}
+              data-ok={isOverallHealthy || undefined}
               data-tip={tipText}
               style={{
                 flex: '1 1 0',
@@ -101,9 +103,6 @@ export function HealthHistoryStrip({
                 maxWidth: '4px',
                 height: '100%',
                 borderRadius: '1px',
-                backgroundColor: isOverallHealthy
-                  ? 'rgba(16, 185, 129, 0.55)'
-                  : 'rgba(248, 113, 113, 0.9)',
                 outline: 'none',
               }}
             />

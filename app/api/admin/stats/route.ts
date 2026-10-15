@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { getAuthorizedAdminEmail } from '@/lib/adminAuth';
 import { getAdminStats } from '@/lib/adminStats';
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
     if (!(await getAuthorizedAdminEmail())) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });

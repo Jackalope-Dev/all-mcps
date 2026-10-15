@@ -1,8 +1,8 @@
 'use client';
 
+import { RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { EmptyState } from '../components/EmptyState';
-import { PageShell } from '../components/PageShell';
+import { StatusScreen } from '../components/StatusScreen';
 import { Button } from '../components/ui/Button';
 import {
   attemptAutoReload,
@@ -38,21 +38,22 @@ export default function ErrorPage({
   if (recovering) return null;
 
   return (
-    <PageShell variant="status" panel className="animate-fade-in">
-      <EmptyState
-        title="Something went wrong"
-        description="An unexpected error occurred. Please try reloading the page or return to the main directory."
-        actions={
-          <>
-            <Button onClick={() => reset()} variant="primary">
-              Try Again
-            </Button>
-            <Button href="/" variant="secondary">
-              Go Home
-            </Button>
-          </>
-        }
-      />
-    </PageShell>
+    <StatusScreen
+      code="Error"
+      title="Something went wrong"
+      description="An unexpected error interrupted this page. Trying again usually fixes it — if it keeps happening, let us know."
+      showSearch={false}
+      actions={
+        <>
+          <Button onClick={() => reset()} variant="primary">
+            <RotateCcw size={15} aria-hidden="true" />
+            Try again
+          </Button>
+          <Button href="/contact" variant="secondary">
+            Report a problem
+          </Button>
+        </>
+      }
+    />
   );
 }

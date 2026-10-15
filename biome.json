@@ -14,7 +14,7 @@
       "!.worktrees",
       "!**/drizzle",
       "!**/public",
-      "!**/content",
+      "!content",
       "!**/email-previews",
       "!**/data/mcp-servers.json",
       "!**/lib/blog-manifest.json",

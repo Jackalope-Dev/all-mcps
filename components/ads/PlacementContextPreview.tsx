@@ -208,7 +208,7 @@ function DirectoryInlineFrame({
     <div>
       <ContextLabel>Browse / Category page · inside listing grid</ContextLabel>
       <div className="placement-preview-grid-3">
-        {cols.map((listing, i) =>
+        {cols.map((listing) =>
           listing === null ? (
             <SponsorAdUnit
               key="ad"
@@ -216,7 +216,7 @@ function DirectoryInlineFrame({
               previewAd={previewAd}
             />
           ) : (
-            <MockListingCard key={i} listing={listing} />
+            <MockListingCard key={listing.name} listing={listing} />
           ),
         )}
       </div>
@@ -432,8 +432,8 @@ function HeaderBannerFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
         className="placement-preview-grid-3"
         style={{ marginTop: '0.75rem', opacity: 0.5, pointerEvents: 'none' }}
       >
-        {FAKE_LISTINGS.slice(0, 3).map((l, i) => (
-          <MockListingCard key={i} listing={l} />
+        {FAKE_LISTINGS.slice(0, 3).map((l) => (
+          <MockListingCard key={l.name} listing={l} />
         ))}
       </div>
     </div>
@@ -463,9 +463,9 @@ function BlogGuideFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
             marginBottom: '0.85rem',
           }}
         />
-        {[100, 94, 88, 97, 80].map((w, i) => (
+        {[100, 94, 88, 97, 80].map((w) => (
           <div
-            key={i}
+            key={w}
             style={{
               height: '10px',
               background: 'var(--border-strong)',
@@ -484,9 +484,9 @@ function BlogGuideFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
             margin: '1rem 0 0.75rem',
           }}
         />
-        {[100, 92, 85].map((w, i) => (
+        {[100, 92, 85].map((w) => (
           <div
-            key={i}
+            key={w}
             style={{
               height: '10px',
               background: 'var(--border-strong)',
@@ -508,9 +508,9 @@ function BlogGuideFrame({ previewAd }: { previewAd: Partial<SponsorAd> }) {
           marginTop: '1rem',
         }}
       >
-        {[100, 90, 78].map((w, i) => (
+        {[100, 90, 78].map((w) => (
           <div
-            key={i}
+            key={w}
             style={{
               height: '10px',
               background: 'var(--border-strong)',

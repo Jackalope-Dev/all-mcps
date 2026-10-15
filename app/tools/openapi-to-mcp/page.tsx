@@ -1,9 +1,6 @@
-import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { serializeJsonLd } from '@/lib/jsonLd';
 import { OpenApiToMcpTool } from '../../../components/tools/OpenApiToMcpTool';
-import { FaqSection } from '../../../components/ui/FaqSection';
+import { ToolPage } from '../../../components/tools/ToolPage';
 
 export const metadata: Metadata = {
   title: 'Free OpenAPI to MCP Code Generator — TS & Python',
@@ -128,164 +125,85 @@ const faqJsonLd = {
 
 export default function OpenApiToMcpPage() {
   return (
-    <main className="page-shell page-shell--tool">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(webAppJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
-      />
-
-      <div className="page-shell-inner">
-        <nav aria-label="Breadcrumb">
-          <ol className="breadcrumb" style={{ marginBottom: '1.5rem' }}>
-            <li>
-              <Link href="/">Home</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li>
-              <Link href="/tools">Tools</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">OpenAPI to MCP</li>
-          </ol>
-        </nav>
-        <div className="surface page-panel">
-          <h1 className="text-page-title" style={{ marginBottom: '0.5rem' }}>
-            OpenAPI to MCP Server Code Generator
-          </h1>
-          <p className="text-lead" style={{ marginBottom: '2rem' }}>
-            Turn any OpenAPI 3.0/3.1 or Swagger API specification into a fully
-            functional Model Context Protocol (MCP) server in TypeScript or
-            Python.
+    <ToolPage
+      href="/tools/openapi-to-mcp"
+      crumb="OpenAPI to MCP"
+      title="OpenAPI to MCP Server Code Generator"
+      description={
+        <p>
+          Turn any OpenAPI 3.0/3.1 or Swagger API specification into a fully
+          functional Model Context Protocol (MCP) server in TypeScript or
+          Python.
+        </p>
+      }
+      jsonLd={[webAppJsonLd, faqJsonLd, breadcrumbJsonLd]}
+      faqJsonLd={false}
+      aboutTitle="How OpenAPI to MCP conversion works"
+      about={
+        <>
+          <p>
+            Exposing existing Web APIs to AI assistants like Claude Desktop,
+            Cursor, and Windsurf allows models to fetch real-time data, query
+            databases, and trigger workflows on your behalf. However, manually
+            writing Zod schemas and HTTP execution handlers for dozens of REST
+            endpoints is slow and error-prone.
           </p>
-
-          <OpenApiToMcpTool />
-
-          {/* Question-Forward Educational & FAQ Section */}
-          <div
-            style={{
-              marginTop: '3.5rem',
-              fontSize: '0.925rem',
-              color: 'var(--text-secondary)',
-              lineHeight: 1.7,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: '1.25rem',
-                color: 'var(--text-primary)',
-                marginBottom: '1rem',
-                fontWeight: 700,
-              }}
-            >
-              How OpenAPI to MCP Conversion Works
-            </h2>
-            <p style={{ marginBottom: '1.25rem' }}>
-              Exposing existing Web APIs to AI assistants like Claude Desktop,
-              Cursor, and Windsurf allows models to fetch real-time data, query
-              databases, and trigger workflows on your behalf. However, manually
-              writing Zod schemas and HTTP execution handlers for dozens of REST
-              endpoints is slow and error-prone.
-            </p>
-            <p style={{ marginBottom: '2rem' }}>
-              This generator parses your <code>paths</code>, HTTP methods (
-              <code>GET</code>, <code>POST</code>, <code>PUT</code>,{' '}
-              <code>DELETE</code>), path/query parameters, and JSON request
-              bodies, outputting clean boilerplates that adhere to the official
-              Model Context Protocol JSON-RPC specification.
-            </p>
-
-            <FaqSection
-              title="Frequently Asked Questions (FAQ)"
-              items={[
-                {
-                  question:
-                    'How do I convert an OpenAPI or Swagger spec to an MCP server?',
-                  answer:
-                    'Paste your OpenAPI 3.0 or 3.1 JSON spec into the generator above, enter your target API base URL, select an auth mode (Bearer Token or API Key), and pick either TypeScript or Python. Copy or download the generated file, install the SDK dependencies, and add the command to your client config.',
-                },
-                {
-                  question:
-                    'Does this generator support both TypeScript and Python FastMCP?',
-                  answer: (
-                    <>
-                      Yes! You can toggle between official TypeScript SDK (
-                      <code>@modelcontextprotocol/sdk</code>) code using native
-                      fetch and Zod input schemas, or Python code using the
-                      official <code>FastMCP</code> framework and{' '}
-                      <code>httpx</code>.
-                    </>
-                  ),
-                },
-                {
-                  question:
-                    'How does authentication work in generated MCP tools?',
-                  answer: (
-                    <>
-                      You can configure Bearer Token authentication or custom
-                      API Key headers. The generated server reads credentials
-                      securely from environment variables (e.g.{' '}
-                      <code>process.env.API_TOKEN</code> or{' '}
-                      <code>os.environ.get(&quot;API_TOKEN&quot;)</code>),
-                      ensuring API keys are never hardcoded in client
-                      configurations.
-                    </>
-                  ),
-                },
-                {
-                  question:
-                    'What is the difference between an OpenAPI spec and an MCP tool schema?',
-                  answer:
-                    'An OpenAPI spec defines HTTP REST endpoints (paths, methods, request bodies, status codes) for human developers or API gateways. An MCP tool schema packages those capabilities into standardized JSON-RPC 2.0 primitives so LLMs can call functions directly without custom integration glue code.',
-                },
-              ]}
-            />
-
-            <div
-              style={{
-                marginTop: '2.5rem',
-                paddingTop: '1.5rem',
-                borderTop: '1px solid var(--border-color)',
-                display: 'flex',
-                gap: '1rem',
-                flexWrap: 'wrap',
-              }}
-            >
-              <Link
-                href="/build-mcp-server"
-                style={{
-                  color: 'var(--accent-color)',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                ← Read the Complete Developer Guide on Building MCP Servers
-              </Link>
-              <Link
-                href="/tools/config-generator"
-                style={{
-                  color: 'var(--accent-color)',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                Generate Client Configs →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
+          <p>
+            This generator parses your <code>paths</code>, HTTP methods (
+            <code>GET</code>, <code>POST</code>, <code>PUT</code>,{' '}
+            <code>DELETE</code>), path/query parameters, and JSON request
+            bodies, outputting clean boilerplates that adhere to the official
+            Model Context Protocol JSON-RPC specification.
+          </p>
+        </>
+      }
+      faq={[
+        {
+          question:
+            'How do I convert an OpenAPI or Swagger spec to an MCP server?',
+          answer:
+            'Paste your OpenAPI 3.0 or 3.1 JSON spec into the generator above, enter your target API base URL, select an auth mode (Bearer Token or API Key), and pick either TypeScript or Python. Copy or download the generated file, install the SDK dependencies, and add the command to your client config.',
+        },
+        {
+          question:
+            'Does this generator support both TypeScript and Python FastMCP?',
+          answer: (
+            <>
+              Yes! You can toggle between official TypeScript SDK (
+              <code>@modelcontextprotocol/sdk</code>) code using native fetch
+              and Zod input schemas, or Python code using the official{' '}
+              <code>FastMCP</code> framework and <code>httpx</code>.
+            </>
+          ),
+        },
+        {
+          question: 'How does authentication work in generated MCP tools?',
+          answer: (
+            <>
+              You can configure Bearer Token authentication or custom API Key
+              headers. The generated server reads credentials securely from
+              environment variables (e.g. <code>process.env.API_TOKEN</code> or{' '}
+              <code>os.environ.get(&quot;API_TOKEN&quot;)</code>), ensuring API
+              keys are never hardcoded in client configurations.
+            </>
+          ),
+        },
+        {
+          question:
+            'What is the difference between an OpenAPI spec and an MCP tool schema?',
+          answer:
+            'An OpenAPI spec defines HTTP REST endpoints (paths, methods, request bodies, status codes) for human developers or API gateways. An MCP tool schema packages those capabilities into standardized JSON-RPC 2.0 primitives so LLMs can call functions directly without custom integration glue code.',
+        },
+      ]}
+      links={[
+        {
+          href: '/build-mcp-server',
+          label: 'The complete guide to building MCP servers',
+        },
+        { href: '/tools/config-generator', label: 'Generate client configs' },
+      ]}
+    >
+      <OpenApiToMcpTool />
+    </ToolPage>
   );
 }

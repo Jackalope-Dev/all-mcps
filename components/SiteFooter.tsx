@@ -3,352 +3,212 @@ import { BadgeMarquee } from './BadgeMarquee';
 import { BrandLogo } from './BrandLogo';
 import { FooterNavSection } from './FooterNavSection';
 import { NewsletterSignupForm } from './forms/NewsletterSignupForm';
-import { AsciiCodeCanvas } from './ui/AsciiCodeCanvas';
+
+interface FooterLink {
+  href: string;
+  label: string;
+  tag?: string;
+  /** Opens in a new tab (raw files, external sites). */
+  external?: boolean;
+}
+
+const COLUMNS: { heading: string; ariaLabel: string; links: FooterLink[] }[] = [
+  {
+    heading: 'Discover',
+    ariaLabel: 'Discover',
+    links: [
+      { href: '/browse', label: 'Browse servers' },
+      { href: '/best', label: 'Best MCP servers' },
+      { href: '/categories', label: 'Categories' },
+      { href: '/tags', label: 'Tags' },
+      { href: '/clients', label: 'MCP clients' },
+      { href: '/prompts', label: 'Agent prompts' },
+      { href: '/stack', label: 'Stack builder' },
+      { href: '/compare', label: 'Compare servers' },
+      { href: '/lucky', label: 'Random discovery', tag: 'New' },
+    ],
+  },
+  {
+    heading: 'Learn',
+    ariaLabel: 'Learn',
+    links: [
+      { href: '/guides', label: 'Guides hub' },
+      { href: '/what-is-mcp', label: 'What is MCP?' },
+      { href: '/guide', label: 'Install guide' },
+      { href: '/build-mcp-server', label: 'Build an MCP server' },
+      { href: '/deploy-mcp-server', label: 'Deploy an MCP server' },
+      { href: '/mcp-security', label: 'Security guide' },
+      { href: '/mcp-troubleshooting', label: 'Troubleshooting' },
+      { href: '/mcp-transports', label: 'Transports: stdio vs HTTP' },
+      { href: '/mcp-protocol-versioning', label: 'Protocol versioning' },
+      { href: '/mcp-for-seo', label: 'MCP for SEO & AEO' },
+      { href: '/state-of-mcp', label: 'State of MCP' },
+      { href: '/blog', label: 'Blog' },
+    ],
+  },
+  {
+    heading: 'Developers',
+    ariaLabel: 'Developer tools and API',
+    links: [
+      { href: '/tools', label: 'All developer tools' },
+      { href: '/tools/config-generator', label: 'Config generator' },
+      { href: '/tools/config-validator', label: 'Config validator' },
+      { href: '/tools/config-auditor', label: 'Config auditor' },
+      { href: '/tools/playground', label: 'MCP playground' },
+      { href: '/tools/token-calculator', label: 'Token calculator' },
+      { href: '/tools/openapi-to-mcp', label: 'OpenAPI → MCP' },
+      { href: '/badge-generator', label: 'Badge generator' },
+      { href: '/docs/api', label: 'REST API docs' },
+      { href: '/api/mcp', label: 'Remote MCP server', external: true },
+      { href: '/llms.txt', label: 'llms.txt', external: true },
+      { href: '/data.json', label: 'Catalog JSON', external: true },
+    ],
+  },
+  {
+    heading: 'Company',
+    ariaLabel: 'Company',
+    links: [
+      { href: '/about', label: 'About' },
+      { href: '/submit', label: 'Submit a server' },
+      { href: '/pricing', label: 'Pricing & Boost' },
+      { href: '/advertise', label: 'Advertise', tag: 'Sponsor' },
+      { href: '/trust', label: 'Trust & traffic' },
+      { href: '/contact', label: 'Contact' },
+      {
+        href: 'https://github.com/Jackalope-Dev/allmcps-server',
+        label: 'GitHub',
+        external: true,
+      },
+    ],
+  },
+];
+
+function FooterLinkItem({ link }: { link: FooterLink }) {
+  const content = (
+    <>
+      {link.label}
+      {link.tag && <span className="footer-tag">{link.tag}</span>}
+    </>
+  );
+  if (link.external) {
+    return (
+      <a href={link.href} target="_blank" rel="noopener noreferrer">
+        {content}
+        <span aria-hidden="true">↗</span>
+        <span className="sr-only"> (opens in a new tab)</span>
+      </a>
+    );
+  }
+  return <Link href={link.href}>{content}</Link>;
+}
 
 /**
- * Site footer — kept to ~5 columns with concise link sets so mobile users
- * don't face a wall of text. Deep guides live under /guides.
+ * Site footer: newsletter band, brand + four link columns (accordions on
+ * mobile via FooterNavSection), the reciprocal "featured on" badges, and a
+ * legal/status bar.
  */
 export function SiteFooter() {
   return (
-    <footer className="container site-footer grid-crosshair grid-crosshair-tl grid-crosshair-tr">
-      <div className="newsletter-footer-cta">
-        <AsciiCodeCanvas
-          className="newsletter-ascii-bg"
-          opacity={0.28}
-          density={14}
-        />
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <h2
-            className="footer-heading"
-            style={{ margin: '0 0 0.25rem 0', fontSize: '1.2rem' }}
-          >
-            Stay in the loop
-          </h2>
-          <p className="site-footer-blurb" style={{ margin: 0 }}>
-            Get new MCP servers and top picks in your inbox.
-          </p>
-        </div>
-        <div style={{ position: 'relative', zIndex: 1 }}>
+    <footer className="site-footer-v2">
+      <div className="container">
+        <div className="footer-cta">
+          <div>
+            <h2 className="footer-cta-title">New MCP servers, weekly.</h2>
+            <p className="footer-cta-sub">
+              The best new listings and install tips. One email, no noise.
+            </p>
+          </div>
           <NewsletterSignupForm source="footer" compact />
         </div>
-      </div>
-      <div className="site-footer-grid">
-        <div className="site-footer-brand">
-          <div style={{ marginBottom: '1rem' }}>
+
+        <div className="footer-main">
+          <div className="footer-brand">
             <BrandLogo size="sm" href="/" />
-          </div>
-          <p className="site-footer-blurb">
-            The open directory for discovering and installing Model Context
-            Protocol servers.
-          </p>
-          <div className="site-footer-social">
-            <a
-              href="https://github.com/Jackalope-Dev/allmcps-server"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nav-link site-footer-social-link"
-              aria-label="AllMCPs on GitHub (opens in a new tab)"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                />
-              </svg>
-              <span className="sr-only">
-                AllMCPs on GitHub (opens in a new tab)
-              </span>
-            </a>
-          </div>
-        </div>
-
-        <FooterNavSection ariaLabel="Explore" heading="Explore">
-          <ul className="site-footer-links">
-            <li>
-              <Link href="/browse" className="nav-link">
-                Browse servers
-              </Link>
-            </li>
-            <li>
-              <Link href="/best" className="nav-link">
-                Best MCP servers
-              </Link>
-            </li>
-            <li>
-              <Link href="/categories" className="nav-link">
-                Categories
-              </Link>
-            </li>
-            <li>
-              <Link href="/clients" className="nav-link">
-                MCP clients
-              </Link>
-            </li>
-            <li>
-              <Link href="/prompts" className="nav-link">
-                Agent prompts
-              </Link>
-            </li>
-            <li>
-              <Link href="/stack" className="nav-link">
-                Stack Builder
-              </Link>
-            </li>
-            <li>
-              <Link href="/compare" className="nav-link">
-                Compare servers
-              </Link>
-            </li>
-            <li>
-              <Link href="/lucky" className="nav-link">
-                Random discovery{' '}
-                <span className="footer-badge footer-badge-new">New</span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/submit" className="nav-link">
-                Submit a server
-              </Link>
-            </li>
-            <li>
-              <Link href="/pricing" className="nav-link">
-                Pricing &amp; Boost{' '}
-                <span className="footer-badge footer-badge-boost">Boost</span>
-              </Link>
-            </li>
-          </ul>
-        </FooterNavSection>
-
-        <FooterNavSection ariaLabel="Learn" heading="Learn">
-          <ul className="site-footer-links">
-            <li>
-              <Link href="/guides" className="nav-link">
-                Guides hub
-              </Link>
-            </li>
-            <li>
-              <Link href="/what-is-mcp" className="nav-link">
-                What is MCP?
-              </Link>
-            </li>
-            <li>
-              <Link href="/guide" className="nav-link">
-                Install guide
-              </Link>
-            </li>
-            <li>
-              <Link href="/build-mcp-server" className="nav-link">
-                Build an MCP server
-              </Link>
-            </li>
-            <li>
-              <Link href="/deploy-mcp-server" className="nav-link">
-                Deploy an MCP server
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-security" className="nav-link">
-                Security guide
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-troubleshooting" className="nav-link">
-                Troubleshooting
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-for-seo" className="nav-link">
-                MCP for SEO &amp; AEO
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-protocol-versioning" className="nav-link">
-                Protocol versioning
-              </Link>
-            </li>
-            <li>
-              <Link href="/mcp-transports" className="nav-link">
-                Transports: stdio vs HTTP
-              </Link>
-            </li>
-            <li>
-              <Link href="/state-of-mcp" className="nav-link">
-                State of MCP (stats)
-              </Link>
-            </li>
-            <li>
-              <Link href="/blog" className="nav-link">
-                Blog &amp; updates
-              </Link>
-            </li>
-          </ul>
-        </FooterNavSection>
-
-        <FooterNavSection ariaLabel="Free tools" heading="Tools">
-          <ul className="site-footer-links">
-            <li>
-              <Link href="/tools" className="nav-link">
-                All developer tools
-              </Link>
-            </li>
-            <li>
-              <Link href="/tools/config-generator" className="nav-link">
-                Config generator
-              </Link>
-            </li>
-            <li>
-              <Link href="/tools/config-validator" className="nav-link">
-                Config validator
-              </Link>
-            </li>
-            <li>
-              <Link href="/tools/config-auditor" className="nav-link">
-                Config auditor
-              </Link>
-            </li>
-            <li>
-              <Link href="/tools/playground" className="nav-link">
-                MCP playground
-              </Link>
-            </li>
-            <li>
-              <Link href="/tools/token-calculator" className="nav-link">
-                Token calculator
-              </Link>
-            </li>
-            <li>
-              <Link href="/tools/openapi-to-mcp" className="nav-link">
-                OpenAPI → MCP
-              </Link>
-            </li>
-            <li>
-              <Link href="/badge-generator" className="nav-link">
-                Badge generator
-              </Link>
-            </li>
-          </ul>
-        </FooterNavSection>
-
-        <FooterNavSection ariaLabel="For AI and agents" heading="For agents">
-          <ul className="site-footer-links">
-            <li>
-              <Link href="/docs/api" className="nav-link">
-                REST API docs
-              </Link>
-            </li>
-            <li>
-              <Link href="/trust" className="nav-link">
-                Trust &amp; traffic{' '}
-                <span className="footer-badge footer-badge-live">
-                  <span className="footer-badge-dot"></span>Live
-                </span>
-              </Link>
-            </li>
-            <li>
-              <a
-                href="/api/mcp"
-                className="nav-link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Remote MCP server{' '}
-                <span className="footer-badge footer-badge-subtle">SSE</span>{' '}
-                <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            </li>
-            <li>
-              <a
-                href="/llms.txt"
-                className="nav-link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                llms.txt <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            </li>
-            <li>
-              <a
-                href="/data.json"
-                className="nav-link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Catalog JSON <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            </li>
-          </ul>
-        </FooterNavSection>
-
-        <FooterNavSection ariaLabel="Company" heading="Company">
-          <ul className="site-footer-links">
-            <li>
-              <Link href="/about" className="nav-link">
-                About
-              </Link>
-            </li>
-            <li>
-              <Link href="/advertise" className="nav-link">
-                Advertise{' '}
-                <span className="footer-badge footer-badge-sponsor">
-                  Sponsor
-                </span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact" className="nav-link">
-                Contact
-              </Link>
-            </li>
-            <li>
+            <p className="footer-brand-blurb">
+              The open directory for discovering, comparing, and installing
+              Model Context Protocol servers.
+            </p>
+            <div className="footer-social">
               <a
                 href="https://github.com/Jackalope-Dev/allmcps-server"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="nav-link"
               >
-                GitHub <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
+                <span className="sr-only">
+                  AllMCPs on GitHub (opens in a new tab)
+                </span>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                  />
+                </svg>
               </a>
-            </li>
-            <li>
               <a
-                href="https://app.lopebase.com/status/all-mcps"
+                href="https://x.com/AllMCPs"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="nav-link"
               >
-                Status <span aria-hidden="true">↗</span>
-                <span className="sr-only"> (opens in a new tab)</span>
+                <span className="sr-only">
+                  AllMCPs on X (opens in a new tab)
+                </span>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
               </a>
-            </li>
-            <li>
-              <Link href="/terms" className="nav-link">
-                Terms
-              </Link>
-            </li>
-            <li>
-              <Link href="/privacy" className="nav-link">
-                Privacy
-              </Link>
-            </li>
-          </ul>
-        </FooterNavSection>
-      </div>
-      <BadgeMarquee />
-      <div className="site-footer-copy">
-        &copy; {new Date().getFullYear()} Jackalope Digital LLC. All rights
-        reserved.
+            </div>
+          </div>
+
+          {COLUMNS.map((col) => (
+            <FooterNavSection
+              key={col.heading}
+              ariaLabel={col.ariaLabel}
+              heading={col.heading}
+            >
+              <ul className="site-footer-links">
+                {col.links.map((link) => (
+                  <li key={link.href}>
+                    <FooterLinkItem link={link} />
+                  </li>
+                ))}
+              </ul>
+            </FooterNavSection>
+          ))}
+        </div>
+
+        <BadgeMarquee />
+
+        <div className="footer-bottom">
+          <span>
+            &copy; {new Date().getFullYear()} Jackalope Digital LLC. All rights
+            reserved.
+          </span>
+          <nav className="footer-bottom-links" aria-label="Legal">
+            <a
+              href="https://app.lopebase.com/status/all-mcps"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-status"
+            >
+              System status
+            </a>
+            <Link href="/terms">Terms</Link>
+            <Link href="/privacy">Privacy</Link>
+          </nav>
+        </div>
       </div>
     </footer>
   );

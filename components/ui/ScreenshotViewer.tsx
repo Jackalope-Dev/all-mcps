@@ -25,6 +25,14 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
 
   const activeSrc = images[currentIndex] || images[0] || '';
   const hasMultiple = images.length > 1;
+  // Key thumbnails by URL plus occurrence count, so a repeated URL still gets a
+  // unique, data-derived key.
+  const seen = new Map<string, number>();
+  const thumbs = images.map((url) => {
+    const n = seen.get(url) ?? 0;
+    seen.set(url, n + 1);
+    return { url, key: `${url}#${n}` };
+  });
 
   const handleOpen = () => {
     trackFeatureUse('screenshot_viewer', { title, count: images.length });
@@ -59,7 +67,6 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
   return (
     <>
       <div
-        onClick={handleOpen}
         className="screenshot-preview-container"
         style={{
           margin: '0 0 1.5rem',
@@ -77,17 +84,25 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
           backdropFilter: 'blur(8px)',
           transition: 'all 0.2s ease',
         }}
-        title="Click to expand screenshot"
-        role="button"
-        tabIndex={0}
-        aria-label="Expand screenshot"
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setIsOpen(true);
-          }
-        }}
       >
+        {/* Full-bleed hit target: the whole card opens the lightbox, while the
+            thumbnail bar (positioned later in the DOM) stays clickable above it. */}
+        <button
+          type="button"
+          onClick={handleOpen}
+          title="Click to expand screenshot"
+          aria-label="Expand screenshot"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            margin: 0,
+            padding: 0,
+            border: 0,
+            background: 'transparent',
+            borderRadius: 'inherit',
+            cursor: 'pointer',
+          }}
+        />
         {/* Main image - natural aspect ratio, contain fit */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -108,8 +123,8 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
         {/* Multi-image thumbnail bar below main preview if multiple exist */}
         {hasMultiple && (
           <div
-            onClick={(e) => e.stopPropagation()}
             style={{
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
@@ -119,9 +134,9 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
               padding: '0.25rem',
             }}
           >
-            {images.map((imgUrl, idx) => (
+            {thumbs.map(({ url: imgUrl, key }, idx) => (
               <button
-                key={imgUrl + idx}
+                key={key}
                 type="button"
                 onClick={() => setCurrentIndex(idx)}
                 style={{
@@ -189,7 +204,6 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
       {/* Lightbox Modal */}
       {isOpen && (
         <div
-          onClick={() => setIsOpen(false)}
           aria-modal="true"
           role="dialog"
           aria-label={title || alt}
@@ -208,9 +222,26 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
             animation: 'fadeIn 0.2s ease-out forwards',
           }}
         >
+          {/* Backdrop: clicking outside the controls and image closes the
+              lightbox (Escape is handled by the window keydown listener). */}
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label="Close screenshot"
+            onClick={() => setIsOpen(false)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              margin: 0,
+              padding: 0,
+              border: 0,
+              background: 'transparent',
+              cursor: 'default',
+            }}
+          />
+
           {/* Top Bar Controls */}
           <div
-            onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
               top: '1.25rem',
@@ -322,7 +353,6 @@ export function ScreenshotViewer({ src, alt, title }: ScreenshotViewerProps) {
 
           {/* Lightbox Image Box with Prev/Next Controls */}
           <div
-            onClick={(e) => e.stopPropagation()}
             style={{
               position: 'relative',
               maxWidth: '94vw',

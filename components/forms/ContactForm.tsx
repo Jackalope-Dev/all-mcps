@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isUserInEU } from '../../lib/consentRegion';
 import { trackContactSubmit } from '../../lib/gtag';
@@ -75,44 +76,61 @@ export function ContactForm() {
 
   if (status === 'success') {
     return (
-      <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-        <h3>Message sent successfully!</h3>
-        <p>We'll get back to you soon.</p>
+      <div className="acct-contact-done" role="status">
+        <div className="acct-success-check" aria-hidden="true">
+          <svg viewBox="0 0 52 52" width="44" height="44" aria-hidden="true">
+            <circle cx="26" cy="26" r="24" />
+            <path d="M15 27l7 7 15-16" />
+          </svg>
+        </div>
+        <h2>Message sent</h2>
+        <p>Thanks for reaching out — we’ll get back to you by email soon.</p>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() => setStatus('idle')}
+        >
+          Send another message
+        </button>
       </div>
     );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-    >
-      <Input name="name" label="Your Name" placeholder="Jane Doe" required />
-      <Input
-        name="email"
-        label="Email Address"
-        type="email"
-        placeholder="jane@example.com"
-        required
-      />
+    <form onSubmit={handleSubmit} className="acct-contact-form">
+      <div className="acct-grid-2">
+        <Input
+          id="contact-name"
+          name="name"
+          label="Name"
+          placeholder="Jane Doe"
+          autoComplete="name"
+          required
+        />
+        <Input
+          id="contact-email"
+          name="email"
+          label="Email"
+          type="email"
+          placeholder="jane@example.com"
+          autoComplete="email"
+          inputMode="email"
+          required
+        />
+      </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <label
-          style={{
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            color: 'var(--text-secondary)',
-          }}
-        >
+      <div className="form-field">
+        <label htmlFor="contact-message" className="form-label">
           Message
         </label>
         <textarea
+          id="contact-message"
           name="message"
-          className="form-input"
-          rows={5}
-          placeholder="How can we help you?"
+          className="form-input acct-textarea"
+          rows={6}
+          placeholder="How can we help? Include a listing URL if it’s about a specific server."
           required
-        ></textarea>
+        />
       </div>
 
       <label className="form-checkbox-row">
@@ -123,8 +141,7 @@ export function ContactForm() {
           onChange={(e) => setNewsletterOptIn(e.target.checked)}
         />
         <span>
-          Keep me posted with the AllMCPs newsletter (new servers, guides,
-          product updates).
+          Send me the weekly AllMCPs newsletter — new servers and guides.
         </span>
       </label>
 
@@ -137,10 +154,18 @@ export function ContactForm() {
       <Button
         variant="primary"
         type="submit"
+        size="lg"
         disabled={status === 'loading'}
-        style={{ marginTop: '1rem', alignSelf: 'flex-start' }}
+        className="acct-contact-submit"
       >
-        {status === 'loading' ? 'Sending...' : 'Send Message'}
+        {status === 'loading' ? (
+          <>
+            <Loader2 size={16} className="acct-spin" aria-hidden="true" />
+            Sending…
+          </>
+        ) : (
+          'Send message'
+        )}
       </Button>
     </form>
   );

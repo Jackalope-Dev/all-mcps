@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronUp, List } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -14,6 +14,12 @@ export interface TableOfContentsProps {
   items: TocItem[];
   title?: string;
   className?: string;
+  /**
+   * `rail` — sticky right-rail list (desktop).
+   * `inline` — collapsible "On this page" bar (mobile / narrow).
+   * `auto` (default) — both, switched by CSS at the article breakpoint.
+   */
+  variant?: 'auto' | 'rail' | 'inline';
 }
 
 function resolveElement(id: string): HTMLElement | null {
@@ -21,9 +27,102 @@ function resolveElement(id: string): HTMLElement | null {
   const cleanId = id.replace(/^#/, '');
   return (
     document.getElementById(cleanId) ||
-    document.getElementById(`user-content-${cleanId}`) ||
-    document.querySelector(`[id="${cleanId}"]`) ||
-    document.querySelector(`[id="user-content-${cleanId}"]`)
+    document.getElementById(`user-content-${cleanId}`)
+  );
+}
+
+/** Px from the viewport top at which a heading counts as "current". */
+const SPY_OFFSET = 140;
+
+function useScrollSpy(items: TocItem[]) {
+  const [activeId, setActiveId] = useState<string>(items[0]?.id || '');
+  const lockUntil = useRef(0);
+
+  useEffect(() => {
+    if (!items.length) return;
+    const els = items
+      .map((item) => ({ id: item.id, el: resolveElement(item.id) }))
+      .filter((h): h is { id: string; el: HTMLElement } => h.el !== null);
+    if (!els.length) return;
+
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      if (Date.now() < lockUntil.current) return;
+      const atBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 4;
+      if (atBottom) {
+        setActiveId(els[els.length - 1].id);
+        return;
+      }
+      let current = els[0].id;
+      for (const { id, el } of els) {
+        if (el.getBoundingClientRect().top <= SPY_OFFSET) current = id;
+        else break;
+      }
+      setActiveId(current);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    update();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [items]);
+
+  const jumpTo = (id: string) => {
+    const el = resolveElement(id);
+    if (!el) return;
+    setActiveId(id);
+    lockUntil.current = Date.now() + 700;
+    const reduce = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    // Headings carry scroll-margin-top (content.css), so this lands clear of
+    // the sticky header.
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    window.history.replaceState(null, '', `#${id}`);
+  };
+
+  return { activeId, jumpTo };
+}
+
+function TocList({
+  items,
+  activeId,
+  onPick,
+}: {
+  items: TocItem[];
+  activeId: string;
+  onPick: (e: React.MouseEvent<HTMLAnchorElement>, id: string) => void;
+}) {
+  return (
+    <ul className="toc-list">
+      {items.map((item) => {
+        const isActive = item.id === activeId;
+        return (
+          <li key={item.id}>
+            <a
+              href={`#${item.id}`}
+              onClick={(e) => onPick(e, item.id)}
+              className={`toc-link ${item.level === 3 ? 'toc-link--h3' : ''} ${
+                isActive ? 'is-active' : ''
+              }`}
+              aria-current={isActive ? 'location' : undefined}
+            >
+              {item.text}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -31,173 +130,73 @@ export function TableOfContents({
   items,
   title = 'On this page',
   className = '',
+  variant = 'auto',
 }: TableOfContentsProps) {
-  const [activeId, setActiveId] = useState<string>(items[0]?.id || '');
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const isClickScrolling = useRef<boolean>(false);
+  const { activeId, jumpTo } = useScrollSpy(items);
+  const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (!items?.length) return;
+  if (!items || items.length === 0) return null;
 
-    const headingElements: { id: string; element: HTMLElement }[] = [];
-
-    items.forEach((item) => {
-      const el = resolveElement(item.id);
-      if (el) {
-        headingElements.push({ id: item.id, element: el });
-      }
-    });
-
-    if (!headingElements.length) return;
-
-    const handleScroll = () => {
-      if (isClickScrolling.current) return;
-
-      const scrollPosition = window.scrollY + 120;
-
-      // Check if near bottom of page
-      const isAtBottom =
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 60;
-
-      if (isAtBottom && headingElements.length > 0) {
-        setActiveId(headingElements[headingElements.length - 1].id);
-        return;
-      }
-
-      // Find current active section
-      for (let i = headingElements.length - 1; i >= 0; i--) {
-        const { id, element } = headingElements[i];
-        const top = element.getBoundingClientRect().top + window.scrollY;
-
-        if (scrollPosition >= top - 20) {
-          setActiveId(id);
-          return;
-        }
-      }
-
-      if (headingElements.length > 0) {
-        setActiveId(headingElements[0].id);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [items]);
-
-  if (!items || items.length === 0) {
-    return null;
-  }
-
-  const handleLinkClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    id: string,
-  ) => {
+  const pick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
-    setActiveId(id);
-    setIsOpen(false);
-    isClickScrolling.current = true;
-
-    const el = resolveElement(id);
-    if (el) {
-      const yOffset = -90; // Header height offset
-      const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-
-      if (window.history.pushState) {
-        window.history.pushState(null, '', `#${id}`);
-      }
-    }
-
-    setTimeout(() => {
-      isClickScrolling.current = false;
-    }, 800);
+    setOpen(false);
+    jumpTo(id);
   };
 
-  const activeItem = items.find((item) => item.id === activeId) || items[0];
+  const activeIndex = Math.max(
+    0,
+    items.findIndex((i) => i.id === activeId),
+  );
+  const activeItem = items[activeIndex];
+  const showInline = variant !== 'rail';
+  const showRail = variant !== 'inline';
 
   return (
-    <nav aria-label="Table of contents" className={`h-full ${className}`}>
-      {/* Mobile Top Accordion (visible on < 1024px). Outer vertical spacing is owned by
-          the page wrapper so the card sits clear of the header above and body below. */}
-      <div className="lg:hidden toc-sidebar-card">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between gap-2 text-left focus:outline-none"
-          aria-expanded={isOpen}
-        >
-          <div className="flex items-center gap-2 overflow-hidden">
-            <List size={16} className="text-cyan-400 shrink-0" />
-            <span className="toc-sidebar-title shrink-0">{title}:</span>
-            <span className="truncate text-cyan-300 text-sm font-semibold">
-              {activeItem?.text}
+    <nav
+      aria-label="Table of contents"
+      className={`toc toc--${variant} ${className}`.trim()}
+    >
+      {showInline ? (
+        <div className={`toc-inline ${open ? 'is-open' : ''}`}>
+          <button
+            type="button"
+            className="toc-inline-toggle"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+          >
+            <span className="toc-inline-label">{title}</span>
+            <span className="toc-inline-current">{activeItem?.text}</span>
+            <span className="toc-inline-count tabular">
+              {activeIndex + 1}/{items.length}
             </span>
+            <ChevronDown size={16} aria-hidden="true" className="toc-chevron" />
+          </button>
+          <div className="toc-inline-panel" inert={!open}>
+            <div className="toc-inline-panel-inner">
+              <TocList items={items} activeId={activeId} onPick={pick} />
+            </div>
           </div>
-          {isOpen ? (
-            <ChevronUp size={18} className="text-slate-400 shrink-0" />
-          ) : (
-            <ChevronDown size={18} className="text-slate-400 shrink-0" />
-          )}
-        </button>
-
-        {isOpen && (
-          <div className="mt-3 pt-3 border-t border-[var(--border-color)] max-h-[60vh] overflow-y-auto">
-            <ul className="toc-sidebar-list">
-              {items.map((item) => {
-                const isActive = item.id === activeId;
-                const isH3 = item.level === 3;
-                return (
-                  <li key={item.id}>
-                    <a
-                      href={`#${item.id}`}
-                      onClick={(e) => handleLinkClick(e, item.id)}
-                      className={`toc-link ${isH3 ? 'toc-link--h3' : ''} ${
-                        isActive ? 'is-active' : ''
-                      }`}
-                    >
-                      {item.text}
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-      </div>
-
-      {/* Desktop Sticky Sidebar (visible on >= 1024px) */}
-      <div className="hidden lg:block toc-sidebar-container">
-        <div className="toc-sidebar-card">
-          <div className="toc-sidebar-header">
-            <List size={16} className="text-cyan-400 shrink-0" />
-            <h3 className="toc-sidebar-title">{title}</h3>
-          </div>
-          <ul className="toc-sidebar-list">
-            {items.map((item) => {
-              const isActive = item.id === activeId;
-              const isH3 = item.level === 3;
-              return (
-                <li key={item.id}>
-                  <a
-                    href={`#${item.id}`}
-                    onClick={(e) => handleLinkClick(e, item.id)}
-                    className={`toc-link ${isH3 ? 'toc-link--h3' : ''} ${
-                      isActive ? 'is-active' : ''
-                    }`}
-                  >
-                    {item.text}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
         </div>
-      </div>
+      ) : null}
+
+      {showRail ? (
+        <div className="toc-rail">
+          <p className="toc-rail-title">{title}</p>
+          <TocList items={items} activeId={activeId} onPick={pick} />
+          <button
+            type="button"
+            className="toc-top"
+            onClick={() => {
+              const reduce = window.matchMedia(
+                '(prefers-reduced-motion: reduce)',
+              ).matches;
+              window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+            }}
+          >
+            Back to top ↑
+          </button>
+        </div>
+      ) : null}
     </nav>
   );
 }

@@ -22,6 +22,7 @@ export function Select({
 }: SelectProps) {
   const selectId =
     id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const hintId = helperText && selectId ? `${selectId}-hint` : undefined;
 
   return (
     <div className={`form-field ${className}`.trim()} style={style}>
@@ -32,6 +33,8 @@ export function Select({
       ) : null}
       <select
         id={selectId}
+        aria-invalid={error || undefined}
+        aria-describedby={hintId}
         className={`form-input ${error ? 'form-input-error' : ''} ${selectClassName}`.trim()}
         {...props}
       >
@@ -39,11 +42,8 @@ export function Select({
       </select>
       {helperText ? (
         <div
-          style={{
-            fontSize: '0.72rem',
-            color: 'var(--text-secondary)',
-            marginTop: '0.25rem',
-          }}
+          id={hintId}
+          className={`acct-field-hint${error ? ' is-error' : ''}`}
         >
           {helperText}
         </div>

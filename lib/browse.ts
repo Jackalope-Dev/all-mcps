@@ -86,9 +86,10 @@ function facetConditions(p: BrowseParams): SQL[] {
 }
 
 /**
- * ORDER BY for a sort mode. Popular and trending mirror engagementScore and
- * trendingScore in lib/search.ts (with step functions standing in for the
- * logs, which SQLite lacks), weighted by the same quality multiplier, and put
+ * ORDER BY for a sort mode. Popular mirrors engagementScore in lib/search.ts
+ * (with step functions standing in for the logs, which SQLite lacks);
+ * trending divides raw engagement by listing age in days + 2 so newer
+ * listings with activity rise. Both are weighted by the same quality multiplier, and put
  * featured listings first as the pricing page promises. Literal metrics
  * (most viewed/upvoted, newest, A-Z) stay literal.
  */

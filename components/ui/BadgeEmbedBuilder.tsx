@@ -1,18 +1,11 @@
 'use client';
 
-import {
-  Check,
-  Copy,
-  ExternalLink,
-  Search,
-  ShieldCheck,
-  X,
-} from 'lucide-react';
+import { ExternalLink, Search, ShieldCheck, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { parseServerName } from '../../lib/displayName';
 import { trackShare } from '../../lib/gtag';
+import { CodePanel } from '../tools/CodePanel';
 import { ServerAvatar } from './ServerAvatar';
-import { toast } from './Toast';
 
 interface BadgeEmbedBuilderProps {
   serverId?: string;
@@ -40,7 +33,6 @@ export function BadgeEmbedBuilder({
     'status' | 'upvotes' | 'views' | 'installs'
   >('status');
   const [badgeTheme, setBadgeTheme] = useState<'dark' | 'light'>('dark');
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Server selection state
   const [customId, setCustomId] = useState(serverId || 'allmcps-server');
@@ -118,10 +110,12 @@ export function BadgeEmbedBuilder({
   const cleanId =
     encodeURIComponent(customId.trim().replace(/[^a-zA-Z0-9_.-]/g, '')) ||
     'allmcps-server';
-  const baseUrl =
-    typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://allmcps.com';
+  // Origin is read after mount so SSR and first client render match
+  // (reading window during render caused a hydration mismatch).
+  const [baseUrl, setBaseUrl] = useState('https://allmcps.com');
+  useEffect(() => {
+    setBaseUrl(window.location.origin);
+  }, []);
 
   const queryParams = new URLSearchParams();
   if (badgeStyle !== 'shield') queryParams.set('style', badgeStyle);
@@ -141,680 +135,296 @@ export function BadgeEmbedBuilder({
   const markdownSnippet = `[![AllMCPs](${badgeSrc})](${targetUrl})`;
   const htmlSnippet = `<a href="${targetUrl}"><img src="${badgeSrc}" alt="${safeServerName} on AllMCPs" height="${badgeHeight}" /></a>`;
 
-  const copyToClipboard = async (text: string, key: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey(null), 2000);
-      trackShare({ method: `copy_${key}`, serverId: cleanId });
-      toast.success('Copied snippet to clipboard!');
-    } catch {
-      toast.error('Could not copy to clipboard');
-    }
-  };
-
   const styleOptions: { value: typeof badgeStyle; label: string }[] = [
-    { value: 'shield', label: 'Standard Badge (20px)' },
-    { value: 'flat-square', label: 'Flat Square (20px)' },
-    { value: 'featured', label: 'Featured Banner (32px)' },
-    { value: 'directory', label: 'Directory Card (40px)' },
+    { value: 'shield', label: 'Standard' },
+    { value: 'flat-square', label: 'Flat square' },
+    { value: 'featured', label: 'Featured banner' },
+    { value: 'directory', label: 'Directory card' },
   ];
 
   const metricOptions: { value: typeof badgeMetric; label: string }[] = [
-    { value: 'status', label: 'Status (Verified)' },
+    { value: 'status', label: 'Status' },
     { value: 'upvotes', label: 'Upvotes' },
     { value: 'views', label: 'Views' },
     { value: 'installs', label: 'Installs' },
   ];
 
+  const showDropdown = dropdownOpen && suggestions.length > 0;
+
   return (
-    <div
-      className={`badge-embed-builder ${className}`}
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}
-    >
-      {/* STEP 1: Select Your MCP Server */}
-      <section
-        style={{
-          padding: '1.25rem 1.35rem',
-          borderRadius: '14px',
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border-color)',
-          boxShadow: 'var(--shadow-sm)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '0.85rem',
-          }}
-        >
-          <span
-            style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              background: 'var(--brand-cyan)',
-              color: '#000',
-              fontWeight: 800,
-              fontSize: '0.85rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            1
-          </span>
-          <h3
-            style={{
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              margin: 0,
-              color: 'var(--text-primary)',
-            }}
-          >
-            Select Your MCP Server
-          </h3>
-        </div>
+    <div className={`bdg ${className}`.trim()}>
+      <div className="bdg-grid">
+        <div className="bdg-controls">
+          <section className="tl-pane" aria-labelledby="bdg-server">
+            <h2 id="bdg-server" className="tl-pane-title">
+              <span className="tl-step">1</span> Server
+            </h2>
 
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            margin: '0 0 1rem',
-            lineHeight: 1.5,
-          }}
-        >
-          Search for an indexed MCP server from AllMCPs or enter a custom server
-          ID below:
-        </p>
-
-        {/* Selected Server Card */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.75rem',
-            padding: '0.85rem 1rem',
-            borderRadius: '10px',
-            background: 'var(--bg-muted)',
-            border: '1px solid var(--border-color)',
-            marginBottom: '1rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              minWidth: 0,
-            }}
-          >
-            <ServerAvatar name={selectedServerName} size={36} />
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  color: 'var(--text-primary)',
-                  textOverflow: 'ellipsis',
-                  overflow: 'hidden',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {selectedServerName}
+            <div className="bdg-selected">
+              <ServerAvatar name={selectedServerName} size={36} />
+              <div className="bdg-selected-text">
+                <span className="bdg-selected-name">{selectedServerName}</span>
+                <span className="bdg-selected-id">{cleanId}</span>
               </div>
-              <div
-                style={{
-                  fontSize: '0.78rem',
-                  color: 'var(--text-secondary)',
-                  fontFamily: 'monospace',
-                }}
+              <a
+                href={`/mcp/${cleanId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="tl-icon-btn"
+                aria-label="View listing (opens in new tab)"
+                title="View listing"
               >
-                ID: {cleanId}
-              </div>
+                <ExternalLink size={15} />
+              </a>
             </div>
-          </div>
-          <a
-            href={`/mcp/${cleanId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: '0.78rem',
-              color: 'var(--accent-color)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              textDecoration: 'none',
-              fontWeight: 600,
-              flexShrink: 0,
-            }}
-          >
-            <span>View Listing</span>
-            <ExternalLink size={12} />
-          </a>
-        </div>
 
-        {/* Search & Selection Input Container */}
-        <div ref={searchContainerRef} style={{ position: 'relative' }}>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <Search
-                size={16}
-                style={{
-                  position: 'absolute',
-                  left: '0.75rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-secondary)',
-                  pointerEvents: 'none',
-                }}
-              />
+            <div ref={searchContainerRef} className="tl-picker">
+              <div className="tl-picker-input">
+                <Search size={16} aria-hidden="true" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onFocus={() => {
+                    if (allServers.length === 0) void fetchIndex();
+                    setDropdownOpen(true);
+                  }}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setDropdownOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setDropdownOpen(false);
+                  }}
+                  placeholder="Search by name or ID — e.g. github, postgres"
+                  className="tl-input"
+                  aria-label="Search for your MCP server"
+                  autoComplete="off"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="tl-icon-btn bdg-clear"
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                ) : null}
+              </div>
+
+              {showDropdown ? (
+                <div
+                  className="tl-picker-pop"
+                  role="listbox"
+                  aria-label="Servers"
+                >
+                  {suggestions.map((s) => {
+                    const { displayName } = parseServerName(s.name);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        role="option"
+                        aria-selected={s.id === cleanId}
+                        onClick={() => selectServer(s)}
+                        className={`tl-picker-option ${s.id === cleanId ? 'is-added' : ''}`}
+                      >
+                        <ServerAvatar
+                          name={s.name}
+                          logoUrl={s.logoUrl}
+                          category={s.category}
+                          size={28}
+                        />
+                        <span className="tl-picker-text">
+                          <span className="tl-picker-name">{displayName}</span>
+                          <span className="tl-picker-meta">
+                            {s.category} · {s.id}
+                          </span>
+                        </span>
+                        {s.id === cleanId ? (
+                          <span className="tl-picker-add">Selected</span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+
+            <label className="tl-field">
+              <span className="tl-label">
+                Or enter a server ID{' '}
+                <span className="tl-label-opt">(from its /mcp/ URL)</span>
+              </span>
               <input
                 type="text"
-                value={searchQuery}
-                onFocus={() => {
-                  if (allServers.length === 0) void fetchIndex();
-                  setDropdownOpen(true);
-                }}
+                value={customId}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setDropdownOpen(true);
+                  const val = e.target.value;
+                  setCustomId(val);
+                  setSelectedServerName(
+                    val ? parseServerName(val).displayName : 'Custom Server',
+                  );
                 }}
-                placeholder="Search server by name or ID (e.g., github-mcp, postgres-mcp)..."
-                className="form-input"
-                style={{
-                  paddingLeft: '2.35rem',
-                  fontSize: '0.875rem',
-                  width: '100%',
-                  borderRadius: '8px',
-                }}
+                className="tl-input is-mono"
+                spellCheck={false}
               />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    position: 'absolute',
-                    right: '0.75rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          </div>
+            </label>
+          </section>
 
-          {/* Manual ID fallback input if user enters raw string */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginTop: '0.75rem',
-              fontSize: '0.78rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <span>Or enter custom server ID manually:</span>
-            <input
-              type="text"
-              value={customId}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCustomId(val);
-                setSelectedServerName(
-                  val ? parseServerName(val).displayName : 'Custom Server',
-                );
-              }}
-              className="form-input"
-              style={{
-                padding: '0.25rem 0.5rem',
-                fontSize: '0.78rem',
-                fontFamily: 'monospace',
-                maxWidth: '220px',
-                borderRadius: '6px',
-              }}
-            />
-          </div>
-
-          {/* Autocomplete Dropdown List */}
-          {dropdownOpen && suggestions.length > 0 && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: 0,
-                right: 0,
-                maxHeight: '260px',
-                overflowY: 'auto',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '10px',
-                boxShadow: 'var(--shadow-lg)',
-                zIndex: 50,
-                padding: '0.35rem',
-              }}
-            >
-              <div
-                style={{
-                  padding: '0.35rem 0.6rem',
-                  fontSize: '0.72rem',
-                  color: 'var(--text-secondary)',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                }}
+          <section className="tl-pane" aria-labelledby="bdg-style">
+            <h2 id="bdg-style" className="tl-pane-title">
+              <span className="tl-step">2</span> Style
+            </h2>
+            <div className="tl-field">
+              <span className="tl-label" id="bdg-style-l">
+                Format
+              </span>
+              <fieldset
+                className="bdg-chips fieldset-plain"
+                aria-labelledby="bdg-style-l"
               >
-                Indexed Servers ({suggestions.length})
-              </div>
-              {suggestions.map((s) => {
-                const { displayName } = parseServerName(s.name);
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => selectServer(s)}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.65rem',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background:
-                        s.id === cleanId
-                          ? 'rgba(0, 229, 255, 0.12)'
-                          : 'transparent',
-                      color: 'var(--text-primary)',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      transition: 'background 0.15s ease',
-                    }}
-                  >
-                    <ServerAvatar
-                      name={s.name}
-                      logoUrl={s.logoUrl}
-                      category={s.category}
-                      size={24}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {displayName}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.72rem',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        {s.category} &bull;{' '}
-                        <span style={{ fontFamily: 'monospace' }}>{s.id}</span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* STEP 2: Customize Badge Style & Metrics */}
-      <section
-        style={{
-          padding: '1.25rem 1.35rem',
-          borderRadius: '14px',
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border-color)',
-          boxShadow: 'var(--shadow-sm)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '0.85rem',
-          }}
-        >
-          <span
-            style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              background: 'var(--brand-cyan)',
-              color: '#000',
-              fontWeight: 800,
-              fontSize: '0.85rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            2
-          </span>
-          <h3
-            style={{
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              margin: 0,
-              color: 'var(--text-primary)',
-            }}
-          >
-            Customize Badge Style &amp; Theme
-          </h3>
-        </div>
-
-        {/* Style & Metric Toggles */}
-        <div
-          className="badge-embed-builder-toggles"
-          style={{ marginBottom: '1.25rem' }}
-        >
-          {/* Style selection */}
-          <div>
-            <div className="badge-embed-label">Badge Style</div>
-            <div className="badge-embed-toggle-group">
-              {styleOptions.map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setBadgeStyle(value)}
-                  className={`badge-embed-toggle-btn ${badgeStyle === value ? 'is-active' : ''}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Metric selection & Theme selection */}
-          <div className="badge-embed-metric-row">
-            <div>
-              <div className="badge-embed-label">Displayed Data / Metric</div>
-              <div className="badge-embed-toggle-group">
-                {metricOptions.map(({ value, label }) => (
+                {styleOptions.map(({ value, label }) => (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setBadgeMetric(value)}
-                    className={`badge-embed-toggle-btn ${badgeMetric === value ? 'is-active' : ''}`}
+                    className="chip"
+                    aria-pressed={badgeStyle === value}
+                    onClick={() => setBadgeStyle(value)}
                   >
                     {label}
                   </button>
                 ))}
-              </div>
+              </fieldset>
             </div>
-
-            <div>
-              <div className="badge-embed-label">Theme</div>
-              <div className="badge-embed-toggle-group">
+            <div className="tl-field">
+              <span className="tl-label" id="bdg-metric-l">
+                Shows
+              </span>
+              <fieldset
+                className="bdg-chips fieldset-plain"
+                aria-labelledby="bdg-metric-l"
+              >
+                {metricOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="chip"
+                    aria-pressed={badgeMetric === value}
+                    onClick={() => setBadgeMetric(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </fieldset>
+            </div>
+            <div className="tl-field">
+              <span className="tl-label" id="bdg-theme-l">
+                Theme
+              </span>
+              <fieldset
+                className="segmented fieldset-plain"
+                aria-labelledby="bdg-theme-l"
+              >
                 <button
                   type="button"
+                  aria-pressed={badgeTheme === 'dark'}
                   onClick={() => setBadgeTheme('dark')}
-                  className={`badge-embed-toggle-btn ${badgeTheme === 'dark' ? 'is-active-light' : ''}`}
                 >
                   Dark
                 </button>
                 <button
                   type="button"
+                  aria-pressed={badgeTheme === 'light'}
                   onClick={() => setBadgeTheme('light')}
-                  className={`badge-embed-toggle-btn ${badgeTheme === 'light' ? 'is-active-solid' : ''}`}
                 >
                   Light
                 </button>
-              </div>
+              </fieldset>
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Live Badge Preview */}
-        <div>
-          <div className="badge-embed-label">
-            Live Preview for &quot;{selectedServerName}&quot;
-          </div>
+        <section className="tl-pane bdg-output" aria-labelledby="bdg-copy">
+          <h2 id="bdg-copy" className="tl-pane-title">
+            <span className="tl-step">3</span> Preview &amp; copy
+          </h2>
           <div
-            className={`badge-embed-preview ${badgeTheme === 'light' ? 'badge-embed-preview--light' : 'badge-embed-preview--dark'}`}
+            className={`bdg-preview ${badgeTheme === 'light' ? 'bdg-preview--light' : ''}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* biome-ignore lint/performance/noImgElement: live SVG badge from our API, sized by the chosen style. */}
             <img
+              key={`${cleanId}${queryString}`}
               src={`/api/badge/${cleanId}${queryString}`}
               alt={`${selectedServerName} AllMCPs Badge`}
               style={{ height: `${badgeHeight}px`, maxWidth: '100%' }}
             />
           </div>
-        </div>
-      </section>
 
-      {/* STEP 3: Copy Code Snippets */}
-      <section
-        style={{
-          padding: '1.25rem 1.35rem',
-          borderRadius: '14px',
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border-color)',
-          boxShadow: 'var(--shadow-sm)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '0.85rem',
-          }}
-        >
-          <span
-            style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              background: 'var(--brand-cyan)',
-              color: '#000',
-              fontWeight: 800,
-              fontSize: '0.85rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            3
-          </span>
-          <h3
-            style={{
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              margin: 0,
-              color: 'var(--text-primary)',
-            }}
-          >
-            Copy Embed Snippet
-          </h3>
-        </div>
-
-        {/* Verification Bonus Callout */}
-        <div className="badge-embed-callout" style={{ marginBottom: '1rem' }}>
-          <ShieldCheck
-            size={16}
-            style={{ color: '#34d399', flexShrink: 0, marginTop: '0.125rem' }}
+          <CodePanel
+            title="Markdown · README.md"
+            code={markdownSnippet}
+            language="text"
+            highlight={false}
+            onCopied={() =>
+              trackShare({ method: 'copy_markdown', serverId: cleanId })
+            }
           />
-          <div className="badge-embed-callout-text">
-            <span style={{ fontWeight: 600 }}>Automatic badge health sync</span>
-            : we re-check your badge on each health run, so once it&apos;s live
-            your reciprocal dofollow link stays credited automatically.
-          </div>
-        </div>
-
-        {/* Reciprocal Dofollow Callout */}
-        <div
-          className="badge-embed-callout"
-          style={{ marginBottom: '1.25rem' }}
-        >
-          <ShieldCheck
-            size={16}
-            style={{
-              color: 'var(--accent-color)',
-              flexShrink: 0,
-              marginTop: '0.125rem',
-            }}
+          <CodePanel
+            title="HTML · website or blog"
+            code={htmlSnippet}
+            language="text"
+            highlight={false}
+            onCopied={() =>
+              trackShare({ method: 'copy_html', serverId: cleanId })
+            }
           />
-          <div className="badge-embed-callout-text">
-            <span style={{ fontWeight: 600 }}>Reciprocal dofollow link</span>:
-            These snippets are a genuine <strong>dofollow</strong> link back to
-            AllMCPs (no <code>rel=&quot;nofollow&quot;</code>). Verify your site
-            (badge, meta tag, or DNS) and keep the link dofollow, and your
-            listing&apos;s website link becomes dofollow in return.
-          </div>
-        </div>
 
-        {/* Claim & Verification Action Block */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            padding: '1rem 1.25rem',
-            borderRadius: '12px',
-            border: '1px solid rgba(0, 229, 255, 0.35)',
-            background: 'var(--brand-gradient-soft)',
-            marginBottom: '1.25rem',
-          }}
-        >
-          <div style={{ flex: '1 1 260px' }}>
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: '0.925rem',
-                color: 'var(--text-primary)',
-                marginBottom: '0.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              <ShieldCheck size={18} style={{ color: 'var(--accent-color)' }} />
-              Claim &amp; Verify Ownership for <code>{cleanId}</code>
-            </div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: '0.775rem',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.45,
-              }}
-            >
-              Claim this listing to get your Verified owner badge, manage
-              description &amp; logo, and earn reciprocal SEO backlinks.
-            </p>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.5rem',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-            }}
-          >
-            <a
-              href={`/mcp/${cleanId}/claim`}
-              className="btn btn-primary"
-              style={{
-                fontSize: '0.825rem',
-                padding: '0.5rem 0.95rem',
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-                fontWeight: 700,
-              }}
-            >
-              Claim &amp; Verify Listing →
-            </a>
-            <a
-              href={`/mcp/${cleanId}`}
-              className="btn btn-secondary"
-              style={{
-                fontSize: '0.825rem',
-                padding: '0.5rem 0.85rem',
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              View Listing
-            </a>
-          </div>
-        </div>
+          <ul className="bdg-notes">
+            <li>
+              <ShieldCheck size={15} aria-hidden="true" />
+              <span>
+                <strong>Reciprocal dofollow link.</strong> These snippets are a
+                genuine dofollow link back to AllMCPs (no{' '}
+                <code>rel=&quot;nofollow&quot;</code>). Verify your site (badge,
+                meta tag, or DNS) and keep the link dofollow, and your
+                listing&apos;s website link becomes dofollow in return.
+              </span>
+            </li>
+            <li>
+              <ShieldCheck size={15} aria-hidden="true" />
+              <span>
+                <strong>Automatic badge health sync.</strong> We re-check your
+                badge on each health run, so once it&apos;s live your reciprocal
+                dofollow link stays credited automatically.
+              </span>
+            </li>
+          </ul>
 
-        {/* Code Snippet Outputs */}
-        <div className="badge-embed-snippets">
-          {/* Markdown Snippet */}
-          <div className="badge-embed-snippet-block">
-            <div className="badge-embed-snippet-label">
-              <span>Markdown (for GitHub README.md)</span>
+          <div className="bdg-claim">
+            <div>
+              <p className="bdg-claim-title">
+                Own <code>{cleanId}</code>?
+              </p>
+              <p className="bdg-claim-sub">
+                Claim this listing to get your Verified owner badge, manage
+                description &amp; logo, and earn reciprocal SEO backlinks.
+              </p>
             </div>
-            <div className="badge-embed-snippet-code">
-              <pre>
-                <code>{markdownSnippet}</code>
-              </pre>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(markdownSnippet, 'markdown')}
-                className="badge-embed-copy-btn"
+            <div className="tl-actions">
+              <a
+                href={`/mcp/${cleanId}/claim`}
+                className="btn btn-primary btn-sm"
               >
-                {copiedKey === 'markdown' ? (
-                  <Check size={14} style={{ color: '#34d399' }} />
-                ) : (
-                  <Copy size={14} />
-                )}
-                <span>{copiedKey === 'markdown' ? 'Copied' : 'Copy'}</span>
-              </button>
+                Claim &amp; verify
+              </a>
+              <a href={`/mcp/${cleanId}`} className="btn btn-ghost btn-sm">
+                View listing
+              </a>
             </div>
           </div>
-
-          {/* HTML Snippet */}
-          <div className="badge-embed-snippet-block">
-            <div className="badge-embed-snippet-label">
-              <span>HTML (for Website or Blog)</span>
-            </div>
-            <div className="badge-embed-snippet-code">
-              <pre>
-                <code>{htmlSnippet}</code>
-              </pre>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(htmlSnippet, 'html')}
-                className="badge-embed-copy-btn"
-              >
-                {copiedKey === 'html' ? (
-                  <Check size={14} style={{ color: '#34d399' }} />
-                ) : (
-                  <Copy size={14} />
-                )}
-                <span>{copiedKey === 'html' ? 'Copied' : 'Copy'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

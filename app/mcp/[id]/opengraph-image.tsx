@@ -203,6 +203,7 @@ export default async function Image({
 
       {/* Geometric Grid Pattern Overlay */}
       <svg
+        aria-hidden="true"
         style={{
           position: 'absolute',
           top: 0,
@@ -257,6 +258,7 @@ export default async function Image({
         >
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <svg
+              aria-hidden="true"
               width="56"
               height="56"
               viewBox="0 0 1024 1024"

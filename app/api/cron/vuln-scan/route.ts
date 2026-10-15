@@ -129,7 +129,7 @@ export async function POST(req: Request) {
 
     const osvResults = await osvQueryBatch(mapped.map((m) => m.eco));
 
-    const idsByServer = mapped.map((m, i) =>
+    const idsByServer = mapped.map((_m, i) =>
       (osvResults[i]?.vulns || []).map((v) => v.id),
     );
     const uniqueIds = [...new Set(idsByServer.flat())].sort();

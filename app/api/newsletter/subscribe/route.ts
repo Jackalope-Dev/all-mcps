@@ -69,7 +69,15 @@ export async function POST(req: Request) {
       enrollInSequences: true,
     });
 
-    return NextResponse.json({ success: true });
+    const res = NextResponse.json({ success: true });
+    // Readable by the client (not httpOnly): NewsletterModal checks it via
+    // document.cookie so the signup modal doesn't reappear.
+    res.cookies.set('allmcps_subscribed', '1', {
+      path: '/',
+      maxAge: 31536000,
+      sameSite: 'lax',
+    });
+    return res;
   } catch (error) {
     console.error('Newsletter subscribe error:', error);
     return NextResponse.json(

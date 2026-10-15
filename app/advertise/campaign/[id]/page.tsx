@@ -145,10 +145,8 @@ async function getCampaignData(id: string) {
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(-21); // Last 3 weeks
 
-    const uniqueReach =
-      allSessions.size > 0
-        ? allSessions.size
-        : Math.round(ad.impressionsServed * 0.78);
+    // Real hashed visitors only — never an estimate.
+    const uniqueReach = allSessions.size;
 
     // Find top performing placement by CTR (min 10 impressions)
     const topPlacement =
@@ -355,8 +353,8 @@ export default async function CampaignDashboardPage({
             <strong style={{ color: 'var(--text-primary)' }}>
               {ad.advertiserEmail}
             </strong>
-            . All impressions counted via MRC-compliant 50%+ in-viewport
-            detection.
+            . An impression counts once at least 50% of the ad is in the
+            viewport.
           </>
         }
       />
@@ -485,10 +483,10 @@ export default async function CampaignDashboardPage({
             <div
               style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
             >
-              Your campaign is in the moderation queue. Once approved (typically
-              within 12–24 hours), impressions will begin serving immediately
-              across all placements and AI feeds. Bookmark this URL to monitor
-              performance in real time.
+              Your campaign is in the moderation queue. Once approved (we aim to
+              review within 24 hours), impressions will begin serving
+              immediately across all placements and AI feeds. Bookmark this URL
+              to monitor performance in real time.
             </div>
           </div>
         </div>
@@ -510,14 +508,14 @@ export default async function CampaignDashboardPage({
         >
           <XCircle
             size={22}
-            style={{ color: '#f87171', flexShrink: 0, marginTop: '2px' }}
+            style={{ color: 'var(--hue-red)', flexShrink: 0, marginTop: '2px' }}
           />
           <div>
             <div
               style={{
                 fontWeight: 700,
                 fontSize: '0.95rem',
-                color: '#f87171',
+                color: 'var(--hue-red)',
                 marginBottom: '0.2rem',
               }}
             >
@@ -706,7 +704,7 @@ export default async function CampaignDashboardPage({
               marginBottom: '0.5rem',
             }}
           >
-            <Eye size={15} style={{ color: 'var(--accent-color)' }} /> Verified
+            <Eye size={15} style={{ color: 'var(--hue-amber)' }} /> Verified
             Impressions
           </div>
           <div
@@ -757,7 +755,7 @@ export default async function CampaignDashboardPage({
               justifyContent: 'space-between',
             }}
           >
-            <span>100% Delivery Guarantee</span>
+            <span>Runs until fully delivered</span>
             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
               {progressPct}%
             </span>
@@ -785,7 +783,7 @@ export default async function CampaignDashboardPage({
           >
             <MousePointerClick
               size={15}
-              style={{ color: 'var(--accent-color)' }}
+              style={{ color: 'var(--hue-orange)' }}
             />{' '}
             Recorded Clicks
           </div>
@@ -838,7 +836,7 @@ export default async function CampaignDashboardPage({
               marginBottom: '0.5rem',
             }}
           >
-            <Percent size={15} style={{ color: 'var(--accent-color)' }} />{' '}
+            <Percent size={15} style={{ color: 'var(--hue-orange)' }} />{' '}
             Click-Through Rate
           </div>
           <div
@@ -858,8 +856,7 @@ export default async function CampaignDashboardPage({
               marginTop: '0.6rem',
             }}
           >
-            Developer tools avg:{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>~1.8%</strong>
+            Clicks ÷ counted impressions
           </div>
         </div>
 
@@ -882,7 +879,7 @@ export default async function CampaignDashboardPage({
               marginBottom: '0.5rem',
             }}
           >
-            <Users size={15} style={{ color: 'var(--accent-color)' }} /> Unique
+            <Users size={15} style={{ color: 'var(--hue-teal)' }} /> Unique
             Developer Reach
           </div>
           <div
@@ -902,7 +899,7 @@ export default async function CampaignDashboardPage({
               marginTop: '0.6rem',
             }}
           >
-            Deduplicated session-based reach
+            Unique hashed visitors in your logs
           </div>
         </div>
       </div>
@@ -935,7 +932,7 @@ export default async function CampaignDashboardPage({
                 marginBottom: '0.35rem',
               }}
             >
-              <DollarSign size={14} style={{ color: 'var(--accent-color)' }} />{' '}
+              <DollarSign size={14} style={{ color: 'var(--hue-indigo)' }} />{' '}
               Delivered CPM
             </div>
             <div
@@ -954,7 +951,7 @@ export default async function CampaignDashboardPage({
                 marginTop: '0.3rem',
               }}
             >
-              Actual cost per 1k verified views
+              Actual cost per 1k counted views
             </div>
           </div>
         )}
@@ -977,7 +974,7 @@ export default async function CampaignDashboardPage({
                 marginBottom: '0.35rem',
               }}
             >
-              <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} />{' '}
+              <TrendingUp size={14} style={{ color: 'var(--hue-orange)' }} />{' '}
               Effective CPC
             </div>
             <div
@@ -1019,8 +1016,8 @@ export default async function CampaignDashboardPage({
                 marginBottom: '0.35rem',
               }}
             >
-              <Target size={14} style={{ color: 'var(--accent-color)' }} /> Cost
-              / Developer
+              <Target size={14} style={{ color: 'var(--hue-blue)' }} /> Cost /
+              Developer
             </div>
             <div
               style={{
@@ -1061,7 +1058,7 @@ export default async function CampaignDashboardPage({
                 marginBottom: '0.35rem',
               }}
             >
-              <Repeat size={14} style={{ color: 'var(--accent-color)' }} /> Ad
+              <Repeat size={14} style={{ color: 'var(--hue-violet)' }} /> Ad
               Frequency
             </div>
             <div
@@ -1102,7 +1099,7 @@ export default async function CampaignDashboardPage({
               marginBottom: '0.35rem',
             }}
           >
-            <Bot size={14} style={{ color: 'var(--accent-color)' }} /> AI Agent
+            <Bot size={14} style={{ color: 'var(--hue-pink)' }} /> AI Agent
             Injections
           </div>
           <div
@@ -1142,7 +1139,10 @@ export default async function CampaignDashboardPage({
             flexWrap: 'wrap',
           }}
         >
-          <Trophy size={20} style={{ color: '#facc15', flexShrink: 0 }} />
+          <Trophy
+            size={20}
+            style={{ color: 'var(--hue-amber)', flexShrink: 0 }}
+          />
           <div style={{ flex: 1, minWidth: '200px' }}>
             <div
               style={{
@@ -1199,7 +1199,7 @@ export default async function CampaignDashboardPage({
                   gap: '8px',
                 }}
               >
-                <Layers size={17} style={{ color: 'var(--accent-color)' }} />{' '}
+                <Layers size={17} style={{ color: 'var(--hue-blue)' }} />{' '}
                 Multi-Placement Performance
               </h3>
               <p
@@ -1532,8 +1532,8 @@ export default async function CampaignDashboardPage({
                 gap: '8px',
               }}
             >
-              <Activity size={17} style={{ color: 'var(--accent-color)' }} />{' '}
-              Daily Delivery Velocity
+              <Activity size={17} style={{ color: 'var(--hue-amber)' }} /> Daily
+              Delivery Velocity
             </h3>
             <span
               style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}
@@ -1583,7 +1583,7 @@ export default async function CampaignDashboardPage({
                       width: '100%',
                       maxWidth: '26px',
                       height: `${heightPct}%`,
-                      background: 'var(--brand-gradient)',
+                      background: 'var(--hue-amber)',
                       borderRadius: '3px 3px 0 0',
                       transition: 'height 0.3s ease',
                     }}
@@ -1766,7 +1766,7 @@ export default async function CampaignDashboardPage({
                 marginBottom: '0.2rem',
               }}
             >
-              ✓ MRC Viewability Compliance
+              ✓ Viewability check
             </div>
             <div
               style={{
@@ -1798,8 +1798,8 @@ export default async function CampaignDashboardPage({
                 lineHeight: 1.45,
               }}
             >
-              Cryptographic session hashing deduplicates rapid reloads and
-              filters automated crawlers from impression counts.
+              Hashed visitor IDs drop double-fired beacons, cap repeat views per
+              visitor per hour, and only views from our signed ad tokens count.
             </div>
           </div>
           <div>
@@ -1811,7 +1811,7 @@ export default async function CampaignDashboardPage({
                 marginBottom: '0.2rem',
               }}
             >
-              ✓ 100% Delivery or Full Refund
+              ✓ Full Delivery, Refund If Rejected
             </div>
             <div
               style={{
@@ -1820,8 +1820,9 @@ export default async function CampaignDashboardPage({
                 lineHeight: 1.45,
               }}
             >
-              Your campaign runs until every purchased impression credit is
-              fulfilled. If rejected, Stripe issues an automatic 100% refund.
+              Your campaign has no end date and runs until every purchased
+              impression is delivered. If we reject it, a full refund is issued
+              automatically through Stripe.
             </div>
           </div>
         </div>

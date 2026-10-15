@@ -266,6 +266,7 @@ export function AdminToolsControl() {
             onKeyDown={(e) => e.key === 'Enter' && handleInspectLookup()}
           />
           <button
+            type="button"
             onClick={handleInspectLookup}
             disabled={inspecting || !inspectorId.trim()}
             className="admin-btn"
@@ -432,6 +433,7 @@ export function AdminToolsControl() {
               }}
             >
               <button
+                type="button"
                 onClick={() => handleQuickServerAction('feature')}
                 disabled={runningJob !== null}
                 className="admin-btn"
@@ -447,6 +449,7 @@ export function AdminToolsControl() {
                 <Zap size={13} /> Grant 14d Boost
               </button>
               <button
+                type="button"
                 onClick={() =>
                   handleQuickServerAction(
                     inspectedServer.isPremium ? 'unset_premium' : 'set_premium',
@@ -622,6 +625,7 @@ export function AdminToolsControl() {
               </div>
 
               <button
+                type="button"
                 onClick={() => handleRunJob(job.id)}
                 disabled={isRunning || runningJob !== null}
                 className="admin-btn"

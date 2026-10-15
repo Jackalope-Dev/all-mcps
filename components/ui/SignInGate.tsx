@@ -15,35 +15,13 @@ export function SignInGate({
   message?: string;
 }) {
   return (
-    <div
-      style={{
-        padding: '1.75rem',
-        textAlign: 'center',
-        border: '1px dashed var(--border-color)',
-        borderRadius: '12px',
-        background: 'var(--bg-muted)',
-      }}
-    >
-      <Lock
-        size={28}
-        color="var(--accent-color)"
-        style={{ marginBottom: '0.5rem' }}
-      />
-      <p
-        style={{
-          color: 'var(--text-secondary)',
-          marginBottom: '1rem',
-          fontSize: '0.9rem',
-        }}
-      >
-        {message}
-      </p>
-      <a
-        href={href}
-        className="btn btn-primary"
-        style={{ textDecoration: 'none', padding: '0.6rem 1.25rem' }}
-      >
-        Sign In to Continue
+    <div className="acct-gate">
+      <span className="acct-gate-icon" aria-hidden="true">
+        <Lock size={18} />
+      </span>
+      <p>{message}</p>
+      <a href={href} className="btn btn-primary btn-md">
+        Sign in to continue
       </a>
     </div>
   );

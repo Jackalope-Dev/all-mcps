@@ -20,6 +20,7 @@ export function Input({
 }: InputProps) {
   const inputId =
     id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const hintId = helperText && inputId ? `${inputId}-hint` : undefined;
 
   return (
     <div className={`form-field ${className}`.trim()} style={style}>
@@ -30,16 +31,15 @@ export function Input({
       ) : null}
       <input
         id={inputId}
+        aria-invalid={error || undefined}
+        aria-describedby={hintId}
         className={`form-input ${error ? 'form-input-error' : ''} ${inputClassName}`.trim()}
         {...props}
       />
       {helperText ? (
         <div
-          style={{
-            fontSize: '0.72rem',
-            color: 'var(--text-secondary)',
-            marginTop: '0.25rem',
-          }}
+          id={hintId}
+          className={`acct-field-hint${error ? ' is-error' : ''}`}
         >
           {helperText}
         </div>

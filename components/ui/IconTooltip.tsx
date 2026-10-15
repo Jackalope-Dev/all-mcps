@@ -54,10 +54,13 @@ export function IconTooltip({
       className={`mcp-icon-tooltip${open ? ' is-open' : ''} ${className}`}
     >
       <TriggerTag
-        {...(asSpan ? {} : { type: 'button' as const })}
+        // A plain <span> may not carry aria-label/aria-expanded, so the span
+        // variant is exposed as a labelled image; the button keeps its state.
+        {...(asSpan
+          ? { role: 'img' }
+          : { type: 'button' as const, 'aria-expanded': open })}
         className="mcp-icon-tooltip-trigger"
         aria-label={label}
-        aria-expanded={open}
         aria-describedby={bubbleId}
         onClick={() => {
           // Only toggle on touch/coarse pointers; hover devices use CSS.

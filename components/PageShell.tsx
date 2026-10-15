@@ -45,14 +45,7 @@ export function PageShell({
 interface PageHeaderProps {
   title: React.ReactNode;
   description?: React.ReactNode;
-  kicker?: string;
-  /**
-   * Icon+text pill "eyebrow" above the title — the badge pattern guides/best/
-   * categories/stack/pricing used to each hand-roll inline. Takes precedence
-   * over `kicker` when both are given.
-   */
-  badge?: React.ReactNode;
-  /** Center the badge/title/description — the hero-style treatment those same pages hand-rolled. */
+  /** Center the title/description (hero-style treatment). */
   centered?: boolean;
   className?: string;
 }
@@ -60,8 +53,6 @@ interface PageHeaderProps {
 export function PageHeader({
   title,
   description,
-  kicker,
-  badge,
   centered = false,
   className = '',
 }: PageHeaderProps) {
@@ -69,11 +60,6 @@ export function PageHeader({
     <header
       className={`page-header ${centered ? 'page-header--centered' : ''} ${className}`.trim()}
     >
-      {badge ? (
-        <div className="page-header-badge">{badge}</div>
-      ) : kicker ? (
-        <p className="page-kicker">{kicker}</p>
-      ) : null}
       <h1 className="text-page-title">{title}</h1>
       {description ? <div className="text-lead">{description}</div> : null}
     </header>

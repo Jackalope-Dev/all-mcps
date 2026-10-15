@@ -1,7 +1,7 @@
 'use client';
 
 import { Flag, X } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TurnstileWidget } from './TurnstileWidget';
 
@@ -21,6 +21,8 @@ const REASONS: { value: string; label: string }[] = [
  */
 export function ReportListingButton({ serverId }: { serverId: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const reasonId = useId();
+  const detailsId = useId();
   const [reason, setReason] = useState('broken_install');
   const [details, setDetails] = useState('');
   const [token, setToken] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [widgetKey, setWidgetKey] = useState(0);
 
-  const close = () => {
+  const close = useCallback(() => {
     setIsOpen(false);
     // Reset after the close animation-free unmount so a re-open starts fresh.
     setTimeout(() => {
@@ -41,7 +43,16 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
       setSubmitted(false);
       setError(null);
     }, 200);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, close]);
 
   const handleSubmit = async () => {
     if (!token) {
@@ -74,13 +85,27 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
   };
 
   const modalContent = (
-    <div className="share-modal-overlay" onClick={close}>
-      <div
-        className="share-modal-content"
-        style={{ maxWidth: 480 }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="share-modal-overlay">
+      {/* Backdrop: a click outside the dialog content closes it. The content
+          (position: relative) paints above this full-bleed button. */}
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Close report dialog"
+        onClick={close}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          margin: 0,
+          padding: 0,
+          border: 0,
+          background: 'transparent',
+          cursor: 'default',
+        }}
+      />
+      <div className="share-modal-content" style={{ maxWidth: 480 }}>
         <button
+          type="button"
           onClick={close}
           style={{
             position: 'absolute',
@@ -167,6 +192,7 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
               </p>
 
               <label
+                htmlFor={reasonId}
                 style={{
                   display: 'block',
                   fontSize: '0.8rem',
@@ -178,6 +204,7 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
                 What&rsquo;s wrong?
               </label>
               <select
+                id={reasonId}
                 className="form-input"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -191,6 +218,7 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
               </select>
 
               <label
+                htmlFor={detailsId}
                 style={{
                   display: 'block',
                   fontSize: '0.8rem',
@@ -207,6 +235,7 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
                 </span>
               </label>
               <textarea
+                id={detailsId}
                 className="form-input"
                 rows={3}
                 maxLength={500}
@@ -276,12 +305,11 @@ export function ReportListingButton({ serverId }: { serverId: string }) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="mcp-action-btn"
+        className="lst-menu-item"
         title="Report a problem with this listing"
-        aria-label="Report a problem with this listing"
       >
-        <Flag size={18} style={{ color: 'var(--text-secondary)' }} />
-        <span className="mcp-action-btn-label">Report</span>
+        <Flag size={15} aria-hidden="true" />
+        <span>Report a problem</span>
       </button>
 
       {isOpen && createPortal(modalContent, document.body)}

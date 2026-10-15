@@ -196,20 +196,22 @@ export function BadgeMarquee() {
     return null;
   }
 
-  // Repeat array for smooth infinite marquee scrolling animation
-  const displayBadges =
-    BADGES.length < 5 ? Array(6).fill(BADGES).flat() : [...BADGES, ...BADGES];
+  // Repeat array for smooth infinite marquee scrolling animation. Each copy's
+  // badges are keyed by badge id + copy number.
+  const copies = BADGES.length < 5 ? 6 : 2;
+  const displayBadges = Array.from({ length: copies }, (_, copy) =>
+    BADGES.map((badge) => ({ badge, key: `${badge.id}-${copy}` })),
+  ).flat();
 
   return (
-    <div
-      className="badge-marquee-container"
-      role="group"
+    <fieldset
+      className="badge-marquee-container fieldset-plain"
       aria-label="Featured Directory Listings"
     >
       <div className="badge-marquee-track">
-        {displayBadges.map((badge, idx) => (
+        {displayBadges.map(({ badge, key }) => (
           <a
-            key={`${badge.id}-${idx}`}
+            key={key}
             href={badge.href}
             target="_blank"
             rel={badge.rel || 'noopener noreferrer'}
@@ -220,7 +222,8 @@ export function BadgeMarquee() {
               {badge.imageUrl ? (
                 <img
                   src={badge.imageUrl}
-                  alt={badge.name}
+                  // The pill shows the name as text, so the logo is decorative.
+                  alt=""
                   className="badge-marquee-icon-thumb"
                   loading="lazy"
                   decoding="async"
@@ -233,6 +236,6 @@ export function BadgeMarquee() {
           </a>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }

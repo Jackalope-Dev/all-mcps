@@ -110,6 +110,9 @@ export function SafeMarkdown({
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeRaw, [rehypeSanitize, customSanitizeSchema]]}
       components={{
+        // Embedded markdown always sits under the page's own <h1>, so a
+        // README/doc "# Title" is demoted to keep one h1 per page.
+        h1: ({ node: _node, ...props }) => <h2 {...props} />,
         a: ({ href, children, node: _node, ...props }) => (
           <MarkdownLink
             href={href}

@@ -20,14 +20,13 @@ export function ServerConfigCopyButton({
   command = 'npx',
   args,
   env,
-  label = 'Copy Config',
+  label = 'Copy config',
 }: ServerConfigCopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
     const formattedConfig = formatServerClientConfig(
       clientSlug,
       serverName,
@@ -35,45 +34,27 @@ export function ServerConfigCopyButton({
       args,
       env,
     );
-    navigator.clipboard.writeText(formattedConfig);
-
+    // Optimistic feedback; revert if the clipboard write is refused.
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard
+      ?.writeText(formattedConfig)
+      .catch(() => setCopied(false));
+    setTimeout(() => setCopied(false), 1800);
   };
 
   return (
     <button
       onClick={handleCopy}
       type="button"
-      className="btn btn-secondary"
-      style={{
-        padding: '0.35rem 0.65rem',
-        fontSize: '0.75rem',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.35rem',
-        borderRadius: '6px',
-        border: '1px solid var(--border-color)',
-        background: copied
-          ? 'rgba(16, 185, 129, 0.15)'
-          : 'rgba(255, 255, 255, 0.05)',
-        color: copied ? '#10b981' : 'var(--text-primary)',
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-      }}
+      className={`btn btn-secondary btn-sm cl-server-copy ${copied ? 'is-copied' : ''}`}
       title={`Copy JSON config for ${serverName}`}
     >
       {copied ? (
-        <>
-          <Check size={13} style={{ color: '#10b981' }} />
-          <span>Copied JSON!</span>
-        </>
+        <Check size={13} aria-hidden="true" />
       ) : (
-        <>
-          <Copy size={13} style={{ color: 'var(--accent-color)' }} />
-          <span>{label}</span>
-        </>
+        <Copy size={13} aria-hidden="true" />
       )}
+      <span aria-live="polite">{copied ? 'Copied' : label}</span>
     </button>
   );
 }

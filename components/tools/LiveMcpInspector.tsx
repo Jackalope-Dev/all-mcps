@@ -3,8 +3,7 @@
 import { AlertTriangle, Loader2, Play, Plug, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
+import { CodePanel, EditorPane } from './CodePanel';
 
 type Tool = { name: string; description?: string; inputSchema?: unknown };
 
@@ -34,7 +33,11 @@ export function LiveMcpInspector() {
     ? { Authorization: `Bearer ${token.trim()}` }
     : undefined;
 
+  const trimmedUrl = url.trim();
+  const urlLooksValid = /^https?:\/\/\S+$/i.test(trimmedUrl);
+
   const connect = async () => {
+    if (!urlLooksValid || connecting) return;
     trackFeatureUse('live_mcp_inspector', { action: 'connect' });
     setConnecting(true);
     setError(null);
@@ -48,7 +51,7 @@ export function LiveMcpInspector() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: url.trim(),
+          url: trimmedUrl,
           method: 'tools/list',
           headers,
         }),
@@ -89,15 +92,16 @@ export function LiveMcpInspector() {
     }
   };
 
+  let argsError: string | null = null;
+  try {
+    if (argsText.trim()) JSON.parse(argsText);
+  } catch {
+    argsError = 'Arguments must be valid JSON.';
+  }
+
   const callTool = async () => {
-    if (!selected) return;
-    let args: unknown;
-    try {
-      args = argsText.trim() ? JSON.parse(argsText) : {};
-    } catch {
-      setCallError('Arguments must be valid JSON.');
-      return;
-    }
+    if (!selected || argsError) return;
+    const args = argsText.trim() ? JSON.parse(argsText) : {};
     setCalling(true);
     setCallError(null);
     setCallResult(null);
@@ -106,7 +110,7 @@ export function LiveMcpInspector() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: url.trim(),
+          url: trimmedUrl,
           method: 'tools/call',
           params: { name: selected.name, arguments: args },
           headers,
@@ -129,281 +133,196 @@ export function LiveMcpInspector() {
     }
   };
 
-  const label = {
-    display: 'block',
-    fontSize: '0.8rem',
-    fontWeight: 600,
-    marginBottom: '0.35rem',
-    color: 'var(--text-secondary)',
-  } as const;
-  const field = {
-    width: '100%',
-    padding: '0.7rem 0.85rem',
-    borderRadius: '10px',
-    border: '1px solid var(--border-color)',
-    background: 'var(--bg-muted)',
-    color: 'var(--text-primary)',
-    fontSize: '0.9rem',
-  } as const;
-
   return (
-    <Card style={{ padding: '1.75rem' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-          marginBottom: '0.5rem',
-        }}
-      >
-        <Plug size={20} style={{ color: 'var(--accent-color)' }} />
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
-          Live Connection
-        </h2>
-      </div>
-      <p
-        style={{
-          fontSize: '0.9rem',
-          color: 'var(--text-secondary)',
-          marginBottom: '1.25rem',
-          lineHeight: 1.5,
-        }}
-      >
-        Connect to a remote MCP server (Streamable HTTP endpoint), list its real
-        tools, and call one — all proxied server-side, so CORS never blocks you.
-        Works with any public HTTP MCP endpoint.
-      </p>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div>
-          <label style={label} htmlFor="mcp-url">
-            MCP endpoint URL
-          </label>
-          <input
-            id="mcp-url"
-            type="url"
-            placeholder="https://example.com/mcp"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            style={field}
-          />
+    <div className="tl-workspace tl-workspace--wide-out">
+      <section className="tl-pane" aria-labelledby="li-connect">
+        <div className="tl-pane-head">
+          <h2 id="li-connect" className="tl-pane-title">
+            <span className="tl-step">1</span> Connect
+          </h2>
         </div>
-        <div>
-          <label style={label} htmlFor="mcp-token">
-            Bearer token (optional)
-          </label>
-          <input
-            id="mcp-token"
-            type="password"
-            placeholder="For authenticated servers"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            style={field}
-          />
-        </div>
-        <div>
-          <Button onClick={connect} disabled={connecting || !url.trim()}>
-            {connecting ? <Loader2 size={16} /> : <Plug size={16} />}
-            {connecting ? 'Connecting…' : 'Connect & list tools'}
-          </Button>
-        </div>
-      </div>
-
-      {error && (
-        <div
-          style={{
-            marginTop: '1.25rem',
-            padding: '0.85rem 1rem',
-            borderRadius: '10px',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            background: 'rgba(239, 68, 68, 0.08)',
-            color: '#ef4444',
-            fontSize: '0.85rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
+        <p className="tl-pane-sub">
+          Any public Streamable HTTP endpoint. Requests are proxied server-side,
+          so CORS never blocks you.
+        </p>
+        <form
+          className="tl-pane tl-pane--flush"
+          onSubmit={(e) => {
+            e.preventDefault();
+            connect();
           }}
         >
-          <AlertTriangle size={16} /> {error}
-        </div>
-      )}
-
-      {tools && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <p
-            style={{
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '0.75rem',
-            }}
-          >
-            {serverInfo?.name ? (
-              <>
-                Connected to{' '}
-                <strong style={{ color: 'var(--text-primary)' }}>
-                  {serverInfo.name}
-                </strong>
-                {serverInfo.version ? ` v${serverInfo.version}` : ''} —{' '}
-              </>
+          <label className="tl-field">
+            <span className="tl-label">MCP endpoint URL</span>
+            <input
+              type="url"
+              className="tl-input"
+              placeholder="https://example.com/mcp"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              aria-invalid={(!!trimmedUrl && !urlLooksValid) || undefined}
+              spellCheck={false}
+            />
+            {trimmedUrl && !urlLooksValid ? (
+              <span className="tl-hint" style={{ color: 'var(--tl-err)' }}>
+                Enter a full http(s):// URL.
+              </span>
             ) : (
-              <>Connected — </>
+              <button
+                type="button"
+                className="tl-link-btn"
+                onClick={() => setUrl('https://allmcps.com/api/mcp')}
+              >
+                Try the AllMCPs server
+              </button>
             )}
-            {tools.length} tool{tools.length === 1 ? '' : 's'} exposed.
-          </p>
-
-          {tools.length > 0 && (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '0.6rem',
-              }}
-            >
-              {tools.map((tool) => (
-                <button
-                  key={tool.name}
-                  type="button"
-                  onClick={() => selectTool(tool)}
-                  style={{
-                    textAlign: 'left',
-                    padding: '0.85rem',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    border: `1px solid ${selected?.name === tool.name ? 'var(--accent-color)' : 'var(--border-color)'}`,
-                    background:
-                      selected?.name === tool.name
-                        ? 'var(--brand-gradient-soft)'
-                        : 'var(--bg-muted)',
-                    color: 'inherit',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      marginBottom: '0.25rem',
-                    }}
-                  >
-                    <Wrench
-                      size={13}
-                      style={{ color: 'var(--accent-color)', flexShrink: 0 }}
-                    />
-                    <code
-                      style={{
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {tool.name}
-                    </code>
-                  </div>
-                  {tool.description && (
-                    <p
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-secondary)',
-                        margin: 0,
-                        lineHeight: 1.4,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {tool.description}
-                    </p>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {selected && (
-        <div
-          style={{
-            marginTop: '1.5rem',
-            paddingTop: '1.5rem',
-            borderTop: '1px solid var(--border-color)',
-          }}
-        >
-          <label style={label} htmlFor="mcp-args">
-            Call{' '}
-            <code style={{ color: 'var(--accent-color)' }}>
-              {selected.name}
-            </code>{' '}
-            with arguments (JSON)
           </label>
-          <textarea
-            id="mcp-args"
-            value={argsText}
-            onChange={(e) => setArgsText(e.target.value)}
-            rows={6}
-            spellCheck={false}
-            style={{
-              ...field,
-              fontFamily: 'monospace',
-              fontSize: '0.8rem',
-              resize: 'vertical',
-            }}
-          />
-          <div style={{ marginTop: '0.75rem' }}>
-            <Button onClick={callTool} disabled={calling}>
-              {calling ? <Loader2 size={16} /> : <Play size={16} />}
-              {calling ? 'Calling…' : 'Call tool'}
-            </Button>
-          </div>
-
-          {callError && (
-            <div
-              style={{
-                marginTop: '1rem',
-                padding: '0.85rem 1rem',
-                borderRadius: '10px',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
-                background: 'rgba(239, 68, 68, 0.08)',
-                color: '#ef4444',
-                fontSize: '0.85rem',
-              }}
+          <label className="tl-field">
+            <span className="tl-label">
+              Bearer token <span className="tl-label-opt">(optional)</span>
+            </span>
+            <input
+              type="password"
+              className="tl-input"
+              placeholder="For authenticated servers"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              autoComplete="off"
+            />
+          </label>
+          <div className="tl-actions">
+            <button
+              type="submit"
+              className="btn btn-primary btn-md"
+              disabled={connecting || !urlLooksValid}
             >
-              {callError}
-            </div>
-          )}
+              {connecting ? (
+                <Loader2 size={16} className="tl-spin" aria-hidden="true" />
+              ) : (
+                <Plug size={16} aria-hidden="true" />
+              )}
+              {connecting ? 'Connecting…' : 'Connect & list tools'}
+            </button>
+          </div>
+        </form>
 
-          {callResult !== null && (
-            <div style={{ marginTop: '1rem' }}>
-              <div
-                style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  marginBottom: '0.4rem',
-                }}
-              >
-                Response
-              </div>
-              <pre
-                style={{
-                  margin: 0,
-                  padding: '1rem',
-                  borderRadius: '10px',
-                  background: 'var(--bg-muted)',
-                  border: '1px solid var(--border-color)',
-                  fontSize: '0.78rem',
-                  color: 'var(--text-primary)',
-                  overflowX: 'auto',
-                  maxHeight: '360px',
-                }}
-              >
-                <code>{callResult}</code>
-              </pre>
-            </div>
-          )}
+        {error ? (
+          <div className="tl-alert tl-alert--err" role="alert">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <p>{error}</p>
+          </div>
+        ) : null}
+
+        {tools ? (
+          <div aria-live="polite">
+            <p className="tl-hint" style={{ marginBottom: '0.6rem' }}>
+              {serverInfo?.name ? (
+                <>
+                  Connected to{' '}
+                  <strong style={{ color: 'var(--text-primary)' }}>
+                    {serverInfo.name}
+                  </strong>
+                  {serverInfo.version ? ` v${serverInfo.version}` : ''} ·{' '}
+                </>
+              ) : (
+                <>Connected · </>
+              )}
+              {tools.length} tool{tools.length === 1 ? '' : 's'}
+            </p>
+            {tools.length > 0 ? (
+              <ul className="li-tools">
+                {tools.map((tool) => (
+                  <li key={tool.name}>
+                    <button
+                      type="button"
+                      onClick={() => selectTool(tool)}
+                      className={`li-tool ${selected?.name === tool.name ? 'is-active' : ''}`}
+                      aria-pressed={selected?.name === tool.name}
+                    >
+                      <span className="li-tool-name">
+                        <Wrench size={13} aria-hidden="true" />
+                        <code>{tool.name}</code>
+                      </span>
+                      {tool.description ? (
+                        <span className="li-tool-desc">{tool.description}</span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+
+      <section
+        className="tl-pane tl-sticky"
+        aria-labelledby="li-call"
+        aria-live="polite"
+      >
+        <div className="tl-pane-head">
+          <h2 id="li-call" className="tl-pane-title">
+            <span className="tl-step">2</span> Call a tool
+          </h2>
         </div>
-      )}
-    </Card>
+        {!selected ? (
+          <div className="tl-empty">
+            <Wrench size={22} aria-hidden="true" />
+            <p className="tl-empty-title">
+              {tools ? 'Pick a tool' : 'Not connected'}
+            </p>
+            <p style={{ margin: 0 }}>
+              {tools
+                ? 'Choose a tool on the left to prefill its arguments.'
+                : 'Connect to a server to list its tools, then call one here.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <EditorPane
+              title={`${selected.name} · arguments`}
+              value={argsText}
+              onChange={setArgsText}
+              ariaLabel={`Arguments for ${selected.name} (JSON)`}
+              rows={8}
+              invalid={!!argsError}
+              status={
+                argsError ? (
+                  <span className="tl-status tl-status--err">Invalid JSON</span>
+                ) : null
+              }
+            />
+            <div className="tl-actions">
+              <button
+                type="button"
+                className="btn btn-primary btn-md"
+                onClick={callTool}
+                disabled={calling || !!argsError}
+              >
+                {calling ? (
+                  <Loader2 size={16} className="tl-spin" aria-hidden="true" />
+                ) : (
+                  <Play size={16} aria-hidden="true" />
+                )}
+                {calling ? 'Calling…' : 'Call tool'}
+              </button>
+            </div>
+            {callError ? (
+              <div className="tl-alert tl-alert--err" role="alert">
+                <AlertTriangle size={18} aria-hidden="true" />
+                <p>{callError}</p>
+              </div>
+            ) : null}
+            {callResult !== null ? (
+              <CodePanel
+                title="result.json"
+                code={callResult}
+                maxHeight="26rem"
+              />
+            ) : null}
+          </>
+        )}
+      </section>
+    </div>
   );
 }

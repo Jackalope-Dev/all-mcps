@@ -1,394 +1,176 @@
 'use client';
 
-import {
-  Flame,
-  Layers,
-  LayoutGrid,
-  Search,
-  SortAsc,
-  Tag,
-  X,
-} from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { hueClass } from '@/lib/palette';
 import type { TagWithCount } from '@/lib/tags';
 
-interface TagGridClientProps {
-  tags: TagWithCount[];
+type SortMode = 'popular' | 'alpha';
+
+function letterOf(label: string): string {
+  const c = label.trim().charAt(0).toUpperCase();
+  return /[A-Z]/.test(c) ? c : '#';
 }
 
-export function TagGridClient({ tags }: TagGridClientProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'all' | 'popular' | 'alphabetical'>(
-    'all',
-  );
-  const [selectedLetter, setSelectedLetter] = useState<string>('ALL');
-  const [sortBy, setSortBy] = useState<
-    'count-desc' | 'count-asc' | 'alpha-asc' | 'alpha-desc'
-  >('count-desc');
+export function TagGridClient({ tags }: { tags: TagWithCount[] }) {
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortMode>('popular');
 
-  // Compute list of available first letters
-  const availableLetters = useMemo(() => {
-    const set = new Set<string>();
-    for (const tag of tags) {
-      const firstChar = tag.label.trim().charAt(0).toUpperCase();
-      if (/[A-Z]/.test(firstChar)) {
-        set.add(firstChar);
-      } else {
-        set.add('#');
-      }
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    const list = q
+      ? tags.filter(
+          (t) =>
+            t.label.toLowerCase().includes(q) ||
+            t.slug.toLowerCase().includes(q),
+        )
+      : [...tags];
+    list.sort((a, b) =>
+      sort === 'alpha'
+        ? a.label.localeCompare(b.label)
+        : b.count - a.count || a.label.localeCompare(b.label),
+    );
+    return list;
+  }, [tags, query, sort]);
+
+  // A–Z mode groups tags under letter headings with a jump bar.
+  const groups = useMemo(() => {
+    if (sort !== 'alpha') return null;
+    const map = new Map<string, TagWithCount[]>();
+    for (const t of filtered) {
+      const l = letterOf(t.label);
+      map.set(l, [...(map.get(l) ?? []), t]);
     }
-    return set;
-  }, [tags]);
+    return [...map.entries()].sort(([a], [b]) =>
+      a === '#' ? -1 : b === '#' ? 1 : a.localeCompare(b),
+    );
+  }, [filtered, sort]);
 
-  const allAlphabetLetters = [
-    'ALL',
-    '#',
-    ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
-  ];
-
-  // Filtered & Sorted Tags
-  const processedTags = useMemo(() => {
-    let result = [...tags];
-
-    // 1. Filter by search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter(
-        (t) =>
-          t.label.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q),
-      );
-    }
-
-    // 2. Filter by view mode (Popular)
-    if (viewMode === 'popular') {
-      // Tags with at least 3 servers or top tags
-      result = result.filter((t) => t.count >= 3);
-    }
-
-    // 3. Filter by selected letter
-    if (selectedLetter !== 'ALL') {
-      result = result.filter((t) => {
-        const firstChar = t.label.trim().charAt(0).toUpperCase();
-        if (selectedLetter === '#') {
-          return !/[A-Z]/.test(firstChar);
-        }
-        return firstChar === selectedLetter;
-      });
-    }
-
-    // 4. Sort
-    result.sort((a, b) => {
-      if (sortBy === 'count-desc')
-        return b.count - a.count || a.label.localeCompare(b.label);
-      if (sortBy === 'count-asc')
-        return a.count - b.count || a.label.localeCompare(b.label);
-      if (sortBy === 'alpha-asc') return a.label.localeCompare(b.label);
-      if (sortBy === 'alpha-desc') return b.label.localeCompare(a.label);
-      return 0;
-    });
-
-    return result;
-  }, [tags, searchQuery, viewMode, selectedLetter, sortBy]);
-
-  // Group tags by letter for Alphabetical View
-  const groupedByLetter = useMemo(() => {
-    const groups: { [key: string]: TagWithCount[] } = {};
-    for (const tag of processedTags) {
-      const firstChar = tag.label.trim().charAt(0).toUpperCase();
-      const letter = /[A-Z]/.test(firstChar) ? firstChar : '#';
-      if (!groups[letter]) {
-        groups[letter] = [];
-      }
-      groups[letter].push(tag);
-    }
-
-    // Sort group keys
-    const sortedKeys = Object.keys(groups).sort((a, b) => {
-      if (a === '#') return -1;
-      if (b === '#') return 1;
-      return a.localeCompare(b);
-    });
-
-    return sortedKeys.map((key) => ({
-      letter: key,
-      items: groups[key],
-    }));
-  }, [processedTags]);
-
-  const handleClear = () => {
-    setSearchQuery('');
-    setSelectedLetter('ALL');
-  };
+  const max = tags[0]?.count ?? 1;
 
   return (
-    <div className="tags-toolbar-section">
-      {/* Search and Filters Toolbar */}
-      <div className="tags-toolbar">
-        {/* Search Bar */}
-        <div className="tags-search-row">
-          <Search size={18} className="tags-search-icon" />
+    <div>
+      <div className="dir-tag-toolbar">
+        <div className="dir-search dir-search--sm">
+          <Search size={17} className="dir-search-icon" aria-hidden="true" />
           <input
-            type="text"
-            className="tags-search-input"
-            placeholder="Search 100+ topics and technology tags..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            type="search"
+            className="dir-search-input"
+            placeholder={`Filter ${tags.length} tags`}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             aria-label="Search tags"
+            autoComplete="off"
           />
-          {searchQuery && (
+          {query && (
             <button
               type="button"
-              className="tags-clear-btn"
-              onClick={() => setSearchQuery('')}
+              className="dir-search-clear"
+              onClick={() => setQuery('')}
               aria-label="Clear search"
             >
-              <X size={16} />
+              <X size={15} aria-hidden="true" />
             </button>
           )}
         </div>
-
-        {/* View Mode & Sort Controls */}
-        <div className="tags-filter-bar">
-          <div
-            className="tags-view-tabs"
-            role="tablist"
-            aria-label="Tag view mode"
+        <fieldset className="segmented fieldset-plain" aria-label="Sort tags">
+          <button
+            type="button"
+            aria-pressed={sort === 'popular'}
+            onClick={() => setSort('popular')}
           >
-            <button
-              type="button"
-              className={`tags-view-tab ${viewMode === 'all' ? 'active' : ''}`}
-              onClick={() => setViewMode('all')}
-              role="tab"
-              aria-selected={viewMode === 'all'}
-            >
-              <LayoutGrid size={15} /> All Tags
-            </button>
-            <button
-              type="button"
-              className={`tags-view-tab ${viewMode === 'popular' ? 'active' : ''}`}
-              onClick={() => setViewMode('popular')}
-              role="tab"
-              aria-selected={viewMode === 'popular'}
-            >
-              <Flame
-                size={15}
-                style={{
-                  color: viewMode === 'popular' ? '#ffffff' : '#ff9800',
-                }}
-              />{' '}
-              Popular
-            </button>
-            <button
-              type="button"
-              className={`tags-view-tab ${viewMode === 'alphabetical' ? 'active' : ''}`}
-              onClick={() => setViewMode('alphabetical')}
-              role="tab"
-              aria-selected={viewMode === 'alphabetical'}
-            >
-              <Layers size={15} /> Alphabetical
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <SortAsc size={16} style={{ color: 'var(--text-secondary)' }} />
-            <select
-              className="tags-sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              aria-label="Sort tags by"
-            >
-              <option value="count-desc">Most Servers</option>
-              <option value="count-asc">Least Servers</option>
-              <option value="alpha-asc">Name (A–Z)</option>
-              <option value="alpha-desc">Name (Z–A)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Alphabet Jump Bar */}
-        <div
-          className="tag-alphabet-bar"
-          role="group"
-          aria-label="Alphabetical jump filter"
-        >
-          {allAlphabetLetters.map((letter) => {
-            const isAvailable =
-              letter === 'ALL' || availableLetters.has(letter);
-            const isActive = selectedLetter === letter;
-
-            return (
-              <button
-                key={letter}
-                type="button"
-                className={`tag-alphabet-btn ${isActive ? 'active' : ''} ${!isAvailable ? 'disabled' : ''}`}
-                onClick={() => isAvailable && setSelectedLetter(letter)}
-                disabled={!isAvailable}
-                aria-label={`Filter by letter ${letter}`}
-              >
-                {letter}
-              </button>
-            );
-          })}
-        </div>
+            Most servers
+          </button>
+          <button
+            type="button"
+            aria-pressed={sort === 'alpha'}
+            onClick={() => setSort('alpha')}
+          >
+            A–Z
+          </button>
+        </fieldset>
       </div>
 
-      {/* Results Count Summary */}
-      {(searchQuery || selectedLetter !== 'ALL' || viewMode === 'popular') && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '1.5rem',
-            fontSize: '0.875rem',
-            color: 'var(--text-secondary)',
-          }}
-        >
-          <span>
-            Showing{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>
-              {processedTags.length}
-            </strong>{' '}
-            tags
-            {searchQuery && <> matching &ldquo;{searchQuery}&rdquo;</>}
-            {selectedLetter !== 'ALL' && (
-              <> starting with &ldquo;{selectedLetter}&rdquo;</>
-            )}
-            {viewMode === 'popular' && <> (Popular)</>}
-          </span>
-          <button
-            type="button"
-            onClick={handleClear}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--accent-color)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              textDecoration: 'underline',
-            }}
-          >
-            Reset Filters
-          </button>
-        </div>
-      )}
+      <p className="dir-cat-meta" aria-live="polite">
+        {query
+          ? `${filtered.length} ${filtered.length === 1 ? 'tag matches' : 'tags match'} “${query.trim()}”`
+          : `${tags.length} tags`}
+      </p>
 
-      {/* Render Tags: Alphabetical Mode vs Standard Grid */}
-      {viewMode === 'alphabetical' &&
-      !searchQuery &&
-      selectedLetter === 'ALL' ? (
-        <div>
-          {groupedByLetter.map(({ letter, items }) => (
-            <div key={letter} className="tag-letter-group">
-              <div className="tag-letter-header">
-                <span>{letter}</span>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--text-secondary)',
-                    fontWeight: 500,
-                  }}
-                >
-                  ({items.length} {items.length === 1 ? 'tag' : 'tags'})
-                </span>
-              </div>
-              <div className="tags-grid">
-                {items.map(({ slug, label, count }) => (
-                  <TagCard key={slug} slug={slug} label={label} count={count} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="tags-grid">
-          {processedTags.map(({ slug, label, count }) => (
-            <TagCard key={slug} slug={slug} label={label} count={count} />
-          ))}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {processedTags.length === 0 && (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '4rem 1.5rem',
-            background: 'var(--bg-elevated)',
-            border: '1px dashed var(--border-color)',
-            borderRadius: '16px',
-            marginTop: '1rem',
-          }}
-        >
-          <Tag
-            size={36}
-            style={{
-              color: 'var(--text-secondary)',
-              opacity: 0.5,
-              marginBottom: '1rem',
-            }}
-          />
-          <h3
-            style={{
-              fontSize: '1.2rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '0.5rem',
-            }}
-          >
-            No tags found
-          </h3>
-          <p
-            style={{
-              fontSize: '0.9rem',
-              color: 'var(--text-secondary)',
-              maxWidth: '400px',
-              margin: '0 auto 1.5rem',
-            }}
-          >
-            We couldn&apos;t find any topics matching your search or selected
-            letter filter.
+      {filtered.length === 0 ? (
+        <div className="dir-empty">
+          <div className="dir-empty-icon" aria-hidden="true">
+            <Search size={22} />
+          </div>
+          <h2 className="dir-empty-title">No tags match</h2>
+          <p className="dir-empty-body">
+            Try a shorter word, or search every server for &ldquo;
+            {query.trim()}&rdquo;.
           </p>
-          <button
-            type="button"
-            onClick={handleClear}
-            style={{
-              padding: '0.5rem 1.25rem',
-              borderRadius: '8px',
-              background: 'var(--brand-gradient)',
-              color: '#ffffff',
-              border: 'none',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
-          >
-            Clear Search & Filters
-          </button>
+          <div className="dir-empty-actions">
+            <Link
+              href={`/browse?q=${encodeURIComponent(query.trim())}`}
+              className="btn btn-secondary btn-sm"
+            >
+              Search all servers
+            </Link>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setQuery('')}
+            >
+              Clear filter
+            </button>
+          </div>
         </div>
+      ) : groups ? (
+        <>
+          <nav
+            className="scroll-x fade-x dir-letters"
+            aria-label="Jump to letter"
+          >
+            {groups.map(([letter]) => (
+              <a key={letter} href={`#tags-${letter}`} className="chip">
+                {letter}
+              </a>
+            ))}
+          </nav>
+          {groups.map(([letter, items]) => (
+            <section
+              key={letter}
+              id={`tags-${letter}`}
+              className="dir-letter-group"
+              aria-label={`Tags starting with ${letter}`}
+            >
+              <h2 className="dir-letter">{letter}</h2>
+              <TagList tags={items} max={max} />
+            </section>
+          ))}
+        </>
+      ) : (
+        <TagList tags={filtered} max={max} />
       )}
     </div>
   );
 }
 
-function TagCard({
-  slug,
-  label,
-  count,
-}: {
-  slug: string;
-  label: string;
-  count: number;
-}) {
+function TagList({ tags, max }: { tags: TagWithCount[]; max: number }) {
   return (
-    <Link href={`/tags/${slug}`} className="tag-card">
-      <div className="tag-card-info">
-        <Tag size={15} className="tag-card-icon" />
-        <span className="tag-card-label">{label}</span>
-      </div>
-      <span className="tag-card-badge">{count}</span>
-    </Link>
+    <ul className="dir-tags">
+      {tags.map(({ slug, label, count }) => (
+        <li key={slug}>
+          <Link href={`/tags/${slug}`} className={`dir-tag ${hueClass(slug)}`}>
+            <span className="dir-tag-label">{label}</span>
+            <span className="dir-tag-count tabular">{count}</span>
+            <span
+              className="dir-tag-bar"
+              aria-hidden="true"
+              style={{ transform: `scaleX(${Math.max(0.04, count / max)})` }}
+            />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

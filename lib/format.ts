@@ -28,7 +28,7 @@ export function formatFullDate(dateVal?: string | Date | null): string | null {
  * while full precision is preserved in tooltips and accessible labels.
  */
 export function formatCompactNumber(num?: number | null): string {
-  if (num == null || isNaN(num) || num <= 0) return '0';
+  if (num == null || Number.isNaN(num) || num <= 0) return '0';
   if (num < 1000) return num.toString();
   if (num < 10000) {
     const formatted = (num / 1000).toFixed(1);

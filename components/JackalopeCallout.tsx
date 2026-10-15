@@ -1,7 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { OutboundLink } from './ui/OutboundLink';
-import { Reveal } from './ui/Reveal';
 
 // Jackalope head mark — the exact antlered-hare geometry and "echo" motif used
 // on jackalope.digital (its BrandMark `characterPaths` + EchoBackdrop). The
@@ -33,7 +32,7 @@ const DOWNLOAD_URL =
  */
 export function JackalopeCallout() {
   return (
-    <Reveal as="section" className="container jd-callout">
+    <aside className="jd-callout" aria-labelledby="jd-callout-title">
       <div className="jd-callout-card">
         <div className="jd-callout-mark" aria-hidden="true">
           {/*
@@ -75,14 +74,13 @@ export function JackalopeCallout() {
         </div>
 
         <div className="jd-callout-content">
-          <p className="jd-callout-kicker">Built by the team behind AllMCPs</p>
-          <h2 className="jd-callout-title">
-            Meet Jackalope, a desktop workspace for parallel coding agents
-          </h2>
+          <h3 id="jd-callout-title" className="jd-callout-title">
+            Jackalope: a desktop workspace for parallel coding agents
+          </h3>
           <p className="jd-callout-body">
-            Run Claude Code, Codex, and Grok side by side. Each agent works in
-            its own Git worktree, so nothing collides, and you review every
-            change before it lands. Available for macOS, Windows, and Linux.
+            Run Claude Code, Codex, and Grok side by side, each in its own Git
+            worktree, and review every change before it lands. macOS, Windows,
+            and Linux.
           </p>
           <OutboundLink
             href={DOWNLOAD_URL}
@@ -91,11 +89,11 @@ export function JackalopeCallout() {
             rel="noopener noreferrer"
             className="jd-callout-btn"
           >
-            Download now
+            Download Jackalope
             <ArrowUpRight size={16} aria-hidden="true" />
           </OutboundLink>
         </div>
       </div>
-    </Reveal>
+    </aside>
   );
 }

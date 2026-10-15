@@ -68,7 +68,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Trust & Traffic Transparency',
   description:
-    'Live numbers on how people and AI systems use AllMCPs: site visits, installs, and a breakdown of every AI assistant and crawler that reads the directory.',
+    'Live numbers on how people and AI systems use AllMCPs: listing views, install-config copies, and every AI assistant and crawler that reads the directory.',
   alternates: { canonical: 'https://allmcps.com/trust' },
   openGraph: {
     images: [
@@ -140,70 +140,26 @@ const TIER_COLORS: Record<string, string> = {
 
 function StatTile({
   icon: Icon,
-  color,
   value,
   label,
 }: {
   icon: typeof Cpu;
-  color: string;
   value: string;
   label: string;
 }) {
   return (
-    <div
-      style={{
-        padding: '1rem',
-        borderRadius: 14,
-        border: '1px solid var(--border-color)',
-        background: 'var(--bg-muted)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.6rem',
-      }}
-    >
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 32,
-          height: 32,
-          borderRadius: 9,
-          background: `${color}1f`,
-        }}
-      >
-        <Icon size={16} style={{ color }} />
-      </span>
-      <div
-        style={{
-          fontSize: '1.4rem',
-          fontWeight: 800,
-          color: 'var(--text-primary)',
-          lineHeight: 1.1,
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+    <div className="acct-stat">
+      <span className="acct-stat-label">
+        <Icon size={14} aria-hidden="true" />
         {label}
-      </div>
+      </span>
+      <span className="acct-stat-value tabular">{value}</span>
     </div>
   );
 }
 
 function StatGrid({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))',
-        gap: '0.75rem',
-        marginBottom: '1.5rem',
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="acct-stat-grid">{children}</div>;
 }
 
 function SectionLabel({
@@ -218,53 +174,19 @@ function SectionLabel({
   tight?: boolean;
 }) {
   return (
-    <div style={{ margin: tight ? '0 0 0.75rem' : '2.25rem 0 0.75rem' }}>
-      <h2
-        style={{
-          fontSize: '1.15rem',
-          margin: '0 0 0.2rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}
-      >
-        {Icon && (
-          <Icon
-            size={17}
-            style={{ color: 'var(--brand-cyan)', flexShrink: 0 }}
-          />
-        )}
+    <div className={`acct-trust-label${tight ? ' is-tight' : ''}`}>
+      <h2>
+        {Icon && <Icon size={17} aria-hidden="true" />}
         {title}
       </h2>
-      <p
-        style={{
-          fontSize: '0.8rem',
-          color: 'var(--text-secondary)',
-          margin: 0,
-        }}
-      >
-        {note}
-      </p>
+      <p>{note}</p>
     </div>
   );
 }
 
 /** Bordered card used to give each dense visualization block its own contained surface. */
 function Panel({ children }: { children: ReactNode }) {
-  return (
-    <div
-      className="trust-panel"
-      style={{
-        border: '1px solid var(--border-color)',
-        borderRadius: 16,
-        background: 'var(--card-bg)',
-        marginBottom: '1.5rem',
-        minWidth: 0,
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="trust-panel">{children}</div>;
 }
 
 type TrafficGroup = {
@@ -753,29 +675,20 @@ export default async function TrustPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <main className="page-shell page-shell--tool">
-        <div className="page-shell-inner" style={{ maxWidth: 960 }}>
-          <div className="surface page-panel">
-            <div
-              style={{
-                textAlign: 'center',
-                maxWidth: 720,
-                margin: '0 auto 2.5rem',
-              }}
-            >
-              <h1
-                className="text-page-title"
-                style={{ marginBottom: '0.75rem' }}
-              >
+      <main className="page-shell page-shell--default">
+        <div className="page-shell-inner acct-trust">
+          <div>
+            <header className="acct-page-head">
+              <h1 className="text-page-title">
                 Trust &amp; Traffic Transparency
               </h1>
-              <p className="text-lead" style={{ margin: 0 }}>
+              <p className="text-lead">
                 Every number on this page comes from our production database. No
                 vanity metrics, no cherry-picked screenshots. Here&apos;s
                 what&apos;s in the catalog, how people use it, and which AI
                 systems and crawlers actually read it.
               </p>
-            </div>
+            </header>
 
             <SectionLabel
               title="The catalog"
@@ -784,25 +697,21 @@ export default async function TrustPage() {
             <StatGrid>
               <StatTile
                 icon={Cpu}
-                color="#34d399"
                 value={formatNumber(stats.totalServers)}
                 label="MCP servers listed"
               />
               <StatTile
                 icon={Tag}
-                color="#60a5fa"
                 value={formatNumber(stats.categoryCount)}
                 label="Categories covered"
               />
               <StatTile
                 icon={Wrench}
-                color="#a855f7"
                 value={formatNumber(stats.toolsIndexed)}
-                label="Callable tools indexed"
+                label="Tools indexed"
               />
               <StatTile
                 icon={ShieldCheck}
-                color="#22d3ee"
                 value={formatNumber(stats.verifiedCount)}
                 label="Verified listings"
               />
@@ -815,19 +724,16 @@ export default async function TrustPage() {
             <StatGrid>
               <StatTile
                 icon={Eye}
-                color="#38bdf8"
                 value={formatNumber(stats.totalViews)}
                 label="Listing views"
               />
               <StatTile
                 icon={Copy}
-                color="#f472b6"
                 value={formatNumber(stats.totalCopies)}
                 label="Install configs copied"
               />
               <StatTile
                 icon={ThumbsUp}
-                color="#fbbf24"
                 value={formatNumber(stats.totalUpvotes)}
                 label="Upvotes cast"
               />
@@ -973,11 +879,12 @@ export default async function TrustPage() {
                       color: 'var(--text-primary)',
                     }}
                   >
-                    {pct(
-                      stats.stdioVerifyStats.okCount,
-                      stats.stdioVerifyStats.totalTested,
-                    )}{' '}
-                    pass rate
+                    {stats.stdioVerifyStats.totalTested > 0
+                      ? `${pct(
+                          stats.stdioVerifyStats.okCount,
+                          stats.stdioVerifyStats.totalTested,
+                        )} pass rate`
+                      : 'No runs yet'}
                   </div>
                   <div
                     style={{
@@ -988,9 +895,11 @@ export default async function TrustPage() {
                   >
                     {formatNumber(stats.stdioVerifyStats.totalTested)} stdio
                     packages isolated and tested in automated execution
-                    sandboxes (avg latency:{' '}
-                    {(stats.stdioVerifyStats.avgDurationMs / 1000).toFixed(1)}
-                    s).
+                    sandboxes
+                    {stats.stdioVerifyStats.avgDurationMs > 0
+                      ? ` (avg time to a passing run: ${(stats.stdioVerifyStats.avgDurationMs / 1000).toFixed(1)}s)`
+                      : ''}
+                    .
                   </div>
                 </div>
               </div>
@@ -1134,7 +1043,7 @@ export default async function TrustPage() {
                   tight
                   icon={Activity}
                   title="Traffic over the last 30 days"
-                  note="Total requests to our API vs. the subset that came from a named AI assistant. Hover or focus the chart for exact daily numbers."
+                  note="Total requests to our API vs. the subset that came from a named AI assistant or AI crawler. Hover or focus the chart for exact daily numbers."
                 />
                 <TrendChart data={stats.dailyTrend30d} />
               </Panel>
@@ -1279,13 +1188,13 @@ export default async function TrustPage() {
               />
               <OpennessCard
                 icon={MessageSquare}
-                color="#34d399"
+                color="var(--brand-cyan)"
                 title="Built to be cited"
                 detail="We set ai-input=yes so answer engines and assistants can quote us directly."
               />
               <OpennessCard
                 icon={Lock}
-                color="#f472b6"
+                color="var(--brand-cyan)"
                 title="Not used for training"
                 detail="We set ai-train=no. The catalog is available to read, not to train on."
               />
@@ -1312,16 +1221,6 @@ export default async function TrustPage() {
         </div>
       </main>
       <style>{`
-        .trust-panel {
-          padding: 1.5rem;
-        }
-        @media (max-width: 640px) {
-          /* The page panel is already padded; a second 1.5rem left the inner
-             cards about 60% of the screen wide. */
-          .trust-panel {
-            padding: 1rem;
-          }
-        }
         .trust-viz {
           --tv-ai: #3987e5;
           --tv-crawler: #d95926;

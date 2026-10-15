@@ -262,23 +262,23 @@ export default async function DashboardPage({
   const { edit } = await searchParams;
 
   return (
-    <main className="page-shell page-shell--content animate-fade-in">
+    <main className="page-shell page-shell--default acct-dash">
       <div className="page-shell-inner">
         <header className="dashboard-page-header">
           <div className="dashboard-page-header-text">
-            <h1 className="text-page-title">Manage listings</h1>
+            <h1 className="text-page-title">Your listings</h1>
             <p className="text-lead dashboard-page-lead">
               {ownedAds.length > 0
-                ? 'Track installs, finish setup for free dofollow links, boost discovery, and manage your sponsor ad campaigns — all in one place.'
-                : "Track installs, finish setup for free dofollow links, and boost discovery when you're ready."}
+                ? 'Track installs, finish setup for a free dofollow link, boost discovery, and manage your sponsor campaigns.'
+                : 'Track installs, finish setup for a free dofollow link, and boost discovery when you’re ready.'}
             </p>
           </div>
           <div className="dashboard-page-header-actions">
-            <a href="/browse" className="btn btn-secondary">
-              Browse to claim
+            <a href="/browse" className="btn btn-secondary btn-md">
+              Claim a listing
             </a>
-            <a href="/submit" className="btn btn-primary">
-              + Submit server
+            <a href="/submit" className="btn btn-primary btn-md">
+              Submit server
             </a>
           </div>
         </header>

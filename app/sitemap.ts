@@ -51,8 +51,9 @@ async function buildCoreSitemap(
   const byCategory = new Map<string, SitemapServer[]>();
   for (const s of servers) {
     const cat = s.category || 'other';
-    if (!byCategory.has(cat)) byCategory.set(cat, []);
-    byCategory.get(cat)!.push(s);
+    const bucket = byCategory.get(cat);
+    if (bucket) bucket.push(s);
+    else byCategory.set(cat, [s]);
   }
 
   const entries: MetadataRoute.Sitemap = [

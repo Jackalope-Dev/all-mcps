@@ -5,13 +5,12 @@ import {
   CheckCircle2,
   Eye,
   ShieldCheck,
-  Sparkles,
   XCircle,
 } from 'lucide-react';
+import type React from 'react';
 import { useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
+import { EditorPane } from './CodePanel';
 
 interface PresetPayload {
   name: string;
@@ -146,6 +145,9 @@ function inspectPayload(rawJson: string): InspectionResult {
 
   try {
     parsed = JSON.parse(rawJson);
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('expected a JSON object');
+    }
   } catch (err: any) {
     return {
       isValidJson: false,
@@ -338,42 +340,38 @@ function inspectPayload(rawJson: string): InspectionResult {
   };
 }
 
+const PRESET_SHORT = [
+  'Text result',
+  'Image result',
+  'tools/list',
+  'Broken payload',
+];
+
 export function ProtocolInspectorTool() {
   const [jsonInput, setJsonInput] = useState<string>(PRESET_PAYLOADS[0].json);
 
   const result = inspectPayload(jsonInput);
   const failCount = result.checks.filter((c) => c.status === 'fail').length;
   const warnCount = result.checks.filter((c) => c.status === 'warn').length;
+  const hasInput = !!jsonInput.trim();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* Preset Banner */}
-      <Card
-        style={{
-          padding: '1.25rem',
-          background: 'var(--bg-muted)',
-          borderColor: 'var(--border-color)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '0.75rem',
-          }}
-        >
-          <Sparkles size={18} style={{ color: 'var(--brand-cyan)' }} />
-          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
-            Load Sample Protocol Payloads
-          </span>
+    <div className="tl-workspace">
+      <section className="tl-pane" aria-labelledby="pi-in">
+        <div className="tl-pane-head">
+          <h2 id="pi-in" className="tl-pane-title">
+            <span className="tl-step">1</span> Paste a payload
+          </h2>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {PRESET_PAYLOADS.map((preset) => (
-            <Button
+        <fieldset className="tl-toolbar" aria-label="Sample payloads">
+          <span className="tl-hint">Samples:</span>
+          {PRESET_PAYLOADS.map((preset, i) => (
+            <button
               key={preset.name}
-              variant="secondary"
-              size="sm"
+              type="button"
+              className="chip"
+              title={preset.desc}
+              aria-pressed={jsonInput === preset.json}
               onClick={() => {
                 trackFeatureUse('protocol_inspector', {
                   action: 'load_preset',
@@ -381,418 +379,170 @@ export function ProtocolInspectorTool() {
                 });
                 setJsonInput(preset.json);
               }}
-              style={{ fontSize: '0.85rem' }}
             >
-              {preset.name}
-            </Button>
+              {PRESET_SHORT[i] ?? preset.name}
+            </button>
           ))}
-        </div>
-      </Card>
-
-      {/* Editor & Diagnostic Output Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {/* Left Column: JSON Editor */}
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
-        >
-          <label
-            htmlFor="protocol-inspector-input"
-            style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem' }}
-          >
-            Paste MCP JSON-RPC Payload / Tool Response
-          </label>
-          <textarea
-            id="protocol-inspector-input"
-            value={jsonInput}
-            onChange={(e) => setJsonInput(e.target.value)}
-            placeholder="Paste raw JSON-RPC response or request object..."
-            rows={16}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              borderRadius: '8px',
-              background: 'var(--bg-muted)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-              fontFamily: 'monospace',
-              fontSize: '0.85rem',
-              outline: 'none',
-              resize: 'vertical',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-
-        {/* Right Column: Diagnostic Inspection Report */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Card
-            style={{
-              padding: '1.25rem',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-                marginBottom: '1rem',
-              }}
+        </fieldset>
+        <EditorPane
+          title="JSON-RPC message"
+          value={jsonInput}
+          onChange={setJsonInput}
+          ariaLabel="Paste MCP JSON-RPC payload or tool response"
+          placeholder="Paste raw JSON-RPC response or request object…"
+          rows={20}
+          invalid={hasInput && !result.isValidJson}
+          status={
+            !hasInput ? null : failCount > 0 ? (
+              <span className="tl-status tl-status--err">
+                {failCount} error{failCount === 1 ? '' : 's'}
+              </span>
+            ) : warnCount > 0 ? (
+              <span className="tl-status tl-status--warn">
+                {warnCount} warning{warnCount === 1 ? '' : 's'}
+              </span>
+            ) : (
+              <span className="tl-status tl-status--ok">Spec-compliant</span>
+            )
+          }
+          actions={
+            <button
+              type="button"
+              className="tl-code-btn"
+              onClick={() => setJsonInput('')}
+              disabled={!jsonInput}
             >
-              <h3
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  margin: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
+              Clear
+            </button>
+          }
+        />
+      </section>
+
+      <div className="tl-pane tl-pane--flush tl-sticky">
+        <section
+          className="tl-pane"
+          aria-labelledby="pi-report"
+          aria-live="polite"
+        >
+          <div className="tl-pane-head">
+            <h2 id="pi-report" className="tl-pane-title">
+              <span className="tl-step">2</span> Diagnostic report
+            </h2>
+            {hasInput ? (
+              <span
+                className={`tl-tag ${failCount ? 'tl-tag--err' : warnCount ? 'tl-tag--warn' : 'tl-tag--ok'}`}
               >
-                <ShieldCheck
-                  size={18}
-                  style={{ color: 'var(--accent-color)' }}
-                />
-                Protocol Diagnostic Report
-              </h3>
-              <div>
-                {failCount > 0 ? (
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '4px',
-                      background: 'rgba(239, 68, 68, 0.15)',
-                      color: '#ef4444',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {failCount} Error(s)
-                  </span>
-                ) : warnCount > 0 ? (
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '4px',
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      color: '#f59e0b',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {warnCount} Warning(s)
-                  </span>
-                ) : (
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '4px',
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      color: '#10b981',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Valid Protocol Format
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-                overflowY: 'auto',
-                maxHeight: '380px',
-              }}
-            >
-              {result.checks.map((check) => (
-                <div
-                  key={check.id}
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: '6px',
-                    background: 'var(--bg-muted)',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.85rem',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.6rem',
-                  }}
-                >
-                  {check.status === 'pass' && (
-                    <CheckCircle2
-                      size={16}
-                      style={{
-                        color: '#10b981',
-                        flexShrink: 0,
-                        marginTop: '2px',
-                      }}
-                    />
-                  )}
-                  {check.status === 'warn' && (
-                    <AlertTriangle
-                      size={16}
-                      style={{
-                        color: '#f59e0b',
-                        flexShrink: 0,
-                        marginTop: '2px',
-                      }}
-                    />
-                  )}
-                  {check.status === 'fail' && (
-                    <XCircle
-                      size={16}
-                      style={{
-                        color: '#ef4444',
-                        flexShrink: 0,
-                        marginTop: '2px',
-                      }}
-                    />
-                  )}
-                  <div>
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        marginBottom: '0.15rem',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {check.label}
-                    </div>
-                    <div
-                      style={{
-                        color: 'var(--text-secondary)',
-                        fontSize: '0.8rem',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {check.message}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* Visual AI Client Simulator (Preview Box) */}
-      <section>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '1rem',
-          }}
-        >
-          <Eye size={20} style={{ color: 'var(--accent-color)' }} />
-          <h2 className="text-section" style={{ margin: 0 }}>
-            Visual AI Client Preview
-          </h2>
-        </div>
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '1rem',
-          }}
-        >
-          Simulates how Claude Desktop, Cursor, and Windsurf render this tool
-          output in their chat stream.
-        </p>
-
-        <Card
-          style={{
-            padding: '1.5rem',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          {/* Client Header Mock */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-              borderBottom: '1px solid var(--border-color)',
-              paddingBottom: '0.75rem',
-              marginBottom: '1rem',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: result.isErrorState ? '#ef4444' : '#10b981',
-                }}
-              />
-              <span>AI Client Tool Execution Window</span>
-            </div>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                color: 'var(--text-secondary)',
-                fontFamily: 'monospace',
-              }}
-            >
-              MCP Transport: Stdio / SSE
-            </span>
+                {failCount
+                  ? `${failCount} error${failCount === 1 ? '' : 's'}`
+                  : warnCount
+                    ? `${warnCount} warning${warnCount === 1 ? '' : 's'}`
+                    : 'Valid'}
+              </span>
+            ) : null}
           </div>
-
-          {/* Content Rendering Box */}
-          {result.isErrorState && (
-            <div
-              style={{
-                padding: '0.875rem 1rem',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: '6px',
-                color: '#ef4444',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                marginBottom: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
-            >
-              <AlertTriangle size={18} />
-              Tool Executed with Error (isError: true)
-            </div>
-          )}
-
-          {result.extractedContent.length === 0 ? (
-            <div
-              style={{
-                color: 'var(--text-secondary)',
-                fontSize: '0.85rem',
-                padding: '1.5rem',
-                textAlign: 'center',
-              }}
-            >
-              No visual tool execution content found in payload.
+          {!hasInput ? (
+            <div className="tl-empty">
+              <ShieldCheck size={22} aria-hidden="true" />
+              <p style={{ margin: 0 }}>
+                Paste a payload or pick a sample to see the checks.
+              </p>
             </div>
           ) : (
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-            >
-              {result.extractedContent.map((item, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    background: 'var(--bg-muted)',
-                    padding: '1rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--brand-cyan)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      fontWeight: 700,
-                      marginBottom: '0.5rem',
-                    }}
+            <ul className="tl-findings">
+              {result.checks.map((check, i) => {
+                const Icon =
+                  check.status === 'pass'
+                    ? CheckCircle2
+                    : check.status === 'warn'
+                      ? AlertTriangle
+                      : XCircle;
+                return (
+                  <li
+                    key={check.id}
+                    className={`pi-check pi-check--${check.status}`}
+                    style={{ '--i': i } as React.CSSProperties}
                   >
-                    Content Block #{idx + 1} — [{item.type}]
-                  </div>
+                    <Icon size={16} aria-hidden="true" />
+                    <div>
+                      <p className="pi-check-label">{check.label}</p>
+                      <p className="pi-check-msg">{check.message}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
 
-                  {item.type === 'text' && (
-                    <pre
-                      style={{
-                        margin: 0,
-                        fontFamily: 'monospace',
-                        fontSize: '0.875rem',
-                        color: 'var(--text-primary)',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                      }}
-                    >
+        <section className="tl-pane" aria-labelledby="pi-preview">
+          <div className="tl-pane-head">
+            <h2 id="pi-preview" className="tl-pane-title">
+              <Eye size={16} aria-hidden="true" /> Client preview
+            </h2>
+            <span className="tl-hint">How a chat client renders it</span>
+          </div>
+          <div className="pi-preview">
+            <div className="pi-preview-bar">
+              <span
+                className={`pi-dot ${result.isErrorState ? 'is-err' : ''}`}
+                aria-hidden="true"
+              />
+              Tool result
+            </div>
+            {result.isErrorState ? (
+              <div className="tl-alert tl-alert--err">
+                <AlertTriangle size={16} aria-hidden="true" />
+                <p>Tool executed with an error (isError: true)</p>
+              </div>
+            ) : null}
+            {result.extractedContent.length === 0 ? (
+              <p className="tl-hint pi-preview-empty">
+                No renderable content blocks in this payload.
+              </p>
+            ) : (
+              result.extractedContent.map((item, idx) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: content blocks are positional.
+                <div key={idx} className="pi-block">
+                  <span className="pi-block-type">
+                    #{idx + 1} · {item.type}
+                  </span>
+                  {item.type === 'text' ? (
+                    <pre className="pi-block-text">
                       {item.text || '(empty text block)'}
                     </pre>
-                  )}
-
-                  {item.type === 'image' && (
-                    <div>
-                      {item.mimeType &&
-                      item.data &&
-                      item.data.length > 20 &&
-                      !item.data.includes('invalid') ? (
-                        <div>
-                          <img
-                            src={`data:${item.mimeType};base64,${item.data}`}
-                            alt="MCP Tool Output Preview"
-                            style={{
-                              maxWidth: '100%',
-                              maxHeight: '300px',
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                            }}
-                          />
-                          <div
-                            style={{
-                              fontSize: '0.75rem',
-                              color: 'var(--text-secondary)',
-                              marginTop: '0.35rem',
-                            }}
-                          >
-                            Rendered Base64 {item.mimeType}
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            padding: '0.75rem',
-                            background: 'rgba(245, 158, 11, 0.1)',
-                            border: '1px dashed #f59e0b',
-                            borderRadius: '4px',
-                            color: '#f59e0b',
-                            fontSize: '0.8rem',
-                          }}
-                        >
-                          [Image Content Block] MIME Type:{' '}
-                          {item.mimeType || 'none'} &mdash; Base64 data string
-                          placeholder
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  ) : null}
+                  {item.type === 'image' ? (
+                    item.mimeType &&
+                    item.data &&
+                    item.data.length > 20 &&
+                    !item.data.includes('invalid') ? (
+                      <div>
+                        {/* biome-ignore lint/performance/noImgElement: base64 data-URI preview, not an optimizable asset. */}
+                        <img
+                          src={`data:${item.mimeType};base64,${item.data}`}
+                          alt="MCP tool output preview"
+                          className="pi-block-img"
+                        />
+                        <span className="tl-hint">
+                          Rendered base64 {item.mimeType}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="tl-alert tl-alert--warn">
+                        <AlertTriangle size={16} aria-hidden="true" />
+                        <p>
+                          Image block can&apos;t render — MIME type:{' '}
+                          {item.mimeType || 'none'}, data is not valid base64.
+                        </p>
+                      </div>
+                    )
+                  ) : null}
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </section>
+              ))
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

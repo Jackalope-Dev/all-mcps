@@ -2,7 +2,7 @@
 
 import { Check, Copy, ExternalLink, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface DirectoryBadgeCardProps {
   serverId: string;
@@ -18,10 +18,13 @@ export function DirectoryBadgeCard({
   );
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const origin =
-    typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://allmcps.com';
+  // Production origin on the server and first client render (so hydration
+  // matches), then the real origin once mounted — local/preview hosts get
+  // working snippet URLs without a mismatch.
+  const [origin, setOrigin] = useState('https://allmcps.com');
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
   const badgeSrc = `${origin}/api/badge/${serverId}?style=${style}`;
   const targetUrl = `${origin}/mcp/${serverId}`;
 

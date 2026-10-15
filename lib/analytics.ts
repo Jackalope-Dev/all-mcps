@@ -401,8 +401,12 @@ export async function getServerAnalyticsBatch(
     hits: number;
   }[]) {
     if (!row.serverId) continue;
-    if (!callerMap.has(row.serverId)) callerMap.set(row.serverId, new Map());
-    callerMap.get(row.serverId)!.set(row.callerClass, row.hits);
+    let classMap = callerMap.get(row.serverId);
+    if (!classMap) {
+      classMap = new Map();
+      callerMap.set(row.serverId, classMap);
+    }
+    classMap.set(row.callerClass, row.hits);
     result[row.serverId].totalApiHits += row.hits;
   }
 

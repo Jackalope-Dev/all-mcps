@@ -1,9 +1,11 @@
 import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import type { CSSProperties } from 'react';
 import { CompareSelector } from '@/components/CompareSelector';
-import { PageShell } from '@/components/PageShell';
+import { PageHeader, PageShell } from '@/components/PageShell';
 import { comparePath, INDEXABLE_COMPARE_PAIRS } from '@/lib/comparePairs';
+import { toPickServer } from '@/lib/comparePick';
 import { getNewestActiveServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
@@ -29,146 +31,64 @@ export const metadata: Metadata = {
   },
 };
 
+const FEATURED_PAIRS = [
+  {
+    href: '/mcp/crystaldba-postgres-mcp/vs/jparkerweb-mcp-sqlite',
+    label: 'Postgres MCP vs. SQLite MCP',
+    blurb: 'Compare relational database tools',
+  },
+  {
+    href: '/mcp/github-github-mcp-server/vs/jmrplens-gitlab-mcp-server',
+    label: 'GitHub MCP vs. GitLab MCP',
+    blurb: 'Compare Git platform tools & APIs',
+  },
+  {
+    href: '/mcp/automatalabs-mcp-server-playwright/vs/microsoft-playwright-mcp',
+    label: 'Automata Playwright vs. Microsoft Playwright',
+    blurb: 'Compare browser automation tools',
+  },
+];
+
 export default async function CompareIndexPage() {
   const servers = await getNewestActiveServers(300);
+  const pairs = [
+    ...FEATURED_PAIRS,
+    ...INDEXABLE_COMPARE_PAIRS.map((pair) => ({
+      href: comparePath(pair),
+      label: pair.label,
+      blurb: pair.blurb,
+    })),
+  ];
 
   return (
     <PageShell>
-      <div
-        style={{ maxWidth: '960px', margin: '0 auto', padding: '2.5rem 1rem' }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h1
-            style={{
-              fontSize: '2.5rem',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              marginBottom: '0.75rem',
-            }}
-          >
-            Compare MCP Servers
-          </h1>
-          <p
-            style={{
-              fontSize: '1.05rem',
-              color: 'var(--text-secondary)',
-              maxWidth: '600px',
-              margin: '0 auto',
-            }}
-          >
-            Select 2 to 4 servers to evaluate tool capabilities, installation
-            requirements, and community metrics side-by-side.
-          </p>
-        </div>
+      <div className="cmp-index">
+        <PageHeader
+          centered
+          title="Compare MCP servers"
+          description="Pick 2 to 4 servers to see tools, install requirements, trust signals and adoption side by side."
+        />
 
-        <CompareSelector servers={servers} />
+        <CompareSelector servers={servers.map(toPickServer)} />
 
-        {/* Popular Comparisons */}
-        <div style={{ marginTop: '3.5rem' }}>
-          <h2
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '1.25rem',
-            }}
-          >
-            Popular Server Comparisons
+        <section className="cmp-popular" aria-labelledby="cmp-popular-h">
+          <h2 id="cmp-popular-h" className="lst-subhead">
+            Popular comparisons
           </h2>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '1rem',
-            }}
-          >
-            <Link
-              href="/mcp/crystaldba-postgres-mcp/vs/jparkerweb-mcp-sqlite"
-              className="compare-popular-card compare-card-blue"
-            >
-              <div>
-                <div className="compare-popular-card-title">
-                  Postgres MCP vs. SQLite MCP
-                </div>
-                <div
-                  style={{
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                    marginTop: '0.2rem',
-                  }}
-                >
-                  Compare relational database tools
-                </div>
-              </div>
-              <ArrowRight size={16} className="compare-popular-card-arrow" />
-            </Link>
-
-            <Link
-              href="/mcp/github-github-mcp-server/vs/jmrplens-gitlab-mcp-server"
-              className="compare-popular-card compare-card-purple"
-            >
-              <div>
-                <div className="compare-popular-card-title">
-                  GitHub MCP vs. GitLab MCP
-                </div>
-                <div
-                  style={{
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                    marginTop: '0.2rem',
-                  }}
-                >
-                  Compare Git platform tools & APIs
-                </div>
-              </div>
-              <ArrowRight size={16} className="compare-popular-card-arrow" />
-            </Link>
-
-            <Link
-              href="/mcp/automatalabs-mcp-server-playwright/vs/microsoft-playwright-mcp"
-              className="compare-popular-card compare-card-green"
-            >
-              <div>
-                <div className="compare-popular-card-title">
-                  Automata Playwright vs. Microsoft Playwright
-                </div>
-                <div
-                  style={{
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                    marginTop: '0.2rem',
-                  }}
-                >
-                  Compare browser automation tools
-                </div>
-              </div>
-              <ArrowRight size={16} className="compare-popular-card-arrow" />
-            </Link>
-
-            {INDEXABLE_COMPARE_PAIRS.map((pair, i) => (
-              <Link
-                key={comparePath(pair)}
-                href={comparePath(pair)}
-                className={`compare-popular-card ${['compare-card-blue', 'compare-card-purple', 'compare-card-green'][i % 3]}`}
-              >
-                <div>
-                  <div className="compare-popular-card-title">{pair.label}</div>
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                      marginTop: '0.2rem',
-                    }}
-                  >
-                    {pair.blurb}
-                  </div>
-                </div>
-                <ArrowRight size={16} className="compare-popular-card-arrow" />
-              </Link>
+          <ul className="cmp-popular-grid reveal-stagger">
+            {pairs.map((pair, i) => (
+              <li key={pair.href} style={{ '--i': i } as CSSProperties}>
+                <Link href={pair.href} className="cmp-popular-card spotlight">
+                  <span>
+                    <span className="cmp-popular-title">{pair.label}</span>
+                    <span className="cmp-popular-blurb">{pair.blurb}</span>
+                  </span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       </div>
     </PageShell>
   );

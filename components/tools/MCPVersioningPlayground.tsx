@@ -246,6 +246,7 @@ function MrtrWalkthrough() {
         {MRTR_STEPS.map((s, idx) => (
           <button
             key={s.key}
+            type="button"
             onClick={() => setStepIndex(idx)}
             style={{
               padding: '0.4rem 0.75rem',

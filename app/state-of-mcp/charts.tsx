@@ -1,11 +1,14 @@
+import type { LucideIcon } from 'lucide-react';
 import type { Bucket } from '@/lib/ecosystemStats';
+import type { Hue } from '@/lib/palette';
 
 // Server-rendered chart primitives for /state-of-mcp. Plain HTML + CSS (no chart
 // library, no client JS): every value is printed as text beside its mark and
 // repeated in a table, so the bars are decoration for sighted readers and the
 // page stays fully readable to crawlers, screen readers and AI answer engines.
 // Colors come from the --som-* tokens in globals.css (validated for CVD and
-// contrast against both theme surfaces).
+// contrast against both theme surfaces); on the page each section swaps the
+// primary series for its own --hue-* token (app/styles/content.css).
 
 export function fmt(n: number): string {
   return n.toLocaleString('en-US');
@@ -61,11 +64,14 @@ export function BarList({
   total,
   caption,
   labelHeader = 'Value',
+  rowHueClass,
 }: {
   rows: Bucket[];
   total: number;
   caption: string;
   labelHeader?: string;
+  /** Per-row identity hue (e.g. categoryHueClass) instead of the section's. */
+  rowHueClass?: (label: string) => string;
 }) {
   const max = Math.max(1, ...rows.map((r) => r.count));
   return (
@@ -74,7 +80,7 @@ export function BarList({
         {rows.map((r) => (
           <li
             key={r.label}
-            className="som-bar-row"
+            className={`som-bar-row${rowHueClass ? ` ${rowHueClass(r.label)}` : ''}`}
             title={`${r.label}: ${fmt(r.count)} (${pct(r.count, total)})`}
           >
             <span className="som-bar-label">{r.label}</span>
@@ -201,13 +207,21 @@ export function StatTile({
   value,
   label,
   href,
+  icon: Icon,
+  hue,
 }: {
   value: string;
   label: string;
   href: string;
+  /** Glyph shown in a tile tinted with the linked section's hue. */
+  icon: LucideIcon;
+  hue: Hue;
 }) {
   return (
-    <a className="som-stat" href={href}>
+    <a className={`som-stat hue-${hue}`} href={href}>
+      <span className="som-stat-icon tint-tile" aria-hidden="true">
+        <Icon size={16} />
+      </span>
       <span className="som-stat-value">{value}</span>
       <span className="som-stat-label">{label}</span>
     </a>

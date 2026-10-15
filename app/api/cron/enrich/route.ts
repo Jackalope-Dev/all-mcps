@@ -505,12 +505,11 @@ export async function POST(req: Request) {
             if (currentPriority < 5 && env.LOGOS) {
               // Priority 4: README Logo
               if (currentPriority < 4) {
-                const readmeLogoCandidates = llmChoice?.logoUrl
+                const llmLogoUrl = llmChoice?.logoUrl;
+                const readmeLogoCandidates = llmLogoUrl
                   ? [
-                      llmChoice.logoUrl,
-                      ...candidateImages.filter(
-                        (img) => img !== llmChoice!.logoUrl,
-                      ),
+                      llmLogoUrl,
+                      ...candidateImages.filter((img) => img !== llmLogoUrl),
                     ]
                   : candidateImages;
 

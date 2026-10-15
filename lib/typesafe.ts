@@ -163,7 +163,7 @@ export function confidentChoice(
   answer: JevAnswer | undefined,
   minConfidence: number,
 ): string | null {
-  if (!answer || answer.type !== 'choice') return null;
+  if (answer?.type !== 'choice') return null;
   if (typeof answer.choice !== 'string' || !answer.choice) return null;
   if (typeof answer.confidence !== 'number') return null;
   return answer.confidence >= minConfidence ? answer.choice : null;
@@ -174,7 +174,7 @@ export function noulVerdict(
   answer: JevAnswer | undefined,
   trueAtOrAbove: number,
 ): boolean | null {
-  if (!answer || answer.type !== 'noul') return null;
+  if (answer?.type !== 'noul') return null;
   if (typeof answer.noul !== 'number') return null;
   return answer.noul >= trueAtOrAbove;
 }
@@ -184,7 +184,7 @@ export function nearestScoreLevel<T extends string>(
   answer: JevAnswer | undefined,
   levels: readonly T[],
 ): T | null {
-  if (!answer || answer.type !== 'score') return null;
+  if (answer?.type !== 'score') return null;
   if (typeof answer.score !== 'number' || levels.length === 0) return null;
   const idx = Math.round(answer.score);
   if (idx < 0 || idx >= levels.length) return null;

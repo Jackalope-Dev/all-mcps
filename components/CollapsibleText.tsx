@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+// scrollHeight measures total content height; clientHeight measures visible clamped height
+const isOverflowing = (el: HTMLElement) =>
+  el.scrollHeight > el.clientHeight + 2;
+
 /**
  * Soft-collapses long body copy (overview paragraphs) so listing pages keep
  * install-first hierarchy without deleting useful content.
@@ -23,24 +27,22 @@ export function CollapsibleText({
   const [isClamped, setIsClamped] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Re-measure after every render: children are opaque nodes, and new content
+  // inside an already-clamped box does not resize it, so the ResizeObserver
+  // alone would miss it. Same-value state updates bail out, so this can't loop.
   useEffect(() => {
     const el = contentRef.current;
-    if (!el) return;
+    if (el) setIsClamped(isOverflowing(el));
+  });
 
-    const checkClamped = () => {
-      // scrollHeight measures total content height; clientHeight measures visible clamped height
-      const overflow = el.scrollHeight > el.clientHeight + 2;
-      setIsClamped(overflow);
-    };
-
-    checkClamped();
-
-    if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(() => checkClamped());
-      observer.observe(el);
-      return () => observer.disconnect();
-    }
-  }, [children, collapsedLines]);
+  // Re-measure when the box itself resizes (viewport, fonts, expand/collapse).
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setIsClamped(isOverflowing(el)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="collapsible-text">

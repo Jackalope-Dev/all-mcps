@@ -1,21 +1,17 @@
-/** Instant navigation feedback for /best/[topic] — see app/mcp/[id]/loading.tsx for why this exists. */
+import { HeadSkeleton } from '../../../components/directory/DirectorySkeletons';
+import { skeletonKeys } from '../../../components/directory/ServerRow';
+
+/** Instant navigation feedback for /best/[topic]: header + ranked cards. */
 export default function Loading() {
   return (
-    <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
-      <div
-        className="skeleton-block"
-        style={{ width: '60%', height: 32, marginBottom: '0.75rem' }}
-      />
-      <div
-        className="skeleton-block"
-        style={{ width: '85%', height: 18, marginBottom: '2rem' }}
-      />
-      <div style={{ display: 'grid', gap: '1rem' }}>
-        {Array.from({ length: 6 }).map((_, i) => (
+    <main className="container dir-catpage" aria-busy="true">
+      <HeadSkeleton />
+      <div className="dir-ranked" aria-hidden="true">
+        {skeletonKeys(5).map((k, i) => (
           <div
-            key={i}
-            className="skeleton-block"
-            style={{ height: 96, borderRadius: 14 }}
+            key={k}
+            className="skeleton dir-skel-rank"
+            style={{ height: i === 0 ? 196 : 172 }}
           />
         ))}
       </div>

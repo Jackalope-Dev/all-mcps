@@ -184,86 +184,24 @@ export function AdoptionSignals(props: AdoptionSignalsProps) {
   if (signals.length < 2) return null;
 
   return (
-    <section
-      className="surface"
-      style={{ padding: '1.75rem', marginTop: '2rem' }}
-      aria-labelledby="adoption-signals-heading"
-    >
-      <h2
-        id="adoption-signals-heading"
-        style={{
-          fontSize: '1.35rem',
-          margin: '0 0 0.4rem',
-          color: 'var(--text-primary)',
-        }}
-      >
-        Adoption &amp; maintenance
-      </h2>
-      <p
-        style={{
-          margin: '0 0 1.25rem',
-          fontSize: '0.9rem',
-          color: 'var(--text-secondary)',
-          lineHeight: 1.55,
-        }}
-      >
+    <div className="lst-subsection">
+      <h3 className="lst-subhead">Adoption &amp; maintenance</h3>
+      <p className="lst-muted-sm">
         Factual signals from GitHub, npm, and our automated checks — not a
         rating.
       </p>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
-          gap: '0.85rem',
-        }}
-      >
+      <div className="lst-signal-grid">
         {signals.map((s) => (
-          <div
-            key={s.key}
-            style={{
-              padding: '0.9rem 1rem',
-              borderRadius: 12,
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-elevated)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                color: 'var(--text-secondary)',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.02em',
-              }}
-            >
-              <span style={{ color: 'var(--accent-color)' }}>{s.icon}</span>
+          <div key={s.key} className="lst-signal">
+            <span className="lst-signal-label">
+              <span className="lst-signal-icon">{s.icon}</span>
               {s.label}
-            </div>
-            <div
-              style={{
-                margin: '0.35rem 0 0.2rem',
-                fontSize: '1.15rem',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-              }}
-            >
-              {s.value}
-            </div>
-            <div
-              style={{
-                fontSize: '0.78rem',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.45,
-              }}
-            >
-              {s.caption}
-            </div>
+            </span>
+            <span className="lst-signal-value tabular">{s.value}</span>
+            <span className="lst-signal-caption">{s.caption}</span>
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

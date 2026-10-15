@@ -1,24 +1,38 @@
 'use client';
 
-import { Check, Plus, Scale, Search, X } from 'lucide-react';
+import { ArrowRight, Check, Plus, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import type { ComparePickServer } from '@/lib/comparePick';
 import { trackFeatureUse } from '@/lib/gtag';
-import type { Server } from '@/lib/servers';
 import { ServerAvatar } from './ui/ServerAvatar';
 
+const MAX = 4;
+
 interface CompareSelectorProps {
-  servers: Server[];
+  servers: ComparePickServer[];
+  /** Pre-selected server ids (e.g. the servers already being compared). */
+  initialIds?: string[];
 }
 
-export function CompareSelector({ servers }: CompareSelectorProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+/**
+ * Server picker for /compare: a tray of up to four slots, a search box, and a
+ * result list. Two picks go to the canonical /mcp/[a]/vs/[b] page; three or
+ * four go to the /compare/[a-vs-b-vs-c] matrix.
+ */
+export function CompareSelector({
+  servers,
+  initialIds = [],
+}: CompareSelectorProps) {
+  const [selectedIds, setSelectedIds] = useState<string[]>(() =>
+    initialIds.slice(0, MAX),
+  );
   const [query, setQuery] = useState('');
   const router = useRouter();
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return servers.slice(0, 12);
-    const q = query.toLowerCase();
+    const q = query.trim().toLowerCase();
+    if (!q) return servers.slice(0, 12);
     return servers
       .filter(
         (s) =>
@@ -29,17 +43,22 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
       .slice(0, 12);
   }, [servers, query]);
 
-  const toggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((i) => i !== id));
-    } else {
-      if (selectedIds.length < 6) {
-        setSelectedIds([...selectedIds, id]);
-      }
-    }
-  };
+  const byId = useMemo(() => new Map(servers.map((s) => [s.id, s])), [servers]);
+  const selected = selectedIds
+    .map((id) => byId.get(id))
+    .filter((s): s is ComparePickServer => Boolean(s));
+  const full = selectedIds.length >= MAX;
 
-  const handleCompare = () => {
+  const toggle = (id: string) =>
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((i) => i !== id)
+        : prev.length < MAX
+          ? [...prev, id]
+          : prev,
+    );
+
+  const compare = () => {
     if (selectedIds.length < 2) return;
     trackFeatureUse('compare_servers', {
       server_ids: selectedIds,
@@ -50,280 +69,93 @@ export function CompareSelector({ servers }: CompareSelectorProps) {
       const [c0, c1] = a < b ? [a, b] : [b, a];
       router.push(`/mcp/${c0}/vs/${c1}`);
     } else {
-      const path = selectedIds.join('-vs-');
-      router.push(`/compare/${path}`);
+      router.push(`/compare/${selectedIds.join('-vs-')}`);
     }
   };
 
-  const selectedServers = useMemo(() => {
-    const map = new Map(servers.map((s) => [s.id, s]));
-    return selectedIds
-      .map((id) => map.get(id))
-      .filter((s): s is Server => Boolean(s));
-  }, [servers, selectedIds]);
-
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--bg-elevated)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '16px',
-        padding: '1.75rem',
-      }}
-    >
-      <div style={{ marginBottom: '1.25rem' }}>
-        <h3
-          style={{
-            fontSize: '1.1rem',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            marginBottom: '0.5rem',
-          }}
+    <div className="cmp-picker">
+      <div className="cmp-tray" aria-live="polite">
+        <ol className="cmp-slots">
+          {Array.from({ length: MAX }, (_, i) => {
+            const s = selected[i];
+            return (
+              <li
+                key={s?.id ?? `empty-${i}`}
+                className={`cmp-slot${s ? ' is-filled' : ''}`}
+              >
+                {s ? (
+                  <>
+                    <ServerAvatar name={s.name} logoUrl={s.logoUrl} size={24} />
+                    <span className="cmp-slot-name">{s.name}</span>
+                    <button
+                      type="button"
+                      className="lst-icon-btn cmp-slot-x"
+                      onClick={() => toggle(s.id)}
+                      aria-label={`Remove ${s.name}`}
+                    >
+                      <X size={13} aria-hidden="true" />
+                    </button>
+                  </>
+                ) : (
+                  <span className="cmp-slot-empty">
+                    {i < 2 ? `Server ${i + 1}` : 'Optional'}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        <button
+          type="button"
+          onClick={compare}
+          disabled={selectedIds.length < 2}
+          className="btn btn-primary btn-md cmp-go"
         >
-          Select Servers to Compare (2 to 6)
-        </h3>
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            margin: 0,
-          }}
-        >
-          Search or pick from popular tools below to generate a comparison
-          matrix.
-        </p>
+          Compare {selectedIds.length >= 2 ? selectedIds.length : ''}
+          <ArrowRight size={15} aria-hidden="true" />
+        </button>
       </div>
 
-      {/* Selected Items Bar */}
-      {selectedServers.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap',
-            padding: '0.85rem 1rem',
-            backgroundColor: 'rgba(168, 85, 247, 0.08)',
-            border: '1px solid rgba(168, 85, 247, 0.25)',
-            borderRadius: '10px',
-            marginBottom: '1.25rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
-            {selectedServers.map((s) => (
-              <div
-                key={s.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.35rem 0.65rem',
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '16px',
-                  fontSize: '0.8rem',
-                  color: 'var(--text-primary)',
-                  fontWeight: 500,
-                  maxWidth: '100%',
-                }}
-              >
-                <span
-                  style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {s.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => toggleSelect(s.id)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#ef4444',
-                    cursor: 'pointer',
-                    padding: 0,
-                    display: 'flex',
-                    flexShrink: 0,
-                  }}
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleCompare}
-            disabled={selectedIds.length < 2}
-            style={{
-              padding: '0.5rem 1.25rem',
-              borderRadius: '8px',
-              border: 'none',
-              background:
-                selectedIds.length >= 2
-                  ? 'linear-gradient(135deg, #a855f7, #6366f1)'
-                  : 'rgba(255,255,255,0.08)',
-              color:
-                selectedIds.length >= 2 ? '#ffffff' : 'var(--text-secondary)',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: selectedIds.length >= 2 ? 'pointer' : 'not-allowed',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem',
-              minWidth: '140px',
-              flexShrink: 0,
-            }}
-          >
-            <Scale size={15} style={{ flexShrink: 0 }} /> Compare Now (
-            {selectedIds.length})
-          </button>
-        </div>
-      )}
-
-      {/* Search Bar */}
-      <div style={{ position: 'relative', marginBottom: '1.25rem' }}>
-        <Search
-          size={16}
-          style={{
-            position: 'absolute',
-            left: '12px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: 'var(--text-secondary)',
-            flexShrink: 0,
-          }}
-        />
+      <label className="cmp-search">
+        <Search size={16} aria-hidden="true" />
         <input
-          type="text"
+          type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search servers by name or keyword..."
-          style={{
-            width: '100%',
-            padding: '0.65rem 0.85rem 0.65rem 2.25rem',
-            backgroundColor: 'var(--bg-color)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            color: 'var(--text-primary)',
-            fontSize: '0.9rem',
-            outline: 'none',
-          }}
+          placeholder="Search servers by name, category or keyword"
+          aria-label="Search servers to compare"
         />
-      </div>
+      </label>
 
-      {/* Server Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
-          gap: '0.75rem',
-        }}
-      >
+      <ul className="cmp-results">
         {filtered.map((s) => {
           const isSelected = selectedIds.includes(s.id);
           return (
-            <div
-              key={s.id}
-              onClick={() => toggleSelect(s.id)}
-              style={{
-                padding: '0.85rem 1rem',
-                backgroundColor: isSelected
-                  ? 'rgba(168, 85, 247, 0.12)'
-                  : 'var(--bg-color)',
-                border: isSelected
-                  ? '1px solid #a855f7'
-                  : '1px solid var(--border-color)',
-                borderRadius: '10px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.6rem',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  overflow: 'hidden',
-                  minWidth: 0,
-                  flex: 1,
-                }}
+            <li key={s.id}>
+              <button
+                type="button"
+                className="cmp-result"
+                aria-pressed={isSelected}
+                disabled={!isSelected && full}
+                onClick={() => toggle(s.id)}
               >
                 <ServerAvatar name={s.name} logoUrl={s.logoUrl} size={28} />
-                <div style={{ overflow: 'hidden', minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      color: 'var(--text-primary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {s.name}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--text-secondary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {s.category}
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  minWidth: '24px',
-                  flexShrink: 0,
-                  borderRadius: '50%',
-                  backgroundColor: isSelected
-                    ? '#a855f7'
-                    : 'rgba(168, 85, 247, 0.15)',
-                  border: isSelected
-                    ? 'none'
-                    : '1px solid rgba(168, 85, 247, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: isSelected ? '#ffffff' : '#a855f7',
-                }}
-              >
-                {isSelected ? (
-                  <Check size={13} style={{ flexShrink: 0 }} />
-                ) : (
-                  <Plus size={13} style={{ flexShrink: 0 }} />
-                )}
-              </div>
-            </div>
+                <span className="cmp-result-text">
+                  <span className="cmp-result-name">{s.name}</span>
+                  <span className="cmp-result-cat">{s.category}</span>
+                </span>
+                <span className="cmp-result-check" aria-hidden="true">
+                  {isSelected ? <Check size={13} /> : <Plus size={13} />}
+                </span>
+              </button>
+            </li>
           );
         })}
-      </div>
+        {filtered.length === 0 && (
+          <li className="cmp-empty">No servers match &ldquo;{query}&rdquo;.</li>
+        )}
+      </ul>
     </div>
   );
 }

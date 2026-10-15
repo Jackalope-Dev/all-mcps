@@ -142,152 +142,45 @@ export function PricingClient({
   const selectedProduct = selectedSku ? PAID_PRODUCTS[selectedSku] : null;
 
   return (
-    <div
-      id="checkout"
-      className="surface"
-      style={{
-        padding: '1.75rem',
-        maxWidth: '520px',
-        margin: '0 auto',
-        scrollMarginTop: '5rem',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: '0.5rem',
-        }}
-      >
-        <span
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: '50%',
-            background: 'rgba(var(--accent-rgb), 0.12)',
-            border: '1px solid rgba(var(--accent-rgb), 0.3)',
-            color: 'var(--accent-color)',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          2
-        </span>
-        <h2 style={{ fontSize: '1.15rem', margin: 0 }}>
-          Find your listing to check out
-        </h2>
+    <div id="checkout" className="acct-checkout">
+      <div className="acct-checkout-head">
+        <h2>Ready to boost a listing?</h2>
+        <p>
+          Pick your listing and we&rsquo;ll show everything you can buy for it.
+          Checkout is handled securely by Stripe.
+        </p>
       </div>
 
       {selectedProduct ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.75rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '10px',
-            background: 'rgba(var(--accent-rgb), 0.08)',
-            border: '1px solid rgba(var(--accent-rgb), 0.3)',
-            marginBottom: '1.25rem',
-          }}
-        >
+        <div className="acct-checkout-selected">
           <div>
-            <span
-              style={{
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                color: 'var(--accent-color)',
-                letterSpacing: '0.05em',
-              }}
-            >
-              Buying
-            </span>
-            <p
-              style={{
-                margin: '0.15rem 0 0',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-              }}
-            >
+            <span className="acct-checkout-selected-label">Buying</span>
+            <p>
               {selectedProduct.name}
               {initialCategory ? ` — ${initialCategory}` : ''}
             </p>
           </div>
           <button
             type="button"
+            className="btn btn-ghost btn-sm"
             onClick={() => setSelectedSku(null)}
-            style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-              flexShrink: 0,
-            }}
           >
             Change
           </button>
         </div>
-      ) : (
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '1.25rem',
-            lineHeight: 1.5,
-          }}
-        >
-          Search for your MCP or paste the listing id from{' '}
-          <code>/mcp/your-listing-id</code>, then pick what to buy below.
-        </p>
-      )}
+      ) : null}
 
       {myListings && myListings.length > 0 && (
-        <div style={{ marginBottom: '1rem' }}>
-          <label
-            style={{
-              display: 'block',
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '0.5rem',
-            }}
-          >
-            Your listings
-          </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div className="acct-checkout-field">
+          <span className="form-label">Your listings</span>
+          <div className="acct-chip-row">
             {myListings.map((l) => (
               <button
                 key={l.id}
                 type="button"
+                className="chip"
+                aria-pressed={serverId === l.id}
                 onClick={() => pickServer(l)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.45rem 0.85rem',
-                  borderRadius: '999px',
-                  border:
-                    serverId === l.id
-                      ? '1px solid var(--accent-color)'
-                      : '1px solid var(--border-color)',
-                  background:
-                    serverId === l.id
-                      ? 'rgba(var(--accent-rgb),0.1)'
-                      : 'var(--bg-muted)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.825rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
               >
                 {l.name}
               </button>
@@ -296,80 +189,48 @@ export function PricingClient({
         </div>
       )}
 
-      <label
-        style={{
-          display: 'block',
-          fontSize: '0.8rem',
-          color: 'var(--text-secondary)',
-          marginBottom: '0.35rem',
-        }}
-      >
-        {myListings && myListings.length > 0
-          ? 'Or search another listing'
-          : 'Find your listing'}
-      </label>
-      <div style={{ marginBottom: '0.85rem' }}>
+      <div className="acct-checkout-field">
+        <span className="form-label">
+          {myListings && myListings.length > 0
+            ? 'Or search another listing'
+            : 'Find your listing'}
+        </span>
         <ServerPicker onSelect={pickServer} placeholder="Search by name…" />
       </div>
 
-      <label
-        style={{
-          display: 'block',
-          fontSize: '0.8rem',
-          color: 'var(--text-secondary)',
-          marginBottom: '0.35rem',
-        }}
-      >
-        Listing ID
-      </label>
-      <input
-        className="form-input"
-        value={serverId}
-        onChange={(e) => setServerId(e.target.value.trim())}
-        placeholder="e.g. awesome-mcp-server"
-        style={{ marginBottom: '0.75rem' }}
-      />
+      <div className="acct-checkout-field">
+        <label htmlFor="checkout-listing-id" className="form-label">
+          Or paste a listing ID
+        </label>
+        <input
+          id="checkout-listing-id"
+          className="form-input"
+          value={serverId}
+          onChange={(e) => setServerId(e.target.value.trim())}
+          placeholder="e.g. awesome-mcp-server"
+        />
+        <p className="acct-field-hint">
+          It&rsquo;s the last part of your listing URL —{' '}
+          <code>/mcp/your-listing-id</code> — and it&rsquo;s in your
+          confirmation email.
+        </p>
+      </div>
 
       {serverId && lookupState === 'loading' && (
-        <p
-          style={{
-            fontSize: '0.8rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.75rem',
-          }}
-        >
-          Looking up listing…
-        </p>
+        <p className="acct-checkout-status">Looking up listing…</p>
       )}
       {serverId && lookupState === 'ok' && listingName && (
-        <p
-          style={{
-            fontSize: '0.85rem',
-            marginBottom: '0.75rem',
-            padding: '0.55rem 0.75rem',
-            borderRadius: 8,
-            background: 'rgba(var(--accent-rgb),0.06)',
-            border: '1px solid rgba(var(--accent-rgb),0.22)',
-            color: 'var(--text-primary)',
-          }}
-        >
+        <p className="acct-checkout-found">
           <strong>{listingName}</strong>
-          <span style={{ color: 'var(--text-secondary)' }}>
+          <span>
             {' '}
-            · status: {listingStatus || 'unknown'}
+            · {listingStatus || 'unknown'}
             {isPremium ? ' · Premium' : ''}
           </span>
         </p>
       )}
       {serverId && lookupState === 'missing' && (
-        <p
-          style={{
-            fontSize: '0.8rem',
-            color: '#fbbf24',
-            marginBottom: '0.75rem',
-            lineHeight: 1.45,
-          }}
-        >
+        <p className="acct-callout acct-callout--warn acct-callout--compact">
           Couldn&apos;t load that listing from the public catalog (it may still
           be pending). Checkout will still work if the id is correct — Priority
           Review is available for pending submissions.
@@ -388,28 +249,10 @@ export function PricingClient({
           showAll
         />
       ) : (
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            margin: 0,
-          }}
-        >
-          Search or paste a listing id above to see what you can buy for it.
+        <p className="acct-checkout-empty">
+          Choose a listing above to see available upgrades.
         </p>
       )}
-      <p
-        style={{
-          fontSize: '0.75rem',
-          color: 'var(--text-secondary)',
-          marginTop: '1rem',
-          lineHeight: 1.45,
-        }}
-      >
-        After free submit, use the id from your confirmation email or the
-        listing URL. Stripe must be configured with live Price IDs for
-        production.
-      </p>
     </div>
   );
 }

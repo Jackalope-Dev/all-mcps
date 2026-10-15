@@ -1,7 +1,7 @@
+import { Rss } from 'lucide-react';
 import type { Metadata } from 'next';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { BlogListClient } from '../../components/BlogListClient';
-import { PageHeader, PageShell } from '../../components/PageShell';
 import { getAllPosts, getAllTags } from '../../lib/blog';
 
 export const dynamic = 'force-static';
@@ -76,15 +76,29 @@ export default function BlogPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <PageShell variant="default">
-        <PageHeader
-          kicker="[ 01 / 02 ] · Editorial & Technical Guides //"
-          title="AllMCPs Blog & Guides"
-          description="In-depth tutorials, protocol deep dives, and production architecture notes for Model Context Protocol builders."
-        />
+      <main className="page-shell content-page content-hub">
+        <div className="page-shell-inner">
+          <header className="content-hub-head content-hub-head--split animate-in">
+            <div>
+              <h1 className="content-hub-title">AllMCPs Blog &amp; Guides</h1>
+              <p className="content-hub-lede">
+                In-depth tutorials, protocol deep dives, and production
+                architecture notes for Model Context Protocol builders.
+              </p>
+            </div>
+            <a
+              href="/blog/rss.xml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-ghost btn-sm"
+            >
+              <Rss size={14} aria-hidden="true" /> RSS feed
+            </a>
+          </header>
 
-        <BlogListClient posts={posts} tags={tags} />
-      </PageShell>
+          <BlogListClient posts={posts} tags={tags} />
+        </div>
+      </main>
     </>
   );
 }

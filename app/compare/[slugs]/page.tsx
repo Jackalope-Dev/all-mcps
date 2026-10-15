@@ -2,8 +2,13 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { MultiServerCompareView } from '@/components/MultiServerCompareView';
 import { PageShell } from '@/components/PageShell';
+import { toPickServer } from '@/lib/comparePick';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { getServerById, type Server } from '@/lib/servers';
+import {
+  getNewestActiveServers,
+  getServerById,
+  type Server,
+} from '@/lib/servers';
 
 // No session/auth reads on this page — safe to ISR like the other listing pages
 // instead of re-querying every id from D1 on every single visit.
@@ -89,6 +94,14 @@ export default async function CompareMatrixPage({
     notFound();
   }
 
+  // Picker pool for "Change servers": the compared servers first, then the
+  // newest catalog entries (same pool /compare uses).
+  const newest = await getNewestActiveServers(300);
+  const pickerServers = [
+    ...servers,
+    ...newest.filter((n) => !servers.some((s) => s.id === n.id)),
+  ].map(toPickServer);
+
   const titleNames = servers.map((s) => s.name).join(' vs. ');
   const canonicalUrl = `https://allmcps.com/compare/${slugs}`;
 
@@ -153,7 +166,7 @@ export default async function CompareMatrixPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <MultiServerCompareView servers={servers} />
+      <MultiServerCompareView servers={servers} pickerServers={pickerServers} />
     </PageShell>
   );
 }

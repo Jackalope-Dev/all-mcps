@@ -1,5 +1,6 @@
 import { ScanSearch } from 'lucide-react';
 import { assessInstallRisk } from '../../lib/installRisk';
+import { statusHueClass } from '../../lib/palette';
 import {
   CAPABILITY_LABEL,
   type Capability,
@@ -81,32 +82,15 @@ export function SecurityProfileCard({ server }: { server: Server }) {
     sandboxRows.push(['Maintainers', String(sb.maintainerCount)]);
 
   return (
-    <div
-      className="surface"
-      style={{
-        padding: '1.35rem',
-        borderRadius: '14px',
-        border: '1px solid var(--border-color)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <ScanSearch
-          size={16}
-          style={{ color: 'var(--text-secondary)', flexShrink: 0 }}
-        />
-        <h3
-          style={{
-            fontSize: '0.95rem',
-            fontWeight: 700,
-            margin: 0,
-            color: 'var(--text-primary)',
-          }}
+    <div className="lst-card lst-stack">
+      <div className="lst-card-head">
+        {/* Amber only when the install command itself needs a look. */}
+        <span
+          className={`lst-card-icon tint-tile ${installRisk.length > 0 ? statusHueClass('warn') : 'hue-indigo'}`}
         >
-          What it can do
-        </h3>
+          <ScanSearch size={15} aria-hidden="true" />
+        </span>
+        <h3>What it can do</h3>
       </div>
 
       {installRisk.length > 0 && (

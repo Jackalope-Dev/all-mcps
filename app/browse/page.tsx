@@ -189,7 +189,6 @@ export default async function BrowsePage({
         initialServers={result.items}
         initialCategory={browseParams.category}
         initialQuery={browseParams.q}
-        variant="browse"
         serverResults={{
           params: browseParams,
           total: result.total ?? 0,

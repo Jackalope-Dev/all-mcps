@@ -1,16 +1,22 @@
 import {
   AlertTriangle,
+  ArrowRight,
   BadgeCheck,
+  BookOpen,
   CheckCircle,
-  ChevronRight,
+  ChevronDown,
   Clock,
+  Code2,
   Crown,
   Download,
   ExternalLink,
+  FileText,
   FolderGit2,
   Globe,
   Info,
   LifeBuoy,
+  ShieldCheck,
+  Shuffle,
   Sparkles,
   Star,
   Terminal,
@@ -18,11 +24,21 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { CSSProperties } from 'react';
+import { ExpandableDoc } from '@/components/listing/ExpandableDoc';
+import { InstallPanel } from '@/components/listing/InstallPanel';
+import { ListingMoreMenu } from '@/components/listing/ListingMoreMenu';
+import {
+  type ListingSection,
+  ListingSectionNav,
+} from '@/components/listing/ListingSectionNav';
 import { ListingVisibilityNotice } from '@/components/listing/ListingVisibilityNotice';
 import { MCP_CLIENTS } from '@/lib/clients';
+import { assessInstallRisk } from '@/lib/installRisk';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { isListingIndexable } from '@/lib/listingIndexability';
 import { isRepositoryUrl } from '@/lib/repoUrl';
+import { parseSecurityProfile } from '@/lib/securityProfile';
 import {
   AUTH_TYPE_LABELS,
   type AuthType,
@@ -32,7 +48,6 @@ import {
   type PricingModel,
 } from '@/lib/serverEnums';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
-import { ClientConfigTabs } from '../../../components/ClientConfigTabs';
 import { CollapsibleText } from '../../../components/CollapsibleText';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
 import { MobileInstallBar } from '../../../components/MobileInstallBar';
@@ -46,8 +61,6 @@ import {
   AdminTopBar,
 } from '../../../components/ui/AdminListingControls';
 import { AdoptionSignals } from '../../../components/ui/AdoptionSignals';
-import { AgentPromptButton } from '../../../components/ui/AgentPromptButton';
-import { Badge } from '../../../components/ui/Badge';
 import { ClaimHintLink } from '../../../components/ui/ClaimHintLink';
 import { CopyBlock } from '../../../components/ui/CopyBlock';
 import { DirectoryBadgeCard } from '../../../components/ui/DirectoryBadgeCard';
@@ -55,7 +68,6 @@ import { FaqSection } from '../../../components/ui/FaqSection';
 import { FlagshipHeroBanner } from '../../../components/ui/FlagshipHeroBanner';
 import { HealthHistoryStrip } from '../../../components/ui/HealthHistoryStrip';
 import { IconTooltip } from '../../../components/ui/IconTooltip';
-import { InstallButtons } from '../../../components/ui/InstallButtons';
 import { OutboundLink } from '../../../components/ui/OutboundLink';
 import { OwnerZone } from '../../../components/ui/OwnerZone';
 import { QualityBadge } from '../../../components/ui/QualityBadge';
@@ -76,13 +88,21 @@ import {
   bestTopicForCategory,
   keywordTopicsForServer,
 } from '../../../lib/bestTopics';
-import { categorySlug, getCategoryMeta } from '../../../lib/categories';
+import {
+  categoryHueClass,
+  categorySlug,
+  getCategoryMeta,
+} from '../../../lib/categories';
 import { parseServerName } from '../../../lib/displayName';
 import {
   isFeaturedListing,
   isVerifiedListing,
 } from '../../../lib/featuredStatus';
-import { formatCommitAge, formatFullDate } from '../../../lib/format';
+import {
+  formatCommitAge,
+  formatCompactNumber,
+  formatFullDate,
+} from '../../../lib/format';
 import {
   isUnverifiedInstall,
   parseArgsJson,
@@ -96,6 +116,7 @@ import {
   websiteLinkRel,
 } from '../../../lib/linkRel';
 import { redirectIfListingMoved } from '../../../lib/listingRedirect';
+import { statusHueClass } from '../../../lib/palette';
 import {
   computeCombinedAvailabilityPct,
   getFeaturedServers,
@@ -351,6 +372,7 @@ export default async function MCPDetail({
   const catMeta = getCategoryMeta(server.category);
   const catSlug = categorySlug(server.category);
   const categoryLabel = catMeta.label;
+  const catHue = categoryHueClass(server.category);
 
   // Drives the health dot by the display name — replaces both the old "Verified Active"
   // row badge and the big sidebar Status card with one tooltip-bearing indicator.
@@ -362,17 +384,17 @@ export default async function MCPDetail({
   const healthUi = {
     active: {
       label: 'Health: Active',
-      color: '#10b981',
+      tone: statusHueClass('ok'),
       detail: 'Recent health check succeeded.',
     },
     down: {
       label: 'Health: Issues detected',
-      color: '#f87171',
+      tone: statusHueClass('bad'),
       detail: 'Last health check failed or the endpoint looked unhealthy.',
     },
     unknown: {
       label: 'Health: Not checked yet',
-      color: '#a1a1aa',
+      tone: '',
       detail: 'We have not completed a health check for this listing yet.',
     },
   }[healthKey];
@@ -552,7 +574,7 @@ export default async function MCPDetail({
         position: 1,
         name: 'Copy Configuration Snippet',
         text: `Copy the JSON configuration block for ${displayName} formatted for your MCP client.`,
-        url: `${canonicalUrl}#config-tabs`,
+        url: `${canonicalUrl}#install`,
       },
       {
         '@type': 'HowToStep',
@@ -637,7 +659,7 @@ export default async function MCPDetail({
       ? [
           {
             '@type': 'FAQPage',
-            mainEntity: server.aiFaq!.map((item) => ({
+            mainEntity: (server.aiFaq ?? []).map((item) => ({
               '@type': 'Question',
               name: item.q,
               acceptedAnswer: { '@type': 'Answer', text: item.a },
@@ -675,6 +697,41 @@ export default async function MCPDetail({
     '@graph': jsonLdGraph,
   };
 
+  const toolCount = server.tools?.length ?? 0;
+  const hasSecurityCard =
+    Boolean(parseSecurityProfile(serverWithSignals.securityProfile)) ||
+    assessInstallRisk(serverWithSignals).length > 0;
+  const hasVulnCard = server.vulnScannedAt != null;
+  const hasAiOverview = Boolean(
+    server.aiOverview ||
+      (server.aiUseCases?.length ?? 0) > 0 ||
+      (server.aiFeatures?.length ?? 0) > 0,
+  );
+  const hasRelated = Boolean(relatedServers && relatedServers.length > 0);
+  const sections: ListingSection[] = [
+    { id: 'install', label: 'Install' },
+    { id: 'overview', label: 'Overview' },
+    ...(toolCount > 0
+      ? [{ id: 'tools-schema', label: 'Tools', count: toolCount }]
+      : []),
+    { id: 'security', label: 'Security' },
+    { id: 'reviews', label: 'Reviews', count: reviewSummary.count },
+    { id: 'faq', label: 'FAQ' },
+    ...(hasRelated ? [{ id: 'alternatives', label: 'Alternatives' }] : []),
+  ];
+  const starsLabel =
+    typeof server.githubStars === 'number' && server.githubStars > 0
+      ? formatCompactNumber(server.githubStars)
+      : null;
+  const remoteHealthy =
+    server.id === 'allmcps-server' || server.remoteEndpointHealthy === true;
+  const showRemoteHealth =
+    server.remoteEndpointHealthy != null || server.id === 'allmcps-server';
+  const best = bestTopicForCategory(server.category);
+  const keywordHubs = keywordTopicsForServer(server).filter(
+    (t) => t.slug !== best?.slug,
+  );
+
   return (
     <>
       <script
@@ -682,21 +739,12 @@ export default async function MCPDetail({
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <AdminProvider serverId={server.id}>
-        <main
-          className="container page-shell"
-          style={{
-            paddingTop: 'var(--space-8)',
-            paddingBottom: 'var(--space-16)',
-          }}
-        >
+        <main className="container lst-page">
           <AdminTopBar server={server} />
-          <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
-            <ol className="breadcrumb">
+          <nav aria-label="Breadcrumb" className="animate-fade">
+            <ol className="crumbs">
               <li>
                 <Link href="/">Home</Link>
-              </li>
-              <li className="breadcrumb-separator" aria-hidden="true">
-                <ChevronRight size={12} aria-hidden="true" />
               </li>
               <li>
                 <AdminInlineCategory
@@ -705,53 +753,16 @@ export default async function MCPDetail({
                   categorySlug={catSlug}
                 />
               </li>
-              <li className="breadcrumb-separator" aria-hidden="true">
-                <ChevronRight size={12} aria-hidden="true" />
-              </li>
-              <li className="breadcrumb-current" aria-current="page">
-                {displayName}
-              </li>
+              <li aria-current="page">{displayName}</li>
             </ol>
           </nav>
 
           {server.status === 'removed' && (
-            <div
-              role="alert"
-              className="surface"
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.75rem',
-                padding: '1rem 1.25rem',
-                marginBottom: '1.5rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(248, 113, 113, 0.35)',
-                background: 'rgba(248, 113, 113, 0.08)',
-              }}
-            >
-              <AlertTriangle
-                size={20}
-                style={{ color: '#f87171', flexShrink: 0, marginTop: '0.1rem' }}
-                aria-hidden="true"
-              />
-              <div style={{ minWidth: 0 }}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                  }}
-                >
-                  This listing appears offline
-                </p>
-                <p
-                  style={{
-                    margin: '0.3rem 0 0',
-                    fontSize: '0.9rem',
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.5,
-                  }}
-                >
+            <div role="alert" className="lst-alert">
+              <AlertTriangle size={18} aria-hidden="true" />
+              <div>
+                <p className="lst-alert-title">This listing appears offline</p>
+                <p className="lst-alert-body">
                   Our automated checks couldn&rsquo;t reach the source
                   repository, so we&rsquo;ve removed it from search, browse, and
                   the API — this page stays reachable at this direct link only.
@@ -761,17 +772,10 @@ export default async function MCPDetail({
                 {!server.isOfficial && (
                   <Link
                     href={`/mcp/${server.id}/claim`}
-                    className="btn btn-secondary"
-                    style={{
-                      marginTop: '0.75rem',
-                      fontSize: '0.85rem',
-                      padding: '0.4rem 0.85rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
+                    className="btn btn-secondary btn-sm"
                   >
-                    <BadgeCheck size={14} /> Claim this listing
+                    <BadgeCheck size={14} aria-hidden="true" /> Claim this
+                    listing
                   </Link>
                 )}
               </div>
@@ -786,474 +790,32 @@ export default async function MCPDetail({
             isOfficial={server.isOfficial}
           />
 
-          <div className="detail-grid">
-            {/* Main Content (Left Column) */}
-            <div className="detail-main">
-              <div className="surface detail-hero-card">
-                <div className="detail-title-row">
-                  {/* Prefer approved R2 logo, else GitHub org avatar, else category gradient (ServerAvatar). */}
-                  <ServerAvatar
-                    name={server.name}
-                    logoUrl={server.logoUrl}
-                    category={server.category}
-                    size={72}
-                    priority
-                  />
-                  <div className="detail-title-text">
-                    <div className="detail-title-heading">
-                      <IconTooltip
-                        label={`Health status: ${healthUi.label}`}
-                        trigger={
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              width: '10px',
-                              height: '10px',
-                              borderRadius: '50%',
-                              backgroundColor: healthUi.color,
-                              boxShadow:
-                                healthKey === 'active'
-                                  ? `0 0 8px ${healthUi.color}`
-                                  : 'none',
-                              flexShrink: 0,
-                            }}
-                          />
-                        }
-                      >
-                        <span className="mcp-icon-tooltip-title">
-                          <span
-                            className="mcp-icon-tooltip-dot"
-                            style={{ backgroundColor: healthUi.color }}
-                          />
-                          {healthUi.label}
-                        </span>
-                        <span className="mcp-icon-tooltip-body">
-                          {healthUi.detail}
-                        </span>
-                        <span className="mcp-icon-tooltip-meta">
-                          {server.lastCheckedAt
-                            ? `Last checked ${new Date(server.lastCheckedAt).toLocaleString()}`
-                            : 'No health check has run yet.'}
-                        </span>
-                      </IconTooltip>
-                      <h1 className="text-page-title detail-page-title">
-                        <AdminInlineName
-                          serverId={server.id}
-                          initialName={displayName}
-                        />
-                      </h1>
-                    </div>
-                    <div className="detail-title-badges">
-                      <TrustTierBadge server={serverWithSignals} />
-                      <a
-                        href="#reviews"
-                        className="detail-rating-badge-link"
-                        style={{ textDecoration: 'none' }}
-                      >
-                        <IconTooltip
-                          label={
-                            reviewSummary.count > 0
-                              ? `${reviewSummary.avgRating.toFixed(1)} stars out of 5 (${reviewSummary.count} ${reviewSummary.count === 1 ? 'rating' : 'ratings'})`
-                              : 'No ratings yet — click to review'
-                          }
-                          trigger={
-                            <span className="mcp-rating-header-badge">
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  gap: '2px',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                {[1, 2, 3, 4, 5].map((n) => {
-                                  const isFilled =
-                                    reviewSummary.count > 0 &&
-                                    n <= Math.round(reviewSummary.avgRating);
-                                  return (
-                                    <Star
-                                      key={n}
-                                      size={12}
-                                      fill={isFilled ? '#fbbf24' : 'none'}
-                                      color={
-                                        isFilled
-                                          ? '#fbbf24'
-                                          : 'var(--border-strong)'
-                                      }
-                                    />
-                                  );
-                                })}
-                              </span>
-                              {reviewSummary.count > 0 ? (
-                                <>
-                                  <span
-                                    style={{
-                                      fontWeight: 700,
-                                      marginLeft: '0.15rem',
-                                    }}
-                                  >
-                                    {reviewSummary.avgRating.toFixed(1)}
-                                  </span>
-                                  <span
-                                    style={{
-                                      opacity: 0.7,
-                                      fontSize: '0.76rem',
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    ({reviewSummary.count})
-                                  </span>
-                                </>
-                              ) : (
-                                <span
-                                  style={{
-                                    opacity: 0.7,
-                                    fontSize: '0.78rem',
-                                    fontWeight: 500,
-                                    marginLeft: '0.15rem',
-                                  }}
-                                >
-                                  No ratings
-                                </span>
-                              )}
-                            </span>
-                          }
-                        >
-                          <span className="mcp-icon-tooltip-title">
-                            <Star size={14} fill="#fbbf24" color="#fbbf24" />{' '}
-                            User Ratings
-                          </span>
-                          <span className="mcp-icon-tooltip-body">
-                            {reviewSummary.count > 0
-                              ? `Rated ${reviewSummary.avgRating.toFixed(1)} / 5.0 across ${reviewSummary.count} user ${reviewSummary.count === 1 ? 'review' : 'reviews'}. Click to view or leave a rating.`
-                              : 'Be the first to rate and review this MCP server!'}
-                          </span>
-                        </IconTooltip>
-                      </a>
-                      {server.isPremium && (
-                        <IconTooltip
-                          label="Premium listing"
-                          trigger={
-                            <Badge className="mcp-trust-badge mcp-trust-badge--premium">
-                              <Crown size={13} color="#d97706" fill="#d97706" />
-                              <span className="mcp-trust-badge-label">
-                                Premium
-                              </span>
-                            </Badge>
-                          }
-                        >
-                          <span className="mcp-icon-tooltip-title">
-                            <Crown size={14} color="#facc15" fill="#facc15" />{' '}
-                            Premium listing
-                          </span>
-                          <span className="mcp-icon-tooltip-body">
-                            This owner pays for enhanced visibility — priority
-                            placement in search, category pages, and rotating
-                            spotlight slots across the directory.
-                          </span>
-                        </IconTooltip>
-                      )}
-                      {isVerifiedListing(server) && (
-                        <IconTooltip
-                          label={
-                            server.isOfficial
-                              ? 'Ownership verified'
-                              : 'Premium listing'
-                          }
-                          trigger={
-                            <Badge
-                              variant="official"
-                              className="mcp-trust-badge"
-                            >
-                              <BadgeCheck size={13} />
-                              <span className="mcp-trust-badge-label">
-                                {server.isOfficial ? 'Verified' : 'Premium'}
-                              </span>
-                            </Badge>
-                          }
-                        >
-                          <span className="mcp-icon-tooltip-title">
-                            <BadgeCheck size={14} color="var(--accent-color)" />
-                            {server.isOfficial
-                              ? 'Ownership verified'
-                              : 'Premium listing'}
-                          </span>
-                          <span className="mcp-icon-tooltip-body">
-                            {server.isOfficial
-                              ? 'The owner proved control of this listing via a GitHub README, site badge, or DNS TXT record.'
-                              : 'This listing has an active Premium subscription. Ownership has not been separately verified.'}
-                          </span>
-                        </IconTooltip>
-                      )}
-                      {isFeaturedListing(server) && (
-                        <IconTooltip
-                          label="Featured listing"
-                          trigger={
-                            <Badge
-                              variant="success"
-                              className="badge-featured mcp-trust-badge"
-                            >
-                              <Star
-                                size={13}
-                                color="var(--accent-color)"
-                                fill="var(--accent-color)"
-                              />
-                              <span className="mcp-trust-badge-label">
-                                Featured
-                              </span>
-                            </Badge>
-                          }
-                        >
-                          <span className="mcp-icon-tooltip-title">
-                            <Star
-                              size={14}
-                              color="var(--accent-color)"
-                              fill="var(--accent-color)"
-                            />{' '}
-                            Featured listing
-                          </span>
-                          <span className="mcp-icon-tooltip-body">
-                            {server.isPremium
-                              ? 'Included with this listing’s active Premium subscription — boosted placement across search, category pages, and homepage spotlight rotation.'
-                              : 'Currently boosted for extra visibility — priority placement across search, category pages, and homepage spotlight rotation.'}
-                          </span>
-                        </IconTooltip>
-                      )}
-                      {!server.aiEnrichedAt && (
-                        <IconTooltip
-                          label="Enrichment pending"
-                          trigger={
-                            <Badge
-                              variant="default"
-                              className="mcp-trust-badge"
-                            >
-                              <Clock size={13} />
-                              <span className="mcp-trust-badge-label">
-                                Pending
-                              </span>
-                            </Badge>
-                          }
-                        >
-                          <span className="mcp-icon-tooltip-title">
-                            <Clock
-                              size={14}
-                              style={{ color: 'var(--text-secondary)' }}
-                            />{' '}
-                            Enrichment pending
-                          </span>
-                          <span className="mcp-icon-tooltip-body">
-                            We haven&rsquo;t run our AI enrichment pass on this
-                            listing yet, so the overview, use cases, and FAQ
-                            below may be sparse or missing. We work through the
-                            catalog over time — check back soon.
-                          </span>
-                        </IconTooltip>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Primary actions: Upvote, Repository, Website, Share & Embed */}
-                <div className="mcp-header-toolbar">
-                  <UpvoteButton
+          {/* ── Header ─────────────────────────────────────────────── */}
+          <header className="lst-hero">
+            <div className="lst-hero-id animate-in">
+              {/* Prefer approved R2 logo, else GitHub org avatar, else category gradient (ServerAvatar). */}
+              <ServerAvatar
+                name={server.name}
+                logoUrl={server.logoUrl}
+                category={server.category}
+                size={64}
+                priority
+              />
+              <div className="lst-hero-text">
+                <h1 className="lst-title">
+                  <AdminInlineName
                     serverId={server.id}
-                    initialCount={server.upvotes || 0}
+                    initialName={displayName}
                   />
-
-                  {hasRepository && (
-                    <OutboundLink
-                      href={server.url}
-                      destinationType="github"
-                      serverId={server.id}
-                      target="_blank"
-                      rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
-                      className="mcp-action-btn"
-                    >
-                      <FolderGit2
-                        size={18}
-                        style={{ color: 'var(--accent-color)' }}
-                      />
-                      <span className="mcp-action-btn-label">
-                        View Repository
-                      </span>
-                      {server.isOfficial && (
-                        <BadgeCheck
-                          size={16}
-                          style={{
-                            color: 'var(--accent-color)',
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                      {typeof server.githubStars === 'number' &&
-                        server.githubStars > 0 && (
-                          <IconTooltip
-                            label={`${server.githubStars.toLocaleString()} GitHub stars`}
-                            asSpan
-                            trigger={
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.25rem',
-                                  padding: '0.15rem 0.5rem',
-                                  borderRadius: '6px',
-                                  background: 'rgba(234, 179, 8, 0.12)',
-                                  color: '#d97706',
-                                  border: '1px solid rgba(234, 179, 8, 0.3)',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 600,
-                                  marginLeft: '0.2rem',
-                                  lineHeight: 1,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                <Star
-                                  size={12}
-                                  fill="#d97706"
-                                  color="#d97706"
-                                />
-                                {server.githubStars >= 1000
-                                  ? `${(server.githubStars / 1000).toFixed(1)}k`
-                                  : server.githubStars.toLocaleString()}
-                              </span>
-                            }
-                          >
-                            <span className="mcp-icon-tooltip-title">
-                              <Star size={14} fill="#d97706" color="#d97706" />{' '}
-                              GitHub Stars
-                            </span>
-                            <span className="mcp-icon-tooltip-body">
-                              Total stargazers on GitHub for the source
-                              repository ({server.githubStars.toLocaleString()}{' '}
-                              stars).
-                            </span>
-                          </IconTooltip>
-                        )}
-                    </OutboundLink>
-                  )}
-                  <AdminInlineLinkPopover
-                    serverId={server.id}
-                    type="repository"
-                    currentUrl={server.url}
-                  />
-
-                  {primaryWebsiteUrl ? (
-                    <span
-                      style={{ display: 'inline-flex', alignItems: 'center' }}
-                    >
-                      <OutboundLink
-                        href={primaryWebsiteUrl}
-                        destinationType="website"
-                        serverId={server.id}
-                        target="_blank"
-                        rel={websiteLinkRel(
-                          !!server.isPremium,
-                          !!server.websiteBacklinkOk,
-                        )}
-                        className="mcp-action-btn mcp-action-btn--accent"
-                      >
-                        <Globe
-                          size={18}
-                          style={{ color: 'var(--accent-color)' }}
-                        />
-                        <span className="mcp-action-btn-label">
-                          Visit Website
-                        </span>
-                        {server.websiteBacklinkOk ? (
-                          <BadgeCheck
-                            size={16}
-                            style={{
-                              color: 'var(--accent-color)',
-                              flexShrink: 0,
-                            }}
-                          />
-                        ) : (
-                          <ExternalLink size={14} style={{ opacity: 0.85 }} />
-                        )}
-                      </OutboundLink>
-                      <AdminInlineLinkPopover
-                        serverId={server.id}
-                        type="website"
-                        // Edits the stored field, which can still be empty when
-                        // the button above fell back to server.url.
-                        currentUrl={server.websiteUrl || ''}
-                      />
-                    </span>
-                  ) : (
-                    <AdminInlineLinkPopover
-                      serverId={server.id}
-                      type="website"
-                      currentUrl=""
-                    />
-                  )}
-
-                  {server.supportUrl && (
-                    <OutboundLink
-                      href={server.supportUrl}
-                      destinationType="website"
-                      serverId={server.id}
-                      target="_blank"
-                      rel={supportLinkRel(
-                        !!server.isPremium,
-                        !!server.websiteBacklinkOk,
-                        server.supportUrl,
-                        server.websiteUrl,
-                      )}
-                      className="mcp-action-btn"
-                    >
-                      <LifeBuoy
-                        size={18}
-                        style={{ color: 'var(--accent-color)' }}
-                      />
-                      <span className="mcp-action-btn-label">Support</span>
-                    </OutboundLink>
-                  )}
-
-                  <ShareModal
-                    serverId={server.id}
-                    serverName={server.name}
-                    variant="action"
-                  />
-                  <ReportListingButton serverId={server.id} />
-                </div>
+                </h1>
+                {org && <p className="lst-org">by {org}</p>}
               </div>
+            </div>
 
-              {server.tags && server.tags.length > 0 && (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.4rem',
-                    marginBottom: '1rem',
-                  }}
-                >
-                  {server.tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="category"
-                      style={{ fontSize: '0.72rem' }}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {server.screenshotUrl && (
-                <ScreenshotViewer
-                  src={server.screenshotUrl}
-                  alt={`${displayName} screenshot`}
-                  title={`${displayName} Screenshot`}
-                />
-              )}
-
-              {server.id === 'allmcps-server' && (
-                <FlagshipHeroBanner
-                  serverId={server.id}
-                  serverName={displayName}
-                />
-              )}
-
+            <div
+              className="lst-hero-summary animate-in"
+              style={{ '--i': 1 } as CSSProperties}
+            >
               <AdminInlineDescription
                 serverId={server.id}
                 initialDescription={
@@ -1269,194 +831,455 @@ export default async function MCPDetail({
                   />
                 }
               />
+            </div>
 
-              {/* Install-first: primary conversion path sits above long AI copy / README. */}
-              <section
-                id="quick-install"
-                className="surface detail-quick-install"
-                style={{
-                  marginBottom: '1.75rem',
-                  scrollMarginTop: '5rem',
-                  borderRadius: '16px',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--brand-gradient-soft)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <h2
-                    style={{
-                      fontSize: '1.25rem',
-                      margin: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      color: 'var(--text-primary)',
-                      fontWeight: 700,
-                    }}
+            {/* Trust signals — one compact, scannable row. */}
+            <ul
+              className="lst-meta animate-in"
+              style={{ '--i': 2 } as CSSProperties}
+              aria-label="Listing signals"
+            >
+              {isVerifiedListing(server) && (
+                <li>
+                  <IconTooltip
+                    label={
+                      server.isOfficial
+                        ? 'Ownership verified'
+                        : 'Premium listing'
+                    }
+                    trigger={
+                      <span className="lst-meta-badge lst-meta-badge--accent">
+                        <BadgeCheck size={14} aria-hidden="true" />
+                        {server.isOfficial ? 'Verified owner' : 'Premium'}
+                      </span>
+                    }
                   >
-                    <Terminal
-                      size={20}
-                      style={{ color: 'var(--accent-color)', flexShrink: 0 }}
-                      aria-hidden="true"
-                    />{' '}
-                    Quick Install
-                  </h2>
-                  <Badge variant="success" style={{ fontSize: '0.75rem' }}>
-                    Automated &amp; IDE Setup
-                  </Badge>
-                </div>
-                <p
-                  style={{
-                    color: 'var(--text-secondary)',
-                    margin: '0 0 1.25rem',
-                    fontSize: '0.875rem',
-                    lineHeight: 1.5,
-                  }}
+                    <span className="mcp-icon-tooltip-title">
+                      <BadgeCheck size={14} color="var(--accent-color)" />
+                      {server.isOfficial
+                        ? 'Ownership verified'
+                        : 'Premium listing'}
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      {server.isOfficial
+                        ? 'The owner proved control of this listing via a GitHub README, site badge, or DNS TXT record.'
+                        : 'This listing has an active Premium subscription. Ownership has not been separately verified.'}
+                    </span>
+                  </IconTooltip>
+                </li>
+              )}
+              {server.isPremium && !isVerifiedListing(server) && (
+                <li>
+                  <IconTooltip
+                    label="Premium listing"
+                    trigger={
+                      <span className="lst-meta-badge">
+                        <Crown size={13} aria-hidden="true" /> Premium
+                      </span>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Crown size={14} color="#facc15" /> Premium listing
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      This owner pays for enhanced visibility — priority
+                      placement in search, category pages, and rotating
+                      spotlight slots across the directory.
+                    </span>
+                  </IconTooltip>
+                </li>
+              )}
+              {isFeaturedListing(server) && (
+                <li>
+                  <IconTooltip
+                    label="Featured listing"
+                    trigger={
+                      <span className="lst-meta-badge">
+                        <Star size={13} aria-hidden="true" /> Featured
+                      </span>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Star size={14} color="var(--accent-color)" /> Featured
+                      listing
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      {server.isPremium
+                        ? 'Included with this listing’s active Premium subscription — boosted placement across search, category pages, and homepage spotlight rotation.'
+                        : 'Currently boosted for extra visibility — priority placement across search, category pages, and homepage spotlight rotation.'}
+                    </span>
+                  </IconTooltip>
+                </li>
+              )}
+              <li className="lst-meta-tier">
+                <TrustTierBadge server={serverWithSignals} />
+              </li>
+              <li>
+                {/* Drives the health dot — one tooltip-bearing indicator. */}
+                <IconTooltip
+                  label={`Health status: ${healthUi.label}`}
+                  trigger={
+                    <span
+                      className={`lst-health lst-health--${healthKey} ${healthUi.tone}`}
+                    >
+                      <span className="lst-health-dot" aria-hidden="true" />
+                      {healthKey === 'active'
+                        ? 'Healthy'
+                        : healthKey === 'down'
+                          ? 'Issues detected'
+                          : 'Not checked yet'}
+                    </span>
+                  }
                 >
-                  Copy the AI prompt to install this server into Claude Code,
-                  Cursor, or another agent — or use 1-click editor setup below.
-                </p>
+                  <span className="mcp-icon-tooltip-title">
+                    <span
+                      className={`mcp-icon-tooltip-dot lst-health-tip ${healthUi.tone}`}
+                    />
+                    {healthUi.label}
+                  </span>
+                  <span className="mcp-icon-tooltip-body">
+                    {healthUi.detail}
+                  </span>
+                  <span className="mcp-icon-tooltip-meta">
+                    {server.lastCheckedAt
+                      ? `Last checked ${new Date(server.lastCheckedAt).toLocaleString()}`
+                      : 'No health check has run yet.'}
+                  </span>
+                </IconTooltip>
+              </li>
+              <li>
+                <Link
+                  href={`/categories/${catSlug}`}
+                  className={`lst-meta-link lst-cat-pill tint-pill ${catHue}`}
+                >
+                  <span aria-hidden="true">{catMeta.emoji}</span>
+                  {categoryLabel}
+                </Link>
+              </li>
+              {starsLabel && (
+                <li>
+                  <span
+                    className="lst-meta-item"
+                    title={`${server.githubStars?.toLocaleString()} GitHub stars`}
+                  >
+                    <Star size={13} aria-hidden="true" />
+                    <span className="tabular">{starsLabel}</span>
+                    <span className="lst-meta-unit">stars</span>
+                  </span>
+                </li>
+              )}
+              <li>
+                <a href="#reviews" className="lst-meta-link">
+                  <IconTooltip
+                    label={
+                      reviewSummary.count > 0
+                        ? `${reviewSummary.avgRating.toFixed(1)} stars out of 5 (${reviewSummary.count} ${reviewSummary.count === 1 ? 'rating' : 'ratings'})`
+                        : 'No ratings yet — click to review'
+                    }
+                    asSpan
+                    trigger={
+                      <span className="lst-meta-item">
+                        <Star
+                          size={13}
+                          aria-hidden="true"
+                          className={
+                            reviewSummary.count > 0 ? 'lst-star-on' : undefined
+                          }
+                        />
+                        {reviewSummary.count > 0 ? (
+                          <>
+                            <span className="tabular">
+                              {reviewSummary.avgRating.toFixed(1)}
+                            </span>
+                            <span className="lst-meta-unit">
+                              ({reviewSummary.count})
+                            </span>
+                          </>
+                        ) : (
+                          <span className="lst-meta-unit">No ratings</span>
+                        )}
+                      </span>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Star size={14} fill="#fbbf24" color="#fbbf24" /> User
+                      Ratings
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      {reviewSummary.count > 0
+                        ? `Rated ${reviewSummary.avgRating.toFixed(1)} / 5.0 across ${reviewSummary.count} user ${reviewSummary.count === 1 ? 'review' : 'reviews'}. Click to view or leave a rating.`
+                        : 'Be the first to rate and review this MCP server!'}
+                    </span>
+                  </IconTooltip>
+                </a>
+              </li>
+              {(server.copies ?? 0) > 0 && (
+                <li>
+                  <span className="lst-meta-item">
+                    <Download size={13} aria-hidden="true" />
+                    <span className="tabular">
+                      {formatCompactNumber(server.copies)}
+                    </span>
+                    <span className="lst-meta-unit">installs</span>
+                  </span>
+                </li>
+              )}
+              {contentUpdatedLabel && (
+                <li>
+                  <span className="lst-meta-item">
+                    <Clock size={13} aria-hidden="true" />
+                    <span className="lst-meta-unit">Updated</span>
+                    {contentUpdatedLabel}
+                  </span>
+                </li>
+              )}
+              {!server.aiEnrichedAt && (
+                <li>
+                  <IconTooltip
+                    label="Enrichment pending"
+                    trigger={
+                      <span className="lst-meta-badge lst-meta-badge--muted">
+                        <Clock size={13} aria-hidden="true" /> Enrichment
+                        pending
+                      </span>
+                    }
+                  >
+                    <span className="mcp-icon-tooltip-title">
+                      <Clock size={14} /> Enrichment pending
+                    </span>
+                    <span className="mcp-icon-tooltip-body">
+                      We haven&rsquo;t run our AI enrichment pass on this
+                      listing yet, so the overview, use cases, and FAQ below may
+                      be sparse or missing. We work through the catalog over
+                      time — check back soon.
+                    </span>
+                  </IconTooltip>
+                </li>
+              )}
+            </ul>
 
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <AgentPromptButton
+            {/* Actions: one primary (Install), the rest quiet. */}
+            <div
+              className="lst-actions animate-in"
+              style={{ '--i': 3 } as CSSProperties}
+            >
+              <a href="#install" className="btn btn-primary btn-md">
+                <Terminal size={16} aria-hidden="true" />
+                Install
+              </a>
+              <span className="lst-upvote">
+                <UpvoteButton
+                  serverId={server.id}
+                  initialCount={server.upvotes || 0}
+                />
+              </span>
+              {hasRepository && (
+                <OutboundLink
+                  href={server.url}
+                  destinationType="github"
+                  serverId={server.id}
+                  target="_blank"
+                  rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
+                  className="btn btn-secondary btn-sm"
+                  aria-label={`${repoHost || 'Source'} repository`}
+                >
+                  <FolderGit2 size={15} aria-hidden="true" />
+                  <span className="lst-btn-label">Repository</span>
+                  {server.isOfficial && (
+                    <BadgeCheck
+                      size={14}
+                      className="lst-accent-icon"
+                      aria-label="Verified owner"
+                    />
+                  )}
+                </OutboundLink>
+              )}
+              <AdminInlineLinkPopover
+                serverId={server.id}
+                type="repository"
+                currentUrl={server.url}
+              />
+              {primaryWebsiteUrl && (
+                <OutboundLink
+                  href={primaryWebsiteUrl}
+                  destinationType="website"
+                  serverId={server.id}
+                  target="_blank"
+                  rel={websiteLinkRel(
+                    !!server.isPremium,
+                    !!server.websiteBacklinkOk,
+                  )}
+                  className="btn btn-secondary btn-sm"
+                  aria-label="Website"
+                >
+                  <Globe size={15} aria-hidden="true" />
+                  <span className="lst-btn-label">Website</span>
+                  {server.websiteBacklinkOk ? (
+                    <BadgeCheck
+                      size={14}
+                      className="lst-accent-icon"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </OutboundLink>
+              )}
+              <AdminInlineLinkPopover
+                serverId={server.id}
+                type="website"
+                // Edits the stored field, which can still be empty when
+                // the button above fell back to server.url.
+                currentUrl={server.websiteUrl || ''}
+              />
+              <ShareModal serverId={server.id} serverName={server.name} />
+              <ListingMoreMenu>
+                {server.supportUrl && (
+                  <OutboundLink
+                    href={server.supportUrl}
+                    destinationType="website"
                     serverId={server.id}
-                    serverName={server.name}
-                  />
+                    target="_blank"
+                    rel={supportLinkRel(
+                      !!server.isPremium,
+                      !!server.websiteBacklinkOk,
+                      server.supportUrl,
+                      server.websiteUrl,
+                    )}
+                    className="lst-menu-item"
+                  >
+                    <LifeBuoy size={15} aria-hidden="true" /> Get support
+                  </OutboundLink>
+                )}
+                <Link
+                  href={`/mcp/${server.id}/readme`}
+                  rel="nofollow"
+                  className="lst-menu-item"
+                >
+                  <FileText size={15} aria-hidden="true" /> Full README
+                </Link>
+                <Link
+                  href={`/mcp/${server.id}/alternatives`}
+                  rel="nofollow"
+                  className="lst-menu-item"
+                >
+                  <Shuffle size={15} aria-hidden="true" /> Compare alternatives
+                </Link>
+                <Link
+                  href={`/mcp/${server.id}/embed`}
+                  rel="nofollow"
+                  className="lst-menu-item"
+                >
+                  <Code2 size={15} aria-hidden="true" /> Embed widget
+                </Link>
+                <span className="lst-menu-sep" aria-hidden="true" />
+                {!server.isOfficial && (
+                  <Link
+                    href={`/mcp/${server.id}/claim`}
+                    className="lst-menu-item"
+                  >
+                    <BadgeCheck size={15} aria-hidden="true" /> Claim this
+                    listing
+                  </Link>
+                )}
+                <ReportListingButton serverId={server.id} />
+              </ListingMoreMenu>
+            </div>
+          </header>
+
+          <div className="lst-grid">
+            {/* ── Main column ───────────────────────────────────────── */}
+            <div className="lst-main">
+              <ListingSectionNav sections={sections} />
+
+              {/* Install is the hero: the one thing most visitors came for. */}
+              <section
+                id="install"
+                className="lst-section lst-install"
+                aria-labelledby="install-h"
+              >
+                <span id="quick-install" className="lst-anchor" />
+                <div className="lst-install-head">
+                  <div>
+                    <h2 id="install-h">
+                      <span className="lst-section-icon tint-tile hue-teal">
+                        <Download size={16} aria-hidden="true" />
+                      </span>
+                      Install {displayName}
+                    </h2>
+                    <p>
+                      Pick your client, then add it in one click or paste the
+                      config.
+                    </p>
+                  </div>
+                  {(detailTransport || detailRuntime) && (
+                    <div className="lst-install-tags">
+                      {detailTransport && (
+                        <span className="lst-pill">{detailTransport}</span>
+                      )}
+                      {detailRuntime && (
+                        <span className="lst-pill">{detailRuntime}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <InstallButtons
-                  serverId={server.id}
-                  serverName={server.name}
-                  url={server.url}
-                  remoteEndpointUrl={server.remoteEndpointUrl}
-                  description={server.description}
-                  installKind={server.installKind}
-                  installCommand={server.installCommand}
-                  installArgs={server.installArgs}
-                  installPackage={server.installPackage}
-                  installConfidence={server.installConfidence}
-                  suggestedInstallCommand={server.suggestedInstallCommand}
-                  suggestedInstallArgs={server.suggestedInstallArgs}
+                <InstallPanel
+                  server={server}
+                  setupUrl={server.installNoteHref || server.url}
+                  setupLabel={
+                    hasRepository
+                      ? `Open setup steps on ${repoHost || 'the repository'}`
+                      : 'Open the project’s setup instructions'
+                  }
                 />
 
                 {server.remoteEndpointUrl && (
-                  <div
-                    style={{
-                      marginTop: '1.25rem',
-                      borderRadius: '10px',
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-color)',
-                      padding: '0.85rem 1rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        marginBottom: '0.5rem',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                      }}
-                    >
-                      <Globe
-                        size={14}
-                        style={{ color: 'var(--accent-color)' }}
-                      />{' '}
-                      Also available as a hosted endpoint
-                      {(server.remoteEndpointHealthy != null ||
-                        server.id === 'allmcps-server') &&
-                        (() => {
-                          const isHealthy =
-                            server.id === 'allmcps-server' ||
-                            server.remoteEndpointHealthy === true;
-                          return (
-                            <IconTooltip
-                              label="Hosted endpoint health"
-                              asSpan
-                              trigger={
-                                <span
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.3rem',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 600,
-                                    color: isHealthy ? '#34d399' : '#f87171',
-                                    marginLeft: '0.2rem',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  <span
-                                    style={{
-                                      width: 6,
-                                      height: 6,
-                                      borderRadius: '50%',
-                                      background: isHealthy
-                                        ? '#34d399'
-                                        : '#f87171',
-                                    }}
-                                  />
-                                  {isHealthy ? 'Live' : 'Unreachable'}
-                                  {formatCommitAge(
-                                    server.remoteEndpointCheckedAt,
-                                  )
-                                    ? ` · ${formatCommitAge(server.remoteEndpointCheckedAt)}`
-                                    : ''}
-                                </span>
-                              }
+                  <div className="lst-install-extra">
+                    <div className="lst-install-extra-head">
+                      <Globe size={14} aria-hidden="true" />
+                      <span>Hosted endpoint</span>
+                      {showRemoteHealth && (
+                        <IconTooltip
+                          label="Hosted endpoint health"
+                          asSpan
+                          trigger={
+                            <span
+                              className={`lst-health lst-health--${remoteHealthy ? 'active' : 'down'} ${statusHueClass(remoteHealthy ? 'ok' : 'bad')}`}
                             >
-                              <span className="mcp-icon-tooltip-title">
-                                <span
-                                  className="mcp-icon-tooltip-dot"
-                                  style={{
-                                    backgroundColor: isHealthy
-                                      ? '#34d399'
-                                      : '#f87171',
-                                  }}
-                                />
-                                {isHealthy
-                                  ? 'Live Remote Endpoint'
-                                  : 'Remote Endpoint Unreachable'}
-                              </span>
-                              <span className="mcp-icon-tooltip-body">
-                                {isHealthy
-                                  ? 'Our automated health check connected to this remote MCP endpoint successfully.'
-                                  : 'Our automated health check could not connect to this remote SSE endpoint.'}
-                              </span>
-                              <span className="mcp-icon-tooltip-meta">
-                                {server.remoteEndpointCheckedAt
-                                  ? `Last checked ${new Date(server.remoteEndpointCheckedAt).toLocaleString()}`
-                                  : 'Live on-site API endpoint.'}
-                              </span>
-                            </IconTooltip>
-                          );
-                        })()}
+                              <span
+                                className="lst-health-dot"
+                                aria-hidden="true"
+                              />
+                              {remoteHealthy ? 'Live' : 'Unreachable'}
+                              {formatCommitAge(server.remoteEndpointCheckedAt)
+                                ? ` · ${formatCommitAge(server.remoteEndpointCheckedAt)}`
+                                : ''}
+                            </span>
+                          }
+                        >
+                          <span className="mcp-icon-tooltip-title">
+                            {remoteHealthy
+                              ? 'Live Remote Endpoint'
+                              : 'Remote Endpoint Unreachable'}
+                          </span>
+                          <span className="mcp-icon-tooltip-body">
+                            {remoteHealthy
+                              ? 'Our automated health check connected to this remote MCP endpoint successfully.'
+                              : 'Our automated health check could not connect to this remote SSE endpoint.'}
+                          </span>
+                          <span className="mcp-icon-tooltip-meta">
+                            {server.remoteEndpointCheckedAt
+                              ? `Last checked ${new Date(server.remoteEndpointCheckedAt).toLocaleString()}`
+                              : 'Live on-site API endpoint.'}
+                          </span>
+                        </IconTooltip>
+                      )}
                     </div>
-                    <p
-                      style={{
-                        color: 'var(--text-secondary)',
-                        fontSize: '0.8rem',
-                        margin: '0 0 0.6rem',
-                      }}
-                    >
+                    <p className="lst-muted-sm">
                       Clients with native remote MCP support can connect
-                      directly to this URL instead of the{' '}
-                      {server.installKind === 'stdio'
-                        ? 'stdio install'
-                        : 'install method'}{' '}
-                      above.
+                      directly to this URL.
                     </p>
                     <CopyBlock
+                      className="copyblock--flush"
                       code={server.remoteEndpointUrl}
                       serverId={server.id}
                       title="Remote endpoint"
@@ -1469,92 +1292,40 @@ export default async function MCPDetail({
                 {(verification ||
                   (server.installKind === 'stdio' &&
                     server.installCommand)) && (
-                  <div
-                    style={{
-                      marginTop: '1.25rem',
-                      borderRadius: '10px',
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-color)',
-                      padding: '0.85rem 1rem',
-                    }}
-                  >
+                  <div className="lst-install-extra lst-check">
                     {server.id === 'allmcps-server' ? (
-                      <>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            marginBottom: '0.5rem',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <CheckCircle size={14} style={{ color: '#34d399' }} />{' '}
-                          Official Flagship Server
-                        </div>
-                        <p
-                          style={{
-                            color: 'var(--text-secondary)',
-                            fontSize: '0.8rem',
-                            margin: 0,
-                          }}
-                        >
-                          Official MCP server for AllMCPs.com — maintained
-                          directly by AllMCPs. Fully verified to search,
-                          introspect, and manage MCP tools programmatically
-                          directly from your AI agent prompts.
-                        </p>
-                      </>
+                      <p className="lst-check-line">
+                        <CheckCircle
+                          size={15}
+                          className="lst-ok"
+                          aria-hidden="true"
+                        />
+                        <strong>Official flagship server</strong>
+                        <span>
+                          — maintained directly by AllMCPs. Fully verified to
+                          search, introspect, and manage MCP tools
+                          programmatically from your agent.
+                        </span>
+                      </p>
                     ) : !verification ? (
-                      <>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            marginBottom: '0.5rem',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <Clock
-                            size={14}
-                            style={{ color: 'var(--text-secondary)' }}
-                          />{' '}
-                          Not yet automatically verified
-                        </div>
-                        <p
-                          style={{
-                            color: 'var(--text-secondary)',
-                            fontSize: '0.8rem',
-                            margin: 0,
-                          }}
-                        >
+                      <p className="lst-check-line">
+                        <Clock size={15} aria-hidden="true" />
+                        <strong>Install not yet sandbox-tested</strong>
+                        <span>
                           {hasIntrospectedTools
-                            ? "This server is confirmed live — we successfully called its tools/list endpoint directly (see the verified badge above). We haven't yet sandbox-tested the stdio install command below specifically, which is a separate, ongoing check."
-                            : "We haven't yet run this listing's install command through our automated sandbox check. This isn't a red flag — we're steadily working through the catalog."}
-                        </p>
-                      </>
+                            ? '— the server itself is confirmed live (we called its tools/list endpoint). The stdio install command is a separate, ongoing check.'
+                            : "— we haven't run this command through our automated sandbox yet. Not a red flag; we're working through the catalog."}
+                        </span>
+                      </p>
                     ) : verification.status === 'ok' ? (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.4rem',
-                          fontSize: '0.85rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Sparkles size={14} style={{ color: '#34d399' }} />{' '}
-                        Automated check passed
-                        <span
-                          style={{
-                            color: 'var(--text-secondary)',
-                            fontWeight: 400,
-                            fontSize: '0.8rem',
-                          }}
-                        >
+                      <p className="lst-check-line">
+                        <Sparkles
+                          size={15}
+                          className="lst-ok"
+                          aria-hidden="true"
+                        />
+                        <strong>Automated check passed</strong>
+                        <span>
                           — started and listed {verification.toolCount ?? 'its'}{' '}
                           tools correctly
                           {formatCommitAge(verification.checkedAt)
@@ -1562,60 +1333,37 @@ export default async function MCPDetail({
                             : ''}
                           .
                         </span>
-                      </div>
+                      </p>
                     ) : (
-                      <>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            marginBottom: '0.5rem',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <Info
+                      <details className="lst-check-details">
+                        <summary className="lst-check-line">
+                          <Info size={15} aria-hidden="true" />
+                          <strong>
+                            We couldn&rsquo;t confirm it starts correctly
+                          </strong>
+                          <ChevronDown
                             size={14}
-                            style={{ color: 'var(--accent-color)' }}
-                          />{' '}
-                          We couldn&rsquo;t automatically confirm this listing
-                          starts correctly
-                        </div>
-                        <p
-                          style={{
-                            color: 'var(--text-secondary)',
-                            fontSize: '0.8rem',
-                            margin: '0 0 0.6rem',
-                          }}
-                        >
+                            className="lst-chevron"
+                            aria-hidden="true"
+                          />
+                        </summary>
+                        <p className="lst-muted-sm">
                           {
                             {
                               needs_credentials:
-                                'The install command below installed and started the server, which then stopped for configuration (such as an API key) that our sandbox does not have — expected for servers that connect to your account.',
+                                'The install command installed and started the server, which then stopped for configuration (such as an API key) that our sandbox does not have — expected for servers that connect to your account.',
                               timeout:
-                                "We ran the install command below but it didn't respond within our test window — this can mean a slow first-time install rather than a real problem.",
+                                "We ran the install command but it didn't respond within our test window — this can mean a slow first-time install rather than a real problem.",
                               handshake_failed:
-                                "The install command below started, but didn't respond the way we expected when we tried to talk to it.",
+                                "The install command started, but didn't respond the way we expected when we tried to talk to it.",
                               install_failed:
-                                "The install command below didn't complete successfully in our automated test.",
+                                "The install command didn't complete successfully in our automated test.",
                               error:
                                 'We hit an unexpected error while testing this listing automatically.',
                             }[verification.status]
                           }
                         </p>
-                        <code
-                          style={{
-                            display: 'block',
-                            fontSize: '0.78rem',
-                            padding: '0.5rem 0.7rem',
-                            borderRadius: '6px',
-                            background: 'var(--bg-muted)',
-                            border: '1px solid var(--border-color)',
-                            marginBottom: verification.error ? '0.5rem' : 0,
-                            wordBreak: 'break-word',
-                          }}
-                        >
+                        <code className="lst-check-cmd">
                           {[
                             server.installCommand,
                             ...(parseArgsJson(server.installArgs) ?? []),
@@ -1624,25 +1372,11 @@ export default async function MCPDetail({
                             .join(' ')}
                         </code>
                         {verification.error && (
-                          <p
-                            style={{
-                              color: 'var(--text-secondary)',
-                              fontSize: '0.75rem',
-                              fontFamily: 'monospace',
-                              margin: '0 0 0.6rem',
-                              wordBreak: 'break-word',
-                            }}
-                          >
+                          <p className="lst-check-error">
                             {verification.error}
                           </p>
                         )}
-                        <p
-                          style={{
-                            color: 'var(--text-secondary)',
-                            fontSize: '0.75rem',
-                            margin: 0,
-                          }}
-                        >
+                        <p className="lst-muted-sm">
                           This is an experimental automated check and can have
                           false negatives — missing environment variables, a
                           slow cold install, etc. It doesn&rsquo;t necessarily
@@ -1654,616 +1388,270 @@ export default async function MCPDetail({
                             <ClaimHintLink serverId={server.id} />
                           )}
                         </p>
-                      </>
+                      </details>
                     )}
                   </div>
                 )}
-
-                <details
-                  className="detail-manual-config"
-                  style={{
-                    marginTop: '1.25rem',
-                    borderRadius: '10px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-color)',
-                    padding: '0.75rem 1rem',
-                  }}
-                >
-                  <summary className="detail-manual-config-summary">
-                    <span>Manual Client &amp; Custom JSON Config</span>
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        opacity: 0.7,
-                        flexShrink: 0,
-                      }}
-                    >
-                      Expand JSON ▾
-                    </span>
-                  </summary>
-                  <div
-                    style={{
-                      marginTop: '1rem',
-                      paddingTop: '1rem',
-                      borderTop: '1px solid var(--border-color)',
-                      minWidth: 0,
-                    }}
-                  >
-                    <ClientConfigTabs server={server} />
-                  </div>
-                </details>
               </section>
 
               <ReviewNudge serverId={server.id} serverName={displayName} />
 
-              {/* Next steps strip — install → claim → compare */}
-              <nav className="detail-next-steps" aria-label="Next steps">
-                <a href="#quick-install" className="detail-next-step">
-                  <Terminal size={14} aria-hidden="true" /> Install
-                </a>
-                {server.tools && server.tools.length > 0 && (
-                  <a href="#tools-schema" className="detail-next-step">
-                    <Wrench size={14} aria-hidden="true" /> Tool Schemas (
-                    {server.tools.length})
-                  </a>
-                )}
-                <a href="#overview-doc" className="detail-next-step">
-                  <Info size={14} aria-hidden="true" /> How it works
-                </a>
-                {relatedServers && relatedServers.length > 0 && (
-                  <a href="#related" className="detail-next-step">
-                    <Sparkles size={14} aria-hidden="true" /> Related
-                  </a>
-                )}
-                {faqItems.length > 0 && (
-                  <a href="#faq" className="detail-next-step">
-                    <LifeBuoy size={14} aria-hidden="true" /> FAQ
-                  </a>
-                )}
-                {reviewSummary.count > 0 && (
-                  <a href="#reviews" className="detail-next-step">
-                    <Star size={14} aria-hidden="true" /> Reviews (
-                    {reviewSummary.count})
-                  </a>
-                )}
-                {!server.isOfficial && (
-                  <Link
-                    href={`/mcp/${server.id}/claim`}
-                    className="detail-next-step"
-                  >
-                    <BadgeCheck size={14} aria-hidden="true" /> Claim listing
-                  </Link>
-                )}
-                <Link
-                  href={`/mcp/${server.id}/alternatives`}
-                  className="detail-next-step"
-                  rel="nofollow"
-                >
-                  <Sparkles size={14} aria-hidden="true" /> Alternatives
-                </Link>
-                <Link
-                  href={`/categories/${catSlug}`}
-                  className="detail-next-step"
-                >
-                  <span aria-hidden="true">{catMeta.emoji}</span> More in{' '}
-                  {catMeta.label}
-                </Link>
-                <a href="#directory-badge" className="detail-next-step">
-                  <BadgeCheck size={14} aria-hidden="true" /> Directory Badge
-                </a>
-              </nav>
+              {/* ── Overview ──────────────────────────────────────── */}
+              <section
+                id="overview"
+                className="lst-section reveal"
+                aria-labelledby="overview-h"
+              >
+                <header className="lst-section-head">
+                  <h2 id="overview-h">
+                    <span className="lst-section-icon tint-tile hue-blue">
+                      <BookOpen size={16} aria-hidden="true" />
+                    </span>
+                    Overview
+                  </h2>
+                </header>
 
-              {/* AI-authored content — overview soft-collapsed so install stays primary. */}
-              {(server.aiOverview ||
-                (server.aiUseCases?.length ?? 0) > 0 ||
-                (server.aiFeatures?.length ?? 0) > 0) && (
-                <section style={{ marginBottom: '2.5rem' }}>
-                  {server.aiOverview && (
-                    <>
-                      <h2
-                        style={{
-                          fontSize: '1.5rem',
-                          marginBottom: '0.75rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                        }}
-                      >
-                        <Sparkles
-                          size={20}
-                          style={{ color: 'var(--accent-color)' }}
-                          aria-hidden="true"
-                        />{' '}
-                        Overview
-                      </h2>
-                      <div
-                        style={{
-                          color: 'var(--text-secondary)',
-                          lineHeight: 1.7,
-                          fontSize: '1rem',
-                          margin: '0 0 1.5rem',
-                        }}
-                      >
-                        <CollapsibleText collapsedLines={4}>
-                          <p style={{ margin: 0 }}>{server.aiOverview}</p>
-                        </CollapsibleText>
-                      </div>
-                    </>
-                  )}
-                  <div className="detail-ai-grid">
-                    {(server.aiUseCases?.length ?? 0) > 0 && (
-                      <div
-                        className="surface"
-                        style={{
-                          padding: '1.25rem',
-                          borderRadius: '12px',
-                          border: '1px solid var(--border-color)',
-                        }}
-                      >
-                        <h3
-                          style={{
-                            fontSize: '1rem',
-                            margin: '0 0 0.85rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            color: 'var(--text-primary)',
-                            fontWeight: 700,
-                          }}
-                        >
-                          <Sparkles
-                            size={16}
-                            style={{ color: 'var(--accent-color)' }}
-                            aria-hidden="true"
-                          />{' '}
-                          Use cases
-                        </h3>
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.55rem',
-                          }}
-                        >
-                          {server.aiUseCases!.map((uc) => (
-                            <div
-                              key={uc}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: '0.55rem',
-                                fontSize: '0.88rem',
-                                color: 'var(--text-secondary)',
-                                lineHeight: 1.5,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  color: 'var(--accent-color)',
-                                  fontWeight: 'bold',
-                                  fontSize: '1.1rem',
-                                  lineHeight: '1',
-                                  marginTop: '-1px',
-                                }}
-                                aria-hidden="true"
-                              >
-                                •
-                              </span>
-                              <span>{uc}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {(server.aiFeatures?.length ?? 0) > 0 && (
-                      <div
-                        className="surface"
-                        style={{
-                          padding: '1.25rem',
-                          borderRadius: '12px',
-                          border: '1px solid var(--border-color)',
-                        }}
-                      >
-                        <h3
-                          style={{
-                            fontSize: '1rem',
-                            margin: '0 0 0.85rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            color: 'var(--text-primary)',
-                            fontWeight: 700,
-                          }}
-                        >
-                          <Wrench
-                            size={16}
-                            style={{ color: 'var(--accent-color)' }}
-                            aria-hidden="true"
-                          />{' '}
-                          Key features
-                        </h3>
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.55rem',
-                          }}
-                        >
-                          {server.aiFeatures!.map((f) => (
-                            <div
-                              key={f}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: '0.55rem',
-                                fontSize: '0.88rem',
-                                color: 'var(--text-secondary)',
-                                lineHeight: 1.5,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  color: 'var(--accent-color)',
-                                  fontWeight: 'bold',
-                                  fontSize: '1.1rem',
-                                  lineHeight: '1',
-                                  marginTop: '-1px',
-                                }}
-                                aria-hidden="true"
-                              >
-                                •
-                              </span>
-                              <span>{f}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                {server.tags && server.tags.length > 0 && (
+                  <ul className="lst-tags" aria-label="Tags">
+                    {server.tags.map((tag) => (
+                      <li key={tag} className="lst-tag">
+                        {tag}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {server.id === 'allmcps-server' && (
+                  <FlagshipHeroBanner
+                    serverId={server.id}
+                    serverName={displayName}
+                    toolCount={toolCount}
+                  />
+                )}
+
+                {server.aiOverview && (
+                  <div className="lst-lead">
+                    <CollapsibleText collapsedLines={5}>
+                      <p>{server.aiOverview}</p>
+                    </CollapsibleText>
                   </div>
+                )}
+
+                {hasAiOverview &&
+                  ((server.aiUseCases?.length ?? 0) > 0 ||
+                    (server.aiFeatures?.length ?? 0) > 0) && (
+                    <div className="lst-two-up">
+                      {(server.aiUseCases?.length ?? 0) > 0 && (
+                        <div className="lst-card">
+                          <h3 className="lst-card-title">Use cases</h3>
+                          <ul className="lst-bullets">
+                            {server.aiUseCases?.map((uc) => (
+                              <li key={uc}>{uc}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {(server.aiFeatures?.length ?? 0) > 0 && (
+                        <div className="lst-card">
+                          <h3 className="lst-card-title">Key features</h3>
+                          <ul className="lst-bullets">
+                            {server.aiFeatures?.map((f) => (
+                              <li key={f}>{f}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                {server.screenshotUrl && (
+                  <ScreenshotViewer
+                    src={server.screenshotUrl}
+                    alt={`${displayName} screenshot`}
+                    title={`${displayName} Screenshot`}
+                  />
+                )}
+
+                <div id="overview-doc" className="lst-doc">
+                  {(server.aiDoc?.trim() || readme) && (
+                    <h3 className="lst-doc-title">
+                      {server.aiDoc?.trim()
+                        ? `How ${displayName} works`
+                        : 'From the project README'}
+                    </h3>
+                  )}
+                  <ExpandableDoc>
+                    <div className="markdown-body">
+                      {server.aiDoc?.trim() ? (
+                        // Our own restructured writeup — original prose grounded in
+                        // the README, not a mirror of it. The full upstream README
+                        // is one click away at the noindex /mcp/[id]/readme route.
+                        <SafeMarkdown
+                          content={server.aiDoc}
+                          utmContent={server.id}
+                          repoUrl={server.url}
+                        />
+                      ) : readme ? (
+                        // Fallback until the enrich cron writes this listing's
+                        // writeup: show the README excerpt as before rather than
+                        // leave the page thin in the interim.
+                        <SafeMarkdown
+                          content={
+                            truncateReadmeExcerpt(readme).excerpt ?? readme
+                          }
+                          utmContent={server.id}
+                          repoUrl={server.url}
+                        />
+                      ) : (
+                        <>
+                          <p>
+                            {displayName} is a {server.category} MCP server
+                            {org ? ` from ${org}` : ''} listed on AllMCPs.{' '}
+                            {server.description}
+                          </p>
+                          {!hasSuppliedDescription && (
+                            <p>
+                              We couldn&rsquo;t automatically pull a README for
+                              this listing
+                              {repoHost ? ` from ${repoHost}` : ''}, so the
+                              summary above comes from its listing details. Use
+                              the config in <a href="#install">Install</a>{' '}
+                              above, then open the source repository for full
+                              setup instructions and the tools it exposes over
+                              MCP.
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </ExpandableDoc>
+                  <p className="lst-doc-links">
+                    <Link
+                      href={`/mcp/${server.id}/readme`}
+                      rel="nofollow"
+                      className="link-arrow"
+                    >
+                      Read the full README <ArrowRight size={14} />
+                    </Link>
+                    {hasRepository && (
+                      <OutboundLink
+                        href={server.url}
+                        destinationType="github"
+                        serverId={server.id}
+                        target="_blank"
+                        rel={repoLinkRel(
+                          !!server.isPremium,
+                          !!server.isOfficial,
+                        )}
+                        className="link-arrow"
+                      >
+                        View source on {repoHost || 'the source repository'}{' '}
+                        <ExternalLink size={13} />
+                      </OutboundLink>
+                    )}
+                  </p>
+                </div>
+              </section>
+
+              {/* ── Tools ─────────────────────────────────────────── */}
+              {toolCount > 0 && (
+                <section
+                  id="tools-schema"
+                  className="lst-section reveal"
+                  aria-labelledby="tools-h"
+                >
+                  <header className="lst-section-head">
+                    <h2 id="tools-h">
+                      <span className="lst-section-icon tint-tile hue-violet">
+                        <Wrench size={16} aria-hidden="true" />
+                      </span>
+                      Tools
+                      <span className="lst-section-count">{toolCount}</span>
+                    </h2>
+                    <p>
+                      What {displayName} lets your agent do. Expand a tool for
+                      its parameters.
+                    </p>
+                  </header>
+                  <ToolSchemaInspector
+                    tools={server.tools}
+                    toolsSource={server.toolsSource}
+                  />
                 </section>
               )}
 
-              <section id="tools-schema" style={{ scrollMarginTop: '5rem' }}>
-                <ToolSchemaInspector
-                  tools={server.tools}
-                  aiFeatures={server.aiFeatures}
-                  aiUseCases={server.aiUseCases}
-                  serverName={displayName}
-                  toolsSource={server.toolsSource}
+              {/* ── Security & health ─────────────────────────────── */}
+              <section
+                id="security"
+                className="lst-section reveal"
+                aria-labelledby="security-h"
+              >
+                <header className="lst-section-head">
+                  <h2 id="security-h">
+                    <span className="lst-section-icon tint-tile hue-indigo">
+                      <ShieldCheck size={16} aria-hidden="true" />
+                    </span>
+                    Security &amp; health
+                  </h2>
+                  <p>
+                    What it can reach and how reliably it runs — from our own
+                    checks, not the maintainer&rsquo;s claims.
+                  </p>
+                </header>
+
+                <div className="lst-card lst-health-card">
+                  <div className="lst-health-row">
+                    <span
+                      className={`lst-health lst-health--${healthKey} ${healthUi.tone}`}
+                    >
+                      <span className="lst-health-dot" aria-hidden="true" />
+                      {healthUi.label.replace('Health: ', '')}
+                    </span>
+                    <span className="lst-muted-sm">
+                      {server.lastCheckedAt
+                        ? `Last checked ${formatCommitAge(server.lastCheckedAt) ?? new Date(server.lastCheckedAt).toLocaleDateString()}`
+                        : 'No health check has run yet.'}
+                    </span>
+                  </div>
+                  <p className="lst-muted-sm">{healthUi.detail}</p>
+                  <HealthHistoryStrip
+                    history={healthHistory}
+                    verification={verification}
+                    hasRemoteEndpoint={!!server.remoteEndpointUrl}
+                    isOfficial={
+                      server.isOfficial || server.id === 'allmcps-server'
+                    }
+                  />
+                </div>
+
+                {(hasSecurityCard || hasVulnCard) && (
+                  <div className="lst-two-up">
+                    <SecurityProfileCard server={serverWithSignals} />
+                    <VulnSignalCard server={server} />
+                  </div>
+                )}
+
+                <AdoptionSignals
+                  githubStars={server.githubStars}
+                  npmDownloads={server.npmDownloads}
+                  lastCommitAt={server.lastCommitAt}
+                  maintenanceStatus={server.maintenanceStatus}
+                  availabilityPct={combinedAvailabilityPct}
+                  installCheck={verification?.status ?? null}
+                  toolCount={server.tools?.length ?? null}
+                  views={server.views}
+                  copies={server.copies}
+                  upvotes={server.upvotes}
                 />
               </section>
 
-              <section id="overview-doc" style={{ scrollMarginTop: '5rem' }}>
-                <h2
-                  style={{
-                    fontSize: '1.5rem',
-                    marginBottom: '1.5rem',
-                    borderBottom: '1px solid var(--border-color)',
-                    paddingBottom: '0.5rem',
-                  }}
-                >
-                  {server.aiDoc?.trim()
-                    ? `How ${displayName} works`
-                    : 'Documentation Overview'}
-                </h2>
-                <div className="detail-readme-scroll">
-                  <div className="markdown-body">
-                    {server.aiDoc?.trim() ? (
-                      // Our own restructured writeup — original prose grounded in
-                      // the README, not a mirror of it. The full upstream README
-                      // is one click away at the noindex /mcp/[id]/readme route.
-                      <SafeMarkdown
-                        content={server.aiDoc}
-                        utmContent={server.id}
-                        repoUrl={server.url}
-                      />
-                    ) : readme ? (
-                      // Fallback until the enrich cron writes this listing's
-                      // writeup: show the README excerpt as before rather than
-                      // leave the page thin in the interim.
-                      <SafeMarkdown
-                        content={
-                          truncateReadmeExcerpt(readme).excerpt ?? readme
-                        }
-                        utmContent={server.id}
-                        repoUrl={server.url}
-                      />
-                    ) : (
-                      <>
-                        <p>
-                          {displayName} is a {server.category} MCP server
-                          {org ? ` from ${org}` : ''} listed on AllMCPs.{' '}
-                          {server.description}
-                        </p>
-                        {!hasSuppliedDescription && (
-                          <p>
-                            We couldn&rsquo;t automatically pull a README for
-                            this listing
-                            {repoHost ? ` from ${repoHost}` : ''}, so the
-                            summary above comes from its listing details. Use
-                            the one-click buttons or copy the config from{' '}
-                            <a href="#quick-install">Quick Install</a> above,
-                            then open the source repository for full setup
-                            instructions and the tools it exposes over MCP.
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-                <p
-                  style={{
-                    marginTop: '1.5rem',
-                    display: 'flex',
-                    gap: '1.5rem',
-                    flexWrap: 'wrap',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  <Link href={`/mcp/${server.id}/readme`} rel="nofollow">
-                    Read the full README →
-                  </Link>
-                  {hasRepository && (
-                    <OutboundLink
-                      href={server.url}
-                      destinationType="github"
-                      serverId={server.id}
-                      target="_blank"
-                      rel={repoLinkRel(!!server.isPremium, !!server.isOfficial)}
-                    >
-                      View source on {repoHost || 'the source repository'} →
-                    </OutboundLink>
-                  )}
-                </p>
-              </section>
-
-              {/* Related MCP Servers */}
-              {relatedServers && relatedServers.length > 0 && (
-                <section
-                  id="related"
-                  style={{
-                    scrollMarginTop: '5rem',
-                    marginTop: '3rem',
-                    paddingTop: '2rem',
-                    borderTop: '1px solid var(--border-color)',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '1rem',
-                      flexWrap: 'wrap',
-                      marginBottom: '1.5rem',
-                    }}
-                  >
-                    <h2
-                      style={{
-                        fontSize: '1.5rem',
-                        margin: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                      }}
-                    >
-                      <Sparkles
-                        size={20}
-                        style={{ color: 'var(--accent-color)' }}
-                      />{' '}
-                      Related MCP Servers
-                    </h2>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <Link
-                        href={`/categories/${categorySlug(server.category)}`}
-                        className="btn btn-secondary"
-                        style={{
-                          fontSize: '0.85rem',
-                          padding: '0.4rem 0.85rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        View all in {catMeta.label} <ChevronRight size={14} />
-                      </Link>
-                      <Link
-                        href={`/mcp/${server.id}/alternatives`}
-                        rel="nofollow"
-                        style={{
-                          fontSize: '0.85rem',
-                          color: 'var(--accent-color)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        View all alternatives <ChevronRight size={14} />
-                      </Link>
-                    </div>
-                  </div>
-                  <ul className="detail-related-grid">
-                    {relatedServers.map((rel) => {
-                      const relName = parseServerName(rel.name).displayName;
-                      return (
-                        <li
-                          key={rel.id}
-                          className="surface-interactive"
-                          style={{
-                            padding: '1.25rem',
-                            borderRadius: '12px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.75rem',
-                            position: 'relative',
-                            border: isFeaturedListing(rel as any)
-                              ? '1px solid rgba(0, 229, 255, 0.4)'
-                              : '1px solid var(--border-color)',
-                            background: isFeaturedListing(rel as any)
-                              ? 'linear-gradient(135deg, rgba(0,229,255,0.06), rgba(0,123,255,0.04))'
-                              : undefined,
-                          }}
-                        >
-                          <Link
-                            href={`/mcp/${rel.id}`}
-                            style={{
-                              textDecoration: 'none',
-                              color: 'inherit',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '0.75rem',
-                              flex: 1,
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '0.5rem',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.6rem',
-                                  minWidth: 0,
-                                }}
-                              >
-                                <ServerAvatar
-                                  name={rel.name}
-                                  logoUrl={rel.logoUrl}
-                                  category={rel.category}
-                                  size={32}
-                                />
-                                <span
-                                  style={{
-                                    fontWeight: 700,
-                                    fontSize: '1rem',
-                                    color: 'var(--text-primary)',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  {relName}
-                                </span>
-                              </div>
-                              {isFeaturedListing(rel as any) ? (
-                                <Badge
-                                  variant="success"
-                                  className="badge-featured"
-                                  style={{ fontSize: '0.65rem', flexShrink: 0 }}
-                                >
-                                  ★ Featured
-                                </Badge>
-                              ) : rel.isOfficial ? (
-                                <Badge
-                                  variant="official"
-                                  style={{ fontSize: '0.65rem', flexShrink: 0 }}
-                                >
-                                  Verified
-                                </Badge>
-                              ) : null}
-                            </div>
-                            <p
-                              style={{
-                                fontSize: '0.85rem',
-                                color: 'var(--text-secondary)',
-                                margin: 0,
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                lineHeight: 1.45,
-                              }}
-                            >
-                              <SafeMarkdown
-                                content={
-                                  rel.description || 'No description provided.'
-                                }
-                                isInline
-                              />
-                            </p>
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginTop: 'auto',
-                                paddingTop: '0.5rem',
-                              }}
-                            >
-                              <Badge
-                                variant="category"
-                                style={{ fontSize: '0.7rem' }}
-                              >
-                                {rel.category}
-                              </Badge>
-                              <span
-                                style={{
-                                  fontSize: '0.75rem',
-                                  color: 'var(--text-secondary)',
-                                }}
-                              >
-                                {(rel.views || 0).toLocaleString()} views
-                              </span>
-                            </div>
-                          </Link>
-                          <Link
-                            href={`/mcp/${server.id}/vs/${rel.id}`}
-                            rel="nofollow"
-                            style={{
-                              fontSize: '0.8rem',
-                              fontWeight: 700,
-                              color: 'var(--accent-color)',
-                              textDecoration: 'none',
-                              paddingTop: '0.35rem',
-                              borderTop: '1px solid var(--border-color)',
-                            }}
-                          >
-                            Compare vs {relName} →
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              )}
-
-              <AdoptionSignals
-                githubStars={server.githubStars}
-                npmDownloads={server.npmDownloads}
-                lastCommitAt={server.lastCommitAt}
-                maintenanceStatus={server.maintenanceStatus}
-                availabilityPct={combinedAvailabilityPct}
-                installCheck={verification?.status ?? null}
-                toolCount={server.tools?.length ?? null}
-                views={server.views}
-                copies={server.copies}
-                upvotes={server.upvotes}
-              />
-
               <ReviewsSection serverId={server.id} summary={reviewSummary} />
 
-              {/* Query-Forward AEO / FAQ Block */}
-              <section
-                id="faq"
-                style={{ marginTop: '2.5rem', scrollMarginTop: '5rem' }}
-              >
+              {/* Query-forward AEO / FAQ block */}
+              <section id="faq" className="lst-section reveal">
                 <FaqSection
                   renderJsonLd={false}
+                  className="lst-faq"
                   title={`Frequently Asked Questions about ${displayName}`}
                   items={faqItems.map((item) => ({
                     question: item.q,
@@ -2272,282 +1660,281 @@ export default async function MCPDetail({
                 />
               </section>
 
-              {/* Directory Badge Generator Card - Bottom of Page */}
-              <div style={{ marginTop: '2.5rem' }}>
-                <DirectoryBadgeCard
-                  serverId={server.id}
-                  serverName={displayName}
-                />
-              </div>
+              {/* ── Alternatives ──────────────────────────────────── */}
+              {hasRelated && (
+                <section
+                  id="alternatives"
+                  className="lst-section reveal"
+                  aria-labelledby="alternatives-h"
+                >
+                  <header className="lst-section-head lst-section-head--split">
+                    <h2 id="alternatives-h">
+                      <span className={`lst-section-icon tint-tile ${catHue}`}>
+                        <Shuffle size={16} aria-hidden="true" />
+                      </span>
+                      Related MCP servers
+                    </h2>
+                    <div className="lst-section-links">
+                      <Link
+                        href={`/categories/${catSlug}`}
+                        className="link-arrow"
+                      >
+                        All in {catMeta.label} <ArrowRight size={14} />
+                      </Link>
+                      <Link
+                        href={`/mcp/${server.id}/alternatives`}
+                        rel="nofollow"
+                        className="link-arrow"
+                      >
+                        All alternatives <ArrowRight size={14} />
+                      </Link>
+                    </div>
+                  </header>
+                  <ul className="lst-related reveal-stagger">
+                    {relatedServers.map((rel, i) => {
+                      const relName = parseServerName(rel.name).displayName;
+                      const featured = isFeaturedListing(rel as any);
+                      return (
+                        <li
+                          key={rel.id}
+                          className={`lst-related-card spotlight tint-card ${categoryHueClass(rel.category)}${featured ? ' is-featured' : ''}`}
+                          style={{ '--i': i } as CSSProperties}
+                        >
+                          <Link
+                            href={`/mcp/${rel.id}`}
+                            className="lst-related-main"
+                          >
+                            <span className="lst-related-top">
+                              <ServerAvatar
+                                name={rel.name}
+                                logoUrl={rel.logoUrl}
+                                category={rel.category}
+                                size={32}
+                              />
+                              <span className="lst-related-name">
+                                {relName}
+                              </span>
+                              {featured ? (
+                                <span className="lst-pill lst-pill--accent">
+                                  Featured
+                                </span>
+                              ) : rel.isOfficial ? (
+                                <span className="lst-pill lst-pill--accent">
+                                  Verified
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="lst-related-desc">
+                              <SafeMarkdown
+                                content={
+                                  rel.description || 'No description provided.'
+                                }
+                                isInline
+                              />
+                            </span>
+                            <span className="lst-related-foot">
+                              <span className="tint-pill">
+                                {getCategoryMeta(rel.category).label}
+                              </span>
+                              <span className="tabular">
+                                {formatCompactNumber(rel.views || 0)} views
+                              </span>
+                            </span>
+                          </Link>
+                          <Link
+                            href={`/mcp/${server.id}/vs/${rel.id}`}
+                            rel="nofollow"
+                            className="lst-related-compare"
+                          >
+                            Compare vs {relName}
+                            <ArrowRight size={13} aria-hidden="true" />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+
+              <details className="lst-card lst-badge">
+                <summary>
+                  <span>
+                    <span className="lst-side-title">
+                      Add a badge to your README
+                    </span>
+                    <span className="lst-muted-sm">
+                      Show it&rsquo;s listed — live SVG, Markdown or HTML.
+                    </span>
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className="lst-chevron"
+                    aria-hidden="true"
+                  />
+                </summary>
+                <div className="lst-badge-body">
+                  <DirectoryBadgeCard
+                    serverId={server.id}
+                    serverName={displayName}
+                  />
+                </div>
+              </details>
             </div>
 
-            <MobileInstallBar displayName={displayName} />
-
-            {/* Sidebar (Right Column) */}
-            <div
-              className="detail-sidebar"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1.5rem',
-              }}
-            >
-              {/* Technical Specs, Popularity & Quality Summary Card */}
-              <div
-                className="surface detail-specs-card"
-                style={{
-                  padding: '1.35rem',
-                  borderRadius: '14px',
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: '1rem',
-                    fontWeight: 700,
-                    margin: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    color: 'var(--text-primary)',
-                  }}
-                >
-                  <Terminal
-                    size={18}
-                    style={{ color: 'var(--brand-cyan)', flexShrink: 0 }}
-                  />
-                  <span>Technical Specs &amp; Signals</span>
-                </h3>
-
-                {/* Category/pricing stay top-level — everything else is one click away below. */}
-                <div
-                  className="detail-spec-list"
-                  style={{ fontSize: '0.85rem', minWidth: 0 }}
-                >
-                  <div className="detail-spec-row">
-                    <span style={{ color: 'var(--text-secondary)' }}>
-                      Category
-                    </span>
+            {/* ── Sidebar ───────────────────────────────────────────── */}
+            <aside className="lst-side" aria-label="Listing details">
+              {/* Sponsored units first, so they're above the fold beside the
+                  install panel (impressions count at ≥50% visible). */}
+              <div className="lst-sponsored">
+                <SponsorAdUnit placement="detail_sidebar" />
+                {/* Rotates between paid featured listings and the self-serve upsell. */}
+                {spotlightPick ? (
+                  <ImpressionBeacon
+                    serverId={spotlightPick.id}
+                    surface="detail_sidebar"
+                  >
                     <Link
-                      href={`/categories/${catSlug}`}
-                      style={{
-                        color: 'var(--accent-color)',
-                        textDecoration: 'none',
-                        fontWeight: 600,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        textAlign: 'right',
-                        minWidth: 0,
-                      }}
+                      href={`/mcp/${spotlightPick.id}`}
+                      className="lst-card lst-promo"
                     >
-                      <span aria-hidden="true">{catMeta.emoji}</span>
-                      <span style={{ overflowWrap: 'anywhere' }}>
-                        {catMeta.label}
+                      <span className="lst-promo-label">Featured</span>
+                      <span className="lst-promo-top">
+                        <ServerAvatar
+                          name={spotlightPick.name}
+                          logoUrl={spotlightPick.logoUrl}
+                          size={28}
+                        />
+                        <span className="lst-promo-name">
+                          {parseServerName(spotlightPick.name).displayName}
+                        </span>
+                      </span>
+                      <span className="lst-promo-desc">
+                        <SafeMarkdown
+                          content={
+                            spotlightPick.description ||
+                            'No description provided.'
+                          }
+                          isInline
+                        />
+                      </span>
+                      <span className="link-arrow">
+                        Explore server <ArrowRight size={13} />
                       </span>
                     </Link>
-                  </div>
-                  {server.pricingModel && (
-                    <div className="detail-spec-row">
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        Pricing
-                      </span>
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--text-primary)',
-                          textAlign: 'right',
-                        }}
+                  </ImpressionBeacon>
+                ) : (
+                  <Link href="/submit" className="lst-card lst-promo">
+                    <span className="lst-promo-label">Spotlight slot</span>
+                    <span className="lst-promo-name">
+                      Feature your MCP server here
+                    </span>
+                    <span className="lst-promo-desc">
+                      Get visibility across our directory, search results, and
+                      detail pages.
+                    </span>
+                    <span className="link-arrow">
+                      Spotlight your server <ArrowRight size={13} />
+                    </span>
+                  </Link>
+                )}
+              </div>
+
+              <div className="lst-card lst-glance">
+                <h2 className="lst-side-title">At a glance</h2>
+                <dl className="lst-specs">
+                  <div>
+                    <dt>Category</dt>
+                    <dd>
+                      <Link
+                        href={`/categories/${catSlug}`}
+                        className={`lst-cat-link ${catHue}`}
                       >
+                        <span className="lst-cat-dot" aria-hidden="true" />
+                        <span aria-hidden="true">{catMeta.emoji}</span>{' '}
+                        {catMeta.label}
+                      </Link>
+                    </dd>
+                  </div>
+                  {/* Transport and runtime are only stated when they come out of
+                  a confirmed install — the same bar the install panel uses. On
+                  a hosted listing with no published command, a derived guess
+                  produced two confident, wrong rows. */}
+                  {detailTransport && (
+                    <div>
+                      <dt>Transport</dt>
+                      <dd>{detailTransport}</dd>
+                    </div>
+                  )}
+                  {detailRuntime && (
+                    <div>
+                      <dt>Runtime</dt>
+                      <dd>{detailRuntime}</dd>
+                    </div>
+                  )}
+                  {server.authType && (
+                    <div>
+                      <dt>Auth</dt>
+                      <dd>
+                        {AUTH_TYPE_LABELS[server.authType as AuthType] ||
+                          server.authType}
+                      </dd>
+                    </div>
+                  )}
+                  {server.pricingModel && (
+                    <div>
+                      <dt>Pricing</dt>
+                      <dd>
                         {PRICING_MODEL_LABELS[
                           server.pricingModel as PricingModel
                         ] || server.pricingModel}
                         {server.pricingNotes ? (
-                          <span
-                            style={{
-                              display: 'block',
-                              fontWeight: 500,
-                              fontSize: '0.75rem',
-                              color: 'var(--text-secondary)',
-                              marginTop: 2,
-                            }}
-                          >
+                          <span className="lst-specs-note">
                             {server.pricingNotes}
                           </span>
                         ) : null}
-                      </span>
+                      </dd>
                     </div>
                   )}
-                </div>
+                  {server.license && (
+                    <div>
+                      <dt>License</dt>
+                      <dd>{server.license}</dd>
+                    </div>
+                  )}
+                  {server.maintenanceStatus && (
+                    <div>
+                      <dt>Maintenance</dt>
+                      <dd>
+                        {MAINTENANCE_STATUS_LABELS[
+                          server.maintenanceStatus as MaintenanceStatus
+                        ] || server.maintenanceStatus}
+                      </dd>
+                    </div>
+                  )}
+                  {server.compatibleClients &&
+                    server.compatibleClients.length > 0 && (
+                      <div>
+                        <dt>Clients</dt>
+                        <dd>
+                          {server.compatibleClients
+                            .map(
+                              (slug) =>
+                                MCP_CLIENTS.find((c) => c.slug === slug)
+                                  ?.name || slug,
+                            )
+                            .join(', ')}
+                        </dd>
+                      </div>
+                    )}
+                  {contentUpdatedLabel && (
+                    <div>
+                      <dt>Last updated</dt>
+                      <dd>{contentUpdatedLabel}</dd>
+                    </div>
+                  )}
+                </dl>
 
-                {/* Less decision-relevant metadata, collapsed by default — health is
-                already shown by the dot next to the listing name up top. */}
-                <details className="detail-sidebar-more">
-                  <summary className="detail-manual-config-summary">
-                    <span>More technical details</span>
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        opacity: 0.7,
-                        flexShrink: 0,
-                      }}
-                    >
-                      Expand ▾
-                    </span>
-                  </summary>
-                  <div
-                    className="detail-spec-list"
-                    style={{
-                      marginTop: '0.85rem',
-                      paddingTop: '0.85rem',
-                      borderTop: '1px solid var(--border-color)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    {/* Transport and runtime are only stated when they come out of
-                    a confirmed install — the same bar the config block above uses.
-                    Both used to be derived inline and always rendered: transport from
-                    "the primary URL isn't a repo URL", runtime from a chain that fell
-                    through to Node.js for everything left over. On a hosted listing
-                    with no published command that produced two confident, wrong rows. */}
-                    {detailTransport && (
-                      <div className="detail-spec-row">
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          Transport
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                            textAlign: 'right',
-                          }}
-                        >
-                          {detailTransport}
-                        </span>
-                      </div>
-                    )}
-                    {detailRuntime && (
-                      <div className="detail-spec-row">
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          Runtime
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                            textAlign: 'right',
-                          }}
-                        >
-                          {detailRuntime}
-                        </span>
-                      </div>
-                    )}
-                    {server.authType && (
-                      <div className="detail-spec-row">
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          Auth
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                            textAlign: 'right',
-                          }}
-                        >
-                          {AUTH_TYPE_LABELS[server.authType as AuthType] ||
-                            server.authType}
-                        </span>
-                      </div>
-                    )}
-                    {server.license && (
-                      <div className="detail-spec-row">
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          License
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                            textAlign: 'right',
-                          }}
-                        >
-                          {server.license}
-                        </span>
-                      </div>
-                    )}
-                    {server.maintenanceStatus && (
-                      <div className="detail-spec-row">
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          Maintenance
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                            textAlign: 'right',
-                          }}
-                        >
-                          {MAINTENANCE_STATUS_LABELS[
-                            server.maintenanceStatus as MaintenanceStatus
-                          ] || server.maintenanceStatus}
-                        </span>
-                      </div>
-                    )}
-                    {server.compatibleClients &&
-                      server.compatibleClients.length > 0 && (
-                        <div className="detail-spec-row">
-                          <span style={{ color: 'var(--text-secondary)' }}>
-                            Clients
-                          </span>
-                          <span
-                            style={{
-                              fontWeight: 600,
-                              color: 'var(--text-primary)',
-                              textAlign: 'right',
-                            }}
-                          >
-                            {server.compatibleClients
-                              .map(
-                                (slug) =>
-                                  MCP_CLIENTS.find((c) => c.slug === slug)
-                                    ?.name || slug,
-                              )
-                              .join(', ')}
-                          </span>
-                        </div>
-                      )}
-                    {contentUpdatedLabel && (
-                      <div className="detail-spec-row">
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          Last updated
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                            textAlign: 'right',
-                          }}
-                        >
-                          {contentUpdatedLabel}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </details>
-
-                <HealthHistoryStrip
-                  history={healthHistory}
-                  verification={verification}
-                  hasRemoteEndpoint={!!server.remoteEndpointUrl}
-                  isOfficial={
-                    server.isOfficial || server.id === 'allmcps-server'
-                  }
-                />
-
-                {/* Popularity signals — 2-up grid reads faster and takes less vertical space than one full-width row each. */}
+                {/* Popularity — 2-up grid reads faster than one row each. */}
                 <div className="detail-stats-grid">
                   <ViewTracker
                     serverId={server.id}
@@ -2555,356 +1942,120 @@ export default async function MCPDetail({
                   />
                   <InstallsStat count={server.copies || 0} />
                   {typeof server.githubStars === 'number' && (
-                    <IconTooltip
-                      label="GitHub stars count"
-                      asSpan
-                      trigger={
-                        <div
-                          className="detail-stat-item"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <span className="detail-stat-item-label">
-                            <Star size={12} style={{ color: '#f5c518' }} />{' '}
-                            GitHub stars
-                          </span>
-                          <span className="detail-stat-item-value">
-                            {server.githubStars.toLocaleString()}
-                          </span>
-                        </div>
-                      }
-                    >
-                      <span className="mcp-icon-tooltip-title">
-                        <Star
-                          size={14}
-                          style={{ color: '#f5c518', fill: '#f5c518' }}
-                        />{' '}
-                        GitHub Star Count
+                    <div className="detail-stat-item">
+                      <span className="detail-stat-item-label">
+                        <Star size={12} aria-hidden="true" /> GitHub stars
                       </span>
-                      <span className="mcp-icon-tooltip-body">
-                        Total stargazers on GitHub representing community
-                        popularity ({server.githubStars.toLocaleString()}{' '}
-                        stars).
+                      <span className="detail-stat-item-value">
+                        {server.githubStars.toLocaleString()}
                       </span>
-                    </IconTooltip>
+                    </div>
                   )}
                   {formatCommitAge(server.lastCommitAt) && (
-                    <IconTooltip
-                      label="Last commit status"
-                      asSpan
-                      trigger={
-                        <div
-                          className="detail-stat-item"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <span className="detail-stat-item-label">
-                            <Clock
-                              size={12}
-                              style={{ color: 'var(--accent-color)' }}
-                            />{' '}
-                            Last commit
-                          </span>
-                          <span className="detail-stat-item-value">
-                            {formatCommitAge(server.lastCommitAt)}
-                          </span>
-                        </div>
+                    <div
+                      className="detail-stat-item"
+                      title={
+                        formatFullDate(server.lastCommitAt)
+                          ? `Last commit on ${formatFullDate(server.lastCommitAt)}`
+                          : undefined
                       }
                     >
-                      <span className="mcp-icon-tooltip-title">
-                        <Clock
-                          size={14}
-                          style={{ color: 'var(--accent-color)' }}
-                        />{' '}
-                        Last Repository Commit
+                      <span className="detail-stat-item-label">
+                        <Clock size={12} aria-hidden="true" /> Last commit
                       </span>
-                      <span className="mcp-icon-tooltip-body">
-                        The most recent commit or push recorded for this
-                        server's GitHub repository.
+                      <span className="detail-stat-item-value">
+                        {formatCommitAge(server.lastCommitAt)}
                       </span>
-                      <span className="mcp-icon-tooltip-meta">
-                        {formatFullDate(server.lastCommitAt)
-                          ? `Last commit on ${formatFullDate(server.lastCommitAt)}`
-                          : 'Refreshed automatically via GitHub API.'}
-                      </span>
-                    </IconTooltip>
+                    </div>
                   )}
                   {typeof server.npmDownloads === 'number' && (
-                    <IconTooltip
-                      label="Monthly npm downloads"
-                      asSpan
-                      trigger={
-                        <div
-                          className="detail-stat-item"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <span className="detail-stat-item-label">
-                            <Download
-                              size={12}
-                              style={{ color: 'var(--accent-color)' }}
-                            />{' '}
-                            npm downloads
-                          </span>
-                          <span className="detail-stat-item-value">
-                            {server.npmDownloads.toLocaleString()}/mo
-                          </span>
-                        </div>
-                      }
-                    >
-                      <span className="mcp-icon-tooltip-title">
-                        <Download
-                          size={14}
-                          style={{ color: 'var(--accent-color)' }}
-                        />{' '}
-                        Monthly npm Downloads
+                    <div className="detail-stat-item">
+                      <span className="detail-stat-item-label">
+                        <Download size={12} aria-hidden="true" /> npm / month
                       </span>
-                      <span className="mcp-icon-tooltip-body">
-                        Average monthly package installs recorded from npm
-                        registry statistics.
+                      <span className="detail-stat-item-value">
+                        {server.npmDownloads.toLocaleString()}
                       </span>
-                    </IconTooltip>
+                    </div>
                   )}
                 </div>
 
-                <div
-                  style={{
-                    borderTop: '1px solid var(--border-color)',
-                    paddingTop: '0.85rem',
-                  }}
-                >
+                <div className="lst-glance-quality">
                   <QualityBadge server={serverForScoring} />
                 </div>
+
+                <ul className="lst-glance-links">
+                  {hasRepository && (
+                    <li>
+                      <OutboundLink
+                        href={server.url}
+                        destinationType="github"
+                        serverId={server.id}
+                        target="_blank"
+                        rel={repoLinkRel(
+                          !!server.isPremium,
+                          !!server.isOfficial,
+                        )}
+                      >
+                        <FolderGit2 size={14} aria-hidden="true" />
+                        <span>{repoHost || 'Repository'}</span>
+                        <ExternalLink size={12} aria-hidden="true" />
+                      </OutboundLink>
+                    </li>
+                  )}
+                  {primaryWebsiteUrl && (
+                    <li>
+                      <OutboundLink
+                        href={primaryWebsiteUrl}
+                        destinationType="website"
+                        serverId={server.id}
+                        target="_blank"
+                        rel={websiteLinkRel(
+                          !!server.isPremium,
+                          !!server.websiteBacklinkOk,
+                        )}
+                      >
+                        <Globe size={14} aria-hidden="true" />
+                        <span>Website</span>
+                        <ExternalLink size={12} aria-hidden="true" />
+                      </OutboundLink>
+                    </li>
+                  )}
+                  <li>
+                    <Link href={`/mcp/${server.id}/readme`} rel="nofollow">
+                      <FileText size={14} aria-hidden="true" />
+                      <span>Full README</span>
+                      <ArrowRight size={12} aria-hidden="true" />
+                    </Link>
+                  </li>
+                </ul>
               </div>
 
-              <SponsorAdUnit placement="detail_sidebar" />
-
-              <VulnSignalCard server={server} />
-
-              <SecurityProfileCard server={serverWithSignals} />
-
-              {/* Sidebar Highlight / Ad Slot (Top of Sidebar Column) — rotates between paid
-              featured listings and the self-serve upsell */}
-              {spotlightPick ? (
-                (() => {
-                  const { displayName: spotlightName } = parseServerName(
-                    spotlightPick.name,
-                  );
-                  return (
-                    <ImpressionBeacon
-                      serverId={spotlightPick.id}
-                      surface="detail_sidebar"
-                    >
-                      <div
-                        className="surface"
-                        style={{
-                          padding: '1.5rem',
-                          borderRadius: '16px',
-                          border: '1px solid var(--accent-color)',
-                          background: 'var(--surface-highlight)',
-                          boxShadow: 'var(--shadow-md)',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: '0.75rem',
-                          }}
-                        >
-                          <Badge
-                            variant="success"
-                            className="badge-featured"
-                            style={{ fontSize: '0.7rem' }}
-                          >
-                            ★ Featured
-                          </Badge>
-                          <ServerAvatar
-                            name={spotlightPick.name}
-                            logoUrl={spotlightPick.logoUrl}
-                            size={32}
-                          />
-                        </div>
-                        <h3
-                          style={{
-                            fontSize: '1rem',
-                            fontWeight: 700,
-                            marginBottom: '0.5rem',
-                            color: 'var(--text-primary)',
-                          }}
-                        >
-                          {spotlightName}
-                        </h3>
-                        <p
-                          style={{
-                            fontSize: '0.8rem',
-                            color: 'var(--text-secondary)',
-                            marginBottom: '1rem',
-                            lineHeight: 1.5,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <SafeMarkdown
-                            content={
-                              spotlightPick.description ||
-                              'No description provided.'
-                            }
-                            isInline
-                          />
-                        </p>
-                        <Link
-                          href={`/mcp/${spotlightPick.id}`}
-                          className="btn btn-primary"
-                          style={{ width: '100%', justifyContent: 'center' }}
-                        >
-                          Explore Server →
-                        </Link>
-                      </div>
-                    </ImpressionBeacon>
-                  );
-                })()
-              ) : (
-                <div
-                  className="surface"
-                  style={{
-                    padding: '1.5rem',
-                    borderRadius: '16px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--brand-gradient-soft)',
-                    boxShadow: 'var(--shadow-sm)',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '0.75rem',
-                    }}
-                  >
-                    <Badge
-                      variant="success"
-                      className="badge-featured"
-                      style={{ fontSize: '0.7rem' }}
-                    >
-                      ★ Spotlight Slot
-                    </Badge>
-                  </div>
-                  <h3
-                    style={{
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      marginBottom: '0.5rem',
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    Feature Your MCP Server
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                      marginBottom: '1rem',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Get maximum visibility for your server across our directory,
-                    search results, and detail pages.
+              {!server.isOfficial && (
+                <div className="lst-card lst-claim">
+                  <h2 className="lst-side-title">
+                    <BadgeCheck size={16} aria-hidden="true" /> Own this
+                    project?
+                  </h2>
+                  <p>
+                    This listing is pre-filled from public sources. Claim it via
+                    your GitHub README, a site badge, or DNS TXT to edit it and
+                    earn the Verified badge
+                    {server.websiteUrl ? '' : ' (and attach your website)'}.
                   </p>
-                  <Link
-                    href="/submit"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      padding: '0.75rem 1rem',
-                      background: 'var(--brand-gradient)',
-                      color: '#ffffff',
-                      borderRadius: '8px',
-                      fontWeight: 700,
-                      fontSize: '0.875rem',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    <Sparkles size={16} /> Spotlight Your Server
-                  </Link>
-                </div>
-              )}
-
-              {!server.isOfficial ? (
-                <div
-                  className="surface"
-                  style={{
-                    padding: '1.5rem',
-                    borderColor: 'rgba(0,229,255,0.35)',
-                  }}
-                >
-                  <h3
-                    style={{
-                      fontSize: '1rem',
-                      marginBottom: '0.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                    }}
-                  >
-                    <CheckCircle size={18} color="var(--accent-color)" /> Own
-                    this project?
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-secondary)',
-                      marginBottom: '0.75rem',
-                      lineHeight: 1.55,
-                    }}
-                  >
-                    This directory is pre-filled from public sources. Claim via
-                    GitHub README, site badge, or DNS TXT to unlock edit access
-                    and the Official badge
-                    {server.websiteUrl ? '' : ' and attach your website'} —
-                    proof is checked automatically, then reviewed by our team.
-                  </p>
-                  <p
-                    style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--text-secondary)',
-                      marginBottom: '1rem',
-                      lineHeight: 1.5,
-                      padding: '0.65rem 0.75rem',
-                      borderRadius: 8,
-                      background: 'rgba(16,185,129,0.08)',
-                      border: '1px solid rgba(16,185,129,0.25)',
-                    }}
-                  >
-                    <strong style={{ color: 'var(--verified-green)' }}>
-                      Free dofollow backlink:
-                    </strong>{' '}
-                    add your website and place the AllMCPs badge on it — no
-                    claim needed. We detect it automatically and keep it
-                    verified as long as the badge stays live.
+                  <p className="lst-claim-perk">
+                    <strong>Free dofollow backlink:</strong> add your website
+                    and place the AllMCPs badge on it — no claim needed. We
+                    detect it automatically.
                   </p>
                   <Link
                     href={`/mcp/${server.id}/claim`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      padding: '0.75rem 1rem',
-                      background: 'var(--brand-gradient)',
-                      color: 'var(--bg-color)',
-                      borderRadius: '8px',
-                      fontWeight: 700,
-                      fontSize: '0.9rem',
-                    }}
+                    className="btn btn-secondary btn-sm lst-block-btn"
                   >
-                    <Sparkles size={16} /> Claim &amp; get free dofollow
+                    Claim this listing <ArrowRight size={14} />
                   </Link>
                 </div>
-              ) : null}
+              )}
 
               <OwnerZone
                 serverId={server.id}
@@ -2917,147 +2068,61 @@ export default async function MCPDetail({
                 categorySponsorUntil={server.categorySponsorUntil}
               />
 
-              <div className="surface" style={{ padding: '1.5rem' }}>
-                <h3
-                  style={{
-                    fontSize: '1rem',
-                    marginBottom: '1rem',
-                    color: 'var(--text-secondary)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  Share & Embed
-                </h3>
-                <p
-                  style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--text-secondary)',
-                    marginBottom: '1rem',
-                  }}
-                >
-                  Add our SVG badge (dark/light directory styles) or embeddable
-                  widget to your site.
-                </p>
-                <ShareModal serverId={server.id} serverName={server.name} />
-              </div>
-
               {/* Internal SEO mesh — category, best-of, install guides, alternatives */}
-              {(() => {
-                const catSlug = categorySlug(server.category);
-                const best = bestTopicForCategory(server.category);
-                const keywordHubs = keywordTopicsForServer(server).filter(
-                  (t) => t.slug !== best?.slug,
-                );
-                return (
-                  <div className="surface" style={{ padding: '1.5rem' }}>
-                    <h3
-                      style={{
-                        fontSize: '1rem',
-                        marginBottom: '0.75rem',
-                        color: 'var(--text-secondary)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                      }}
+              <nav className="lst-card lst-explore" aria-label="Explore more">
+                <h2 className="lst-side-title">Explore more</h2>
+                <ul>
+                  <li>
+                    <Link href={`/categories/${catSlug}`}>
+                      More in {server.category}
+                    </Link>
+                  </li>
+                  {best && (
+                    <li>
+                      <Link href={`/best/${best.slug}`}>
+                        Best MCP servers for {best.title}
+                      </Link>
+                    </li>
+                  )}
+                  {keywordHubs.map((t) => (
+                    <li key={t.slug}>
+                      <Link href={`/best/${t.slug}`}>
+                        Best {t.title} MCP servers
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
+                    <Link
+                      href={`/mcp/${server.id}/alternatives`}
+                      rel="nofollow"
                     >
-                      Explore more
-                    </h3>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.5rem',
-                      }}
-                    >
-                      <Link
-                        href={`/categories/${catSlug}`}
-                        style={{
-                          fontSize: '0.85rem',
-                          color: 'var(--accent-color)',
-                          fontWeight: 600,
-                        }}
-                      >
-                        More in {server.category} →
-                      </Link>
-                      {best && (
-                        <Link
-                          href={`/best/${best.slug}`}
-                          style={{
-                            fontSize: '0.85rem',
-                            color: 'var(--accent-color)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Best MCP servers for {best.title} →
-                        </Link>
-                      )}
-                      {keywordHubs.map((t) => (
-                        <Link
-                          key={t.slug}
-                          href={`/best/${t.slug}`}
-                          style={{
-                            fontSize: '0.85rem',
-                            color: 'var(--accent-color)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Best {t.title} MCP servers →
-                        </Link>
-                      ))}
-                      <Link
-                        href={`/mcp/${server.id}/alternatives`}
-                        rel="nofollow"
-                        style={{
-                          fontSize: '0.85rem',
-                          color: 'var(--accent-color)',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Alternatives to {displayName} →
-                      </Link>
-                      <Link
-                        href="/clients/claude-desktop"
-                        style={{
-                          fontSize: '0.85rem',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        Install in Claude Desktop
-                      </Link>
-                      <Link
-                        href="/clients/cursor"
-                        style={{
-                          fontSize: '0.85rem',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        Install in Cursor
-                      </Link>
-                      <Link
-                        href="/clients/vs-code"
-                        style={{
-                          fontSize: '0.85rem',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        Install in VS Code
-                      </Link>
-                      <Link
-                        href="/clients"
-                        style={{
-                          fontSize: '0.85rem',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        Setup guides for all {MCP_CLIENTS.length} MCP clients
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
+                      Alternatives to {displayName}
+                    </Link>
+                  </li>
+                </ul>
+                <ul className="lst-explore-secondary">
+                  <li>
+                    <Link href="/clients/claude-desktop">
+                      Install in Claude Desktop
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/clients/cursor">Install in Cursor</Link>
+                  </li>
+                  <li>
+                    <Link href="/clients/vs-code">Install in VS Code</Link>
+                  </li>
+                  <li>
+                    <Link href="/clients">
+                      Setup guides for all {MCP_CLIENTS.length} MCP clients
+                    </Link>
+                  </li>
+                </ul>
+              </nav>
+            </aside>
           </div>
         </main>
+        <MobileInstallBar displayName={displayName} subtitle={categoryLabel} />
       </AdminProvider>
     </>
   );

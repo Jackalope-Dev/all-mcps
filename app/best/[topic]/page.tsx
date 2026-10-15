@@ -1,14 +1,15 @@
-import { BadgeCheck, ChevronRight, Download, Eye, Heart } from 'lucide-react';
+import { ArrowRight, BadgeCheck, ChevronDown, Download } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { IconTooltip } from '../../../components/ui/IconTooltip';
-import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
+import { ServerStats } from '../../../components/directory/ServerRow';
+import { InlineMarkdown } from '../../../components/ui/InlineMarkdown';
 import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import {
   BEST_TOPICS,
   bestTopicBySlug,
+  bestTopicHue,
   selectServersForTopic,
 } from '../../../lib/bestTopics';
 import { parseServerName } from '../../../lib/displayName';
@@ -16,7 +17,6 @@ import {
   isFeaturedListing,
   isVerifiedListing,
 } from '../../../lib/featuredStatus';
-import { formatCompactNumber } from '../../../lib/format';
 import { engagementScore } from '../../../lib/search';
 import { getServersForTopic, type Server } from '../../../lib/servers';
 
@@ -107,6 +107,8 @@ export default async function BestTopicPage({
   if (!t) notFound();
 
   const all = await getServersForTopic(t);
+  // #1 is gold (amber); #2–#3 carry the topic's own hue.
+  const topicHue = bestTopicHue(t);
   const ranked = selectServersForTopic(t, all)
     .sort((a, b) => engagementScore(b) - engagementScore(a))
     .slice(0, TOP_N);
@@ -159,404 +161,235 @@ export default async function BestTopicPage({
     ],
   };
 
+  // Curated relations first (e.g. marketing <-> seo) — these disambiguate
+  // adjacent-intent topics that would otherwise silently split relevance
+  // signals for the same head term — then backfill to 8 with the rest.
+  const relatedCurated = (t.relatedTopicSlugs ?? [])
+    .map((slug) => bestTopicBySlug(slug))
+    .filter(
+      (o): o is NonNullable<typeof o> => Boolean(o) && o?.slug !== t.slug,
+    );
+  const relatedSlugs = new Set(relatedCurated.map((o) => o.slug));
+  const relatedTopics = [
+    ...relatedCurated,
+    ...BEST_TOPICS.filter(
+      (o) => o.slug !== t.slug && !relatedSlugs.has(o.slug),
+    ),
+  ].slice(0, 8);
+
+  const browseAll = t.categorySlug
+    ? { href: `/categories/${t.categorySlug}`, rel: undefined }
+    : {
+        href: `/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`,
+        rel: 'nofollow',
+      };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
-        {/* Breadcrumb */}
+      <main className="container dir-catpage">
         <nav aria-label="Breadcrumb">
-          <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
+          <ol className="crumbs">
             <li>
               <Link href="/">Home</Link>
             </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
             <li>
-              <Link href="/best">Best MCP Servers</Link>
+              <Link href="/best">Best MCP servers</Link>
             </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">{t.title}</li>
+            <li aria-current="page">{t.title}</li>
           </ol>
         </nav>
 
-        {/* Hero */}
-        <section
-          style={{
-            marginBottom: '2.5rem',
-            maxWidth: '760px',
-            margin: '0 auto 2.5rem',
-            textAlign: 'center',
-          }}
-        >
-          <h1 className="text-display" style={{ marginBottom: '1rem' }}>
-            {heading}{' '}
-            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-              ({year})
-            </span>
+        <header className="dir-page-head dir-best-head animate-in">
+          <h1 className="text-page-title">
+            {heading} <span className="dir-best-year">({year})</span>
           </h1>
-          <p
-            className="text-lead"
-            style={{ margin: '0 auto 1.25rem', textAlign: 'center' }}
-          >
-            {t.lead}
+          <p className="text-lead">{t.lead}</p>
+          <p className="dir-best-meta">
+            Top {ranked.length} · ranked by installs, upvotes, stars and views ·
+            refreshed hourly
           </p>
-          {t.categorySlug ? (
-            <Link
-              href={`/categories/${t.categorySlug}`}
-              className="btn btn-secondary"
-            >
-              Browse all {t.title} servers →
-            </Link>
-          ) : (
-            <Link
-              href={`/browse?q=${encodeURIComponent(t.match?.[0] || t.title)}`}
-              className="btn btn-secondary"
-              rel="nofollow"
-            >
-              Browse all {t.title} servers →
-            </Link>
-          )}
-        </section>
+        </header>
 
-        {/* Ranked list */}
-        {ranked.length > 0 ? (
-          <ol
-            style={{
-              listStyle: 'none',
-              padding: 0,
-              margin: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            {ranked.map((server, i) => {
-              const { displayName, org } = parseServerName(server.name);
-              return (
-                <li key={server.id}>
-                  <Link
-                    href={`/mcp/${server.id}`}
-                    className="surface-interactive"
-                    style={{
-                      display: 'flex',
-                      gap: '1rem',
-                      alignItems: 'flex-start',
-                      padding: '1.25rem',
-                      borderRadius: '12px',
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      border: '1px solid var(--border-color)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 800,
-                        color: 'var(--accent-color)',
-                        minWidth: '2rem',
-                        textAlign: 'center',
-                        lineHeight: 1.4,
-                      }}
+        <div className="dir-best-layout">
+          {ranked.length > 0 ? (
+            <ol className="dir-ranked">
+              {ranked.map((server, i) => {
+                const { displayName, org } = parseServerName(server.name);
+                const verified = isVerifiedListing(server);
+                return (
+                  <li key={server.id}>
+                    <article
+                      id={`rank-${i + 1}`}
+                      className={`dir-rank spotlight${i === 0 ? ' is-first hue-amber' : i < 3 ? ` is-podium hue-${topicHue}` : ''}`}
                     >
-                      {i + 1}
-                    </div>
-                    <ServerAvatar
-                      name={server.name}
-                      logoUrl={server.logoUrl}
-                      size={44}
-                    />
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            fontSize: '1.05rem',
-                            color: 'var(--text-primary)',
-                          }}
-                        >
-                          {displayName}
-                        </span>
-                        {org && (
-                          <span
-                            style={{
-                              fontSize: '0.8rem',
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            {org}
-                          </span>
-                        )}
-                        {isVerifiedListing(server) && (
-                          <IconTooltip
-                            label="Verified listing"
-                            asSpan
-                            trigger={
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  cursor: 'pointer',
-                                }}
+                      <span className="dir-rank-num tabular" aria-hidden="true">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <div className="dir-rank-main">
+                        <div className="dir-rank-head">
+                          <ServerAvatar
+                            name={server.name}
+                            logoUrl={server.logoUrl}
+                            category={server.category}
+                            size={i === 0 ? 48 : 40}
+                          />
+                          <div className="dir-rank-titles">
+                            <h2 className="dir-rank-name">
+                              <Link
+                                href={`/mcp/${server.id}`}
+                                className="dir-rank-link"
                               >
-                                <BadgeCheck
-                                  size={15}
-                                  style={{ color: 'var(--accent-color)' }}
-                                />
-                              </span>
+                                <span className="sr-only">#{i + 1} </span>
+                                {displayName}
+                              </Link>
+                            </h2>
+                            <div className="dir-rank-sub">
+                              {org && (
+                                <span className="dir-row-org">{org}</span>
+                              )}
+                              {verified && (
+                                <span className="dir-flag dir-flag--verified">
+                                  <BadgeCheck size={13} aria-hidden="true" />
+                                  {server.isOfficial ? 'Official' : 'Verified'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="dir-rank-why">
+                          <span className="dir-rank-why-label">
+                            Why it&rsquo;s here
+                          </span>
+                          {reasonFor(server, i)}
+                        </p>
+                        <p className="dir-rank-desc">
+                          <InlineMarkdown
+                            content={
+                              server.description || 'No description provided.'
                             }
+                          />
+                        </p>
+                        <div className="dir-rank-foot">
+                          <ServerStats server={server} />
+                          <Link
+                            href={`/mcp/${server.id}#quick-install`}
+                            className={`btn btn-sm ${i === 0 ? 'btn-primary' : 'btn-secondary'} dir-rank-cta`}
                           >
-                            <span className="mcp-icon-tooltip-title">
-                              <BadgeCheck
-                                size={14}
-                                color="var(--accent-color)"
-                              />{' '}
-                              Verified Listing
-                            </span>
-                            <span className="mcp-icon-tooltip-body">
-                              Ownership or active status confirmed on AllMCPs.
-                            </span>
-                          </IconTooltip>
-                        )}
+                            <Download size={14} aria-hidden="true" />
+                            Install
+                          </Link>
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          fontSize: '0.7rem',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
-                          color: 'var(--accent-color)',
-                          margin: '0.35rem 0',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {reasonFor(server, i)}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.875rem',
-                          color: 'var(--text-secondary)',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          lineHeight: 1.45,
-                        }}
-                      >
-                        <SafeMarkdown
-                          content={
-                            server.description || 'No description provided.'
-                          }
-                          isInline
-                        />
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: '0.85rem',
-                          color: 'var(--text-secondary)',
-                          fontSize: '0.8rem',
-                          marginTop: '0.6rem',
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                          }}
-                          title={`${(server.views || 0).toLocaleString()} views`}
-                        >
-                          <Eye size={13} />{' '}
-                          {formatCompactNumber(server.views || 0)}
-                        </span>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                          }}
-                          title={`${(server.copies || 0).toLocaleString()} installs`}
-                        >
-                          <Download size={13} />{' '}
-                          {formatCompactNumber(server.copies || 0)}
-                        </span>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                          }}
-                          title={`${(server.upvotes || 0).toLocaleString()} upvotes`}
-                        >
-                          <Heart size={13} />{' '}
-                          {formatCompactNumber(server.upvotes || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ol>
-        ) : (
-          <div
-            className="surface empty-state"
-            style={{ borderStyle: 'dashed' }}
-          >
-            <p className="empty-state-body" style={{ margin: 0 }}>
-              No servers listed for this topic yet.
-            </p>
-          </div>
-        )}
-
-        {/* Query-Forward Selection Guide */}
-        <section style={{ marginTop: '3.5rem', maxWidth: '760px' }}>
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 700,
-              marginBottom: '1rem',
-            }}
-          >
-            Which {t.title} MCP server should you use?
-          </h2>
-          <div
-            className="surface"
-            style={{
-              padding: '1.5rem',
-              borderRadius: '12px',
-              marginBottom: '2.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            {t.guidance && t.guidance.length > 0 ? (
-              t.guidance.map((p, i) => (
-                <p
-                  key={i}
-                  style={{
-                    margin: 0,
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {p}
-                </p>
-              ))
-            ) : (
-              <p
-                style={{
-                  margin: 0,
-                  color: 'var(--text-secondary)',
-                  lineHeight: 1.6,
-                }}
-              >
-                When choosing a Model Context Protocol server for{' '}
-                <strong>{t.title}</strong>, select verified or official listings
-                if you need strict API security guarantees. For rapid local dev
-                testing with Claude or Cursor, community-maintained tools offer
-                zero-setup configuration blocks ready to copy-paste.
+                    </article>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <div className="dir-empty">
+              <h2 className="dir-empty-title">No servers ranked yet</h2>
+              <p className="dir-empty-body">
+                Nothing in the directory matches this topic yet.
               </p>
-            )}
-          </div>
-
-          <h2
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 700,
-              marginBottom: '1.25rem',
-            }}
-          >
-            Frequently asked questions about {t.title} MCP servers
-          </h2>
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
-          >
-            {t.faq.map((f) => (
-              <div
-                key={f.q}
-                className="surface"
-                style={{ padding: '1.25rem', borderRadius: '12px' }}
-              >
-                <h3
-                  style={{
-                    fontSize: '1.05rem',
-                    fontWeight: 700,
-                    marginTop: 0,
-                    marginBottom: '0.35rem',
-                    color: 'var(--text-primary)',
-                  }}
-                >
-                  {f.q}
-                </h3>
-                <p
-                  style={{
-                    margin: 0,
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {f.a}
-                </p>
+              <div className="dir-empty-actions">
+                <Link href="/submit" className="btn btn-secondary btn-sm">
+                  Submit a server
+                </Link>
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
+          )}
 
-        {/* Related best-of pages */}
-        <section style={{ marginTop: '3.5rem' }}>
-          <h2
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 700,
-              marginBottom: '1.25rem',
-            }}
-          >
+          <aside className="dir-best-aside" aria-label="About this list">
+            <div className="dir-best-card">
+              <h2 className="dir-best-card-title">How this list is ranked</h2>
+              <p>
+                Servers are scored on real usage in the AllMCPs directory —
+                installs, community upvotes, GitHub stars and views — and the
+                list refreshes every hour.
+              </p>
+              {ranked.length > 0 && (
+                <ol className="dir-best-index">
+                  {ranked.map((s, i) => (
+                    <li key={s.id}>
+                      <a href={`#rank-${i + 1}`}>
+                        <span className="dir-best-index-n tabular">
+                          {i + 1}
+                        </span>
+                        <span className="dir-best-index-name">
+                          {parseServerName(s.name).displayName}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              <Link
+                href={browseAll.href}
+                rel={browseAll.rel}
+                className="btn btn-secondary btn-sm dir-best-all"
+              >
+                Browse all {t.title} servers
+                <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </div>
+          </aside>
+        </div>
+
+        <div className="dir-best-guide">
+          <section className="dir-section" aria-labelledby="which-one">
+            <h2 id="which-one" className="dir-section-title">
+              Which {t.title} MCP server should you use?
+            </h2>
+            <div className="dir-prose">
+              {t.guidance && t.guidance.length > 0 ? (
+                t.guidance.map((p) => <p key={p}>{p}</p>)
+              ) : (
+                <p>
+                  When choosing a Model Context Protocol server for{' '}
+                  <strong>{t.title}</strong>, select verified or official
+                  listings if you need strict API security guarantees. For rapid
+                  local dev testing with Claude or Cursor, community-maintained
+                  tools offer zero-setup configuration blocks ready to
+                  copy-paste.
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="dir-section" aria-labelledby="best-faq">
+            <h2 id="best-faq" className="dir-section-title">
+              Frequently asked questions about {t.title} MCP servers
+            </h2>
+            <div className="dir-faq-list">
+              {t.faq.map((f, i) => (
+                <details key={f.q} className="dir-faq-item" open={i === 0}>
+                  <summary>
+                    <h3>{f.q}</h3>
+                    <ChevronDown
+                      size={16}
+                      className="dir-facet-chevron"
+                      aria-hidden="true"
+                    />
+                  </summary>
+                  <p>{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <section className="dir-section" aria-labelledby="more-guides">
+          <h2 id="more-guides" className="dir-section-title dir-more-title">
             More best-of guides
           </h2>
-          <ul
-            style={{
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-              display: 'flex',
-              gap: '0.6rem',
-              flexWrap: 'wrap',
-            }}
-          >
-            {(() => {
-              // Curated relations first (e.g. marketing <-> seo) — these disambiguate
-              // adjacent-intent topics that would otherwise silently split relevance
-              // signals for the same head term — then backfill to 8 with the rest.
-              const related = (t.relatedTopicSlugs ?? [])
-                .map((slug) => bestTopicBySlug(slug))
-                .filter(
-                  (o): o is NonNullable<typeof o> =>
-                    Boolean(o) && o!.slug !== t.slug,
-                );
-              const relatedSlugs = new Set(related.map((o) => o.slug));
-              const rest = BEST_TOPICS.filter(
-                (o) => o.slug !== t.slug && !relatedSlugs.has(o.slug),
-              );
-              return [...related, ...rest].slice(0, 8);
-            })().map((o) => (
+          <ul className="dir-chip-list">
+            {relatedTopics.map((o) => (
               <li key={o.slug}>
-                <Link
-                  href={`/best/${o.slug}`}
-                  className="badge badge-link badge-category"
-                >
+                <Link href={`/best/${o.slug}`} className="chip">
                   Best for {o.title}
                 </Link>
               </li>

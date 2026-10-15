@@ -1,6 +1,6 @@
 'use client';
 
-import { Crown, Minus, Plus, Sparkles, Zap } from 'lucide-react';
+import { Crown, Loader2, Minus, Plus, Sparkles, Zap } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { trackBeginCheckout } from '../lib/gtag';
 import {
@@ -159,99 +159,37 @@ export function PremiumUpgrade({
   };
 
   return (
-    <div
-      className={compact ? '' : 'surface'}
-      style={compact ? undefined : { padding: '1.5rem' }}
-    >
+    <div className={compact ? 'acct-upgrade' : 'acct-upgrade acct-card'}>
       {!compact && (
         <>
-          <h3
-            style={{
-              fontSize: '1rem',
-              marginBottom: '0.35rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <Sparkles size={18} color="var(--accent-color)" /> Promote this
-            listing
+          <h3 className="acct-upgrade-title">
+            <Sparkles size={17} aria-hidden="true" /> Promote this listing
           </h3>
-          <p
-            style={{
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '1rem',
-              lineHeight: 1.5,
-            }}
-          >
+          <p className="acct-upgrade-sub">
             Optional paid placement. Free listings stay free forever.
           </p>
         </>
       )}
 
-      {highlightUnavailableReason && (
-        <p
-          style={{
-            fontSize: '0.8rem',
-            color: '#d97706',
-            background: 'rgba(217,119,6,0.1)',
-            border: '1px solid rgba(217,119,6,0.3)',
-            borderRadius: '10px',
-            padding: '0.65rem 0.85rem',
-            marginBottom: '0.85rem',
-            lineHeight: 1.5,
-          }}
-        >
-          {PAID_PRODUCTS[highlightSku!].name} isn&rsquo;t available for this
+      {highlightSku && highlightUnavailableReason && (
+        <p className="acct-callout acct-callout--warn acct-callout--compact">
+          {PAID_PRODUCTS[highlightSku].name} isn&rsquo;t available for this
           listing yet — {highlightUnavailableReason}
         </p>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+      <div className="acct-upgrade-list">
         {visible.map((sku) => {
           const p = PAID_PRODUCTS[sku];
           const isHighlighted = sku === highlightSku;
-          const rowStyle = {
-            borderRadius: '12px',
-            border: isHighlighted
-              ? '1px solid var(--accent-color)'
-              : '1px solid rgba(var(--accent-rgb),0.25)',
-            boxShadow: isHighlighted
-              ? '0 0 0 3px rgba(var(--accent-rgb),0.15)'
-              : 'none',
-            background:
-              sku === 'premium_monthly' || isHighlighted
-                ? 'linear-gradient(135deg, rgba(var(--accent-rgb),0.1), rgba(var(--accent-secondary-rgb),0.08))'
-                : 'var(--bg-muted)',
-            color: 'var(--text-primary)',
-          };
+          const rowClass = `acct-upgrade-row${isHighlighted ? ' is-selected' : ''}${
+            sku === 'premium_monthly' ? ' is-premium' : ''
+          }${loadingSku && loadingSku !== sku ? ' is-dimmed' : ''}`;
           const nameRow = (
-            <span
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-              }}
-            >
+            <span className="acct-upgrade-name">
               {p.name}
               {isHighlighted && (
-                <span
-                  style={{
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    color: 'var(--accent-color)',
-                    background: 'rgba(var(--accent-rgb),0.15)',
-                    borderRadius: '4px',
-                    padding: '0.1rem 0.4rem',
-                  }}
-                >
-                  Selected
-                </span>
+                <span className="acct-upgrade-selected">Selected</span>
               )}
             </span>
           );
@@ -261,96 +199,40 @@ export function PremiumUpgrade({
             const weeks = getWeeks(sku);
             const total = tieredTotal(p, weeks);
             const savingsPct = tieredSavingsPct(p, weeks);
+            const current =
+              sku === 'category_sponsor_7d'
+                ? categorySponsorUntil
+                : featuredUntil;
+            const stacks = current
+              ? new Date(current).getTime() > Date.now()
+              : false;
             return (
-              <div key={sku} style={{ ...rowStyle, padding: '0.85rem 1rem' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.75rem',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  <span
-                    style={{
-                      color: 'var(--accent-color)',
-                      display: 'flex',
-                      marginTop: '0.1rem',
-                    }}
-                  >
+              <div key={sku} className={rowClass}>
+                <div className="acct-upgrade-head">
+                  <span className="acct-upgrade-icon" aria-hidden="true">
                     {ICONS[sku]}
                   </span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="acct-upgrade-body">
                     {nameRow}
-                    <span
-                      style={{
-                        display: 'block',
-                        fontSize: '0.75rem',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
+                    <span className="acct-upgrade-tagline">
                       {p.tagline} · from{' '}
                       {formatUsd(p.weeklyTiers[0].unitAmount)}/wk
                     </span>
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '0.75rem',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      Weeks
-                    </span>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                      }}
-                    >
+                <div className="acct-upgrade-controls">
+                  <div className="acct-upgrade-weeks">
+                    <span className="acct-upgrade-weeks-label">Weeks</span>
+                    <div className="acct-stepper">
                       <button
                         type="button"
                         aria-label="Fewer weeks"
                         disabled={loadingSku !== null || weeks <= 1}
                         onClick={() => setWeeks(sku, weeks - 1, maxWeeks)}
-                        style={{
-                          padding: '0.35rem 0.5rem',
-                          background: 'var(--bg-elevated)',
-                          border: 'none',
-                          color: 'var(--text-primary)',
-                          cursor: weeks <= 1 ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                        }}
                       >
                         <Minus size={13} />
                       </button>
-                      <span
-                        style={{
-                          minWidth: '1.75rem',
-                          textAlign: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.875rem',
-                        }}
-                      >
+                      <span className="tabular" aria-live="polite">
                         {weeks}
                       </span>
                       <button
@@ -358,82 +240,42 @@ export function PremiumUpgrade({
                         aria-label="More weeks"
                         disabled={loadingSku !== null || weeks >= maxWeeks}
                         onClick={() => setWeeks(sku, weeks + 1, maxWeeks)}
-                        style={{
-                          padding: '0.35rem 0.5rem',
-                          background: 'var(--bg-elevated)',
-                          border: 'none',
-                          color: 'var(--text-primary)',
-                          cursor: weeks >= maxWeeks ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                        }}
                       >
                         <Plus size={13} />
                       </button>
                     </div>
                     {savingsPct > 0 && (
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          color: '#059669',
-                          background: 'rgba(16,185,129,0.12)',
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: '4px',
-                        }}
-                      >
-                        Save {savingsPct}%
-                      </span>
+                      <span className="acct-save-pill">Save {savingsPct}%</span>
                     )}
                   </div>
                   <button
                     type="button"
+                    className="btn btn-primary btn-sm"
                     disabled={loadingSku !== null}
+                    aria-busy={loadingSku === sku}
                     onClick={() => startCheckout(sku, weeks)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.5rem 0.9rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'var(--accent-color)',
-                      color: 'var(--bg-color)',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: loadingSku ? 'wait' : 'pointer',
-                      opacity: loadingSku && loadingSku !== sku ? 0.6 : 1,
-                      whiteSpace: 'nowrap',
-                    }}
                   >
+                    {loadingSku === sku ? (
+                      <Loader2
+                        size={14}
+                        className="acct-spin"
+                        aria-hidden="true"
+                      />
+                    ) : null}
                     {loadingSku === sku
-                      ? '…'
+                      ? 'Opening checkout…'
                       : `Get ${weeks}wk — ${formatUsd(total)}`}
                   </button>
                 </div>
-                <p
-                  style={{
-                    margin: '0.5rem 0 0',
-                    fontSize: '0.75rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  → Runs until{' '}
-                  <strong style={{ color: 'var(--text-primary)' }}>
+                <p className="acct-upgrade-note">
+                  Runs until{' '}
+                  <strong>
                     {resultDateFor(sku, weeks).toLocaleDateString(
                       'en-US',
                       DATE_FORMAT,
                     )}
                   </strong>
-                  {(() => {
-                    const current =
-                      sku === 'category_sponsor_7d'
-                        ? categorySponsorUntil
-                        : featuredUntil;
-                    const currentMs = current ? new Date(current).getTime() : 0;
-                    return currentMs > Date.now()
-                      ? ' (stacks onto your remaining time)'
-                      : '';
-                  })()}
+                  {stacks ? ' (stacks onto your remaining time)' : ''}
                 </p>
               </div>
             );
@@ -448,53 +290,31 @@ export function PremiumUpgrade({
               <button
                 type="button"
                 disabled={loadingSku !== null}
+                aria-busy={loadingSku === sku}
                 onClick={() => startCheckout(sku)}
-                style={{
-                  ...rowStyle,
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  textAlign: 'left',
-                  padding: '0.85rem 1rem',
-                  cursor: loadingSku ? 'wait' : 'pointer',
-                  opacity: loadingSku && loadingSku !== sku ? 0.6 : 1,
-                }}
+                className={`${rowClass} acct-upgrade-row--button`}
               >
-                <span style={{ color: 'var(--accent-color)', display: 'flex' }}>
+                <span className="acct-upgrade-icon" aria-hidden="true">
                   {ICONS[sku]}
                 </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
+                <span className="acct-upgrade-body">
                   {nameRow}
-                  <span
-                    style={{
-                      display: 'block',
-                      fontSize: '0.75rem',
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {p.tagline}
-                  </span>
+                  <span className="acct-upgrade-tagline">{p.tagline}</span>
                 </span>
-                <span
-                  style={{
-                    fontWeight: 800,
-                    fontSize: '0.9rem',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {loadingSku === sku ? '…' : priceLabel}
+                <span className="acct-upgrade-price tabular">
+                  {loadingSku === sku ? (
+                    <Loader2
+                      size={15}
+                      className="acct-spin"
+                      aria-label="Loading"
+                    />
+                  ) : (
+                    priceLabel
+                  )}
                 </span>
               </button>
               {sku === 'premium_monthly' && (
-                <p
-                  style={{
-                    margin: '0.4rem 0 0',
-                    fontSize: '0.7rem',
-                    color: 'var(--text-secondary)',
-                    paddingLeft: '0.25rem',
-                  }}
-                >
+                <p className="acct-upgrade-note">
                   Cancel anytime — no long-term lock-in.
                 </p>
               )}
@@ -505,10 +325,9 @@ export function PremiumUpgrade({
         {canManageBilling && (
           <button
             type="button"
-            className="btn btn-secondary"
+            className="btn btn-secondary btn-md"
             disabled={loadingSku !== null}
             onClick={openPortal}
-            style={{ fontSize: '0.85rem' }}
           >
             {loadingSku === 'premium_monthly'
               ? 'Opening…'

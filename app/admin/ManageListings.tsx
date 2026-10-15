@@ -14,7 +14,7 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from '../../components/ui/Toast';
 import { notifyAdminStatsChanged } from '../../lib/adminStatsRefresh';
 import { DIRECTORY_CATEGORIES } from '../../lib/categories';
@@ -192,76 +192,79 @@ export default function ManageListings({
 
   const requestIdRef = useRef<number>(0);
 
-  const fetchListings = async (nextOffset: number) => {
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search.trim()) params.set('search', search.trim());
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      if (premiumFilter) params.set('premium', premiumFilter);
-      if (featuredFilter) params.set('featured', featuredFilter);
-      if (healthFilter) params.set('health', healthFilter);
-      if (aiFilter) params.set('aiEnriched', aiFilter);
-      if (toolsFilter) params.set('hasTools', toolsFilter);
-      if (hasToolsErrorFilter) params.set('hasToolsError', hasToolsErrorFilter);
-      if (categorySponsorFilter)
-        params.set('categorySponsor', categorySponsorFilter);
-      if (pricingModelFilter) params.set('pricingModel', pricingModelFilter);
-      if (authTypeFilter) params.set('authType', authTypeFilter);
-      if (maintenanceStatusFilter)
-        params.set('maintenanceStatus', maintenanceStatusFilter);
-      params.set('sort', sortBy);
-      params.set('order', sortOrder);
-      params.set('offset', String(nextOffset));
-      params.set('limit', String(PAGE_SIZE));
+  const fetchListings = useCallback(
+    async (nextOffset: number) => {
+      const requestId = ++requestIdRef.current;
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (search.trim()) params.set('search', search.trim());
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (premiumFilter) params.set('premium', premiumFilter);
+        if (featuredFilter) params.set('featured', featuredFilter);
+        if (healthFilter) params.set('health', healthFilter);
+        if (aiFilter) params.set('aiEnriched', aiFilter);
+        if (toolsFilter) params.set('hasTools', toolsFilter);
+        if (hasToolsErrorFilter)
+          params.set('hasToolsError', hasToolsErrorFilter);
+        if (categorySponsorFilter)
+          params.set('categorySponsor', categorySponsorFilter);
+        if (pricingModelFilter) params.set('pricingModel', pricingModelFilter);
+        if (authTypeFilter) params.set('authType', authTypeFilter);
+        if (maintenanceStatusFilter)
+          params.set('maintenanceStatus', maintenanceStatusFilter);
+        params.set('sort', sortBy);
+        params.set('order', sortOrder);
+        params.set('offset', String(nextOffset));
+        params.set('limit', String(PAGE_SIZE));
 
-      const res = await fetch(`/api/admin/listings?${params.toString()}`);
-      const data = (await res.json()) as {
-        items?: Listing[];
-        total?: number;
-        error?: string;
-      };
-      if (!res.ok) throw new Error(data.error || 'Could not load listings');
+        const res = await fetch(`/api/admin/listings?${params.toString()}`);
+        const data = (await res.json()) as {
+          items?: Listing[];
+          total?: number;
+          error?: string;
+        };
+        if (!res.ok) throw new Error(data.error || 'Could not load listings');
 
-      if (requestId !== requestIdRef.current) return;
+        if (requestId !== requestIdRef.current) return;
 
-      setItems(data.items || []);
-      setTotal(data.total || 0);
-      setOffset(nextOffset);
-    } catch (err: any) {
-      if (requestId === requestIdRef.current) {
-        toast.error('Could not load listings', { description: err?.message });
+        setItems(data.items || []);
+        setTotal(data.total || 0);
+        setOffset(nextOffset);
+      } catch (err: any) {
+        if (requestId === requestIdRef.current) {
+          toast.error('Could not load listings', { description: err?.message });
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
-      }
-    }
-  };
+    },
+    [
+      search,
+      statusFilter,
+      premiumFilter,
+      featuredFilter,
+      healthFilter,
+      aiFilter,
+      toolsFilter,
+      hasToolsErrorFilter,
+      categorySponsorFilter,
+      pricingModelFilter,
+      authTypeFilter,
+      maintenanceStatusFilter,
+      sortBy,
+      sortOrder,
+    ],
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchListings(0);
     }, 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    search,
-    statusFilter,
-    premiumFilter,
-    featuredFilter,
-    healthFilter,
-    aiFilter,
-    toolsFilter,
-    hasToolsErrorFilter,
-    categorySponsorFilter,
-    pricingModelFilter,
-    authTypeFilter,
-    maintenanceStatusFilter,
-    sortBy,
-    sortOrder,
-  ]);
+  }, [fetchListings]);
 
   const runAction = async (
     id: string,
@@ -456,6 +459,7 @@ export default function ManageListings({
             Quick Views:
           </span>
           <button
+            type="button"
             onClick={() => {
               resetAllFilters();
               setSortBy('createdAt');
@@ -484,6 +488,7 @@ export default function ManageListings({
             ⚡ Recently Approved / Newest
           </button>
           <button
+            type="button"
             onClick={() => {
               resetAllFilters();
               setStatusFilter('active');
@@ -504,6 +509,7 @@ export default function ManageListings({
             Active Listings
           </button>
           <button
+            type="button"
             onClick={() => {
               resetAllFilters();
               setStatusFilter('pending');
@@ -524,6 +530,7 @@ export default function ManageListings({
             Pending Submissions
           </button>
           <button
+            type="button"
             onClick={() => {
               resetAllFilters();
               setHealthFilter('unhealthy');
@@ -546,6 +553,7 @@ export default function ManageListings({
             ⚠️ Unhealthy / Offline
           </button>
           <button
+            type="button"
             onClick={() => {
               resetAllFilters();
               setPremiumFilter('true');
@@ -611,6 +619,7 @@ export default function ManageListings({
             </select>
 
             <button
+              type="button"
               onClick={() =>
                 setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))
               }
@@ -741,6 +750,7 @@ export default function ManageListings({
 
           {hasActiveFilters && (
             <button
+              type="button"
               onClick={resetAllFilters}
               className="admin-btn"
               style={{
@@ -1120,6 +1130,7 @@ export default function ManageListings({
                       }}
                     >
                       <button
+                        type="button"
                         onClick={() => saveEdit(listing.id)}
                         disabled={rowLoading}
                         className="admin-btn"
@@ -1128,6 +1139,7 @@ export default function ManageListings({
                         Save Changes
                       </button>
                       <button
+                        type="button"
                         onClick={() => setEditingId(null)}
                         disabled={rowLoading}
                         className="admin-btn"
@@ -1266,6 +1278,7 @@ export default function ManageListings({
                       Badges:
                     </span>
                     <button
+                      type="button"
                       onClick={() => runAction(listing.id, 'toggle_official')}
                       disabled={rowLoading}
                       className="admin-btn"
@@ -1290,6 +1303,7 @@ export default function ManageListings({
                     </button>
 
                     <button
+                      type="button"
                       onClick={() =>
                         runAction(listing.id, 'toggle_reciprocal_badge')
                       }
@@ -1318,6 +1332,7 @@ export default function ManageListings({
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => runAction(listing.id, 'check_health')}
                       disabled={rowLoading}
                       className="admin-btn"
@@ -1358,6 +1373,7 @@ export default function ManageListings({
                       Placements:
                     </span>
                     <button
+                      type="button"
                       onClick={() =>
                         runAction(listing.id, 'feature', { days: 7 })
                       }
@@ -1376,6 +1392,7 @@ export default function ManageListings({
                     </button>
 
                     <button
+                      type="button"
                       onClick={() =>
                         runAction(listing.id, 'feature', { days: 30 })
                       }
@@ -1394,6 +1411,7 @@ export default function ManageListings({
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => setBoostModalListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
@@ -1409,6 +1427,7 @@ export default function ManageListings({
                     </button>
 
                     <button
+                      type="button"
                       onClick={() =>
                         runAction(
                           listing.id,
@@ -1449,6 +1468,7 @@ export default function ManageListings({
                       Management:
                     </span>
                     <button
+                      type="button"
                       onClick={() => startEdit(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
@@ -1463,6 +1483,7 @@ export default function ManageListings({
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => setInspectListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
@@ -1480,6 +1501,7 @@ export default function ManageListings({
                     {listing.status === 'active' ? (
                       <>
                         <button
+                          type="button"
                           onClick={() =>
                             runAction(listing.id, 'resend_approval')
                           }
@@ -1495,6 +1517,7 @@ export default function ManageListings({
                           Resend Email
                         </button>
                         <button
+                          type="button"
                           onClick={() => runAction(listing.id, 'unpublish')}
                           disabled={rowLoading}
                           className="admin-btn"
@@ -1507,6 +1530,7 @@ export default function ManageListings({
                           Unpublish
                         </button>
                         <button
+                          type="button"
                           onClick={() => mergeDuplicate(listing)}
                           disabled={rowLoading}
                           className="admin-btn"
@@ -1522,6 +1546,7 @@ export default function ManageListings({
                       </>
                     ) : listing.status === 'removed' ? (
                       <button
+                        type="button"
                         onClick={() => runAction(listing.id, 'republish')}
                         disabled={rowLoading}
                         className="admin-btn"
@@ -1536,6 +1561,7 @@ export default function ManageListings({
                     ) : null}
 
                     <button
+                      type="button"
                       onClick={() => deleteListing(listing)}
                       disabled={rowLoading}
                       className="admin-btn"
@@ -1564,6 +1590,7 @@ export default function ManageListings({
         </span>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button
+            type="button"
             onClick={() => fetchListings(Math.max(0, offset - PAGE_SIZE))}
             disabled={loading || offset === 0}
             className="admin-btn"
@@ -1572,6 +1599,7 @@ export default function ManageListings({
             Prev
           </button>
           <button
+            type="button"
             onClick={() => fetchListings(offset + PAGE_SIZE)}
             disabled={loading || offset + PAGE_SIZE >= total}
             className="admin-btn"
@@ -1596,10 +1624,27 @@ export default function ManageListings({
             zIndex: 1000,
             padding: '1rem',
           }}
-          onClick={() => setBoostModalListing(null)}
         >
-          <div
+          <button
+            type="button"
+            aria-label="Close dialog"
+            tabIndex={-1}
+            onClick={() => setBoostModalListing(null)}
             style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'transparent',
+              border: 0,
+              padding: 0,
+              cursor: 'default',
+            }}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Grant placement boost"
+            style={{
+              position: 'relative',
               background: 'var(--card-bg)',
               color: 'var(--text-primary)',
               border: '1px solid var(--border-color)',
@@ -1609,7 +1654,6 @@ export default function ManageListings({
               width: '100%',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             <div
               style={{
@@ -1630,6 +1674,7 @@ export default function ManageListings({
                 Grant Placement Boost: {boostModalListing.name}
               </h3>
               <button
+                type="button"
                 onClick={() => setBoostModalListing(null)}
                 style={{
                   background: 'transparent',
@@ -1658,6 +1703,7 @@ export default function ManageListings({
             >
               <div>
                 <label
+                  htmlFor="admin-boost-days"
                   style={{
                     display: 'block',
                     fontSize: '0.8rem',
@@ -1668,6 +1714,7 @@ export default function ManageListings({
                   Number of Days to Add
                 </label>
                 <input
+                  id="admin-boost-days"
                   type="number"
                   min={1}
                   max={365}
@@ -1711,6 +1758,7 @@ export default function ManageListings({
                 }}
               >
                 <button
+                  type="button"
                   onClick={() => setBoostModalListing(null)}
                   className="admin-btn"
                   style={{ background: '#64748b', color: '#ffffff' }}
@@ -1718,6 +1766,7 @@ export default function ManageListings({
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={() => grantFeaturedModal(boostModalListing.id)}
                   className="admin-btn"
                   style={{ background: '#0284c7', color: '#ffffff' }}
@@ -1744,10 +1793,27 @@ export default function ManageListings({
             zIndex: 1000,
             padding: '1rem',
           }}
-          onClick={() => setInspectListing(null)}
         >
-          <div
+          <button
+            type="button"
+            aria-label="Close dialog"
+            tabIndex={-1}
+            onClick={() => setInspectListing(null)}
             style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'transparent',
+              border: 0,
+              padding: 0,
+              cursor: 'default',
+            }}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Listing inspector"
+            style={{
+              position: 'relative',
               background: 'var(--card-bg)',
               color: 'var(--text-primary)',
               border: '1px solid var(--border-color)',
@@ -1759,7 +1825,6 @@ export default function ManageListings({
               overflowY: 'auto',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             <div
               style={{
@@ -1780,6 +1845,7 @@ export default function ManageListings({
                 Listing Inspector: {inspectListing.name}
               </h3>
               <button
+                type="button"
                 onClick={() => setInspectListing(null)}
                 style={{
                   background: 'transparent',

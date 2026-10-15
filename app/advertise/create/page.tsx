@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PageHeader, PageShell } from '../../../components/PageShell';
+import { PageShell } from '../../../components/PageShell';
 import { AdvertiseStudioClient } from './AdvertiseStudioClient';
 
 export const metadata: Metadata = {
@@ -26,16 +26,13 @@ export default async function AdvertiseCreatePage({
   return (
     <PageShell variant="default">
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-        <PageHeader
-          title="Sponsor Campaign Studio"
-          description={
-            <>
-              Design your ad creative with real-time multi-format previews,
-              customize your impression credit volume, and choose your CPM
-              bidding priority.
-            </>
-          }
-        />
+        <header className="acct-page-head">
+          <h1 className="text-page-title">Create a sponsor campaign</h1>
+          <p className="text-lead">
+            Write your ad, preview it in every placement, then pick your
+            impression volume and delivery speed.
+          </p>
+        </header>
         <AdvertiseStudioClient
           initialTier={params.tier}
           initialPlacement={params.placement}

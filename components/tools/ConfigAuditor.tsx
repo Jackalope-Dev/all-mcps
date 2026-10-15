@@ -3,17 +3,20 @@
 import {
   AlertCircle,
   AlertTriangle,
-  Check,
-  Copy,
+  CheckCircle2,
   Info,
   Plus,
-  Search,
-  Sparkles,
-  X,
 } from 'lucide-react';
+import type React from 'react';
 import { useMemo, useState } from 'react';
 import { auditMcpConfig, mergeServerIntoConfig } from '../../lib/configAudit';
 import { trackFeatureUse } from '../../lib/gtag';
+import {
+  isRemoteHint,
+  parseInstallHint,
+} from '../../lib/tools/parseInstallHint';
+import { CopyButton, EditorPane } from './CodePanel';
+import { type DirectoryServerHit, ServerPicker } from './ServerPicker';
 
 const SAMPLE_CONFIG = `{
   "mcpServers": {
@@ -34,13 +37,13 @@ const SAMPLE_CONFIG = `{
 const SAMPLE_SERVERS = [
   {
     id: 'modelcontextprotocol-server-sqlite',
-    name: 'Server Sqlite',
+    name: 'SQLite',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-sqlite'],
   },
   {
     id: 'modelcontextprotocol-server-filesystem',
-    name: 'Server Filesystem',
+    name: 'Filesystem',
     command: 'npx',
     args: [
       '-y',
@@ -50,436 +53,284 @@ const SAMPLE_SERVERS = [
   },
   {
     id: 'modelcontextprotocol-server-memory',
-    name: 'Server Memory',
+    name: 'Memory',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-memory'],
   },
   {
     id: 'modelcontextprotocol-server-fetch',
-    name: 'Server Fetch',
+    name: 'Fetch',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-fetch'],
   },
   {
     id: 'modelcontextprotocol-server-git',
-    name: 'Server Git',
+    name: 'Git',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-git'],
   },
 ];
 
+const FORMAT_NAMES: Record<string, string> = {
+  claude: 'Claude Desktop',
+  cursor: 'Cursor',
+  windsurf: 'Windsurf',
+  cline: 'Cline',
+  zed: 'Zed',
+  'vs-code': 'VS Code',
+  unknown: 'Unknown',
+};
+
+function slugKey(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+/** Adds a remote (URL) server under mcpServers — mergeServerIntoConfig only knows stdio. */
+function mergeRemote(existing: string, key: string, url: string): string {
+  let obj: Record<string, any>;
+  try {
+    obj = existing.trim() ? JSON.parse(existing) : {};
+  } catch {
+    obj = {};
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) obj = {};
+  if (!obj.mcpServers) obj.mcpServers = {};
+  obj.mcpServers[key] = { url };
+  return JSON.stringify(obj, null, 2);
+}
+
 export function ConfigAuditor() {
   const [jsonText, setJsonText] = useState(SAMPLE_CONFIG);
-  const [copied, setCopied] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [pickerSearch, setPickerSearch] = useState('');
+  const [mergeNote, setMergeNote] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
 
   const audit = useMemo(() => auditMcpConfig(jsonText), [jsonText]);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(jsonText);
-    setCopied(true);
-    trackFeatureUse('config_auditor', { action: 'copy_config' });
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const errors = audit.issues.filter((i) => i.type === 'error').length;
+  const warnings = audit.issues.filter((i) => i.type === 'warning').length;
 
   const handleMergeServer = (s: {
     id: string;
+    name: string;
     command: string;
     args: string[];
   }) => {
-    const updated = mergeServerIntoConfig(jsonText, s);
-    setJsonText(updated);
-    setShowModal(false);
+    setJsonText((t) => mergeServerIntoConfig(t, s));
+    setMergeNote({ ok: true, text: `Merged ${s.name} into your config.` });
     trackFeatureUse('config_auditor', {
       action: 'merge_server',
       server_id: s.id,
     });
   };
 
-  const filteredPickerServers = SAMPLE_SERVERS.filter(
-    (s) =>
-      s.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
-      s.id.toLowerCase().includes(pickerSearch.toLowerCase()),
+  const handleDirectoryHit = (hit: DirectoryServerHit) => {
+    const hint = parseInstallHint(hit.description);
+    const key = slugKey(hit.name);
+    if (hint && isRemoteHint(hint)) {
+      setJsonText((t) => mergeRemote(t, key, hint.url));
+      setMergeNote({ ok: true, text: `Merged ${hit.name} (remote URL).` });
+      trackFeatureUse('config_auditor', {
+        action: 'merge_server',
+        server_id: hit.id,
+      });
+    } else if (hint) {
+      handleMergeServer({
+        id: key,
+        name: hit.name,
+        command: hint.command,
+        args: hint.args,
+      });
+    } else {
+      setMergeNote({
+        ok: false,
+        text: `${hit.name} has no install command we can read. Open its listing for setup steps.`,
+      });
+    }
+  };
+
+  const status = !jsonText.trim() ? null : !audit.isValidJson ? (
+    <span className="tl-status tl-status--err">Invalid JSON</span>
+  ) : (
+    <span className="tl-status tl-status--ok">Valid JSON</span>
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* Action Bar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
-      >
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <button
-            type="button"
-            className="btn btn-sm btn-secondary"
-            onClick={() => setJsonText(SAMPLE_CONFIG)}
-          >
-            Load Sample Config
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-secondary"
-            onClick={() => setJsonText('')}
-          >
-            Clear
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <button
-            type="button"
-            className="btn btn-sm btn-primary"
-            onClick={() => setShowModal(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <Plus size={14} /> Merge Directory Server
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-sm btn-primary"
-            onClick={handleCopy}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            <span>{copied ? 'Copied!' : 'Copy Config'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Editor & Audit Results Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {/* Editor Pane */}
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-        >
-          <label
-            htmlFor="config-auditor-input"
-            style={{
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              color: 'var(--text-primary)',
-            }}
-          >
-            Paste Config JSON (`claude_desktop_config.json`, `.cursor/mcp.json`,
-            etc.)
-          </label>
-          <textarea
-            id="config-auditor-input"
-            className="form-input"
-            rows={18}
-            value={jsonText}
-            onChange={(e) => setJsonText(e.target.value)}
-            placeholder="Paste your JSON configuration here..."
-            style={{
-              fontFamily: 'monospace',
-              fontSize: '0.85rem',
-              lineHeight: 1.5,
-              background: 'var(--bg-muted)',
-              color: 'var(--text-primary)',
-              resize: 'vertical',
-            }}
-          />
-        </div>
-
-        {/* Audit Report Pane */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h2
-            style={{
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <Sparkles size={18} style={{ color: 'var(--accent-color)' }} />
-            Live Audit Report
+    <div className="tl-workspace tl-workspace--wide-in">
+      <section className="tl-pane" aria-labelledby="ca-in">
+        <div className="tl-pane-head">
+          <h2 id="ca-in" className="tl-pane-title">
+            <span className="tl-step">1</span> Paste your config
           </h2>
-
-          <div
-            className="surface"
-            style={{
-              padding: '1.25rem',
-              borderRadius: '12px',
-              border: audit.isValidJson
-                ? '1px solid var(--border-color)'
-                : '1px solid rgba(248, 113, 113, 0.4)',
-              background: 'var(--bg-muted)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            {/* Status Summary Pill */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+          <div className="tl-actions">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setJsonText(SAMPLE_CONFIG)}
             >
-              <span
-                style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
-              >
-                Detected format:{' '}
-                <strong
-                  style={{
-                    color: 'var(--accent-color)',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {audit.formatDetected}
-                </strong>
-              </span>
-              <span
-                style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
-              >
-                Servers:{' '}
-                <strong style={{ color: 'var(--text-primary)' }}>
-                  {audit.serverCount}
-                </strong>
-              </span>
-            </div>
-
-            {/* Issue Items */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-              }}
+              Load sample
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setJsonText('')}
+              disabled={!jsonText}
             >
-              {audit.issues.map((issue, idx) => {
-                const Icon =
-                  issue.type === 'error'
-                    ? AlertCircle
-                    : issue.type === 'warning'
-                      ? AlertTriangle
-                      : Info;
-                const borderClr =
-                  issue.type === 'error'
-                    ? 'rgba(248, 113, 113, 0.4)'
-                    : issue.type === 'warning'
-                      ? 'rgba(245, 158, 11, 0.4)'
-                      : 'var(--border-color)';
-                const bgClr =
-                  issue.type === 'error'
-                    ? 'rgba(248, 113, 113, 0.08)'
-                    : issue.type === 'warning'
-                      ? 'rgba(245, 158, 11, 0.08)'
-                      : 'var(--brand-gradient-soft)';
-                const textClr =
-                  issue.type === 'error'
-                    ? '#ef4444'
-                    : issue.type === 'warning'
-                      ? '#d97706'
-                      : 'var(--accent-color)';
-
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '0.85rem',
-                      borderRadius: '8px',
-                      border: `1px solid ${borderClr}`,
-                      background: bgClr,
-                      display: 'flex',
-                      gap: '0.65rem',
-                    }}
-                  >
-                    <Icon
-                      size={18}
-                      style={{
-                        color: textClr,
-                        flexShrink: 0,
-                        marginTop: '2px',
-                      }}
-                    />
-                    <div style={{ fontSize: '0.85rem', lineHeight: 1.45 }}>
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        {issue.message}
-                      </div>
-                      {issue.suggestion && (
-                        <div
-                          style={{
-                            color: 'var(--text-secondary)',
-                            marginTop: '0.25rem',
-                            fontSize: '0.8rem',
-                          }}
-                        >
-                          💡 {issue.suggestion}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              Clear
+            </button>
           </div>
         </div>
-      </div>
+        <EditorPane
+          title="claude_desktop_config.json · .cursor/mcp.json · …"
+          value={jsonText}
+          onChange={setJsonText}
+          ariaLabel="Paste your MCP config JSON"
+          placeholder="Paste your JSON configuration here…"
+          rows={18}
+          invalid={!!jsonText.trim() && !audit.isValidJson}
+          status={status}
+          actions={
+            <CopyButton
+              text={jsonText}
+              disabled={!jsonText.trim()}
+              onCopied={() =>
+                trackFeatureUse('config_auditor', { action: 'copy_config' })
+              }
+            />
+          }
+        />
 
-      {/* Directory Server Merger Modal */}
-      {showModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            backgroundColor: 'var(--bg-overlay, rgba(2, 6, 23, 0.85))',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            className="surface"
-            style={{
-              width: '100%',
-              maxWidth: '500px',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-elevated)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1rem',
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  margin: 0,
-                  color: 'var(--text-primary)',
-                }}
-              >
-                Merge Directory Server into Config
-              </h3>
+        <div className="tl-field">
+          <span className="tl-label">Merge a server from the directory</span>
+          <ServerPicker
+            onSelect={handleDirectoryHit}
+            placeholder="Search servers to merge…"
+          />
+          <div className="tl-toolbar" style={{ marginTop: '0.25rem' }}>
+            <span className="tl-hint">Popular:</span>
+            {SAMPLE_SERVERS.map((s) => (
               <button
+                key={s.id}
                 type="button"
-                onClick={() => setShowModal(false)}
-                className="btn btn-sm btn-secondary"
-                style={{ padding: '0.3rem' }}
+                className="chip"
+                onClick={() => handleMergeServer(s)}
               >
-                <X size={16} />
+                <Plus size={12} aria-hidden="true" />
+                {s.name}
               </button>
-            </div>
-
-            <div style={{ position: 'relative', marginBottom: '1rem' }}>
-              <Search
-                size={16}
-                style={{
-                  position: 'absolute',
-                  left: '0.85rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-secondary)',
-                }}
-              />
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Search server..."
-                aria-label="Search directory servers"
-                value={pickerSearch}
-                onChange={(e) => setPickerSearch(e.target.value)}
-                style={{ paddingLeft: '2.5rem' }}
-              />
-            </div>
-
-            <div
+            ))}
+          </div>
+          {mergeNote ? (
+            <p
+              className="tl-hint"
+              role="status"
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-                maxHeight: '280px',
-                overflowY: 'auto',
+                color: mergeNote.ok ? 'var(--tl-ok)' : 'var(--tl-warn)',
               }}
             >
-              {filteredPickerServers.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => handleMergeServer(s)}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-muted)',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                      {s.name}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      {s.command} {s.args.join(' ')}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      color: 'var(--accent-color)',
-                    }}
-                  >
-                    + Merge
-                  </span>
-                </button>
-              ))}
-            </div>
+              {mergeNote.text}
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section
+        className="tl-pane tl-sticky"
+        aria-labelledby="ca-out"
+        aria-live="polite"
+      >
+        <div className="tl-pane-head">
+          <h2 id="ca-out" className="tl-pane-title">
+            <span className="tl-step">2</span> Audit report
+          </h2>
+        </div>
+
+        <div className="tl-stats">
+          <div className="tl-stat">
+            <span
+              className="tl-stat-value"
+              style={{
+                fontSize: '0.92rem',
+                lineHeight: 1.3,
+                paddingTop: '0.3rem',
+              }}
+            >
+              {FORMAT_NAMES[audit.formatDetected] ?? audit.formatDetected}
+            </span>
+            <span className="tl-stat-label">Detected format</span>
+          </div>
+          <div className="tl-stat">
+            <span className="tl-stat-value">{audit.serverCount}</span>
+            <span className="tl-stat-label">Servers</span>
+          </div>
+          <div className="tl-stat">
+            <span
+              className="tl-stat-value"
+              style={errors ? { color: 'var(--tl-err)' } : undefined}
+            >
+              {errors}
+            </span>
+            <span className="tl-stat-label">Errors</span>
+          </div>
+          <div className="tl-stat">
+            <span
+              className="tl-stat-value"
+              style={warnings ? { color: 'var(--tl-warn)' } : undefined}
+            >
+              {warnings}
+            </span>
+            <span className="tl-stat-label">Warnings</span>
           </div>
         </div>
-      )}
+
+        {audit.issues.length === 0 ? (
+          <div className="tl-alert tl-alert--ok">
+            <CheckCircle2 size={18} aria-hidden="true" />
+            <div>
+              <p className="tl-alert-title">No issues found</p>
+              <p className="tl-alert-body">
+                Copy the config back into your client and restart it.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ul className="tl-findings">
+            {audit.issues.map((issue, idx) => {
+              const Icon =
+                issue.type === 'error'
+                  ? AlertCircle
+                  : issue.type === 'warning'
+                    ? AlertTriangle
+                    : Info;
+              const tone =
+                issue.type === 'error'
+                  ? 'err'
+                  : issue.type === 'warning'
+                    ? 'warn'
+                    : 'info';
+              return (
+                <li
+                  // biome-ignore lint/suspicious/noArrayIndexKey: issues are recomputed wholesale per edit.
+                  key={idx}
+                  className={`tl-alert tl-alert--${tone}`}
+                  style={{ '--i': idx } as React.CSSProperties}
+                >
+                  <Icon size={18} aria-hidden="true" />
+                  <div>
+                    <p className="tl-alert-title">{issue.message}</p>
+                    {issue.suggestion ? (
+                      <p className="tl-alert-body">{issue.suggestion}</p>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

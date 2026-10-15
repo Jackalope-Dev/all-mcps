@@ -1,6 +1,15 @@
 'use client';
 
-import { LogIn, LogOut, Menu, Search, Sparkles, X } from 'lucide-react';
+import {
+  ArrowRight,
+  ChevronDown,
+  LogIn,
+  LogOut,
+  Menu,
+  Plus,
+  Search,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -8,41 +17,137 @@ import { createPortal } from 'react-dom';
 import { fetchBrowserSession } from '../lib/clientSession';
 import { openSearch } from '../lib/openSearch';
 import { BrandLogo } from './BrandLogo';
-import { Button } from './ui/Button';
-
-const NAV = [
-  { href: '/browse', label: 'Browse' },
-  { href: '/best', label: 'Best' },
-  { href: '/categories', label: 'Categories' },
-  { href: '/stack', label: 'Stack' },
-  { href: '/compare', label: 'Compare' },
-  { href: '/tools', label: 'Tools' },
-  { href: '/guides', label: 'Guides' },
-  { href: '/blog', label: 'Blog' },
-] as const;
+import {
+  isGroupActive,
+  isNavActive,
+  NAV_GROUPS,
+  type NavGroup,
+  PRIMARY_NAV,
+} from './navigation';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-function isActive(pathname: string, href: string): boolean {
-  if (href === '/browse') {
-    return pathname === '/browse' || pathname.startsWith('/mcp/');
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+function NavMenu({
+  group,
+  open,
+  active,
+  onOpen,
+  onClose,
+}: {
+  group: NavGroup;
+  open: boolean;
+  active: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  const panelId = `nav-menu-${group.id}`;
+  const closeTimer = useRef<number | undefined>(undefined);
+
+  // Hover intent: open immediately, close after a short grace period so the
+  // pointer can travel from the trigger into the panel without it vanishing.
+  const enter = () => {
+    window.clearTimeout(closeTimer.current);
+    onOpen();
+  };
+  const leave = () => {
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(onClose, 140);
+  };
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+  return (
+    <div
+      className="nav-menu"
+      onPointerEnter={(e) => e.pointerType === 'mouse' && enter()}
+      onPointerLeave={(e) => e.pointerType === 'mouse' && leave()}
+    >
+      <button
+        type="button"
+        className={`nav-link nav-menu-trigger${active ? ' is-active' : ''}`}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => (open ? onClose() : onOpen())}
+      >
+        {group.label}
+        <ChevronDown size={14} aria-hidden="true" className="nav-menu-caret" />
+      </button>
+      {/* Always rendered (hidden via CSS when closed) so the menu's links are
+          in the server HTML for crawlers, not only after a click. */}
+      <div
+        id={panelId}
+        className="nav-menu-panel"
+        data-open={open || undefined}
+      >
+        <ul className="nav-menu-grid">
+          {group.items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="nav-menu-item"
+                  onClick={onClose}
+                >
+                  {Icon && (
+                    <span
+                      className={`nav-menu-icon${item.hue ? ` hue-${item.hue}` : ''}`}
+                    >
+                      <Icon size={16} aria-hidden="true" />
+                    </span>
+                  )}
+                  <span className="nav-menu-copy">
+                    <span className="nav-menu-label">{item.label}</span>
+                    {item.description && (
+                      <span className="nav-menu-desc">{item.description}</span>
+                    )}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        {group.footer && (
+          <Link
+            href={group.footer.href}
+            className="nav-menu-footer"
+            onClick={onClose}
+          >
+            <span>
+              <span className="nav-menu-label">{group.footer.label}</span>
+              <span className="nav-menu-desc">{group.footer.description}</span>
+            </span>
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function SiteHeader() {
   const pathname = usePathname() || '/';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   /** Platform-appropriate search shortcut for the header chip (⌘ vs Ctrl). */
   const [searchModKey, setSearchModKey] = useState('Ctrl');
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+  // Close only if this group is still the open one: a delayed hover-out
+  // close from one menu must not shut a sibling the pointer has moved to.
+  const closeGroup = useCallback(
+    (id: string) =>
+      setOpenGroup((current) => (current === id ? null : current)),
+    [],
+  );
 
   // The mobile drawer is portaled to <body>, so it must wait for the client
   // mount before createPortal has a DOM target.
@@ -58,9 +163,18 @@ export function SiteHeader() {
     }
   }, []);
 
+  // Hairline + denser glass only once the page has scrolled, so the header
+  // sits flush with hero sections at the top of the page.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   // Signed-in state isn't known until this client-side check resolves, so the
-  // CTA starts as "Submit MCP" (correct for the common logged-out case) and
-  // swaps to "Manage" rather than blocking render on a server session check.
+  // CTA starts as "Submit" (correct for the common logged-out case) and
+  // swaps to "Dashboard" rather than blocking render on a server session check.
   useEffect(() => {
     let cancelled = false;
     fetchBrowserSession().then((data) => {
@@ -72,10 +186,7 @@ export function SiteHeader() {
   }, []);
 
   const ctaHref = isSignedIn ? '/dashboard' : '/submit';
-  const ctaLabel = isSignedIn ? 'Manage' : 'Submit MCP';
-  const mobileCtaLabel = isSignedIn
-    ? 'Manage Your Listings'
-    : 'Submit MCP Server';
+  const ctaLabel = isSignedIn ? 'Dashboard' : 'Submit server';
   const loginHref =
     pathname === '/login' || pathname === '/verify-request'
       ? '/login'
@@ -85,10 +196,29 @@ export function SiteHeader() {
       ? '/api/auth/signout?callbackUrl=%2F'
       : `/api/auth/signout?callbackUrl=${encodeURIComponent(pathname)}`;
 
-  // Close mobile menu on route change
+  // Close menus on route change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the trigger, not a value read inside.
   useEffect(() => {
     setMobileMenuOpen(false);
+    setOpenGroup(null);
   }, [pathname]);
+
+  // Desktop menus: Escape and outside clicks close the open panel.
+  useEffect(() => {
+    if (!openGroup) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenGroup(null);
+    };
+    const onDown = (e: PointerEvent) => {
+      if (!navRef.current?.contains(e.target as Node)) setOpenGroup(null);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown);
+    };
+  }, [openGroup]);
 
   // Focus trap + Escape while the drawer is open; restore focus on close.
   useEffect(() => {
@@ -147,15 +277,9 @@ export function SiteHeader() {
     };
   }, [mobileMenuOpen, closeMobileMenu]);
 
-  // Lock scroll when mobile menu is open. `overflow: hidden` on <body> looks
-  // like the obvious approach, but it silently breaks .site-header's
-  // `position: sticky` — toggling body's overflow makes it a new scroll
-  // container, so the sticky header's containing block switches away from
-  // the viewport and it stops tracking scroll, jumping off-screen by
-  // exactly the current scrollY (visible as the header "scrolling away" and
-  // leaving a gap above the menu). Freezing body at its current scroll
-  // offset via `position: fixed` locks scroll without touching overflow, so
-  // sticky positioning keeps working normally.
+  // Lock scroll while the mobile sheet is open. Locks <html> and <body>
+  // overflow rather than making body position: fixed — the latter breaks
+  // .site-header's position: sticky (body becomes the containing block).
   useEffect(() => {
     if (mobileMenuOpen) {
       const originalBodyOverflow = document.body.style.overflow;
@@ -170,96 +294,87 @@ export function SiteHeader() {
   }, [mobileMenuOpen]);
 
   return (
-    <header className="site-header">
-      <div className="container grid-crosshair grid-crosshair-bl grid-crosshair-br">
-        <div className="site-header-inner">
-          <div className="flex items-center">
-            <BrandLogo size="md" />
-          </div>
+    <header className="site-header" data-scrolled={scrolled || undefined}>
+      <div className="container site-header-inner">
+        <BrandLogo size="sm" />
 
-          {/* Desktop Navigation */}
-          <nav className="site-nav desktop-only-nav" aria-label="Main">
-            {NAV.map(({ href, label }) => (
+        <nav
+          ref={navRef}
+          className="site-nav desktop-only-nav"
+          aria-label="Main"
+        >
+          {PRIMARY_NAV.map(({ href, label }) => {
+            const active = isNavActive(pathname, href);
+            return (
               <Link
                 key={href}
                 href={href}
-                className={`nav-link${isActive(pathname, href) ? ' is-active' : ''}`}
-                aria-current={isActive(pathname, href) ? 'page' : undefined}
+                className={`nav-link${active ? ' is-active' : ''}`}
+                aria-current={active ? 'page' : undefined}
               >
                 {label}
               </Link>
-            ))}
-            <button
-              type="button"
-              onClick={openSearch}
-              className="header-search-btn"
-              title={`Search directory (${searchModKey}+K)`}
-              aria-label={`Search directory (${searchModKey}+K)`}
-            >
-              <Search size={13} className="text-cyan-400" aria-hidden="true" />
-              <span className="header-search-label">Search</span>
-              <kbd className="header-search-kbd">
-                {searchModKey === '⌘' ? '⌘K' : 'Ctrl+K'}
-              </kbd>
-            </button>
-            {isSignedIn ? (
-              <div className="site-nav-manage-group">
-                <Button
-                  href={ctaHref}
-                  variant="primary"
-                  size="sm"
-                  className="site-nav-cta"
-                >
-                  <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
-                </Button>
-                <a
-                  href={logoutHref}
-                  className="header-search-btn site-nav-logout"
-                  title="Log out"
-                  aria-label="Log out"
-                >
-                  <LogOut size={13} aria-hidden="true" />
-                </a>
-              </div>
-            ) : (
-              <div className="site-nav-auth-group">
-                <Button
-                  href={loginHref}
-                  variant="secondary"
-                  size="sm"
-                  className="site-nav-login"
-                >
-                  <LogIn size={13} aria-hidden="true" /> Log in
-                </Button>
-                <Button
-                  href={ctaHref}
-                  variant="primary"
-                  size="sm"
-                  className="site-nav-cta"
-                >
-                  <Sparkles size={13} aria-hidden="true" /> {ctaLabel}
-                </Button>
-              </div>
-            )}
-          </nav>
+            );
+          })}
+          {NAV_GROUPS.map((group) => (
+            <NavMenu
+              key={group.id}
+              group={group}
+              open={openGroup === group.id}
+              active={isGroupActive(pathname, group)}
+              onOpen={() => setOpenGroup(group.id)}
+              onClose={() => closeGroup(group.id)}
+            />
+          ))}
+        </nav>
 
-          {/* Mobile search: the desktop search chip is hidden below 768px, so
-              without this the only way to search on a phone was two taps deep
-              inside the menu drawer. */}
+        <div className="site-header-actions">
           <button
             type="button"
-            className="mobile-search-btn"
             onClick={openSearch}
-            aria-label="Search directory"
+            className="header-search"
+            aria-label={`Search MCP servers (${searchModKey}+K)`}
           >
-            <Search size={20} aria-hidden="true" />
+            <Search size={15} aria-hidden="true" />
+            <span className="header-search-label">Search servers…</span>
+            <span className="header-search-keys" aria-hidden="true">
+              <kbd className="kbd">{searchModKey === '⌘' ? '⌘' : 'Ctrl'}</kbd>
+              <kbd className="kbd">K</kbd>
+            </span>
           </button>
+          {isSignedIn ? (
+            <a
+              href={logoutHref}
+              className="btn btn-ghost btn-sm header-auth"
+              title="Log out"
+            >
+              <LogOut size={14} aria-hidden="true" />
+              <span className="header-auth-label">Log out</span>
+            </a>
+          ) : (
+            <Link href={loginHref} className="btn btn-ghost btn-sm header-auth">
+              <LogIn size={14} aria-hidden="true" />
+              <span className="header-auth-label">Log in</span>
+            </Link>
+          )}
+          <Link href={ctaHref} className="btn btn-primary btn-sm header-cta">
+            {!isSignedIn && <Plus size={14} aria-hidden="true" />}
+            {ctaLabel}
+          </Link>
 
-          {/* Mobile Menu Toggle Button */}
+          {/* Mobile: search is one tap, not buried in the sheet. */}
+          <button
+            type="button"
+            className="header-icon-btn mobile-only"
+            onClick={openSearch}
+            aria-label="Search MCP servers"
+          >
+            <Search size={19} aria-hidden="true" />
+          </button>
           <button
             ref={menuButtonRef}
             type="button"
-            className="mobile-menu-btn"
+            className="header-icon-btn mobile-only"
             onClick={() => setMobileMenuOpen((open) => !open)}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation"
@@ -268,115 +383,142 @@ export function SiteHeader() {
             }
           >
             {mobileMenuOpen ? (
-              <X size={24} aria-hidden="true" />
+              <X size={20} aria-hidden="true" />
             ) : (
-              <Menu size={24} aria-hidden="true" />
+              <Menu size={20} aria-hidden="true" />
             )}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer Overlay — portaled to <body> so it isn't trapped by the
-          header's backdrop-filter, which establishes a containing block for
-          position: fixed descendants and would otherwise collapse the overlay
-          to the header's height (making the menu appear to do nothing). */}
+      {/* Mobile sheet — portaled to <body> so the header's backdrop-filter
+          (which creates a containing block for fixed descendants) doesn't
+          collapse the overlay to the header's height. */}
       {mounted &&
         mobileMenuOpen &&
         createPortal(
-          <div
-            className="mobile-menu-overlay"
-            onClick={closeMobileMenu}
-            role="presentation"
-          >
+          <div className="mobile-sheet-overlay">
+            {/* Backdrop: a click outside the drawer closes it. The drawer
+                (positioned, later in the DOM) paints above this button. */}
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-label="Close navigation"
+              onClick={() => closeMobileMenu()}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                margin: 0,
+                padding: 0,
+                border: 0,
+                background: 'transparent',
+                cursor: 'default',
+              }}
+            />
             <div
               ref={drawerRef}
-              className="mobile-menu-drawer"
-              onClick={(e) => e.stopPropagation()}
+              className="mobile-sheet"
               role="dialog"
               aria-modal="true"
               aria-label="Site navigation"
             >
-              <nav
-                id="mobile-navigation"
-                className="mobile-nav-list"
-                aria-label="Mobile"
-              >
-                {NAV.map(({ href, label }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`mobile-nav-link${isActive(pathname, href) ? ' is-active' : ''}`}
-                    aria-current={isActive(pathname, href) ? 'page' : undefined}
-                    onClick={closeMobileMenu}
-                  >
-                    {label}
-                  </Link>
-                ))}
+              <div className="mobile-sheet-head">
+                <BrandLogo size="sm" />
                 <button
                   type="button"
+                  className="header-icon-btn"
+                  onClick={closeMobileMenu}
+                  aria-label="Close navigation menu"
+                >
+                  <X size={20} aria-hidden="true" />
+                </button>
+              </div>
+              <nav
+                id="mobile-navigation"
+                className="mobile-sheet-body"
+                aria-label="Mobile"
+              >
+                <button
+                  type="button"
+                  className="mobile-sheet-search"
                   onClick={() => {
                     closeMobileMenu();
                     openSearch();
                   }}
-                  className="mobile-nav-link"
-                  style={{
-                    width: '100%',
-                    justifyContent: 'flex-start',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                  aria-label="Search directory"
                 >
-                  <Search
-                    size={18}
-                    className="text-cyan-400"
-                    aria-hidden="true"
-                  />
-                  <span>Search Directory</span>
+                  <Search size={16} aria-hidden="true" />
+                  Search MCP servers…
                 </button>
-                <Link
-                  href="/build-mcp-server"
-                  className={`mobile-nav-link${isActive(pathname, '/build-mcp-server') ? ' is-active' : ''}`}
-                  onClick={closeMobileMenu}
-                >
-                  Build an MCP Server
-                </Link>
-                <div className="mobile-nav-cta-block">
-                  {!isSignedIn && (
-                    <Button
-                      href={loginHref}
-                      variant="secondary"
-                      size="md"
-                      className="mobile-nav-cta-btn"
-                      onClick={closeMobileMenu}
-                    >
-                      <LogIn size={16} aria-hidden="true" /> Log in
-                    </Button>
-                  )}
-                  <Button
-                    href={ctaHref}
-                    variant="primary"
-                    size="md"
-                    className="mobile-nav-cta-btn"
+                <ul className="mobile-sheet-primary">
+                  {PRIMARY_NAV.map(({ href, label }) => {
+                    const active = isNavActive(pathname, href);
+                    return (
+                      <li key={href}>
+                        <Link
+                          href={href}
+                          className={`mobile-sheet-link${active ? ' is-active' : ''}`}
+                          aria-current={active ? 'page' : undefined}
+                          onClick={closeMobileMenu}
+                        >
+                          {label}
+                          <ArrowRight size={16} aria-hidden="true" />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {NAV_GROUPS.map((group) => (
+                  <section key={group.id} className="mobile-sheet-group">
+                    <h2 className="mobile-sheet-heading">{group.label}</h2>
+                    <ul className="mobile-sheet-grid">
+                      {[
+                        ...group.items,
+                        ...(group.footer ? [group.footer] : []),
+                      ].map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <li key={item.href}>
+                            <Link
+                              href={item.href}
+                              className={`mobile-sheet-item${item.hue ? ` hue-${item.hue}` : ''}`}
+                              onClick={closeMobileMenu}
+                            >
+                              {Icon && <Icon size={16} aria-hidden="true" />}
+                              {item.label}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </nav>
+              <div className="mobile-sheet-foot">
+                {isSignedIn ? (
+                  <a
+                    href={logoutHref}
+                    className="btn btn-secondary btn-md"
                     onClick={closeMobileMenu}
                   >
-                    <Sparkles size={16} aria-hidden="true" /> {mobileCtaLabel}
-                  </Button>
-                  {isSignedIn && (
-                    <Button
-                      href={logoutHref}
-                      variant="secondary"
-                      size="md"
-                      className="mobile-nav-cta-btn"
-                      onClick={closeMobileMenu}
-                    >
-                      <LogOut size={16} aria-hidden="true" /> Log out
-                    </Button>
-                  )}
-                </div>
-              </nav>
+                    <LogOut size={16} aria-hidden="true" /> Log out
+                  </a>
+                ) : (
+                  <Link
+                    href={loginHref}
+                    className="btn btn-secondary btn-md"
+                    onClick={closeMobileMenu}
+                  >
+                    <LogIn size={16} aria-hidden="true" /> Log in
+                  </Link>
+                )}
+                <Link
+                  href={ctaHref}
+                  className="btn btn-primary btn-md"
+                  onClick={closeMobileMenu}
+                >
+                  {ctaLabel}
+                </Link>
+              </div>
             </div>
           </div>,
           document.body,

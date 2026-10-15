@@ -148,8 +148,10 @@ function getSnapshotFallback(): SiteStats {
     (acc, s) => acc + (Number(s.upvotes) || 0),
     0,
   );
+  // Same rule as the Verified badge (isVerifiedListing) so the /trust count
+  // matches what visitors see on listings.
   const snapshotVerified = snapshotServers.filter(
-    (s) => s.isOfficial || s.isPremium || s.reciprocalBadgeOk,
+    (s) => s.isOfficial || s.isPremium,
   ).length;
   const snapshotTools = snapshotServers.reduce((acc, s) => {
     if (Array.isArray(s.tools)) return acc + s.tools.length;
@@ -206,7 +208,8 @@ function getSnapshotFallback(): SiteStats {
       readme: snapshotReadme,
       unparsed: snapshotUnparsed,
     },
-    stdioVerifyStats: { totalTested: 124, okCount: 98, avgDurationMs: 3420 },
+    // No sandbox data in the snapshot — zeros, never invented sample numbers.
+    stdioVerifyStats: { totalTested: 0, okCount: 0, avgDurationMs: 0 },
     qualityTierBreakdown: snapshotQualityTiers,
     reciprocalBadgeCount: snapshotReciprocalBadges,
     recentCommitCount30d: snapshotRecentCommits,
@@ -380,7 +383,8 @@ async function querySiteStats(): Promise<SiteStats | null> {
           // this whole multi-column query, silently falling back to stale snapshot values
           // for introspected/readme/reciprocalBadges/verified too, not just this field.
           recentCommits: sql<number>`sum(case when ${gte(servers.lastCommitAt, cutoff)} then 1 else 0 end)`,
-          verified: sql<number>`sum(case when ${servers.isOfficial} = 1 or ${servers.isPremium} = 1 or ${servers.reciprocalBadgeOk} = 1 then 1 else 0 end)`,
+          // Matches the Verified badge (isVerifiedListing): official/claimed or premium.
+          verified: sql<number>`sum(case when ${servers.isOfficial} = 1 or ${servers.isPremium} = 1 then 1 else 0 end)`,
         })
         .from(servers)
         .where(eq(servers.status, 'active'))
@@ -591,9 +595,9 @@ async function querySiteStats(): Promise<SiteStats | null> {
         unparsed: unparsedCount,
       },
       stdioVerifyStats: {
-        totalTested: verifyTotal > 0 ? verifyTotal : 124,
-        okCount: verifyTotal > 0 ? verifyOk : 98,
-        avgDurationMs: verifyAvgMs > 0 ? verifyAvgMs : 3420,
+        totalTested: verifyTotal,
+        okCount: verifyOk,
+        avgDurationMs: verifyAvgMs,
       },
       qualityTierBreakdown: dbQualityTiers,
       reciprocalBadgeCount: dbReciprocalBadges,

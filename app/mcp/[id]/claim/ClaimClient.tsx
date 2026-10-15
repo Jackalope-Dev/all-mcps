@@ -37,7 +37,7 @@ const SITE_BADGE_STYLES: { id: BadgeStyle; label: string }[] = [
 
 export default function ClaimClient({
   serverId,
-  serverName,
+  serverName: _serverName,
   repoUrl,
   websiteUrl: initialWebsite,
   isOfficial,
@@ -1124,6 +1124,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 }}
               >
                 <label
+                  htmlFor="claim-website-url"
                   style={{
                     fontSize: '0.875rem',
                     fontWeight: 600,
@@ -1145,6 +1146,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                 )}
               </div>
               <input
+                id="claim-website-url"
                 type="url"
                 className="form-input"
                 placeholder="https://yourproduct.com"
@@ -1937,6 +1939,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                         }}
                       >
                         <label
+                          htmlFor="claim-cf-token"
                           style={{
                             fontSize: '0.775rem',
                             color: 'var(--text-secondary)',
@@ -1947,6 +1950,7 @@ Then commit and push your changes to GitHub. Once pushed, call the verification 
                           limited to {apexDomain || 'this domain'}:
                         </label>
                         <input
+                          id="claim-cf-token"
                           type="password"
                           className="form-input"
                           autoComplete="off"

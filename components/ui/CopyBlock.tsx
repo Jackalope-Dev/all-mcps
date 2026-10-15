@@ -14,6 +14,8 @@ interface CopyBlockProps {
   snippetType?: string;
   /** Toast message shown after a successful copy. */
   toastMessage?: string;
+  /** Extra class on the wrapper — e.g. `copyblock--flush` to drop the outer margin. */
+  className?: string;
 }
 
 /**
@@ -193,6 +195,7 @@ export function CopyBlock({
   language,
   snippetType = 'install_command',
   toastMessage = 'Copied to clipboard',
+  className,
 }: CopyBlockProps) {
   const [copied, setCopied] = useState(false);
 
@@ -239,141 +242,27 @@ export function CopyBlock({
   const lines = code.split('\n');
 
   return (
-    <div
-      style={{
-        borderRadius: '10px',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        background: '#0d1117',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
-        overflow: 'hidden',
-        margin: '1.5rem 0',
-        maxWidth: '100%',
-        minWidth: 0,
-        boxSizing: 'border-box',
-      }}
-    >
-      {/* IDE Header Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem',
-          padding: '0.55rem 1rem',
-          background: 'rgba(255, 255, 255, 0.035)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          userSelect: 'none',
-          minWidth: 0,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            minWidth: 0,
-            overflow: 'hidden',
-          }}
-        >
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: '#ff5f56',
-              display: 'inline-block',
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: '#ffbd2e',
-              display: 'inline-block',
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: '#27c93f',
-              display: 'inline-block',
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              marginLeft: '0.5rem',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: '#8b949e',
-              fontFamily:
-                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-              letterSpacing: '0.02em',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              minWidth: 0,
-            }}
-          >
-            {meta.title}
-          </span>
-        </div>
-
+    <div className={`copyblock${className ? ` ${className}` : ''}`}>
+      <div className="copyblock-bar">
+        <span className="copyblock-title">{meta.title}</span>
         <button
+          type="button"
           onClick={handleCopy}
-          aria-label="Copy to clipboard"
-          style={{
-            background: copied
-              ? 'rgba(16, 185, 129, 0.15)'
-              : 'rgba(255, 255, 255, 0.08)',
-            border: `1px solid ${copied ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.12)'}`,
-            borderRadius: '6px',
-            padding: '0.35rem 0.65rem',
-            cursor: 'pointer',
-            color: copied ? '#10b981' : '#c9d1d9',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            outline: 'none',
-            transition: 'all 0.2s ease',
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            if (!copied) e.currentTarget.style.color = '#ffffff';
-          }}
-          onMouseLeave={(e) => {
-            if (!copied) e.currentTarget.style.color = '#c9d1d9';
-          }}
+          aria-label={copied ? 'Copied' : 'Copy to clipboard'}
+          className={`copyblock-btn${copied ? ' is-copied' : ''}`}
+          data-copied={copied || undefined}
         >
-          {copied ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
-          <span>{copied ? 'Copied!' : 'Copy'}</span>
+          <span className="copyblock-btn-icon" aria-hidden="true">
+            <Copy size={13} className="copyblock-icon-copy" />
+            <Check size={13} className="copyblock-icon-check" />
+          </span>
+          <span className="copyblock-btn-label">
+            {copied ? 'Copied' : 'Copy'}
+          </span>
         </button>
       </div>
-
-      {/* Code Editor Body */}
-      <pre
-        style={{
-          background: 'transparent',
-          padding: '1.15rem 1.25rem',
-          margin: 0,
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          maxWidth: '100%',
-          fontSize: '0.86rem',
-          lineHeight: 1.65,
-          fontFamily:
-            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Fira Code", monospace',
-          color: '#e6edf3',
-        }}
-      >
-        <code style={{ color: '#e6edf3' }}>
+      <pre className="copyblock-pre">
+        <code>
           {lines.map((line, idx) => renderHighlightedLine(line, idx))}
         </code>
       </pre>

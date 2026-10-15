@@ -1,11 +1,14 @@
+import { Activity, Laptop, Server, TrendingUp } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { ArticleLayout } from '@/components/content/ArticleLayout';
 import { CopyBlock } from '@/components/ui/CopyBlock';
 import { FaqSection } from '@/components/ui/FaqSection';
-import { SectionKicker } from '@/components/ui/SectionKicker';
+import { categoryHueClass } from '@/lib/categories';
 import { getEcosystemStats } from '@/lib/ecosystemStats';
 import { serializeJsonLd } from '@/lib/jsonLd';
+import type { Hue } from '@/lib/palette';
 import {
   BarList,
   ColumnChart,
@@ -25,7 +28,7 @@ export const dynamic = 'force-dynamic';
 const PAGE_URL = 'https://allmcps.com/state-of-mcp';
 const TITLE = 'State of MCP: Live Model Context Protocol Ecosystem Statistics';
 const DESCRIPTION =
-  'Live statistics on the MCP server ecosystem from the AllMCPs index: how many servers exist, local vs remote transports, npx vs uvx, auth, licenses, health, and security advisories.';
+  'Live MCP ecosystem statistics from the AllMCPs index: server count, local vs remote transports, npx vs uvx, auth, licenses, health, and security advisories.';
 
 // The share card itself comes from ./opengraph-image.tsx (live numbers), so
 // no `images` here. `twitter` is set explicitly because the root layout's
@@ -47,7 +50,6 @@ export const metadata: Metadata = {
   },
 };
 
-const SECTIONS = 8;
 const MONTHS = [
   'Jan',
   'Feb',
@@ -69,26 +71,37 @@ function monthLabel(ym: string): string {
   return name ? `${name} ${y}` : ym;
 }
 
+/** One hue per section: its heading dot, chart series and stat tiles. */
+const SECTION_HUE = {
+  size: 'blue',
+  transport: 'teal',
+  runners: 'orange',
+  auth: 'indigo',
+  licenses: 'violet',
+  categories: 'pink',
+  popularity: 'amber',
+  health: 'green',
+} as const satisfies Record<string, Hue>;
+
 function Section({
   id,
-  index,
-  kicker,
   title,
   takeaway,
   shareText,
   children,
 }: {
-  id: string;
-  index: number;
-  kicker: string;
+  id: keyof typeof SECTION_HUE;
   title: string;
   takeaway: ReactNode;
   shareText: string;
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="som-section" aria-labelledby={`${id}-h`}>
-      <SectionKicker index={index} total={SECTIONS} label={kicker} />
+    <section
+      id={id}
+      className={`som-section hue-${SECTION_HUE[id]}`}
+      aria-labelledby={`${id}-h`}
+    >
       <h2 id={`${id}-h`} className="som-h2">
         {title}
       </h2>
@@ -225,354 +238,335 @@ export default async function StateOfMcpPage() {
   };
 
   return (
-    <main className="page-shell page-shell--default">
-      <div className="page-shell-inner">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: serializeJsonLd(datasetJsonLd) }}
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(datasetJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(breadcrumbJsonLd),
+        }}
+      />
+
+      <ArticleLayout
+        path="/state-of-mcp"
+        crumbs={[
+          { label: 'Guides', href: '/guides' },
+          { label: 'State of MCP' },
+        ]}
+        title="State of MCP"
+        lede={
+          <p>
+            {localShare} of those with a known transport run locally over stdio,
+            npx is the most common launcher, and {healthyShare} passed their
+            latest health check. Every number on this page is computed live from
+            the AllMCPs directory.
+          </p>
+        }
+        updated={updated}
+        updatedLabel="Data updated"
+        meta={<span>Refreshes every few hours</span>}
+        toc={[
+          { id: 'size', text: 'Growth' },
+          { id: 'transport', text: 'Local vs remote' },
+          { id: 'runners', text: 'Launchers' },
+          { id: 'auth', text: 'Auth & pricing' },
+          { id: 'licenses', text: 'Licenses' },
+          { id: 'categories', text: 'Categories' },
+          { id: 'popularity', text: 'Popularity' },
+          { id: 'health', text: 'Health & security' },
+          { id: 'method-h', text: 'Cite this data' },
+          { id: 'faq', text: 'FAQ' },
+        ]}
+        prose={false}
+      >
+        <div className="som-stats">
+          <StatTile
+            value={fmt(stats.total)}
+            label="active Model Context Protocol servers indexed"
+            href="#size"
+            icon={Server}
+            hue={SECTION_HUE.size}
+          />
+          <StatTile
+            value={`+${fmt(stats.added30d)}`}
+            label="servers added to the index in the last 30 days"
+            href="#size"
+            icon={TrendingUp}
+            hue={SECTION_HUE.size}
+          />
+          <StatTile
+            value={localShare}
+            label="run locally over stdio (of known transport)"
+            href="#transport"
+            icon={Laptop}
+            hue={SECTION_HUE.transport}
+          />
+          <StatTile
+            value={healthyShare}
+            label="passed their latest health check"
+            href="#health"
+            icon={Activity}
+            hue={SECTION_HUE.health}
+          />
+        </div>
+        <ShareBar
+          text={`State of MCP: ${fmt(stats.total)} active MCP servers, ${localShare} run locally, ${npxShare} of local servers launch with npx. Live data:`}
         />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(breadcrumbJsonLd),
-          }}
-        />
 
-        <div className="surface page-panel som-panel min-w-0">
-          <nav
-            aria-label="Breadcrumb"
-            style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}
-          >
-            <Link href="/guides" style={{ color: 'var(--text-secondary)' }}>
-              Guides
-            </Link>
-            <span
-              style={{ color: 'var(--text-secondary)', margin: '0 0.4rem' }}
-            >
-              /
-            </span>
-            <span style={{ color: 'var(--text-primary)' }}>State of MCP</span>
-          </nav>
+        <Section
+          id="size"
+          title="How big is the MCP ecosystem?"
+          takeaway={
+            <>
+              <strong>{fmt(stats.total)}</strong> active servers,{' '}
+              <strong>{fmt(stats.added30d)}</strong> added in the last 30 days.{' '}
+              {fmt(stats.official)} carry the Official badge, meaning their
+              maintainers proved ownership of the listing.
+            </>
+          }
+          shareText={`${fmt(stats.total)} active MCP servers, ${fmt(stats.added30d)} added in the last 30 days — State of MCP`}
+        >
+          <ColumnChart
+            rows={stats.monthly}
+            formatLabel={monthLabel}
+            partialLast={monthIsPartial}
+            caption="Servers added to the AllMCPs index per month. This measures when we indexed a server, not when it was created — the index began in mid-2026, so early months include the backlog of existing servers."
+          />
+        </Section>
 
-          <header className="som-hero">
-            <h1 className="som-title">State of MCP</h1>
-            <p className="som-hero-figure">
-              <span className="som-hero-number">{fmt(stats.total)}</span>
-              <span className="som-hero-unit">
-                active Model Context Protocol servers indexed
-              </span>
-              <span className="som-updated">
-                Updated {updated} · refreshes every few hours
-              </span>
-            </p>
-            <p className="text-lead som-lead">
-              {localShare} of those with a known transport run locally over
-              stdio, npx is the most common launcher, and {healthyShare} passed
-              their latest health check. Every number on this page is computed
-              live from the AllMCPs directory.
-            </p>
-            <ShareBar
-              text={`State of MCP: ${fmt(stats.total)} active MCP servers, ${localShare} run locally, ${npxShare} of local servers launch with npx. Live data:`}
-            />
-          </header>
+        <Section
+          id="transport"
+          title="Local vs remote servers"
+          takeaway={
+            <>
+              <strong>{localShare}</strong> of servers with a known transport
+              run locally; <strong>{pct(remote, determined)}</strong> are hosted
+              remote endpoints.
+            </>
+          }
+          shareText={`${localShare} of MCP servers run locally over stdio; ${pct(remote, determined)} are remote HTTP endpoints — State of MCP`}
+        >
+          <SplitBar
+            segments={[
+              { label: 'Local (stdio)', count: stdio, tone: 'primary' },
+              { label: 'Remote (HTTP)', count: remote, tone: 'secondary' },
+              {
+                label: 'Not determined',
+                count: undetermined,
+                tone: 'neutral',
+              },
+            ]}
+            caption="Install transport across all active servers, as extracted from each server's documentation. Local servers run as a client subprocess; remote servers are reached over HTTP."
+          />
+          <p className="som-note">
+            See <Link href="/mcp-transports">MCP transports explained</Link> for
+            the trade-offs.
+          </p>
+        </Section>
 
-          <div className="som-stats">
-            <StatTile
-              value={`+${fmt(stats.added30d)}`}
-              label="servers added to the index in the last 30 days"
-              href="#size"
+        <Section
+          id="runners"
+          title="How local servers are launched"
+          takeaway={
+            <>
+              <strong>{npxShare}</strong> launch with npx (Node.js) and{' '}
+              <strong>{pct(uvx, runnersTotal)}</strong> with uvx (Python).
+            </>
+          }
+          shareText={`${npxShare} of local MCP servers launch with npx, ${pct(uvx, runnersTotal)} with uvx — State of MCP`}
+        >
+          <BarList
+            rows={stats.runners}
+            total={runnersTotal}
+            labelHeader="Launcher"
+            caption="Launcher for stdio servers with a verified install command."
+          />
+        </Section>
+
+        <Section
+          id="auth"
+          title="Authentication and pricing"
+          takeaway={
+            <>
+              <strong>{pct(needsCreds, authTotal)}</strong> need credentials;{' '}
+              <strong>{pct(free, pricingTotal)}</strong> are free to use.
+            </>
+          }
+          shareText={`${pct(needsCreds, authTotal)} of MCP servers need an API key or OAuth; ${pct(free, pricingTotal)} are free — State of MCP`}
+        >
+          <div className="som-pair">
+            <BarList
+              rows={stats.auth}
+              total={authTotal}
+              labelHeader="Auth"
+              caption={`Authentication required, of ${fmt(authTotal)} servers where it could be determined.`}
             />
-            <StatTile
-              value={localShare}
-              label="run locally over stdio (of known transport)"
-              href="#transport"
-            />
-            <StatTile
-              value={npxShare}
-              label="of local servers launch with npx"
-              href="#runners"
-            />
-            <StatTile
-              value={healthyShare}
-              label="passed their latest health check"
-              href="#health"
+            <BarList
+              rows={stats.pricing}
+              total={pricingTotal}
+              labelHeader="Pricing"
+              caption={`Pricing model, of ${fmt(pricingTotal)} servers where it could be determined.`}
             />
           </div>
+        </Section>
 
-          <nav className="som-toc" aria-label="On this page">
-            <a href="#size">Growth</a>
-            <a href="#transport">Local vs remote</a>
-            <a href="#runners">Launchers</a>
-            <a href="#auth">Auth &amp; pricing</a>
-            <a href="#licenses">Licenses</a>
-            <a href="#categories">Categories</a>
-            <a href="#popularity">Popularity</a>
-            <a href="#health">Health &amp; security</a>
-            <a href="#method">Cite this data</a>
-          </nav>
-
-          <Section
-            id="size"
-            index={1}
-            kicker="Growth"
-            title="How big is the MCP ecosystem?"
-            takeaway={
+        <Section
+          id="licenses"
+          title="Licenses"
+          takeaway={
+            topLicense ? (
               <>
-                <strong>{fmt(stats.total)}</strong> active servers,{' '}
-                <strong>{fmt(stats.added30d)}</strong> added in the last 30
-                days. {fmt(stats.official)} carry the Official badge, meaning
-                their maintainers proved ownership of the listing.
+                <strong>{topLicense.label}</strong> covers{' '}
+                <strong>{pct(topLicense.count, licenseTotal)}</strong> of
+                servers with a detected license.
               </>
-            }
-            shareText={`${fmt(stats.total)} active MCP servers, ${fmt(stats.added30d)} added in the last 30 days — State of MCP`}
-          >
-            <ColumnChart
-              rows={stats.monthly}
-              formatLabel={monthLabel}
-              partialLast={monthIsPartial}
-              caption="Servers added to the AllMCPs index per month. This measures when we indexed a server, not when it was created — the index began in mid-2026, so early months include the backlog of existing servers."
-            />
-          </Section>
+            ) : (
+              'License breakdown of servers with a detected license.'
+            )
+          }
+          shareText={
+            topLicense
+              ? `${pct(topLicense.count, licenseTotal)} of open MCP servers use the ${topLicense.label} license — State of MCP`
+              : 'MCP server licenses — State of MCP'
+          }
+        >
+          <BarList
+            rows={stats.licenses}
+            total={licenseTotal}
+            labelHeader="License"
+            caption="Top licenses among servers with a detected license."
+          />
+        </Section>
 
-          <Section
-            id="transport"
-            index={2}
-            kicker="Transport"
-            title="Local vs remote servers"
-            takeaway={
+        <Section
+          id="categories"
+          title="What MCP servers do"
+          takeaway={
+            topCategory ? (
               <>
-                <strong>{localShare}</strong> of servers with a known transport
-                run locally; <strong>{pct(remote, determined)}</strong> are
-                hosted remote endpoints.
+                <strong>{topCategory.label}</strong> make up{' '}
+                <strong>{pct(topCategory.count, stats.total)}</strong> of the
+                index.
               </>
-            }
-            shareText={`${localShare} of MCP servers run locally over stdio; ${pct(remote, determined)} are remote HTTP endpoints — State of MCP`}
-          >
-            <SplitBar
-              segments={[
-                { label: 'Local (stdio)', count: stdio, tone: 'primary' },
-                { label: 'Remote (HTTP)', count: remote, tone: 'secondary' },
-                {
-                  label: 'Not determined',
-                  count: undetermined,
-                  tone: 'neutral',
-                },
-              ]}
-              caption="Install transport across all active servers, as extracted from each server's documentation. Local servers run as a client subprocess; remote servers are reached over HTTP."
-            />
-            <p className="som-note">
-              See <Link href="/mcp-transports">MCP transports explained</Link>{' '}
-              for the trade-offs.
-            </p>
-          </Section>
+            ) : (
+              'Largest categories in the directory.'
+            )
+          }
+          shareText={
+            topCategory
+              ? `${pct(topCategory.count, stats.total)} of MCP servers are ${topCategory.label.replace(/^\P{L}+/u, '')} — State of MCP`
+              : 'What MCP servers do — State of MCP'
+          }
+        >
+          <BarList
+            rows={stats.categories}
+            total={stats.total}
+            labelHeader="Category"
+            rowHueClass={categoryHueClass}
+            caption="Largest categories, share of all active servers."
+          />
+          <p className="som-note">
+            Each has a full list in the{' '}
+            <Link href="/categories">category index</Link>, and the{' '}
+            <Link href="/best">best-of rankings</Link> cover the most-used
+            servers per topic.
+          </p>
+        </Section>
 
-          <Section
-            id="runners"
-            index={3}
-            kicker="Launchers"
-            title="How local servers are launched"
-            takeaway={
-              <>
-                <strong>{npxShare}</strong> launch with npx (Node.js) and{' '}
-                <strong>{pct(uvx, runnersTotal)}</strong> with uvx (Python).
-              </>
-            }
-            shareText={`${npxShare} of local MCP servers launch with npx, ${pct(uvx, runnersTotal)} with uvx — State of MCP`}
-          >
-            <BarList
-              rows={stats.runners}
-              total={runnersTotal}
-              labelHeader="Launcher"
-              caption="Launcher for stdio servers with a verified install command."
-            />
-          </Section>
+        <Section
+          id="popularity"
+          title="Popularity"
+          takeaway={
+            <>
+              <strong>{pct(underTen, stats.total)}</strong> have fewer than 10
+              GitHub stars; only <strong>{fmt(thousandPlus)}</strong> have
+              1,000+.
+            </>
+          }
+          shareText={`${pct(underTen, stats.total)} of MCP servers have fewer than 10 GitHub stars; only ${fmt(thousandPlus)} have 1,000+ — State of MCP`}
+        >
+          <BarList
+            rows={stats.stars}
+            total={stats.total}
+            labelHeader="GitHub stars"
+            caption="GitHub stars per server. Most servers are small, single-maintainer projects."
+          />
+        </Section>
 
-          <Section
-            id="auth"
-            index={4}
-            kicker="Access"
-            title="Authentication and pricing"
-            takeaway={
-              <>
-                <strong>{pct(needsCreds, authTotal)}</strong> need credentials;{' '}
-                <strong>{pct(free, pricingTotal)}</strong> are free to use.
-              </>
-            }
-            shareText={`${pct(needsCreds, authTotal)} of MCP servers need an API key or OAuth; ${pct(free, pricingTotal)} are free — State of MCP`}
-          >
-            <div className="som-pair">
-              <BarList
-                rows={stats.auth}
-                total={authTotal}
-                labelHeader="Auth"
-                caption={`Authentication required, of ${fmt(authTotal)} servers where it could be determined.`}
-              />
-              <BarList
-                rows={stats.pricing}
-                total={pricingTotal}
-                labelHeader="Pricing"
-                caption={`Pricing model, of ${fmt(pricingTotal)} servers where it could be determined.`}
-              />
-            </div>
-          </Section>
+        <Section
+          id="health"
+          title="Health and security"
+          takeaway={
+            <>
+              <strong>{healthyShare}</strong> passed their latest health check;{' '}
+              <strong>{fmt(stats.vulnCriticalOrHigh)}</strong> of{' '}
+              {fmt(stats.vulnScanned)} scanned packages (
+              {pct(stats.vulnCriticalOrHigh, stats.vulnScanned)}) have a
+              critical or high advisory on record.
+            </>
+          }
+          shareText={`${healthyShare} of MCP servers passed their latest health check; ${pct(stats.vulnCriticalOrHigh, stats.vulnScanned)} of scanned packages have a critical/high advisory on record — State of MCP`}
+        >
+          <BarList
+            rows={stats.health}
+            total={stats.total}
+            labelHeader="Status"
+            caption="Latest health check result, rechecked continuously by the directory's health monitor."
+          />
+          <p className="som-note">
+            Advisories come from{' '}
+            <a href="https://osv.dev" rel="noopener">
+              OSV.dev
+            </a>{' '}
+            for each server&apos;s install package and count any version, not
+            necessarily the current one. See{' '}
+            <Link href="/mcp-security">MCP security best practices</Link>.
+          </p>
+        </Section>
 
-          <Section
-            id="licenses"
-            index={5}
-            kicker="Licenses"
-            title="Licenses"
-            takeaway={
-              topLicense ? (
-                <>
-                  <strong>{topLicense.label}</strong> covers{' '}
-                  <strong>{pct(topLicense.count, licenseTotal)}</strong> of
-                  servers with a detected license.
-                </>
-              ) : (
-                'License breakdown of servers with a detected license.'
-              )
-            }
-            shareText={
-              topLicense
-                ? `${pct(topLicense.count, licenseTotal)} of open MCP servers use the ${topLicense.label} license — State of MCP`
-                : 'MCP server licenses — State of MCP'
-            }
-          >
-            <BarList
-              rows={stats.licenses}
-              total={licenseTotal}
-              labelHeader="License"
-              caption="Top licenses among servers with a detected license."
-            />
-          </Section>
+        <section
+          id="method"
+          className="som-section markdown-body"
+          aria-labelledby="method-h"
+        >
+          <h2 id="method-h" className="som-h2">
+            Methodology and citing this data
+          </h2>
+          <p>
+            Figures cover listings with active status in AllMCPs, which ingests
+            public MCP servers from the official MCP Registry, community server
+            lists and direct submissions, merges duplicates, and removes
+            archived or deleted repositories. Transport, runner, auth, pricing
+            and license are extracted from each server&apos;s documentation and
+            verified where possible; values that could not be determined are
+            excluded from the shares that depend on them. Numbers refresh every
+            few hours; last computed{' '}
+            {stats.generatedAt.replace('T', ' ').slice(0, 16)} UTC.
+          </p>
+          <p>
+            You are welcome to cite these figures with a link to this page (CC
+            BY 4.0). Programmatic access is available through the{' '}
+            <Link href="/docs/api">AllMCPs API</Link>.
+          </p>
+          <CopyBlock
+            code={citation}
+            title="Citation"
+            language="text"
+            snippetType="state_of_mcp_citation"
+            toastMessage="Citation copied"
+          />
+        </section>
 
-          <Section
-            id="categories"
-            index={6}
-            kicker="Categories"
-            title="What MCP servers do"
-            takeaway={
-              topCategory ? (
-                <>
-                  <strong>{topCategory.label}</strong> make up{' '}
-                  <strong>{pct(topCategory.count, stats.total)}</strong> of the
-                  index.
-                </>
-              ) : (
-                'Largest categories in the directory.'
-              )
-            }
-            shareText={
-              topCategory
-                ? `${pct(topCategory.count, stats.total)} of MCP servers are ${topCategory.label.replace(/^\P{L}+/u, '')} — State of MCP`
-                : 'What MCP servers do — State of MCP'
-            }
-          >
-            <BarList
-              rows={stats.categories}
-              total={stats.total}
-              labelHeader="Category"
-              caption="Largest categories, share of all active servers."
-            />
-            <p className="som-note">
-              Each has a full list in the{' '}
-              <Link href="/categories">category index</Link>, and the{' '}
-              <Link href="/best">best-of rankings</Link> cover the most-used
-              servers per topic.
-            </p>
-          </Section>
-
-          <Section
-            id="popularity"
-            index={7}
-            kicker="Popularity"
-            title="Popularity"
-            takeaway={
-              <>
-                <strong>{pct(underTen, stats.total)}</strong> have fewer than 10
-                GitHub stars; only <strong>{fmt(thousandPlus)}</strong> have
-                1,000+.
-              </>
-            }
-            shareText={`${pct(underTen, stats.total)} of MCP servers have fewer than 10 GitHub stars; only ${fmt(thousandPlus)} have 1,000+ — State of MCP`}
-          >
-            <BarList
-              rows={stats.stars}
-              total={stats.total}
-              labelHeader="GitHub stars"
-              caption="GitHub stars per server. Most servers are small, single-maintainer projects."
-            />
-          </Section>
-
-          <Section
-            id="health"
-            index={8}
-            kicker="Health"
-            title="Health and security"
-            takeaway={
-              <>
-                <strong>{healthyShare}</strong> passed their latest health
-                check; <strong>{fmt(stats.vulnCriticalOrHigh)}</strong> of{' '}
-                {fmt(stats.vulnScanned)} scanned packages (
-                {pct(stats.vulnCriticalOrHigh, stats.vulnScanned)}) have a
-                critical or high advisory on record.
-              </>
-            }
-            shareText={`${healthyShare} of MCP servers passed their latest health check; ${pct(stats.vulnCriticalOrHigh, stats.vulnScanned)} of scanned packages have a critical/high advisory on record — State of MCP`}
-          >
-            <BarList
-              rows={stats.health}
-              total={stats.total}
-              labelHeader="Status"
-              caption="Latest health check result, rechecked continuously by the directory's health monitor."
-            />
-            <p className="som-note">
-              Advisories come from{' '}
-              <a href="https://osv.dev" rel="noopener">
-                OSV.dev
-              </a>{' '}
-              for each server&apos;s install package and count any version, not
-              necessarily the current one. See{' '}
-              <Link href="/mcp-security">MCP security best practices</Link>.
-            </p>
-          </Section>
-
-          <section
-            id="method"
-            className="som-section markdown-body"
-            aria-labelledby="method-h"
-          >
-            <h2 id="method-h" className="som-h2">
-              Methodology and citing this data
-            </h2>
-            <p>
-              Figures cover listings with active status in AllMCPs, which
-              ingests public MCP servers from the official MCP Registry,
-              community server lists and direct submissions, merges duplicates,
-              and removes archived or deleted repositories. Transport, runner,
-              auth, pricing and license are extracted from each server&apos;s
-              documentation and verified where possible; values that could not
-              be determined are excluded from the shares that depend on them.
-              Numbers refresh every few hours; last computed{' '}
-              {stats.generatedAt.replace('T', ' ').slice(0, 16)} UTC.
-            </p>
-            <p>
-              You are welcome to cite these figures with a link to this page (CC
-              BY 4.0). Programmatic access is available through the{' '}
-              <Link href="/docs/api">AllMCPs API</Link>.
-            </p>
-            <CopyBlock
-              code={citation}
-              title="Citation"
-              language="text"
-              snippetType="state_of_mcp_citation"
-              toastMessage="Citation copied"
-            />
-          </section>
-
-          <FaqSection items={faqs} />
-        </div>
-      </div>
-    </main>
+        <FaqSection
+          items={faqs}
+          title="Frequently asked questions"
+          headingId="faq"
+          className="som-section"
+        />
+      </ArticleLayout>
+    </>
   );
 }

@@ -1,19 +1,8 @@
 'use client';
 
-import {
-  ChevronDown,
-  ChevronUp,
-  Code2,
-  FileText,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Terminal,
-  Wrench,
-} from 'lucide-react';
+import { ChevronDown, FileText, Search, ShieldCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { CollapsibleText } from '../CollapsibleText';
-import { IconTooltip } from './IconTooltip';
 
 interface ToolItem {
   name: string;
@@ -55,64 +44,49 @@ function getSchemaProperties(parameters: Record<string, unknown> | undefined) {
 
 interface ToolSchemaInspectorProps {
   tools?: ToolItem[];
-  aiFeatures?: string[];
-  aiUseCases?: string[];
-  serverName: string;
   /** 'introspected' (live MCP handshake) | 'readme' (best-effort static parse) | null/undefined. */
   toolsSource?: string | null;
 }
 
 const TOOLS_SOURCE_BADGE: Record<
   string,
-  {
-    label: string;
-    icon: typeof ShieldCheck;
-    color: string;
-    background: string;
-    border: string;
-    title: string;
-  }
+  { label: string; icon: typeof ShieldCheck; tone: string; title: string }
 > = {
   introspected: {
     label: 'Verified live',
     icon: ShieldCheck,
-    // Themed via var() — matches .badge-verified, and stays readable in light
-    // mode (the dark-mode #34d399 is low-contrast on a light background).
-    color: 'var(--verified-green)',
-    background: 'var(--verified-green-bg)',
-    border: 'var(--verified-green-border)',
+    tone: 'ok',
     title: 'Captured by calling this server’s live tools/list endpoint.',
   },
   readme: {
     label: 'Self-reported',
     icon: FileText,
-    color: '#94a3b8',
-    background: 'rgba(148, 163, 184, 0.12)',
-    border: 'rgba(148, 163, 184, 0.25)',
+    tone: 'muted',
     title:
       'Parsed from the repository README, not verified against a live server — may be incomplete or out of date.',
   },
 };
 
+const TOOL_PREVIEW_COUNT = 8;
+
+/**
+ * Tools list for /mcp/[id]: one row per tool (name + description), expanding
+ * in place to the parameter list, raw JSON schema, and a JSON-RPC call
+ * preview. The section heading lives on the page; this renders the toolbar
+ * (source + context-cost signal + search) and the list.
+ */
 export function ToolSchemaInspector({
   tools = [],
-  aiFeatures = [],
-  aiUseCases = [],
-  serverName,
   toolsSource,
 }: ToolSchemaInspectorProps) {
   const sourceBadge = toolsSource ? TOOLS_SOURCE_BADGE[toolsSource] : undefined;
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>(
-    {},
-  );
-  /** Collapse long tool lists so install stays above the fold on mobile. */
-  const [showAllTools, setShowAllTools] = useState(false);
-  const TOOL_PREVIEW_COUNT = 6;
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [showAll, setShowAll] = useState(false);
 
-  const filteredTools = useMemo(() => {
-    if (!searchQuery.trim()) return tools;
-    const q = searchQuery.toLowerCase();
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return tools;
     return tools.filter(
       (t) =>
         t.name.toLowerCase().includes(q) ||
@@ -120,23 +94,14 @@ export function ToolSchemaInspector({
     );
   }, [tools, searchQuery]);
 
-  const visibleTools = useMemo(() => {
-    if (searchQuery.trim() || showAllTools) return filteredTools;
-    return filteredTools.slice(0, TOOL_PREVIEW_COUNT);
-  }, [filteredTools, searchQuery, showAllTools]);
-  const hiddenToolCount = Math.max(
-    0,
-    filteredTools.length - visibleTools.length,
-  );
+  const visible =
+    searchQuery.trim() || showAll
+      ? filtered
+      : filtered.slice(0, TOOL_PREVIEW_COUNT);
+  const hiddenCount = Math.max(0, filtered.length - visible.length);
 
-  const toggleExpand = (name: string) => {
-    setExpandedTools((prev) => ({ ...prev, [name]: !prev[name] }));
-  };
-
-  const hasTools = tools && tools.length > 0;
-  const hasAiCapabilities =
-    (aiFeatures && aiFeatures.length > 0) ||
-    (aiUseCases && aiUseCases.length > 0);
+  const toggle = (key: string) =>
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
   /**
    * Rough context-budget signal: ~4 chars/token is the standard back-of-envelope
@@ -145,7 +110,6 @@ export function ToolSchemaInspector({
    * to the model on every tool-enabled request, not just the visible summary.
    */
   const approxTokens = useMemo(() => {
-    if (!hasTools) return 0;
     const chars = tools.reduce((sum, t) => {
       const paramsChars = t.parameters
         ? JSON.stringify(t.parameters).length
@@ -153,596 +117,186 @@ export function ToolSchemaInspector({
       return sum + t.name.length + (t.description?.length ?? 0) + paramsChars;
     }, 0);
     return Math.round(chars / 4);
-  }, [tools, hasTools]);
+  }, [tools]);
 
-  if (!hasTools && !hasAiCapabilities) {
-    return null;
-  }
+  if (tools.length === 0) return null;
+
+  const tokenLabel =
+    approxTokens >= 1000
+      ? `${(approxTokens / 1000).toFixed(1)}k`
+      : String(approxTokens);
 
   return (
-    <div style={{ marginBottom: '3rem', minWidth: 0, maxWidth: '100%' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '0.75rem',
-          minWidth: 0,
-        }}
-      >
-        <div style={{ minWidth: 0, flex: '1 1 12rem' }}>
-          <h2
-            style={{
-              fontSize: 'clamp(1.15rem, 4vw, 1.4rem)',
-              fontWeight: 700,
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              flexWrap: 'wrap',
-            }}
-          >
-            <Wrench
-              size={22}
-              style={{ color: 'var(--accent-color)', flexShrink: 0 }}
-            />
-            Capabilities & Tool Schemas {hasTools ? `(${tools.length})` : ''}
-            {hasTools && approxTokens > 0 && (
-              <IconTooltip
-                label={`Approximate context cost: ~${approxTokens} tokens`}
-                trigger={
-                  <span
-                    style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      color: 'var(--text-secondary)',
-                      background: 'var(--bg-muted)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '999px',
-                      padding: '0.2rem 0.6rem',
-                    }}
-                  >
-                    ~
-                    {approxTokens >= 1000
-                      ? `${(approxTokens / 1000).toFixed(1)}k`
-                      : approxTokens}{' '}
-                    tokens
-                  </span>
-                }
-              >
-                <span className="mcp-icon-tooltip-title">
-                  <Sparkles
-                    size={14}
-                    style={{ color: 'var(--accent-color)' }}
-                  />{' '}
-                  ~
-                  {approxTokens >= 1000
-                    ? `${(approxTokens / 1000).toFixed(1)}k`
-                    : approxTokens}{' '}
-                  tokens
-                </span>
-                <span className="mcp-icon-tooltip-body">
-                  Approximate context cost of this server&rsquo;s tool schemas
-                  (~4 chars/token), before any tool is called. Actual usage
-                  depends on your client and model.
-                </span>
-              </IconTooltip>
-            )}
-            {hasTools && sourceBadge && (
-              <IconTooltip
-                label={sourceBadge.label}
-                asSpan
-                trigger={
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      color: sourceBadge.color,
-                      background: sourceBadge.background,
-                      border: `1px solid ${sourceBadge.border}`,
-                      borderRadius: '999px',
-                      padding: '0.2rem 0.6rem',
-                      // 'help' (question-mark cursor), not 'pointer' — this is
-                      // a hover-only tooltip trigger (desktop reveals it via
-                      // CSS :hover, no click needed), so a pointer cursor
-                      // promises a click action that doesn't exist.
-                      cursor: 'help',
-                    }}
-                  >
-                    <sourceBadge.icon size={11} />
-                    {sourceBadge.label}
-                  </span>
-                }
-              >
-                <span className="mcp-icon-tooltip-title">
-                  <sourceBadge.icon size={14} color={sourceBadge.color} />{' '}
-                  {sourceBadge.label}
-                </span>
-                <span className="mcp-icon-tooltip-body">
-                  {sourceBadge.title}
-                </span>
-              </IconTooltip>
-            )}
-          </h2>
-          <p
-            style={{
-              color: 'var(--text-secondary)',
-              fontSize: '0.85rem',
-              margin: '0.25rem 0 0',
-            }}
-          >
-            Inspect callable tools, capabilities, and parameters exposed to AI
-            agents by {serverName}.
-          </p>
+    <div className="lst-tools">
+      <div className="lst-tools-bar">
+        <div className="lst-tools-meta">
+          {sourceBadge && (
+            <span
+              className={`lst-pill lst-pill--${sourceBadge.tone}`}
+              title={sourceBadge.title}
+            >
+              <sourceBadge.icon size={12} aria-hidden="true" />
+              {sourceBadge.label}
+            </span>
+          )}
+          {approxTokens > 0 && (
+            <span
+              className="lst-pill"
+              title="Approximate context cost of these tool schemas (~4 chars/token), before any tool is called. Actual usage depends on your client and model."
+            >
+              ~{tokenLabel} tokens of context
+            </span>
+          )}
         </div>
-
-        {hasTools && tools.length > 4 && (
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '220px',
-              minWidth: 0,
-            }}
-          >
-            <Search
-              size={14}
-              style={{
-                position: 'absolute',
-                left: '0.75rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-secondary)',
-              }}
-            />
+        {tools.length > 4 && (
+          <label className="lst-tools-search">
+            <Search size={14} aria-hidden="true" />
             <input
-              type="text"
-              placeholder="Search tools..."
+              type="search"
+              placeholder="Filter tools"
+              aria-label="Filter tools"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                maxWidth: '100%',
-                boxSizing: 'border-box',
-                padding: '0.4rem 0.75rem 0.4rem 2.2rem',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-muted)',
-                color: 'var(--text-primary)',
-                fontSize: '0.8rem',
-              }}
             />
-          </div>
+          </label>
         )}
       </div>
 
-      {hasTools ? (
-        <>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
-              gap: '0.85rem',
-              minWidth: 0,
-            }}
-          >
-            {visibleTools.map((tool) => {
-              const isExpanded = !!expandedTools[tool.name];
-              const hasParams =
-                tool.parameters && Object.keys(tool.parameters).length > 0;
-              const schemaProps = hasParams
-                ? getSchemaProperties(tool.parameters)
-                : null;
-              const showRawKey = `${tool.name}__raw`;
-              const showRaw = !!expandedTools[showRawKey];
+      <ul className="lst-tool-list">
+        {visible.map((tool) => {
+          const isOpen = !!expanded[tool.name];
+          const hasParams =
+            tool.parameters && Object.keys(tool.parameters).length > 0;
+          const props = hasParams ? getSchemaProperties(tool.parameters) : null;
+          const rawKey = `${tool.name}__raw`;
+          const showRaw = !!expanded[rawKey];
+          const panelId = `tool-${tool.name.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+          return (
+            <li
+              key={tool.name}
+              className={`lst-tool${isOpen ? ' is-open' : ''}`}
+            >
+              <button
+                type="button"
+                className="lst-tool-row"
+                onClick={() => hasParams && toggle(tool.name)}
+                aria-expanded={hasParams ? isOpen : undefined}
+                aria-controls={hasParams ? panelId : undefined}
+                disabled={!hasParams}
+              >
+                <span className="lst-tool-text">
+                  <code className="lst-tool-name">{tool.name}</code>
+                  <span className="lst-tool-desc">
+                    {tool.description || 'Callable MCP tool'}
+                  </span>
+                </span>
+                {hasParams && (
+                  <span className="lst-tool-meta">
+                    {props
+                      ? `${props.length} param${props.length === 1 ? '' : 's'}`
+                      : 'schema'}
+                    <ChevronDown size={14} aria-hidden="true" />
+                  </span>
+                )}
+              </button>
 
-              return (
-                <div
-                  key={tool.name}
-                  className="surface"
-                  style={{
-                    padding: '1.1rem',
-                    borderRadius: '12px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-elevated)',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        minWidth: 0,
-                      }}
-                    >
-                      <Code2
-                        size={15}
-                        style={{ color: 'var(--accent-color)', flexShrink: 0 }}
-                      />
-                      <code
-                        style={{
-                          fontSize: '0.875rem',
-                          fontWeight: 700,
-                          color: 'var(--accent-color)',
-                          wordBreak: 'break-word',
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        {tool.name}
-                      </code>
-                    </div>
-                    {hasParams && (
+              {hasParams && isOpen && (
+                <div id={panelId} className="lst-tool-panel">
+                  <div className="lst-tool-panel-head">
+                    <span className="lst-mono-label">Parameters</span>
+                    {props && props.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => toggleExpand(tool.name)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.2rem',
-                          fontSize: '0.72rem',
-                          padding: '0.1rem 0.3rem',
-                          borderRadius: '4px',
-                        }}
+                        className="lst-textbtn"
+                        onClick={() => toggle(rawKey)}
                       >
-                        <span>Schema</span>
-                        {isExpanded ? (
-                          <ChevronUp size={12} />
-                        ) : (
-                          <ChevronDown size={12} />
-                        )}
+                        {showRaw ? 'View as list' : 'View raw JSON'}
                       </button>
                     )}
                   </div>
-
-                  {tool.description ? (
-                    <p
-                      style={{
-                        fontSize: '0.82rem',
-                        color: 'var(--text-secondary)',
-                        margin: 0,
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      {tool.description}
-                    </p>
+                  {props && props.length > 0 && !showRaw ? (
+                    <dl className="lst-params">
+                      {props.map((prop) => (
+                        <div key={prop.name} className="lst-param">
+                          <dt>
+                            <code>{prop.name}</code>
+                            {prop.type && (
+                              <span className="lst-param-type">
+                                {prop.type}
+                              </span>
+                            )}
+                            {prop.required && (
+                              <span className="lst-param-req">required</span>
+                            )}
+                          </dt>
+                          <dd>
+                            {prop.description ? (
+                              <CollapsibleText collapsedLines={2}>
+                                {prop.description}
+                              </CollapsibleText>
+                            ) : (
+                              <span className="lst-muted-sm">
+                                No description
+                              </span>
+                            )}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
                   ) : (
-                    <p
-                      style={{
-                        fontSize: '0.78rem',
-                        color: 'var(--text-secondary)',
-                        margin: 0,
-                        fontStyle: 'italic',
-                        opacity: 0.7,
-                      }}
-                    >
-                      Callable MCP tool function
-                    </p>
+                    <pre className="lst-tool-json">
+                      {JSON.stringify(tool.parameters, null, 2)}
+                    </pre>
                   )}
-
-                  {hasParams && isExpanded && (
-                    <div
-                      style={{
-                        marginTop: '0.5rem',
-                        padding: '0.65rem 0.85rem',
-                        background: 'var(--bg-muted)',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        fontSize: '0.75rem',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.5rem',
-                          marginBottom: '0.5rem',
-                        }}
-                      >
-                        <div
-                          style={{
-                            color: 'var(--text-secondary)',
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            fontFamily: 'monospace',
-                          }}
-                        >
-                          INPUT SCHEMA / PARAMETERS
-                        </div>
-                        {schemaProps && schemaProps.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => toggleExpand(showRawKey)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: 'var(--accent-color)',
-                              cursor: 'pointer',
-                              fontSize: '0.68rem',
-                              fontWeight: 600,
-                              padding: 0,
-                              textDecoration: 'underline',
-                              textUnderlineOffset: '2px',
-                            }}
-                          >
-                            {showRaw ? 'View as list' : 'View raw JSON'}
-                          </button>
-                        )}
-                      </div>
-
-                      {schemaProps && schemaProps.length > 0 && !showRaw ? (
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.55rem',
-                          }}
-                        >
-                          {schemaProps.map((prop) => (
-                            <div
-                              key={prop.name}
-                              style={{
-                                borderBottom: '1px solid var(--border-color)',
-                                paddingBottom: '0.5rem',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  flexWrap: 'wrap',
-                                  gap: '0.4rem',
-                                  marginBottom: '0.2rem',
-                                }}
-                              >
-                                <code
-                                  style={{
-                                    fontFamily: 'monospace',
-                                    fontWeight: 700,
-                                    color: 'var(--text-primary)',
-                                  }}
-                                >
-                                  {prop.name}
-                                </code>
-                                {prop.type && (
-                                  <span
-                                    style={{
-                                      fontSize: '0.65rem',
-                                      color: 'var(--text-secondary)',
-                                      background: 'var(--bg-elevated)',
-                                      border: '1px solid var(--border-color)',
-                                      borderRadius: '4px',
-                                      padding: '0.05rem 0.4rem',
-                                    }}
-                                  >
-                                    {prop.type}
-                                  </span>
-                                )}
-                                {prop.required && (
-                                  <span
-                                    style={{
-                                      fontSize: '0.65rem',
-                                      fontWeight: 600,
-                                      color: 'var(--accent-color)',
-                                    }}
-                                  >
-                                    required
-                                  </span>
-                                )}
-                              </div>
-                              {prop.description ? (
-                                <div
-                                  style={{
-                                    color: 'var(--text-secondary)',
-                                    lineHeight: 1.45,
-                                  }}
-                                >
-                                  <CollapsibleText collapsedLines={2}>
-                                    {prop.description}
-                                  </CollapsibleText>
-                                </div>
-                              ) : (
-                                <span
-                                  style={{
-                                    color: 'var(--text-secondary)',
-                                    fontStyle: 'italic',
-                                    opacity: 0.7,
-                                  }}
-                                >
-                                  No description provided
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <pre
-                          style={{
-                            margin: 0,
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word',
-                            fontFamily: 'monospace',
-                            color: 'var(--text-primary)',
-                          }}
-                        >
-                          {JSON.stringify(tool.parameters, null, 2)}
-                        </pre>
-                      )}
-
-                      {/* JSON-RPC Request Payload Preview */}
-                      <div
-                        style={{
-                          marginTop: '0.85rem',
-                          paddingTop: '0.65rem',
-                          borderTop: '1px solid var(--border-color)',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: '0.35rem',
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              fontWeight: 600,
-                              color: 'var(--accent-color)',
-                              fontFamily: 'monospace',
-                            }}
-                          >
-                            JSON-RPC 2.0 REQUEST PAYLOAD
-                          </span>
-                          <a
-                            href={`/tools/playground`}
-                            style={{
-                              fontSize: '0.68rem',
-                              color: 'var(--accent-color)',
-                              textDecoration: 'underline',
-                            }}
-                          >
-                            Test in Playground &rarr;
-                          </a>
-                        </div>
-                        <pre
-                          style={{
-                            margin: 0,
-                            padding: '0.5rem',
-                            background: 'var(--bg-color)',
-                            borderRadius: '6px',
-                            fontSize: '0.72rem',
-                            color: '#34d399',
-                            fontFamily: 'monospace',
-                            overflowX: 'auto',
-                          }}
-                        >
-                          {JSON.stringify(
-                            {
-                              jsonrpc: '2.0',
-                              id: 1,
-                              method: 'tools/call',
-                              params: {
-                                name: tool.name,
-                                arguments: schemaProps
-                                  ? Object.fromEntries(
-                                      schemaProps.map((p) => [
-                                        p.name,
-                                        `<${p.type || 'value'}>`,
-                                      ]),
-                                    )
-                                  : {},
-                              },
-                            },
-                            null,
-                            2,
-                          )}
-                        </pre>
-                      </div>
-                    </div>
-                  )}
+                  <div className="lst-tool-panel-head">
+                    <span className="lst-mono-label">JSON-RPC request</span>
+                    <a href="/tools/playground" className="lst-textbtn">
+                      Test in Playground &rarr;
+                    </a>
+                  </div>
+                  <pre className="lst-tool-json lst-tool-json--rpc">
+                    {JSON.stringify(
+                      {
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'tools/call',
+                        params: {
+                          name: tool.name,
+                          arguments: props
+                            ? Object.fromEntries(
+                                props.map((p) => [
+                                  p.name,
+                                  `<${p.type || 'value'}>`,
+                                ]),
+                              )
+                            : {},
+                        },
+                      },
+                      null,
+                      2,
+                    )}
+                  </pre>
                 </div>
-              );
-            })}
-          </div>
-          {hiddenToolCount > 0 && (
-            <button
-              type="button"
-              className="collapsible-text-toggle"
-              style={{ marginTop: '0.85rem' }}
-              onClick={() => setShowAllTools(true)}
-            >
-              Show all {filteredTools.length} tools
-            </button>
-          )}
-          {showAllTools &&
-            filteredTools.length > TOOL_PREVIEW_COUNT &&
-            !searchQuery.trim() && (
-              <button
-                type="button"
-                className="collapsible-text-toggle"
-                style={{ marginTop: '0.5rem' }}
-                onClick={() => setShowAllTools(false)}
-              >
-                Show fewer tools
-              </button>
-            )}
-        </>
-      ) : (
-        /* Fallback: render AI-extracted tool capabilities if raw tool schemas aren't introspected yet */
-        <div
-          className="surface"
-          style={{ padding: '1.25rem', borderRadius: '12px' }}
+              )}
+            </li>
+          );
+        })}
+        {visible.length === 0 && (
+          <li className="lst-tool-empty">
+            No tools match &ldquo;{searchQuery}&rdquo;.
+          </li>
+        )}
+      </ul>
+
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm lst-tools-more"
+          onClick={() => setShowAll(true)}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.75rem',
-              color: 'var(--accent-color)',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-            }}
-          >
-            <Sparkles size={16} /> Extracted Tool Capabilities
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
-              gap: '0.75rem',
-            }}
-          >
-            {aiFeatures.map((f, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.4rem',
-                  fontSize: '0.85rem',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                <Terminal
-                  size={14}
-                  style={{
-                    color: 'var(--accent-color)',
-                    flexShrink: 0,
-                    marginTop: '0.2rem',
-                  }}
-                />
-                <span>{f}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+          Show all {filtered.length} tools
+          <ChevronDown size={14} aria-hidden="true" />
+        </button>
       )}
     </div>
   );

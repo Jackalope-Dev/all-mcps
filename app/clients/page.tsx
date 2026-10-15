@@ -1,13 +1,15 @@
-import { ArrowRight, ChevronRight, Settings, Terminal } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { PageHeader, PageShell } from '@/components/PageShell';
-import { Badge } from '@/components/ui/Badge';
-import { Card } from '@/components/ui/Card';
+import type React from 'react';
+import { ClientLogo } from '@/components/ClientLogo';
+import { TopicFilter } from '@/components/content/TopicFilter';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { serializeJsonLd } from '@/lib/jsonLd';
 
 const SITE = 'https://allmcps.com';
+
+const kindId = (kind: string) => kind.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 export const metadata: Metadata = {
   title: 'How to Install MCP Servers in Every Client',
@@ -76,141 +78,71 @@ export default function ClientsIndexPage() {
     ],
   };
 
+  const kinds = Array.from(new Set(MCP_CLIENTS.map((c) => c.badgeText)));
+  const topics = kinds.map((k) => ({
+    id: kindId(k),
+    label: k,
+    count: MCP_CLIENTS.filter((c) => c.badgeText === k).length,
+  }));
+
   return (
-    <PageShell variant="default">
+    <main className="page-shell content-page content-hub">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
-        <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
-          <ol className="breadcrumb">
-            <li>
-              <Link href="/">Home</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">MCP Clients</li>
-          </ol>
-        </nav>
+      <div className="page-shell-inner">
+        <header className="content-hub-head animate-in">
+          <nav aria-label="Breadcrumb">
+            <ol className="crumbs">
+              <li>
+                <Link href="/">Home</Link>
+              </li>
+              <li>
+                <span aria-current="page">MCP Clients</span>
+              </li>
+            </ol>
+          </nav>
+          <h1 className="content-hub-title">
+            Install MCP Servers in Any Client
+          </h1>
+          <p className="content-hub-lede">
+            Select your preferred AI client below for step-by-step setup guides,
+            OS config file paths, interactive JSON generators, and
+            troubleshooting tips.
+          </p>
+        </header>
 
-        <PageHeader
-          centered
-          badge={
-            <Badge variant="verified">
-              <Settings size={13} style={{ marginRight: '0.35rem' }} />{' '}
-              Canonical Setup Guides
-            </Badge>
-          }
-          title={
-            <>
-              Install MCP Servers in{' '}
-              <span className="text-brand-gradient">Any Client</span>
-            </>
-          }
-          description="Select your preferred AI client below for step-by-step setup guides, OS config file paths, interactive JSON generators, and troubleshooting tips."
-        />
-
-        <ul
-          style={{
-            listStyle: 'none',
-            padding: 0,
-            margin: '2.5rem 0 0',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '1.5rem',
-          }}
+        <TopicFilter
+          topics={topics}
+          total={MCP_CLIENTS.length}
+          label="Filter clients by type"
         >
-          {MCP_CLIENTS.map((c) => (
-            <li key={c.slug}>
-              <Card
-                href={`/clients/${c.slug}`}
-                hoverable
-                glow
-                crosshair
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  padding: '1.5rem',
-                  height: '100%',
-                }}
+          <ul className="cl-hub-grid">
+            {MCP_CLIENTS.map((c, i) => (
+              <li
+                key={c.slug}
+                data-topic={kindId(c.badgeText)}
+                className="animate-in"
+                style={{ '--i': Math.min(i, 8) } as React.CSSProperties}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  <h2
-                    style={{
-                      fontSize: '1.2rem',
-                      fontWeight: 700,
-                      margin: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <Terminal
-                      size={18}
-                      style={{ color: 'var(--accent-color)' }}
-                    />
-                    <span>{c.name}</span>
-                  </h2>
-                  <Badge variant="category">{c.badgeText}</Badge>
-                </div>
-
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <code
-                    style={{
-                      fontSize: '0.75rem',
-                      background: 'var(--bg-muted)',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '4px',
-                      border: '1px solid var(--border-color)',
-                      color: 'var(--brand-cyan)',
-                    }}
-                  >
-                    {c.configFilename}
-                  </code>
-                </div>
-
-                <p
-                  style={{
-                    fontSize: '0.875rem',
-                    color: 'var(--text-secondary)',
-                    margin: '0 0 1.25rem',
-                    lineHeight: 1.55,
-                    flexGrow: 1,
-                  }}
-                >
-                  {c.lead}
-                </p>
-
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    color: 'var(--accent-color)',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    marginTop: 'auto',
-                    paddingTop: '0.75rem',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                  }}
-                >
-                  <span>View Setup Guide &amp; Config</span>
-                  <ArrowRight size={15} />
-                </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                <Link href={`/clients/${c.slug}`} className="cl-hub-card">
+                  <span className="cl-hub-card-top">
+                    <ClientLogo slug={c.slug} name={c.name} size={40} />
+                    <span className="cl-hub-kind">{c.badgeText}</span>
+                  </span>
+                  <h2 className="cl-hub-name">{c.name}</h2>
+                  <code className="cl-hub-file">{c.configFilename}</code>
+                  <p className="cl-hub-lead">{c.lead}</p>
+                  <span className="guides-card-cta">
+                    View setup guide <ArrowRight size={14} aria-hidden="true" />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </TopicFilter>
       </div>
-    </PageShell>
+    </main>
   );
 }

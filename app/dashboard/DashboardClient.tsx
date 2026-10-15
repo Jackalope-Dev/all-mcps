@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
-  Crown,
   Download,
   Edit3,
   ExternalLink,
@@ -15,12 +14,14 @@ import {
   Globe,
   Heart,
   Image as ImageIcon,
+  LayoutDashboard,
   Lock,
   Megaphone,
   Minus,
   MousePointerClick,
   PauseCircle,
   Percent,
+  Plus,
   Search,
   ShieldCheck,
   Sparkles,
@@ -31,7 +32,16 @@ import {
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
-import { type CSSProperties, useEffect, useMemo, useState } from 'react';
+import {
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { PremiumUpgrade } from '@/components/PremiumUpgrade';
 import { toast } from '@/components/ui/Toast';
 import {
@@ -47,7 +57,7 @@ import {
   serializeAdRevision,
 } from '@/lib/adRevision';
 import type { AnalyticsSummary, ServerAnalytics } from '@/lib/analytics';
-import { DIRECTORY_CATEGORIES } from '@/lib/categories';
+import { categoryHueClass, DIRECTORY_CATEGORIES } from '@/lib/categories';
 import { MCP_CLIENTS } from '@/lib/clients';
 import { isFeaturedListing } from '@/lib/featuredStatus';
 import { type ImpressionSurface, SURFACE_LABELS } from '@/lib/impressionLog';
@@ -61,6 +71,20 @@ import {
   PRICING_MODEL_LABELS,
   PRICING_MODELS,
 } from '@/lib/serverEnums';
+import { type Hue, statusHueClass } from '../../lib/palette';
+
+/** One hue per metric, shared by the portfolio summary, per-listing stat
+ *  pills and the hits chart, so a number keeps its colour everywhere. */
+const METRIC_HUE = {
+  listings: 'blue',
+  views: 'teal',
+  installs: 'indigo',
+  upvotes: 'pink',
+  apiHits: 'violet',
+  impressions: 'amber',
+  clicks: 'orange',
+  ctr: 'orange',
+} as const satisfies Record<string, Hue>;
 
 type Server = {
   id: string;
@@ -266,7 +290,7 @@ export default function DashboardClient({
     }
   };
 
-  const startEdit = (server: Server) => {
+  const startEdit = useCallback((server: Server) => {
     setEditingId(server.id);
     const pending = parsePendingRevision(server.pendingRevision);
     const p = pending?.proposed;
@@ -298,7 +322,7 @@ export default function DashboardClient({
       ).join(' '),
     });
     setActiveTabMap((prev) => ({ ...prev, [server.id]: 'edit' }));
-  };
+  }, []);
 
   const uploadScreenshot = async (serverId: string, file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -401,7 +425,12 @@ export default function DashboardClient({
     }
   };
 
+  // initialEditId is honoured once, against the servers present on
+  // first render — later list updates must not reopen the editor.
+  const initialEditHandledRef = useRef(false);
   useEffect(() => {
+    if (initialEditHandledRef.current) return;
+    initialEditHandledRef.current = true;
     if (!initialEditId) return;
     const target = servers.find((s) => s.id === initialEditId);
     if (!target) return;
@@ -409,8 +438,7 @@ export default function DashboardClient({
     document
       .getElementById(`server-${initialEditId}`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialEditId, servers, startEdit]);
 
   // Auto-fetch deep analytics for all premium or boosted servers
   useEffect(() => {
@@ -469,41 +497,45 @@ export default function DashboardClient({
     return (
       <div className="dashboard-workspace">
         {ads.length > 0 && <AdCampaignsSection ads={ads} />}
-        <div className="dashboard-empty">
-          <div className="dashboard-empty-hero">
-            <h2>No listings yet</h2>
-            <p>
-              Submit a new MCP server or claim one you already published. Once
-              claimed, you get analytics, logo uploads, and free dofollow
-              backlink setup.
-            </p>
+        <div className="acct-dash-empty">
+          <div className="acct-dash-empty-icon" aria-hidden="true">
+            <LayoutDashboard size={22} />
           </div>
-          <ul className="dashboard-empty-grid">
-            <li className="dashboard-empty-card">
-              <h3>Submit a server</h3>
-              <p>List a new repository or product site for free review.</p>
-              <Link href="/submit" className="btn btn-primary">
-                + Submit server
-              </Link>
+          <h2>Add your first listing</h2>
+          <p>
+            Submit a new MCP server or claim one that&apos;s already in the
+            directory. Claimed listings get analytics, logo uploads, and a free
+            dofollow backlink.
+          </p>
+          <div className="acct-dash-empty-actions">
+            <Link href="/submit" className="btn btn-primary btn-md">
+              <Plus size={15} aria-hidden="true" /> Submit a server
+            </Link>
+            <Link href="/browse" className="btn btn-secondary btn-md">
+              Find &amp; claim yours
+            </Link>
+          </div>
+          <ol className="acct-dash-checklist" aria-label="Getting started">
+            <li>
+              <span className="acct-dash-check-n">1</span>
+              <span>
+                <strong>Submit or claim</strong> a listing you maintain
+              </span>
             </li>
-            <li className="dashboard-empty-card">
-              <h3>Claim an existing listing</h3>
-              <p>
-                Find your server in the directory and verify ownership via badge
-                or DNS.
-              </p>
-              <Link href="/browse" className="btn btn-secondary">
-                Browse directory
-              </Link>
+            <li>
+              <span className="acct-dash-check-n">2</span>
+              <span>
+                <strong>Verify ownership</strong> with a README badge or DNS
+              </span>
             </li>
-            <li className="dashboard-empty-card">
-              <h3>Get a badge</h3>
-              <p>Generate README or site badges for verification and SEO.</p>
-              <Link href="/badge-generator" className="btn btn-secondary">
-                Badge generator
-              </Link>
+            <li>
+              <span className="acct-dash-check-n">3</span>
+              <span>
+                <strong>Add the badge</strong> to earn a dofollow link —{' '}
+                <Link href="/badge-generator">badge generator</Link>
+              </span>
             </li>
-          </ul>
+          </ol>
         </div>
       </div>
     );
@@ -514,41 +546,90 @@ export default function DashboardClient({
       {ads.length > 0 && <AdCampaignsSection ads={ads} />}
       <ul className="dashboard-metrics" aria-label="Portfolio summary">
         <li className="dashboard-metric">
-          <span className="dashboard-metric-label">Listings</span>
+          <span className="dashboard-metric-label">
+            <span
+              className={`dashboard-metric-icon tint-tile hue-${METRIC_HUE.listings}`}
+            >
+              <LayoutDashboard size={13} aria-hidden="true" />
+            </span>
+            Listings
+          </span>
           <span className="dashboard-metric-value">{servers.length}</span>
         </li>
         <li className="dashboard-metric">
-          <span className="dashboard-metric-label">Views</span>
+          <span className="dashboard-metric-label">
+            <span
+              className={`dashboard-metric-icon tint-tile hue-${METRIC_HUE.views}`}
+            >
+              <Eye size={13} aria-hidden="true" />
+            </span>
+            Views
+          </span>
           <span className="dashboard-metric-value">
             {totalViews.toLocaleString()}
           </span>
         </li>
         <li className="dashboard-metric">
-          <span className="dashboard-metric-label">Installs</span>
+          <span className="dashboard-metric-label">
+            <span
+              className={`dashboard-metric-icon tint-tile hue-${METRIC_HUE.installs}`}
+            >
+              <Download size={13} aria-hidden="true" />
+            </span>
+            Installs
+          </span>
           <span className="dashboard-metric-value">
             {totalInstalls.toLocaleString()}
           </span>
         </li>
         <li className="dashboard-metric">
-          <span className="dashboard-metric-label">Upvotes</span>
+          <span className="dashboard-metric-label">
+            <span
+              className={`dashboard-metric-icon tint-tile hue-${METRIC_HUE.upvotes}`}
+            >
+              <Heart size={13} aria-hidden="true" />
+            </span>
+            Upvotes
+          </span>
           <span className="dashboard-metric-value">
             {totalUpvotes.toLocaleString()}
           </span>
         </li>
         <li className="dashboard-metric dashboard-metric--accent">
-          <span className="dashboard-metric-label">API hits (30d)</span>
+          <span className="dashboard-metric-label">
+            <span
+              className={`dashboard-metric-icon tint-tile hue-${METRIC_HUE.apiHits}`}
+            >
+              <Activity size={13} aria-hidden="true" />
+            </span>
+            API hits (30d)
+          </span>
           <span className="dashboard-metric-value">
             {totalApiHits.toLocaleString()}
           </span>
         </li>
         <li className="dashboard-metric">
-          <span className="dashboard-metric-label">Impressions (30d)</span>
+          <span className="dashboard-metric-label">
+            <span
+              className={`dashboard-metric-icon tint-tile hue-${METRIC_HUE.impressions}`}
+            >
+              <Globe size={13} aria-hidden="true" />
+            </span>
+            Impressions (30d)
+          </span>
           <span className="dashboard-metric-value">
             {totalImpressions.toLocaleString()}
           </span>
         </li>
         <li className="dashboard-metric">
-          <span className="dashboard-metric-label">Outbound clicks</span>
+          <span className="dashboard-metric-label">
+            <span
+              className={`dashboard-metric-icon tint-tile hue-${METRIC_HUE.clicks}`}
+            >
+              <MousePointerClick size={13} aria-hidden="true" />
+            </span>
+            Outbound clicks
+          </span>
           <span className="dashboard-metric-value">
             {totalOutboundClicks.toLocaleString()}
           </span>
@@ -631,26 +712,32 @@ export default function DashboardClient({
                   <div className="dashboard-listing-identity-text">
                     <div className="dashboard-listing-title-row">
                       <h2>{server.name}</h2>
-                      <span className="dashboard-pill">{server.category}</span>
+                      <span
+                        className={`dashboard-pill tint-pill ${categoryHueClass(server.category)}`}
+                      >
+                        {server.category}
+                      </span>
                       {rankInfo && (
                         <span className="dashboard-pill dashboard-pill--rank">
                           #{rankInfo.rank} of {rankInfo.totalInCategory}
                         </span>
                       )}
                       {server.isPremium && (
-                        <span className="dashboard-pill dashboard-pill--premium">
+                        <span className="dashboard-pill tint-pill hue-violet">
                           Premium
                         </span>
                       )}
                       {pending && (
-                        <span className="dashboard-pill dashboard-pill--warn">
+                        <span
+                          className={`dashboard-pill tint-pill ${statusHueClass('warn')}`}
+                        >
                           Edit pending
                         </span>
                       )}
                       {server.featuredUntil &&
                         new Date(server.featuredUntil).getTime() >
                           Date.now() && (
-                          <span className="dashboard-pill dashboard-pill--boost">
+                          <span className="dashboard-pill tint-pill hue-orange">
                             Boosted ·{' '}
                             {new Date(
                               server.featuredUntil,
@@ -665,28 +752,13 @@ export default function DashboardClient({
                         {(server.copies || 0).toLocaleString()} installs ·{' '}
                         {(server.upvotes || 0).toLocaleString()} upvotes
                         {server.githubStars != null &&
-                          ` · ⭐ ${server.githubStars.toLocaleString()}`}
+                          ` · ${server.githubStars.toLocaleString()} stars`}
                         {server.npmDownloads != null &&
-                          ` · 📦 ${server.npmDownloads.toLocaleString()}/mo`}
-                        {toolsCount > 0 && ` · 🛠️ ${toolsCount} tools`}
+                          ` · ${server.npmDownloads.toLocaleString()} npm/mo`}
+                        {toolsCount > 0 && ` · ${toolsCount} tools`}
                         {server.healthStatus && (
                           <span
-                            style={{
-                              marginLeft: '0.4rem',
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              padding: '0.12rem 0.45rem',
-                              borderRadius: '999px',
-                              background:
-                                server.healthStatus === 'healthy'
-                                  ? 'rgba(16, 185, 129, 0.15)'
-                                  : 'rgba(245,158,11,0.15)',
-                              color:
-                                server.healthStatus === 'healthy'
-                                  ? '#10b981'
-                                  : '#f59e0b',
-                              border: `1px solid ${server.healthStatus === 'healthy' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245,158,11,0.3)'}`,
-                            }}
+                            className={`acct-health${server.healthStatus === 'healthy' ? ' is-ok' : ''}`}
                           >
                             {server.healthStatus === 'healthy'
                               ? 'Healthy'
@@ -707,26 +779,14 @@ export default function DashboardClient({
                   >
                     <ExternalLink size={14} aria-hidden="true" /> View listing
                   </Link>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setTab(server.id, 'edit')}
-                  >
-                    <Edit3 size={14} aria-hidden="true" /> Edit
-                  </button>
-                  <Link
-                    href={`/mcp/${server.id}/claim`}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Verify
-                  </Link>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm dashboard-boost-btn"
-                    onClick={() => setTab(server.id, 'boost')}
-                  >
-                    <Sparkles size={14} aria-hidden="true" /> Boost
-                  </button>
+                  {!server.websiteBacklinkOk && !server.isPremium && (
+                    <Link
+                      href={`/mcp/${server.id}/claim`}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      <ShieldCheck size={14} aria-hidden="true" /> Verify
+                    </Link>
+                  )}
                   <label className="btn btn-secondary btn-sm dashboard-logo-upload">
                     <ImageIcon size={14} aria-hidden="true" />
                     {uploadingLogoId === server.id
@@ -749,7 +809,7 @@ export default function DashboardClient({
                     />
                   </label>
                   {server.isPremium ? (
-                    <label className="btn btn-secondary btn-sm dashboard-logo-upload dashboard-screenshot-upload">
+                    <label className="btn btn-secondary btn-sm dashboard-logo-upload">
                       <ImageIcon size={14} aria-hidden="true" />
                       {uploadingScreenshotId === server.id
                         ? 'Uploading…'
@@ -779,23 +839,12 @@ export default function DashboardClient({
                             'Upgrade your listing to Premium to upload high-res screenshots and capture user interest.',
                         });
                       }}
-                      className="btn btn-secondary btn-sm dashboard-logo-upload dashboard-screenshot-pro-btn"
+                      className="btn btn-secondary btn-sm acct-locked-btn"
                       title="Unlock high-res screenshot uploads with Premium"
                     >
-                      <Crown size={14} style={{ color: 'var(--gold-color)' }} />
-                      <span>Upload screenshot</span>
-                      <span
-                        style={{
-                          fontSize: '0.68rem',
-                          padding: '1px 5px',
-                          borderRadius: '4px',
-                          background: 'rgba(255, 215, 0, 0.2)',
-                          fontWeight: 700,
-                          marginLeft: '2px',
-                        }}
-                      >
-                        PRO
-                      </span>
+                      <ImageIcon size={14} aria-hidden="true" />
+                      <span>Screenshot</span>
+                      <span className="acct-pro-tag">Premium</span>
                     </button>
                   )}
                 </div>
@@ -848,7 +897,7 @@ export default function DashboardClient({
                   type="button"
                   role="tab"
                   aria-selected={activeTab === 'boost'}
-                  className={`dashboard-tab dashboard-tab--boost${activeTab === 'boost' ? ' is-active' : ''}`}
+                  className={`dashboard-tab${activeTab === 'boost' ? ' is-active' : ''}`}
                   onClick={() => setTab(server.id, 'boost')}
                 >
                   <Sparkles size={15} aria-hidden="true" />
@@ -875,16 +924,19 @@ export default function DashboardClient({
                     <StatPill
                       icon={<Eye size={13} />}
                       label="Views"
+                      hue={METRIC_HUE.views}
                       value={server.views || 0}
                     />
                     <StatPill
                       icon={<Download size={13} />}
                       label="Installs"
+                      hue={METRIC_HUE.installs}
                       value={server.copies || 0}
                     />
                     <StatPill
                       icon={<Heart size={13} />}
                       label="Upvotes"
+                      hue={METRIC_HUE.upvotes}
                       value={server.upvotes || 0}
                     />
                     {summary && (
@@ -892,6 +944,7 @@ export default function DashboardClient({
                         <StatPill
                           icon={<Activity size={13} />}
                           label="API Hits"
+                          hue={METRIC_HUE.apiHits}
                           value={summary.totalApiHits}
                           accent
                           trend={summary.trend}
@@ -899,12 +952,14 @@ export default function DashboardClient({
                         <StatPill
                           icon={<Globe size={13} />}
                           label="Impressions"
+                          hue={METRIC_HUE.impressions}
                           value={summary.totalImpressions}
                           accent
                         />
                         <StatPill
                           icon={<MousePointerClick size={13} />}
                           label="Clicks"
+                          hue={METRIC_HUE.clicks}
                           value={summary.totalOutboundClicks || 0}
                           accent
                         />
@@ -912,6 +967,7 @@ export default function DashboardClient({
                           <StatPill
                             icon={<Percent size={13} />}
                             label="CTR"
+                            hue={METRIC_HUE.ctr}
                             value={`${summary.ctr}%`}
                             accent
                           />
@@ -1063,7 +1119,7 @@ export default function DashboardClient({
                     </div>
                     {server.featuredUntil &&
                       new Date(server.featuredUntil).getTime() > Date.now() && (
-                        <span className="dashboard-pill dashboard-pill--boost">
+                        <span className="dashboard-pill tint-pill hue-orange">
                           Active until{' '}
                           {new Date(server.featuredUntil).toLocaleDateString()}
                         </span>
@@ -1112,8 +1168,14 @@ export default function DashboardClient({
                       : '.'}
                   </p>
                   <div>
-                    <label style={fieldLabelStyle}>Server name</label>
+                    <label
+                      htmlFor={`edit-${server.id}-server-name`}
+                      style={fieldLabelStyle}
+                    >
+                      Server name
+                    </label>
                     <input
+                      id={`edit-${server.id}-server-name`}
                       className="form-input"
                       value={form.name}
                       onChange={(e) =>
@@ -1123,8 +1185,14 @@ export default function DashboardClient({
                     />
                   </div>
                   <div>
-                    <label style={fieldLabelStyle}>Description</label>
+                    <label
+                      htmlFor={`edit-${server.id}-description`}
+                      style={fieldLabelStyle}
+                    >
+                      Description
+                    </label>
                     <textarea
+                      id={`edit-${server.id}-description`}
                       className="form-input"
                       value={form.description}
                       onChange={(e) =>
@@ -1136,8 +1204,14 @@ export default function DashboardClient({
                   </div>
                   <div className="submit-optional-grid">
                     <div>
-                      <label style={fieldLabelStyle}>Category</label>
+                      <label
+                        htmlFor={`edit-${server.id}-category`}
+                        style={fieldLabelStyle}
+                      >
+                        Category
+                      </label>
                       <select
+                        id={`edit-${server.id}-category`}
                         className="form-input"
                         value={form.category}
                         onChange={(e) =>
@@ -1156,8 +1230,14 @@ export default function DashboardClient({
                       </select>
                     </div>
                     <div>
-                      <label style={fieldLabelStyle}>Website URL</label>
+                      <label
+                        htmlFor={`edit-${server.id}-website-url`}
+                        style={fieldLabelStyle}
+                      >
+                        Website URL
+                      </label>
                       <input
+                        id={`edit-${server.id}-website-url`}
                         className="form-input"
                         type="url"
                         value={form.websiteUrl}
@@ -1170,10 +1250,14 @@ export default function DashboardClient({
                   </div>
 
                   <div>
-                    <label style={fieldLabelStyle}>
+                    <label
+                      htmlFor={`edit-${server.id}-tags`}
+                      style={fieldLabelStyle}
+                    >
                       Tags (comma-separated, up to 5)
                     </label>
                     <input
+                      id={`edit-${server.id}-tags`}
                       className="form-input"
                       value={form.tagsInput}
                       onChange={(e) =>
@@ -1185,8 +1269,14 @@ export default function DashboardClient({
 
                   <div className="submit-optional-grid">
                     <div>
-                      <label style={fieldLabelStyle}>Pricing</label>
+                      <label
+                        htmlFor={`edit-${server.id}-pricing`}
+                        style={fieldLabelStyle}
+                      >
+                        Pricing
+                      </label>
                       <select
+                        id={`edit-${server.id}-pricing`}
                         className="form-input"
                         value={form.pricingModel}
                         onChange={(e) =>
@@ -1205,8 +1295,14 @@ export default function DashboardClient({
                       </select>
                     </div>
                     <div>
-                      <label style={fieldLabelStyle}>Auth</label>
+                      <label
+                        htmlFor={`edit-${server.id}-auth`}
+                        style={fieldLabelStyle}
+                      >
+                        Auth
+                      </label>
                       <select
+                        id={`edit-${server.id}-auth`}
                         className="form-input"
                         value={form.authType}
                         onChange={(e) =>
@@ -1222,8 +1318,14 @@ export default function DashboardClient({
                       </select>
                     </div>
                     <div>
-                      <label style={fieldLabelStyle}>Maintenance</label>
+                      <label
+                        htmlFor={`edit-${server.id}-maintenance`}
+                        style={fieldLabelStyle}
+                      >
+                        Maintenance
+                      </label>
                       <select
+                        id={`edit-${server.id}-maintenance`}
                         className="form-input"
                         value={form.maintenanceStatus}
                         onChange={(e) =>
@@ -1242,8 +1344,14 @@ export default function DashboardClient({
                       </select>
                     </div>
                     <div>
-                      <label style={fieldLabelStyle}>License</label>
+                      <label
+                        htmlFor={`edit-${server.id}-license`}
+                        style={fieldLabelStyle}
+                      >
+                        License
+                      </label>
                       <input
+                        id={`edit-${server.id}-license`}
                         className="form-input"
                         value={form.license}
                         onChange={(e) =>
@@ -1256,8 +1364,14 @@ export default function DashboardClient({
 
                   {form.pricingModel && form.pricingModel !== 'free' && (
                     <div>
-                      <label style={fieldLabelStyle}>Pricing notes</label>
+                      <label
+                        htmlFor={`edit-${server.id}-pricing-notes`}
+                        style={fieldLabelStyle}
+                      >
+                        Pricing notes
+                      </label>
                       <input
+                        id={`edit-${server.id}-pricing-notes`}
                         className="form-input"
                         value={form.pricingNotes}
                         onChange={(e) =>
@@ -1272,10 +1386,14 @@ export default function DashboardClient({
                   )}
 
                   <div>
-                    <label style={fieldLabelStyle}>
+                    <label
+                      htmlFor={`edit-${server.id}-support-community-url`}
+                      style={fieldLabelStyle}
+                    >
                       Support / community URL
                     </label>
                     <input
+                      id={`edit-${server.id}-support-community-url`}
                       className="form-input"
                       type="url"
                       value={form.supportUrl}
@@ -1287,8 +1405,14 @@ export default function DashboardClient({
                   </div>
 
                   <div>
-                    <label style={fieldLabelStyle}>Remote MCP endpoint</label>
+                    <label
+                      htmlFor={`edit-${server.id}-remote-mcp-endpoint`}
+                      style={fieldLabelStyle}
+                    >
+                      Remote MCP endpoint
+                    </label>
                     <input
+                      id={`edit-${server.id}-remote-mcp-endpoint`}
                       className="form-input"
                       type="url"
                       value={form.remoteEndpointUrl}
@@ -1308,7 +1432,7 @@ export default function DashboardClient({
                   </div>
 
                   <div>
-                    <label style={fieldLabelStyle}>Compatible clients</label>
+                    <span style={fieldLabelStyle}>Compatible clients</span>
                     <div className="submit-client-checks">
                       {MCP_CLIENTS.map((c) => {
                         const checked = form.compatibleClients.includes(c.slug);
@@ -1337,10 +1461,14 @@ export default function DashboardClient({
 
                   <div className="submit-optional-grid">
                     <div>
-                      <label style={fieldLabelStyle}>
+                      <label
+                        htmlFor={`edit-${server.id}-install-command`}
+                        style={fieldLabelStyle}
+                      >
                         Suggested install command
                       </label>
                       <input
+                        id={`edit-${server.id}-install-command`}
                         className="form-input"
                         value={form.suggestedInstallCommand}
                         onChange={(e) =>
@@ -1353,10 +1481,14 @@ export default function DashboardClient({
                       />
                     </div>
                     <div>
-                      <label style={fieldLabelStyle}>
+                      <label
+                        htmlFor={`edit-${server.id}-install-args`}
+                        style={fieldLabelStyle}
+                      >
                         Suggested install args
                       </label>
                       <input
+                        id={`edit-${server.id}-install-args`}
                         className="form-input"
                         value={form.suggestedInstallArgsInput}
                         onChange={(e) =>
@@ -1786,6 +1918,7 @@ function AdEditForm({
     targetUrl: pending.targetUrl ?? ad.targetUrl,
   });
   const [saving, setSaving] = useState(false);
+  const fieldId = useId();
   const update =
     (key: keyof EditableAdFields) => (e: { target: { value: string } }) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -1840,8 +1973,11 @@ function AdEditForm({
           : '.'}
       </p>
       <div>
-        <label style={fieldLabelStyle}>Headline</label>
+        <label htmlFor={`${fieldId}-headline`} style={fieldLabelStyle}>
+          Headline
+        </label>
         <input
+          id={`${fieldId}-headline`}
           className="form-input"
           value={form.title}
           onChange={update('title')}
@@ -1850,8 +1986,11 @@ function AdEditForm({
         />
       </div>
       <div>
-        <label style={fieldLabelStyle}>Description</label>
+        <label htmlFor={`${fieldId}-description`} style={fieldLabelStyle}>
+          Description
+        </label>
         <textarea
+          id={`${fieldId}-description`}
           className="form-input"
           value={form.description}
           onChange={update('description')}
@@ -1861,8 +2000,11 @@ function AdEditForm({
         />
       </div>
       <div>
-        <label style={fieldLabelStyle}>Button text</label>
+        <label htmlFor={`${fieldId}-button-text`} style={fieldLabelStyle}>
+          Button text
+        </label>
         <input
+          id={`${fieldId}-button-text`}
           className="form-input"
           value={form.ctaText}
           onChange={update('ctaText')}
@@ -1871,8 +2013,11 @@ function AdEditForm({
         />
       </div>
       <div>
-        <label style={fieldLabelStyle}>Destination URL</label>
+        <label htmlFor={`${fieldId}-destination-url`} style={fieldLabelStyle}>
+          Destination URL
+        </label>
         <input
+          id={`${fieldId}-destination-url`}
           className="form-input"
           type="url"
           value={form.targetUrl}
@@ -2284,12 +2429,15 @@ function StatPill({
   value,
   accent,
   trend,
+  hue,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number | string;
   accent?: boolean;
   trend?: 'up' | 'down' | 'flat';
+  /** Metric identity hue (same as the portfolio summary icons). */
+  hue?: Hue;
 }) {
   return (
     <div
@@ -2331,7 +2479,11 @@ function StatPill({
             textOverflow: 'ellipsis',
           }}
         >
-          {icon}
+          <span
+            className={`dashboard-stat-icon${hue ? ` hue-${hue} tint-text` : ''}`}
+          >
+            {icon}
+          </span>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {label}
           </span>
@@ -3142,6 +3294,18 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
       : null;
   const activePoint = activeIndex !== null ? points[activeIndex] : null;
 
+  // Map the pointer back into viewBox space and pick the day column under it.
+  // Columns are `step` wide, centred on each point, spanning the plot height.
+  const handleChartMouseMove = (e: ReactMouseEvent<SVGSVGElement>) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    if (box.width === 0 || box.height === 0) return;
+    const x = ((e.clientX - box.left) / box.width) * width;
+    const y = ((e.clientY - box.top) / box.height) * height;
+    if (y < paddingTop || y > paddingTop + chartHeight) return;
+    const index = Math.round((x - paddingX) / step);
+    if (index >= 0 && index < points.length) setHoverIndex(index);
+  };
+
   return (
     <div style={{ width: '100%' }}>
       {/* Chart Summary Bar */}
@@ -3164,12 +3328,12 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
         </div>
         <div>
           <span>Peak: </span>
-          <strong style={{ color: '#F43F5E' }}>
+          <strong style={{ color: 'var(--hue-amber)' }}>
             {peakHits.toLocaleString()}
           </strong>
           <span style={{ margin: '0 0.3rem', opacity: 0.4 }}>|</span>
           <span>Avg: </span>
-          <strong style={{ color: 'var(--accent-color)' }}>{avgHits}</strong>
+          <strong style={{ color: 'var(--hue-violet)' }}>{avgHits}</strong>
           /day
         </div>
       </div>
@@ -3177,24 +3341,27 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
       <div style={{ position: 'relative', width: '100%' }}>
         <svg
           viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={`Daily hits over the last ${data.length} days: ${totalHits.toLocaleString()} total, peak ${peakHits.toLocaleString()}, average ${avgHits} per day`}
           style={{
             width: '100%',
             height: 'auto',
             display: 'block',
             overflow: 'visible',
           }}
+          onMouseMove={handleChartMouseMove}
           onMouseLeave={() => setHoverIndex(null)}
         >
           <defs>
             <linearGradient id="chartGrad" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop
                 offset="0%"
-                stopColor="var(--accent-color)"
+                stopColor="var(--hue-violet)"
                 stopOpacity="0.35"
               />
               <stop
                 offset="100%"
-                stopColor="var(--accent-color)"
+                stopColor="var(--hue-violet)"
                 stopOpacity="0.0"
               />
             </linearGradient>
@@ -3232,7 +3399,7 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
           <path
             d={pathD}
             fill="none"
-            stroke="var(--accent-color)"
+            stroke="var(--hue-violet)"
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -3246,7 +3413,7 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
                 y1={paddingTop}
                 x2={activePoint.x}
                 y2={paddingTop + chartHeight}
-                stroke="rgba(var(--accent-rgb), 0.5)"
+                stroke="color-mix(in srgb, var(--hue-violet) 50%, transparent)"
                 strokeWidth="1.5"
                 strokeDasharray="2 2"
               />
@@ -3254,27 +3421,27 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
                 cx={activePoint.x}
                 cy={activePoint.y}
                 r="5"
-                fill="var(--accent-color)"
+                fill="var(--hue-violet)"
                 stroke="var(--bg-elevated, #0f172a)"
                 strokeWidth="2"
               />
             </>
           )}
 
-          {/* Invisible hover trigger columns for smooth mouse interaction */}
-          {points.map((p, i) => {
+          {/* Invisible hit-area columns; the svg's onMouseMove picks the
+              hovered one, these just give it a pointer surface and cursor. */}
+          {points.map((p) => {
             const colWidth = step;
             const xLeft = p.x - colWidth / 2;
             return (
               <rect
-                key={i}
+                key={p.x}
                 x={xLeft}
                 y={paddingTop}
                 width={colWidth}
                 height={chartHeight}
                 fill="transparent"
                 style={{ cursor: 'pointer' }}
-                onMouseEnter={() => setHoverIndex(i)}
               />
             );
           })}
@@ -3289,7 +3456,8 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
               left: `${Math.min(85, Math.max(15, (activePoint.x / width) * 100))}%`,
               transform: 'translateX(-50%)',
               background: 'rgba(15, 23, 42, 0.95)',
-              border: '1px solid rgba(var(--accent-rgb), 0.4)',
+              border:
+                '1px solid color-mix(in srgb, var(--hue-violet) 40%, transparent)',
               borderRadius: '6px',
               padding: '0.25rem 0.6rem',
               fontSize: '0.75rem',
@@ -3300,7 +3468,7 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
               zIndex: 10,
             }}
           >
-            <div style={{ fontWeight: 700, color: 'var(--accent-color)' }}>
+            <div style={{ fontWeight: 700, color: 'var(--hue-violet)' }}>
               {data[activeIndex].toLocaleString()} hits
             </div>
             <div

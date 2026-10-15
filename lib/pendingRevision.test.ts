@@ -42,7 +42,8 @@ describe('owner-editable remote endpoint', () => {
     expect(parsed?.proposed.remoteEndpointUrl).toBe(
       'https://example.dev/mcp/v2',
     );
-    expect(pendingRevisionToDbPatch(parsed!.proposed)).toEqual({
+    if (!parsed) throw new Error('expected the revision to parse');
+    expect(pendingRevisionToDbPatch(parsed.proposed)).toEqual({
       remoteEndpointUrl: 'https://example.dev/mcp/v2',
     });
   });

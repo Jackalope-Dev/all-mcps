@@ -1,4 +1,5 @@
 import { Shield } from 'lucide-react';
+import { statusHueClass } from '../../lib/palette';
 import type { Server } from '../../lib/servers';
 
 /**
@@ -32,32 +33,16 @@ export function VulnSignalCard({ server }: { server: Server }) {
       : null;
 
   return (
-    <div
-      className="surface"
-      style={{
-        padding: '1.35rem',
-        borderRadius: '14px',
-        border: '1px solid var(--border-color)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Shield
-          size={16}
-          style={{ color: 'var(--text-secondary)', flexShrink: 0 }}
-        />
-        <h3
-          style={{
-            fontSize: '0.95rem',
-            fontWeight: 700,
-            margin: 0,
-            color: 'var(--text-primary)',
-          }}
+    <div className="lst-card lst-stack">
+      <div className="lst-card-head">
+        {/* Status tile: green when the scan is clean, amber (never red) when
+            high-severity advisories are on record. */}
+        <span
+          className={`lst-card-icon tint-tile ${statusHueClass(highSeverityCount === 0 ? 'ok' : 'warn')}`}
         >
-          Supply-chain signal
-        </h3>
+          <Shield size={15} aria-hidden="true" />
+        </span>
+        <h3>Supply-chain signal</h3>
       </div>
 
       <p
@@ -82,8 +67,9 @@ export function VulnSignalCard({ server }: { server: Server }) {
         }}
       >
         <span
+          className={critical > 0 ? 'hue-indigo tint-text' : undefined}
           style={{
-            color: critical > 0 ? '#6366f1' : 'var(--text-secondary)',
+            color: critical > 0 ? undefined : 'var(--text-secondary)',
             fontWeight: critical > 0 ? 700 : 400,
           }}
         >

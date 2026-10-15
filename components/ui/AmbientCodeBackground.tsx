@@ -1,26 +1,19 @@
 import { AsciiCodeCanvas } from './AsciiCodeCanvas';
 
 /**
- * Decorative backdrop: Firecrawl graph-paper grid + [ TAG ] labels + ASCII flame.
- * First child of a `position: relative; overflow: hidden` section.
+ * Decorative hero backdrop: a faint graph-paper grid, the brand ASCII flame
+ * kept low and quiet, and a fade into the page background. First child of a
+ * `position: relative; isolation: isolate` section (styles in
+ * app/styles/home.css).
  */
-const TAGS = [
-  { text: '[ STDIO ]', className: 'ambient-tag-tr' },
-  { text: '[ TOOLS/LIST ]', className: 'ambient-tag-bl' },
-  { text: '[ .JSON ]', className: 'ambient-tag-br' },
-];
-
 export function AmbientCodeBackground() {
   return (
-    <div className="ambient-code-bg" aria-hidden="true">
-      <div className="ambient-grid" />
-      <AsciiCodeCanvas opacity={0.72} density={11} />
-      {TAGS.map((tag) => (
-        <span key={tag.text} className={`ambient-tag ${tag.className}`}>
-          {tag.text}
-        </span>
-      ))}
-      <div className="ambient-code-fade" />
+    <div className="home-ambient" aria-hidden="true">
+      <div className="home-ambient-grid" />
+      <div className="home-ambient-flame">
+        <AsciiCodeCanvas opacity={0.5} density={12} />
+      </div>
+      <div className="home-ambient-glow" />
     </div>
   );
 }

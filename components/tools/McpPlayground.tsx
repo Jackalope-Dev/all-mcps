@@ -1,22 +1,53 @@
 'use client';
 
-import { Check, Copy, RefreshCw, Send, Sparkles, Terminal } from 'lucide-react';
+import { Loader2, Send, Terminal } from 'lucide-react';
 import { useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
+import { CodePanel } from './CodePanel';
+
+type Method =
+  | 'initialize'
+  | 'tools/list'
+  | 'search_mcp_servers'
+  | 'get_mcp_install_config'
+  | 'list_mcp_categories';
+
+const METHODS: Array<{ id: Method; label: string; hint: string }> = [
+  {
+    id: 'search_mcp_servers',
+    label: 'search_mcp_servers',
+    hint: 'tools/call — search the directory',
+  },
+  {
+    id: 'get_mcp_install_config',
+    label: 'get_mcp_install_config',
+    hint: 'tools/call — install config for a server',
+  },
+  {
+    id: 'list_mcp_categories',
+    label: 'list_mcp_categories',
+    hint: 'tools/call — list categories',
+  },
+  { id: 'tools/list', label: 'tools/list', hint: 'List the server’s tools' },
+  { id: 'initialize', label: 'initialize', hint: 'Protocol handshake' },
+];
+
+const DEFAULT_ENDPOINT = 'https://allmcps.com/api/mcp';
+
+interface ResponseState {
+  body: string;
+  ok: boolean;
+  status: number | null;
+  ms: number;
+}
 
 export function McpPlayground() {
-  const [endpointUrl, setEndpointUrl] = useState('https://allmcps.com/api/mcp');
-  const [selectedMethod, setSelectedMethod] = useState<
-    | 'initialize'
-    | 'tools/list'
-    | 'search_mcp_servers'
-    | 'get_mcp_install_config'
-    | 'list_mcp_categories'
-  >('search_mcp_servers');
+  const [endpointUrl, setEndpointUrl] = useState(DEFAULT_ENDPOINT);
+  const [selectedMethod, setSelectedMethod] =
+    useState<Method>('search_mcp_servers');
   const [searchQuery, setSearchQuery] = useState('postgres');
   const [loading, setLoading] = useState(false);
-  const [responseOutput, setResponseOutput] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [response, setResponse] = useState<ResponseState | null>(null);
 
   const getJsonRpcPayload = () => {
     switch (selectedMethod) {
@@ -73,23 +104,42 @@ export function McpPlayground() {
     }
   };
 
+  const urlValid = /^https?:\/\/\S+$/i.test(endpointUrl.trim());
+  const needsQuery =
+    selectedMethod === 'search_mcp_servers' ||
+    selectedMethod === 'get_mcp_install_config';
+
   const handleExecute = async () => {
+    if (!urlValid || loading) return;
     trackFeatureUse('mcp_playground', { method: selectedMethod });
     setLoading(true);
-    setResponseOutput(null);
+    const started = performance.now();
     try {
       const payload = getJsonRpcPayload();
-      const res = await fetch(endpointUrl, {
+      const res = await fetch(endpointUrl.trim(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      const data = await res.json();
-      setResponseOutput(JSON.stringify(data, null, 2));
+      const text = await res.text();
+      let body = text;
+      let rpcError = false;
+      try {
+        const data = JSON.parse(text);
+        rpcError = !!data?.error || !!data?.result?.isError;
+        body = JSON.stringify(data, null, 2);
+      } catch {
+        // Not JSON (SSE stream, HTML error page) — show it raw.
+      }
+      setResponse({
+        body,
+        ok: res.ok && !rpcError,
+        status: res.status,
+        ms: Math.round(performance.now() - started),
+      });
     } catch (e: any) {
-      setResponseOutput(
-        JSON.stringify(
+      setResponse({
+        body: JSON.stringify(
           {
             jsonrpc: '2.0',
             id: null,
@@ -101,246 +151,169 @@ export function McpPlayground() {
           null,
           2,
         ),
-      );
+        ok: false,
+        status: null,
+        ms: Math.round(performance.now() - started),
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyResponse = () => {
-    if (responseOutput) {
-      navigator.clipboard.writeText(responseOutput);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      {/* Controls Bar */}
-      <div
-        className="surface"
-        style={{
-          padding: '1.25rem',
-          borderRadius: '16px',
-          border: '1px solid var(--border-color)',
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '1rem',
-            marginBottom: '1rem',
+    <div className="tl-workspace tl-workspace--wide-out">
+      <section className="tl-pane" aria-labelledby="pg-req">
+        <div className="tl-pane-head">
+          <h2 id="pg-req" className="tl-pane-title">
+            <span className="tl-step">1</span> Build a request
+          </h2>
+        </div>
+        <form
+          className="tl-pane tl-pane--flush"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleExecute();
           }}
         >
-          <div>
-            <label
-              htmlFor="playground-endpoint-url"
-              style={{
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: 'var(--text-secondary)',
-                display: 'block',
-                marginBottom: '0.35rem',
-              }}
-            >
-              MCP Endpoint URL
-            </label>
+          <label className="tl-field">
+            <span className="tl-label">MCP endpoint URL</span>
             <input
-              id="playground-endpoint-url"
-              type="text"
-              className="form-input"
+              type="url"
+              className="tl-input"
               value={endpointUrl}
               onChange={(e) => setEndpointUrl(e.target.value)}
-              placeholder="https://..."
+              placeholder="https://…"
+              aria-invalid={!urlValid || undefined}
+              spellCheck={false}
             />
-          </div>
-
-          <div>
-            <label
-              htmlFor="playground-method"
-              style={{
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: 'var(--text-secondary)',
-                display: 'block',
-                marginBottom: '0.35rem',
-              }}
-            >
-              JSON-RPC Method / Action
-            </label>
-            <select
-              id="playground-method"
-              className="form-input"
-              value={selectedMethod}
-              onChange={(e: any) => setSelectedMethod(e.target.value)}
-            >
-              <option value="search_mcp_servers">
-                search_mcp_servers (Directory Search)
-              </option>
-              <option value="tools/list">
-                tools/list (List Remote MCP Tools)
-              </option>
-              <option value="initialize">
-                initialize (Protocol Handshake)
-              </option>
-              <option value="get_mcp_install_config">
-                get_mcp_install_config
-              </option>
-              <option value="list_mcp_categories">list_mcp_categories</option>
-            </select>
-          </div>
-
-          {selectedMethod === 'search_mcp_servers' && (
-            <div>
-              <label
-                htmlFor="playground-search-query"
+            {!urlValid ? (
+              <span className="tl-hint" style={{ color: 'var(--tl-err)' }}>
+                Enter a full http(s):// URL.
+              </span>
+            ) : endpointUrl !== DEFAULT_ENDPOINT ? (
+              <button
+                type="button"
+                className="tl-hint"
                 style={{
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  display: 'block',
-                  marginBottom: '0.35rem',
+                  background: 'none',
+                  border: 0,
+                  padding: 0,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: 'var(--accent-color)',
                 }}
+                onClick={() => setEndpointUrl(DEFAULT_ENDPOINT)}
               >
-                Search Query (`query`)
-              </label>
+                Reset to the AllMCPs server
+              </button>
+            ) : (
+              <span className="tl-hint">
+                Defaults to the AllMCPs MCP server so you can try it now.
+              </span>
+            )}
+          </label>
+
+          <fieldset
+            className="tl-field"
+            style={{ border: 0, margin: 0, padding: 0 }}
+          >
+            <legend className="tl-label" style={{ marginBottom: '0.35rem' }}>
+              Method
+            </legend>
+            <div className="pg-methods">
+              {METHODS.map((m) => (
+                <label
+                  key={m.id}
+                  className={`pg-method ${selectedMethod === m.id ? 'is-active' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="pg-method"
+                    value={m.id}
+                    checked={selectedMethod === m.id}
+                    onChange={() => setSelectedMethod(m.id)}
+                  />
+                  <span className="pg-method-name">{m.label}</span>
+                  <span className="pg-method-hint">{m.hint}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          {needsQuery ? (
+            <label className="tl-field">
+              <span className="tl-label">
+                {selectedMethod === 'search_mcp_servers'
+                  ? 'Search query'
+                  : 'Server name'}
+              </span>
               <input
-                id="playground-search-query"
                 type="text"
-                className="form-input"
+                className="tl-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="e.g. postgres, github, slack"
               />
-            </div>
-          )}
-        </div>
+            </label>
+          ) : null}
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleExecute}
-          disabled={loading}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-        >
-          {loading ? (
-            <RefreshCw size={16} className="animate-spin" />
-          ) : (
-            <Send size={16} />
-          )}
-          <span>
-            {loading ? 'Sending Request...' : 'Send JSON-RPC Request'}
-          </span>
-        </button>
-      </div>
-
-      {/* Editor & Response Inspector */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {/* Request Pane */}
-        <div>
-          <h2
-            style={{
-              fontSize: '1rem',
-              fontWeight: 700,
-              marginBottom: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <Terminal size={16} style={{ color: 'var(--accent-color)' }} />{' '}
-            Outgoing Request (JSON-RPC 2.0)
-          </h2>
-          <pre
-            style={{
-              background: 'var(--bg-muted)',
-              padding: '1rem',
-              borderRadius: '12px',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem',
-              overflowX: 'auto',
-              margin: 0,
-              minHeight: '280px',
-            }}
-          >
-            <code>{JSON.stringify(getJsonRpcPayload(), null, 2)}</code>
-          </pre>
-        </div>
-
-        {/* Response Inspector Pane */}
-        <div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '0.5rem',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: '1rem',
-                fontWeight: 700,
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
+          <div className="tl-actions">
+            <button
+              type="submit"
+              className="btn btn-primary btn-md"
+              disabled={loading || !urlValid}
             >
-              <Sparkles size={16} style={{ color: 'var(--accent-color)' }} />{' '}
-              Server Response Inspector
-            </h2>
-            {responseOutput && (
-              <button
-                type="button"
-                className="btn btn-sm btn-secondary"
-                onClick={handleCopyResponse}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
-            )}
+              {loading ? (
+                <Loader2 size={16} className="tl-spin" aria-hidden="true" />
+              ) : (
+                <Send size={16} aria-hidden="true" />
+              )}
+              {loading ? 'Sending…' : 'Send request'}
+            </button>
           </div>
-          <pre
-            style={{
-              background: 'var(--bg-muted)',
-              padding: '1rem',
-              borderRadius: '12px',
-              border: '1px solid var(--border-color)',
-              color: responseOutput?.includes('"error"')
-                ? '#ef4444'
-                : '#059669',
-              fontSize: '0.85rem',
-              overflowX: 'auto',
-              margin: 0,
-              minHeight: '280px',
-            }}
-          >
-            <code>
-              {responseOutput ||
-                '// Click "Send JSON-RPC Request" to execute against the endpoint'}
-            </code>
-          </pre>
+        </form>
+
+        <CodePanel
+          title="Request · JSON-RPC 2.0"
+          code={JSON.stringify(getJsonRpcPayload(), null, 2)}
+        />
+      </section>
+
+      <section
+        className="tl-pane tl-sticky"
+        aria-labelledby="pg-res"
+        aria-live="polite"
+        aria-busy={loading}
+      >
+        <div className="tl-pane-head">
+          <h2 id="pg-res" className="tl-pane-title">
+            <span className="tl-step">2</span> Response
+          </h2>
+          {response ? (
+            <span
+              className={`tl-status ${response.ok ? 'tl-status--ok' : 'tl-status--err'}`}
+              style={{ color: response.ok ? 'var(--tl-ok)' : 'var(--tl-err)' }}
+            >
+              {response.status ?? 'Network error'} · {response.ms} ms
+            </span>
+          ) : null}
         </div>
-      </div>
+        <CodePanel
+          title={response ? 'response.json' : 'Waiting for a request'}
+          code={response?.body ?? ''}
+          maxHeight="36rem"
+          className={loading ? 'is-loading' : ''}
+          empty={
+            <>
+              <Terminal size={22} aria-hidden="true" />
+              <span>
+                Pick a method and press <strong>Send request</strong>. The raw
+                JSON-RPC reply shows up here.
+              </span>
+            </>
+          }
+        />
+      </section>
     </div>
   );
 }

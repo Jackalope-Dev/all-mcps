@@ -288,6 +288,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
       {/* Filter Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
         <button
+          type="button"
           onClick={() => setFilter('pending')}
           className={`btn btn-sm ${filter === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
           style={{ gap: '6px' }}
@@ -295,6 +296,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
           Pending Review ({pendingAds.length})
         </button>
         <button
+          type="button"
           onClick={() => setFilter('edits')}
           className={`btn btn-sm ${filter === 'edits' ? 'btn-primary' : 'btn-secondary'}`}
           style={{ gap: '6px' }}
@@ -302,6 +304,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
           Edits ({editAds.length})
         </button>
         <button
+          type="button"
           onClick={() => setFilter('active')}
           className={`btn btn-sm ${filter === 'active' ? 'btn-primary' : 'btn-secondary'}`}
           style={{ gap: '6px' }}
@@ -309,6 +312,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
           Active ({activeAds.length})
         </button>
         <button
+          type="button"
           onClick={() => setFilter('all')}
           className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
           style={{ gap: '6px' }}
@@ -573,6 +577,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                     {ad.status === 'pending_approval' && (
                       <>
                         <button
+                          type="button"
                           onClick={() => handleAction(ad.id, 'approve')}
                           disabled={isLoading || !ad.stripePaymentIntentId}
                           className="btn btn-sm btn-primary"
@@ -586,6 +591,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                           <CheckCircle2 size={13} /> Approve &amp; Run
                         </button>
                         <button
+                          type="button"
                           onClick={() => {
                             const reason = prompt('Rejection reason:');
                             if (reason !== null)
@@ -606,6 +612,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
 
                     {ad.status === 'active' && (
                       <button
+                        type="button"
                         onClick={() => {
                           const reason = prompt(
                             'Reason for pausing (optional — included in the advertiser email):',
@@ -627,6 +634,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
 
                     {ad.status === 'paused' && (
                       <button
+                        type="button"
                         onClick={() => handleAction(ad.id, 'resume')}
                         disabled={isLoading}
                         className="btn btn-sm btn-primary"
@@ -640,6 +648,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                       ad.status !== 'pending_approval' &&
                       ad.status !== 'rejected' && (
                         <button
+                          type="button"
                           onClick={() => {
                             const bonus = prompt(
                               'Enter bonus impressions to add (e.g. 5000):',
@@ -659,6 +668,7 @@ export function AdminAdsControl({ initialAds }: AdminAdsControlProps) {
                       )}
 
                     <button
+                      type="button"
                       onClick={() => {
                         if (confirm('Delete this ad campaign entirely?'))
                           handleAction(ad.id, 'delete');

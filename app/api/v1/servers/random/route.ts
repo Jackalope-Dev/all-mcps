@@ -60,8 +60,9 @@ export async function GET(request: Request) {
     const byCategory = new Map<string, typeof pool>();
     for (const s of pool) {
       const cat = s.category || 'Developer Tools';
-      if (!byCategory.has(cat)) byCategory.set(cat, []);
-      byCategory.get(cat)!.push(s);
+      const bucket = byCategory.get(cat);
+      if (bucket) bucket.push(s);
+      else byCategory.set(cat, [s]);
     }
 
     const categories = Array.from(byCategory.keys());
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
 
     for (const cat of shuffledCats) {
       if (stackResult.length >= count) break;
-      const catServers = byCategory.get(cat)!;
+      const catServers = byCategory.get(cat) ?? [];
       const picked = catServers[Math.floor(Math.random() * catServers.length)];
       if (picked && !stackResult.some((s) => s.id === picked.id)) {
         stackResult.push(picked);

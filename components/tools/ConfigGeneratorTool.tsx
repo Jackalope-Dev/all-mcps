@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { ExternalLink, PackagePlus, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { trackFeatureUse } from '../../lib/gtag';
 import {
   CLIENT_CONFIG_PATHS,
-  CLIENT_FORMAT_LABELS,
   type ClientFormat,
   type ServerRow,
   serializeConfig,
@@ -13,13 +13,17 @@ import {
   isRemoteHint,
   parseInstallHint,
 } from '../../lib/tools/parseInstallHint';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
-import { CopyBlock } from '../ui/CopyBlock';
-import { Input } from '../ui/Input';
+import { CodePanel } from './CodePanel';
 import { type DirectoryServerHit, ServerPicker } from './ServerPicker';
 
 const STORAGE_KEY = 'allmcps-config-generator-rows';
+
+const FORMATS: Array<{ id: ClientFormat; label: string; file: string }> = [
+  { id: 'claude', label: 'Claude', file: 'claude_desktop_config.json' },
+  { id: 'cursor', label: 'Cursor', file: 'mcp.json' },
+  { id: 'vscode', label: 'VS Code', file: 'mcp.json' },
+  { id: 'windsurf', label: 'Windsurf', file: 'mcp_config.json' },
+];
 
 function newRow(partial: Partial<ServerRow> = {}): ServerRow {
   return {
@@ -38,6 +42,21 @@ function slugify(name: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 }
+
+function parseEnvInput(value: string): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const pair of value.split(',')) {
+    const [k, ...rest] = pair.trim().split('=');
+    if (k) env[k.trim()] = rest.join('=').trim();
+  }
+  return env;
+}
+
+const EXAMPLE_ROW: Partial<ServerRow> = {
+  name: 'filesystem',
+  command: 'npx',
+  args: ['-y', '@modelcontextprotocol/server-filesystem', '~/Documents'],
+};
 
 export function ConfigGeneratorTool() {
   const [rows, setRows] = useState<ServerRow[]>([]);
@@ -100,170 +119,232 @@ export function ConfigGeneratorTool() {
     setRows((r) => r.filter((row) => row.id !== id));
   }
 
-  function parseEnvInput(value: string): Record<string, string> {
-    const env: Record<string, string> = {};
-    value.split(',').forEach((pair) => {
-      const [k, ...rest] = pair.trim().split('=');
-      if (k) env[k] = rest.join('=');
-    });
-    return env;
-  }
-
   const configJson = serializeConfig(rows, format);
+  const active = FORMATS.find((f) => f.id === format) ?? FORMATS[0];
+  const addedIds = useMemo(
+    () =>
+      new Set(
+        rows.map((r) => r.sourceServerId).filter((x): x is string => !!x),
+      ),
+    [rows],
+  );
+  const unnamed = rows.filter((r) => !r.name.trim()).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <section>
-        <h2 className="text-section" style={{ marginBottom: '1rem' }}>
-          1. Add servers
-        </h2>
-        <div style={{ marginBottom: '1rem' }}>
-          <ServerPicker onSelect={addFromDirectory} />
+    <div className="tl-workspace">
+      <section className="tl-pane" aria-labelledby="cg-add">
+        <div className="tl-pane-head">
+          <h2 id="cg-add" className="tl-pane-title">
+            <span className="tl-step">1</span> Add servers
+          </h2>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setRows((r) => [...r, newRow()])}
+          >
+            <Plus size={14} aria-hidden="true" /> Custom server
+          </button>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setRows((r) => [...r, newRow()])}
-        >
-          + Add custom server
-        </Button>
+        <ServerPicker
+          onSelect={addFromDirectory}
+          addedIds={addedIds}
+          placeholder="Search 30,000+ servers — e.g. github, postgres"
+        />
+
+        {rows.length === 0 ? (
+          <div className="tl-empty">
+            <PackagePlus size={22} aria-hidden="true" />
+            <p className="tl-empty-title">No servers yet</p>
+            <p style={{ margin: 0 }}>
+              Search the directory above, add a custom server, or start from an
+              example.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setRows([newRow(EXAMPLE_ROW)])}
+            >
+              Load an example
+            </button>
+          </div>
+        ) : (
+          <ul className="tl-rows">
+            {rows.map((row) => (
+              <RowEditor
+                key={row.id}
+                row={row}
+                onChange={(patch) => updateRow(row.id, patch)}
+                onRemove={() => removeRow(row.id)}
+              />
+            ))}
+          </ul>
+        )}
       </section>
 
-      {rows.length > 0 && (
-        <section>
-          <h2 className="text-section" style={{ marginBottom: '1rem' }}>
-            2. Review &amp; edit
+      <section className="tl-pane tl-sticky" aria-labelledby="cg-out">
+        <div className="tl-pane-head">
+          <h2 id="cg-out" className="tl-pane-title">
+            <span className="tl-step">2</span> Copy into your client
           </h2>
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-          >
-            {rows.map((row) => (
-              <Card key={row.id} style={{ padding: '1.25rem' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  {row.sourceServerId ? (
-                    <a
-                      href={`/mcp/${row.sourceServerId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        fontSize: '0.8rem',
-                        color: 'var(--accent-color)',
-                      }}
-                    >
-                      View directory listing ↗
-                    </a>
-                  ) : (
-                    <span />
-                  )}
-                  <button
-                    onClick={() => removeRow(row.id)}
-                    aria-label="Remove server"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <Input
-                  id={`${row.id}-name`}
-                  label="Server name (config key)"
-                  value={row.name}
-                  onChange={(e) => updateRow(row.id, { name: e.target.value })}
-                />
-                <Input
-                  id={`${row.id}-command`}
-                  label="Command"
-                  placeholder="npx"
-                  value={row.command || ''}
-                  onChange={(e) =>
-                    updateRow(row.id, { command: e.target.value })
-                  }
-                  disabled={!!row.url}
-                />
-                <Input
-                  id={`${row.id}-args`}
-                  label="Args (space-separated)"
-                  placeholder="-y @scope/package"
-                  value={(row.args || []).join(' ')}
-                  onChange={(e) =>
-                    updateRow(row.id, {
-                      args: e.target.value.split(' ').filter(Boolean),
-                    })
-                  }
-                  disabled={!!row.url}
-                />
-                <Input
-                  id={`${row.id}-url`}
-                  label="Remote URL (leave blank for a local/stdio server)"
-                  placeholder="https://example.com/mcp"
-                  value={row.url || ''}
-                  onChange={(e) => updateRow(row.id, { url: e.target.value })}
-                />
-                <Input
-                  id={`${row.id}-env`}
-                  label="Env vars (KEY=value, comma-separated)"
-                  placeholder="API_KEY=xxx, OTHER=yyy"
-                  value={Object.entries(row.env || {})
-                    .map(([k, v]) => `${k}=${v}`)
-                    .join(', ')}
-                  onChange={(e) =>
-                    updateRow(row.id, { env: parseEnvInput(e.target.value) })
-                  }
-                />
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section>
-        <h2 className="text-section" style={{ marginBottom: '1rem' }}>
-          3. Choose your client &amp; copy
-        </h2>
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.5rem',
-            flexWrap: 'wrap',
-            marginBottom: '1rem',
-          }}
-        >
-          {(Object.keys(CLIENT_FORMAT_LABELS) as ClientFormat[]).map((f) => (
+        </div>
+        <fieldset className="segmented" aria-label="Client">
+          {FORMATS.map((f) => (
             <button
-              key={f}
-              onClick={() => setFormat(f)}
-              className={`btn btn-sm ${format === f ? 'btn-primary' : 'btn-secondary'}`}
+              key={f.id}
+              type="button"
+              aria-pressed={format === f.id}
+              onClick={() => setFormat(f.id)}
             >
-              {CLIENT_FORMAT_LABELS[f]}
+              {f.label}
             </button>
           ))}
-        </div>
-        <p
-          style={{
-            fontSize: '0.85rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.75rem',
-          }}
-        >
-          Paste into: {CLIENT_CONFIG_PATHS[format].join(' · ')}
-        </p>
-        <CopyBlock
+        </fieldset>
+        <CodePanel
+          title={active.file}
           code={configJson}
-          title={CLIENT_CONFIG_PATHS[format][0]}
-          language="json"
+          downloadName={active.file}
+          downloadMime="application/json"
+          maxHeight="32rem"
+          snippetType="install_command"
+          onCopied={() =>
+            trackFeatureUse('config_generator', {
+              action: 'copy',
+              format,
+              count: rows.length,
+            })
+          }
         />
+        {unnamed > 0 ? (
+          <p className="tl-hint" role="status">
+            {unnamed === 1
+              ? '1 server has no name and is left out of the config.'
+              : `${unnamed} servers have no name and are left out of the config.`}
+          </p>
+        ) : null}
+        <p className="tl-hint">
+          Paste into{' '}
+          {CLIENT_CONFIG_PATHS[format].map((p, i) => (
+            <span key={p}>
+              {i > 0 ? ' · ' : ''}
+              <code>{p}</code>
+            </span>
+          ))}
+          , then fully restart the client.
+        </p>
       </section>
     </div>
+  );
+}
+
+function RowEditor({
+  row,
+  onChange,
+  onRemove,
+}: {
+  row: ServerRow;
+  onChange: (patch: Partial<ServerRow>) => void;
+  onRemove: () => void;
+}) {
+  // Keep the raw text for list-ish fields locally so typing a space or comma
+  // isn't swallowed by the parse → re-join round trip.
+  const [argsText, setArgsText] = useState((row.args || []).join(' '));
+  const [envText, setEnvText] = useState(
+    Object.entries(row.env || {})
+      .map(([k, v]) => `${k}=${v}`)
+      .join(', '),
+  );
+  const isRemote = !!row.url;
+  const nameMissing = !row.name.trim();
+
+  return (
+    <li className="tl-row">
+      <div className="tl-row-head">
+        <span className="tl-row-title">{row.name || 'Untitled server'}</span>
+        {row.sourceServerId ? (
+          <a
+            href={`/mcp/${row.sourceServerId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="tl-icon-btn"
+            aria-label="View directory listing (opens in new tab)"
+            title="View directory listing"
+          >
+            <ExternalLink size={15} />
+          </a>
+        ) : null}
+        <button
+          type="button"
+          className="tl-icon-btn tl-icon-btn--danger"
+          onClick={onRemove}
+          aria-label={`Remove ${row.name || 'server'}`}
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+      <div className="tl-grid-2">
+        <label className="tl-field">
+          <span className="tl-label">Name (config key)</span>
+          <input
+            className="tl-input is-mono"
+            value={row.name}
+            aria-invalid={nameMissing || undefined}
+            placeholder="my-server"
+            onChange={(e) => onChange({ name: e.target.value })}
+          />
+        </label>
+        <label className="tl-field">
+          <span className="tl-label">
+            Remote URL <span className="tl-label-opt">(HTTP servers)</span>
+          </span>
+          <input
+            className="tl-input"
+            type="url"
+            value={row.url || ''}
+            placeholder="https://example.com/mcp"
+            onChange={(e) => onChange({ url: e.target.value })}
+          />
+        </label>
+        <label className="tl-field">
+          <span className="tl-label">Command</span>
+          <input
+            className="tl-input is-mono"
+            value={row.command || ''}
+            placeholder="npx"
+            disabled={isRemote}
+            onChange={(e) => onChange({ command: e.target.value })}
+          />
+        </label>
+        <label className="tl-field">
+          <span className="tl-label">
+            Args <span className="tl-label-opt">(space-separated)</span>
+          </span>
+          <input
+            className="tl-input is-mono"
+            value={argsText}
+            placeholder="-y @scope/package"
+            disabled={isRemote}
+            onChange={(e) => {
+              setArgsText(e.target.value);
+              onChange({ args: e.target.value.split(/\s+/).filter(Boolean) });
+            }}
+          />
+        </label>
+      </div>
+      <label className="tl-field" style={{ marginTop: '0.75rem' }}>
+        <span className="tl-label">
+          Env vars{' '}
+          <span className="tl-label-opt">(KEY=value, comma-separated)</span>
+        </span>
+        <input
+          className="tl-input is-mono"
+          value={envText}
+          placeholder="API_KEY=xxx, OTHER=yyy"
+          onChange={(e) => {
+            setEnvText(e.target.value);
+            onChange({ env: parseEnvInput(e.target.value) });
+          }}
+        />
+      </label>
+    </li>
   );
 }

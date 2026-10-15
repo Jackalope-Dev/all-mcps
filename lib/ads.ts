@@ -68,7 +68,8 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
   directory_inline: {
     id: 'directory_inline',
     name: 'Directory Native Card',
-    tagline: 'Inlined natively in the MCP directory grid (every ~12 cards)',
+    tagline:
+      'Inlined natively in the MCP directory results (one slot per list)',
     description:
       'Featured directly inside the main catalog and search results. Reaches high-intent developers browsing for tools.',
     aspectRatioHint: 'Square 1:1 logo (64x64 or higher)',
@@ -88,7 +89,7 @@ export const AD_PLACEMENTS: Record<AdPlacement, PlacementMeta> = {
     name: 'Blog & Guide In-Text Unit',
     tagline: 'Clean horizontal banner inside technical tutorials and guides',
     description:
-      'High engagement placement embedded directly into long-form guides and tutorials read by engineering leaders.',
+      'Placement embedded directly into long-form guides and technical tutorials.',
     aspectRatioHint: 'Horizontal or square icon',
     estimatedDailyViews: 8000,
   },
@@ -119,7 +120,7 @@ export const CPM_TIERS = [
     cpmCents: 1000, // $10.00 / 1k impressions ($0.01 / imp)
     weightMultiplier: 2.0,
     badge: '2x Priority',
-    tagline: 'Double delivery probability during active traffic hours',
+    tagline: 'Twice the rotation weight of Standard when campaigns compete',
   },
   {
     id: 'blitz',
@@ -127,7 +128,7 @@ export const CPM_TIERS = [
     cpmCents: 2000, // $20.00 / 1k impressions ($0.02 / imp)
     weightMultiplier: 4.0,
     badge: '4x Max Speed',
-    tagline: 'Top bidding weight for product launches and hackathons',
+    tagline: 'Four times the Standard weight, for launches and hackathons',
   },
 ] as const;
 

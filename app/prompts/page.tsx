@@ -1,15 +1,16 @@
-import { ArrowRight, ChevronRight, Layers } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Badge } from '@/components/ui/Badge';
-import { Card } from '@/components/ui/Card';
+import type React from 'react';
+import { TopicFilter } from '@/components/content/TopicFilter';
+import { workflowIdentity } from '@/components/content/workflowIdentity';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { WORKFLOW_PROMPTS } from '@/lib/prompts';
+import { WORKFLOW_PROMPTS, workflowCategoryId } from '@/lib/prompts';
 
 export const metadata: Metadata = {
   title: 'Agent Multi-MCP Workflow & System Prompt Library',
   description:
-    'Curated multi-MCP agent workflows with copyable system prompts and combined claude_desktop_config.json for Full-Stack, Research, DevOps, and Data Science.',
+    'Copy-ready multi-MCP agent workflows: PR review, Sentry triage, Playwright tests, Figma to code, Supabase migrations, incident response, SEO audits and more.',
   alternates: { canonical: 'https://allmcps.com/prompts' },
   openGraph: {
     images: [
@@ -73,170 +74,137 @@ export default function PromptsHubPage() {
     ],
   };
 
+  const [featured, ...rest] = WORKFLOW_PROMPTS;
+  const featuredId = featured ? workflowIdentity(featured.slug) : null;
+  // Category chips in first-appearance order, counted over the grid (the
+  // featured workflow sits above the filter, like the guides hub).
+  const categories = new Map<string, { label: string; count: number }>();
+  for (const w of rest) {
+    const id = workflowCategoryId(w.category);
+    const entry = categories.get(id);
+    if (entry) entry.count += 1;
+    else categories.set(id, { label: w.category, count: 1 });
+  }
+  const topics = [...categories].map(([id, c]) => ({ id, ...c }));
+  const FeaturedIcon = featuredId?.icon;
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <main
-        className="container page-shell"
-        style={{
-          paddingTop: 'var(--space-8)',
-          paddingBottom: 'var(--space-16)',
-        }}
-      >
-        <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
-          <ol className="breadcrumb">
-            <li>
-              <Link href="/">Home</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">Prompt Library</li>
-          </ol>
-        </nav>
+      <main className="page-shell content-page content-hub">
+        <div className="page-shell-inner">
+          <header className="content-hub-head animate-in">
+            <nav aria-label="Breadcrumb">
+              <ol className="crumbs">
+                <li>
+                  <Link href="/">Home</Link>
+                </li>
+                <li>
+                  <span aria-current="page">Prompt Library</span>
+                </li>
+              </ol>
+            </nav>
+            <h1 className="content-hub-title">
+              Agent Multi-MCP Workflow &amp; Prompt Library
+            </h1>
+            <p className="content-hub-lede">
+              Combine multiple Model Context Protocol (MCP) servers into
+              powerful multi-tool agent workflows. Get copyable system prompts
+              and combined configuration JSONs for your favorite AI client.
+            </p>
+          </header>
 
-        <section
-          style={{
-            maxWidth: '800px',
-            margin: '0 auto 3rem',
-            textAlign: 'center',
-          }}
-        >
-          <h1 className="text-display" style={{ marginBottom: '1rem' }}>
-            Agent Multi-MCP{' '}
-            <span className="text-brand-gradient">
-              Workflow &amp; Prompt Library
-            </span>
-          </h1>
-          <p className="text-lead" style={{ margin: '0 auto' }}>
-            Combine multiple Model Context Protocol (MCP) servers into powerful
-            multi-tool agent workflows. Get copyable system prompts and combined
-            configuration JSONs for your favorite AI client.
-          </p>
-        </section>
-
-        <ul
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '1.5rem',
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-          }}
-        >
-          {WORKFLOW_PROMPTS.map((w) => (
-            <li key={w.slug} style={{ listStyle: 'none' }}>
-              <Card
-                href={`/prompts/${w.slug}`}
-                hoverable
-                style={{
-                  padding: '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: '100%',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  <Badge variant="category">{w.category}</Badge>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      fontSize: '0.75rem',
-                      color: 'var(--accent-color)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <Layers size={14} /> {w.requiredMcps.length} MCPs Combined
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    minHeight: '3.5rem',
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <h2
-                    style={{
-                      fontSize: '1.25rem',
-                      fontWeight: 700,
-                      margin: 0,
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    {w.title}
-                  </h2>
-                  <p
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--accent-color)',
-                      fontWeight: 600,
-                      margin: '0.2rem 0 0',
-                    }}
-                  >
-                    {w.subtitle}
-                  </p>
-                </div>
-
-                <p
-                  style={{
-                    fontSize: '0.875rem',
-                    color: 'var(--text-secondary)',
-                    height: '3.9rem',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    margin: '0 0 1.25rem',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {w.description}
-                </p>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: 'auto',
-                    paddingTop: '0.75rem',
-                    borderTop: '1px solid var(--border-color)',
-                  }}
-                >
+          {featured ? (
+            <Link
+              href={`/prompts/${featured.slug}`}
+              className={`blog-featured spotlight pr-featured animate-in hue-${featuredId?.hue}`}
+              style={{ '--i': 1 } as React.CSSProperties}
+            >
+              <span className="pr-featured-top">
+                {FeaturedIcon ? (
                   <span
-                    style={{
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      color: 'var(--accent-color)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
-                    }}
+                    className="tint-tile-solid tint-tile-solid--lg"
+                    aria-hidden="true"
                   >
-                    View Workflow &amp; Prompts <ArrowRight size={14} />
+                    <FeaturedIcon size={22} />
                   </span>
-                </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                ) : null}
+                <span className="blog-featured-label">
+                  Featured · {featured.category}
+                </span>
+              </span>
+              <h2 className="blog-featured-title">{featured.title}</h2>
+              <p className="blog-featured-excerpt">{featured.description}</p>
+              <span className="blog-featured-foot">
+                <span className="pr-mcps">
+                  {featured.requiredMcps.map((m) => (
+                    <span key={m.id} className="content-tag">
+                      {m.name}
+                    </span>
+                  ))}
+                </span>
+                <span className="blog-read">
+                  View workflow &amp; prompts{' '}
+                  <ArrowRight size={14} aria-hidden="true" />
+                </span>
+              </span>
+            </Link>
+          ) : null}
+
+          <section aria-labelledby="all-workflows" className="guides-all">
+            <h2 id="all-workflows" className="content-section-title">
+              All workflows
+            </h2>
+            <TopicFilter
+              topics={topics}
+              total={rest.length}
+              label="Filter workflows by category"
+            >
+              <ul className="guides-grid pr-grid">
+                {rest.map((w, i) => {
+                  const { icon: Icon, hue } = workflowIdentity(w.slug);
+                  return (
+                    <li
+                      key={w.slug}
+                      data-topic={workflowCategoryId(w.category)}
+                      className="animate-in"
+                      style={
+                        { '--i': Math.min(i + 2, 9) } as React.CSSProperties
+                      }
+                    >
+                      <Link
+                        href={`/prompts/${w.slug}`}
+                        className={`guides-card spotlight hue-${hue}`}
+                      >
+                        <span className="guides-card-top">
+                          <span className="tint-tile-solid" aria-hidden="true">
+                            <Icon size={18} />
+                          </span>
+                          <span className="guides-card-topic">
+                            {w.category}
+                          </span>
+                          <span className="guides-card-time tabular">
+                            {w.requiredMcps.length} MCPs
+                          </span>
+                        </span>
+                        <h3 className="guides-card-title">{w.title}</h3>
+                        <p className="pr-card-subtitle">{w.subtitle}</p>
+                        <p className="guides-card-desc">{w.description}</p>
+                        <span className="guides-card-cta">
+                          View workflow{' '}
+                          <ArrowRight size={14} aria-hidden="true" />
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </TopicFilter>
+          </section>
+        </div>
       </main>
     </>
   );

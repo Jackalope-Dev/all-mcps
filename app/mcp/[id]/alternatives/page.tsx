@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   Check,
-  ChevronRight,
   Download,
   Eye,
   Layers,
@@ -18,6 +17,7 @@ import { FaqSection } from '../../../../components/ui/FaqSection';
 import { SafeMarkdown } from '../../../../components/ui/SafeMarkdown';
 import { ServerAvatar } from '../../../../components/ui/ServerAvatar';
 import {
+  categoryHueClass,
   categorySlug,
   getCategoryMeta,
   parseCategoryLabel,
@@ -223,7 +223,7 @@ export default async function AlternativesPage({
     },
     {
       q: `Are alternatives to ${displayName} free and open source?`,
-      a: `Most MCP servers listed on AllMCPs are open source tools under MIT or Apache licenses that you can self-host or run locally with Claude Desktop, Cursor, VS Code, or Windsurf.`,
+      a: `It varies by server. Pricing, auth and license are declared by each maintainer and shown in the comparison table where provided — a dash means nothing was declared, so check that project's own site before assuming it's free.`,
     },
     {
       q: `How do I side-by-side compare ${displayName} with a specific alternative?`,
@@ -298,33 +298,21 @@ export default async function AlternativesPage({
         style={{ paddingTop: 'var(--space-8)', paddingBottom: '4rem' }}
       >
         {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
-          <ol className="breadcrumb">
+        <nav aria-label="Breadcrumb">
+          <ol className="crumbs">
             <li>
               <Link href="/">Home</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
             </li>
             <li>
               <Link href="/categories">Categories</Link>
             </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
             <li>
               <Link href={`/categories/${catSlug}`}>{categoryLabel}</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
             </li>
             <li>
               <Link href={`/mcp/${server.id}`}>{displayName}</Link>
             </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">Alternatives</li>
+            <li aria-current="page">Alternatives</li>
           </ol>
         </nav>
 
@@ -338,10 +326,10 @@ export default async function AlternativesPage({
               marginBottom: '0.75rem',
             }}
           >
-            <Badge variant="category" style={{ fontSize: '0.8rem' }}>
+            <span className={`tint-pill ${categoryHueClass(server.category)}`}>
               <span aria-hidden="true">{catMeta.emoji}</span>
               <span>{categoryLabel}</span>
-            </Badge>
+            </span>
             <span
               style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}
             >
@@ -389,7 +377,7 @@ export default async function AlternativesPage({
             </Link>
             <Link
               href={`/mcp/${server.id}`}
-              className="btn btn-primary"
+              className="btn btn-secondary"
               style={{ fontSize: '0.875rem' }}
             >
               View {displayName} Specs →
@@ -492,8 +480,8 @@ export default async function AlternativesPage({
                   lineHeight: 1.6,
                 }}
               >
-                {server.aiUseCases.slice(0, 4).map((useCase, idx) => (
-                  <li key={idx}>{useCase}</li>
+                {server.aiUseCases.slice(0, 4).map((useCase) => (
+                  <li key={useCase}>{useCase}</li>
                 ))}
               </ul>
             </div>
@@ -513,7 +501,9 @@ export default async function AlternativesPage({
                 gap: '0.5rem',
               }}
             >
-              <Layers size={20} style={{ color: 'var(--accent-color)' }} />{' '}
+              <span className="lst-section-icon tint-tile hue-indigo">
+                <Layers size={16} aria-hidden="true" />
+              </span>
               Specification Matrix: {displayName} vs Alternatives
             </h2>
             <p
@@ -614,7 +604,7 @@ export default async function AlternativesPage({
                       {server.authType
                         ? AUTH_TYPE_LABELS[server.authType as AuthType] ||
                           server.authType
-                        : 'Free/None'}
+                        : '—'}
                     </td>
                     <td
                       style={{
@@ -626,7 +616,7 @@ export default async function AlternativesPage({
                         ? PRICING_MODEL_LABELS[
                             server.pricingModel as PricingModel
                           ] || server.pricingModel
-                        : 'Free'}
+                        : '—'}
                     </td>
                     <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>
                       {server.githubStars
@@ -702,7 +692,7 @@ export default async function AlternativesPage({
                           {alt.authType
                             ? AUTH_TYPE_LABELS[alt.authType as AuthType] ||
                               alt.authType
-                            : 'Free/None'}
+                            : '—'}
                         </td>
                         <td
                           style={{
@@ -714,7 +704,7 @@ export default async function AlternativesPage({
                             ? PRICING_MODEL_LABELS[
                                 alt.pricingModel as PricingModel
                               ] || alt.pricingModel
-                            : 'Free'}
+                            : '—'}
                         </td>
                         <td
                           style={{ padding: '0.85rem 1rem', fontWeight: 600 }}
@@ -766,7 +756,11 @@ export default async function AlternativesPage({
               gap: '0.5rem',
             }}
           >
-            <Sparkles size={20} style={{ color: 'var(--accent-color)' }} />{' '}
+            <span
+              className={`lst-section-icon tint-tile ${categoryHueClass(server.category)}`}
+            >
+              <Sparkles size={16} aria-hidden="true" />
+            </span>
             Detailed Evaluation of {displayName} Alternatives
           </h2>
 
@@ -859,6 +853,11 @@ export default async function AlternativesPage({
                               ? `Runtime: ${getInstallLabel(alt)}`
                               : 'Runtime not confirmed'}
                           </span>
+                          <span
+                            className={`tint-pill lst-alt-cat ${categoryHueClass(alt.category)}`}
+                          >
+                            {getCategoryMeta(alt.category).label}
+                          </span>
                         </div>
                       </div>
                       {featured ? (
@@ -918,9 +917,9 @@ export default async function AlternativesPage({
                         >
                           Key Features:
                         </span>
-                        {featuresList.map((f, i) => (
+                        {featuresList.map((f) => (
                           <div
-                            key={i}
+                            key={f}
                             style={{
                               fontSize: '0.78rem',
                               color: 'var(--text-secondary)',

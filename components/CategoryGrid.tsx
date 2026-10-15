@@ -1,8 +1,13 @@
 'use client';
 
+import { ArrowUpRight, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { CATEGORY_GROUPS, getCategoryMeta } from '../lib/categories';
+import { parseServerName } from '../lib/displayName';
+import { ServerAvatar } from './ui/ServerAvatar';
+
+type CategoryPreview = { id: string; name: string; logoUrl: string | null };
 
 type CategoryItem = {
   name: string;
@@ -10,190 +15,184 @@ type CategoryItem = {
   label: string;
   count: number;
   slug: string;
+  /** A few of the most-viewed servers in the category, for the card preview. */
+  top?: CategoryPreview[];
 };
 
 export function CategoryGrid({ categories }: { categories: CategoryItem[] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeGroup, setActiveGroup] = useState<string>('all');
-  const [hasScrolled, setHasScrolled] = useState(false);
 
   const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return categories.filter((c) => {
       if (activeGroup !== 'all') {
-        const meta = getCategoryMeta(c.name);
-        if (meta.group.id !== activeGroup) return false;
+        if (getCategoryMeta(c.name).group.id !== activeGroup) return false;
       }
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        if (
-          !c.label.toLowerCase().includes(q) &&
-          !c.name.toLowerCase().includes(q)
-        )
-          return false;
+      if (q) {
+        const haystack =
+          `${c.label} ${c.name} ${(c.top ?? []).map((s) => s.name).join(' ')}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
       }
       return true;
     });
   }, [categories, searchQuery, activeGroup]);
 
-  // Handle hash-based scrolling from breadcrumb links (e.g. /categories#💻 Developer Tools)
+  // Hash links (e.g. /categories#💻 Developer Tools) scroll to and flash the card.
   useEffect(() => {
-    if (hasScrolled) return;
     const hash = decodeURIComponent(window.location.hash.slice(1));
-    if (hash) {
-      // Small delay to allow the DOM to render
-      const timer = setTimeout(() => {
-        const el = document.getElementById(hash);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Brief highlight effect
-          el.style.boxShadow =
-            '0 0 0 2px var(--accent-color), 0 12px 40px rgba(0, 0, 0, 0.5)';
-          setTimeout(() => {
-            el.style.boxShadow = '';
-          }, 2000);
-        }
-        setHasScrolled(true);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [hasScrolled]);
+    if (!hash) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(hash);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('is-targeted');
+      setTimeout(() => el.classList.remove('is-targeted'), 2000);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
-      {/* Search & Group Tabs */}
-      <div
-        className="animate-fade-in delay-2"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1.25rem',
-          marginBottom: '2.5rem',
-        }}
-      >
-        <input
-          type="text"
-          placeholder="Search categories..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="form-input search-input"
-          style={{ maxWidth: '500px', width: '100%' }}
-          aria-label="Search categories"
-          id="search-categories"
-        />
-
-        <div
-          className="directory-tags-row"
-          style={{
-            overflowX: 'auto',
-            paddingBottom: '0.25rem',
-            maxWidth: '100%',
-            justifyContent: 'center',
-          }}
+      <div className="dir-cat-toolbar">
+        <div className="dir-search dir-search--sm">
+          <Search size={17} className="dir-search-icon" aria-hidden="true" />
+          <input
+            id="search-categories"
+            type="search"
+            className="dir-search-input"
+            placeholder="Filter categories or servers"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search categories"
+            autoComplete="off"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="dir-search-clear"
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+        <fieldset
+          className="scroll-x fade-x dir-cat-groups fieldset-plain"
+          aria-label="Category groups"
         >
           <button
             type="button"
-            className={`directory-tag ${activeGroup === 'all' ? 'directory-tag-active' : ''}`}
+            className="chip"
+            aria-pressed={activeGroup === 'all'}
             onClick={() => setActiveGroup('all')}
           >
-            ✨ All Categories
+            All
           </button>
           {CATEGORY_GROUPS.map((g) => (
             <button
               key={g.id}
               type="button"
-              className={`directory-tag ${activeGroup === g.id ? 'directory-tag-active' : ''}`}
+              className={`chip hue-${g.hue}`}
+              aria-pressed={activeGroup === g.id}
               onClick={() => setActiveGroup(g.id)}
-              style={{
-                borderColor: activeGroup === g.id ? g.color : undefined,
-                color: activeGroup === g.id ? g.color : undefined,
-                background: activeGroup === g.id ? g.bgTint : undefined,
-              }}
             >
-              <span aria-hidden="true">{g.emoji}</span>
-              <span>{g.label}</span>
+              <span className="dir-group-dot" aria-hidden="true" />
+              {g.label}
             </button>
           ))}
-        </div>
+        </fieldset>
       </div>
 
-      {/* Results count when filtering */}
-      {searchQuery && (
-        <p
-          style={{
-            textAlign: 'center',
-            color: 'var(--text-secondary)',
-            marginBottom: '2rem',
-            fontSize: '0.875rem',
-          }}
-        >
-          {filtered.length} {filtered.length === 1 ? 'category' : 'categories'}{' '}
-          found
-        </p>
-      )}
+      <p className="dir-cat-meta" aria-live="polite">
+        {filtered.length === categories.length
+          ? `${categories.length} categories, largest first`
+          : `${filtered.length} of ${categories.length} categories`}
+      </p>
 
-      {/* Grid */}
-      <div className="categories-grid">
-        {filtered.map((cat, i) => {
-          const meta = getCategoryMeta(cat.name);
-          const lightColor = meta.lightColor || meta.color;
-          return (
-            <Link
-              key={cat.name}
-              href={`/categories/${cat.slug}`}
-              id={cat.name}
-              className="category-card surface-interactive"
-              style={
-                {
-                  animationDelay: `${Math.min(i * 0.03, 0.6)}s`,
-                  '--cat-color': meta.color,
-                  '--cat-light-color': lightColor,
-                  '--cat-bg': meta.bgTint,
-                  '--cat-bg-light': `${lightColor}15`,
-                  '--cat-border': meta.borderTint || `${meta.color}40`,
-                  '--cat-border-light': `${lightColor}35`,
-                  '--cat-gradient-bg': `linear-gradient(135deg, ${meta.color}15 0%, var(--bg-elevated) 100%)`,
-                  '--cat-gradient-light':
-                    meta.lightGradient ||
-                    `linear-gradient(135deg, ${lightColor}12 0%, #ffffff 100%)`,
-                } as React.CSSProperties
-              }
-            >
-              <div
-                className="category-card-emoji"
-                aria-hidden="true"
-                style={{
-                  background: `${meta.color}18`,
-                  borderColor: meta.borderTint || `${meta.color}40`,
-                  boxShadow: `0 2px 10px ${meta.color}20`,
-                }}
-              >
-                {meta.emoji || cat.emoji || cat.label.charAt(0)}
-              </div>
-              <div className="category-card-content">
-                <h3 className="category-card-label">{cat.label}</h3>
-                <span className="category-card-count">
-                  Browse {cat.count.toLocaleString()} {cat.label} MCP{' '}
-                  {cat.count === 1 ? 'server' : 'servers'}
-                </span>
-              </div>
-              <span
-                className="category-card-arrow"
-                aria-hidden="true"
-                style={{ color: meta.color }}
-              >
-                →
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-
-      {filtered.length === 0 && (
-        <div className="surface empty-state" style={{ borderStyle: 'dashed' }}>
-          <p className="empty-state-body" style={{ margin: 0 }}>
-            No categories found matching &ldquo;{searchQuery}&rdquo;.
+      {filtered.length > 0 ? (
+        <ul className="dir-catgrid">
+          {filtered.map((cat) => {
+            const meta = getCategoryMeta(cat.name);
+            const top = cat.top ?? [];
+            return (
+              <li key={cat.name}>
+                <Link
+                  href={`/categories/${cat.slug}`}
+                  id={cat.name}
+                  className={`dir-catcard spotlight tint-card hue-${meta.hue}`}
+                >
+                  <div className="dir-catcard-head">
+                    <span className="dir-catcard-icon" aria-hidden="true">
+                      {meta.emoji || cat.emoji || cat.label.charAt(0)}
+                    </span>
+                    <div className="dir-catcard-titles">
+                      <h2 className="dir-catcard-title">{cat.label}</h2>
+                      <span className="dir-catcard-count tabular">
+                        {cat.count.toLocaleString('en-US')}{' '}
+                        {cat.count === 1 ? 'server' : 'servers'}
+                      </span>
+                    </div>
+                    <ArrowUpRight
+                      size={16}
+                      className="dir-catcard-arrow"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  {top.length > 0 && (
+                    <div className="dir-catcard-preview">
+                      <span className="dir-catcard-avatars" aria-hidden="true">
+                        {top.map((s) => (
+                          <ServerAvatar
+                            key={s.id}
+                            name={s.name}
+                            logoUrl={s.logoUrl}
+                            category={cat.name}
+                            size={22}
+                          />
+                        ))}
+                      </span>
+                      <span className="dir-catcard-names">
+                        {top
+                          .map((s) => parseServerName(s.name).displayName)
+                          .join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <div className="dir-empty">
+          <div className="dir-empty-icon" aria-hidden="true">
+            <Search size={22} />
+          </div>
+          <h2 className="dir-empty-title">No categories match</h2>
+          <p className="dir-empty-body">
+            Nothing matches &ldquo;{searchQuery}&rdquo;. Search every server
+            instead.
           </p>
+          <div className="dir-empty-actions">
+            <Link
+              href={`/browse?q=${encodeURIComponent(searchQuery.trim())}`}
+              className="btn btn-secondary btn-sm"
+            >
+              Search all servers
+            </Link>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                setSearchQuery('');
+                setActiveGroup('all');
+              }}
+            >
+              Reset
+            </button>
+          </div>
         </div>
       )}
     </>

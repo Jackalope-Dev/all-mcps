@@ -14,7 +14,6 @@ export function UpvoteButton({
 }) {
   const [upvotes, setUpvotes] = useState(initialCount || 0);
   const [hasUpvoted, setHasUpvoted] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     // Check if the user has already upvoted this server
@@ -140,8 +139,6 @@ export function UpvoteButton({
     <button
       type="button"
       onClick={handleToggleUpvote}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       disabled={isSubmitting}
       className={`listing-metric-pill listing-metric-pill--button listing-metric-pill--upvote ${hasUpvoted ? 'listing-metric-pill--upvoted' : ''}`}
       title={hasUpvoted ? 'Click to remove upvote' : 'Click to upvote'}
@@ -149,15 +146,9 @@ export function UpvoteButton({
     >
       <Heart
         size={16}
-        className="upvote-heart-icon text-white"
-        fill={
-          hasUpvoted
-            ? '#ffffff'
-            : isHovered
-              ? 'rgba(255, 255, 255, 0.5)'
-              : 'transparent'
-        }
-        style={{ transition: 'all 0.2s ease', color: '#ffffff' }}
+        className="upvote-heart-icon"
+        fill={hasUpvoted ? 'currentColor' : 'none'}
+        aria-hidden="true"
       />
       <span>
         {upvotes} {upvotes === 1 ? 'Upvote' : 'Upvotes'}

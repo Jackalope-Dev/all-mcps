@@ -13,7 +13,7 @@ export const contentType = 'image/png';
 export default async function Image() {
   const rawTitle = 'The Directory for Model Context Protocol Servers';
   const rawDesc =
-    'Discover, filter, and install the best MCP servers to give your AI agents superpowers. Browse 50+ categories of verified tools.';
+    'Discover, filter, and install MCP servers to give your AI agents superpowers. Browse MCP servers across 50+ categories.';
 
   const displayTitle = truncateTitle(rawTitle, 75);
   const displayDesc = truncateDescription(rawDesc, 145);
@@ -62,6 +62,7 @@ export default async function Image() {
 
       {/* Geometric Grid Pattern Overlay */}
       <svg
+        aria-hidden="true"
         style={{
           position: 'absolute',
           top: 0,
@@ -116,6 +117,7 @@ export default async function Image() {
         >
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <svg
+              aria-hidden="true"
               width="56"
               height="56"
               viewBox="0 0 1024 1024"

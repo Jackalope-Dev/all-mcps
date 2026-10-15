@@ -2,18 +2,18 @@
 
 import {
   Bot,
-  CheckCircle2,
+  Check,
   Download,
   Layers,
+  Link2,
   Plus,
-  Share2,
   Sparkles,
   Trash2,
-  Wrench,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { trackFeatureUse } from '@/lib/gtag';
 import { resolveInstallConfig } from '@/lib/installConfig';
 import type { Server } from '@/lib/servers';
@@ -26,16 +26,47 @@ import {
   saveStackServerIds,
   toggleServerInStack,
 } from '@/lib/stackStore';
-import { CopyBlock } from './ui/CopyBlock';
+import { CodePanel, downloadText, useCopy } from './tools/CodePanel';
+import { ServerPicker } from './tools/ServerPicker';
 
 type ClientFormat = 'claude' | 'cursor' | 'cline' | 'windsurf' | 'prompt';
 
-const CLIENT_TABS: Array<{ id: ClientFormat; label: string }> = [
-  { id: 'claude', label: 'Claude Desktop' },
-  { id: 'cursor', label: 'Cursor' },
-  { id: 'cline', label: 'Cline / Roo Code' },
-  { id: 'windsurf', label: 'Windsurf' },
-  { id: 'prompt', label: 'AI Agent Prompt' },
+const CLIENT_TABS: Array<{
+  id: ClientFormat;
+  label: string;
+  file: string;
+  hint: string;
+}> = [
+  {
+    id: 'claude',
+    label: 'Claude',
+    file: 'claude_desktop_config.json',
+    hint: 'Claude Desktop → Settings → Developer → Edit Config',
+  },
+  {
+    id: 'cursor',
+    label: 'Cursor',
+    file: 'mcp.json',
+    hint: '.cursor/mcp.json in your project, or ~/.cursor/mcp.json',
+  },
+  {
+    id: 'cline',
+    label: 'Cline',
+    file: 'cline_mcp_settings.json',
+    hint: 'Cline / Roo Code → MCP Servers → Edit settings',
+  },
+  {
+    id: 'windsurf',
+    label: 'Windsurf',
+    file: 'mcp_config.json',
+    hint: '~/.codeium/windsurf/mcp_config.json',
+  },
+  {
+    id: 'prompt',
+    label: 'AI prompt',
+    file: 'mcp_agent_prompt.md',
+    hint: 'Paste into ChatGPT, Claude, or Cursor and let it set things up',
+  },
 ];
 
 interface StackBuilderProps {
@@ -61,6 +92,29 @@ type CatalogServerItem = {
   logoUrl?: string | null;
 };
 
+function resolveFor(server: CatalogServerItem) {
+  return resolveInstallConfig({
+    id: server.id,
+    name: server.name,
+    url: server.url || '',
+    description: server.description,
+    installKind: server.installKind,
+    installCommand: server.installCommand,
+    installArgs: server.installArgs,
+    installPackage: server.installPackage,
+    installConfidence: server.installConfidence,
+    suggestedInstallCommand: server.suggestedInstallCommand,
+    suggestedInstallArgs: server.suggestedInstallArgs,
+  });
+}
+
+function configKey(id: string) {
+  return id.replace(/[^a-z0-9_-]/gi, '_');
+}
+
+/** Removal waits for the row's exit animation before touching the store. */
+const EXIT_MS = 200;
+
 export function StackBuilderModal({
   allServers = [],
   isOpen = true,
@@ -68,11 +122,14 @@ export function StackBuilderModal({
   onClose,
 }: StackBuilderProps) {
   const [serverIds, setServerIds] = useState<string[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [activeTab, setActiveTab] = useState<ClientFormat>('claude');
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [leaving, setLeaving] = useState<Set<string>>(new Set());
+  const [linkCopied, copyLink] = useCopy();
+  const [promptCopied, copyPrompt] = useCopy();
   const [fetchedCatalog, setFetchedCatalog] = useState<CatalogServerItem[]>([]);
   const fetchedRef = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const refreshStack = React.useCallback(() => {
     setServerIds(getStackServerIds());
@@ -91,6 +148,7 @@ export function StackBuilderModal({
     }
 
     refreshStack();
+    setHydrated(true);
 
     const handleStackUpdate = () => {
       refreshStack();
@@ -104,9 +162,8 @@ export function StackBuilderModal({
     };
   }, [refreshStack]);
 
-  // Look up only what the modal shows: stack entries missing from
+  // Look up only what the builder shows: stack entries missing from
   // `allServers` by id, and (once) the most-used listings for recommendations.
-  // It used to download the whole catalog to find a handful of rows.
   const stackKey = serverIds.join(',');
   // biome-ignore lint/correctness/useExhaustiveDependencies: stackKey stands in for serverIds; fetchedCatalog is read for the known set only.
   useEffect(() => {
@@ -148,29 +205,39 @@ export function StackBuilderModal({
     });
   }, [isOpen, stackKey, allServers]);
 
-  // Handle Escape key to close modal
+  // Modal: Escape closes, focus moves into the dialog, page scroll locks.
   useEffect(() => {
-    if (!isOpen || !onClose || !isModal) return;
+    if (!isOpen || !onClose || !isModal || !hydrated) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, isModal]);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const prevFocus = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = prevOverflow;
+      prevFocus?.focus?.();
+    };
+  }, [isOpen, onClose, isModal, hydrated]);
 
-  const selectedServers = useMemo(() => {
+  const catalogMap = useMemo(() => {
     const map = new Map<string, CatalogServerItem>();
     for (const s of allServers) {
       map.set(s.id, s as unknown as CatalogServerItem);
     }
     for (const s of fetchedCatalog) {
-      if (!map.has(s.id)) {
-        map.set(s.id, s);
-      }
+      if (!map.has(s.id)) map.set(s.id, s);
     }
-    return serverIds
-      .map((id) => {
-        const found = map.get(id);
+    return map;
+  }, [allServers, fetchedCatalog]);
+
+  const selectedServers = useMemo(
+    () =>
+      serverIds.map((id): CatalogServerItem => {
+        const found = catalogMap.get(id);
         if (found) return found;
         const cleanName = `${id
           .replace(/-(mcp|server)$/gi, '')
@@ -183,9 +250,9 @@ export function StackBuilderModal({
           category: 'MCP Tool',
           url: '',
         };
-      })
-      .filter(Boolean);
-  }, [allServers, fetchedCatalog, serverIds]);
+      }),
+    [catalogMap, serverIds],
+  );
 
   const recommendedServers = useMemo(() => {
     const selectedSet = new Set(serverIds);
@@ -213,6 +280,7 @@ export function StackBuilderModal({
     for (const item of catalog) {
       if (selectedSet.has(item.id)) continue;
       if (
+        activeCategories.size === 0 ||
         activeCategories.has(item.category) ||
         defaultStapleIds.includes(item.id)
       ) {
@@ -227,51 +295,22 @@ export function StackBuilderModal({
     if (activeTab === 'prompt') {
       const serverDetails = selectedServers
         .map((server, i) => {
-          const cfg = resolveInstallConfig({
-            id: server.id,
-            name: server.name,
-            url: server.url || '',
-            description: server.description,
-            installKind: server.installKind,
-            installCommand: server.installCommand,
-            installArgs: server.installArgs,
-            installPackage: server.installPackage,
-            installConfidence: server.installConfidence,
-            suggestedInstallCommand: server.suggestedInstallCommand,
-            suggestedInstallArgs: server.suggestedInstallArgs,
-          });
-
+          const cfg = resolveFor(server);
           const installStr =
             cfg.kind === 'remote'
               ? `URL: ${cfg.url}`
               : `${cfg.command} ${cfg.args.join(' ')}`;
-
           return `${i + 1}. **${server.name}** (${server.category || 'MCP Tool'})\n   - Description: ${server.description || 'Model Context Protocol server'}\n   - Install Command: \`${installStr}\``;
         })
         .join('\n\n');
 
       const jsonSnippet: Record<string, unknown> = {};
       for (const server of selectedServers) {
-        const cfg = resolveInstallConfig({
-          id: server.id,
-          name: server.name,
-          url: server.url || '',
-          description: server.description,
-          installKind: server.installKind,
-          installCommand: server.installCommand,
-          installArgs: server.installArgs,
-          installPackage: server.installPackage,
-          installConfidence: server.installConfidence,
-          suggestedInstallCommand: server.suggestedInstallCommand,
-          suggestedInstallArgs: server.suggestedInstallArgs,
-        });
-
-        const key = server.id.replace(/[^a-z0-9_-]/gi, '_');
-        if (cfg.kind === 'remote') {
-          jsonSnippet[key] = { url: cfg.url };
-        } else {
-          jsonSnippet[key] = { command: cfg.command, args: cfg.args };
-        }
+        const cfg = resolveFor(server);
+        jsonSnippet[configKey(server.id)] =
+          cfg.kind === 'remote'
+            ? { url: cfg.url }
+            : { command: cfg.command, args: cfg.args };
       }
 
       return `Please configure the following Model Context Protocol (MCP) servers in my AI client:
@@ -287,61 +326,22 @@ Please update my configuration file and guide me through setting any required AP
     }
 
     const mcpServers: Record<string, unknown> = {};
-
     for (const server of selectedServers) {
-      const cfg = resolveInstallConfig({
-        id: server.id,
-        name: server.name,
-        url: server.url || '',
-        description: server.description,
-        installKind: server.installKind,
-        installCommand: server.installCommand,
-        installArgs: server.installArgs,
-        installPackage: server.installPackage,
-        installConfidence: server.installConfidence,
-        suggestedInstallCommand: server.suggestedInstallCommand,
-        suggestedInstallArgs: server.suggestedInstallArgs,
-      });
-
-      const key = server.id.replace(/[^a-z0-9_-]/gi, '_');
-
-      if (cfg.kind === 'remote') {
-        if (activeTab === 'cline') {
-          mcpServers[key] = {
-            url: cfg.url,
-            disabled: false,
-            autoApprove: [],
-          };
-        } else {
-          mcpServers[key] = {
-            url: cfg.url,
-          };
-        }
-      } else {
-        if (activeTab === 'cline') {
-          mcpServers[key] = {
-            command: cfg.command,
-            args: cfg.args,
-            disabled: false,
-            autoApprove: [],
-          };
-        } else {
-          mcpServers[key] = {
-            command: cfg.command,
-            args: cfg.args,
-          };
-        }
-      }
+      const cfg = resolveFor(server);
+      const base =
+        cfg.kind === 'remote'
+          ? { url: cfg.url }
+          : { command: cfg.command, args: cfg.args };
+      mcpServers[configKey(server.id)] =
+        activeTab === 'cline'
+          ? { ...base, disabled: false, autoApprove: [] }
+          : base;
     }
-
     return JSON.stringify({ mcpServers }, null, 2);
   }, [selectedServers, activeTab]);
 
   const handleCopyLink = () => {
-    const shareUrl = buildStackShareUrl(serverIds);
-    navigator.clipboard.writeText(shareUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    copyLink(buildStackShareUrl(serverIds));
   };
 
   const handleCopyPrompt = () => {
@@ -364,539 +364,295 @@ ${mergedConfig}
 \`\`\`
 
 Please update my client configuration file and help me set any required API keys or environment variables.`;
-
-    navigator.clipboard.writeText(promptText);
-    setCopiedPrompt(true);
-    setTimeout(() => setCopiedPrompt(false), 2000);
+    copyPrompt(promptText);
   };
+
+  const activeClient =
+    CLIENT_TABS.find((t) => t.id === activeTab) ?? CLIENT_TABS[0];
 
   const handleDownload = () => {
-    let filename = 'claude_desktop_config.json';
-    if (activeTab === 'cursor') filename = 'mcp.json';
-    if (activeTab === 'cline') filename = 'cline_mcp_settings.json';
-    if (activeTab === 'windsurf') filename = 'mcp_config.json';
-    if (activeTab === 'prompt') filename = 'mcp_agent_prompt.md';
-
-    const mimeType =
-      activeTab === 'prompt' ? 'text/markdown' : 'application/json';
-    const blob = new Blob([mergedConfig], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(
+      mergedConfig,
+      activeClient.file,
+      activeTab === 'prompt' ? 'text/markdown' : 'application/json',
+    );
   };
 
+  const removeWithExit = (id: string) => {
+    setLeaving((prev) => new Set(prev).add(id));
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(
+      () => {
+        removeServerFromStack(id);
+        setLeaving((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      },
+      reduce ? 0 : EXIT_MS,
+    );
+  };
+
+  const addServer = (id: string, action: string) => {
+    if (serverIds.includes(id)) return;
+    toggleServerInStack(id);
+    trackFeatureUse('stack_builder', { action, server_id: id });
+  };
+
+  const addedIds = useMemo(() => new Set(serverIds), [serverIds]);
+
   if (!isOpen) return null;
+
+  const count = selectedServers.length;
 
   const content = (
     <div
       id="stack-builder"
-      style={{
-        width: '100%',
-        maxWidth: isModal ? '760px' : '100%',
-        maxHeight: isModal ? '90vh' : 'none',
-        backgroundColor: 'var(--bg-elevated)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '16px',
-        boxShadow: isModal
-          ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
-          : 'var(--shadow-md)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-      onClick={(e) => e.stopPropagation()}
+      className={`stk-root ${isModal ? 'stk-root--modal' : ''}`}
     >
-      {/* Header */}
-      <div
-        style={{
-          padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid var(--border-color)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background:
-            'linear-gradient(90deg, rgba(0,229,255,0.05), transparent)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'var(--brand-gradient)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              fontWeight: 700,
-            }}
-          >
-            <Layers size={20} />
-          </div>
+      {isModal ? (
+        <div className="stk-modal-head">
+          <span className="stk-modal-icon" aria-hidden="true">
+            <Layers size={18} />
+          </span>
           <div>
-            <h2
-              style={{
-                fontSize: '1.15rem',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                margin: 0,
-              }}
-            >
-              MCP Stack Builder
+            <h2 id="stk-modal-title" className="stk-modal-title">
+              Your MCP stack
             </h2>
-            <p
-              style={{
-                fontSize: '0.8rem',
-                color: 'var(--text-secondary)',
-                margin: 0,
-              }}
-            >
-              {selectedServers.length}{' '}
-              {selectedServers.length === 1 ? 'server' : 'servers'} selected in
-              your multi-tool stack
+            <p className="stk-modal-sub">
+              {count} {count === 1 ? 'server' : 'servers'} · one config for
+              every client
             </p>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {selectedServers.length > 0 && (
-            <button
-              type="button"
-              onClick={() => clearStack()}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#ef4444',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                padding: '0.35rem 0.65rem',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
-            >
-              <Trash2 size={13} /> Clear Stack
-            </button>
-          )}
-          {isModal && onClose && (
+          {onClose ? (
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close modal"
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-secondary)',
-                borderRadius: '8px',
-                padding: '0.35rem',
-                cursor: 'pointer',
-              }}
+              aria-label="Close stack builder"
+              className="tl-icon-btn stk-modal-close"
             >
               <X size={18} />
             </button>
-          )}
+          ) : null}
         </div>
-      </div>
+      ) : null}
 
-      {/* Content Body */}
-      <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1 }}>
-        {selectedServers.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '3rem 1.5rem',
-              backgroundColor: 'rgba(255,255,255,0.02)',
-              border: '1px dashed var(--border-color)',
-              borderRadius: '12px',
-            }}
-          >
-            <Wrench
-              size={32}
-              style={{
-                color: 'var(--accent-color)',
-                margin: '0 auto 1rem',
-                opacity: 0.8,
-              }}
-            />
-            <h3
-              style={{
-                fontSize: '1rem',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                marginBottom: '0.5rem',
-              }}
-            >
-              Your MCP Stack is Empty
-            </h3>
-            <p
-              style={{
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                maxWidth: '420px',
-                margin: '0 auto 1.5rem',
-              }}
-            >
-              Click &ldquo;+ Add to Stack&rdquo; on any MCP server card to build
-              a combined configuration file for your AI client.
-            </p>
-            <Link
-              href="/browse"
-              onClick={isModal ? onClose : undefined}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 1.25rem',
-                borderRadius: '8px',
-                background: 'var(--brand-gradient)',
-                color: '#ffffff',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                textDecoration: 'none',
-              }}
-            >
-              <Plus size={15} /> Browse Servers
-            </Link>
-          </div>
-        ) : (
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
-          >
-            {/* Selected Chips */}
-            <div>
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                Selected Tools ({selectedServers.length})
-              </span>
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                  marginTop: '0.5rem',
-                }}
-              >
-                {selectedServers.map((s) => (
-                  <div
-                    key={s.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.35rem 0.65rem',
-                      backgroundColor: 'rgba(0, 229, 255, 0.1)',
-                      border: '1px solid rgba(0, 229, 255, 0.3)',
-                      borderRadius: '20px',
-                      fontSize: '0.8rem',
-                      color: 'var(--text-primary)',
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span>{s.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeServerFromStack(s.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                      }}
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recommended Complementary Tools */}
-            {recommendedServers.length > 0 && (
-              <div
-                style={{
-                  marginTop: '0.25rem',
-                  paddingTop: '0.85rem',
-                  borderTop: '1px solid var(--border-color)',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--text-secondary)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <Sparkles
-                    size={13}
-                    style={{ color: 'var(--accent-color)' }}
-                  />{' '}
-                  Recommended to Complement Stack
+      <div className="tl-workspace stk-workspace">
+        <section className="tl-pane" aria-labelledby="stk-pick">
+          <div className="tl-pane-head">
+            <h2 id="stk-pick" className="tl-pane-title">
+              <span className="tl-step">1</span> Pick servers
+              {count > 0 ? (
+                <span className="stk-count tabular" aria-live="polite">
+                  {count}
                 </span>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fill, minmax(200px, 1fr))',
-                    gap: '0.5rem',
-                  }}
-                >
-                  {recommendedServers.map((rec) => (
-                    <div
-                      key={rec.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.5rem',
-                        padding: '0.45rem 0.65rem',
-                        backgroundColor: 'rgba(255,255,255,0.02)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '8px',
-                      }}
-                    >
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div
-                          style={{
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {rec.name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '0.7rem',
-                            color: 'var(--text-secondary)',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {rec.category || 'MCP Tool'}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          toggleServerInStack(rec.id);
-                          trackFeatureUse('stack_builder', {
-                            action: 'add_recommended',
-                            server_id: rec.id,
-                          });
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.2rem',
-                          padding: '0.25rem 0.55rem',
-                          borderRadius: '6px',
-                          border: '1px solid var(--accent-color)',
-                          backgroundColor: 'rgba(0, 229, 255, 0.1)',
-                          color: 'var(--accent-color)',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Plus size={12} /> Add
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Format Selector Tabs */}
-            <div>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '0.4rem',
-                  flexWrap: 'wrap',
-                  borderBottom: '1px solid var(--border-color)',
-                  paddingBottom: '0.65rem',
+              ) : null}
+            </h2>
+            {count > 0 ? (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm stk-clear"
+                onClick={() => {
+                  clearStack();
+                  trackFeatureUse('stack_builder', { action: 'clear' });
                 }}
               >
-                {CLIENT_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => {
-                      trackFeatureUse('stack_builder', {
-                        action: 'switch_client',
-                        client: tab.id,
-                      });
-                      setActiveTab(tab.id);
-                    }}
-                    className={`stack-tab-btn ${activeTab === tab.id ? 'is-active' : ''}`}
-                  >
-                    {tab.id === 'prompt' && (
-                      <Bot size={13} style={{ marginRight: '0.2rem' }} />
+                <Trash2 size={14} aria-hidden="true" /> Clear
+              </button>
+            ) : null}
+          </div>
+
+          <ServerPicker
+            source="index"
+            addedIds={addedIds}
+            placeholder="Search servers to add — e.g. github, postgres"
+            onSelect={(hit) => {
+              setFetchedCatalog((prev) =>
+                prev.some((p) => p.id === hit.id) ? prev : [...prev, hit],
+              );
+              addServer(hit.id, 'add_search');
+            }}
+          />
+
+          {!hydrated ? (
+            <div className="stk-list" aria-hidden="true">
+              <div className="skeleton" style={{ height: '3.25rem' }} />
+              <div className="skeleton" style={{ height: '3.25rem' }} />
+            </div>
+          ) : count === 0 ? (
+            <div className="tl-empty">
+              <Layers size={22} aria-hidden="true" />
+              <p className="tl-empty-title">Your stack is empty</p>
+              <p style={{ margin: 0 }}>
+                Search above, load a preset, or use{' '}
+                <strong>Add to stack</strong> on any server page.
+              </p>
+              {isModal ? (
+                <Link
+                  href="/browse"
+                  onClick={onClose}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Browse servers
+                </Link>
+              ) : (
+                <a href="#stack-presets" className="btn btn-secondary btn-sm">
+                  See preset stacks
+                </a>
+              )}
+            </div>
+          ) : (
+            <ul className="stk-list" aria-label="Servers in your stack">
+              {selectedServers.map((s) => (
+                <li
+                  key={s.id}
+                  className={`stk-item ${leaving.has(s.id) ? 'is-leaving' : ''}`}
+                >
+                  <span className="stk-avatar" aria-hidden="true">
+                    {s.logoUrl ? (
+                      // biome-ignore lint/performance/noImgElement: tiny remote logo, sized by CSS.
+                      <img src={s.logoUrl} alt="" loading="lazy" />
+                    ) : (
+                      s.name.slice(0, 1).toUpperCase()
                     )}
-                    {tab.label}
+                  </span>
+                  <span className="stk-item-text">
+                    <Link
+                      href={`/mcp/${s.id}`}
+                      className="stk-item-name"
+                      onClick={isModal ? onClose : undefined}
+                    >
+                      {s.name}
+                    </Link>
+                    <span className="stk-item-meta">
+                      {s.category || 'MCP Tool'}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="tl-icon-btn tl-icon-btn--danger"
+                    aria-label={`Remove ${s.name} from stack`}
+                    onClick={() => removeWithExit(s.id)}
+                  >
+                    <X size={15} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {recommendedServers.length > 0 ? (
+            <div className="stk-recs">
+              <p className="stk-recs-label">
+                <Sparkles size={13} aria-hidden="true" />
+                {count > 0 ? 'Pairs well with your stack' : 'Popular picks'}
+              </p>
+              <div className="stk-recs-row">
+                {recommendedServers.map((rec) => (
+                  <button
+                    key={rec.id}
+                    type="button"
+                    className="chip"
+                    title={rec.category || 'MCP Tool'}
+                    onClick={() => addServer(rec.id, 'add_recommended')}
+                  >
+                    <Plus size={12} aria-hidden="true" />
+                    {rec.name}
                   </button>
                 ))}
               </div>
             </div>
+          ) : null}
+        </section>
 
-            {/* Merged Code Output */}
-            <div>
-              <div
-                style={{
-                  fontSize: '0.78rem',
-                  color: 'var(--text-secondary)',
-                  marginBottom: '0.4rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {activeTab === 'claude' &&
-                    'Claude Desktop Config (claude_desktop_config.json)'}
-                  {activeTab === 'cursor' && 'Cursor MCP Config (mcp.json)'}
-                  {activeTab === 'cline' &&
-                    'Cline / Roo Code Settings (cline_mcp_settings.json)'}
-                  {activeTab === 'windsurf' &&
-                    'Windsurf Config (mcp_config.json)'}
-                  {activeTab === 'prompt' &&
-                    'Universal AI Agent Prompt (Natural Language)'}
-                </span>
-                <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>
-                  {activeTab === 'prompt'
-                    ? 'Paste into ChatGPT, Claude, or Cursor AI'
-                    : 'Save to client settings'}
-                </span>
-              </div>
-              <CopyBlock
-                code={mergedConfig}
-                language={activeTab === 'prompt' ? 'markdown' : 'json'}
-              />
-            </div>
+        <section className="tl-pane tl-sticky" aria-labelledby="stk-export">
+          <div className="tl-pane-head">
+            <h2 id="stk-export" className="tl-pane-title">
+              <span className="tl-step">2</span> Export
+            </h2>
           </div>
-        )}
-      </div>
-
-      {/* Footer Actions */}
-      {selectedServers.length > 0 && (
-        <div
-          style={{
-            padding: '1rem 1.5rem',
-            borderTop: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            backgroundColor: 'var(--bg-elevated)',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="tl-toolbar">
+            <fieldset className="segmented fieldset-plain" aria-label="Client">
+              {CLIENT_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={activeTab === tab.id}
+                  onClick={() => {
+                    trackFeatureUse('stack_builder', {
+                      action: 'switch_client',
+                      client: tab.id,
+                    });
+                    setActiveTab(tab.id);
+                  }}
+                >
+                  {tab.id === 'prompt' ? (
+                    <Bot size={13} aria-hidden="true" />
+                  ) : null}
+                  {tab.label}
+                </button>
+              ))}
+            </fieldset>
+          </div>
+          <CodePanel
+            title={activeClient.file}
+            code={count > 0 ? mergedConfig : ''}
+            language={activeTab === 'prompt' ? 'markdown' : 'json'}
+            maxHeight={isModal ? '18rem' : '28rem'}
+            snippetType="install_command"
+            highlight={activeTab !== 'prompt'}
+            empty={
+              <>
+                <Layers size={22} aria-hidden="true" />
+                <span>
+                  Add servers and the merged config appears here, live.
+                </span>
+              </>
+            }
+          />
+          <p className="tl-hint">{activeClient.hint}</p>
+          <div className="tl-actions stk-actions">
             <button
               type="button"
-              onClick={handleCopyLink}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                color: 'var(--text-primary)',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-              }}
+              className="btn btn-primary btn-md"
+              onClick={handleDownload}
+              disabled={count === 0}
             >
-              {copiedLink ? (
-                <CheckCircle2 size={14} style={{ color: '#34d399' }} />
-              ) : (
-                <Share2 size={14} />
-              )}
-              {copiedLink ? 'Link Copied!' : 'Share Stack Link'}
+              <Download size={15} aria-hidden="true" /> Download{' '}
+              {activeTab === 'prompt' ? 'prompt' : 'config'}
             </button>
-
             <button
               type="button"
+              className={`btn btn-secondary btn-md tl-copy ${promptCopied ? 'is-copied' : ''}`}
               onClick={handleCopyPrompt}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'rgba(0, 229, 255, 0.08)',
-                color: 'var(--accent-color)',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              disabled={count === 0}
             >
-              {copiedPrompt ? (
-                <CheckCircle2 size={14} style={{ color: '#34d399' }} />
+              {promptCopied ? (
+                <Check size={15} aria-hidden="true" />
               ) : (
-                <Bot size={14} />
+                <Bot size={15} aria-hidden="true" />
               )}
-              {copiedPrompt ? 'Prompt Copied!' : 'Copy AI Agent Prompt'}
+              {promptCopied ? 'Prompt copied' : 'Copy AI prompt'}
+            </button>
+            <button
+              type="button"
+              className={`btn btn-ghost btn-md tl-copy ${linkCopied ? 'is-copied' : ''}`}
+              onClick={handleCopyLink}
+              disabled={count === 0}
+            >
+              {linkCopied ? (
+                <Check size={15} aria-hidden="true" />
+              ) : (
+                <Link2 size={15} aria-hidden="true" />
+              )}
+              {linkCopied ? 'Link copied' : 'Share link'}
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={handleDownload}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.45rem 1rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'var(--brand-gradient)',
-              color: '#ffffff',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-            }}
-          >
-            <Download size={15} /> Download Config
-          </button>
-        </div>
-      )}
+        </section>
+      </div>
     </div>
   );
 
@@ -904,22 +660,39 @@ Please update my client configuration file and help me set any required API keys
     return content;
   }
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(2, 6, 23, 0.75)',
-        backdropFilter: 'blur(8px)',
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-      }}
-      onClick={onClose}
-    >
-      {content}
-    </div>
+  // Portal to <body> so no transformed/stacking ancestor (route transition
+  // wrapper, deferred chrome) can trap the overlay under the site header.
+  if (!hydrated) return null;
+  return createPortal(
+    <div className="stk-modal">
+      {/* Backdrop: a click outside the dialog closes it. The dialog
+          (position: relative, later in the DOM) paints above this button. */}
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Close stack builder"
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          margin: 0,
+          padding: 0,
+          border: 0,
+          background: 'transparent',
+          cursor: 'default',
+        }}
+      />
+      <div
+        ref={dialogRef}
+        className="stk-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="stk-modal-title"
+        tabIndex={-1}
+      >
+        {content}
+      </div>
+    </div>,
+    document.body,
   );
 }

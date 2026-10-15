@@ -87,9 +87,10 @@ async function enrichWithLlm(input: {
   if (typeof data.description === 'string' && data.description.trim()) {
     out.description = data.description.trim().slice(0, 500);
   }
-  if (typeof data.category === 'string') {
+  const category = data.category;
+  if (typeof category === 'string') {
     const match = DIRECTORY_CATEGORIES.find(
-      (c) => c.toLowerCase() === data.category!.trim().toLowerCase(),
+      (c) => c.toLowerCase() === category.trim().toLowerCase(),
     );
     if (match) out.category = match;
   }

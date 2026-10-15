@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { SubmitForm } from '../../components/forms/SubmitForm';
-import { PageHeader, PageShell } from '../../components/PageShell';
+import { PageShell } from '../../components/PageShell';
 
 export const metadata: Metadata = {
   title: 'Submit Your MCP Server for Listing & Review',
   description:
-    'Submit your Model Context Protocol server to the AllMCPs directory for review, claim verification, and to reach thousands of AI developers and agent builders.',
+    'Submit your Model Context Protocol server to the AllMCPs directory for free review and claim verification, so developers and AI agents can find it.',
   alternates: {
     canonical: 'https://allmcps.com/submit',
   },
@@ -21,14 +21,14 @@ export const metadata: Metadata = {
     ],
     title: 'Submit Your MCP Server for Listing & Review | AllMCPs',
     description:
-      'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers and agent users.',
+      'Submit your Model Context Protocol server to the AllMCPs directory, free, so developers and AI agents searching for MCP tools can find it.',
     url: 'https://allmcps.com/submit',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Submit Your MCP Server for Listing & Review | AllMCPs',
     description:
-      'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers.',
+      'Submit your MCP server to the AllMCPs directory, free, so developers and AI agents can find it.',
   },
 };
 
@@ -40,7 +40,7 @@ export default function SubmitPage() {
         '@type': 'WebPage',
         name: 'Submit your MCP Server to AllMCPs',
         description:
-          'Submit your Model Context Protocol server to the AllMCPs directory. Reach thousands of AI developers and agent users.',
+          'Submit your Model Context Protocol server to the AllMCPs directory, free, so developers and AI agents searching for MCP tools can find it.',
         url: 'https://allmcps.com/submit',
       },
       {
@@ -64,21 +64,18 @@ export default function SubmitPage() {
   };
 
   return (
-    <PageShell variant="content" panel>
+    <PageShell variant="default" className="acct-submit-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <PageHeader
-        title="Submit an MCP server"
-        description={
-          <>
-            Free listing review for Model Context Protocol servers. Add a repo
-            or website, we prefill what we can, then you claim ownership after
-            approval.
-          </>
-        }
-      />
+      <header className="acct-page-head">
+        <h1 className="text-page-title">Submit an MCP server</h1>
+        <p className="text-lead">
+          Add a repo or website, we prefill what we can, and you claim ownership
+          after approval. Takes about a minute.
+        </p>
+      </header>
       <SubmitForm />
     </PageShell>
   );

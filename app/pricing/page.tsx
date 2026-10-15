@@ -1,11 +1,18 @@
-import { ArrowRight, Check, Megaphone, Sparkles, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Crown,
+  Megaphone,
+  Minus,
+  Package,
+  Rocket,
+  Zap,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { PageHeader, PageShell } from '../../components/PageShell';
+import { PageShell } from '../../components/PageShell';
 import { Button } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
 import { FaqSection } from '../../components/ui/FaqSection';
 import {
   FREE_TIER,
@@ -20,7 +27,7 @@ import { PricingClient } from './PricingClient';
 export const metadata: Metadata = {
   title: 'Pricing & Sponsorships — Featured MCP Listings',
   description:
-    'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, real-time agent analytics, and priority 24h verification.',
+    'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
   alternates: { canonical: 'https://allmcps.com/pricing' },
   openGraph: {
     images: [
@@ -33,14 +40,14 @@ export const metadata: Metadata = {
     ],
     title: 'Pricing & Sponsorships — Featured MCP Listings | AllMCPs',
     description:
-      'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, real-time agent analytics, and priority 24h verification.',
+      'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
     url: 'https://allmcps.com/pricing',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Pricing & Sponsorships — Featured MCP Listings | AllMCPs',
     description:
-      'Promote your Model Context Protocol server on AllMCPs. Get featured placements, dofollow backlinks, real-time agent analytics, and priority 24h verification.',
+      'Promote your Model Context Protocol server on AllMCPs with featured placements, dofollow backlinks, real-time agent analytics, and priority review.',
   },
 };
 
@@ -51,11 +58,11 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How fast is Priority Review ($5) processed?',
-    a: 'Priority Review guarantees your submission is reviewed, verified, and published within 24 hours (most submissions are published in under 6 hours).',
+    a: 'Priority Review moves your submission to the front of the review queue, ahead of every free submission. We aim to review priority submissions within 24 hours, and you are emailed as soon as it is published.',
   },
   {
     q: 'What is included in the Premium subscription ($19/mo)?',
-    a: 'Premium gives your MCP continuous featured rotation on the homepage and directory grid, a high-value dofollow SEO backlink, real-time LLM access analytics, a glowing Verified/Premium badge, and instant listing edits.',
+    a: 'Premium gives your MCP continuous featured rotation on the homepage and directory grid, a high-value dofollow SEO backlink, real-time LLM access analytics, and a Verified badge with a glowing featured card.',
   },
   {
     q: 'What is a Dofollow backlink and why does it matter for my project?',
@@ -71,15 +78,54 @@ const FAQ_ITEMS = [
   },
 ];
 
-function CheckCell({ ok, fallback }: { ok: boolean; fallback?: ReactNode }) {
-  if (!ok) {
-    return fallback !== undefined ? (
-      fallback
-    ) : (
-      <X size={16} color="var(--text-secondary)" />
-    );
-  }
-  return <Check size={18} color="var(--verified-green)" />;
+type Cell = boolean | string;
+
+/** Feature matrix rows: Free, Priority, Featured, Premium, Sponsor ads. */
+const MATRIX: { feature: string; cells: [Cell, Cell, Cell, Cell, Cell] }[] = [
+  {
+    feature: 'Directory search & category indexing',
+    cells: [true, true, true, true, true],
+  },
+  {
+    feature: 'Front-of-queue review',
+    cells: [false, true, false, false, false],
+  },
+  {
+    feature: 'Homepage discovery spotlight',
+    cells: [false, false, true, true, false],
+  },
+  {
+    feature: 'Native sidebar & guide banners',
+    cells: [false, false, false, false, true],
+  },
+  {
+    feature: 'Dofollow website backlink',
+    cells: [false, false, false, true, 'Direct link'],
+  },
+  {
+    feature: 'Live impressions & CTR analytics',
+    cells: [false, false, true, true, true],
+  },
+  {
+    feature: 'Promotes any app, API or website',
+    cells: ['MCP only', 'MCP only', 'MCP only', 'MCP only', true],
+  },
+];
+
+const MATRIX_COLS = [
+  'Free',
+  'Priority · $5',
+  'Featured · $12/wk',
+  'Premium · $19/mo',
+  'Sponsor ads · $5 CPM',
+];
+
+function MatrixCell({ value }: { value: Cell }) {
+  if (value === true)
+    return <Check size={17} className="acct-yes" aria-label="Included" />;
+  if (value === false)
+    return <Minus size={15} className="acct-no" aria-label="Not included" />;
+  return <span className="acct-cell-text">{value}</span>;
 }
 
 export default async function PricingPage({
@@ -166,6 +212,8 @@ export default async function PricingPage({
 
   const premium = PAID_PRODUCTS.premium_monthly;
   const boostSkus = ['priority_review', 'featured_7d'] as const;
+  const featured = PAID_PRODUCTS.featured_7d;
+  const featuredMaxWeeks = featured.maxWeeks || 8;
 
   return (
     <>
@@ -173,569 +221,275 @@ export default async function PricingPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <PageShell variant="tool">
-        <PageHeader
-          centered
-          badge={
-            <>
-              <Sparkles size={14} color="var(--accent-color)" /> Elevate Your
-              MCP Discovery
-            </>
-          }
-          title="Pricing & Promotion Options"
-          description={
-            <>
-              Listing on AllMCPs is <strong>100% free forever</strong>. Upgrade
-              anytime to jump the review queue, sponsor your category, or unlock
-              continuous featured reach &amp; dofollow SEO power.
-            </>
-          }
-        />
+      <PageShell variant="default" className="acct-pricing">
+        <header className="acct-page-head acct-page-head--center">
+          <h1 className="text-page-title">
+            Pricing: free to list, pay only to stand out
+          </h1>
+          <p className="text-lead">
+            Every MCP server is listed <strong>free, forever</strong>. Upgrade
+            when you want to skip the review queue, get featured, or earn a
+            dofollow backlink.
+          </p>
+        </header>
 
-        <Card padding="md" className="pricing-stats-bar">
-          <div className="pricing-stat">
-            <p className="pricing-stat-value">
+        <ul className="acct-proof" aria-label="Directory at a glance">
+          <li>
+            <strong className="tabular">
               {siteStats.totalServers.toLocaleString()}
-            </p>
-            <p className="pricing-stat-label">MCP Servers Indexed</p>
-          </div>
-          <div
-            className="pricing-stat"
-            style={{ color: 'var(--accent-color)' }}
-          >
-            <p
-              className="pricing-stat-value"
-              style={{ color: 'var(--accent-color)' }}
-            >
+            </strong>
+            <span>servers indexed</span>
+          </li>
+          <li>
+            <strong className="tabular">
               {siteStats.categoryCount.toLocaleString()}
-            </p>
-            <p className="pricing-stat-label">Active Categories</p>
-          </div>
-          <div className="pricing-stat">
-            <p
-              className="pricing-stat-value"
-              style={{ color: 'var(--verified-green)' }}
-            >
-              {siteStats.toolsIndexed > 0
-                ? siteStats.toolsIndexed.toLocaleString()
-                : '—'}
-            </p>
-            <p className="pricing-stat-label">Tools Introspected</p>
-          </div>
-          <div className="pricing-stat">
-            <p
-              className="pricing-stat-value"
-              style={{ color: 'var(--gold-color)' }}
-            >
-              &lt; 24h
-            </p>
-            <p className="pricing-stat-label">Priority Queue Turnaround</p>
-          </div>
-        </Card>
-
-        <p className="pricing-trust-link">
-          Want to inspect our live platform traffic and AI crawler activity?{' '}
-          <Link
-            href="/trust"
-            style={{ color: 'var(--accent-color)', fontWeight: 600 }}
-          >
-            View Trust &amp; Traffic Transparency →
-          </Link>
-        </p>
+            </strong>
+            <span>categories</span>
+          </li>
+          {siteStats.toolsIndexed > 0 ? (
+            <li>
+              <strong className="tabular">
+                {siteStats.toolsIndexed.toLocaleString()}
+              </strong>
+              <span>tools indexed</span>
+            </li>
+          ) : null}
+          <li>
+            <strong className="tabular">
+              {formatUsd(PAID_PRODUCTS.priority_review.unitAmount)}
+            </strong>
+            <span>priority review</span>
+          </li>
+          <li>
+            <Link href="/trust" className="link-arrow">
+              Live traffic data
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          </li>
+        </ul>
 
         {canceled && (
-          <p className="pricing-alert">
-            Checkout canceled. You can try again anytime.
+          <p className="acct-callout acct-callout--warn acct-pricing-alert">
+            Checkout canceled — nothing was charged. You can try again anytime.
           </p>
         )}
 
-        {/* Main Listing Tiers */}
-        <section className="pricing-section">
-          <div className="pricing-section-header">
-            <span className="pricing-step-badge">1</span>
-            <h2 style={{ fontSize: '1.25rem', margin: 0, fontWeight: 700 }}>
-              Choose a plan
-            </h2>
-          </div>
-
-          <div className="pricing-tier-grid">
-            <Card padding="lg" className="tier-card">
-              <div className="tier-eyebrow-row">
-                <span className="tier-eyebrow">Free Forever</span>
-              </div>
-              <h3 className="tier-title">{FREE_TIER.name}</h3>
-              <p className="tier-tagline">{FREE_TIER.tagline}</p>
-              <div className="tier-price-row">
-                <span className="tier-price">$0</span>
-                <span className="tier-price-suffix"> forever</span>
-              </div>
-              <p
-                className="tier-hint"
-                style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}
-              >
-                {FREE_TIER.placementHint}
-              </p>
-              <ul className="tier-benefits">
-                {FREE_TIER.benefits.map((b) => (
-                  <li key={b} className="tier-benefit">
-                    <Check size={16} color="var(--accent-color)" />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button href="/submit" variant="secondary" className="tier-cta">
-                Submit for free
-              </Button>
-            </Card>
-
-            <Card
-              padding="lg"
-              accent="var(--accent-color)"
-              className="tier-card tier-card--featured"
-              id="premium"
-            >
-              <div className="tier-eyebrow-row">
-                <span className="tier-eyebrow tier-eyebrow--accent">
-                  Most Popular
-                </span>
-                {premium.badgeText && (
-                  <span className="tier-pill">{premium.badgeText}</span>
-                )}
-              </div>
-              <h3 className="tier-title">{premium.name} Subscription</h3>
-              <p className="tier-tagline">{premium.tagline}</p>
-
-              <div className="tier-price-row">
-                <span className="tier-price">
-                  {formatUsd(premium.unitAmount)}
-                </span>
-                <span className="tier-price-suffix">/mo</span>
-                <span className="tier-savings-badge">
-                  Or $149/yr (Save 35%)
-                </span>
-              </div>
-
-              {premium.placementHint && (
-                <p className="tier-hint">📌 {premium.placementHint}</p>
-              )}
-
-              <ul className="tier-benefits">
-                {premium.benefits.map((b) => (
-                  <li key={b} className="tier-benefit tier-benefit--strong">
-                    <Check size={16} color="var(--accent-color)" />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                href={checkoutHref(premium.sku)}
-                variant="primary"
-                className="tier-cta"
-              >
-                Get Premium Now <ArrowRight size={16} />
-              </Button>
-            </Card>
-          </div>
-        </section>
-
-        {/* One-Time Boost Options */}
-        <section className="pricing-section">
-          <div className="pricing-section-header is-centered">
-            <h2
-              style={{
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                marginBottom: '0.4rem',
-              }}
-            >
-              One-Time Boost Upgrades
-            </h2>
-            <p
-              style={{
-                fontSize: '0.9rem',
-                color: 'var(--text-secondary)',
-                maxWidth: '580px',
-              }}
-            >
-              Single-payment visibility packages designed to amplify your MCP
-              launch or category reach without a recurring subscription.
+        <section className="acct-tiers" aria-label="Plans">
+          <article className="acct-tier hue-teal">
+            <header>
+              <span className="acct-tier-icon tint-tile" aria-hidden="true">
+                <Package size={18} />
+              </span>
+              <h2 className="acct-tier-name">{FREE_TIER.name}</h2>
+              <p className="acct-tier-tagline">{FREE_TIER.tagline}</p>
+            </header>
+            <p className="acct-tier-price">
+              <span className="tabular">$0</span>
+              <span className="acct-tier-per">forever</span>
             </p>
-          </div>
+            <Button href="/submit" variant="secondary" fullWidth>
+              Submit for free
+            </Button>
+            <ul className="acct-tier-list">
+              {FREE_TIER.benefits.map((b) => (
+                <li key={b}>
+                  <Check size={15} aria-hidden="true" />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
 
-          <div className="pricing-boost-grid">
-            {boostSkus.map((boostSku) => {
-              const p = PAID_PRODUCTS[boostSku];
-              return (
-                <Card
-                  padding="md"
-                  key={boostSku}
-                  className="tier-card tier-card--boost"
-                  style={{ scrollMarginTop: '5rem' }}
-                >
-                  <div className="tier-eyebrow-row">
-                    <span className="tier-eyebrow tier-eyebrow--accent">
-                      One-Time Boost
-                    </span>
-                    {p.badgeText && (
-                      <span className="tier-pill tier-pill--muted">
-                        {p.badgeText}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="tier-title">{p.name}</h3>
-                  <p className="tier-tagline">{p.tagline}</p>
-                  <div className="tier-price-row">
-                    <span className="tier-price">
-                      {formatUsd(p.unitAmount)}
-                    </span>
-                    {p.weeklyTiers && (
-                      <span className="tier-price-suffix">/wk</span>
-                    )}
-                  </div>
-                  {p.weeklyTiers && (
-                    <p className="tier-savings-note">
-                      Buy {p.maxWeeks || 8} weeks at checkout — save up to{' '}
-                      {tieredSavingsPct(p, p.maxWeeks || 8)}%
-                    </p>
-                  )}
-                  {p.placementHint && (
-                    <p className="tier-hint tier-hint--muted">
-                      📌 {p.placementHint}
-                    </p>
-                  )}
-                  <ul className="tier-benefits">
-                    {p.benefits.map((b) => (
-                      <li key={b} className="tier-benefit">
-                        <Check size={15} color="var(--accent-color)" />
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
+          <article
+            className="acct-tier acct-tier--featured hue-violet"
+            id="premium"
+          >
+            <span className="acct-tier-flag">Recommended</span>
+            <header>
+              <span className="acct-tier-icon tint-tile" aria-hidden="true">
+                <Crown size={18} />
+              </span>
+              <h2 className="acct-tier-name">{premium.name}</h2>
+              <p className="acct-tier-tagline">{premium.tagline}</p>
+            </header>
+            <p className="acct-tier-price">
+              <span className="tabular">{formatUsd(premium.unitAmount)}</span>
+              <span className="acct-tier-per">/ month</span>
+            </p>
+            <Button
+              href={checkoutHref(premium.sku)}
+              variant="primary"
+              fullWidth
+            >
+              Get Premium
+              <ArrowRight size={16} aria-hidden="true" />
+            </Button>
+            <ul className="acct-tier-list">
+              {premium.benefits.map((b) => (
+                <li key={b}>
+                  <Check size={15} aria-hidden="true" />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="acct-tier-foot">Cancel anytime in one click.</p>
+          </article>
+
+          <article className="acct-tier hue-orange">
+            <header>
+              <span className="acct-tier-icon tint-tile" aria-hidden="true">
+                <Rocket size={18} />
+              </span>
+              <h2 className="acct-tier-name">One-time boosts</h2>
+              <p className="acct-tier-tagline">
+                Pay once for a launch or a busy week — no subscription.
+              </p>
+            </header>
+            <div className="acct-boost-list">
+              {boostSkus.map((boostSku) => {
+                const p = PAID_PRODUCTS[boostSku];
+                return (
+                  <Link
+                    key={boostSku}
                     href={checkoutHref(p.sku)}
-                    variant="secondary"
-                    className="tier-cta"
+                    className="acct-boost"
                   >
-                    Select Boost →
-                  </Button>
-                </Card>
-              );
-            })}
-
-            <Card
-              padding="md"
-              accent="var(--accent-color)"
-              className="tier-card tier-card--boost"
-              style={{ scrollMarginTop: '5rem' }}
-            >
-              <div className="tier-eyebrow-row">
-                <span className="tier-eyebrow tier-eyebrow--accent">
-                  Universal Ad Network
-                </span>
-                <span className="tier-pill">Any Product / CPM</span>
-              </div>
-              <h3 className="tier-title">Sponsor Ad Spaces</h3>
-              <p className="tier-tagline">
-                Promote any developer tool, API, SaaS, or site across AllMCPs.
+                    <span
+                      className={`acct-boost-icon ${boostSku === 'priority_review' ? 'hue-amber' : 'hue-orange'}`}
+                      aria-hidden="true"
+                    >
+                      {boostSku === 'priority_review' ? (
+                        <Zap size={16} />
+                      ) : (
+                        <Rocket size={16} />
+                      )}
+                    </span>
+                    <span className="acct-boost-body">
+                      <strong>{p.name}</strong>
+                      <span>{p.placementHint || p.tagline}</span>
+                    </span>
+                    <span className="acct-boost-price tabular">
+                      {formatUsd(p.unitAmount)}
+                      {p.weeklyTiers ? (
+                        <small className="acct-boost-per">/wk</small>
+                      ) : null}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+            {featured.weeklyTiers ? (
+              <p className="acct-tier-foot">
+                Run Featured for up to {featuredMaxWeeks} weeks and save up to{' '}
+                {tieredSavingsPct(featured, featuredMaxWeeks)}%.
               </p>
-              <div className="tier-price-row">
-                <span className="tier-price">$5.00</span>
-                <span className="tier-price-suffix"> / 1k views</span>
-              </div>
-              <p className="tier-savings-note">
-                1k to 100k+ impression credit blocks with weighted CPM bidding
-              </p>
-              <p className="tier-hint tier-hint--muted">
-                📌 Placed natively across directory cards, listing sidebars, and
-                guides
-              </p>
-              <ul className="tier-benefits">
-                <li className="tier-benefit">
-                  <Check size={15} color="var(--accent-color)" />
-                  <span>
-                    Reach active AI developers &amp; software engineers
-                  </span>
-                </li>
-                <li className="tier-benefit">
-                  <Check size={15} color="var(--accent-color)" />
-                  <span>Custom copy, logo icon, and direct outbound link</span>
-                </li>
-                <li className="tier-benefit">
-                  <Check size={15} color="var(--accent-color)" />
-                  <span>
-                    Real-time impressions &amp; CTR reporting dashboard
-                  </span>
-                </li>
-              </ul>
-              <Button href="/advertise" variant="primary" className="tier-cta">
-                Launch Sponsor Ad →
-              </Button>
-            </Card>
-          </div>
+            ) : null}
+          </article>
         </section>
 
-        {/* Feature Comparison Matrix */}
-        <section className="pricing-section">
-          <div className="pricing-section-header is-centered">
-            <h2
-              style={{
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                marginBottom: '0.4rem',
-              }}
-            >
-              Feature Comparison Matrix
-            </h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              Compare what is included across every tier and upgrade.
+        <aside className="acct-ad-banner">
+          <span className="acct-ad-banner-icon hue-pink" aria-hidden="true">
+            <Megaphone size={20} />
+          </span>
+          <div className="acct-ad-banner-body">
+            <h2>Not an MCP server? Sponsor ads work for any product.</h2>
+            <p>
+              Native logo + copy placements across directory cards, listing
+              sidebars and guides, from <strong>$5 per 1,000 views</strong> with
+              live CTR reporting.
             </p>
           </div>
+          <Button href="/advertise" variant="secondary">
+            Explore advertising
+            <ArrowRight size={16} aria-hidden="true" />
+          </Button>
+        </aside>
 
-          <Card padding="sm" className="pricing-table-wrap">
-            <table className="pricing-table">
+        <section className="section-tight" aria-labelledby="compare-title">
+          <div className="section-head section-head--center">
+            <h2 id="compare-title" className="section-title">
+              Compare plans
+            </h2>
+            <p className="section-sub">
+              What&rsquo;s included in every tier and upgrade.
+            </p>
+          </div>
+          <div className="acct-table-wrap">
+            <table className="acct-table">
               <thead>
                 <tr>
-                  <th>Features &amp; Benefits</th>
-                  <th>Free Listing</th>
-                  <th style={{ color: 'var(--accent-color)' }}>
-                    Priority ($5)
-                  </th>
-                  <th style={{ color: 'var(--accent-color)' }}>
-                    Featured ($12/wk)
-                  </th>
-                  <th className="is-highlight">Premium ($19/mo)</th>
-                  <th style={{ color: 'var(--accent-color)' }}>
-                    Sponsor Ads ($5 CPM)
-                  </th>
+                  <th scope="col">Feature</th>
+                  {MATRIX_COLS.map((c, i) => (
+                    <th
+                      key={c}
+                      scope="col"
+                      className={i === 3 ? 'is-highlight' : undefined}
+                    >
+                      {c}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Directory Search &amp; Category Indexing</td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                  <td className="is-highlight">
-                    <CheckCell ok />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                </tr>
-                <tr>
-                  <td>Guaranteed &lt; 24h Review Turnaround</td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                  <td className="is-highlight">
-                    <CheckCell ok />
-                  </td>
-                  <td>Instant Launch</td>
-                </tr>
-                <tr>
-                  <td>Homepage Discovery Grid Spotlight</td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                  <td className="is-highlight">
-                    <CheckCell ok />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                </tr>
-                <tr>
-                  <td>Native Sidebars &amp; Guide Banners</td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td className="is-highlight">
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                </tr>
-                <tr>
-                  <td>Dofollow SEO Website Backlink</td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td className="is-highlight">
-                    <CheckCell ok />
-                  </td>
-                  <td>Direct Link</td>
-                </tr>
-                <tr>
-                  <td>Live Impressions &amp; CTR Analytics</td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td>
-                    <CheckCell ok={false} />
-                  </td>
-                  <td className="is-highlight">
-                    <CheckCell ok />
-                  </td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                </tr>
-                <tr>
-                  <td>Works for Any App, API or Website</td>
-                  <td>MCP Only</td>
-                  <td>MCP Only</td>
-                  <td>MCP Only</td>
-                  <td className="is-highlight">MCP Only</td>
-                  <td>
-                    <CheckCell ok />
-                  </td>
-                </tr>
+                {MATRIX.map((row) => (
+                  <tr key={row.feature}>
+                    <th scope="row">{row.feature}</th>
+                    {row.cells.map((cell, i) => (
+                      <td
+                        key={MATRIX_COLS[i]}
+                        className={i === 3 ? 'is-highlight' : undefined}
+                      >
+                        <MatrixCell value={cell} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
               </tbody>
             </table>
-          </Card>
+          </div>
         </section>
 
-        {/* Don't have an MCP Server? Universal Advertiser Banner */}
-        <Card
-          padding="md"
-          accent="var(--accent-color)"
-          className="pricing-promo-banner"
-          style={{ marginBottom: '4rem' }}
-        >
-          <div className="pricing-promo-content">
-            <div className="pricing-promo-icon">
-              <Megaphone size={24} />
-            </div>
-            <div>
-              <div className="pricing-promo-tag-row">
-                <span className="pricing-promo-tag">
-                  No MCP Server Required
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  For Developers, SaaS, Apps &amp; Startups
-                </span>
-              </div>
-              <h3 className="pricing-promo-title">
-                Want to promote your App, Developer Tool, API, or Website?
-              </h3>
-              <p className="pricing-promo-desc">
-                You don&apos;t need to have an MCP server listed to reach our
-                audience. Sponsor native logo + copy ad units across directory
-                cards, listing sidebars, and guide articles starting at{' '}
-                <strong>$5.00 per 1,000 views</strong> with live reporting and
-                weighted CPM bidding.
-              </p>
-            </div>
-          </div>
-          <Button
-            href="/advertise"
-            variant="primary"
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            Create Sponsor Ad <ArrowRight size={16} />
-          </Button>
-        </Card>
-
-        {/* Step 2 Checkout Selection Component */}
-        <PricingClient
-          initialServerId={serverId}
-          initialCategory={
-            typeof params.category === 'string' ? params.category : ''
-          }
-          initialSku={sku}
-        />
-
-        {/* Frequently Asked Questions */}
-        <section className="pricing-section" style={{ marginTop: '4.5rem' }}>
-          <div className="pricing-section-header is-centered">
-            <h2
-              style={{
-                fontSize: '1.6rem',
-                fontWeight: 800,
-                marginBottom: '0.4rem',
-              }}
-            >
-              Frequently Asked Questions
-            </h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              Everything you need to know about listing, boosting, and billing
-              on AllMCPs.
-            </p>
-          </div>
-
-          <FaqSection
-            items={FAQ_ITEMS.map((item) => ({
-              question: item.q,
-              answer: item.a,
-            }))}
-            defaultOpenIndex={0}
-            renderJsonLd={false}
+        <section className="section-tight" aria-label="Checkout">
+          <PricingClient
+            initialServerId={serverId}
+            initialCategory={
+              typeof params.category === 'string' ? params.category : ''
+            }
+            initialSku={sku}
           />
         </section>
 
-        <p
-          style={{
-            textAlign: 'center',
-            marginTop: '3rem',
-            fontSize: '0.875rem',
-            color: 'var(--text-secondary)',
-          }}
-        >
-          Free forever to list and claim.{' '}
-          <Link
-            href="/submit"
-            style={{ color: 'var(--accent-color)', fontWeight: 600 }}
-          >
-            Submit an MCP Server
-          </Link>{' '}
-          or{' '}
-          <Link
-            href="/browse"
-            style={{ color: 'var(--accent-color)', fontWeight: 600 }}
-          >
-            Browse the Directory
-          </Link>
-          .
-        </p>
+        <section className="section-tight">
+          <div className="section-head section-head--center">
+            <h2 className="section-title">Questions, answered</h2>
+            <p className="section-sub">
+              Listing, boosting and billing on AllMCPs.
+            </p>
+          </div>
+          <div className="acct-faq">
+            <FaqSection
+              items={FAQ_ITEMS.map((item) => ({
+                question: item.q,
+                answer: item.a,
+              }))}
+              defaultOpenIndex={0}
+              renderJsonLd={false}
+            />
+          </div>
+        </section>
+
+        <div className="acct-final-cta">
+          <h2>Listing is free. Start there.</h2>
+          <p>Submit in about a minute — upgrade later if you want reach.</p>
+          <div className="acct-final-cta-actions">
+            <Button href="/submit" variant="primary" size="lg">
+              Submit your server
+            </Button>
+            <Button href="/browse" variant="secondary" size="lg">
+              Browse the directory
+            </Button>
+          </div>
+        </div>
       </PageShell>
     </>
   );

@@ -1,8 +1,9 @@
-import { ChevronRight, Layers, Sparkles, Terminal } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Badge } from '@/components/ui/Badge';
+import { ArticleLayout } from '@/components/content/ArticleLayout';
+import { workflowIdentity } from '@/components/content/workflowIdentity';
 import { CopyBlock } from '@/components/ui/CopyBlock';
 import { FaqSection } from '@/components/ui/FaqSection';
 import { serializeJsonLd } from '@/lib/jsonLd';
@@ -124,137 +125,64 @@ export default async function WorkflowDetailPage({
     ],
   };
 
+  const { icon: WorkflowIcon, hue } = workflowIdentity(workflow.slug);
+
+  // Same-category workflows first, then the rest of the library, capped so
+  // the footer stays a short list as the library grows.
+  const others = WORKFLOW_PROMPTS.filter((w) => w.slug !== workflow.slug);
+  const related = [
+    ...others.filter((w) => w.category === workflow.category),
+    ...others.filter((w) => w.category !== workflow.category),
+  ].slice(0, 6);
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <main
-        className="container page-shell"
-        style={{
-          paddingTop: 'var(--space-8)',
-          paddingBottom: 'var(--space-16)',
-        }}
+      <ArticleLayout
+        icon={
+          <span
+            className={`tint-tile-solid tint-tile-solid--lg hue-${hue}`}
+            aria-hidden="true"
+          >
+            <WorkflowIcon size={22} />
+          </span>
+        }
+        crumbs={[
+          { label: 'Prompt Library', href: '/prompts' },
+          { label: workflow.title },
+        ]}
+        title={workflow.title}
+        lede={
+          <>
+            <p className="pr-subtitle">{workflow.subtitle}</p>
+            <p>{workflow.description}</p>
+          </>
+        }
+        meta={<span>{workflow.requiredMcps.length} MCP servers combined</span>}
+        toc={[
+          { id: 'included-servers', text: 'Included MCP servers' },
+          { id: 'system-prompt', text: 'System prompt' },
+          { id: 'combined-config', text: 'Combined config' },
+          ...(workflow.faq.length > 0 ? [{ id: 'faq', text: 'FAQ' }] : []),
+        ]}
+        prose={false}
+        progress={false}
       >
-        <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem' }}>
-          <ol className="breadcrumb">
-            <li>
-              <Link href="/">Home</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li>
-              <Link href="/prompts">Prompt Library</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">{workflow.title}</li>
-          </ol>
-        </nav>
-
-        <section
-          style={{
-            maxWidth: '800px',
-            margin: '0 auto 2.5rem',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.5rem',
-              marginBottom: '0.75rem',
-              justifyContent: 'center',
-            }}
-          >
-            <Badge variant="category">{workflow.category}</Badge>
-          </div>
-          <h1 className="text-display" style={{ marginBottom: '0.75rem' }}>
-            {workflow.title}
-          </h1>
-          <p
-            style={{
-              fontSize: '1.1rem',
-              color: 'var(--accent-color)',
-              fontWeight: 600,
-              marginBottom: '1rem',
-            }}
-          >
-            {workflow.subtitle}
-          </p>
-          <p className="text-lead" style={{ margin: '0 auto' }}>
-            {workflow.description}
-          </p>
-        </section>
-
-        {/* Required MCP Servers Suite */}
-        <section style={{ marginBottom: '3rem' }}>
-          <h2
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 700,
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <Layers size={20} style={{ color: 'var(--accent-color)' }} />{' '}
+        <section className="pr-section" aria-labelledby="included-servers">
+          <h2 id="included-servers" className="content-section-title">
             Included MCP Servers ({workflow.requiredMcps.length})
           </h2>
-          <ul
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '1rem',
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-            }}
-          >
+          <ul className="pr-servers">
             {workflow.requiredMcps.map((mcp) => (
-              <li
-                key={mcp.id}
-                className="surface"
-                style={{
-                  listStyle: 'none',
-                  padding: '1.25rem',
-                  borderRadius: '12px',
-                }}
-              >
-                <Link
-                  href={`/mcp/${mcp.id}`}
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    color: 'var(--text-primary)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  {mcp.name} →
+              <li key={mcp.id} className="pr-server">
+                <Link href={`/mcp/${mcp.id}`} className="pr-server-name">
+                  {mcp.name} <ArrowRight size={14} aria-hidden="true" />
                 </Link>
-                <p
-                  style={{
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                    margin: '0.35rem 0 0.75rem',
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {mcp.description}
-                </p>
-                <code
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#38bdf8',
-                    background: 'rgba(0,0,0,0.4)',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                  }}
-                >
+                <p>{mcp.description}</p>
+                <code>
                   {mcp.command} {mcp.args.join(' ')}
                 </code>
               </li>
@@ -262,98 +190,73 @@ export default async function WorkflowDetailPage({
           </ul>
         </section>
 
-        {/* System Prompt Block */}
-        <section
-          className="surface"
-          style={{
-            padding: '1.75rem',
-            borderRadius: '16px',
-            marginBottom: '3rem',
-            border: '1px solid rgba(var(--accent-rgb),0.3)',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1rem',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: '1.2rem',
-                fontWeight: 700,
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
-            >
-              <Sparkles size={18} style={{ color: 'var(--accent-color)' }} />{' '}
-              Optimized Agent System Prompt
-            </h2>
-          </div>
-          <p
-            style={{
-              fontSize: '0.875rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '1rem',
-            }}
-          >
+        <section className="pr-section" aria-labelledby="system-prompt">
+          <h2 id="system-prompt" className="content-section-title">
+            Optimized Agent System Prompt
+          </h2>
+          <p className="pr-section-lede">
             Paste this system prompt into Cursor (.cursorrules), Claude Desktop,
             Windsurf, or Antigravity:
           </p>
           <CopyBlock code={workflow.systemPrompt} />
         </section>
 
-        {/* Combined Config JSON */}
-        <section
-          className="surface"
-          style={{
-            padding: '1.75rem',
-            borderRadius: '16px',
-            marginBottom: '3rem',
-          }}
-        >
-          <h2
-            style={{
-              fontSize: '1.2rem',
-              fontWeight: 700,
-              marginBottom: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <Terminal size={18} style={{ color: 'var(--accent-color)' }} />{' '}
-            Combined Suite `claude_desktop_config.json`
+        <section className="pr-section" aria-labelledby="combined-config">
+          <h2 id="combined-config" className="content-section-title">
+            Combined Suite <code>claude_desktop_config.json</code>
           </h2>
-          <p
-            style={{
-              fontSize: '0.875rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '1rem',
-            }}
-          >
+          <p className="pr-section-lede">
             One single JSON configuration containing all required MCP servers
             for this workflow:
           </p>
           <CopyBlock code={combinedConfigJson} />
         </section>
 
-        {/* FAQ */}
         {workflow.faq.length > 0 && (
-          <section style={{ maxWidth: '760px' }}>
+          <section className="pr-section">
             <FaqSection
               title="Frequently Asked Questions"
+              headingId="faq"
+              renderJsonLd={false}
               items={workflow.faq.map((f) => ({ question: f.q, answer: f.a }))}
             />
           </section>
         )}
-      </main>
+
+        <nav className="pr-section" aria-labelledby="more-workflows">
+          <h2 id="more-workflows" className="content-section-title">
+            More workflows
+          </h2>
+          <ul className="content-related">
+            {related.map((w) => {
+              const { icon: Icon, hue: wHue } = workflowIdentity(w.slug);
+              return (
+                <li key={w.slug}>
+                  <Link
+                    href={`/prompts/${w.slug}`}
+                    className={`content-related-card pr-related hue-${wHue}`}
+                  >
+                    <span
+                      className="tint-tile-solid pr-related-icon"
+                      aria-hidden="true"
+                    >
+                      <Icon size={15} />
+                    </span>
+                    <strong>{w.title}</strong>
+                    <span>{w.subtitle}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="pr-section-lede">
+            <Link href="/prompts">
+              Browse all {WORKFLOW_PROMPTS.length} workflows{' '}
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          </p>
+        </nav>
+      </ArticleLayout>
     </>
   );
 }

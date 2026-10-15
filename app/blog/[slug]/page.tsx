@@ -1,15 +1,14 @@
-import { ChevronRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
-import { Badge } from '../../../components/ui/Badge';
+import { ArticleLayout } from '../../../components/content/ArticleLayout';
+import { blogTagClass } from '../../../components/content/blogTags';
+import { FaqSection } from '../../../components/ui/FaqSection';
 import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
-import {
-  TableOfContents,
-  type TocItem,
-} from '../../../components/ui/TableOfContents';
+import type { TocItem } from '../../../components/ui/TableOfContents';
 import { getAllPosts, getPostBySlug, getRelatedPosts } from '../../../lib/blog';
 import { extractToc, withHeadingAnchors } from '../../../lib/blogToc';
 import { truncateDescription, truncateTitle } from '../../../lib/ogHelpers';
@@ -69,14 +68,6 @@ export async function generateMetadata({
       description: metaDescription,
     },
   };
-}
-
-function formatDate(date: string): string {
-  return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 export default async function BlogPostPage({
@@ -180,163 +171,71 @@ export default async function BlogPostPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <main className="page-shell page-shell--default">
-        <div className="page-shell-inner">
-          {/* marginBottom via inline style, not a Tailwind margin utility: this
-              project's unlayered CSS reset (star selector, margin 0) overrides
-              layered utility classes, so mt-6 here computed to 0. */}
-          <nav aria-label="Breadcrumb" style={{ marginBottom: '1.5rem' }}>
-            <ol className="breadcrumb">
-              <li>
-                <Link href="/">Home</Link>
-              </li>
-              <li className="breadcrumb-separator">
-                <ChevronRight size={12} />
-              </li>
-              <li>
-                <Link href="/blog">Blog</Link>
-              </li>
-              <li className="breadcrumb-separator">
-                <ChevronRight size={12} />
-              </li>
-              <li className="breadcrumb-current">{post.title}</li>
-            </ol>
-          </nav>
+      <ArticleLayout
+        crumbs={[{ label: 'Blog', href: '/blog' }, { label: post.title }]}
+        title={post.title}
+        updated={post.date}
+        updatedLabel="Published"
+        readingMinutes={post.readingTime}
+        meta={
+          post.tags.length > 0 ? (
+            <span className="content-tags">
+              {post.tags.map((tag) => (
+                <span key={tag} className={blogTagClass(tag)}>
+                  {tag}
+                </span>
+              ))}
+            </span>
+          ) : null
+        }
+        toc={tocItems}
+        footer={
+          <>
+            <SponsorAdUnit placement="blog_guide" />
 
-          <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-10">
-            <article className="surface page-panel min-w-0">
-              <header>
-                <h1 className="text-page-title">{post.title}</h1>
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '0.75rem',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    marginBottom: '1rem',
-                  }}
-                >
-                  <time
-                    dateTime={post.date}
-                    className="text-meta"
-                    style={{ fontWeight: 600 }}
-                  >
-                    {formatDate(post.date)}
-                  </time>
-                  <span className="text-meta">
-                    · {post.readingTime} min read
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '0.5rem',
-                    flexWrap: 'wrap',
-                    marginBottom: '1.5rem',
-                  }}
-                >
-                  {post.tags.map((tag) => (
-                    <Badge key={tag} variant="category">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </header>
+            {post.faq.length > 0 ? (
+              <FaqSection
+                title="Frequently asked questions"
+                headingId="faq"
+                renderJsonLd={false}
+                items={post.faq.map((item) => ({
+                  question: item.q,
+                  answer: item.a,
+                }))}
+              />
+            ) : null}
 
-              {tocItems.length > 1 && (
-                // Spacing via inline style, not Tailwind mb-*/mt-*: this project's unlayered
-                // CSS reset overrides layered margin utilities (they compute to 0), so the
-                // mobile TOC card would otherwise butt right up against the body text.
-                <div
-                  className="lg:hidden"
-                  style={{ marginTop: '1rem', marginBottom: '2.5rem' }}
-                >
-                  <TableOfContents items={tocItems} />
-                </div>
-              )}
-
-              <div className="markdown-body">
-                <SafeMarkdown content={contentWithAnchors} />
-              </div>
-
-              <SponsorAdUnit placement="blog_guide" />
-
-              {post.faq.length > 0 && (
-                <div style={{ marginTop: '2.5rem' }}>
-                  <h2 className="text-section">Frequently asked questions</h2>
-                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                    {post.faq.map((item) => (
-                      <li
-                        key={item.q}
-                        style={{ listStyle: 'none', marginBottom: '1.5rem' }}
+            {relatedPosts.length > 0 ? (
+              <nav aria-labelledby="related-articles">
+                <h2 id="related-articles" className="content-section-title">
+                  Related articles
+                </h2>
+                <ul className="content-related">
+                  {relatedPosts.map((rp) => (
+                    <li key={rp.slug}>
+                      <Link
+                        href={`/blog/${rp.slug}`}
+                        className="content-related-card"
                       >
-                        <h3
-                          style={{
-                            color: 'var(--text-primary)',
-                            fontSize: '1.05rem',
-                            marginBottom: '0.4rem',
-                          }}
-                        >
-                          {item.q}
-                        </h3>
-                        <p
-                          style={{
-                            color: 'var(--text-secondary)',
-                            lineHeight: 1.65,
-                            margin: 0,
-                          }}
-                        >
-                          {item.a}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                        <strong>{rp.title}</strong>
+                        <span>{rp.excerpt}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ) : null}
 
-              {relatedPosts.length > 0 && (
-                <nav
-                  aria-label="Related articles"
-                  style={{ marginTop: '2.5rem' }}
-                >
-                  <h2 className="text-section">Related articles</h2>
-                  <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
-                    {relatedPosts.map((rp) => (
-                      <li key={rp.slug} style={{ marginBottom: '0.6rem' }}>
-                        <Link
-                          href={`/blog/${rp.slug}`}
-                          style={{
-                            color: 'var(--accent-color)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {rp.title}
-                        </Link>
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          {' '}
-                          — {rp.excerpt}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-              )}
-            </article>
-
-            {tocItems.length > 1 && (
-              <div className="hidden lg:block h-full">
-                <TableOfContents items={tocItems} />
-              </div>
-            )}
-          </div>
-
-          <div style={{ marginTop: '2rem' }}>
-            <Link href="/blog" className="btn btn-secondary">
-              ← Back to Blog
-            </Link>
-          </div>
-        </div>
-      </main>
+            <p>
+              <Link href="/blog" className="link-arrow">
+                All articles <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </p>
+          </>
+        }
+      >
+        <SafeMarkdown content={contentWithAnchors} />
+      </ArticleLayout>
     </>
   );
 }

@@ -20,6 +20,7 @@ export function Textarea({
 }: TextareaProps) {
   const textareaId =
     id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const hintId = helperText && textareaId ? `${textareaId}-hint` : undefined;
 
   return (
     <div className={`form-field ${className}`.trim()} style={style}>
@@ -30,16 +31,15 @@ export function Textarea({
       ) : null}
       <textarea
         id={textareaId}
+        aria-invalid={error || undefined}
+        aria-describedby={hintId}
         className={`form-input ${error ? 'form-input-error' : ''} ${textareaClassName}`.trim()}
         {...props}
       />
       {helperText ? (
         <div
-          style={{
-            fontSize: '0.72rem',
-            color: 'var(--text-secondary)',
-            marginTop: '0.25rem',
-          }}
+          id={hintId}
+          className={`acct-field-hint${error ? ' is-error' : ''}`}
         >
           {helperText}
         </div>

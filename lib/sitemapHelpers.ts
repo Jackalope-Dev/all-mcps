@@ -25,7 +25,7 @@ export function safeDateISO(val: unknown): string {
   const now = new Date();
 
   function plausible(d: Date): boolean {
-    if (isNaN(d.getTime())) return false;
+    if (Number.isNaN(d.getTime())) return false;
     const y = d.getFullYear();
     return y >= MIN_YEAR && y <= MAX_YEAR;
   }
@@ -45,7 +45,7 @@ export function safeDateISO(val: unknown): string {
         d = rescue(val) ?? now;
       }
     } else if (typeof val === 'number') {
-      if (!isNaN(val) && val > 0) {
+      if (!Number.isNaN(val) && val > 0) {
         let parsed = new Date(val);
         if (plausible(parsed)) {
           d = parsed;
@@ -71,7 +71,7 @@ export function safeDateISO(val: unknown): string {
         const parsed = new Date(str);
         if (plausible(parsed)) {
           d = parsed;
-        } else if (!isNaN(parsed.getTime())) {
+        } else if (!Number.isNaN(parsed.getTime())) {
           d = rescue(parsed) ?? now;
         }
       }
@@ -91,51 +91,51 @@ export function safeDateISO(val: unknown): string {
  * on every request (that teaches crawlers to ignore lastmod).
  */
 export const STATIC_PAGE_LASTMOD: Record<string, string> = {
-  '/': '2026-09-09',
-  '/browse': '2026-08-05',
-  '/categories': '2026-08-05',
-  '/best': '2026-08-13',
+  '/': '2026-10-14',
+  '/browse': '2026-10-14',
+  '/categories': '2026-10-14',
+  '/best': '2026-10-14',
   '/clients': '2026-09-23',
-  '/about': '2026-07-27',
+  '/about': '2026-10-14',
   '/docs/api': '2026-10-14',
   '/blog': '2026-08-07',
-  '/contact': '2026-07-27',
-  '/submit': '2026-08-01',
+  '/contact': '2026-10-14',
+  '/submit': '2026-10-14',
   '/terms': '2026-07-27',
   '/privacy': '2026-07-27',
-  '/guides': '2026-09-23',
+  '/guides': '2026-10-14',
   '/what-is-mcp': '2026-08-04',
   '/guide': '2026-08-04',
-  '/build-mcp-server': '2026-08-04',
+  '/build-mcp-server': '2026-10-14',
   '/mcp-security': '2026-08-04',
-  '/deploy-mcp-server': '2026-08-28',
+  '/deploy-mcp-server': '2026-10-14',
   '/mcp-troubleshooting': '2026-08-07',
   '/mcp-protocol-versioning': '2026-08-22',
   '/mcp-transports': '2026-09-17',
   '/state-of-mcp': '2026-10-05',
-  '/pricing': '2026-08-08',
-  '/tools': '2026-08-05',
+  '/pricing': '2026-10-14',
+  '/tools': '2026-10-14',
   '/tools/openapi-to-mcp': '2026-08-05',
   '/tools/protocol-inspector': '2026-08-05',
   '/tools/config-generator': '2026-08-05',
   '/tools/config-validator': '2026-08-05',
-  '/tools/token-calculator': '2026-08-05',
+  '/tools/token-calculator': '2026-10-14',
   '/tools/config-auditor': '2026-09-23',
   '/tools/playground': '2026-09-23',
-  '/prompts': '2026-08-05',
+  '/prompts': '2026-10-14',
   '/badge-generator': '2026-08-01',
-  '/mcp-for-cursor': '2026-08-05',
-  '/mcp-for-claude-desktop': '2026-08-05',
-  '/mcp-for-windsurf': '2026-08-05',
-  '/mcp-for-cline': '2026-08-05',
-  '/trust': '2026-08-07',
-  '/stack': '2026-08-10',
+  '/mcp-for-cursor': '2026-10-14',
+  '/mcp-for-claude-desktop': '2026-10-14',
+  '/mcp-for-windsurf': '2026-10-14',
+  '/mcp-for-cline': '2026-10-14',
+  '/trust': '2026-10-14',
+  '/stack': '2026-10-14',
   '/compare': '2026-09-23',
-  '/tags': '2026-08-26',
+  '/tags': '2026-10-14',
   '/best/seo': '2026-08-10',
   '/mcp-for-seo': '2026-08-23',
-  '/lucky': '2026-08-13',
-  '/advertise': '2026-08-13',
+  '/lucky': '2026-10-14',
+  '/advertise': '2026-10-14',
   '/best/figma': '2026-09-23',
   '/best/obsidian': '2026-09-23',
   '/best/shopify': '2026-09-23',
@@ -344,7 +344,7 @@ export function maxServerLastMod(servers: SitemapServer[]): string {
   for (const s of servers) {
     const iso = listingLastMod(s);
     const t = new Date(iso).getTime();
-    if (!isNaN(t) && t > maxMs) maxMs = t;
+    if (!Number.isNaN(t) && t > maxMs) maxMs = t;
   }
   return maxMs > 0
     ? new Date(maxMs).toISOString().replace(/\.\d{3}Z$/, 'Z')

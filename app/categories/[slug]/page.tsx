@@ -1,15 +1,12 @@
-import { ChevronRight, Download, Eye, Heart } from 'lucide-react';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
+import { ServerCard, ServerRow } from '../../../components/directory/ServerRow';
 import { ImpressionBeacon } from '../../../components/ImpressionTracker';
-import { Badge } from '../../../components/ui/Badge';
-import { Card } from '../../../components/ui/Card';
 import { FaqSection } from '../../../components/ui/FaqSection';
-import { SafeMarkdown } from '../../../components/ui/SafeMarkdown';
-import { ServerAvatar } from '../../../components/ui/ServerAvatar';
 import { bestTopicForCategory } from '../../../lib/bestTopics';
 import {
   categoryFromSlug,
@@ -21,11 +18,6 @@ import {
 } from '../../../lib/categories';
 import { parseServerName } from '../../../lib/displayName';
 import {
-  isFeaturedListing,
-  isVerifiedListing,
-} from '../../../lib/featuredStatus';
-import { formatCompactNumber } from '../../../lib/format';
-import {
   getCategoryCounts,
   getRankingCandidates,
   relatedRankingScore,
@@ -36,6 +28,10 @@ const SITE = 'https://allmcps.com';
 
 /** Cap the server-rendered card list; larger categories link out to the full filter view. */
 const MAX_CARDS = 60;
+/** Leading servers shown as "top picks" cards above the list. */
+const TOP_PICKS = 3;
+/** Row index of the in-feed sponsor unit in the list below the picks. */
+const AD_ROW_INDEX = 2;
 
 /** Ranking mirrors lib/servers.relatedRankingScore so ordering is consistent site-wide. */
 function score(s: Server): number {
@@ -108,7 +104,7 @@ export default async function CategoryLandingPage({
     redirect(`/categories/${canonicalSlug}`);
   }
 
-  const { emoji, label } = parseCategoryLabel(category);
+  const { label } = parseCategoryLabel(category);
   const meta = getCategoryMeta(category);
 
   const [categoryServers, countsObj] = await Promise.all([
@@ -149,7 +145,7 @@ export default async function CategoryLandingPage({
   const related = Object.entries(countsObj)
     .filter(([name]) => name !== category)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
+    .slice(0, 9)
     .map(([name, count]) => ({
       name,
       count,
@@ -221,7 +217,10 @@ export default async function CategoryLandingPage({
       },
     ],
   };
-  const adSlotIndex = Math.floor(Math.random() * 10) + 5; // random slot 5–14
+  const picks = cards.slice(0, TOP_PICKS);
+  const rest = cards.slice(TOP_PICKS);
+  const best = bestTopicForCategory(category);
+  const browseHref = `/browse?category=${encodeURIComponent(category)}`;
 
   return (
     <>
@@ -229,310 +228,185 @@ export default async function CategoryLandingPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <main className="container page-shell" style={{ paddingBottom: '4rem' }}>
-        {/* Breadcrumb */}
+      <main className="container dir-catpage">
         <nav aria-label="Breadcrumb">
-          <ol className="breadcrumb" style={{ marginBottom: '2rem' }}>
+          <ol className="crumbs">
             <li>
               <Link href="/">Home</Link>
-            </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
             </li>
             <li>
               <Link href="/categories">Categories</Link>
             </li>
-            <li className="breadcrumb-separator">
-              <ChevronRight size={12} />
-            </li>
-            <li className="breadcrumb-current">{label}</li>
+            <li aria-current="page">{label}</li>
           </ol>
         </nav>
 
-        {/* Hero */}
-        <section
-          style={{
-            margin: '0 auto 2.5rem',
-            maxWidth: '780px',
-            textAlign: 'center',
-          }}
-        >
-          {(meta.emoji || emoji) && (
-            <div
-              className="category-card-emoji"
-              aria-hidden="true"
-              style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '16px',
-                fontSize: '2.25rem',
-                background: `${meta.color}18`,
-                borderColor: meta.borderTint || `${meta.color}40`,
-                boxShadow: `0 4px 20px ${meta.color}25`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1.25rem',
-              }}
-            >
-              {meta.emoji || emoji}
-            </div>
-          )}
-          <h1 className="text-display" style={{ marginBottom: '1rem' }}>
-            <span className="text-brand-gradient">
-              {total.toLocaleString()}
-            </span>{' '}
-            {label} MCP Servers
-          </h1>
-          <p
-            className="text-lead"
-            style={{ margin: '0 auto 1.5rem', textAlign: 'center' }}
-          >
-            {intro}
-          </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.75rem',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Link
-              href={`/browse?category=${encodeURIComponent(category)}`}
-              className="btn btn-secondary"
-              rel="nofollow"
-            >
-              Open in interactive directory
-            </Link>
-            {(() => {
-              const best = bestTopicForCategory(category);
-              return best ? (
-                <Link href={`/best/${best.slug}`} className="btn btn-secondary">
-                  Best {best.title} servers →
+        <header className={`dir-hero animate-in hue-${meta.hue}`}>
+          <span className="dir-hero-icon" aria-hidden="true">
+            {meta.emoji}
+          </span>
+          <div className="dir-hero-body">
+            <h1 className="text-page-title">{label} MCP servers</h1>
+            <p className="dir-hero-lead">{intro}</p>
+            <div className="dir-hero-actions">
+              <Link
+                href={browseHref}
+                className="btn btn-primary btn-md"
+                rel="nofollow"
+              >
+                Search &amp; filter all {total.toLocaleString()}
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              {best && (
+                <Link
+                  href={`/best/${best.slug}`}
+                  className="btn btn-secondary btn-md"
+                >
+                  Best {best.title} servers
                 </Link>
-              ) : null;
-            })()}
+              )}
+            </div>
           </div>
-        </section>
+        </header>
 
-        {/* Sponsor Ad Header Unit */}
-        <div style={{ marginBottom: '2.5rem' }}>
-          <SponsorAdUnit placement="header_banner" />
-        </div>
-
-        {/* Server grid */}
         {cards.length > 0 ? (
-          <ul
-            className="directory-grid"
-            style={{ listStyle: 'none', margin: 0, padding: 0 }}
-          >
-            {cards.map((server, index) => {
-              const { displayName, org } = parseServerName(server.name);
-              return (
-                <div key={server.id} style={{ display: 'contents' }}>
-                  {index === adSlotIndex && (
-                    <li style={{ listStyle: 'none', height: '100%' }}>
-                      <SponsorAdUnit placement="directory_inline" />
-                    </li>
-                  )}
-                  <li>
+          <>
+            {/* Directly under the heading so the sponsor is in the first
+                screen (impressions count at ≥50% visible). */}
+            <div className="dir-banner">
+              <SponsorAdUnit placement="header_banner" />
+            </div>
+
+            <section className="dir-section" aria-labelledby="top-picks">
+              <div className="dir-section-head">
+                <h2 id="top-picks" className="dir-section-title">
+                  Top picks
+                </h2>
+                <p className="dir-section-sub">
+                  The most-used {label} servers on AllMCPs right now.
+                </p>
+              </div>
+              <ol className="dir-picks">
+                {picks.map((server, i) => (
+                  <li key={server.id} className="dir-pick">
+                    <span className="dir-pick-rank tabular" aria-hidden="true">
+                      #{i + 1}
+                    </span>
                     <ImpressionBeacon
                       serverId={server.id}
                       surface="category_page"
+                      className="dir-beacon dir-pick-beacon"
                     >
-                      <Card
-                        href={`/mcp/${server.id}`}
-                        className={`directory-card-uniform ${isFeaturedListing(server) ? 'directory-card-featured' : ''}`.trim()}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            marginBottom: '0.75rem',
-                          }}
-                        >
-                          <ServerAvatar
-                            name={server.name}
-                            logoUrl={server.logoUrl}
-                            size={44}
-                          />
-                          <div
-                            className="directory-card-title-block"
-                            style={{ marginBottom: 0 }}
-                          >
-                            <h2
-                              className="directory-card-title-text"
-                              style={{ fontSize: '1.1rem' }}
-                            >
-                              {displayName}
-                            </h2>
-                            {org && (
-                              <div className="directory-card-org-text">
-                                {org}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="directory-card-desc-block">
-                          <SafeMarkdown
-                            content={
-                              server.description || 'No description provided.'
-                            }
-                            isInline
-                          />
-                        </div>
-                        <div className="directory-card-footer">
-                          <div
-                            style={{
-                              display: 'flex',
-                              gap: '0.5rem',
-                              flexWrap: 'wrap',
-                              minWidth: 0,
-                            }}
-                          >
-                            {isFeaturedListing(server) && (
-                              <Badge
-                                variant="success"
-                                className="badge-featured"
-                              >
-                                ★ Featured
-                              </Badge>
-                            )}
-                            {isVerifiedListing(server) && (
-                              <Badge variant="official">Verified</Badge>
-                            )}
-                          </div>
-                          <div
-                            className="directory-card-stats"
-                            style={{
-                              display: 'flex',
-                              gap: '0.75rem',
-                              color: 'var(--text-secondary)',
-                              fontSize: '0.8rem',
-                            }}
-                          >
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                              }}
-                              title={`${(server.views || 0).toLocaleString()} views`}
-                            >
-                              <Eye size={13} />{' '}
-                              {formatCompactNumber(server.views || 0)}
-                            </span>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                              }}
-                              title={`${(server.copies || 0).toLocaleString()} installs`}
-                            >
-                              <Download size={13} />{' '}
-                              {formatCompactNumber(server.copies || 0)}
-                            </span>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                              }}
-                              title={`${(server.upvotes || 0).toLocaleString()} upvotes`}
-                            >
-                              <Heart size={13} />{' '}
-                              {formatCompactNumber(server.upvotes || 0)}
-                            </span>
-                          </div>
-                        </div>
-                      </Card>
+                      <ServerCard server={server} hideCategory />
                     </ImpressionBeacon>
                   </li>
-                </div>
-              );
-            })}
-          </ul>
-        ) : (
-          <div
-            className="surface empty-state"
-            style={{ borderStyle: 'dashed' }}
-          >
-            <p className="empty-state-body" style={{ margin: 0 }}>
-              No servers are listed in this category yet.{' '}
-              <Link href="/submit">Submit one →</Link>
-            </p>
-          </div>
-        )}
+                ))}
+              </ol>
+            </section>
 
-        {total > cards.length && (
-          <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-            <Link
-              href={`/browse?category=${encodeURIComponent(category)}`}
-              className="btn btn-primary"
-              rel="nofollow"
-            >
-              Browse all {total.toLocaleString()} {label} servers →
-            </Link>
-          </div>
-        )}
-
-        {/* Related categories */}
-        {related.length > 0 && (
-          <section style={{ marginTop: '4rem' }}>
-            <h2
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                marginBottom: '1.25rem',
-              }}
-            >
-              Explore related categories
-            </h2>
-            <ul
-              style={{
-                listStyle: 'none',
-                margin: 0,
-                padding: 0,
-                display: 'flex',
-                gap: '0.6rem',
-                flexWrap: 'wrap',
-              }}
-            >
-              {related.map((r) => (
-                <li key={r.slug}>
-                  <Link
-                    href={`/categories/${r.slug}`}
-                    className="badge badge-link badge-category"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                    }}
-                  >
-                    {r.emoji && <span aria-hidden="true">{r.emoji}</span>}
-                    <span>{r.label}</span>
-                    <span style={{ opacity: 0.6 }}>
-                      ({r.count.toLocaleString()})
-                    </span>
+            {rest.length > 0 && (
+              <section className="dir-section" aria-labelledby="all-servers">
+                <div className="dir-section-head dir-section-head--split">
+                  <h2 id="all-servers" className="dir-section-title">
+                    More {label} servers
+                  </h2>
+                  <Link href={browseHref} className="link-arrow" rel="nofollow">
+                    Filter by client, language &amp; more
+                    <ArrowRight size={14} aria-hidden="true" />
                   </Link>
-                </li>
-              ))}
+                </div>
+                <ol className="dir-list dir-list--plain">
+                  {rest.map((server, index) => (
+                    <li key={server.id}>
+                      {index === AD_ROW_INDEX && (
+                        <div className="dir-ad-slot">
+                          <SponsorAdUnit
+                            placement="directory_inline"
+                            layout="row"
+                          />
+                        </div>
+                      )}
+                      <ImpressionBeacon
+                        serverId={server.id}
+                        surface="category_page"
+                      >
+                        <ServerRow server={server} hideCategory />
+                      </ImpressionBeacon>
+                    </li>
+                  ))}
+                </ol>
+                {total > cards.length && (
+                  <div className="dir-more">
+                    <span className="dir-more-meta tabular">
+                      Showing {cards.length} of {total.toLocaleString()}
+                    </span>
+                    <Link
+                      href={browseHref}
+                      className="btn btn-secondary btn-md"
+                      rel="nofollow"
+                    >
+                      Browse all {total.toLocaleString()} {label} servers
+                    </Link>
+                  </div>
+                )}
+              </section>
+            )}
+          </>
+        ) : (
+          <div className="dir-empty">
+            <h2 className="dir-empty-title">No servers here yet</h2>
+            <p className="dir-empty-body">
+              Nothing is listed in {label} yet. Know a good one?
+            </p>
+            <div className="dir-empty-actions">
+              <Link href="/submit" className="btn btn-secondary btn-sm">
+                Submit a server
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {related.length > 0 && (
+          <section className="dir-section" aria-labelledby="related-cats">
+            <div className="dir-section-head">
+              <h2 id="related-cats" className="dir-section-title">
+                Related categories
+              </h2>
+            </div>
+            <ul className="dir-catgrid dir-catgrid--compact">
+              {related.map((r) => {
+                const rMeta = getCategoryMeta(r.name);
+                return (
+                  <li key={r.slug}>
+                    <Link
+                      href={`/categories/${r.slug}`}
+                      className={`dir-catcard spotlight tint-card hue-${rMeta.hue}`}
+                    >
+                      <div className="dir-catcard-head">
+                        <span className="dir-catcard-icon" aria-hidden="true">
+                          {rMeta.emoji}
+                        </span>
+                        <div className="dir-catcard-titles">
+                          <h3 className="dir-catcard-title">{r.label}</h3>
+                          <span className="dir-catcard-count tabular">
+                            {r.count.toLocaleString()} servers
+                          </span>
+                        </div>
+                        <ArrowUpRight
+                          size={16}
+                          className="dir-catcard-arrow"
+                          aria-hidden="true"
+                        />
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
 
-        {/* Query-Forward AEO/SEO Information Section */}
-        <section
-          style={{
-            marginTop: '4rem',
-            paddingTop: '2.5rem',
-            borderTop: '1px solid var(--border-color)',
-          }}
-        >
+        <section className="dir-section dir-faq">
           <FaqSection
             title={`Frequently Asked Questions about ${label} MCP Servers`}
             renderJsonLd={false}

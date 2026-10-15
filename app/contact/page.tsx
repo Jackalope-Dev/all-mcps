@@ -1,7 +1,15 @@
+import {
+  ArrowRight,
+  BadgeCheck,
+  CreditCard,
+  Megaphone,
+  PlusCircle,
+} from 'lucide-react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { ContactForm } from '../../components/forms/ContactForm';
-import { PageHeader, PageShell } from '../../components/PageShell';
+import { PageShell } from '../../components/PageShell';
 
 export const metadata: Metadata = {
   title: 'Contact & Support — Listings & Sponsorships',
@@ -79,12 +87,68 @@ export default function ContactPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <PageShell variant="content" panel>
-        <PageHeader
-          title="Contact Us"
-          description="Have a question, feedback, or need help with a listing? Send us a message."
-        />
-        <ContactForm />
+      <PageShell variant="default">
+        <div className="acct-contact">
+          <div className="acct-contact-intro">
+            <header className="acct-page-head">
+              <h1 className="text-page-title">Contact the AllMCPs team</h1>
+              <p className="text-lead">
+                Questions, feedback, or help with a listing — send us a message
+                and we’ll get back to you by email.
+              </p>
+            </header>
+
+            <p className="acct-contact-shortcuts-label">
+              Faster for common requests
+            </p>
+            <ul className="acct-contact-shortcuts">
+              <li className="hue-blue">
+                <Link href="/submit">
+                  <PlusCircle size={17} aria-hidden="true" />
+                  <span>
+                    <strong>Add a server</strong>
+                    <span>Submit it for free review</span>
+                  </span>
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </li>
+              <li className="hue-teal">
+                <Link href="/dashboard">
+                  <BadgeCheck size={17} aria-hidden="true" />
+                  <span>
+                    <strong>Edit or claim a listing</strong>
+                    <span>Manage it from your dashboard</span>
+                  </span>
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </li>
+              <li className="hue-pink">
+                <Link href="/advertise">
+                  <Megaphone size={17} aria-hidden="true" />
+                  <span>
+                    <strong>Advertising</strong>
+                    <span>Self-serve sponsor campaigns</span>
+                  </span>
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </li>
+              <li className="hue-violet">
+                <Link href="/pricing">
+                  <CreditCard size={17} aria-hidden="true" />
+                  <span>
+                    <strong>Billing &amp; boosts</strong>
+                    <span>Plans, FAQ and invoices</span>
+                  </span>
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div className="acct-card acct-contact-card">
+            <ContactForm />
+          </div>
+        </div>
       </PageShell>
     </>
   );

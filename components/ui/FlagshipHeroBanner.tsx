@@ -17,11 +17,13 @@ import { useState } from 'react';
 interface FlagshipHeroBannerProps {
   serverId: string;
   serverName: string;
+  /** Tools on the live listing — never a hard-coded count. */
+  toolCount: number;
 }
 
 export function FlagshipHeroBanner({
-  serverId,
   serverName,
+  toolCount,
 }: FlagshipHeroBannerProps) {
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
@@ -109,8 +111,8 @@ export function FlagshipHeroBanner({
               color: 'var(--text-secondary)',
             }}
           >
-            <BadgeCheck size={14} style={{ color: '#10b981' }} /> 8 Native MCP
-            Tools
+            <BadgeCheck size={14} style={{ color: '#10b981' }} /> Native MCP
+            tools
           </span>
         </div>
 
@@ -310,7 +312,8 @@ export function FlagshipHeroBanner({
               gap: '0.4rem',
             }}
           >
-            <ArrowDown size={16} /> Inspect 8 MCP Tool Schemas
+            <ArrowDown size={16} /> Inspect{' '}
+            {toolCount > 0 ? `${toolCount} ` : ''}MCP Tool Schemas
           </a>
 
           <Link

@@ -381,6 +381,7 @@ export default function AdminClient({
           const isActive = activeTab === item.id;
           return (
             <button
+              type="button"
               key={item.id}
               onClick={() => setActiveTab(item.id as any)}
               className={`admin-tab-btn ${isActive ? 'active' : ''}`}
@@ -454,6 +455,7 @@ export default function AdminClient({
             }}
           >
             <button
+              type="button"
               onClick={() => setModSubTab('submissions')}
               className={`admin-btn ${modSubTab === 'submissions' ? 'admin-btn-primary' : ''}`}
               style={{
@@ -475,6 +477,7 @@ export default function AdminClient({
               {syncPending.length > 0 ? ` +${syncPending.length} auto` : ''})
             </button>
             <button
+              type="button"
               onClick={() => setModSubTab('edits')}
               className={`admin-btn ${modSubTab === 'edits' ? 'admin-btn-primary' : ''}`}
               style={{
@@ -493,6 +496,7 @@ export default function AdminClient({
               Edits ({pendingEdits.length})
             </button>
             <button
+              type="button"
               onClick={() => setModSubTab('claims')}
               className={`admin-btn ${modSubTab === 'claims' ? 'admin-btn-primary' : ''}`}
               style={{
@@ -511,6 +515,7 @@ export default function AdminClient({
               Claims ({pendingClaims.length})
             </button>
             <button
+              type="button"
               onClick={() => setModSubTab('logos')}
               className={`admin-btn ${modSubTab === 'logos' ? 'admin-btn-primary' : ''}`}
               style={{
@@ -529,6 +534,7 @@ export default function AdminClient({
               Logos ({pendingLogos.length})
             </button>
             <button
+              type="button"
               onClick={() => setModSubTab('screenshots')}
               className={`admin-btn ${modSubTab === 'screenshots' ? 'admin-btn-primary' : ''}`}
               style={{
@@ -549,6 +555,7 @@ export default function AdminClient({
               Screenshots ({pendingScreenshots.length})
             </button>
             <button
+              type="button"
               onClick={() => setModSubTab('reviews')}
               className={`admin-btn ${modSubTab === 'reviews' ? 'admin-btn-primary' : ''}`}
               style={{
@@ -567,6 +574,7 @@ export default function AdminClient({
               Review Comments ({pendingReviewComments.length})
             </button>
             <button
+              type="button"
               onClick={() => setModSubTab('reports')}
               className={`admin-btn ${modSubTab === 'reports' ? 'admin-btn-primary' : ''}`}
               style={{
@@ -903,6 +911,7 @@ export default function AdminClient({
                 Reject & Send Feedback
               </h3>
               <button
+                type="button"
                 onClick={() => setRejectingItem(null)}
                 style={{
                   background: 'transparent',
@@ -939,6 +948,7 @@ export default function AdminClient({
 
             <div>
               <label
+                htmlFor="admin-rejection-reason"
                 style={{
                   display: 'block',
                   fontSize: '0.8rem',
@@ -950,6 +960,7 @@ export default function AdminClient({
                 Rejection Reason / Feedback to Submitter:
               </label>
               <textarea
+                id="admin-rejection-reason"
                 className="form-input"
                 rows={4}
                 value={rejectionReason}
@@ -968,6 +979,7 @@ export default function AdminClient({
               }}
             >
               <button
+                type="button"
                 onClick={() => setRejectingItem(null)}
                 className="admin-btn"
                 style={{
@@ -979,6 +991,7 @@ export default function AdminClient({
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => {
                   handleAction(rejectingItem.id, rejectingItem.action, {
                     reason: rejectionReason.trim(),
@@ -1265,6 +1278,7 @@ function ServerTable({
                   <td data-label="Actions">
                     <div className="admin-actions">
                       <button
+                        type="button"
                         onClick={() => onApprove(server.id)}
                         disabled={loadingId === server.id}
                         className="admin-btn"
@@ -1273,6 +1287,7 @@ function ServerTable({
                         Approve
                       </button>
                       <button
+                        type="button"
                         onClick={() => onReject(server)}
                         disabled={loadingId === server.id}
                         className="admin-btn"
@@ -1402,6 +1417,7 @@ function RecentlyAddedTable({
                 <td data-label="Actions">
                   <div className="admin-actions">
                     <button
+                      type="button"
                       onClick={() => onResendApproval(server.id)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
@@ -1510,6 +1526,7 @@ function PendingEditsTable({
                   <td data-label="Actions">
                     <div className="admin-actions">
                       <button
+                        type="button"
                         onClick={() => onApprove(server.id)}
                         disabled={loadingId === server.id}
                         className="admin-btn"
@@ -1518,6 +1535,7 @@ function PendingEditsTable({
                         Approve
                       </button>
                       <button
+                        type="button"
                         onClick={() => onReject(server)}
                         disabled={loadingId === server.id}
                         className="admin-btn"
@@ -1606,6 +1624,7 @@ function PendingClaimsTable({
                 <td data-label="Actions">
                   <div className="admin-actions">
                     <button
+                      type="button"
                       onClick={() => onApprove(server.id)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
@@ -1614,6 +1633,7 @@ function PendingClaimsTable({
                       Approve
                     </button>
                     <button
+                      type="button"
                       onClick={() => onReject(server)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
@@ -1681,6 +1701,7 @@ function PendingLogosTable({
                 <td data-label="Actions">
                   <div className="admin-actions">
                     <button
+                      type="button"
                       onClick={() => onApprove(server.id)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
@@ -1689,6 +1710,7 @@ function PendingLogosTable({
                       Approve
                     </button>
                     <button
+                      type="button"
                       onClick={() => onReject(server)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
@@ -1760,6 +1782,7 @@ function PendingScreenshotsTable({
                 <td data-label="Actions">
                   <div className="admin-actions">
                     <button
+                      type="button"
                       onClick={() => onApprove(server.id)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
@@ -1768,6 +1791,7 @@ function PendingScreenshotsTable({
                       Approve
                     </button>
                     <button
+                      type="button"
                       onClick={() => onReject(server)}
                       disabled={loadingId === server.id}
                       className="admin-btn"
@@ -1865,6 +1889,7 @@ function PendingReportsTable({
                 <td data-label="Actions">
                   <div className="admin-actions">
                     <button
+                      type="button"
                       onClick={() => onReviewed(r.id)}
                       disabled={loadingId === String(r.id)}
                       className="admin-btn"
@@ -1873,6 +1898,7 @@ function PendingReportsTable({
                       Mark Reviewed
                     </button>
                     <button
+                      type="button"
                       onClick={() => onDismiss(r.id)}
                       disabled={loadingId === String(r.id)}
                       className="admin-btn"
@@ -1966,6 +1992,7 @@ function PendingReviewsTable({
                 <td data-label="Actions">
                   <div className="admin-actions">
                     <button
+                      type="button"
                       onClick={() => onApprove(r.id)}
                       disabled={loadingId === String(r.id)}
                       className="admin-btn"
@@ -1974,6 +2001,7 @@ function PendingReviewsTable({
                       Approve
                     </button>
                     <button
+                      type="button"
                       onClick={() => onReject(r)}
                       disabled={loadingId === String(r.id)}
                       className="admin-btn"
@@ -1982,6 +2010,7 @@ function PendingReviewsTable({
                       Reject
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         if (
                           confirm(

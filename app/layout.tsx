@@ -10,6 +10,7 @@ import { serializeJsonLd } from '@/lib/jsonLd';
 import { CommandPaletteLazy } from '../components/CommandPaletteLazy';
 import { CookieBanner } from '../components/CookieBanner';
 import { DeferredChrome } from '../components/DeferredChrome';
+import { MotionRuntime } from '../components/MotionRuntime';
 import { PostHogIdentify } from '../components/PostHogIdentify';
 import { PurchaseTracker } from '../components/PurchaseTracker';
 import { SiteFooter } from '../components/SiteFooter';
@@ -17,6 +18,16 @@ import { SiteHeader } from '../components/SiteHeader';
 import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { ToastProvider } from '../components/ui/Toast';
 import './globals.css';
+// Refresh layers — cascade order matters: foundation tokens/primitives first,
+// then one stylesheet per area of the site (see app/styles/).
+import './styles/foundation.css';
+import './styles/chrome.css';
+import './styles/home.css';
+import './styles/directory.css';
+import './styles/listing.css';
+import './styles/tools.css';
+import './styles/content.css';
+import './styles/account.css';
 
 // Atkinson Hyperlegible Next: purpose-built so l / I / 1 don't collide —
 // lowercase "l" has a clear tail (not a plain vertical bar). Critical for "AllMCPs".
@@ -59,8 +70,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   // Match light/dark shell chrome so browser UI doesn't flash the wrong color.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
-    { media: '(prefers-color-scheme: dark)', color: '#020617' },
+    { media: '(prefers-color-scheme: light)', color: '#fafbfc' },
+    { media: '(prefers-color-scheme: dark)', color: '#05070c' },
   ],
 };
 
@@ -70,7 +81,7 @@ export const metadata: Metadata = {
     template: '%s | AllMCPs',
   },
   description:
-    'Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.',
+    'Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse MCP servers across 50+ categories.',
   metadataBase: new URL('https://allmcps.com'),
   manifest: '/manifest.webmanifest',
   icons: {
@@ -91,7 +102,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'AllMCPs | Directory for Model Context Protocol Servers',
     description:
-      'Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse 50+ categories of verified MCP tools.',
+      'Discover and install Model Context Protocol (MCP) servers to give your AI agents superpowers. Browse MCP servers across 50+ categories.',
     url: 'https://allmcps.com',
     siteName: 'AllMCPs',
     locale: 'en_US',
@@ -247,6 +258,7 @@ export default function RootLayout({
           <PurchaseTracker />
         </Suspense>
         <PostHogIdentify />
+        <MotionRuntime />
         <CommandPaletteLazy />
         <CookieBanner />
         <ToastProvider />

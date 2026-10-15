@@ -1,10 +1,12 @@
-import { ChevronRight, Tag } from 'lucide-react';
+import { Hash, Search } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import DirectoryGrid from '@/components/DirectoryGrid';
+import { ServerRow } from '@/components/directory/ServerRow';
+import { ImpressionBeacon } from '@/components/ImpressionTracker';
 import { PageShell } from '@/components/PageShell';
 import { serializeJsonLd } from '@/lib/jsonLd';
+import { engagementScore } from '@/lib/search';
 import { getServersForTag } from '@/lib/tags';
 
 // getServersForTag re-derives tags for the whole active catalog via regex extraction
@@ -12,6 +14,9 @@ import { getServersForTag } from '@/lib/tags';
 // incrementalCache (open-next.config.ts) let this persist across requests like the
 // other listing pages (categories/[slug], best/[topic]).
 export const revalidate = 3600;
+
+/** Rows rendered on the page; larger tags link out to /browse search. */
+const MAX_ROWS = 60;
 
 export async function generateMetadata({
   params,
@@ -118,116 +123,76 @@ export default async function TagDetailPage({
     ],
   };
 
+  const shown = [...matched]
+    .sort((a, b) => engagementScore(b) - engagementScore(a))
+    .slice(0, MAX_ROWS);
+
   return (
     <PageShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
-      <div
-        style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}
-      >
-        {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" style={{ marginBottom: '1.5rem' }}>
-          <ol
-            className="breadcrumb"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-              listStyle: 'none',
-              padding: 0,
-              margin: 0,
-            }}
-          >
-            <li>
-              <Link
-                href="/"
-                style={{
-                  color: 'var(--text-secondary)',
-                  textDecoration: 'none',
-                }}
-              >
-                Home
-              </Link>
-            </li>
-            <li className="breadcrumb-separator" aria-hidden="true">
-              <ChevronRight size={14} />
-            </li>
-            <li>
-              <Link
-                href="/tags"
-                style={{
-                  color: 'var(--text-secondary)',
-                  textDecoration: 'none',
-                }}
-              >
-                Tags
-              </Link>
-            </li>
-            <li className="breadcrumb-separator" aria-hidden="true">
-              <ChevronRight size={14} />
-            </li>
-            <li
-              className="breadcrumb-current"
-              aria-current="page"
-              style={{ color: 'var(--text-primary)', fontWeight: 600 }}
-            >
-              {rawTag}
-            </li>
-          </ol>
-        </nav>
+      <nav aria-label="Breadcrumb">
+        <ol className="crumbs">
+          <li>
+            <Link href="/">Home</Link>
+          </li>
+          <li>
+            <Link href="/tags">Tags</Link>
+          </li>
+          <li aria-current="page">{rawTag}</li>
+        </ol>
+      </nav>
 
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: '2.5rem',
-            maxWidth: '750px',
-            margin: '0 auto 2.5rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              color: 'var(--accent-color)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              marginBottom: '0.5rem',
-            }}
-          >
-            <Tag size={16} /> Tag Topic
-          </div>
-          <h1
-            style={{
-              fontSize: '2.25rem',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              margin: 0,
-            }}
-          >
-            {rawTag} MCP Servers & Tools
-          </h1>
-          <p
-            style={{
-              fontSize: '1rem',
-              color: 'var(--text-secondary)',
-              marginTop: '0.6rem',
-              lineHeight: 1.6,
-            }}
-          >
-            Browse {matched.length} curated Model Context Protocol servers
-            tagged with &ldquo;{rawTag}&rdquo;. Connect these servers directly
-            to Claude Desktop, Cursor, or Windsurf to equip your AI agents with
-            verified capabilities.
+      <header className="dir-hero animate-in">
+        <span className="dir-hero-icon" aria-hidden="true">
+          <Hash size={24} />
+        </span>
+        <div className="dir-hero-body">
+          <h1 className="text-page-title">{rawTag} MCP servers &amp; tools</h1>
+          <p className="dir-hero-lead">
+            {matched.length.toLocaleString()} Model Context Protocol servers
+            tagged &ldquo;{rawTag}&rdquo;, ranked by usage. Connect any of them
+            to Claude Desktop, Cursor or Windsurf in one step.
           </p>
+          <div className="dir-hero-actions">
+            <Link
+              href={`/browse?q=${encodeURIComponent(rawTag)}`}
+              className="btn btn-secondary btn-md"
+              rel="nofollow"
+            >
+              <Search size={15} aria-hidden="true" />
+              Search &ldquo;{rawTag}&rdquo; with filters
+            </Link>
+          </div>
         </div>
+      </header>
 
-        <DirectoryGrid initialServers={matched.slice(0, 48)} variant="browse" />
-      </div>
+      <h2 className="sr-only">Servers tagged {rawTag}</h2>
+      <ol className="dir-list dir-list--plain">
+        {shown.map((server) => (
+          <li key={server.id}>
+            <ImpressionBeacon serverId={server.id} surface="browse_list">
+              <ServerRow server={server} />
+            </ImpressionBeacon>
+          </li>
+        ))}
+      </ol>
+      {matched.length > shown.length && (
+        <div className="dir-more">
+          <span className="dir-more-meta tabular">
+            Showing {shown.length} of {matched.length.toLocaleString()}
+          </span>
+          <Link
+            href={`/browse?q=${encodeURIComponent(rawTag)}`}
+            className="btn btn-secondary btn-md"
+            rel="nofollow"
+          >
+            See all in Browse
+          </Link>
+        </div>
+      )}
     </PageShell>
   );
 }

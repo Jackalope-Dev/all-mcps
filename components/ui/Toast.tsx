@@ -18,12 +18,16 @@ type ToastItem = {
   title: string;
   description?: string;
   duration: number;
+  /** Set while the exit animation plays, just before removal. */
+  leaving?: boolean;
 };
 
 type Listener = (toasts: ToastItem[]) => void;
 
 const DEFAULT_DURATION = 4000;
 const MAX_TOASTS = 4;
+/** Matches the .acct-toast exit animation in app/styles/account.css. */
+const EXIT_MS = 180;
 
 let toasts: ToastItem[] = [];
 const listeners = new Set<Listener>();
@@ -42,10 +46,15 @@ function dismissToast(id: string) {
     clearTimeout(timer);
     dismissTimers.delete(id);
   }
-  const next = toasts.filter((t) => t.id !== id);
-  if (next.length === toasts.length) return;
-  toasts = next;
+  const target = toasts.find((t) => t.id === id);
+  if (!target || target.leaving) return;
+  // Play the exit animation first, then drop the toast from the stack.
+  toasts = toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t));
   emit();
+  setTimeout(() => {
+    toasts = toasts.filter((t) => t.id !== id);
+    emit();
+  }, EXIT_MS);
 }
 
 function addToast(type: ToastType, title: string, options?: ToastOptions) {
@@ -98,9 +107,9 @@ export const toast = {
 };
 
 const ICONS: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle2 size={18} strokeWidth={2.25} />,
-  error: <XCircle size={18} strokeWidth={2.25} />,
-  info: <Info size={18} strokeWidth={2.25} />,
+  success: <CheckCircle2 size={17} strokeWidth={2.25} />,
+  error: <XCircle size={17} strokeWidth={2.25} />,
+  info: <Info size={17} strokeWidth={2.25} />,
 };
 
 function ToastCard({
@@ -112,22 +121,23 @@ function ToastCard({
 }) {
   return (
     <div
-      className={`toast-item toast-${item.type}`}
+      className={`acct-toast acct-toast--${item.type}`}
+      data-leaving={item.leaving ? 'true' : undefined}
       role={item.type === 'error' ? 'alert' : 'status'}
       aria-live={item.type === 'error' ? 'assertive' : 'polite'}
     >
-      <div className="toast-icon" aria-hidden="true">
+      <div className="acct-toast-icon" aria-hidden="true">
         {ICONS[item.type]}
       </div>
-      <div className="toast-body">
-        <p className="toast-title">{item.title}</p>
+      <div className="acct-toast-body">
+        <p className="acct-toast-title">{item.title}</p>
         {item.description ? (
-          <p className="toast-description">{item.description}</p>
+          <p className="acct-toast-desc">{item.description}</p>
         ) : null}
       </div>
       <button
         type="button"
-        className="toast-dismiss"
+        className="acct-toast-dismiss"
         onClick={() => onDismiss(item.id)}
         aria-label="Dismiss notification"
       >
@@ -158,11 +168,11 @@ export function ToastProvider() {
   if (!mounted || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="toast-viewport" role="region" aria-label="Notifications">
+    <section className="acct-toasts" aria-label="Notifications">
       {items.map((item) => (
         <ToastCard key={item.id} item={item} onDismiss={onDismiss} />
       ))}
-    </div>,
+    </section>,
     document.body,
   );
 }

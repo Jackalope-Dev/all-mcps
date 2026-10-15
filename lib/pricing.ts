@@ -106,10 +106,10 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     mode: 'payment',
     priceEnv: 'STRIPE_PRICE_PRIORITY_REVIEW',
     badgeText: '⚡ Fast Track',
-    placementHint: 'Reviewed and published within 24 hours.',
+    placementHint: 'Front of the review queue — we aim for 24 hours.',
     targetAudience: 'New submissions launching soon',
     benefits: [
-      'Reviewed within 24 hours (guaranteed turnaround)',
+      'Moved to the front of the review queue (we aim for 24 hours)',
       'Direct notification when published live',
       'Ideal for product launches, hackathons & releases',
       'Same security checks — published safely',
@@ -153,7 +153,7 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
     targetAudience: 'Tools aiming to capture high-intent category visitors',
     benefits: [
       '★ Pinned #1 spot in your category, for as many weeks as you buy',
-      'Crown & Category Sponsor banner on category page',
+      'Featured badge & glowing card on your pinned listing',
       'Top exposure to users searching specifically for your niche',
     ],
     weeklyTiers: [
@@ -183,7 +183,7 @@ export const PAID_PRODUCTS: Record<PaidSku, PaidProduct> = {
       'Dofollow website backlink (valuable SEO boost)',
       'Verified / Premium badge & glowing card design',
       'Impression tracking & search discovery insights',
-      'Priority support & instant listing edits',
+      'Priority support',
     ],
   },
 };

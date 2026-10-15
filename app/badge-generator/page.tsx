@@ -1,6 +1,6 @@
+import { ShieldCheck } from 'lucide-react';
 import type { Metadata } from 'next';
-import { serializeJsonLd } from '@/lib/jsonLd';
-import { PageHeader, PageShell } from '../../components/PageShell';
+import { ToolPage } from '../../components/tools/ToolPage';
 import { BadgeEmbedBuilder } from '../../components/ui/BadgeEmbedBuilder';
 
 export const metadata: Metadata = {
@@ -69,39 +69,30 @@ export default function BadgeGeneratorPage() {
   };
 
   return (
-    <PageShell variant="tool" panel>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
-      />
-      <PageHeader
-        title="MCP Badge & Embed Generator"
-        description="Generate dynamic SVG badges in 3 easy steps: 1. Select your MCP server, 2. Customize badge style & metric, 3. Copy the Markdown or HTML snippet for your GitHub README or project site."
-      />
-      <div
-        style={{
-          marginTop: '1.25rem',
-          padding: '1rem 1.15rem',
-          borderRadius: 12,
-          border: '1px solid rgba(16,185,129,0.3)',
-          background: 'rgba(16,185,129,0.08)',
-          fontSize: '0.9rem',
-          color: 'var(--text-secondary)',
-          lineHeight: 1.55,
-        }}
-      >
-        <strong style={{ color: '#34d399' }}>Free dofollow path:</strong> claim
-        your listing, verify the product website, then embed a badge{' '}
-        <em>without</em> <code>nofollow</code>. We recheck periodically. Premium
-        listings get dofollow without a badge — see{' '}
-        <a href="/pricing#premium" style={{ color: 'var(--accent-color)' }}>
-          Premium
-        </a>
-        .
+    <ToolPage
+      href="/badge-generator"
+      crumb="Badge Generator"
+      title="MCP Badge & Embed Generator"
+      description={
+        <p>
+          Generate dynamic SVG badges in 3 easy steps: select your MCP server,
+          customize the badge style &amp; metric, then copy the Markdown or HTML
+          snippet for your GitHub README or project site.
+        </p>
+      }
+      meta={['Free', 'No sign-in', 'Live SVG, always up to date']}
+      jsonLd={[jsonLd]}
+    >
+      <div className="tl-alert tl-alert--ok bdg-dofollow">
+        <ShieldCheck size={18} aria-hidden="true" />
+        <p>
+          <strong>Free dofollow path:</strong> claim your listing, verify the
+          product website, then embed a badge <em>without</em>{' '}
+          <code>nofollow</code>. We recheck periodically. Premium listings get
+          dofollow without a badge — see <a href="/pricing#premium">Premium</a>.
+        </p>
       </div>
-      <div style={{ marginTop: '2rem' }}>
-        <BadgeEmbedBuilder />
-      </div>
-    </PageShell>
+      <BadgeEmbedBuilder />
+    </ToolPage>
   );
 }

@@ -140,7 +140,7 @@ describe('prose and placeholders are not package names', () => {
   });
 
   it('rejects shell interpolation swallowed from a header example', () => {
-    expect(isPlausibleInstallPackage('Authorization:${AUTH_HEADER}')).toBe(
+    expect(isPlausibleInstallPackage(`Authorization:\${AUTH_HEADER}`)).toBe(
       false,
     );
     expect(isPlausibleInstallPackage('<your-package>')).toBe(false);

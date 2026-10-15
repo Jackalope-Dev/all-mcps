@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { PageHeader, PageShell } from '@/components/PageShell';
 import { PresetStackGrid } from '@/components/PresetStackGrid';
 import { StackBuilderModal } from '@/components/StackBuilderModal';
+import { ToolPage } from '@/components/tools/ToolPage';
 import { getNewestActiveServers } from '@/lib/servers';
 
 export const metadata: Metadata = {
@@ -31,30 +31,20 @@ export default async function StackPage() {
   const servers = await getNewestActiveServers(500);
 
   return (
-    <PageShell>
-      <div
-        style={{ maxWidth: '960px', margin: '0 auto', padding: '2rem 1rem' }}
-      >
-        <PageHeader
-          centered
-          title="MCP Stack Builder"
-          description={
-            <>
-              Select your favorite MCP tools and export a single unified{' '}
-              <code style={{ color: 'var(--accent-color)' }}>
-                claude_desktop_config.json
-              </code>{' '}
-              or Cursor setup in seconds.
-            </>
-          }
-        />
-
-        {/* Inline Stack Manager (non-modal) */}
-        <StackBuilderModal allServers={servers} isOpen={true} isModal={false} />
-
-        {/* Interactive Featured Preset Stacks */}
-        <PresetStackGrid />
-      </div>
-    </PageShell>
+    <ToolPage
+      href="/stack"
+      crumb="Stack Builder"
+      title="MCP Stack Builder"
+      description={
+        <p>
+          Select your favorite MCP tools and export a single unified{' '}
+          <code>claude_desktop_config.json</code> or Cursor setup in seconds.
+        </p>
+      }
+      meta={['Free', 'No sign-in', 'Saved in this browser', 'Shareable link']}
+    >
+      <StackBuilderModal allServers={servers} isOpen={true} isModal={false} />
+      <PresetStackGrid />
+    </ToolPage>
   );
 }

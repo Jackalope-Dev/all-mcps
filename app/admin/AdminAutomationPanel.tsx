@@ -177,14 +177,14 @@ export function AdminAutomationPanel() {
               <strong style={{ color: 'var(--text-primary)' }}>
                 {g.label}
               </strong>
-              <div className="directory-segmented">
+              <div className="segmented">
                 {(['off', 'shadow', 'live'] as const).map((m) => (
                   <button
                     key={m}
                     type="button"
                     disabled={busy}
                     onClick={() => setMode(g, m)}
-                    className={`directory-segmented-btn ${g.mode === m ? 'is-active' : ''}`}
+                    className={g.mode === m ? 'is-active' : undefined}
                     aria-pressed={g.mode === m}
                   >
                     {m === 'off' ? 'Off' : m === 'shadow' ? 'Shadow' : 'Live'}

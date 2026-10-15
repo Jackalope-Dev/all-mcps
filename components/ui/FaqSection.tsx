@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, HelpCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import React, { useId, useRef, useState } from 'react';
 import { serializeJsonLd } from '@/lib/jsonLd';
 
@@ -13,6 +13,8 @@ interface FaqItem {
 
 export interface FaqSectionProps {
   title?: React.ReactNode;
+  /** id on the title heading, so a table-of-contents entry can target it. */
+  headingId?: string;
   items: FaqItem[];
   className?: string;
   defaultOpenIndex?: number | null;
@@ -34,11 +36,14 @@ function nodeToString(node: React.ReactNode): string {
 }
 
 /**
- * Standardized, WCAG AAA/AA accessible FAQ accordion component with embedded Schema.org JSON-LD support.
- * Complies with W3C WAI-ARIA APG Accordion Pattern (aria-expanded, aria-controls, role="region", arrow key navigation).
+ * Accessible FAQ accordion (WAI-ARIA APG accordion pattern: aria-expanded,
+ * aria-controls, role="region", arrow-key navigation) with optional
+ * FAQPage JSON-LD. Answers stay in the DOM when collapsed (inert, height 0)
+ * so their text is still present for crawlers and in-page find.
  */
 export function FaqSection({
   title,
+  headingId,
   items,
   className,
   defaultOpenIndex = 0,
@@ -61,47 +66,34 @@ export function FaqSection({
     const total = items.length;
     let targetIndex: number | null = null;
 
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      targetIndex = (index + 1) % total;
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      targetIndex = (index - 1 + total) % total;
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      targetIndex = 0;
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      targetIndex = total - 1;
-    }
+    if (e.key === 'ArrowDown') targetIndex = (index + 1) % total;
+    else if (e.key === 'ArrowUp') targetIndex = (index - 1 + total) % total;
+    else if (e.key === 'Home') targetIndex = 0;
+    else if (e.key === 'End') targetIndex = total - 1;
 
-    if (targetIndex !== null && buttonRefs.current[targetIndex]) {
+    if (targetIndex !== null) {
+      e.preventDefault();
       buttonRefs.current[targetIndex]?.focus();
     }
   };
 
-  // Structured Data (Schema.org FAQPage)
   const jsonLd = renderJsonLd
     ? {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
-        mainEntity: items.map((item) => {
-          const qText = nodeToString(item.question ?? item.q);
-          const aText = nodeToString(item.answer ?? item.a);
-          return {
-            '@type': 'Question',
-            name: qText,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: aText,
-            },
-          };
-        }),
+        mainEntity: items.map((item) => ({
+          '@type': 'Question',
+          name: nodeToString(item.question ?? item.q),
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: nodeToString(item.answer ?? item.a),
+          },
+        })),
       }
     : null;
 
   return (
-    <div className={className}>
+    <section className={`faq ${className ?? ''}`.trim()}>
       {jsonLd && (
         <script
           type="application/ld+json"
@@ -110,19 +102,12 @@ export function FaqSection({
       )}
 
       {title && (
-        <h2
-          style={{
-            fontSize: '1.4rem',
-            color: 'var(--text-primary)',
-            marginBottom: '1.25rem',
-            fontWeight: 700,
-          }}
-        >
+        <h2 className="faq-title" id={headingId}>
           {title}
         </h2>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="faq-list">
         {items.map((item, index) => {
           const questionText = item.question ?? item.q;
           const answerText = item.answer ?? item.a;
@@ -132,87 +117,38 @@ export function FaqSection({
           const key = typeof questionText === 'string' ? questionText : index;
 
           return (
-            <div
-              key={key}
-              style={{
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                background: isOpen ? 'var(--bg-elevated)' : 'var(--bg-muted)',
-                transition: 'all 0.2s ease',
-                overflow: 'hidden',
-              }}
-            >
-              <button
-                ref={(el) => {
-                  buttonRefs.current[index] = el;
-                }}
-                id={buttonId}
-                onClick={() => toggle(index)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                type="button"
-                aria-expanded={isOpen}
-                aria-controls={panelId}
-                style={{
-                  width: '100%',
-                  padding: '1rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-primary)',
-                  textAlign: 'left',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                <span
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.6rem',
+            <div key={key} className={`faq-item ${isOpen ? 'is-open' : ''}`}>
+              <h3 className="faq-q">
+                <button
+                  ref={(el) => {
+                    buttonRefs.current[index] = el;
                   }}
+                  id={buttonId}
+                  onClick={() => toggle(index)}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  className="faq-trigger"
                 >
-                  <HelpCircle
-                    size={18}
-                    style={{ color: 'var(--brand-cyan)', flexShrink: 0 }}
-                    aria-hidden="true"
-                  />
                   <span>{questionText}</span>
-                </span>
-                <ChevronDown
-                  size={18}
-                  aria-hidden="true"
-                  style={{
-                    color: 'var(--text-secondary)',
-                    transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.2s ease',
-                    flexShrink: 0,
-                  }}
-                />
-              </button>
-
-              {isOpen && (
-                <div
-                  id={panelId}
-                  role="region"
-                  aria-labelledby={buttonId}
-                  style={{
-                    padding: '0 1.25rem 1.25rem 2.85rem',
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.6,
-                    fontSize: '0.925rem',
-                  }}
-                >
-                  {answerText}
+                  <Plus size={18} aria-hidden="true" className="faq-icon" />
+                </button>
+              </h3>
+              <section
+                id={panelId}
+                aria-labelledby={buttonId}
+                className="faq-panel"
+                inert={!isOpen}
+              >
+                <div className="faq-panel-inner">
+                  <div className="faq-a">{answerText}</div>
                 </div>
-              )}
+              </section>
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

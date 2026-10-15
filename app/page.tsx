@@ -1,26 +1,19 @@
 import type { Metadata } from 'next';
 import { serializeJsonLd } from '@/lib/jsonLd';
-import { BentoShowcase } from '../components/BentoShowcase';
-import DirectoryGrid from '../components/DirectoryGrid';
-import { FeaturedCards } from '../components/FeaturedCards';
-import { FeaturedMarquee } from '../components/FeaturedMarquee';
+import { FeaturedServers, HeroFeatured } from '../components/FeaturedCards';
 import { HeroSection } from '../components/HeroSection';
-import { JackalopeCallout } from '../components/JackalopeCallout';
 import {
   LandingCta,
   LandingFaq,
+  LandingHowItWorks,
   LandingIntents,
-  LandingMcpPromo,
-  LandingNewsletter,
+  LandingTrust,
 } from '../components/LandingHome';
-import { StatsBanner } from '../components/StatsBanner';
-import { SectionKicker } from '../components/ui/SectionKicker';
 import { pickDiscoveryServers } from '../lib/featured';
-import { buildAiSearchText } from '../lib/search';
+import { isFeaturedListing } from '../lib/featuredStatus';
 import {
   getActiveServersLight,
   getShowcaseActiveServers,
-  type Server,
 } from '../lib/servers';
 import { getSiteStats } from '../lib/siteStats';
 
@@ -53,50 +46,6 @@ export const metadata: Metadata = {
   },
 };
 
-/**
- * Homepage landing cards only ever render name/description/category/badges/
- * install-snippet/tool-count (see the DirectoryGrid card markup) — never the
- * raw `tools` schema array or the full AI-content fields. `getShowcaseActiveServers`
- * still selects those heavy columns (other callers need them), so this collapses
- * them into the same compact `toolText`/`toolCount`/`aiText` shape the lazy
- * /browse feed already uses before they ever reach the client, instead of
- * shipping the full tool-schema/AI-content JSON into the homepage's initial
- * hydration payload for 48 listings just to leave it unread.
- */
-function toLightCard(s: Server) {
-  const tools = s.tools || [];
-  const {
-    tools: _tools,
-    aiSummary: _aiSummary,
-    aiOverview: _aiOverview,
-    aiUseCases: _aiUseCases,
-    aiFeatures: _aiFeatures,
-    aiFaq: _aiFaq,
-    aiEnvVars: _aiEnvVars,
-    ...rest
-  } = s;
-  return {
-    ...rest,
-    toolText: tools.map((t) => t.name).join(' ') || null,
-    toolCount: tools.length,
-    aiText: buildAiSearchText(
-      {
-        aiSummary: s.aiSummary,
-        aiOverview: s.aiOverview,
-        aiUseCases: s.aiUseCases,
-        aiFeatures: s.aiFeatures,
-        aiFaq: s.aiFaq,
-        tags: s.tags,
-        license: s.license,
-        pricingModel: s.pricingModel,
-        authType: s.authType,
-        compatibleClients: s.compatibleClients,
-      },
-      400,
-    ),
-  };
-}
-
 // 5-minute ISR aligns with the 5-min discovery seed rotation while serving
 // sub-15ms Edge CDN response times for root homepage visitors.
 export const revalidate = 300;
@@ -109,29 +58,40 @@ export const revalidate = 300;
 // pipeline is even involved, so this page never touches searchParams and stays
 // eligible for the `revalidate` caching below.
 export default async function Home() {
-  // Landing cards (full detail, DB-sorted+capped) and the catalog-wide ranking
-  // pool (lightweight columns only — see getActiveServersLight) are independent
-  // queries so a homepage hit never has to load every listing's tools/AI-content
-  // into memory just to pick ~20 marquee/featured cards out of thousands.
+  // The discovery pool selects lightweight columns only (see
+  // getActiveServersLight) and doubles as the paid-placement source and the
+  // fallback; the showcase pool is the quality-ranked curated preview.
   const [showcaseServers, discoveryPool, siteStats] = await Promise.all([
-    getShowcaseActiveServers(48),
+    getShowcaseActiveServers(8),
     getActiveServersLight(200),
     getSiteStats(),
   ]);
-  const landingServers = showcaseServers.map(toLightCard);
   // discoveryPool is capped at 200 rows for ranking, so its length is not the
-  // catalog size — use the real active-listing count that StatsBanner shows.
+  // catalog size — use the real active-listing count.
   const catalogTotal = Math.max(siteStats.totalServers, discoveryPool.length);
 
-  // Prefer premium / verified / high-engagement for discovery chrome
-  // Seed changes every 5 minutes so different visitors see different featured servers
+  // Paid/featured listings lead (labeled "Featured" on the card), then the
+  // showcase ranking (logo, health, docs, adoption). Engagement-ranked
+  // discovery picks only top up the grid when the showcase pool is thin, so
+  // the section is never empty. The seed rotates every 5 minutes.
   const discoverySeed = Math.floor(Date.now() / (5 * 60 * 1000));
-  const { marquee: marqueeServers, featured: featuredCards } =
-    pickDiscoveryServers(discoveryPool, {
-      marquee: 15,
-      featured: 3,
-      seed: discoverySeed,
-    });
+  const { marquee, featured } = pickDiscoveryServers(discoveryPool, {
+    marquee: 8,
+    featured: 3,
+    seed: discoverySeed,
+  });
+  const seen = new Set<string>();
+  const previewServers = [
+    ...featured.filter((s) => isFeaturedListing(s)),
+    ...showcaseServers,
+    ...marquee,
+  ]
+    .filter((s) => {
+      if (seen.has(s.id)) return false;
+      seen.add(s.id);
+      return true;
+    })
+    .slice(0, 8);
 
   // Advertise the machine-readable catalog export so agents/answer engines can
   // discover /data.json as a citable structured data source.
@@ -171,33 +131,21 @@ export default async function Home() {
   };
 
   return (
-    <main>
+    <main className="home">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(datasetJsonLd) }}
       />
-      {/*
-        Marketing chrome lives here (not inside DirectoryGrid) so a hydration
-        mismatch in the interactive catalog cannot remount the hero. That remount
-        was replaying enter-up / fade-in animations and looked like a full reload.
-      */}
-      <HeroSection totalCount={catalogTotal} />
-      <div className="landing-proof">
-        <SectionKicker index={1} label="Proof" aside="Live catalog" />
-        <StatsBanner stats={siteStats} />
-      </div>
-      <LandingIntents />
-      <FeaturedCards servers={featuredCards} />
-      <BentoShowcase />
-      <JackalopeCallout />
-      <LandingMcpPromo />
-      <FeaturedMarquee servers={marqueeServers} />
-      <LandingNewsletter />
-      <DirectoryGrid
-        initialServers={landingServers}
-        variant="landing"
+      <HeroSection
         totalCount={catalogTotal}
+        featuredSlot={<HeroFeatured servers={featured} />}
       />
+      {/* Top picks lead with paid featured listings — kept right under the
+          hero so they're seen early. */}
+      <FeaturedServers servers={previewServers} totalCount={catalogTotal} />
+      <LandingIntents />
+      <LandingHowItWorks />
+      <LandingTrust stats={siteStats} totalCount={catalogTotal} />
       <LandingFaq />
       <LandingCta totalCount={catalogTotal} />
     </main>

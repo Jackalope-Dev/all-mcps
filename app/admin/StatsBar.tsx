@@ -188,75 +188,83 @@ export function StatsBar({
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <li
-              key={card.label}
-              onClick={() => handleCardClick(card)}
-              style={{
-                background: 'var(--card-bg)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '0.9rem 1rem',
-                cursor: 'pointer',
-                transition:
-                  'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                height: '110px',
-              }}
-              className="admin-kpi-card hover:border-cyan-500/40 hover:-translate-y-0.5"
-            >
-              <div
+            <li key={card.label}>
+              <button
+                type="button"
+                onClick={() => handleCardClick(card)}
                 style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  font: 'inherit',
+                  color: 'inherit',
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  padding: '0.9rem 1rem',
+                  cursor: 'pointer',
+                  transition:
+                    'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
                   display: 'flex',
-                  alignItems: 'center',
+                  flexDirection: 'column',
                   justifyContent: 'space-between',
-                  height: '1.4rem',
+                  height: '110px',
                 }}
+                className="admin-kpi-card hover:border-cyan-500/40 hover:-translate-y-0.5"
               >
                 <span
                   style={{
-                    fontSize: '0.725rem',
-                    color: 'var(--text-secondary)',
-                    textTransform: 'uppercase',
-                    fontWeight: 600,
-                    letterSpacing: '0.03em',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    height: '1.4rem',
                   }}
                 >
-                  {card.label}
+                  <span
+                    style={{
+                      fontSize: '0.725rem',
+                      color: 'var(--text-secondary)',
+                      textTransform: 'uppercase',
+                      fontWeight: 600,
+                      letterSpacing: '0.03em',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {card.label}
+                  </span>
+                  <Icon
+                    className="w-4 h-4"
+                    style={{ color: card.color, flexShrink: 0 }}
+                  />
                 </span>
-                <Icon
-                  className="w-4 h-4"
-                  style={{ color: card.color, flexShrink: 0 }}
-                />
-              </div>
-              <div
-                style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 800,
-                  color: 'var(--text-primary)',
-                  lineHeight: 1,
-                  margin: '0.25rem 0',
-                }}
-              >
-                {card.value}
-              </div>
-              <div
-                style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--text-secondary)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  height: '1rem',
-                  lineHeight: '1rem',
-                }}
-              >
-                {card.subtext}
-              </div>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: '1.5rem',
+                    fontWeight: 800,
+                    color: 'var(--text-primary)',
+                    lineHeight: 1,
+                    margin: '0.25rem 0',
+                  }}
+                >
+                  {card.value}
+                </span>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    height: '1rem',
+                    lineHeight: '1rem',
+                  }}
+                >
+                  {card.subtext}
+                </span>
+              </button>
             </li>
           );
         })}

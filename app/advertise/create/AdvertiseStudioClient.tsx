@@ -22,6 +22,7 @@ import {
   PlacementContextPreview,
   type PlacementFrameType,
 } from '../../../components/ads/PlacementContextPreview';
+import { PLACEMENT_HUE } from '../../../components/ads/PlacementShowcase';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { Textarea } from '../../../components/ui/Textarea';
@@ -62,7 +63,7 @@ const CTA_PRESETS = [
 
 export function AdvertiseStudioClient({
   initialTier,
-  initialPlacement,
+  initialPlacement: _initialPlacement,
   initialVariant,
   canceled,
 }: {
@@ -249,58 +250,40 @@ export function AdvertiseStudioClient({
   const activeFormatMeta = AD_PLACEMENTS[activePreviewFormat];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+    <div className="acct-studio">
       {canceled && (
-        <div
-          style={{
-            padding: '0.75rem 1rem',
-            borderRadius: '10px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.25)',
-            color: '#f87171',
-            fontSize: '0.85rem',
-          }}
-        >
-          Checkout was canceled. You can adjust your campaign below and try
-          again.
-        </div>
+        <p className="acct-callout acct-callout--warn" role="status">
+          Checkout was canceled — nothing was charged. Adjust your campaign
+          below and try again.
+        </p>
       )}
 
       {/* LIVE MULTI-FORMAT PREVIEW — same in-context frames as /advertise's
           placement showcase, fed with this campaign's live form data. */}
       <div>
-        <div
-          className="directory-segmented"
-          style={{
-            justifyContent: 'center',
-            margin: '0 auto 1rem',
-            width: 'fit-content',
-            flexWrap: 'wrap',
-          }}
-          role="tablist"
-          aria-label="Ad placement formats"
-        >
-          {PREVIEW_FORMATS.map((format) => {
-            const Icon = format.icon;
-            const isActive = format.id === activePreviewFormat;
-            return (
-              <button
-                key={format.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`directory-segmented-btn ${isActive ? 'is-active' : ''}`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-                onClick={() => setActivePreviewFormat(format.id)}
-              >
-                <Icon size={14} /> {format.tabLabel}
-              </button>
-            );
-          })}
+        <div className="acct-placements-tabs fade-x">
+          <div
+            className="segmented scroll-x"
+            role="tablist"
+            aria-label="Ad placement formats"
+          >
+            {PREVIEW_FORMATS.map((format) => {
+              const Icon = format.icon;
+              const isActive = format.id === activePreviewFormat;
+              return (
+                <button
+                  key={format.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`hue-${PLACEMENT_HUE[format.id]}${isActive ? ' is-active' : ''}`}
+                  onClick={() => setActivePreviewFormat(format.id)}
+                >
+                  <Icon size={14} aria-hidden="true" /> {format.tabLabel}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div
@@ -328,14 +311,7 @@ export function AdvertiseStudioClient({
           </span>
         </div>
 
-        <div
-          className="surface"
-          style={{
-            borderRadius: '16px',
-            padding: '1.75rem',
-            border: '1px solid var(--border-color)',
-          }}
-        >
+        <div className="acct-placements-stage" key={activePreviewFormat}>
           <div
             style={{
               display: 'flex',
@@ -424,18 +400,8 @@ export function AdvertiseStudioClient({
               }}
             >
               <span
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  background: 'var(--brand-gradient)',
-                  color: '#fff',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                }}
+                className="acct-studio-step-n tint-tile hue-blue"
+                aria-hidden="true"
               >
                 1
               </span>
@@ -522,7 +488,7 @@ export function AdvertiseStudioClient({
 
               {/* Logo Image Upload */}
               <div className="form-field">
-                <label className="form-label">Logo / App Icon *</label>
+                <span className="form-label">Logo / App Icon *</span>
 
                 <input
                   ref={fileInputRef}
@@ -536,7 +502,8 @@ export function AdvertiseStudioClient({
                 />
 
                 {!logoUrl ? (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -549,6 +516,9 @@ export function AdvertiseStudioClient({
                       if (file) handleFileUpload(file);
                     }}
                     style={{
+                      width: '100%',
+                      font: 'inherit',
+                      color: 'inherit',
                       border: '2px dashed var(--border-color)',
                       borderRadius: '12px',
                       padding: '1.5rem',
@@ -583,7 +553,7 @@ export function AdvertiseStudioClient({
                       </>
                     ) : (
                       <>
-                        <div
+                        <span
                           style={{
                             width: '40px',
                             height: '40px',
@@ -596,7 +566,7 @@ export function AdvertiseStudioClient({
                           }}
                         >
                           <UploadCloud size={20} />
-                        </div>
+                        </span>
                         <span
                           style={{
                             fontSize: '0.875rem',
@@ -616,7 +586,7 @@ export function AdvertiseStudioClient({
                         </span>
                       </>
                     )}
-                  </div>
+                  </button>
                 ) : (
                   <div
                     style={{
@@ -721,18 +691,8 @@ export function AdvertiseStudioClient({
               }}
             >
               <span
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  background: 'var(--brand-gradient)',
-                  color: '#fff',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                }}
+                className="acct-studio-step-n tint-tile hue-violet"
+                aria-hidden="true"
               >
                 2
               </span>
@@ -751,12 +711,12 @@ export function AdvertiseStudioClient({
               {/* Placement — every campaign runs across all 4 placements automatically,
                 so there's nothing to choose here (see the format switcher above). */}
               <div>
-                <label
+                <span
                   className="form-label"
                   style={{ margin: '0 0 0.45rem', display: 'block' }}
                 >
                   Target Placement
-                </label>
+                </span>
                 <div
                   style={{
                     display: 'flex',
@@ -788,7 +748,11 @@ export function AdvertiseStudioClient({
                     marginBottom: '0.45rem',
                   }}
                 >
-                  <label className="form-label" style={{ margin: 0 }}>
+                  <label
+                    htmlFor="ad-impressions-range"
+                    className="form-label"
+                    style={{ margin: 0 }}
+                  >
                     Impression Block Volume
                   </label>
                   <span
@@ -838,6 +802,7 @@ export function AdvertiseStudioClient({
                 </div>
 
                 <input
+                  id="ad-impressions-range"
                   type="range"
                   min={1000}
                   max={100000}
@@ -858,7 +823,11 @@ export function AdvertiseStudioClient({
                     marginBottom: '0.45rem',
                   }}
                 >
-                  <label className="form-label" style={{ margin: 0 }}>
+                  <label
+                    htmlFor="ad-cpm-range"
+                    className="form-label"
+                    style={{ margin: 0 }}
+                  >
                     CPM Bid (Delivery Speed &amp; Priority)
                   </label>
                   <span
@@ -921,6 +890,7 @@ export function AdvertiseStudioClient({
                 </div>
 
                 <input
+                  id="ad-cpm-range"
                   type="range"
                   min={200}
                   max={5000}
@@ -947,7 +917,7 @@ export function AdvertiseStudioClient({
               {/* Advertiser Email */}
               {sessionEmail ? (
                 <div className="form-field">
-                  <label className="form-label">Your Email Address</label>
+                  <span className="form-label">Your Email Address</span>
                   <div
                     style={{
                       display: 'flex',
@@ -1057,11 +1027,11 @@ export function AdvertiseStudioClient({
               lineHeight: 1.45,
             }}
           >
-            ✓ 100% guaranteed delivery of {impressions.toLocaleString()} views
+            ✓ Runs until all {impressions.toLocaleString()} views are delivered
             <br />✓ Real-time advertiser tracking dashboard with CTR &amp; click
             metrics
-            <br />✓ Campaign review &amp; activation within 12–24 hours
-            <br />✓ 100% full refund guarantee if rejected for any reason
+            <br />✓ Reviewed by hand — we aim to review within 24 hours
+            <br />✓ Full refund if we reject it, for any reason
           </div>
 
           <button

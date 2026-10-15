@@ -204,16 +204,18 @@ export async function createStripeCheckoutSession(
   const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     mode: product.mode,
     line_items: [
-      isWeeklyTiered
+      // productId is set exactly when the SKU is weekly-tiered (guarded above);
+      // otherwise priceId is guaranteed by the earlier missing-Price guard.
+      productId
         ? {
             price_data: {
               currency: 'usd',
-              product: productId!,
+              product: productId,
               unit_amount: tieredUnitPrice(product, initialWeeks),
             },
             quantity: initialWeeks,
           }
-        : { price: priceId!, quantity: 1 },
+        : { price: priceId ?? undefined, quantity: 1 },
     ],
     success_url: `${appUrl}${successPath}`,
     cancel_url: `${appUrl}/pricing?serverId=${encodeURIComponent(serverId)}&canceled=1`,
