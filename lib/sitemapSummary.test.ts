@@ -61,7 +61,7 @@ beforeAll(() => {
     `INSERT INTO servers (id, category, status, ai_doc, ai_doc_at, created_at, github_stars, tools_source)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
-  // Writeup + traction: indexable, and one side of a curated compare pair.
+  // Writeup + strong traction: indexable, and one side of a curated compare pair.
   insert.run(
     'executeautomation-playwright-mcp-server',
     DEV,
@@ -69,10 +69,10 @@ beforeAll(() => {
     'doc',
     1790000000,
     1700000000,
-    100,
+    300,
     null,
   );
-  // Writeup + proof it runs: indexable, the other side of that pair.
+  // Writeup + traction + proof it runs: indexable, the other side of that pair.
   insert.run(
     'microsoft-playwright-mcp',
     COMMS,
@@ -80,7 +80,7 @@ beforeAll(() => {
     'doc',
     1780000000,
     1700000000,
-    0,
+    50,
     'introspected',
   );
   // No writeup: not indexable, but still dates its category hub.
@@ -123,7 +123,7 @@ describe('createSitemapSummarizer', () => {
       id: 'x',
       category: DEV,
       hasAiDoc: 1,
-      githubStars: 50,
+      githubStars: 300,
       aiDocAt: '2026-09-01T00:00:00Z',
     };
     s.add([row]);
