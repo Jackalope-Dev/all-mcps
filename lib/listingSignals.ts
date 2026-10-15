@@ -6,6 +6,7 @@
 
 import { DIRECTORY_CATEGORIES } from './categories';
 import { packageBelongsElsewhere } from './packageRegistry';
+import { manifestInstallCandidates } from './repoManifest';
 import {
   type AuthType,
   isAuthType,
@@ -17,7 +18,12 @@ import {
   isRemoteHint,
   type ParsedInstallHint,
 } from './tools/parseInstallHint';
-import { askJev, confidentChoice, type JevChoiceQuestion } from './typesafe';
+import {
+  askJev,
+  confidentChoice,
+  type JevChoiceQuestion,
+  noulVerdict,
+} from './typesafe';
 
 const CHOICE_FLOOR = 0.75;
 
@@ -107,10 +113,15 @@ export async function classifyListingFields(
   };
 }
 
-function hintLabel(hint: NonNullable<ParsedInstallHint>): string {
+function hintLabel(
+  hint: NonNullable<ParsedInstallHint>,
+  fromManifest = false,
+): string {
   if (isRemoteHint(hint)) return `remote ${hint.url}`;
-  const pkg = hint.package || hint.args[hint.args.length - 1] || hint.command;
-  return `${hint.command} ${pkg}`;
+  const command = `${hint.command} ${hint.args.join(' ')}`.trim();
+  return fromManifest
+    ? `${command} (package published from this repo's manifest)`
+    : command;
 }
 
 export async function pickInstallCommand(
@@ -118,20 +129,34 @@ export async function pickInstallCommand(
 ): Promise<NonNullable<ParsedInstallHint> | null> {
   const text = `${listing.description || ''}\n${listing.readme || ''}`;
   const all = collectInstallCandidates(text);
-  // Drop what the registry proves is some other project's package before the
-  // sole-candidate shortcut or the LLM can pick it (see packageBelongsElsewhere).
-  const foreign = await Promise.all(
-    all.map(
-      (hint) =>
-        !isRemoteHint(hint) &&
-        packageBelongsElsewhere(
-          hint.command,
-          hint.package || hint.args[hint.args.length - 1],
-          listing.url,
-        ),
+  const [foreign, manifest] = await Promise.all([
+    // Drop what the registry proves is some other project's package before
+    // Jev sees it (see packageBelongsElsewhere).
+    Promise.all(
+      all.map(
+        (hint) =>
+          !isRemoteHint(hint) &&
+          packageBelongsElsewhere(
+            hint.command,
+            hint.package || hint.args[hint.args.length - 1],
+            listing.url,
+          ),
+      ),
+    ),
+    manifestInstallCandidates(listing.url),
+  ]);
+  const fromReadme = all.filter((_, i) => !foreign[i]);
+  const readmePackages = new Set(
+    fromReadme.map((h) =>
+      isRemoteHint(h) ? h.url : h.package || h.args[h.args.length - 1],
     ),
   );
-  const candidates = all.filter((_, i) => !foreign[i]);
+  // The repo's own published package, when the README never spelled it out.
+  // After the README's so Jev-unavailable fallback keeps preferring those.
+  const fromManifest = manifest.filter(
+    (h) => !readmePackages.has(h.package || h.args[h.args.length - 1]),
+  );
+  const candidates = [...fromReadme, ...fromManifest];
   // A sole candidate still goes to Jev, which can answer "none": READMEs
   // often hold exactly one command and it's another project's (an example
   // config, a catalog entry) with no registry metadata to disprove it.
@@ -141,17 +166,20 @@ export async function pickInstallCommand(
     none: 'None of these run THIS server',
   };
   const byKey = new Map<string, NonNullable<ParsedInstallHint>>();
+  const labels = candidates.map((hint, i) =>
+    hintLabel(hint, i >= fromReadme.length),
+  );
   candidates.forEach((hint, i) => {
     const key = `c${i}`;
     byKey.set(key, hint);
-    criteria[key] = hintLabel(hint);
+    criteria[key] = labels[i];
   });
 
   const res = await askJev(
     {
       name: listing.name ?? '',
       url: listing.url ?? '',
-      candidates: candidates.map(hintLabel),
+      candidates: labels,
       readme: (listing.readme ?? listing.description ?? '').slice(0, 4000),
     },
     {
@@ -167,6 +195,48 @@ export async function pickInstallCommand(
   const picked = confidentChoice(res.answers.install, CHOICE_FLOOR);
   if (!picked || picked === 'none') return null;
   return byKey.get(picked) ?? null;
+}
+
+/**
+ * Below this, Jev is confident the tools belong to a different server. Kept
+ * low because a wrong "doesn't fit" throws away a real verified tool list;
+ * the case it exists for is blatant (an offers-search listing showing BotHire's
+ * wallet and hiring tools after its install pointed at BotHire's package).
+ */
+const TOOLS_FIT_FLOOR = 0.15;
+
+/**
+ * Whether tools seen in a sandbox run plausibly belong to this listing.
+ * False only on a confident mismatch; null when Jev is unavailable or there
+ * is nothing to compare — callers keep their current behaviour on null.
+ */
+export async function toolsFitListing(
+  listing: ListingSignalInput,
+  tools: { name: string; description?: string }[],
+): Promise<boolean | null> {
+  if (tools.length === 0 || !(listing.name || listing.description)) return null;
+  const res = await askJev(
+    {
+      name: listing.name ?? '',
+      description: listing.description ?? '',
+      url: listing.url ?? '',
+      tools: tools
+        .slice(0, 40)
+        .map((t) => `${t.name}: ${(t.description ?? '').slice(0, 160)}`),
+    },
+    {
+      fits: {
+        type: 'noul',
+        instructions:
+          "These tools were reported by running this listing's install command. They plausibly belong to the server this listing describes, rather than to a different, unrelated product.",
+        criteria: {
+          true: 'The tools fit what the listing says the server does',
+          false: 'The tools belong to a different, unrelated server',
+        },
+      },
+    },
+  );
+  return res ? noulVerdict(res.answers.fits, TOOLS_FIT_FLOOR) : null;
 }
 
 export async function pickBestWebsiteAndLogo(input: {

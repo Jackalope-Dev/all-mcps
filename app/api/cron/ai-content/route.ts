@@ -4,6 +4,7 @@ import {
   asc,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   isNull,
@@ -71,6 +72,8 @@ const DEFAULT_BATCH_SIZE = 6;
 const CONCURRENCY = 6;
 const MIN_MATERIAL_CHARS = 30;
 const STALE_RECHECK_MS = 90 * 24 * 60 * 60 * 1000;
+/** Minimum gap before an install-only run re-checks a listing it found no install for. */
+const INSTALL_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * aiDoc = '' marks "writeup attempted, nothing to write" (thin README / JEV skip).
@@ -144,6 +147,7 @@ export async function POST(req: Request) {
     // install backlog isn't limited to the slots left over after write-ups,
     // which are capped for OpenAI spend (see AI_CONTENT_DEDICATED_RUNS).
     const installOnly = url.searchParams.get('pass') === 'install';
+    const recheckBefore = new Date(claimTime.getTime() - INSTALL_RECHECK_MS);
 
     // Phase 1: atomically claim highest-value never-enriched or missing-writeup listings
     const claimedNew = installOnly
@@ -270,7 +274,20 @@ export async function POST(req: Request) {
                   installOnly
                     ? or(isNull(servers.aiDoc), hasWriteup)
                     : and(isNotNull(servers.aiEnrichedAt), hasWriteup),
-                  isNull(servers.installExtractedAt),
+                  installOnly
+                    ? or(
+                        isNull(servers.installExtractedAt),
+                        // No install found last time, but the repo has moved
+                        // on since (a README often gains its install command
+                        // later). At most weekly, so busy repos don't re-pick
+                        // on every commit.
+                        and(
+                          isNull(servers.installPackage),
+                          gt(servers.lastCommitAt, servers.installExtractedAt),
+                          lt(servers.installExtractedAt, recheckBefore),
+                        ),
+                      )
+                    : isNull(servers.installExtractedAt),
                 ),
               )
               .orderBy(

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { servers, stdioVerifications } from '../../../../../db/schema';
 import { isCronAuthorized } from '../../../../../lib/cronAuth';
 import { isPackageInstallable } from '../../../../../lib/listingEnrich';
+import { toolsFitListing } from '../../../../../lib/listingSignals';
 import { storeSecurityProfile } from '../../../../../lib/securityProfileStore';
 import {
   decideGuessRetirement,
@@ -120,6 +121,7 @@ export async function POST(req: Request) {
     let needsConfig = 0;
     let discardedStale = 0;
     let toolsChanged = 0;
+    let toolsRejected = 0;
 
     for (const r of results) {
       // State as it stands *before* this result lands: the consecutive-failure
@@ -132,6 +134,9 @@ export async function POST(req: Request) {
           installExtractedAt: servers.installExtractedAt,
           installCommand: servers.installCommand,
           installPackage: servers.installPackage,
+          name: servers.name,
+          description: servers.description,
+          url: servers.url,
         })
         .from(servers)
         .leftJoin(
@@ -190,7 +195,35 @@ export async function POST(req: Request) {
         });
       }
 
-      if (r.status === 'ok' && r.tools && r.tools.length > 0) {
+      // A clean run of the wrong package still returns tools — the AON
+      // listing showed BotHire's wallet tools as verified this way. Promote
+      // only tools that fit the listing; Jev being unsure or down keeps them.
+      const toolsMismatch =
+        r.status === 'ok' &&
+        r.tools &&
+        r.tools.length > 0 &&
+        prior &&
+        (await toolsFitListing(prior, r.tools)) === false;
+      if (toolsMismatch) {
+        toolsRejected++;
+        console.warn(
+          `[stdio-verify] ${r.serverId}: sandbox tools don't fit the listing; not promoted (install ${prior?.installCommand} ${prior?.installPackage})`,
+        );
+        await db
+          .update(servers)
+          .set({
+            toolsError:
+              "Sandbox tools didn't match this listing; install command may point at another project.",
+          })
+          .where(eq(servers.id, r.serverId));
+      }
+
+      if (
+        r.status === 'ok' &&
+        r.tools &&
+        r.tools.length > 0 &&
+        !toolsMismatch
+      ) {
         await db
           .update(servers)
           .set({
@@ -297,6 +330,7 @@ export async function POST(req: Request) {
       needsConfig,
       discardedStale,
       toolsChanged,
+      toolsRejected,
     });
   } catch (error: any) {
     console.error('stdio-verify result error:', error);

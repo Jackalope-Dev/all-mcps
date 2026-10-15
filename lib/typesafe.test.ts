@@ -20,8 +20,12 @@ const {
   shouldSkipAiWriteup,
   alignListings,
 } = await import('./listingReview');
-const { classifyListingFields, pickInstallCommand, pickBestWebsiteAndLogo } =
-  await import('./listingSignals');
+const {
+  classifyListingFields,
+  pickInstallCommand,
+  pickBestWebsiteAndLogo,
+  toolsFitListing,
+} = await import('./listingSignals');
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -328,6 +332,38 @@ jevPicksInstall('c0');
 assert(
   (await pickInstallCommand(SOLE)) !== null,
   'pickInstallCommand must keep a sole candidate Jev confirms',
+);
+
+// Sandbox tools are only rejected on a confident mismatch.
+const jevToolsFit = (noul: number) => {
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        model: 'jev-latest',
+        answers: { fits: { type: 'noul', noul } },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )) as typeof fetch;
+};
+const WALLET_TOOLS = [
+  { name: 'create_wallet', description: 'Generate a fresh EVM wallet' },
+];
+jevToolsFit(0.03);
+assert(
+  (await toolsFitListing(LISTING, WALLET_TOOLS)) === false,
+  'toolsFitListing must reject tools Jev is confident belong elsewhere',
+);
+jevToolsFit(0.4);
+assert(
+  (await toolsFitListing(LISTING, WALLET_TOOLS)) === true,
+  'toolsFitListing must keep tools when Jev is merely unsure',
+);
+globalThis.fetch = (async () => {
+  throw new Error('down');
+}) as typeof fetch;
+assert(
+  (await toolsFitListing(LISTING, WALLET_TOOLS)) === null,
+  'toolsFitListing must return null when Jev is unavailable',
 );
 
 process.env.TYPESAFE_API_KEY = '';
