@@ -367,53 +367,22 @@ const DISCOVERY_COLUMNS = {
   aiUseCases: serversTable.aiUseCases,
 } as const;
 
-/**
- * Lightweight full-catalog scan for homepage discovery: marquee/featured
- * ranking, category counts, total count. Deliberately excludes `tools` and
- * the AI-content columns — those can be several KB per listing (introspected
- * tool schemas, generated overviews), and loading them for every active
- * listing just to rank ~20 cards out of thousands risks tripping the
- * Worker's memory limit. Same reasoning as getDirectoryFeedPage's column
- * sharding for /browse; the homepage needs the same treatment because it
- * scans the whole catalog too (for counts/ranking), not just its own page.
- */
-export async function getActiveServersLight(limit?: number): Promise<Server[]> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const query = db
-        .select(DISCOVERY_COLUMNS)
-        .from(serversTable)
-        .where(servableFilter());
-      const rows = limit
-        ? await query
-            .orderBy(
-              desc(serversTable.isPremium),
-              // Active featured boosts must make the capped pool regardless of
-              // traffic, or a low-view paid listing never reaches the shelf.
-              desc(
-                sql`coalesce(${serversTable.featuredUntil} > unixepoch(), 0)`,
-              ),
-              desc(serversTable.views),
-              desc(serversTable.copies),
-              desc(serversTable.upvotes),
-            )
-            .limit(limit)
-        : await query;
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          description: cleanListingDescription(r.description),
-          tags: parseStringArray(r.tags),
-          aiUseCases: parseStringArray(r.aiUseCases),
-        })) as unknown as Server[];
-      }
-    }
-  } catch (_e) {
-    // Fall back to static JSON
-  }
+/** A DISCOVERY_COLUMNS row in the shape getActiveServersLight returns. */
+function toLightServer(r: {
+  description: string | null;
+  tags: unknown;
+  aiUseCases: unknown;
+}): Server {
+  return {
+    ...r,
+    description: cleanListingDescription(r.description),
+    tags: parseStringArray(r.tags),
+    aiUseCases: parseStringArray(r.aiUseCases),
+  } as unknown as Server;
+}
+
+/** Snapshot rows trimmed to the getActiveServersLight shape. */
+function snapshotLightServers(limit?: number): Server[] {
   const base = snapshotCatalogServers();
   const candidates = limit ? base.slice(0, limit) : base;
   return candidates.map((s) => ({
@@ -434,6 +403,94 @@ export async function getActiveServersLight(limit?: number): Promise<Server[]> {
     tags: parseStringArray(s.tags),
     aiUseCases: parseStringArray(s.aiUseCases),
   })) as unknown as Server[];
+}
+
+/**
+ * Lightweight discovery rows for homepage marquee/featured ranking: the
+ * `limit` most-engaged servable listings. Deliberately excludes `tools` and
+ * the AI-content columns — those can be several KB per listing (introspected
+ * tool schemas, generated overviews). Whole-catalog consumers (tag counts)
+ * must page with iterateActiveServersLight instead: ~32k rows at once, even
+ * slim, is enough to push a render over the Worker memory limit.
+ */
+export async function getActiveServersLight(limit: number): Promise<Server[]> {
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const ctx = await getCloudflareContext();
+    if (ctx?.env && (ctx.env as any).DB) {
+      const db = drizzle((ctx.env as any).DB);
+      const rows = await db
+        .select(DISCOVERY_COLUMNS)
+        .from(serversTable)
+        .where(servableFilter())
+        .orderBy(
+          desc(serversTable.isPremium),
+          // Active featured boosts must make the capped pool regardless of
+          // traffic, or a low-view paid listing never reaches the shelf.
+          desc(sql`coalesce(${serversTable.featuredUntil} > unixepoch(), 0)`),
+          desc(serversTable.views),
+          desc(serversTable.copies),
+          desc(serversTable.upvotes),
+        )
+        .limit(limit);
+      if (rows.length > 0) return rows.map(toLightServer);
+    }
+  } catch (_e) {
+    // Fall back to static JSON
+  }
+  return snapshotLightServers(limit);
+}
+
+/** Rows per iterateActiveServersLight page; slim rows keep a page a few MB. */
+const LIGHT_PAGE_SIZE = 2000;
+
+/**
+ * Every servable listing as getActiveServersLight-shaped rows, one keyset page
+ * at a time, so whole-catalog aggregations (tag counts, tag hubs) hold one
+ * page instead of the full ~32k-row catalog. Paged on rowid like
+ * lib/siteStats.ts queryQualityTiers: (status, rowid) walks
+ * idx_servers_status in order instead of re-sorting every active row per page.
+ */
+type LightPageRow = {
+  rowid: number;
+  description: string | null;
+  tags: unknown;
+  aiUseCases: unknown;
+};
+
+export async function* iterateActiveServersLight(
+  pageSize = LIGHT_PAGE_SIZE,
+): AsyncGenerator<Server[]> {
+  const searchDb = await getSearchDb();
+  let yielded = false;
+  if (searchDb) {
+    try {
+      let afterRowid: number | null = null;
+      for (;;) {
+        // Annotated: afterRowid feeding back into the query defeats inference.
+        const rows: LightPageRow[] = await searchDb.db
+          .select({ rowid: sql<number>`rowid`, ...DISCOVERY_COLUMNS })
+          .from(serversTable)
+          .where(
+            afterRowid === null
+              ? servableFilter()
+              : and(servableFilter(), sql`rowid > ${afterRowid}`),
+          )
+          .orderBy(sql`rowid`)
+          .limit(pageSize);
+        if (rows.length === 0) break;
+        yielded = true;
+        yield rows.map(({ rowid: _rowid, ...r }) => toLightServer(r));
+        if (rows.length < pageSize) break;
+        afterRowid = rows[rows.length - 1].rowid;
+      }
+    } catch (e) {
+      // Fall back to static JSON only if nothing was yielded yet; a partial
+      // scan followed by the snapshot would double-count listings.
+      if (yielded) throw e;
+    }
+  }
+  if (!yielded) yield snapshotLightServers();
 }
 
 /**
@@ -2665,125 +2722,191 @@ export function formatServerSummaryLine(server: Server): string {
  */
 const RELATED_CANDIDATE_POOL = 300;
 
-async function getSameCategoryActiveServers(
-  currentServer: Server,
-  poolLimit: number = RELATED_CANDIDATE_POOL,
+/** Cross-category candidates considered when the same category is too small. */
+const RELATED_FALLBACK_POOL = 30;
+
+/**
+ * Most tools per candidate that related ranking reads. Tool overlap and the
+ * semantic token set both walk every tool, and a few listings carry hundreds
+ * (one has 987), so an uncapped outlier in the pool costs a large JSON string,
+ * an object per tool and a big token Set. Past the first couple hundred tools
+ * the overlap/similarity signal is already saturated for ranking purposes.
+ */
+const RELATED_TOOLS_CAP = 200;
+
+/**
+ * extractSemanticTokens reads at most 2000 chars of any one text field, so
+ * longer text is truncated in SQLite. Descriptions get headroom because
+ * cleanListingDescription strips README chrome before the slice.
+ */
+const RELATED_TEXT_CHARS = 2000;
+const RELATED_DESCRIPTION_CHARS = 4000;
+
+/**
+ * Tool names and descriptions only (no parameter schemas), capped at
+ * RELATED_TOOLS_CAP tools and truncated to what the tokenizer reads, built in
+ * SQLite so the full tools JSON never reaches the Worker heap.
+ */
+const RELATED_TOOLS_SQL = sql<
+  string | null
+>`CASE WHEN json_valid(${serversTable.tools}) THEN (
+  SELECT json_group_array(json_object('name', json_extract(je.value, '$.name'), 'description', substr(json_extract(je.value, '$.description'), 1, ${RELATED_TEXT_CHARS})))
+  FROM (SELECT value FROM json_each(${serversTable.tools}) LIMIT ${RELATED_TOOLS_CAP}) AS je
+) ELSE NULL END`;
+
+/**
+ * Only the columns relatedRankingScore reads (engagement, install readiness,
+ * trust flags, and the text/tool/tag/env-var fields it compares), with long
+ * text truncated to what it reads. The pool is 300 rows per call and a compare
+ * page ranks two pools, so carrying full public rows (aiOverview, pricing,
+ * install fields, the whole tools JSON) for every candidate is what kept
+ * /mcp/[a]/vs/[b] and /mcp/[id]/alternatives over the Worker memory limit.
+ * Only the handful of winners are hydrated into full rows afterwards.
+ */
+const RELATED_RANKING_COLUMNS = {
+  id: serversTable.id,
+  name: serversTable.name,
+  category: serversTable.category,
+  description: sql<string>`substr(${serversTable.description}, 1, ${RELATED_DESCRIPTION_CHARS})`,
+  aiSummary: sql<
+    string | null
+  >`substr(${serversTable.aiSummary}, 1, ${RELATED_TEXT_CHARS})`,
+  aiOverview: sql<
+    string | null
+  >`substr(${serversTable.aiOverview}, 1, ${RELATED_TEXT_CHARS})`,
+  tags: serversTable.tags,
+  aiUseCases: serversTable.aiUseCases,
+  aiFeatures: serversTable.aiFeatures,
+  aiEnvVars: serversTable.aiEnvVars,
+  tools: RELATED_TOOLS_SQL,
+  installConfidence: serversTable.installConfidence,
+  isOfficial: serversTable.isOfficial,
+  isPremium: serversTable.isPremium,
+  isVerifiedActive: serversTable.isVerifiedActive,
+  healthStatus: serversTable.healthStatus,
+  reciprocalBadgeOk: serversTable.reciprocalBadgeOk,
+  views: serversTable.views,
+  copies: serversTable.copies,
+  upvotes: serversTable.upvotes,
+  githubStars: serversTable.githubStars,
+  npmDownloads: serversTable.npmDownloads,
+} as const;
+
+/**
+ * Engagement-ordered slim ranking candidates other than `current`, either from
+ * its own category or (fallback) from every other one. Empty on a D1 error:
+ * related listings are a garnish and must not break the page.
+ */
+async function getRelatedRankingCandidates(
+  db: D1Drizzle,
+  current: Server,
+  sameCategory: boolean,
+  poolLimit: number,
 ): Promise<Server[]> {
-  let sameCategory: Server[] = [];
-
   try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select(SCORING_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(
-          and(
-            servableFilter(),
-            eq(serversTable.category, currentServer.category),
-            ne(serversTable.id, currentServer.id),
-          ),
-        )
-        .orderBy(
-          desc(serversTable.views),
-          desc(serversTable.copies),
-          desc(serversTable.upvotes),
-        )
-        .limit(poolLimit);
-      if (rows.length > 0) {
-        sameCategory = rows.map((r) => normalizeServer(r as unknown as Server));
-      }
-    }
-  } catch (_e) {
-    // Fall back to static JSON
-  }
-
-  if (sameCategory.length === 0) {
-    const allServers = snapshotCatalogServers();
-    // Slice before normalizing: normalizeServer parses this row's JSON columns, so
-    // mapping the whole category first would allocate exactly what the cap avoids.
-    sameCategory = allServers
-      .filter(
-        (s) =>
-          s.id !== currentServer.id && s.category === currentServer.category,
+    const rows = await db
+      .select(RELATED_RANKING_COLUMNS)
+      .from(serversTable)
+      .where(
+        and(
+          servableFilter(),
+          sameCategory
+            ? eq(serversTable.category, current.category)
+            : ne(serversTable.category, current.category),
+          ne(serversTable.id, current.id),
+        ),
       )
-      .sort((a, b) => engagementScore(b) - engagementScore(a))
-      .slice(0, poolLimit)
-      .map(normalizeServer);
+      .orderBy(
+        desc(serversTable.views),
+        desc(serversTable.copies),
+        desc(serversTable.upvotes),
+      )
+      .limit(poolLimit);
+    return rows.map((r) => normalizeServer(r as unknown as Server));
+  } catch (_e) {
+    return [];
   }
-
-  return sameCategory;
 }
 
+/** `candidates` best-first against `current`, scoring each candidate once. */
+function rankRelated(candidates: Server[], current: Server): Server[] {
+  return candidates
+    .map((s) => ({ s, score: relatedRankingScore(s, current) }))
+    .sort((a, b) => b.score - a.score)
+    .map(({ s }) => s);
+}
+
+/** Related listings from the bundled snapshot, for when D1 is unavailable. */
+function getRelatedFromSnapshot(
+  currentServer: Server,
+  limit: number,
+): Server[] {
+  const all = snapshotCatalogServers();
+  // Slice before normalizing: normalizeServer parses each row's JSON columns, so
+  // mapping the whole category first would allocate exactly what the cap avoids.
+  const sameCategory = all
+    .filter(
+      (s) => s.id !== currentServer.id && s.category === currentServer.category,
+    )
+    .sort((a, b) => engagementScore(b) - engagementScore(a))
+    .slice(0, RELATED_CANDIDATE_POOL)
+    .map(normalizeServer);
+  const ranked = rankRelated(sameCategory, currentServer).slice(0, limit);
+  if (ranked.length >= limit) return ranked;
+  const fallback = all
+    .filter(
+      (s) => s.id !== currentServer.id && s.category !== currentServer.category,
+    )
+    .slice(0, RELATED_FALLBACK_POOL)
+    .map(normalizeServer);
+  return [...ranked, ...rankRelated(fallback, currentServer)].slice(0, limit);
+}
+
+/**
+ * The `limit` listings most related to `currentServer`: engagement-capped
+ * same-category pool first, topped up from other categories when that runs
+ * short. Ranks slim rows, then hydrates only the winners.
+ */
 export async function getRelatedServers(
   currentServer: Server,
   limit = 4,
 ): Promise<Server[]> {
-  const sameCategory = await getSameCategoryActiveServers(currentServer);
+  const searchDb = await getSearchDb();
+  if (!searchDb) return getRelatedFromSnapshot(currentServer, limit);
+  const { db } = searchDb;
 
-  sameCategory.sort(
-    (a, b) =>
-      relatedRankingScore(b, currentServer) -
-      relatedRankingScore(a, currentServer),
-  );
-
-  if (sameCategory.length >= limit) {
-    return sameCategory.slice(0, limit);
+  let ranked = rankRelated(
+    await getRelatedRankingCandidates(
+      db,
+      currentServer,
+      true,
+      RELATED_CANDIDATE_POOL,
+    ),
+    currentServer,
+  ).slice(0, limit);
+  if (ranked.length < limit) {
+    const fallback = await getRelatedRankingCandidates(
+      db,
+      currentServer,
+      false,
+      RELATED_FALLBACK_POOL,
+    );
+    ranked = [...ranked, ...rankRelated(fallback, currentServer)].slice(
+      0,
+      limit,
+    );
   }
+  if (ranked.length === 0) return getRelatedFromSnapshot(currentServer, limit);
 
-  // Bounded fallback candidate pool from other categories when same category is small
-  let fallbackCandidates: Server[] = [];
   try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const ctx = await getCloudflareContext();
-    if (ctx?.env && (ctx.env as any).DB) {
-      const db = drizzle((ctx.env as any).DB);
-      const rows = await db
-        .select(SCORING_SERVER_COLUMNS)
-        .from(serversTable)
-        .where(
-          and(
-            servableFilter(),
-            ne(serversTable.category, currentServer.category),
-            ne(serversTable.id, currentServer.id),
-          ),
-        )
-        .orderBy(
-          desc(serversTable.views),
-          desc(serversTable.copies),
-          desc(serversTable.upvotes),
-        )
-        .limit(30);
-      if (rows.length > 0) {
-        fallbackCandidates = rows.map((r) =>
-          normalizeServer(r as unknown as Server),
-        );
-      }
-    }
+    // Full public rows (tools trimmed) for just the winners, in ranked order.
+    return await hydrateSearchResults(
+      db,
+      ranked.map((s) => s.id),
+    );
   } catch (_e) {
-    // Fall back to static JSON
+    return ranked;
   }
-
-  if (fallbackCandidates.length === 0) {
-    const allServers = snapshotCatalogServers();
-    fallbackCandidates = allServers
-      .filter(
-        (s) =>
-          s.id !== currentServer.id && s.category !== currentServer.category,
-      )
-      .slice(0, 30)
-      .map(normalizeServer);
-  }
-
-  fallbackCandidates.sort(
-    (a, b) =>
-      relatedRankingScore(b, currentServer) -
-      relatedRankingScore(a, currentServer),
-  );
-
-  return [...sameCategory, ...fallbackCandidates].slice(0, limit);
 }
 
 /** Paid/featured listings eligible to rotate into promotional ad slots, excluding the given server. */

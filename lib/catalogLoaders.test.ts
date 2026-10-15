@@ -49,10 +49,13 @@ const { selectServersForTopic } = await import('./bestTopics');
 const {
   getRankingCandidates,
   getRandomActiveServers,
+  getRelatedServers,
   getServersForTopic,
   hydrateServersByIds,
   iterateActiveServers,
+  iterateActiveServersLight,
 } = await import('./servers');
+const { getAllTagsWithCounts, getServersForTag } = await import('./tags');
 
 const DEV = '💻 Developer Tools';
 const COMMS = '💬 Communication';
@@ -183,5 +186,55 @@ describe('getRandomActiveServers', () => {
     const rows = await getRandomActiveServers(2, COMMS);
     expect(rows.length).toBe(2);
     expect(ids(rows)).toEqual(['b-gmail', 'f-slack']);
+  });
+});
+
+describe('iterateActiveServersLight', () => {
+  it('pages through every servable listing once, as slim rows', async () => {
+    const pages: string[][] = [];
+    for await (const page of iterateActiveServersLight(2)) {
+      pages.push(page.map((s) => s.id));
+      expect(page[0]).not.toHaveProperty('tools');
+      expect(page[0]).not.toHaveProperty('aiOverview');
+    }
+    expect(pages).toEqual([
+      ['a-gdrive', 'b-gmail'],
+      ['c-git', 'd-googleplex'],
+      ['f-slack'],
+    ]);
+  });
+});
+
+describe('tag scans', () => {
+  it('counts tags across every page of the catalog', async () => {
+    const tags = await getAllTagsWithCounts();
+    const count = (slug: string) => tags.find((t) => t.slug === slug)?.count;
+    expect(count('developer-tools')).toBe(3);
+    expect(count('communication')).toBe(2);
+  });
+
+  it('keeps only the matches for one tag', async () => {
+    const { servers } = await getServersForTag('communication');
+    expect(ids(servers)).toEqual(['b-gmail', 'f-slack']);
+  });
+});
+
+describe('getRelatedServers', () => {
+  it('ranks same-category listings first, tops up from other categories, and hydrates the winners', async () => {
+    const [current] = await hydrateServersByIds(['a-gdrive']);
+    const related = await getRelatedServers(current, 4);
+    expect(ids(related.slice(0, 2))).toEqual(['c-git', 'd-googleplex']);
+    expect(ids(related.slice(2))).toEqual(['b-gmail', 'f-slack']);
+    // Full public rows for the winners, not the slim ranking rows.
+    expect(related[0].aiOverview).toBe('A long generated overview.');
+    expect(related[0].tools).toEqual([
+      { name: 'do_thing', description: 'Does it' },
+    ]);
+  });
+
+  it('stops at the same category when it fills the limit', async () => {
+    const [current] = await hydrateServersByIds(['a-gdrive']);
+    const related = await getRelatedServers(current, 2);
+    expect(ids(related)).toEqual(['c-git', 'd-googleplex']);
   });
 });

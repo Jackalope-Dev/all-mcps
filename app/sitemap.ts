@@ -4,13 +4,11 @@ import { getAllPosts } from '../lib/blog';
 import { categorySlug, DIRECTORY_CATEGORIES } from '../lib/categories';
 import { MCP_CLIENTS } from '../lib/clients';
 import { comparePath, INDEXABLE_COMPARE_PAIRS } from '../lib/comparePairs';
-import { isListingIndexable } from '../lib/listingIndexability';
 import { WORKFLOW_PROMPTS } from '../lib/prompts';
 import {
-  getSitemapServers,
-  listingLastMod,
-  maxServerLastMod,
-  type SitemapServer,
+  categoryLastMod,
+  getSitemapSummary,
+  type SitemapSummary,
   STATIC_PAGE_LASTMOD,
   safeDateISO,
 } from '../lib/sitemapHelpers';
@@ -19,7 +17,7 @@ import { getAllTagsWithCounts } from '../lib/tags';
 const BASE = 'https://allmcps.com';
 
 // Rendered per request, with the underlying D1 read cached for an hour in
-// `getSitemapServers` (see lib/sitemapHelpers.ts). This deliberately isn't ISR:
+// `getSitemapSummary` (see lib/sitemapHelpers.ts). This deliberately isn't ISR:
 // a revalidate-based sitemap is prerendered at build time, where there's no D1
 // binding, so every deploy froze a fallback-shaped sitemap into the cache until
 // the first revalidation. Crawlers still don't re-scan D1 on each hit — the
@@ -46,16 +44,8 @@ function staticEntry(
 }
 
 async function buildCoreSitemap(
-  servers: SitemapServer[],
+  summary: SitemapSummary,
 ): Promise<MetadataRoute.Sitemap> {
-  const byCategory = new Map<string, SitemapServer[]>();
-  for (const s of servers) {
-    const cat = s.category || 'other';
-    const bucket = byCategory.get(cat);
-    if (bucket) bucket.push(s);
-    else byCategory.set(cat, [s]);
-  }
-
   const entries: MetadataRoute.Sitemap = [
     staticEntry('/', 'hourly', 1),
     staticEntry('/browse', 'hourly', 0.95),
@@ -122,10 +112,13 @@ async function buildCoreSitemap(
 
   // Category hubs — lastmod from newest listing activity in that category
   for (const category of DIRECTORY_CATEGORIES) {
-    const inCat = byCategory.get(category) || [];
     entries.push({
       url: `${BASE}/categories/${categorySlug(category)}`,
-      lastModified: maxServerLastMod(inCat),
+      // Listings with no category count under 'other'.
+      lastModified: categoryLastMod(
+        summary,
+        (cat) => (cat || 'other') === category,
+      ),
       changeFrequency: 'daily',
       priority: 0.85,
     });
@@ -136,18 +129,18 @@ async function buildCoreSitemap(
   for (const t of BEST_TOPICS) {
     if (seenBest.has(t.slug)) continue;
     seenBest.add(t.slug);
-    const inCat = t.categorySlug
-      ? servers.filter((s) => categorySlug(s.category || '') === t.categorySlug)
-      : [];
+    const inTopic = (cat: string) => categorySlug(cat) === t.categorySlug;
+    const hasListings =
+      Boolean(t.categorySlug) &&
+      Object.keys(summary.categoryLastMs).some(inTopic);
     entries.push({
       url: `${BASE}/best/${t.slug}`,
-      lastModified:
-        inCat.length > 0
-          ? maxServerLastMod(inCat)
-          : safeDateISO(
-              STATIC_PAGE_LASTMOD[`/best/${t.slug}`] ??
-                STATIC_PAGE_LASTMOD['/best'],
-            ),
+      lastModified: hasListings
+        ? categoryLastMod(summary, inTopic)
+        : safeDateISO(
+            STATIC_PAGE_LASTMOD[`/best/${t.slug}`] ??
+              STATIC_PAGE_LASTMOD['/best'],
+          ),
       changeFrequency: 'weekly',
       priority: 0.85,
     });
@@ -200,44 +193,28 @@ async function buildCoreSitemap(
   return entries;
 }
 
-function buildListingsSitemap(servers: SitemapServer[]): MetadataRoute.Sitemap {
-  // Only listings the page itself leaves indexable (see /mcp/[id] metadata).
-  return servers
-    .filter((server) =>
-      isListingIndexable({
-        hasAiDoc: Boolean(server.hasAiDoc),
-        toolsSource: server.toolsSource,
-        installNeedsConfig: server.installNeedsConfig,
-        remoteEndpointHealthy: server.remoteEndpointHealthy,
-        githubStars: server.githubStars ?? server.stars,
-        npmDownloads: server.npmDownloads ?? server.downloads,
-        staleFlagged: Boolean(server.staleFlagged),
-      }),
-    )
-    .map((server) => ({
-      url: `${BASE}/mcp/${server.id}`,
-      lastModified: listingLastMod(server),
-      changeFrequency: 'daily' as const,
-      priority: 0.7,
-    }));
+function buildListingsSitemap(summary: SitemapSummary): MetadataRoute.Sitemap {
+  // Already filtered to the listings the page itself leaves indexable (see
+  // createSitemapSummarizer and /mcp/[id] metadata).
+  return summary.listings.map((listing) => ({
+    url: `${BASE}/mcp/${listing.id}`,
+    lastModified: listing.lastmod,
+    changeFrequency: 'daily' as const,
+    priority: 0.7,
+  }));
 }
 
-function buildSecondarySitemap(
-  servers: SitemapServer[],
-): MetadataRoute.Sitemap {
+function buildSecondarySitemap(summary: SitemapSummary): MetadataRoute.Sitemap {
   // Programmatic vs / comparison pages and alternatives pages are kept navigable
   // on-site but noindexed to avoid Google's Scaled Content Abuse penalties for large
   // programmatic matrix doorways. The only exception is the small curated set in
   // lib/comparePairs.ts, submitted under the same condition the page uses to
   // allow indexing (both listings active with a writeup).
-  const byId = new Map(servers.map((s) => [s.id, s]));
   const entries: MetadataRoute.Sitemap = [];
   for (const pair of INDEXABLE_COMPARE_PAIRS) {
-    const a = byId.get(pair.a);
-    const b = byId.get(pair.b);
-    if (!a?.hasAiDoc || !b?.hasAiDoc) continue;
-    const lastA = listingLastMod(a);
-    const lastB = listingLastMod(b);
+    const lastA = summary.comparePairLastMod[pair.a];
+    const lastB = summary.comparePairLastMod[pair.b];
+    if (!lastA || !lastB) continue;
     entries.push({
       url: `${BASE}${comparePath(pair)}`,
       lastModified: lastA > lastB ? lastA : lastB,
@@ -252,11 +229,11 @@ export default async function sitemap(props: {
   id: Promise<string>;
 }): Promise<MetadataRoute.Sitemap> {
   const id = await props.id;
-  const servers = await getSitemapServers();
+  const summary = await getSitemapSummary();
 
-  if (id === 'core') return await buildCoreSitemap(servers);
-  if (id === 'listings') return buildListingsSitemap(servers);
-  if (id === 'secondary') return buildSecondarySitemap(servers);
+  if (id === 'core') return await buildCoreSitemap(summary);
+  if (id === 'listings') return buildListingsSitemap(summary);
+  if (id === 'secondary') return buildSecondarySitemap(summary);
 
   // Unknown shard — return empty rather than mixing priorities.
   return [];

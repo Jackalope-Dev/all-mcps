@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { parseCategoryLabel } from './categories';
-import { getActiveServersLight, type Server } from './servers';
+import { iterateActiveServersLight, type Server } from './servers';
 
 function slugifyTag(str: string): string {
   return str
@@ -151,17 +151,20 @@ export type TagWithCount = {
 
 /** Get all tags with server counts across all active servers in the catalog */
 export async function getAllTagsWithCounts(): Promise<TagWithCount[]> {
-  const servers = await getActiveServersLight();
   const counts = new Map<string, { label: string; count: number }>();
 
-  for (const server of servers) {
-    const extracted = extractTagsForServer(server);
-    for (const { slug, label } of extracted) {
-      const existing = counts.get(slug);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        counts.set(slug, { label, count: 1 });
+  // Paged: holding the whole catalog at once overran the Worker memory limit
+  // (this runs inside /sitemap/core.xml and /tags).
+  for await (const page of iterateActiveServersLight()) {
+    for (const server of page) {
+      const extracted = extractTagsForServer(server);
+      for (const { slug, label } of extracted) {
+        const existing = counts.get(slug);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          counts.set(slug, { label, count: 1 });
+        }
       }
     }
   }
@@ -179,16 +182,18 @@ export async function getAllTagsWithCounts(): Promise<TagWithCount[]> {
 export const getServersForTag = cache(async function getServersForTag(
   targetSlug: string,
 ): Promise<{ servers: Server[]; rawTag: string }> {
-  const servers = await getActiveServersLight();
   const matched: Server[] = [];
   let foundLabel = targetSlug;
 
-  for (const server of servers) {
-    const extracted = extractTagsForServer(server);
-    const match = extracted.find((t) => t.slug === targetSlug);
-    if (match) {
-      matched.push(server);
-      if (match.label) foundLabel = match.label;
+  // Paged so only the matches outlive each page, not the whole catalog.
+  for await (const page of iterateActiveServersLight()) {
+    for (const server of page) {
+      const extracted = extractTagsForServer(server);
+      const match = extracted.find((t) => t.slug === targetSlug);
+      if (match) {
+        matched.push(server);
+        if (match.label) foundLabel = match.label;
+      }
     }
   }
 
