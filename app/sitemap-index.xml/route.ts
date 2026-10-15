@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
-  getSitemapServers,
-  maxServerLastMod,
+  categoryLastMod,
+  getSitemapSummary,
   STATIC_PAGE_LASTMOD,
   safeDateISO,
 } from '../../lib/sitemapHelpers';
@@ -13,9 +13,10 @@ import {
 // /sitemap.xml URL to this route so the external contract (robots.txt, GSC
 // submission) is unaffected.
 export async function GET() {
-  const servers = await getSitemapServers();
+  const summary = await getSitemapSummary();
   const coreLastMod = safeDateISO(STATIC_PAGE_LASTMOD['/'] ?? '2026-08-01');
-  const listingsLastMod = maxServerLastMod(servers);
+  // Newest listing across every category.
+  const listingsLastMod = categoryLastMod(summary, () => true);
   const secondaryLastMod = listingsLastMod;
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

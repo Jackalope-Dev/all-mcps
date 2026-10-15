@@ -3,11 +3,13 @@
  * Keeps lastmod honest so crawlers can trust change signals.
  */
 
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { unstable_cache } from 'next/cache';
 import serversData from '../data/mcp-servers.json';
 import { servers as serversTable } from '../db/schema';
+import { INDEXABLE_COMPARE_PAIRS } from './comparePairs';
+import { isListingIndexable } from './listingIndexability';
 
 /**
  * Safely parses and normalizes any date input into a valid Date object.
@@ -222,25 +224,115 @@ const SITEMAP_SERVER_COLUMNS = {
 const SITEMAP_CACHE_SECONDS = 3600;
 
 /**
- * One D1 read of every active listing, or null when D1 isn't reachable.
+ * Rows per sitemap scan page. Slim rows are a few hundred bytes, so a page is
+ * a few MB of heap at most however large the catalog grows.
+ */
+const SITEMAP_PAGE_SIZE = 2000;
+
+/**
+ * Everything the sitemap routes need from the catalog, folded down while it is
+ * scanned so no request ever holds every listing row at once. Holding the full
+ * ~32k-row catalog (plus its unstable_cache copy and the rendered XML) is what
+ * pushed /sitemap/core.xml and /sitemap/listings.xml over the Worker memory
+ * limit. Plain JSON so unstable_cache can store it.
+ */
+export type SitemapSummary = {
+  /** Newest listingLastMod (epoch ms) per raw category value ('' when unset). */
+  categoryLastMs: Record<string, number>;
+  /** Indexable listings in catalog order, for the listings shard. */
+  listings: { id: string; lastmod: string }[];
+  /** lastmod of curated compare-pair listings that carry an AI writeup. */
+  comparePairLastMod: Record<string, string>;
+};
+
+const COMPARE_PAIR_IDS = new Set(
+  INDEXABLE_COMPARE_PAIRS.flatMap((p) => [p.a, p.b]),
+);
+
+/** Folds sitemap rows into a SitemapSummary one page at a time. */
+export function createSitemapSummarizer() {
+  const seen = new Set<string>();
+  const summary: SitemapSummary = {
+    categoryLastMs: {},
+    listings: [],
+    comparePairLastMod: {},
+  };
+  return {
+    add(rows: SitemapServer[]) {
+      for (const s of rows) {
+        if (!s.id || seen.has(s.id)) continue;
+        seen.add(s.id);
+        const lastmod = listingLastMod(s);
+        const ms = new Date(lastmod).getTime();
+        const cat = s.category || '';
+        if (!Number.isNaN(ms) && ms > (summary.categoryLastMs[cat] ?? 0)) {
+          summary.categoryLastMs[cat] = ms;
+        }
+        if (s.hasAiDoc && COMPARE_PAIR_IDS.has(s.id)) {
+          summary.comparePairLastMod[s.id] = lastmod;
+        }
+        // Only listings the page itself leaves indexable (see /mcp/[id] metadata).
+        if (
+          isListingIndexable({
+            hasAiDoc: Boolean(s.hasAiDoc),
+            toolsSource: s.toolsSource,
+            installNeedsConfig: s.installNeedsConfig,
+            remoteEndpointHealthy: s.remoteEndpointHealthy,
+            githubStars: s.githubStars ?? s.stars,
+            npmDownloads: s.npmDownloads ?? s.downloads,
+            staleFlagged: Boolean(s.staleFlagged),
+          })
+        ) {
+          summary.listings.push({ id: s.id, lastmod });
+        }
+      }
+    },
+    /** Null when no listing was added, so callers can tell "empty" apart. */
+    result(): SitemapSummary | null {
+      return seen.size > 0 ? summary : null;
+    },
+  };
+}
+
+/**
+ * One paged D1 scan of every active listing, folded into a SitemapSummary, or
+ * null when D1 isn't reachable (or has no active rows).
  *
  * Returns null rather than falling back here so callers can tell "D1 said
  * nothing" apart from "D1 wasn't available" — the difference between a
  * legitimately empty catalog and a build-time render with no binding.
  */
-async function fetchSitemapServersFromD1(): Promise<SitemapServer[] | null> {
+async function fetchSitemapSummaryFromD1(): Promise<SitemapSummary | null> {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext({ async: true });
     if (!ctx?.env || !(ctx.env as any).DB) return null;
 
     const db = drizzle((ctx.env as any).DB);
-    const dbServers = await db
-      .select(SITEMAP_SERVER_COLUMNS)
-      .from(serversTable)
-      .where(eq(serversTable.status, 'active'));
-
-    return dbServers.length > 0 ? (dbServers as SitemapServer[]) : null;
+    const summarizer = createSitemapSummarizer();
+    let afterRowid: number | null = null;
+    for (;;) {
+      // Paged on rowid, not id: (status, rowid) walks idx_servers_status in
+      // order (see queryQualityTiers in lib/siteStats.ts).
+      const rows: (SitemapServer & { rowid: number })[] = await db
+        .select({ rowid: sql<number>`rowid`, ...SITEMAP_SERVER_COLUMNS })
+        .from(serversTable)
+        .where(
+          afterRowid === null
+            ? eq(serversTable.status, 'active')
+            : and(
+                eq(serversTable.status, 'active'),
+                sql`rowid > ${afterRowid}`,
+              ),
+        )
+        .orderBy(sql`rowid`)
+        .limit(SITEMAP_PAGE_SIZE);
+      if (rows.length === 0) break;
+      summarizer.add(rows);
+      if (rows.length < SITEMAP_PAGE_SIZE) break;
+      afterRowid = rows[rows.length - 1].rowid;
+    }
+    return summarizer.result();
   } catch (e: any) {
     const msg = e?.message || e?.cause?.message || String(e);
     if (msg.includes('no such table') || msg.includes('D1_ERROR')) {
@@ -253,25 +345,25 @@ async function fetchSitemapServersFromD1(): Promise<SitemapServer[] | null> {
 }
 
 /**
- * Caches the D1 read itself rather than the rendered sitemap. The routes are
+ * Caches the folded D1 scan rather than the rendered sitemap. The routes are
  * `force-dynamic` on purpose: an ISR sitemap gets prerendered at build time,
  * when there's no D1 binding, which froze a fallback-shaped sitemap into the
  * cache for a full revalidate window on every deploy. Caching here keeps that
- * from costing a query per crawl hit — the catalog is read at most once an
- * hour and every other request reuses it.
+ * from costing a catalog scan per crawl hit — the catalog is read at most once
+ * an hour and every other request reuses the (small) summary.
  */
-const getCachedSitemapServersFromD1 = unstable_cache(
-  fetchSitemapServersFromD1,
-  ['sitemap-servers'],
+const getCachedSitemapSummaryFromD1 = unstable_cache(
+  fetchSitemapSummaryFromD1,
+  ['sitemap-summary'],
   { revalidate: SITEMAP_CACHE_SECONDS },
 );
 
-/** Active directory listings for sitemap generation (D1 when available). */
-export async function getSitemapServers(): Promise<SitemapServer[]> {
-  let dbServers: SitemapServer[] | null = null;
+/** Catalog summary for sitemap generation (D1 when available). */
+export async function getSitemapSummary(): Promise<SitemapSummary> {
+  let summary: SitemapSummary | null = null;
 
   try {
-    dbServers = await getCachedSitemapServersFromD1();
+    summary = await getCachedSitemapSummaryFromD1();
   } catch (e) {
     console.error('[sitemap] Cached D1 read failed, querying directly:', e);
   }
@@ -280,26 +372,41 @@ export async function getSitemapServers(): Promise<SitemapServer[]> {
   // couldn't reach the request context. Retry uncached before falling back to
   // the bundled sample, so a cache problem costs a query instead of shipping a
   // sitemap that's missing almost every listing.
-  if (!dbServers) {
-    dbServers = await fetchSitemapServersFromD1();
+  if (!summary) {
+    summary = await fetchSitemapSummaryFromD1();
   }
+  if (summary) return summary;
 
-  const servers =
-    dbServers ??
+  const summarizer = createSitemapSummarizer();
+  summarizer.add(
     (serversData as Array<SitemapServer & { status?: string }>).filter(
       (s) => s.status !== 'removed',
-    );
-
-  const seen = new Set<string>();
-  const uniqueServers: SitemapServer[] = [];
-  for (const s of servers) {
-    if (s.id && !seen.has(s.id)) {
-      seen.add(s.id);
-      uniqueServers.push(s);
+    ),
+  );
+  return (
+    summarizer.result() ?? {
+      categoryLastMs: {},
+      listings: [],
+      comparePairLastMod: {},
     }
-  }
+  );
+}
 
-  return uniqueServers;
+/**
+ * Newest listing lastmod among categories satisfying `match` (category and
+ * topic hubs, the sitemap index), or the /categories ship date when none do.
+ */
+export function categoryLastMod(
+  summary: SitemapSummary,
+  match: (category: string) => boolean,
+): string {
+  let maxMs = 0;
+  for (const [cat, ms] of Object.entries(summary.categoryLastMs)) {
+    if (ms > maxMs && match(cat)) maxMs = ms;
+  }
+  return maxMs > 0
+    ? new Date(maxMs).toISOString().replace(/\.\d{3}Z$/, 'Z')
+    : safeDateISO(STATIC_PAGE_LASTMOD['/categories']);
 }
 
 /**
@@ -334,21 +441,6 @@ export function listingLastMod(server: SitemapServer): string {
     return new Date(contentMs).toISOString().replace(/\.\d{3}Z$/, 'Z');
   }
   return safeDateISO(server.createdAt || server.created_at);
-}
-
-/** Max lastmod among a set of servers (for category/topic hub pages). */
-export function maxServerLastMod(servers: SitemapServer[]): string {
-  if (servers.length === 0)
-    return safeDateISO(STATIC_PAGE_LASTMOD['/categories']);
-  let maxMs = 0;
-  for (const s of servers) {
-    const iso = listingLastMod(s);
-    const t = new Date(iso).getTime();
-    if (!Number.isNaN(t) && t > maxMs) maxMs = t;
-  }
-  return maxMs > 0
-    ? new Date(maxMs).toISOString().replace(/\.\d{3}Z$/, 'Z')
-    : listingLastMod(servers[0]);
 }
 
 /** High-value core paths to submit first via IndexNow (priority crawl targets). */
