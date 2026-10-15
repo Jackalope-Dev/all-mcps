@@ -83,7 +83,7 @@ async function runCronJob(
   job: CronJob,
   env: CloudflareEnv,
   ctx: ExecutionContext,
-): Promise<{ drained: boolean }> {
+): Promise<{ drained: boolean; failed?: boolean }> {
   // Secrets live on the runtime env even though they aren't in the generated
   // `CloudflareEnv` type (same values the routes read via `process.env`).
   // Falls back to ADMIN_SECRET so a Worker that hasn't had CRON_SECRET set yet
@@ -142,7 +142,7 @@ async function runCronJob(
   } catch (error) {
     console.error(`[cron] ${job.path} threw`, error);
   }
-  return { drained: false };
+  return { drained: false, failed: true };
 }
 
 export default {
@@ -183,12 +183,17 @@ export default {
 
     // Run sequentially so overlapping D1 writes / third-party rate limits stay
     // predictable, and so one failing job never blocks the others.
-    const drained = new Set<string>();
+    // A drainable path stops for the rest of the tick once it reports
+    // drained, or once a run fails: repeats of a failed run (e.g. "D1 DB is
+    // overloaded") only pile more load on and fail the same way.
+    const stopped = new Set<string>();
     for (const job of jobs) {
       if (job.shouldRun && !job.shouldRun(now)) continue;
-      if (job.drainable && drained.has(job.path)) continue;
+      if (job.drainable && stopped.has(job.path)) continue;
       const result = await runCronJob(job, jobEnv, ctx);
-      if (job.drainable && result.drained) drained.add(job.path);
+      if (job.drainable && (result.drained || result.failed)) {
+        stopped.add(job.path);
+      }
     }
   },
 } satisfies ExportedHandler<CloudflareEnv>;
