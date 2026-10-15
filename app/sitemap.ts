@@ -4,6 +4,11 @@ import { getAllPosts } from '../lib/blog';
 import { categorySlug, DIRECTORY_CATEGORIES } from '../lib/categories';
 import { MCP_CLIENTS } from '../lib/clients';
 import { comparePath, INDEXABLE_COMPARE_PAIRS } from '../lib/comparePairs';
+import {
+  getHubCounts,
+  isBestTopicIndexable,
+  isCategoryHubIndexable,
+} from '../lib/hubIndexability';
 import { WORKFLOW_PROMPTS } from '../lib/prompts';
 import {
   categoryLastMod,
@@ -110,8 +115,12 @@ async function buildCoreSitemap(
     console.error('Failed to read blog posts for sitemap', e);
   }
 
+  // Thin hubs are noindexed by their pages (lib/hubIndexability.ts); never submit them.
+  const hubCounts = await getHubCounts();
+
   // Category hubs — lastmod from newest listing activity in that category
   for (const category of DIRECTORY_CATEGORIES) {
+    if (!isCategoryHubIndexable(category, hubCounts)) continue;
     entries.push({
       url: `${BASE}/categories/${categorySlug(category)}`,
       // Listings with no category count under 'other'.
@@ -129,6 +138,7 @@ async function buildCoreSitemap(
   for (const t of BEST_TOPICS) {
     if (seenBest.has(t.slug)) continue;
     seenBest.add(t.slug);
+    if (!isBestTopicIndexable(t, hubCounts)) continue;
     const inTopic = (cat: string) => categorySlug(cat) === t.categorySlug;
     const hasListings =
       Boolean(t.categorySlug) &&

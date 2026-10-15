@@ -1,5 +1,5 @@
 ---
-title: "Build MCP Server Python FastMCP with uvx Packaging"
+title: "Build an MCP Server in Python with FastMCP and uv"
 excerpt: "Build an MCP server in Python with FastMCP using decorators, typed tool arguments, context logging, and uv packaging that runs through uvx."
 tags: ["MCP", "Developer Tools", "Guides", "Architecture"]
 faq:

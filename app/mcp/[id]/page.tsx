@@ -37,6 +37,7 @@ import { MCP_CLIENTS } from '@/lib/clients';
 import { assessInstallRisk } from '@/lib/installRisk';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { isListingIndexable } from '@/lib/listingIndexability';
+import { buildListingMetaDescription } from '@/lib/listingMeta';
 import { isRepositoryUrl } from '@/lib/repoUrl';
 import { parseSecurityProfile } from '@/lib/securityProfile';
 import {
@@ -163,20 +164,7 @@ export async function generateMetadata({
 
   redirectIfListingMoved(id, server);
 
-  // Prefer the LLM-written one-liner for the meta description — it's a clean, unique
-  // sentence, whereas the raw description is often scraped chrome. Better CTR + no
-  // duplicate-snippet penalty against the upstream repo.
-  const metaSource = server.aiSummary?.trim() || server.description || '';
-  let cleanSource = metaSource.trim().replace(/\.+$/, '');
-  if (cleanSource.length > 100) {
-    cleanSource = `${cleanSource.slice(0, 97).trimEnd()}…`;
-  }
-  // Spell out "and" — a raw "&" is serialized as "&amp;", which audit tools that
-  // read the attribute verbatim count as 5 chars, pushing us past ~160.
-  let desc = `${cleanSource}${cleanSource.endsWith('…') ? '' : '.'} Install and connect to Claude Desktop, Cursor and Windsurf with verified JSON config and tools.`;
-  if (desc.length > 160) {
-    desc = `${desc.slice(0, 157).trimEnd()}...`;
-  }
+  const desc = buildListingMetaDescription(server);
 
   const { displayName } = parseServerName(server.name, server.url);
   const title = buildDetailTitle(displayName);

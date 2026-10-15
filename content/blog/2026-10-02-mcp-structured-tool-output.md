@@ -76,7 +76,7 @@ The `content` field is an array of MCP content blocks. Text is the most portable
 
 The protocol revision boundary matters. The MCP specification dated 2025-06-18 introduced `outputSchema` on tool definitions and `structuredContent` on tool results. A server and client negotiate a protocol version during initialization, so a server must not assume that every connected client supports fields defined by that revision or later revisions.
 
-For a connection using a protocol version before the revision that defines these fields, use the older result features supported by that version, normally `content` blocks and `isError` where applicable. Do not advertise an `outputSchema` to an older client merely because the server SDK can construct one. The exact behavior also depends on SDK releases: an SDK may expose the fields only after adding support for the relevant specification revision.
+For a connection using a protocol version before the revision that defines these fields, use the older result features supported by that version, normally `content` blocks and `isError` where applicable. Older clients ignore `outputSchema` and `structuredContent`, which is why the text copy above matters.
 
 A practical compatibility check includes three separate questions:
 
@@ -212,7 +212,7 @@ The most interoperable pattern is:
 2. Return an object in `structuredContent` that conforms to the schema.
 3. Include concise text in `content` for older integrations, text-oriented hosts, and human-readable tool-result views.
 
-The text should be a presentation of the result, not a second source of truth. It can omit repetitive fields, but it should include the outcome and the most important identifiers or next action. Avoid dumping a second, independently generated JSON document into text unless a specific legacy consumer requires it.
+For backward compatibility, the spec says a tool that returns `structuredContent` should also return the serialized JSON in a text content block, so clients that ignore `structuredContent` still get the data. Generate that text from the same object rather than building it separately, so the two can never disagree.
 
 This dual representation has costs. It increases response size and creates a consistency obligation. If the structured result says `ready: false` while the text says “ready to receive traffic,” users and models can receive conflicting instructions. Generate both forms from the same internal result object where possible.
 
@@ -260,35 +260,23 @@ For this reason, include useful text in `content` when compatibility matters. Th
 
 ## Error results and partial results
 
-The `isError` flag indicates that a tool call produced an error result, but it does not automatically exempt that result from an applicable `outputSchema`. If a tool declares an output schema, the `structuredContent` returned by the tool must conform to that schema, including when the server represents an error through the tool result.
+When a tool declares an `outputSchema`, successful results must include `structuredContent` that conforms to it. Error results (`isError: true`) are treated more loosely: the official SDKs do not require `structuredContent` on an error. If you do include it, keep it valid against the schema so clients that validate every result don't reject it.
 
-There are two sound designs. First, define a result schema that represents both outcomes. A discriminated union can require a `status` field and then describe separate success and error properties:
+There are two sound designs. First, define a result schema that represents both outcomes. MCP requires `outputSchema` to be an object schema (`"type": "object"`), so rather than a top-level `oneOf`, use a `status` field as the discriminator and make the success and error fields optional:
 
 ```json
 {
   "outputSchema": {
-    "oneOf": [
-      {
-        "type": "object",
-        "properties": {
-          "status": { "const": "ok" },
-          "deploymentId": { "type": "string" },
-          "ready": { "type": "boolean" }
-        },
-        "required": ["status", "deploymentId", "ready"],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "status": { "const": "error" },
-          "code": { "type": "string" },
-          "message": { "type": "string" }
-        },
-        "required": ["status", "code", "message"],
-        "additionalProperties": false
-      }
-    ]
+    "type": "object",
+    "properties": {
+      "status": { "type": "string", "enum": ["ok", "error"] },
+      "deploymentId": { "type": "string" },
+      "ready": { "type": "boolean" },
+      "code": { "type": "string" },
+      "message": { "type": "string" }
+    },
+    "required": ["status"],
+    "additionalProperties": false
   }
 }
 ```

@@ -4,6 +4,7 @@ import {
   desc,
   eq,
   gt,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -266,4 +267,174 @@ export async function countChanged(db: Db): Promise<number> {
       ),
     );
   return Number(row?.n ?? 0);
+}
+
+// --- Install pass --------------------------------------------------------
+
+/** A real writeup exists (excludes NULL and the '' skip marker). */
+export const hasWriteup = sql`${servers.aiDoc} != ''`;
+
+/** Index entries per page of the install-candidate walk. */
+const INSTALL_SCAN_PAGE = 1000;
+/** Ids per claim UPDATE, well under D1's 100 bound parameters. */
+const INSTALL_CLAIM_CHUNK = 50;
+
+type InstallPass = {
+  /** ?pass=install: also takes rows still queued for a writeup, and re-checks. */
+  installOnly: boolean;
+  /** A listing with no install found is re-checked at most once before this. */
+  recheckBefore: Date;
+};
+
+/** Due for an install pick (cheap columns only). Also the claim's guard. */
+function installDueWhere({ installOnly, recheckBefore }: InstallPass): SQL {
+  if (!installOnly) return isNull(servers.installExtractedAt);
+  return or(
+    isNull(servers.installExtractedAt),
+    // No install found last time, but the repo has moved on since (a README
+    // often gains its install command later). At most weekly, so busy repos
+    // don't re-pick on every commit.
+    and(
+      isNull(servers.installPackage),
+      gt(servers.lastCommitAt, servers.installExtractedAt),
+      lt(servers.installExtractedAt, recheckBefore),
+    ),
+  ) as SQL;
+}
+
+/**
+ * Whether an active row is an install candidate. ai_doc (the large writeup)
+ * comes last so SQLite only compares it for rows that pass the cheap tests.
+ */
+function installCandidateWhere(pass: InstallPass): SQL {
+  return and(
+    isNull(servers.staleFlaggedAt),
+    installDueWhere(pass),
+    // The regular pass waits for a write-up, which picks an install itself;
+    // install-only runs also take listings still queued for one, skipping
+    // only those marked thin (aiDoc '').
+    pass.installOnly
+      ? or(isNull(servers.aiDoc), hasWriteup)
+      : and(isNotNull(servers.aiEnrichedAt), hasWriteup),
+  ) as SQL;
+}
+
+type ScanCursor = {
+  views: number;
+  copies: number;
+  upvotes: number;
+  rid: number;
+};
+
+/**
+ * Up to `limit` install candidates, most-used first (views, copies, upvotes).
+ *
+ * This used to be the subquery of one `UPDATE … WHERE id IN (SELECT …
+ * ORDER BY views, upvotes, created_at LIMIT n)`. That ORDER BY skipped
+ * `copies`, so it could not follow idx_servers_status_popularity: D1 had to
+ * read every eligible active row (whole rows, ai_doc writeups included) and
+ * sort them to return 24. Once the install backlog thinned, that was most of
+ * the catalog on every run, and the statement failed in production several
+ * times a day ("Failed query: update servers set install_extracted_at …").
+ *
+ * Now each statement walks at most INSTALL_SCAN_PAGE entries in index order
+ * (keyset on views, copies, upvotes, rowid) and only reports which of them
+ * qualify, so no single query scans the catalog and the walk stops as soon as
+ * the batch is full.
+ */
+export async function installCandidateIds(
+  db: Db,
+  pass: InstallPass,
+  limit: number,
+): Promise<string[]> {
+  const ids: string[] = [];
+  if (limit <= 0) return ids;
+  const candidate = installCandidateWhere(pass);
+  let after: ScanCursor | null = null;
+  for (;;) {
+    const rows: (ScanCursor & { id: string | null })[] = await db
+      .select({
+        rid: sql<number>`rowid`,
+        views: servers.views,
+        copies: servers.copies,
+        upvotes: servers.upvotes,
+        id: sql<string | null>`CASE WHEN ${candidate} THEN ${servers.id} END`,
+      })
+      .from(servers)
+      .where(
+        after === null
+          ? eq(servers.status, 'active')
+          : and(
+              eq(servers.status, 'active'),
+              sql`(${servers.views}, ${servers.copies}, ${servers.upvotes}, rowid) < (${after.views}, ${after.copies}, ${after.upvotes}, ${after.rid})`,
+            ),
+      )
+      .orderBy(
+        desc(servers.views),
+        desc(servers.copies),
+        desc(servers.upvotes),
+        sql`rowid desc`,
+      )
+      .limit(INSTALL_SCAN_PAGE);
+    for (const r of rows) {
+      if (!r.id) continue;
+      ids.push(r.id);
+      if (ids.length >= limit) return ids;
+    }
+    if (rows.length < INSTALL_SCAN_PAGE) return ids;
+    const last = rows[rows.length - 1];
+    after = {
+      views: Number(last.views),
+      copies: Number(last.copies),
+      upvotes: Number(last.upvotes),
+      rid: Number(last.rid),
+    };
+  }
+}
+
+/**
+ * Claims install candidates picked by installCandidateIds. The UPDATE
+ * re-checks that each row is still due, so an overlapping run that picked the
+ * same ids can't claim them twice: a claimed row's install_extracted_at is
+ * now, which is neither NULL nor before recheckBefore.
+ */
+export async function claimInstallIds(
+  db: Db,
+  pass: InstallPass,
+  claimTime: Date,
+  ids: string[],
+) {
+  const claimed: {
+    id: string;
+    name: string;
+    url: string;
+    description: string;
+    category: string;
+    tools: string | null;
+  }[] = [];
+  for (let i = 0; i < ids.length; i += INSTALL_CLAIM_CHUNK) {
+    const rows = await db
+      .update(servers)
+      .set({ installExtractedAt: claimTime })
+      .where(
+        and(
+          inArray(servers.id, ids.slice(i, i + INSTALL_CLAIM_CHUNK)),
+          installDueWhere(pass),
+        ),
+      )
+      .returning({
+        id: servers.id,
+        name: servers.name,
+        url: servers.url,
+        description: servers.description,
+        category: servers.category,
+        tools: servers.tools,
+      });
+    claimed.push(...rows);
+  }
+  // Keep the walk's demand order (RETURNING order is unspecified).
+  const order = new Map(ids.map((id, i) => [id, i]));
+  return claimed.sort(
+    (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
+  );
 }

@@ -80,7 +80,7 @@ beforeAll(() => {
     'doc',
     1780000000,
     1700000000,
-    50,
+    30,
     'introspected',
   );
   // No writeup: not indexable, but still dates its category hub.

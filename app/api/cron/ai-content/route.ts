@@ -4,11 +4,9 @@ import {
   asc,
   desc,
   eq,
-  gt,
   inArray,
   isNotNull,
   isNull,
-  lt,
   or,
   sql,
 } from 'drizzle-orm';
@@ -19,9 +17,12 @@ import { generateListingContent } from '../../../../lib/aiContent';
 import {
   CHANGED_MAX_FAILURES,
   changedCandidates,
+  claimInstallIds,
   countChanged,
   countNewBacklog,
   countStaleDue,
+  hasWriteup,
+  installCandidateIds,
   newCandidateIds,
   servableWhere,
   staleCandidates,
@@ -109,9 +110,6 @@ async function markWriteupSkipped(
       ),
     );
 }
-
-/** A real writeup exists (excludes NULL and the '' skip marker). */
-const hasWriteup = sql`${servers.aiDoc} != ''`;
 
 type ClaimedRow = {
   id: string;
@@ -270,56 +268,14 @@ export async function POST(req: Request) {
       claimedChanged.length + claimedWriteup.length + claimedStale.length;
     const leftover = batchSize - writeupCount;
     if (leftover > 0) {
-      const installClaim = (await db
-        .update(servers)
-        .set({ installExtractedAt: claimTime })
-        .where(
-          inArray(
-            servers.id,
-            db
-              .select({ id: servers.id })
-              .from(servers)
-              .where(
-                and(
-                  servableWhere,
-                  // The regular pass waits for a write-up, which picks an
-                  // install itself; install-only runs also take listings still
-                  // queued for one, skipping only those marked thin (aiDoc '').
-                  installOnly
-                    ? or(isNull(servers.aiDoc), hasWriteup)
-                    : and(isNotNull(servers.aiEnrichedAt), hasWriteup),
-                  installOnly
-                    ? or(
-                        isNull(servers.installExtractedAt),
-                        // No install found last time, but the repo has moved
-                        // on since (a README often gains its install command
-                        // later). At most weekly, so busy repos don't re-pick
-                        // on every commit.
-                        and(
-                          isNull(servers.installPackage),
-                          gt(servers.lastCommitAt, servers.installExtractedAt),
-                          lt(servers.installExtractedAt, recheckBefore),
-                        ),
-                      )
-                    : isNull(servers.installExtractedAt),
-                ),
-              )
-              .orderBy(
-                desc(servers.views),
-                desc(servers.upvotes),
-                asc(servers.createdAt),
-              )
-              .limit(leftover),
-          ),
-        )
-        .returning({
-          id: servers.id,
-          name: servers.name,
-          url: servers.url,
-          description: servers.description,
-          category: servers.category,
-          tools: servers.tools,
-        })) as Omit<ClaimedRow, 'pass'>[];
+      // Eligibility, order and the bounded index walk: lib/aiContentQueue.ts.
+      const installPass = { installOnly, recheckBefore };
+      const installClaim = await claimInstallIds(
+        db,
+        installPass,
+        claimTime,
+        await installCandidateIds(db, installPass, leftover),
+      );
       claimedInstall = installClaim.map((c) => ({
         ...c,
         pass: 'install' as const,
@@ -710,7 +666,9 @@ export async function POST(req: Request) {
         }. ~${changedWaiting} changed since writeup, ~${remaining} never-enriched, ~${dueForRecheck} due for re-check, ~${installRemaining} install-unchecked, ~${docRemaining} without a writeup.`,
     });
   } catch (error: any) {
-    console.error('AI content cron error:', error);
+    // Drizzle wraps the D1 error in `cause`; its message is the actual reason
+    // ("Failed query: ..." alone doesn't say what D1 objected to).
+    console.error('AI content cron error:', error, error?.cause?.message ?? '');
     return NextResponse.json(
       { error: error?.message || 'Internal Server Error' },
       { status: 500 },

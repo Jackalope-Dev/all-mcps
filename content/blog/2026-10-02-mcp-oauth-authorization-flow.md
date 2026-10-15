@@ -8,7 +8,7 @@ faq:
   - q: "What is the resource parameter in MCP OAuth?"
     a: "The resource parameter identifies the MCP server that should accept the resulting access token. The client should use the protected resource identifier from MCP resource metadata in both the authorization request and token request, following the MCP authorization flow. Some authorization servers may have compatibility requirements, but omitting the parameter can produce a token with the wrong audience."
   - q: "Is dynamic client registration mandatory for MCP clients?"
-    a: "MCP clients are expected to work with authorization servers that use OAuth metadata and dynamic client registration, but deployments can vary. Some providers pre-register clients or use a client-management process outside the MCP flow. Check the MCP specification and the selected client and server versions before assuming that registration is available or required."
+    a: "No. Since the 2025-11-25 revision, the MCP authorization spec prefers Client ID Metadata Documents, where the client_id is an HTTPS URL that hosts the client's metadata. Pre-registration is the other supported option, and dynamic client registration is kept as a fallback for compatibility with authorization servers that support neither."
   - q: "Which PKCE method should an MCP client use?"
     a: "An MCP client should use PKCE with the S256 code challenge method. It creates a high-entropy code verifier, sends its SHA-256-derived challenge in the authorization request, and sends the original verifier to the token endpoint. The authorization server rejects the code exchange when the verifier does not match."
 ---
@@ -307,4 +307,4 @@ OAuth is one part of an MCP threat model. Review tool authorization, tenant isol
 
 ## Next steps
 
-Implement the flow against the MCP specification and your identity provider’s OAuth metadata, then verify resource, audience, scope, PKCE, and opaque-token introspection behavior with automated tests. For examples of OAuth-protected or authentication-oriented directory entries, review the [Box remote MCP server](/mcp/box-mcp-server-box-remote), [Strava MCP server](/mcp/kw510-strava-mcp), and [Keycloak administration MCP server](/mcp/mrz1880-mcp-keycloak-admin). If you are building the server itself, continue with the [MCP server development guide](/build-mcp-server).
+Implement the flow against the MCP specification and your identity provider’s OAuth metadata, then verify resource, audience, scope, PKCE, and opaque-token introspection behavior with automated tests.

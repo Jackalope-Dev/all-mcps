@@ -1,3 +1,6 @@
+import { type SQL, sql } from 'drizzle-orm';
+import { servers } from '../db/schema';
+
 /**
  * Single source of truth for whether a /mcp/[id] listing is offered to search
  * engines. Used by the page's robots meta AND the listings sitemap so we never
@@ -24,11 +27,11 @@
  * crosses the traction bar, it becomes indexable and enters the sitemap with
  * no manual step.
  */
-export const INDEXABLE_MIN_GITHUB_STARS = 25;
-export const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
+const INDEXABLE_MIN_GITHUB_STARS = 25;
+const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
 /** Traction high enough to index without a verified run. */
-export const INDEXABLE_STRONG_GITHUB_STARS = 250;
-export const INDEXABLE_STRONG_NPM_DOWNLOADS = 5000;
+const INDEXABLE_STRONG_GITHUB_STARS = 250;
+const INDEXABLE_STRONG_NPM_DOWNLOADS = 5000;
 
 export type IndexabilityInput = {
   status?: string | null;
@@ -68,4 +71,17 @@ function hasVerifiedRun(s: {
     s.installNeedsConfig != null ||
     Boolean(s.remoteEndpointHealthy)
   );
+}
+
+/**
+ * SQL form of isListingIndexable for aggregate reads (catalog coverage, hub
+ * thresholds). Callers add the status / stale filter themselves.
+ */
+export function indexableListingSql(): SQL {
+  const stars = sql`coalesce(${servers.githubStars}, 0)`;
+  const downloads = sql`coalesce(${servers.npmDownloads}, 0)`;
+  const traction = sql`(${stars} >= ${INDEXABLE_MIN_GITHUB_STARS} OR ${downloads} >= ${INDEXABLE_MIN_NPM_DOWNLOADS})`;
+  const strongTraction = sql`(${stars} >= ${INDEXABLE_STRONG_GITHUB_STARS} OR ${downloads} >= ${INDEXABLE_STRONG_NPM_DOWNLOADS})`;
+  const verifiedRun = sql`(${servers.toolsSource} = 'introspected' OR ${servers.installNeedsConfig} IS NOT NULL OR coalesce(${servers.remoteEndpointHealthy}, 0) = 1)`;
+  return sql`(coalesce(${servers.aiDoc}, '') <> '' AND (${strongTraction} OR (${traction} AND ${verifiedRun})))`;
 }
