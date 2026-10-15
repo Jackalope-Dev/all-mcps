@@ -3574,3 +3574,30 @@
   height: 5.5rem;
   border-radius: var(--radius-lg);
 }
+
+/* Dashboard sparkline hover tooltip — themed surface so the text reads in
+   both light and dark (it used a hard-coded dark slate background). */
+.acct-chart-tip {
+  position: absolute;
+  z-index: 10;
+  transform: translateX(-50%);
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--hue-violet) 40%, transparent);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-popover);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.acct-chart-tip-value {
+  font-weight: 700;
+  color: var(--hue-violet);
+}
+
+.acct-chart-tip-label {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}

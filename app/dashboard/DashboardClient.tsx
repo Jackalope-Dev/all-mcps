@@ -3450,32 +3450,16 @@ function Sparkline({ data, labels }: { data: number[]; labels: string[] }) {
         {/* Hover Tooltip display */}
         {activeIndex !== null && activePoint && (
           <div
+            className="acct-chart-tip"
             style={{
-              position: 'absolute',
               top: Math.max(0, activePoint.y * (110 / height) - 45),
               left: `${Math.min(85, Math.max(15, (activePoint.x / width) * 100))}%`,
-              transform: 'translateX(-50%)',
-              background: 'rgba(15, 23, 42, 0.95)',
-              border:
-                '1px solid color-mix(in srgb, var(--hue-violet) 40%, transparent)',
-              borderRadius: '6px',
-              padding: '0.25rem 0.6rem',
-              fontSize: '0.75rem',
-              color: '#F8FAFC',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-              zIndex: 10,
             }}
           >
-            <div style={{ fontWeight: 700, color: 'var(--hue-violet)' }}>
+            <div className="acct-chart-tip-value">
               {data[activeIndex].toLocaleString()} hits
             </div>
-            <div
-              style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}
-            >
-              {labels[activeIndex]}
-            </div>
+            <div className="acct-chart-tip-label">{labels[activeIndex]}</div>
           </div>
         )}
       </div>
