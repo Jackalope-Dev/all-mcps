@@ -164,8 +164,35 @@ function fromBulletList(section: string): ParsedReadmeTool[] {
 const NON_TOOL_SUBHEADING =
   /\b(error|response|example|troubleshoot|usage|param)/i;
 
+// A bullet that names tools only to say they are gone ("1.3.0 removed `search_jobs`",
+// "Releases after 1.5.1 no longer include `list_escalations`"). Changelog-style notes
+// like these sit under "## Tools" too, and mining them listed retired tools as current.
+const RETIRED_TOOL_NOTE =
+  /\b(removed|no longer|deprecated|retired|replaced by)\b/i;
+
+// A line that is nothing but a comma-separated run of `code` identifiers, the shape
+// generated tool catalogs use: "`browse_listings`, `get_listing`, `get_upgrade_link`".
+const CATALOG_LINE =
+  /^\s*`[a-zA-Z][\w.-]*`(?:\s*,\s*`[a-zA-Z][\w.-]*`)+\s*,?\s*$/;
+
 /**
- * Strategy 4 (last resort, name-only): bare `code`-wrapped identifiers inside bullet
+ * Strategy 4 (name-only): plain paragraph lines listing tools as `code` identifiers,
+ * usually one line per group under a bold label ("**Public (no key):**"). Two or more
+ * identifiers and nothing else on the line keeps prose that merely mentions a tool out.
+ */
+function fromCatalogLines(section: string): ParsedReadmeTool[] {
+  const names: string[] = [];
+  for (const line of section.split('\n')) {
+    if (!CATALOG_LINE.test(line)) continue;
+    for (const m of line.matchAll(/`([a-zA-Z][\w.-]*)`/g)) {
+      if (m[1].length <= MAX_NAME_LEN) names.push(m[1]);
+    }
+  }
+  return names.map((name) => ({ name }));
+}
+
+/**
+ * Strategy 5 (last resort, name-only): bare `code`-wrapped identifiers inside bullet
  * lines, e.g. "- Discovery: `hol.stats`, `hol.capabilities`, `hol.search`". No per-tool
  * description is recoverable from this shape, but the real tool names still beat nothing.
  */
@@ -179,6 +206,7 @@ function fromInlineCodeInBullets(section: string): ParsedReadmeTool[] {
       continue;
     }
     if (suppressed || !/^\s*[-*]\s+/.test(line)) continue;
+    if (RETIRED_TOOL_NOTE.test(line)) continue;
     for (const m of line.matchAll(/`([a-zA-Z][\w.-]*)`/g)) {
       if (m[1].length <= MAX_NAME_LEN) names.push(m[1]);
     }
@@ -212,7 +240,12 @@ export function parseToolsFromReadme(
   const section = extractToolsSection(readme);
   if (!section) return [];
 
-  for (const strategy of [fromTables, fromSubheadings, fromBulletList]) {
+  for (const strategy of [
+    fromTables,
+    fromSubheadings,
+    fromBulletList,
+    fromCatalogLines,
+  ]) {
     const found = dedupe(strategy(section));
     if (found.length > 0) return found.slice(0, MAX_TOOLS);
   }
