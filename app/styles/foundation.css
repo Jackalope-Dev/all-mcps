@@ -752,25 +752,24 @@ fieldset:where(.fieldset-plain) {
 
 /* One-shot entrance for above-the-fold content. Stagger with style="--i: n". */
 .animate-in {
-  animation: enter-rise 620ms var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+  animation: enter-rise 480ms var(--ease-out) both;
+  /* Capped stagger: long lists shouldn't cascade for half a second. */
+  animation-delay: calc(min(var(--i, 0), 6) * 45ms);
 }
 
 .animate-fade {
-  animation: enter-fade 500ms var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+  animation: enter-fade 420ms var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 6) * 45ms);
 }
 
 @keyframes enter-rise {
   from {
     opacity: 0;
-    transform: translateY(14px);
-    filter: blur(4px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 
@@ -823,35 +822,52 @@ fieldset:where(.fieldset-plain) {
   }
 }
 
-/* Route transitions (components/RouteTransition.tsx). Exit is quick; the
-   new page rises in slightly slower so navigation reads as forward motion. */
+/* Route transitions (app/template.tsx). Old and new pages cross-fade over
+   the same 180ms with no gap and no movement — a delayed or offset fade
+   leaves a near-blank frame between pages, which reads as a flash. */
 ::view-transition-group(root) {
   animation-duration: 0s;
 }
 
 ::view-transition-old(.page-out) {
-  animation: vt-page-out 140ms var(--ease-in-out) both;
+  animation: vt-page-out 180ms var(--ease-in-out) both;
 }
 
 ::view-transition-new(.page-in) {
-  animation: vt-page-in 340ms var(--ease-out) 60ms both;
+  animation: vt-page-in 180ms var(--ease-in-out) both;
 }
 
 @keyframes vt-page-out {
   to {
     opacity: 0;
-    transform: translateY(-4px);
   }
 }
 
 @keyframes vt-page-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
 }
 
-/* Top-of-page navigation progress (components/RouteTransition.tsx). */
+/* After the first in-app navigation (components/MotionRuntime.tsx sets
+   data-navigated on <html> when one starts), the cross-fade above is the
+   motion. Per-element entrances would replay inside it and stack into
+   several rapid flashes, so they only play on a page's first load. */
+:root[data-navigated]
+:is(
+  .animate-in,
+  .animate-fade,
+  .page-header,
+  .content-head,
+  .acct-page-head,
+  .acct-legal-head,
+  .dashboard-page-header,
+  .dashboard-listing-card
+) {
+  animation: none;
+}
+
+/* Top-of-page navigation progress (components/MotionRuntime.tsx). */
 .nav-progress {
   position: fixed;
   top: 0;

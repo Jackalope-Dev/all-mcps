@@ -6,7 +6,19 @@ import { useEffect, useRef, useState } from 'react';
 type ProgressState = 'idle' | 'loading' | 'done';
 
 /**
+ * Flags <html> once an in-app navigation starts, before the next page
+ * renders, so CSS can drop per-element entrance animations (the route
+ * cross-fade carries the motion — see app/styles/foundation.css).
+ */
+function markNavigated() {
+  document.documentElement.setAttribute('data-navigated', '');
+}
+
+/**
  * Site-wide motion glue, mounted once in the root layout:
+ *
+ * 0. Marks <html data-navigated> when an in-app navigation starts, so
+ *    first-load entrance animations don't replay inside route transitions.
  *
  * 1. Navigation progress — a 2px brand bar that starts the instant an
  *    internal link to another page is clicked and completes when the new
@@ -56,6 +68,7 @@ export function MotionRuntime() {
       // API routes, feeds, and files are full document loads, not app navs.
       if (/^\/api\/|\.(xml|txt|json|md|png|svg)$/.test(url.pathname)) return;
 
+      markNavigated();
       setState('loading');
       window.clearTimeout(safetyTimer.current);
       safetyTimer.current = window.setTimeout(() => setState('done'), 10000);
@@ -76,9 +89,12 @@ export function MotionRuntime() {
       });
     };
 
+    // Back/forward are in-app navigations too.
+    window.addEventListener('popstate', markNavigated);
     document.addEventListener('click', onClick, { capture: true });
     document.addEventListener('pointermove', onPointerMove, { passive: true });
     return () => {
+      window.removeEventListener('popstate', markNavigated);
       document.removeEventListener('click', onClick, { capture: true });
       document.removeEventListener('pointermove', onPointerMove);
       window.cancelAnimationFrame(frame);
