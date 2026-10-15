@@ -31,6 +31,10 @@ export type SequenzySubscriberSync = {
  * alongside a submission or Stripe webhook and must not fail because Sequenzy is down.
  * Always merges (adds tags to an existing subscriber) rather than skipping or overwriting.
  */
+export function redactEmails(text: string): string {
+  return text.replace(/[^\s"'<>@,;:]+@[^\s"'<>@,;:]+/g, '<email>');
+}
+
 export async function syncSequenzySubscriber(
   input: SequenzySubscriberSync,
 ): Promise<void> {
@@ -76,9 +80,14 @@ export async function syncSequenzySubscriber(
     });
 
     if (!res.ok) {
-      // Don't log the response body — Sequenzy validation errors commonly echo the
-      // submitted email, and this app doesn't put PII in log retention anywhere else.
-      console.error('Sequenzy subscriber sync failed', res.status);
+      // Sequenzy validation errors commonly echo the submitted email, and this app
+      // doesn't put PII in log retention anywhere else — so log the reason with
+      // every email address redacted.
+      const reason = await res
+        .text()
+        .then((t) => redactEmails(t).slice(0, 300))
+        .catch(() => '');
+      console.error('Sequenzy subscriber sync failed', res.status, reason);
     }
   } catch (e) {
     console.error('Sequenzy subscriber sync error', e);
