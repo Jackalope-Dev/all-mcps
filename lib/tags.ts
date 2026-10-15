@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { parseCategoryLabel } from './categories';
+import { readEdgeCache, writeEdgeCache } from './edgeCache';
 import { iterateActiveServersLight, type Server } from './servers';
 
 function slugifyTag(str: string): string {
@@ -149,8 +150,27 @@ export type TagWithCount = {
   count: number;
 };
 
-/** Get all tags with server counts across all active servers in the catalog */
+const TAG_COUNTS_CACHE_KEY = 'tag-counts/v1';
+const TAG_COUNTS_TTL_SECONDS = 60 * 60;
+
+/**
+ * Get all tags with server counts across all active servers in the catalog.
+ * The count is a full paged catalog scan (~17 D1 reads, several seconds), and
+ * /sitemap/core.xml and /tags ran it on every request — so it's kept in the
+ * colo edge cache for an hour.
+ */
 export async function getAllTagsWithCounts(): Promise<TagWithCount[]> {
+  const cached = await readEdgeCache<TagWithCount[]>(TAG_COUNTS_CACHE_KEY);
+  if (cached && cached.length > 0) return cached;
+  const tags = await countTagsAcrossCatalog();
+  // Never pin an empty result (D1 unreachable) for an hour.
+  if (tags.length > 0) {
+    await writeEdgeCache(TAG_COUNTS_CACHE_KEY, tags, TAG_COUNTS_TTL_SECONDS);
+  }
+  return tags;
+}
+
+async function countTagsAcrossCatalog(): Promise<TagWithCount[]> {
   const counts = new Map<string, { label: string; count: number }>();
 
   // Paged: holding the whole catalog at once overran the Worker memory limit
