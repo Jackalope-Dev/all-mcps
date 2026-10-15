@@ -30,7 +30,7 @@ import {
 import type { BestTopic } from './bestTopics';
 import { categoryFromSlug } from './categories';
 import { cleanListingDescription } from './description';
-import { readEdgeCache, writeEdgeCache } from './edgeCache';
+import { readEdgeCache, swrEdgeCache, writeEdgeCache } from './edgeCache';
 import { isFeaturedListing } from './featuredStatus';
 import {
   installConfidenceNote,
@@ -414,6 +414,28 @@ function snapshotLightServers(limit?: number): Server[] {
  * slim, is enough to push a render over the Worker memory limit.
  */
 export async function getActiveServersLight(limit: number): Promise<Server[]> {
+  const rows = await swrEdgeCache(
+    `catalog/discovery-pool/v1/${limit}`,
+    CATALOG_POOL_CACHE,
+    () => queryDiscoveryPool(limit),
+  );
+  if (rows) return rows.map(toLightServer);
+  return snapshotLightServers(limit);
+}
+
+/**
+ * Catalog pools for the homepage and /categories sort every servable listing
+ * (~32k rows, on expressions no index covers). On a D1 busy with the cron
+ * ticks that ran past the 25s ISR revalidation timeout on `/`
+ * ("TimeoutError: The operation was aborted due to timeout"), so they are
+ * served stale-while-revalidate from the edge cache.
+ */
+const CATALOG_POOL_CACHE = {
+  freshMs: 10 * 60 * 1000,
+  maxAgeSeconds: 24 * 60 * 60,
+};
+
+async function queryDiscoveryPool(limit: number) {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -433,12 +455,12 @@ export async function getActiveServersLight(limit: number): Promise<Server[]> {
           desc(serversTable.upvotes),
         )
         .limit(limit);
-      if (rows.length > 0) return rows.map(toLightServer);
+      if (rows.length > 0) return rows;
     }
   } catch (_e) {
-    // Fall back to static JSON
+    // Callers fall back to static JSON
   }
-  return snapshotLightServers(limit);
+  return null;
 }
 
 /** Rows per iterateActiveServersLight page; slim rows keep a page a few MB. */
@@ -610,6 +632,24 @@ export async function getShowcaseActiveServers(
   limit: number,
 ): Promise<Server[]> {
   const poolSize = Math.max(limit * 6, 300);
+  const rows = await swrEdgeCache(
+    `catalog/showcase-pool/v1/${poolSize}`,
+    CATALOG_POOL_CACHE,
+    () => queryShowcasePool(poolSize),
+  );
+  if (rows) {
+    return rankShowcaseServers(
+      rows.map((r) => normalizeServer(r as unknown as Server)),
+      limit,
+    );
+  }
+  return rankShowcaseServers(
+    snapshotCatalogServers().map(normalizeServer),
+    limit,
+  );
+}
+
+async function queryShowcasePool(poolSize: number) {
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const ctx = await getCloudflareContext();
@@ -633,20 +673,12 @@ export async function getShowcaseActiveServers(
           desc(serversTable.views),
         )
         .limit(poolSize);
-      if (rows.length > 0) {
-        return rankShowcaseServers(
-          rows.map((r) => normalizeServer(r as unknown as Server)),
-          limit,
-        );
-      }
+      if (rows.length > 0) return rows;
     }
   } catch (_e) {
-    // Fall back to static JSON
+    // The caller falls back to static JSON
   }
-  return rankShowcaseServers(
-    snapshotCatalogServers().map(normalizeServer),
-    limit,
-  );
+  return null;
 }
 
 /**
