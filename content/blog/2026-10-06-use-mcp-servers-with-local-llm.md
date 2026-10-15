@@ -70,7 +70,7 @@ instead of returning a native tool-call message. A client that expects structure
 
 ### Clear, constrained schemas
 
-Tool descriptions are part of the model's prompt. Ambiguous descriptions, optional fields, large nested schemas, and overlapping tool names increase the chance of an incorrect call. Use explicit descriptions and narrow inputs. The [MCP tool input schema guide](/blog/mcp-tool-input-schema-design) covers schema choices that improve model-generated arguments.
+Tool descriptions are part of the model's prompt. Ambiguous descriptions, optional fields, large nested schemas, and overlapping tool names increase the chance of an incorrect call. Use explicit descriptions and narrow inputs. The guide to [writing MCP tool descriptions](/blog/writing-mcp-tool-descriptions-that-work) covers description and parameter choices that improve model-generated arguments.
 
 A tool should make its contract obvious:
 

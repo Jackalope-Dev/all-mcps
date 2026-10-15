@@ -2,12 +2,7 @@ import { desc, gt, sql } from 'drizzle-orm';
 import type { drizzle } from 'drizzle-orm/d1';
 import { searchMisses, servers } from '../db/schema';
 import { DEFAULT_SUBMIT_CATEGORY } from './categories';
-import {
-  INDEXABLE_MIN_GITHUB_STARS,
-  INDEXABLE_MIN_NPM_DOWNLOADS,
-  INDEXABLE_STRONG_GITHUB_STARS,
-  INDEXABLE_STRONG_NPM_DOWNLOADS,
-} from './listingIndexability';
+import { indexableListingSql } from './listingIndexability';
 
 /**
  * How complete the public catalog is, field by field, for servable listings
@@ -53,13 +48,7 @@ export async function getCatalogCoverage(
 ): Promise<CatalogCoverage> {
   const freshCutoff = Math.floor((now.getTime() - FRESH_CHECK_MS) / 1000);
   const hasTools = hasJsonList(servers.tools);
-  // Mirrors lib/listingIndexability.ts (status and flag are already filtered).
-  const stars = sql`coalesce(${servers.githubStars}, 0)`;
-  const downloads = sql`coalesce(${servers.npmDownloads}, 0)`;
-  const traction = sql`(${stars} >= ${INDEXABLE_MIN_GITHUB_STARS} OR ${downloads} >= ${INDEXABLE_MIN_NPM_DOWNLOADS})`;
-  const strongTraction = sql`(${stars} >= ${INDEXABLE_STRONG_GITHUB_STARS} OR ${downloads} >= ${INDEXABLE_STRONG_NPM_DOWNLOADS})`;
-  const verifiedRun = sql`(${servers.toolsSource} = 'introspected' OR ${servers.installNeedsConfig} IS NOT NULL OR coalesce(${servers.remoteEndpointHealthy}, 0) = 1)`;
-  const indexable = sql`${hasText(servers.aiDoc)} AND (${strongTraction} OR (${traction} AND ${verifiedRun}))`;
+  const indexable = indexableListingSql();
 
   const [row] = await db
     .select({

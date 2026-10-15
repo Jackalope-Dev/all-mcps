@@ -225,7 +225,7 @@ This separation lets you test tool behavior without starting an MCP process and 
 
 ## Generate first, then review the boundary
 
-OpenAPI-based generators can save setup time when an API has a maintained specification. Directory projects such as [bbonnin/openapi-to-mcp](/mcp/bbonnin-openapi-to-mcp), [mcp-swagger-server](/mcp/zaizaizhao-mcp-swagger-server), [mcp-link](/mcp/automation-ai-labs-mcp-link), and [APIFold](/mcp/work90210-apifold) take different approaches to turning API descriptions into MCP servers. Check each project's current transport, authentication, schema, and maintenance behavior before adopting it.
+OpenAPI-based generators can save setup time when an API has a maintained specification. The free [OpenAPI to MCP converter](/tools/openapi-to-mcp) turns a spec into a starter tool list you can trim before writing code. Directory projects such as [bbonnin/openapi-to-mcp](/mcp/bbonnin-openapi-to-mcp), [mcp-swagger-server](/mcp/zaizaizhao-mcp-swagger-server), [mcp-link](/mcp/automation-ai-labs-mcp-link), and [APIFold](/mcp/work90210-apifold) take different approaches to turning API descriptions into MCP servers. Check each project's current transport, authentication, schema, and maintenance behavior before adopting it.
 
 Use generation as an inventory and scaffolding step:
 

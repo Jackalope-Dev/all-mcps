@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { BLOG_REDIRECTS } from './lib/blogRedirects';
 
 export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
@@ -24,6 +25,11 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = pathname.slice(0, -1);
     return NextResponse.redirect(url, 301);
+  }
+
+  const blogTarget = BLOG_REDIRECTS[pathname];
+  if (blogTarget) {
+    return NextResponse.redirect(new URL(blogTarget, req.url), 301);
   }
 
   // `/?category=`/`/?q=` are filtered/search views that live on /browse — this

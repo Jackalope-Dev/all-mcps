@@ -4,11 +4,11 @@ excerpt: "Learn MCP server error handling: distinguish JSON-RPC protocol failure
 tags: ["MCP", "Guides", "Developer Tools", "Architecture"]
 faq:
   - q: "What is the difference between an MCP protocol error and a tool error?"
-    a: "A protocol error is a JSON-RPC failure that means the MCP request or message could not be processed correctly. A tool error is a successful tools/call response whose result has isError: true. Protocol errors usually indicate an integration, validation, or transport problem, while tool errors describe a failure in the operation the model asked the server to perform."
+    a: "A protocol error is a JSON-RPC failure that means the MCP request could not be processed at all, such as malformed JSON, an unknown method, or an unknown tool. A tool error is a tools/call response whose result has isError: true. Tool errors cover failures the model can act on, including invalid arguments, missing resources, and upstream API failures."
   - q: "What does isError mean in MCP?"
     a: "The MCP isError field tells the client that a tool result represents an unsuccessful tool execution. The result can still contain text or other content explaining the failure. Clients generally make that content available to the model, although the exact formatting and recovery behavior depend on the MCP host or client."
   - q: "Should an MCP tool throw an exception or return isError?"
-    a: "Return isError: true for an expected operational failure such as a missing record, invalid business input, rate limit, or upstream API error that the model can act on. Use an exception or protocol-level error for malformed requests, unavailable methods, broken protocol state, or failures that prevent a valid tool result from being produced. SDK behavior varies, so test the actual client path."
+    a: "Return isError: true for an expected operational failure such as a missing record, invalid business input, rate limit, or upstream API error that the model can act on. Invalid arguments also belong in isError results. Use a protocol-level error only for malformed requests, unknown methods or tools, and broken protocol state. Test the actual client path."
   - q: "How should MCP tool error messages be written for models?"
     a: "Write a concise message that states what failed, identifies the relevant input or resource, explains whether retrying can help, and gives a concrete next action. Avoid stack traces, vague messages, and secrets. For example: Issue lookup failed: project ENG exists, but issue ENG-42 was not found. Verify the issue key or list recent issues first."
 ---
@@ -29,11 +29,7 @@ A protocol-level failure looks like this:
   "id": 7,
   "error": {
     "code": -32602,
-    "message": "Invalid params",
-    "data": {
-      "field": "issueKey",
-      "reason": "Expected a string"
-    }
+    "message": "Unknown tool: get_issues"
   }
 }
 ```
@@ -69,13 +65,13 @@ Use a protocol error when the server cannot treat the message as a valid request
 1. The JSON is malformed or cannot be parsed.
 2. The request is not a valid JSON-RPC request.
 3. The method does not exist.
-4. Required request parameters are missing or have the wrong protocol-level type.
+4. The request names a tool the server does not expose.
 5. The client calls a method that is unavailable in the current session state.
 6. The server cannot produce a valid response for the requested MCP operation.
 
 JSON-RPC defines standard error codes such as `-32700` for parse errors, `-32600` for invalid requests, `-32601` for method not found, `-32602` for invalid params, and `-32603` for internal errors. Implementations may also use implementation-defined server errors. Follow the protocol and SDK behavior supported by your target clients rather than inventing a new error envelope.
 
-For example, if a client sends a `tools/call` request with an `arguments` value that is not an object, the server should reject the request according to its protocol and SDK rules. That is different from receiving a correctly shaped argument object containing an invalid issue key. The latter is usually a tool error because the tool can explain the business failure in its result.
+Tool input validation is not on that list. Since the 2025-11-25 revision, the spec says input validation failures, such as a missing required argument, a wrong type, or an invalid issue key, should be returned as tool execution errors (`isError: true`) rather than protocol errors, so the model sees what was wrong and can correct the call. Reserve protocol errors for requests the server cannot process at all.
 
 A protocol error is also appropriate when the server cannot safely complete the requested operation because its session or capabilities are invalid. For example, a server should not pretend that an uninitialized session successfully executed a tool. The lifecycle rules are part of the MCP protocol contract; a client may treat violations as a session or connection failure.
 
@@ -208,7 +204,7 @@ log unexpected defects with a correlation ID
 verify how the target SDK serializes unexpected exceptions
 ```
 
-Do not assume that an uncaught exception becomes a JSON-RPC protocol error. Several MCP SDKs catch exceptions from tool handlers and serialize them as tool results with `isError: true`; other behavior can vary by SDK, adapter, and version. Explicitly catch and translate expected domain, dependency, authorization, and validation failures. For unexpected exceptions, document the target SDK's behavior, test the serialized response through the actual transport, and decide whether you need an SDK-specific wrapper to sanitize the result. The important distinction is the response on the wire, not the exception class inside your handler.
+Do not assume that an uncaught exception becomes a JSON-RPC protocol error. The TypeScript SDK's `McpServer` and Python's FastMCP both catch exceptions thrown by a tool handler and return them as a tool result with `isError: true`, using the exception message as the text content. Explicitly catch and translate expected domain, dependency, authorization, and validation failures. For unexpected exceptions, document the target SDK's behavior, test the serialized response through the actual transport, and decide whether you need an SDK-specific wrapper to sanitize the result. The important distinction is the response on the wire, not the exception class inside your handler.
 
 Argument schemas should reject obviously malformed input before business logic runs. Tool descriptions should explain important constraints so the model is less likely to make invalid calls in the first place. See [how to write MCP tool descriptions that get picked](/blog/writing-mcp-tool-descriptions-that-work) for the discovery and instruction side of that contract.
 
@@ -230,7 +226,7 @@ A focused test matrix should include at least:
 |---|---|---|
 | Malformed JSON | JSON-RPC parse error | Primarily an operator/client issue |
 | Unknown method | JSON-RPC method error | Detects capability or version mismatch |
-| Wrong argument shape | JSON-RPC or SDK validation error | Detects contract mismatch |
+| Invalid or missing arguments | Tool result with `isError: true` | Model can fix the arguments and retry |
 | Valid call, missing resource | Tool result with `isError: true` | Model can correct or search |
 | Valid call, authorization failure | Tool result with `isError: true` | Model can request access or choose another resource |
 | Timeout after mutation | Tool error with uncertain outcome | Prevents unsafe duplicate retry |

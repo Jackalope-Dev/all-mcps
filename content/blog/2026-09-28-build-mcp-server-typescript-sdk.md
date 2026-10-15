@@ -1,5 +1,5 @@
 ---
-title: "Build MCP Server TypeScript SDK: Tool, Resource, and Test"
+title: "Build an MCP Server with the TypeScript SDK"
 excerpt: "Build an MCP server with the TypeScript SDK from zero: register a tool and resource, test both with an in-memory client, and compare stdio with HTTP."
 tags: ["MCP", "Guides", "Developer Tools", "Architecture"]
 faq:
