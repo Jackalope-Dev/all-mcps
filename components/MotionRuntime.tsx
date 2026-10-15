@@ -66,7 +66,11 @@ export function MotionRuntime() {
       if (url.origin !== window.location.origin) return;
       if (url.pathname === window.location.pathname) return;
       // API routes, feeds, and files are full document loads, not app navs.
-      if (/^\/api\/|\.(xml|txt|json|md|png|svg)$/.test(url.pathname)) return;
+      if (
+        url.pathname.startsWith('/api/') ||
+        /\.(xml|txt|json|md|png|svg)$/.test(url.pathname)
+      )
+        return;
 
       markNavigated();
       setState('loading');

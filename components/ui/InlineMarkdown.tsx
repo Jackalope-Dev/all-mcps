@@ -20,11 +20,11 @@ function flatten(text: string): string {
       // <tags> are dropped, their text kept
       .replace(/<[^>]+>/g, '')
       .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
       // heading / quote / list markers at the start
       .replace(/^\s{0,3}(#{1,6}\s+|>\s+|[-*+]\s+)/, '')
       .replace(/\s+/g, ' ')

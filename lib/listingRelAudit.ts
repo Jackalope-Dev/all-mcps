@@ -22,9 +22,9 @@ const WEBSITE_BUTTON_CAMPAIGN = 'website_button';
 
 function decodeAttr(value: string): string {
   return value
-    .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
-    .replace(/&#x27;|&#39;/g, "'");
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&amp;/g, '&');
 }
 
 function attr(tag: string, name: string): string | null {

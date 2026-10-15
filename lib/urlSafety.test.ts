@@ -15,6 +15,8 @@ describe('isSafeSubmissionUrl', () => {
     'http://[::ffff:127.0.0.1]/',
     'http://[::ffff:a9fe:a9fe]/',
     'http://[fd00::1]/',
+    'http://[::127.0.0.1]/',
+    'http://[64:ff9b::10.0.0.1]/',
     'file:///etc/passwd',
   ])('blocks %s', (url) => {
     expect(isSafeSubmissionUrl(url)).toBe(false);

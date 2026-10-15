@@ -50,7 +50,11 @@ Perform programmatic queries against our directory:
 `;
 
 async function resolveMarkdownForPath(path: string): Promise<string | null> {
-  const normalized = path.replace(/\/+$/, '') || '/';
+  // A loop, not /\/+$/: that regex backtracks quadratically on a path with a
+  // long run of slashes that does not end in one.
+  let end = path.length;
+  while (end > 0 && path[end - 1] === '/') end--;
+  const normalized = path.slice(0, end) || '/';
 
   if (normalized === '/') {
     return HOME_MARKDOWN;

@@ -8,6 +8,8 @@
  * Network fetchers live in ./fetchSources.ts; dedupe and insert in ./run.ts.
  */
 
+import { isGithubUrl } from '../listingEnrich';
+
 /** listing_signals.discovered_via values. */
 type DiscoveredVia =
   | 'official-registry'
@@ -275,8 +277,7 @@ export function npmObjectToCandidate(
     name: pkg.name,
     url,
     description: pkg.description || '',
-    websiteUrl:
-      homepage && !/github\.com/i.test(homepage) ? homepage : undefined,
+    websiteUrl: homepage && !isGithubUrl(homepage) ? homepage : undefined,
     source: 'npm',
     installCommand: 'npx',
     installPackage: pkg.name,
@@ -310,9 +311,7 @@ export function githubRepoToCandidate(
     url: repo.html_url,
     description: repo.description || '',
     websiteUrl:
-      homepage &&
-      /^https?:\/\//i.test(homepage) &&
-      !/github\.com/i.test(homepage)
+      homepage && /^https?:\/\//i.test(homepage) && !isGithubUrl(homepage)
         ? homepage
         : undefined,
     source: 'github-topic',

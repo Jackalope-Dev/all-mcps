@@ -35,7 +35,11 @@ function isPrivateOrReservedHost(hostname: string): boolean {
 
   // IPv4-mapped IPv6 (::ffff:a.b.c.d). The URL parser normalizes the dotted
   // tail to two hex groups, e.g. [::ffff:127.0.0.1] -> [::ffff:7f00:1].
-  const mapped = v6.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  // The deprecated IPv4-compatible form (::a.b.c.d) and the NAT64 well-known
+  // prefix (64:ff9b::a.b.c.d) embed an IPv4 address the same way.
+  const mapped = v6.match(
+    /^(?:::ffff:|::|64:ff9b::)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/,
+  );
   if (mapped) {
     const hi = Number.parseInt(mapped[1], 16);
     return isPrivateOrReservedIpv4(hi >> 8, hi & 0xff);

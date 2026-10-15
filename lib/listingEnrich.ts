@@ -72,7 +72,7 @@ export function pickDescription(
   return (cleanedCurrent || cleanedGh || current || '').slice(0, 2000);
 }
 
-function isGithubUrl(urlString: string): boolean {
+export function isGithubUrl(urlString: string): boolean {
   if (!urlString) return false;
   try {
     const parsed = new URL(

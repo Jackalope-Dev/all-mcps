@@ -252,7 +252,7 @@ async function npmPackageFacts(listing) {
   if (!name) return {};
   try {
     const res = await fetch(
-      `https://registry.npmjs.org/${name.replace('/', '%2F')}`,
+      `https://registry.npmjs.org/${name.replaceAll('/', '%2F')}`,
       { signal: AbortSignal.timeout(10_000) },
     );
     if (!res.ok) return {};

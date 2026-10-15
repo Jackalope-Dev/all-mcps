@@ -220,7 +220,7 @@ async function registryFacts(
   const name = bareName(raw).replace(/\[.*\]$/, '');
   const url =
     registry === 'npm'
-      ? `https://registry.npmjs.org/${name.replace('/', '%2F')}/latest`
+      ? `https://registry.npmjs.org/${name.replaceAll('/', '%2F')}/latest`
       : `https://pypi.org/pypi/${encodeURIComponent(name)}/json`;
   const nameMatch =
     name.replace(/^@[^/]+\//, '').toLowerCase() === listing.repo;
@@ -258,7 +258,7 @@ export async function checkRegistry(
   const name = bareName(raw);
   const url =
     registry === 'npm'
-      ? `https://registry.npmjs.org/${name.replace('/', '%2F')}`
+      ? `https://registry.npmjs.org/${name.replaceAll('/', '%2F')}`
       : `https://pypi.org/pypi/${encodeURIComponent(name)}/json`;
   try {
     const res = await fetch(url, {

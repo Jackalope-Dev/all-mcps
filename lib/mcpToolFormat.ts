@@ -110,7 +110,8 @@ export function formatComparisonMarkdown(facts: ListingFacts[]): string {
     ['Quality score', (f) => `${f.qualityScore}/100`],
     ['Page', (f) => f.detailUrl],
   ];
-  const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  const cell = (s: string) =>
+    s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
   let md = `# Comparison\n\n| | ${facts.map((f) => cell(f.name)).join(' | ')} |\n`;
   md += `|---|${facts.map(() => '---').join('|')}|\n`;
   for (const [label, get] of rows) {
