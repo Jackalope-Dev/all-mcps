@@ -1,6 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reviveDates, swrEdgeCache } from './edgeCache';
 
+/** Fake global tier: the R2 bucket swrEdgeCache reads via the request env. */
+const r2 = new Map<string, string>();
+vi.mock('@opennextjs/cloudflare', () => ({
+  getCloudflareContext: () => ({
+    env: {
+      NEXT_INC_CACHE_R2_BUCKET: {
+        get: async (k: string) =>
+          r2.has(k) ? { text: async () => r2.get(k) as string } : null,
+        put: async (k: string, v: string) => {
+          r2.set(k, v);
+        },
+      },
+    },
+    ctx: { waitUntil: () => {} },
+  }),
+}));
+
 /** In-memory stand-in for the Workers Cache API (`caches.default`). */
 function installFakeCache() {
   const store = new Map<string, string>();
@@ -21,6 +38,7 @@ describe('swrEdgeCache', () => {
   let store: Map<string, string>;
   beforeEach(() => {
     store = installFakeCache();
+    r2.clear();
   });
   afterEach(() => {
     delete (globalThis as { caches?: unknown }).caches;
@@ -62,6 +80,44 @@ describe('swrEdgeCache', () => {
       )) ?? [];
     expect(row.createdAt).toBeInstanceOf(Date);
     expect(row.createdAt.getTime()).toBe(createdAt.getTime());
+  });
+});
+
+describe('swrEdgeCache global tier', () => {
+  let store: Map<string, string>;
+  beforeEach(() => {
+    store = installFakeCache();
+    r2.clear();
+  });
+  afterEach(() => {
+    delete (globalThis as { caches?: unknown }).caches;
+  });
+
+  it('writes a load to both the colo cache and R2', async () => {
+    await swrEdgeCache('k', OPTS, async () => ['a']);
+    expect(store.size).toBe(1);
+    expect(r2.has('app-cache/k')).toBe(true);
+  });
+
+  it('serves a colo with no copy from R2 without loading, and seeds the colo', async () => {
+    r2.set(
+      'app-cache/k',
+      JSON.stringify({ data: ['global'], timestamp: Date.now() }),
+    );
+    const load = vi.fn(async () => ['fresh']);
+    expect(await swrEdgeCache('k', OPTS, load)).toEqual(['global']);
+    expect(load).not.toHaveBeenCalled();
+    expect(store.size).toBe(1);
+  });
+
+  it('ignores an R2 copy past maxAgeSeconds', async () => {
+    r2.set(
+      'app-cache/k',
+      JSON.stringify({ data: ['ancient'], timestamp: Date.now() - 7200_000 }),
+    );
+    expect(await swrEdgeCache('k', OPTS, async () => ['fresh'])).toEqual([
+      'fresh',
+    ]);
   });
 });
 
