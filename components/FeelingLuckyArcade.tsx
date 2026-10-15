@@ -14,7 +14,6 @@ import {
   Sparkles,
   Star,
   Trophy,
-  Tv,
   Volume2,
   VolumeX,
   Wrench,
@@ -183,7 +182,6 @@ export function FeelingLuckyArcade() {
 
   // Settings & Gamification
   const [isMuted, setIsMuted] = useState(false);
-  const [crtEnabled, setCrtEnabled] = useState(true);
   const [spinCount, setSpinCount] = useState(0);
   const [streakCount, setStreakCount] = useState(0);
   const [achievements, setAchievements] = useState<string[]>([]);
@@ -215,11 +213,6 @@ export function FeelingLuckyArcade() {
       localStorage.setItem('allmcps_arcade_muted', String(next));
     } catch {}
     playSound('click', next);
-  };
-
-  const toggleCrt = () => {
-    setCrtEnabled(!crtEnabled);
-    playSound('click', isMuted);
   };
 
   const selectMode = (newMode: SpinMode) => {
@@ -427,7 +420,7 @@ export function FeelingLuckyArcade() {
         </fieldset>
 
         <div
-          className={`lucky-screen ${crtEnabled ? 'has-scanlines' : ''} ${isSpinning ? 'is-spinning' : ''}`}
+          className={`lucky-screen ${isSpinning ? 'is-spinning' : ''}`}
           aria-live="polite"
           aria-busy={isSpinning}
         >
@@ -478,14 +471,6 @@ export function FeelingLuckyArcade() {
             <strong className="tabular">{achievements.length}/4</strong>
           </span>
           <span className="tl-spacer" />
-          <button
-            type="button"
-            onClick={toggleCrt}
-            className={`lucky-toggle ${crtEnabled ? 'is-on' : ''}`}
-            aria-pressed={crtEnabled}
-          >
-            <Tv size={14} aria-hidden="true" /> Scanlines
-          </button>
           <button
             type="button"
             onClick={toggleMute}

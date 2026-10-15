@@ -4296,14 +4296,19 @@ nav[aria-label="Table of contents"] {
 
 /* Inline filesystem / config paths sitewide */
 
-/* General light-mode: bare <code> in prose/pages without markdown-body */
-[data-theme="light"]
-  main
-  code:not(pre code):not(.client-config-code-block code),
-[data-theme="light"]
-  .page-shell
-  code:not(pre code):not(.client-config-code-block code),
-[data-theme="light"] .page-panel code:not(pre code) {
+/* General light-mode: bare <code> in prose/pages without markdown-body.
+   Zero specificity (:where) so any component that styles its own <code> —
+   notably dark code panels with light text — wins; before, this rule beat
+   them and painted dark text on dark panels in the light theme. */
+:where(
+  [data-theme="light"]
+    main
+    code:not(pre code):not(.client-config-code-block code),
+  [data-theme="light"]
+    .page-shell
+    code:not(pre code):not(.client-config-code-block code),
+  [data-theme="light"] .page-panel code:not(pre code)
+) {
   color: #0f172a;
   background: rgba(15, 23, 42, 0.07);
   border: 1px solid rgba(15, 23, 42, 0.1);

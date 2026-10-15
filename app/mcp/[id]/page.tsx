@@ -399,12 +399,21 @@ export default async function MCPDetail({
     },
   }[healthKey];
 
-  // Sidebar ad slot rotates between paid featured listings and the "spotlight your own
-  // server" upsell — one extra slot in the pool reserved for the upsell keeps it showing
-  // occasionally even as more advertisers are in rotation.
-  const spotlightCandidates = [...featuredPool, null];
+  // Sidebar spotlight: always a paid featured listing when any exist (the
+  // "spotlight your server" upsell shows only when none do). The pick is a
+  // stable hash of this listing's id, not Math.random(): the page is ISR-cached,
+  // so a random roll froze one outcome per page for the whole revalidate window
+  // (often the upsell). Hashing spreads every featured server evenly across
+  // the catalog's listing pages instead.
+  let spotlightHash = 0;
+  for (let i = 0; i < server.id.length; i++) {
+    spotlightHash =
+      (Math.imul(spotlightHash, 31) + server.id.charCodeAt(i)) | 0;
+  }
   const spotlightPick =
-    spotlightCandidates[Math.floor(Math.random() * spotlightCandidates.length)];
+    featuredPool.length > 0
+      ? featuredPool[Math.abs(spotlightHash) % featuredPool.length]
+      : null;
   // The mcpServers key just needs to be a readable identifier; the npx arg below
   // uses server.name verbatim since that's typically the real package name
   // (e.g. "@agentfund/mcp") and slugifying it would produce a nonexistent package.
@@ -802,12 +811,24 @@ export default async function MCPDetail({
                 priority
               />
               <div className="lst-hero-text">
-                <h1 className="lst-title">
-                  <AdminInlineName
-                    serverId={server.id}
-                    initialName={displayName}
-                  />
-                </h1>
+                <div className="lst-title-row">
+                  <h1 className="lst-title">
+                    <AdminInlineName
+                      serverId={server.id}
+                      initialName={displayName}
+                    />
+                  </h1>
+                  {/* Paid placements are always labelled beside the name. */}
+                  {server.isPremium ? (
+                    <span className="lst-paid-badge tint-pill hue-amber">
+                      <Crown size={13} aria-hidden="true" /> Premium
+                    </span>
+                  ) : isFeaturedListing(server) ? (
+                    <span className="lst-paid-badge tint-pill hue-amber">
+                      <Sparkles size={13} aria-hidden="true" /> Featured
+                    </span>
+                  ) : null}
+                </div>
                 {org && <p className="lst-org">by {org}</p>}
               </div>
             </div>
@@ -1787,7 +1808,7 @@ export default async function MCPDetail({
                   install panel (impressions count at ≥50% visible). */}
               <div className="lst-sponsored">
                 <SponsorAdUnit placement="detail_sidebar" />
-                {/* Rotates between paid featured listings and the self-serve upsell. */}
+                {/* A paid featured listing (see spotlightPick); the upsell only when none. */}
                 {spotlightPick ? (
                   <ImpressionBeacon
                     serverId={spotlightPick.id}

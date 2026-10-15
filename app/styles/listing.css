@@ -3716,12 +3716,31 @@ table.cmp-table {
   z-index: 45;
 }
 
-/* Client configs range from a one-line CLI command (~150px) to a long
-   settings file (~700px). A stable floor keeps the page below from jumping
-   up and down as you switch clients; only the longest configs still grow. */
-@media (min-width: 768px) {
-  .lst-install-pane {
-    min-height: 32rem;
-    overflow-anchor: none;
-  }
+/* Client configs range from a one-line CLI command to a long settings file.
+   The frame (height set from InstallPanel) glides between them instead of
+   jumping, and never reserves space a short config doesn't need. */
+.lst-install-pane-frame {
+  overflow: clip;
+  overflow-clip-margin: 8px;
+  overflow-anchor: none;
+  transition: height 280ms var(--ease-out);
+}
+
+/* Listing name + paid-placement badge (Premium / Featured) on one line. */
+.lst-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+}
+
+.lst-title-row .lst-title {
+  margin: 0;
+}
+
+.lst-paid-badge {
+  padding: 0.22rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }

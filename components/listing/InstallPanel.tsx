@@ -14,7 +14,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildClientConfigs, serverConfigKey } from '../../lib/clientConfigs';
 import { trackCopyConfig, trackFeatureUse } from '../../lib/gtag';
 import {
@@ -172,6 +172,7 @@ export function InstallPanel({
   );
   // Each env row carries a stable id so React keys survive edits and removals.
   const nextEnvId = useRef(0);
+  const [paneHeight, setPaneHeight] = useState<number | null>(null);
   const newEnvRow = (key = '') => ({ id: nextEnvId.current++, key, value: '' });
   const [envVars, setEnvVars] = useState<
     Array<{ id: number; key: string; value: string }>
@@ -217,6 +218,19 @@ export function InstallPanel({
   const location =
     active.locations[Math.min(locationIndex, active.locations.length - 1)];
   const deepLink = unverified ? undefined : links[active.client];
+
+  const paneKey = `${active.client}-${install.kind}`;
+  // Track the active config's natural height so the frame can animate to it.
+  // A callback ref on the keyed pane: React re-runs it (and its cleanup)
+  // whenever the pane remounts for a new client / install kind.
+  const observePane = useCallback((pane: HTMLDivElement | null) => {
+    if (!pane || typeof ResizeObserver === 'undefined') return;
+    const measure = () => setPaneHeight(pane.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(pane);
+    return () => ro.disconnect();
+  }, []);
 
   const selectClient = (client: string) => {
     trackFeatureUse('client_config_tabs', { client, server_id: server.id });
@@ -465,76 +479,87 @@ export function InstallPanel({
         )}
       </div>
 
+      {/* The frame animates to each config's real height, so switching
+          clients glides instead of jumping and short configs don't leave a
+          reserved gap (configs range from one line to a long settings file). */}
       <div
-        id="lst-install-pane"
-        role="tabpanel"
-        aria-labelledby={activeInMore ? undefined : `tab-${active.client}`}
-        aria-label={activeInMore ? active.label : undefined}
-        className="lst-install-pane"
-        key={`${active.client}-${install.kind}`}
+        className="lst-install-pane-frame"
+        style={paneHeight == null ? undefined : { height: paneHeight }}
       >
-        {deepLink && (
-          <div className="lst-oneclick">
-            <a
-              href={deepLink}
-              onClick={() => onDeepLink(active.client)}
-              className="btn btn-primary btn-md"
-            >
-              <Zap size={16} aria-hidden="true" />
-              Add to {active.label} in one click
-            </a>
-            <span className="lst-oneclick-hint">or paste the config below</span>
-          </div>
-        )}
-
-        {location && (
-          <div className="lst-location">
-            <Folder size={14} aria-hidden="true" />
-            <code title={location.path}>{location.path}</code>
-            {active.locations.length > 1 && (
-              <select
-                aria-label="Operating system"
-                value={Math.min(locationIndex, active.locations.length - 1)}
-                onChange={(e) => setLocationIndex(Number(e.target.value))}
+        <div
+          id="lst-install-pane"
+          role="tabpanel"
+          aria-labelledby={activeInMore ? undefined : `tab-${active.client}`}
+          aria-label={activeInMore ? active.label : undefined}
+          className="lst-install-pane"
+          key={paneKey}
+          ref={observePane}
+        >
+          {deepLink && (
+            <div className="lst-oneclick">
+              <a
+                href={deepLink}
+                onClick={() => onDeepLink(active.client)}
+                className="btn btn-primary btn-md"
               >
-                {active.locations.map((l, i) => (
-                  <option key={l.os} value={i}>
-                    {l.os}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              type="button"
-              onClick={copyPath}
-              className="lst-icon-btn"
-              aria-label="Copy config file path"
-              title="Copy path"
-            >
-              {copiedPath ? (
-                <Check size={14} aria-hidden="true" />
-              ) : (
-                <Copy size={14} aria-hidden="true" />
-              )}
-            </button>
-          </div>
-        )}
+                <Zap size={16} aria-hidden="true" />
+                Add to {active.label} in one click
+              </a>
+              <span className="lst-oneclick-hint">
+                or paste the config below
+              </span>
+            </div>
+          )}
 
-        <CopyBlock
-          className="copyblock--flush"
-          code={active.snippet}
-          title={
-            active.format === 'shell'
-              ? 'Terminal'
-              : active.format === 'text'
-                ? 'Server URL'
-                : (location?.path.split(/[/\\]/).pop() ?? active.label)
-          }
-          serverId={server.id}
-          snippetType={`config_${active.client}`}
-          toastMessage={`Copied ${active.label} config`}
-        />
-        <p className="lst-install-note">{active.note}</p>
+          {location && (
+            <div className="lst-location">
+              <Folder size={14} aria-hidden="true" />
+              <code title={location.path}>{location.path}</code>
+              {active.locations.length > 1 && (
+                <select
+                  aria-label="Operating system"
+                  value={Math.min(locationIndex, active.locations.length - 1)}
+                  onChange={(e) => setLocationIndex(Number(e.target.value))}
+                >
+                  {active.locations.map((l, i) => (
+                    <option key={l.os} value={i}>
+                      {l.os}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button
+                type="button"
+                onClick={copyPath}
+                className="lst-icon-btn"
+                aria-label="Copy config file path"
+                title="Copy path"
+              >
+                {copiedPath ? (
+                  <Check size={14} aria-hidden="true" />
+                ) : (
+                  <Copy size={14} aria-hidden="true" />
+                )}
+              </button>
+            </div>
+          )}
+
+          <CopyBlock
+            className="copyblock--flush"
+            code={active.snippet}
+            title={
+              active.format === 'shell'
+                ? 'Terminal'
+                : active.format === 'text'
+                  ? 'Server URL'
+                  : (location?.path.split(/[/\\]/).pop() ?? active.label)
+            }
+            serverId={server.id}
+            snippetType={`config_${active.client}`}
+            toastMessage={`Copied ${active.label} config`}
+          />
+          <p className="lst-install-note">{active.note}</p>
+        </div>
       </div>
 
       {install.kind === 'stdio' && (
