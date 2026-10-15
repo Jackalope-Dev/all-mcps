@@ -51,19 +51,34 @@ export function bareName(pkg: string): string {
     .replace(/==.*$/, '');
 }
 
+type NpmRepo = string | { url?: unknown } | undefined;
+type NpmVersion = { deprecated?: unknown; repository?: NpmRepo };
+
 /** npm packument → status. Deprecation is per version; the dist-tag `latest` is what users get. */
 export function npmStatusFromDoc(doc: unknown): RegistryStatus {
-  type Repo = string | { url?: unknown } | undefined;
   const d = doc as {
     'dist-tags'?: { latest?: string };
-    versions?: Record<string, { deprecated?: unknown; repository?: Repo }>;
-    repository?: Repo;
+    versions?: Record<string, NpmVersion>;
+    repository?: NpmRepo;
     time?: { unpublished?: unknown };
   };
   if (d?.time?.unpublished) return { kind: 'missing' };
   const latest = d?.['dist-tags']?.latest;
-  const version = latest ? d.versions?.[latest] : undefined;
-  const repoField = version?.repository ?? d?.repository;
+  return npmVersionStatus(
+    latest ? d.versions?.[latest] : undefined,
+    d?.repository,
+  );
+}
+
+/**
+ * One version's manifest (what `/<name>/latest` returns) → status. The
+ * packument's top-level repository stands in when the version names none.
+ */
+function npmVersionStatus(
+  version: NpmVersion | undefined,
+  fallbackRepo?: NpmRepo,
+): RegistryStatus {
+  const repoField = version?.repository ?? fallbackRepo;
   const repo = githubRepoSlug(
     typeof repoField === 'string'
       ? repoField
@@ -232,8 +247,13 @@ async function registryFacts(
     if (res.status === 404 || res.status === 410) {
       return { missing: true, hasSource: false, sourceMatch: false, nameMatch };
     }
-    if (!res.ok) return null;
-    const repos = sourceReposFromDoc(registry, await res.json());
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return null;
+    }
+    const doc = await readJsonCapped(res);
+    if (doc === undefined) return null;
+    const repos = sourceReposFromDoc(registry, doc);
     return {
       missing: false,
       hasSource: repos.length > 0,
@@ -247,6 +267,91 @@ async function registryFacts(
   }
 }
 
+/**
+ * Largest registry document we parse. A full npm packument carries every
+ * version's manifest (and often every README): tens of MB for a long-lived
+ * package, several times that once parsed. The stale sweep reads eight at a
+ * time, which pushed the jobs Worker over its memory limit. The documents we
+ * actually need (npm `/latest`, a PyPI project) are far under this.
+ */
+const MAX_REGISTRY_DOC_BYTES = 1_000_000;
+
+/**
+ * The response body parsed as JSON, or undefined when it is larger than
+ * `maxBytes` (the download is cancelled there, never buffered whole) or isn't
+ * JSON.
+ */
+async function readJsonCapped(
+  res: Response,
+  maxBytes: number = MAX_REGISTRY_DOC_BYTES,
+): Promise<unknown> {
+  const declared = Number(res.headers.get('content-length'));
+  if (!res.body || (Number.isFinite(declared) && declared > maxBytes)) {
+    await res.body?.cancel().catch(() => {});
+    return undefined;
+  }
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel().catch(() => {});
+      return undefined;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return undefined;
+  }
+}
+
+async function fetchRegistry(url: string): Promise<Response> {
+  return fetch(url, {
+    headers: { 'User-Agent': 'AllMCPs-Stale-Sweep' },
+    signal: AbortSignal.timeout(8000),
+  });
+}
+
+/**
+ * npm: the `latest` version's manifest (a few KB) rather than the packument.
+ * Only when that 404s is the packument read, to tell an unpublished package
+ * (gone) from one without a `latest` tag.
+ */
+async function checkNpm(name: string): Promise<RegistryStatus> {
+  const base = `https://registry.npmjs.org/${name.replaceAll('/', '%2F')}`;
+  const res = await fetchRegistry(`${base}/latest`);
+  if (res.ok) {
+    const doc = await readJsonCapped(res);
+    return doc === undefined
+      ? { kind: 'unknown' }
+      : npmVersionStatus(doc as NpmVersion);
+  }
+  await res.body?.cancel().catch(() => {});
+  if (res.status !== 404 && res.status !== 410) return { kind: 'unknown' };
+  const full = await fetchRegistry(base);
+  if (full.status === 404 || full.status === 410) {
+    await full.body?.cancel().catch(() => {});
+    return { kind: 'missing' };
+  }
+  if (!full.ok) {
+    await full.body?.cancel().catch(() => {});
+    return { kind: 'unknown' };
+  }
+  const doc = await readJsonCapped(full);
+  return doc === undefined ? { kind: 'unknown' } : npmStatusFromDoc(doc);
+}
+
 export async function checkRegistry(
   installCommand: string | null | undefined,
   installPackage: string | null | undefined,
@@ -256,19 +361,23 @@ export async function checkRegistry(
   if (!registry || !raw || raw.includes('://') || /\s/.test(raw))
     return { kind: 'unknown' };
   const name = bareName(raw);
-  const url =
-    registry === 'npm'
-      ? `https://registry.npmjs.org/${name.replaceAll('/', '%2F')}`
-      : `https://pypi.org/pypi/${encodeURIComponent(name)}/json`;
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'AllMCPs-Stale-Sweep' },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (res.status === 404 || res.status === 410) return { kind: 'missing' };
-    if (!res.ok) return { kind: 'unknown' };
-    const doc = await res.json();
-    return registry === 'npm' ? npmStatusFromDoc(doc) : pypiStatusFromDoc(doc);
+    if (registry === 'npm') return await checkNpm(name);
+    const res = await fetchRegistry(
+      `https://pypi.org/pypi/${encodeURIComponent(name)}/json`,
+    );
+    if (res.status === 404 || res.status === 410) {
+      await res.body?.cancel().catch(() => {});
+      return { kind: 'missing' };
+    }
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return { kind: 'unknown' };
+    }
+    // A project with a long release history can outgrow the cap; that
+    // answer is unknown, which changes nothing.
+    const doc = await readJsonCapped(res);
+    return doc === undefined ? { kind: 'unknown' } : pypiStatusFromDoc(doc);
   } catch {
     return { kind: 'unknown' };
   }

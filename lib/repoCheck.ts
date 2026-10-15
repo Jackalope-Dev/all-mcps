@@ -109,6 +109,8 @@ async function checkUrl(
         headers: { 'User-Agent': 'AllMCPs-Repo-Check' },
         signal: AbortSignal.timeout(8000),
       });
+      // Only the status matters; don't download the page.
+      await res.body?.cancel().catch(() => {});
     }
     return { status: classifyRepoResponse(res.status), stars: null };
   } catch {
