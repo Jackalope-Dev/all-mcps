@@ -53,7 +53,7 @@ beforeAll(() => {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const tools = JSON.stringify([{ name: 't' }]);
-  // Indexable: writeup + verified tools, specific category, fresh check, install, logo.
+  // Indexable: writeup + traction + verified tools, specific category, fresh check, install, logo.
   insert.run(
     'a',
     'active',
@@ -62,12 +62,12 @@ beforeAll(() => {
     'doc',
     tools,
     'introspected',
-    0,
+    40,
     nowSec - DAY,
     'stdio',
     'https://x/logo.png',
   );
-  // Writeup + traction, README tools, default category, stale check.
+  // Not indexable: writeup + traction but only README tools (no verified run), default category, stale check.
   insert.run(
     'b',
     'active',
@@ -137,7 +137,7 @@ describe('getCatalogCoverage', () => {
     const by = Object.fromEntries(cov.fields.map((f) => [f.key, f.count]));
     expect(cov.total).toBe(3);
     expect(by).toMatchObject({
-      indexable: 2,
+      indexable: 1,
       aiDoc: 2,
       toolsIntrospected: 1,
       toolsReadme: 1,

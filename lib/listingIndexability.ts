@@ -7,9 +7,12 @@
  * currently not indexed" by mid-Sept 2026 (then a site-wide drop after the
  * Sept 2026 spam update). A listing without our own writeup only shows a README
  * excerpt — duplicate content Google already has from GitHub — so it's never
- * indexable. A writeup alone is templated-catalog shaped; requiring a second,
- * independent signal (real-world traction, or proof the server runs) keeps the
- * indexed set to listings people actually look for.
+ * indexable. A writeup alone is templated-catalog shaped, and once the
+ * ai-content cron had written ~21.8k of them, "writeup plus any one signal"
+ * still left ~7.5k listings indexable (Oct 2026). So a listing now needs BOTH
+ * independent signals — real-world traction and proof the server runs — unless
+ * its traction alone is strong enough that people clearly search for it
+ * (~1.7k listings).
  *
  * "Proof it runs" means we saw it work: a live tools/list (toolsSource
  * 'introspected'), a sandbox run that started and asked for keys
@@ -21,8 +24,11 @@
  * crosses the traction bar, it becomes indexable and enters the sitemap with
  * no manual step.
  */
-const INDEXABLE_MIN_GITHUB_STARS = 25;
-const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
+export const INDEXABLE_MIN_GITHUB_STARS = 25;
+export const INDEXABLE_MIN_NPM_DOWNLOADS = 100;
+/** Traction high enough to index without a verified run. */
+export const INDEXABLE_STRONG_GITHUB_STARS = 250;
+export const INDEXABLE_STRONG_NPM_DOWNLOADS = 5000;
 
 export type IndexabilityInput = {
   status?: string | null;
@@ -40,10 +46,15 @@ export function isListingIndexable(s: IndexabilityInput): boolean {
   if (s.status && s.status !== 'active') return false;
   if (s.staleFlagged) return false;
   if (!s.hasAiDoc) return false;
+  const stars = s.githubStars ?? 0;
+  const downloads = s.npmDownloads ?? 0;
   const hasTraction =
-    (s.githubStars ?? 0) >= INDEXABLE_MIN_GITHUB_STARS ||
-    (s.npmDownloads ?? 0) >= INDEXABLE_MIN_NPM_DOWNLOADS;
-  return hasTraction || hasVerifiedRun(s);
+    stars >= INDEXABLE_MIN_GITHUB_STARS ||
+    downloads >= INDEXABLE_MIN_NPM_DOWNLOADS;
+  const hasStrongTraction =
+    stars >= INDEXABLE_STRONG_GITHUB_STARS ||
+    downloads >= INDEXABLE_STRONG_NPM_DOWNLOADS;
+  return hasStrongTraction || (hasTraction && hasVerifiedRun(s));
 }
 
 /** We saw the server work: live tools, a sandbox start that asked for keys, or a healthy remote endpoint. */
