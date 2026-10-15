@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   bareName,
+  checkRegistry,
   npmPackageFor,
   npmStatusFromDoc,
   packageBelongsElsewhere,
@@ -179,6 +180,84 @@ describe('packageBelongsElsewhere', () => {
       await packageBelongsElsewhere('npx', 'x', 'https://example.com'),
     ).toBe(false);
     expect(await packageBelongsElsewhere('docker', 'x', LISTING)).toBe(false);
+  });
+});
+
+describe('checkRegistry', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  /** Routes fetches by URL; records every URL requested. */
+  const registry = (routes: Record<string, Response | (() => Response)>) => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        const r = routes[url];
+        if (!r) return new Response('', { status: 404 });
+        return typeof r === 'function' ? r() : r;
+      }),
+    );
+    return urls;
+  };
+  const json = (doc: unknown, status = 200) =>
+    new Response(JSON.stringify(doc), { status });
+  const NPM = 'https://registry.npmjs.org/@acme%2Ftool';
+
+  it('reads only the latest manifest for npm, never the full packument', async () => {
+    const urls = registry({
+      [`${NPM}/latest`]: json({
+        deprecated: 'Use @acme/tool2',
+        repository: { url: 'git+https://github.com/acme/tool.git' },
+      }),
+    });
+    expect(await checkRegistry('npx', '@acme/tool@1.0.0')).toMatchObject({
+      kind: 'deprecated',
+      message: 'Use @acme/tool2',
+    });
+    expect(urls).toEqual([`${NPM}/latest`]);
+  });
+
+  it('confirms a missing npm latest against the packument', async () => {
+    registry({});
+    expect(await checkRegistry('npx', '@acme/tool')).toEqual({
+      kind: 'missing',
+    });
+    registry({ [NPM]: json({ time: { unpublished: { time: 'x' } } }) });
+    expect(await checkRegistry('npx', '@acme/tool')).toEqual({
+      kind: 'missing',
+    });
+    // Published, just no `latest` tag: not gone.
+    registry({ [NPM]: json({ 'dist-tags': {}, versions: {} }) });
+    expect((await checkRegistry('npx', '@acme/tool')).kind).toBe('ok');
+  });
+
+  it('treats registry errors as unknown', async () => {
+    const urls = registry({ [`${NPM}/latest`]: json({}, 503) });
+    expect(await checkRegistry('npx', '@acme/tool')).toEqual({
+      kind: 'unknown',
+    });
+    expect(urls).toHaveLength(1);
+  });
+
+  it('gives up on an oversized document instead of buffering it', async () => {
+    const PYPI = 'https://pypi.org/pypi/big-mcp/json';
+    registry({
+      [PYPI]: () =>
+        new Response(
+          JSON.stringify({
+            info: { yanked: true },
+            pad: 'x'.repeat(1_100_000),
+          }),
+        ),
+    });
+    expect(await checkRegistry('uvx', 'big-mcp')).toEqual({ kind: 'unknown' });
+    registry({
+      [PYPI]: json({ info: { yanked: true, yanked_reason: 'bad' } }),
+    });
+    expect(await checkRegistry('uvx', 'big-mcp')).toMatchObject({
+      kind: 'deprecated',
+      message: 'bad',
+    });
   });
 });
 
