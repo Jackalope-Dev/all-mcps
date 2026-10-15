@@ -51,6 +51,32 @@ describe('generated tool catalogs', () => {
     const readme = '## Tools\n\nCall `get_platform_context` first.\n';
     expect(names(readme)).toEqual([]);
   });
+
+  // From the re-parse sweep: a wrapped bullet's second line looks like a catalog
+  // line on its own, and reading it would replace the full bullet list with its tail.
+  it('leaves the wrapped tail of a bullet to the bullet fallback', () => {
+    const readme = `## Tools
+
+- **Content:** \`write_note\`, \`read_note\`, \`edit_note\`,
+  \`delete_note\`, \`view_note\`
+`;
+    expect(names(readme)).toEqual([
+      'write_note',
+      'read_note',
+      'edit_note',
+      'delete_note',
+      'view_note',
+    ]);
+  });
+
+  it('ignores a wrapped sentence that ends in a run of field names', () => {
+    const readme = `## Tools
+
+Structured metadata can include \`screenshotUrl\`, \`expiresAt\`,
+\`cacheStatus\`, \`format\`, \`mimeType\`
+`;
+    expect(names(readme)).toEqual([]);
+  });
 });
 
 describe('inline-code bullet fallback', () => {

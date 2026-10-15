@@ -167,23 +167,32 @@ const NON_TOOL_SUBHEADING =
 // A bullet that names tools only to say they are gone ("1.3.0 removed `search_jobs`",
 // "Releases after 1.5.1 no longer include `list_escalations`"). Changelog-style notes
 // like these sit under "## Tools" too, and mining them listed retired tools as current.
-const RETIRED_TOOL_NOTE =
-  /\b(removed|no longer|deprecated|retired|replaced by)\b/i;
+const RETIRED_TOOL_NOTE = /\b(removed|no longer|deprecated|retired)\b/i;
 
 // A line that is nothing but a comma-separated run of `code` identifiers, the shape
 // generated tool catalogs use: "`browse_listings`, `get_listing`, `get_upgrade_link`".
-const CATALOG_LINE =
-  /^\s*`[a-zA-Z][\w.-]*`(?:\s*,\s*`[a-zA-Z][\w.-]*`)+\s*,?\s*$/;
+const CATALOG_LINE = /^\s*`[a-zA-Z][\w.-]*`(?:\s*,\s*`[a-zA-Z][\w.-]*`)+\s*$/;
+
+// Blank or a heading: what borders a catalog line that is a paragraph of its own.
+const isParagraphEdge = (line: string | undefined) =>
+  line === undefined || !line.trim() || /^#{1,6}\s/.test(line);
 
 /**
  * Strategy 4 (name-only): plain paragraph lines listing tools as `code` identifiers,
  * usually one line per group under a bold label ("**Public (no key):**"). Two or more
  * identifiers and nothing else on the line keeps prose that merely mentions a tool out.
+ * The line must also be its own paragraph: the wrapped tail of a bullet or sentence
+ * ("`cacheStatus`, `format`, `mimeType`" continuing "metadata can include ...") has
+ * text right above it, and reading it alone would drop the rest of the list.
  */
 function fromCatalogLines(section: string): ParsedReadmeTool[] {
   const names: string[] = [];
-  for (const line of section.split('\n')) {
+  const lines = section.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (!CATALOG_LINE.test(line)) continue;
+    if (!isParagraphEdge(lines[i - 1]) || !isParagraphEdge(lines[i + 1]))
+      continue;
     for (const m of line.matchAll(/`([a-zA-Z][\w.-]*)`/g)) {
       if (m[1].length <= MAX_NAME_LEN) names.push(m[1]);
     }
@@ -195,19 +204,46 @@ function fromCatalogLines(section: string): ParsedReadmeTool[] {
  * Strategy 5 (last resort, name-only): bare `code`-wrapped identifiers inside bullet
  * lines, e.g. "- Discovery: `hol.stats`, `hol.capabilities`, `hol.search`". No per-tool
  * description is recoverable from this shape, but the real tool names still beat nothing.
+ * A bullet's indented continuation lines belong to it: a retired-tool note is skipped
+ * whole, and a list that wraps (its line ends in a comma) is read into the next line.
+ * Other continuation lines are prose, where `code` is usually a parameter or a value.
  */
 function fromInlineCodeInBullets(section: string): ParsedReadmeTool[] {
-  const names: string[] = [];
+  type Bullet = { text: string; list: string; wrapping: boolean };
+  const bullets: Bullet[] = [];
+  let current: Bullet | null = null;
   let suppressed = false;
+  const flush = () => {
+    if (current) bullets.push(current);
+    current = null;
+  };
   for (const line of section.split('\n')) {
     const headingMatch = line.match(/^#{1,6}\s+(.+)$/);
     if (headingMatch) {
+      flush();
       suppressed = NON_TOOL_SUBHEADING.test(headingMatch[1]);
       continue;
     }
-    if (suppressed || !/^\s*[-*]\s+/.test(line)) continue;
-    if (RETIRED_TOOL_NOTE.test(line)) continue;
-    for (const m of line.matchAll(/`([a-zA-Z][\w.-]*)`/g)) {
+    if (/^\s*[-*]\s+/.test(line)) {
+      flush();
+      if (!suppressed)
+        current = { text: line, list: line, wrapping: /,\s*$/.test(line) };
+    } else if (current && /^\s+\S/.test(line)) {
+      current.text += `\n${line}`;
+      if (current.wrapping) {
+        current.list += `\n${line}`;
+        current.wrapping = /,\s*$/.test(line);
+      }
+    } else {
+      flush();
+    }
+  }
+  flush();
+
+  const names: string[] = [];
+  for (const bullet of bullets) {
+    if (RETIRED_TOOL_NOTE.test(bullet.text)) continue;
+    for (const m of bullet.list.matchAll(/`([a-zA-Z][\w.-]*)`/g)) {
       if (m[1].length <= MAX_NAME_LEN) names.push(m[1]);
     }
   }
