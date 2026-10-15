@@ -181,7 +181,10 @@ export async function POST(req: Request) {
     const dwellCutoff = new Date(Date.now() - PROMOTION_DWELL_MS);
     const candidates = (
       await db
-        .select()
+        // Only the servers half: D1 rejects result sets over 100 columns, and
+        // servers + listing_signals together passed that on 2026-10-14
+        // ("too many columns in result set"), failing every run.
+        .select({ servers })
         .from(servers)
         .leftJoin(listingSignals, eq(listingSignals.serverId, servers.id))
         .where(
