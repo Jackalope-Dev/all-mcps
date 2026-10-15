@@ -2,6 +2,7 @@ import { ArrowRight, BadgeCheck, ChevronDown, Download } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getHubCounts, isBestTopicIndexable } from '@/lib/hubIndexability';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { ServerStats } from '../../../components/directory/ServerRow';
 import { InlineMarkdown } from '../../../components/ui/InlineMarkdown';
@@ -60,10 +61,12 @@ export async function generateMetadata({
   const description =
     t.lead.length > 157 ? `${t.lead.slice(0, 154).trimEnd()}...` : t.lead;
   const url = `${SITE}/best/${t.slug}`;
+  const indexable = isBestTopicIndexable(t, await getHubCounts());
   return {
     title,
     description,
     alternates: { canonical: url },
+    ...(indexable ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
       type: 'article',
       images: [

@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { getHubCounts, isCategoryHubIndexable } from '@/lib/hubIndexability';
 import { serializeJsonLd } from '@/lib/jsonLd';
 import { SponsorAdUnit } from '../../../components/ads/SponsorAdUnit';
 import { ServerCard, ServerRow } from '../../../components/directory/ServerRow';
@@ -64,10 +65,12 @@ export async function generateMetadata({
       ? `${rawDescription.slice(0, 154)}...`
       : rawDescription;
   const url = `${SITE}/categories/${canonicalSlug}`;
+  const indexable = isCategoryHubIndexable(category, await getHubCounts());
   return {
     title,
     description,
     alternates: { canonical: url },
+    ...(indexable ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
       images: [
         {
