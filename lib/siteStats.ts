@@ -265,6 +265,82 @@ async function loadSiteStats(): Promise<SiteStats> {
   return data;
 }
 
+/**
+ * Rows per quality-tier page. Each slim row is well under 1 KB, so a page
+ * stays a few MB of heap however large the catalog grows.
+ */
+const QUALITY_TIER_PAGE_SIZE = 2000;
+
+/**
+ * Quality tier counts across every active listing, scored one keyset page at a
+ * time. Loading all ~32k active rows at once (on every edge-cache miss, inside
+ * the homepage render) pushed `/` over the Worker memory limit. Returns null
+ * when the catalog is empty so the caller falls back to the snapshot.
+ */
+async function queryQualityTiers(
+  db: any,
+): Promise<SiteStats['qualityTierBreakdown'] | null> {
+  const totals = { Excellent: 0, Great: 0, Good: 0, Fair: 0, Emerging: 0 };
+  let scored = 0;
+  let afterRowid: number | null = null;
+  for (;;) {
+    // Only the columns computeQualityScore reads, never heavy text (readme, aiOverview, etc.).
+    const rows: { rowid: number; toolsCount: number }[] = await db
+      .select({
+        // Paged on rowid, not id: (status, rowid) walks idx_servers_status in
+        // order, while ordering by id re-sorts every active row on each page.
+        rowid: sql<number>`rowid`,
+        id: servers.id,
+        url: servers.url,
+        healthStatus: servers.healthStatus,
+        remoteEndpointUrl: servers.remoteEndpointUrl,
+        remoteEndpointHealthy: servers.remoteEndpointHealthy,
+        isOfficial: servers.isOfficial,
+        isVerifiedActive: servers.isVerifiedActive,
+        toolsSource: servers.toolsSource,
+        websiteVerified: servers.websiteVerified,
+        isPremium: servers.isPremium,
+        reciprocalBadgeOk: servers.reciprocalBadgeOk,
+        authType: servers.authType,
+        githubStars: servers.githubStars,
+        npmDownloads: servers.npmDownloads,
+        copies: servers.copies,
+        upvotes: servers.upvotes,
+        views: servers.views,
+        lastCommitAt: servers.lastCommitAt,
+        // Truncated/counted in SQL: the score only needs description length
+        // (ramps out at 400 chars) and the tool count.
+        description: sql<string>`substr(${servers.description}, 1, 500)`,
+        toolsCount: sql<number>`case when ${servers.tools} is not null and json_valid(${servers.tools}) then json_array_length(${servers.tools}) else 0 end`,
+        installCommand: servers.installCommand,
+        installPackage: servers.installPackage,
+        suggestedInstallCommand: servers.suggestedInstallCommand,
+        vulnScannedAt: servers.vulnScannedAt,
+        vulnCriticalCount: servers.vulnCriticalCount,
+        vulnHighCount: servers.vulnHighCount,
+      })
+      .from(servers)
+      .where(
+        afterRowid === null
+          ? eq(servers.status, 'active')
+          : and(eq(servers.status, 'active'), sql`rowid > ${afterRowid}`),
+      )
+      .orderBy(sql`rowid`)
+      .limit(QUALITY_TIER_PAGE_SIZE);
+    if (rows.length === 0) break;
+    const page = calcQualityTiers(
+      rows.map((r) => ({ ...r, tools: new Array(Number(r.toolsCount) || 0) })),
+    );
+    for (const tier of Object.keys(totals) as (keyof typeof totals)[]) {
+      totals[tier] += page[tier];
+    }
+    scored += rows.length;
+    if (rows.length < QUALITY_TIER_PAGE_SIZE) break;
+    afterRowid = rows[rows.length - 1].rowid;
+  }
+  return scored > 0 ? totals : null;
+}
+
 /** Live stats from D1, or null when D1 is unreachable (callers fall back to the snapshot). */
 async function querySiteStats(): Promise<SiteStats | null> {
   const now = Date.now();
@@ -293,7 +369,7 @@ async function querySiteStats(): Promise<SiteStats | null> {
       topCountryRows,
       serverExtraRows,
       stdioVerifyRows,
-      activeServersRows,
+      qualityTierRows,
     ] = await Promise.all([
       db
         .select({
@@ -399,42 +475,7 @@ async function querySiteStats(): Promise<SiteStats | null> {
         .from(stdioVerifications)
         .catch(() => []),
 
-      // Only select lightweight columns needed for computeQualityScore — avoids loading heavy text columns (readme, aiOverview, etc.) into worker heap
-      db
-        .select({
-          id: servers.id,
-          url: servers.url,
-          healthStatus: servers.healthStatus,
-          remoteEndpointUrl: servers.remoteEndpointUrl,
-          remoteEndpointHealthy: servers.remoteEndpointHealthy,
-          isOfficial: servers.isOfficial,
-          isVerifiedActive: servers.isVerifiedActive,
-          toolsSource: servers.toolsSource,
-          websiteVerified: servers.websiteVerified,
-          isPremium: servers.isPremium,
-          reciprocalBadgeOk: servers.reciprocalBadgeOk,
-          authType: servers.authType,
-          githubStars: servers.githubStars,
-          npmDownloads: servers.npmDownloads,
-          copies: servers.copies,
-          upvotes: servers.upvotes,
-          views: servers.views,
-          lastCommitAt: servers.lastCommitAt,
-          // Truncated/counted in SQL: the score only needs description length
-          // (ramps out at 400 chars) and the tool count, and this query spans
-          // every active listing, so full text/JSON here is a big heap spike.
-          description: sql<string>`substr(${servers.description}, 1, 500)`,
-          toolsCount: sql<number>`case when ${servers.tools} is not null and json_valid(${servers.tools}) then json_array_length(${servers.tools}) else 0 end`,
-          installCommand: servers.installCommand,
-          installPackage: servers.installPackage,
-          suggestedInstallCommand: servers.suggestedInstallCommand,
-          vulnScannedAt: servers.vulnScannedAt,
-          vulnCriticalCount: servers.vulnCriticalCount,
-          vulnHighCount: servers.vulnHighCount,
-        })
-        .from(servers)
-        .where(eq(servers.status, 'active'))
-        .catch(() => []),
+      queryQualityTiers(db).catch(() => null),
     ]);
 
     const fallback = getSnapshotFallback();
@@ -552,15 +593,7 @@ async function querySiteStats(): Promise<SiteStats | null> {
       Number(stdioVerifyRows[0]?.avgDurationMs ?? 0),
     );
 
-    const dbQualityTiers =
-      activeServersRows && activeServersRows.length > 0
-        ? calcQualityTiers(
-            activeServersRows.map((r: any) => ({
-              ...r,
-              tools: new Array(Number(r.toolsCount) || 0),
-            })),
-          )
-        : fallback.qualityTierBreakdown;
+    const dbQualityTiers = qualityTierRows ?? fallback.qualityTierBreakdown;
 
     const dbReciprocalBadges = Number(
       serverExtraRows[0]?.reciprocalBadges ?? fallback.reciprocalBadgeCount,
